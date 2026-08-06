@@ -1,0 +1,7 @@
+shopify:
+  branch-naming:
+    description: Branch naming convention for Jira tickets (EMKT-XXX__description format)
+  commit-style:
+    description: Commit message format with feat/fix/refactor prefixes
+  docs-conventions:
+    description: Documentation file structure and gitignore conventions
