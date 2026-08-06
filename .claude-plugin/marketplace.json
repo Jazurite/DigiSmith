@@ -1,0 +1,20 @@
+{
+  "name": "digismith",
+  "description": "Personal marketplace for the DigiSmith SDLC plugin",
+  "owner": {
+    "name": "Jack Huỳnh",
+    "email": "jack@jazurite.com"
+  },
+  "plugins": [
+    {
+      "name": "digismith",
+      "description": "Jack's personal SDLC plugin — ticket to delivery, built on top of Superpowers",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Jack Huỳnh",
+        "email": "jack@jazurite.com"
+      }
+    }
+  ]
+}
