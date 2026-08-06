@@ -73,30 +73,36 @@ I'll inject the relevant standards. How should I format them?
 Which scenario?
 ```
 
-### Step 3: Detect Shopify-Repo Layer (Scenario 4 auto-include gate)
+### Step 3: Detect Shopify-Repo Layers (Scenario 4 auto-include gate)
 
-This check only decides whether Scenario 4 may auto-include `shopify/`
-standards without asking. It is not a filter on which standards are
-eligible for matching in the first place — in Scenarios 1-3, `shopify/`
-standards are matched by content relevance against `index.yml`
-descriptions exactly like any other standard, regardless of the current
-working repo's identity.
+`standards/` has three folders on two independent axes: *scope* (`global/`
+= universal, `shopify/` + `team/` = Emma-specific) and *kind* (`shopify/`
+= technical/code patterns, `team/` = process conventions with no code
+aspect). This detection check applies to both Emma-specific folders
+(`shopify/` and `team/`) equally — it only decides whether Scenario 4 may
+auto-include them without asking. It is not a filter on which standards
+are eligible for matching in the first place — in Scenarios 1-3, `shopify/`
+and `team/` standards are matched by content relevance against
+`index.yml` descriptions exactly like any other standard, regardless of
+the current working repo's identity. `global/` never has a repo-type gate
+of any kind, in any scenario.
 
-The current working repo qualifies for `shopify/` auto-include if either
-is true:
+The current working repo qualifies for `shopify/` + `team/` auto-include
+if either is true:
 - `docs/development-workflow.md` exists at the repo root, or
 - the repo name matches `shopify-template-*`
 
-Scenarios 1-3: surface `shopify/` matches as ordinary suggestions the user
-confirms, same as anything else — content relevance only, never gated by
-this repo check. Scenario 4: if the repo qualifies, auto-include matched
-`shopify/` standards without asking.
+Scenarios 1-3: surface `shopify/` and `team/` matches as ordinary
+suggestions the user confirms, same as anything else — content relevance
+only, never gated by this repo check. Scenario 4: if the repo qualifies,
+auto-include matched `shopify/` and `team/` standards without asking.
 
-If the repo qualifies but `standards/shopify/` is empty or doesn't exist,
-silently skip it — there's nothing to inject, and this is not an error.
-The same goes for `standards/global/`: it has no repo-type gate, so if
-it's empty or doesn't exist there's simply nothing indexed to match
-against — also not an error.
+If the repo qualifies but `standards/shopify/` or `standards/team/` is
+empty or doesn't exist, silently skip whichever is empty — there's
+nothing to inject, and this is not an error. The same goes for
+`standards/global/`: it has no repo-type gate, so if it's empty or
+doesn't exist there's simply nothing indexed to match against — also not
+an error.
 
 ### Step 4: Match and Suggest (skip in Explicit Mode)
 
@@ -106,24 +112,25 @@ Match `index.yml` descriptions against the current work context. Present
 ```
 Based on your task, these standards may be relevant:
 
-1. shopify/branch-naming — Branch naming convention for Emma tickets
+1. team/branch-naming — Branch naming convention for Jira tickets
 2. global/error-handling — Error handling conventions across any language
 
-Inject these? (yes / just 1 / add: shopify/commit-style / none)
+Inject these? (yes / just 1 / add: team/commit-style / none)
 ```
 
 ### Step 5: Parse Explicit Targets (Explicit Mode only)
 
-Arguments can be a folder (`shopify` → all files in it), a folder/file
-(`shopify/branch-naming` → one file), or `root`/`root/<file>` for files
+Arguments can be a folder (`team` → all files in it), a folder/file
+(`team/branch-naming` → one file), or `root`/`root/<file>` for files
 directly in `standards/`. If a named target doesn't exist:
 
 ```
-Standard not found: shopify/nonexistent
+Standard not found: team/nonexistent
 
-Available standards in shopify/:
+Available standards in team/:
 - branch-naming
 - commit-style
+- docs-conventions
 
 Did you mean one of these?
 ```
@@ -136,7 +143,7 @@ inline:
 ```
 I've read the following standards as relevant to what we're working on:
 
---- Standard: shopify/branch-naming ---
+--- Standard: team/branch-naming ---
 [full file content]
 --- End Standard ---
 
@@ -160,7 +167,7 @@ References mode:
 ```
 Reference these standards files in the appropriate location:
 
-@standards/shopify/branch-naming.md
+@standards/team/branch-naming.md
 @standards/global/error-handling.md
 ```
 
@@ -175,7 +182,11 @@ directly into the subagent's prompt:
 ```
 ## Standards
 
---- Standard: shopify/branch-naming ---
+--- Standard: team/branch-naming ---
+[full file content]
+--- End Standard ---
+
+--- Standard: shopify/custom-element-components ---
 [full file content]
 --- End Standard ---
 ```
@@ -190,7 +201,7 @@ augments the brief, it doesn't gate dispatch.
 |---|---|
 | 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |
-| 3 | Detect Shopify-repo layer (2 signals) — gates only Scenario 4's auto-include, never a filter in Scenarios 1-3 |
+| 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated |
 | 4 | Match + suggest (skip if explicit target given) |
 | 5 | Parse explicit target if given, validate it exists |
 | 6 | Inject formatted for the scenario |

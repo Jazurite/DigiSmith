@@ -46,10 +46,19 @@ turn into a standalone rule, ask one clarifying question via
 
 ### Step 2: Determine the Folder
 
-Ask (or infer from context) whether this belongs in `standards/global/`
-(any stack) or `standards/shopify/` (Shopify/Liquid/Emma-theme specific).
-If a related file already exists in either folder, offer to append to it
-rather than create a duplicate — check both folders before drafting.
+Two independent axes decide the folder: *scope* (universal vs.
+Shopify/Emma-specific) and *kind* (a coding technique vs. a team/process
+convention with no code aspect). Ask (or infer from context) which of the
+three applies:
+
+- `standards/global/` — universal principles, any stack
+- `standards/shopify/` — Shopify/Liquid/Emma-theme *technical* patterns
+  (code-level: components, asset loading, etc.)
+- `standards/team/` — Emma team/process conventions with no coding-technique
+  aspect (branch naming, commit style, docs layout, etc.)
+
+If a related file already exists in any of the three, offer to append to
+it rather than create a duplicate — check all three before drafting.
 
 ### Step 3: Draft and Confirm
 
@@ -57,7 +66,7 @@ Draft the standard following Writing Concise Standards (below), then
 confirm with `AskUserQuestion` before writing:
 
 ```
-Here's the draft for shopify/branch-naming.md:
+Here's the draft for team/branch-naming.md:
 
 ---
 # Branch Naming
@@ -98,7 +107,7 @@ tokens.
 | Step | Action |
 |---|---|
 | 1 | Capture the user's stated rule, clarify if ambiguous |
-| 2 | Pick `global/` or `shopify/`, check for an existing file to append to |
+| 2 | Pick `global/`, `shopify/`, or `team/`, check for an existing file to append to |
 | 3 | Draft, confirm via `AskUserQuestion` |
 | 4 | Write `standards/<folder>/<name>.md` |
 | 5 | Invoke `digismith:index-standards` |

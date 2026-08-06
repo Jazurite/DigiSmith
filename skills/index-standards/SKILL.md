@@ -69,7 +69,7 @@ to propose a one-line description:
 
 ```
 New standard needs indexing:
-  File: shopify/branch-naming.md
+  File: team/branch-naming.md
 
 Suggested description: "Branch naming convention for Emma tickets"
 
@@ -81,7 +81,7 @@ what changed — don't default to keeping the old one:
 
 ```
 Standard content changed, description may need updating:
-  File: shopify/docs-conventions.md
+  File: team/docs-conventions.md
 
 Current description: "Documentation file structure and gitignore conventions"
 Suggested description: "Documentation file structure, gitignore conventions, and Jira copy-over process"
@@ -126,6 +126,10 @@ global:
     description: Error handling conventions across any language
 
 shopify:
+  custom-element-components:
+    description: Custom element base-class pattern for interactive theme components
+
+team:
   branch-naming:
     description: Branch naming convention for Emma tickets
   commit-style:

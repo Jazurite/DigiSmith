@@ -1,11 +1,13 @@
 shopify:
+  custom-element-components:
+    description: Custom element base-class pattern for interactive theme components
+  quickscript-asset-loading:
+    description: Deferred JS/CSS loading convention using inert quickscript tags
+
+team:
   branch-naming:
     description: Branch naming convention for Jira tickets (EMKT-XXX__description format)
   commit-style:
     description: Commit message format with feat/fix/refactor prefixes
-  custom-element-components:
-    description: Custom element base-class pattern for interactive theme components
   docs-conventions:
     description: Documentation file structure and gitignore conventions
-  quickscript-asset-loading:
-    description: Deferred JS/CSS loading convention using inert quickscript tags

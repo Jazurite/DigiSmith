@@ -162,17 +162,29 @@
     ├── index.yml
     ├── global/
     │   └── *.md            # universal principles, any stack
-    └── shopify/
-        └── *.md             # Shopify/Liquid/Emma-theme layer</code></pre>
-  <p>Everything lives inside the DigiSmith repo. <code>global/</code> and
-  <code>shopify/</code> are plain folders (mirroring Agent OS's <code>root/</code>,
-  <code>api/</code>, <code>database/</code> convention) — not a profile-inheritance system.
-  <strong>Refined during implementation:</strong> repo-type detection (see Detection
+    ├── shopify/
+    │   └── *.md             # Shopify/Liquid/Emma-theme TECHNICAL patterns
+    └── team/
+        └── *.md             # Emma team/process conventions, no code aspect</code></pre>
+  <p>Everything lives inside the DigiSmith repo. <code>global/</code>, <code>shopify/</code>,
+  and <code>team/</code> are plain folders (mirroring Agent OS's <code>root/</code>,
+  <code>api/</code>, <code>database/</code> convention) — not a profile-inheritance system.</p>
+  <p><strong>Refined during implementation:</strong> repo-type detection (see Detection
   Logic) only gates whether <code>inject-standards</code> scenario 4 (subagent dispatch)
-  auto-includes the <code>shopify/</code> layer without asking — it is not a filter on
-  which standards are eligible for matching at all. In scenarios 1-3, <code>shopify/</code>
-  standards are ordinary content-matched candidates regardless of the current working
-  repo's identity, the same as <code>global/</code>.</p>
+  auto-includes the <code>shopify/</code>-scoped layers without asking — it is not a filter
+  on which standards are eligible for matching at all. In scenarios 1-3, <code>shopify/</code>
+  and <code>team/</code> standards are ordinary content-matched candidates regardless of the
+  current working repo's identity, the same as <code>global/</code>.</p>
+  <p><strong>Added post-merge:</strong> the original two-folder design (<code>global/</code>
+  vs. <code>shopify/</code>) split standards by <em>scope</em> only. Once real content
+  existed, it became clear <code>shopify/</code> was doing double duty for two different
+  <em>kinds</em> of standard — code-level technique (custom-element components, asset
+  loading) and team/process convention with no coding aspect (branch naming, commit style,
+  docs layout). <code>team/</code> was split out to hold the latter, sharing
+  <code>shopify/</code>'s scope (Emma-specific, same repo-detection gate) but not its kind.
+  <code>global/</code> is unaffected — it's assumed technical by default since no non-technical
+  universal content exists yet; if that changes, the same kind/scope split could apply there
+  too.</p>
 </section>
 
 <section id="skills">
@@ -246,15 +258,16 @@
   If ambiguous, ask rather than guess — ported directly from Agent OS's rule.</p>
   <p>Matching: read <code>standards/index.yml</code>, match descriptions against the current
   work context, present 2–5 suggestions for confirmation (skipped only for scenario 4's
-  <code>shopify/</code> auto-include). Explicit-mode invocation (naming a folder/file
-  directly) skips suggestion but still validates the target exists.</p>
+  <code>shopify/</code> + <code>team/</code> auto-include). Explicit-mode invocation
+  (naming a folder/file directly) skips suggestion but still validates the target exists.</p>
 </section>
 
 <section id="detection">
   <h2>Detection Logic</h2>
   <p><strong>Scenario detection</strong> — see <code>inject-standards</code> above.</p>
   <p><strong>Shopify-repo detection</strong> — gates <code>inject-standards</code>
-  scenario 4's auto-include only (see the refinement noted in § Structure &amp; Storage).
+  scenario 4's auto-include for both Emma-scoped folders, <code>shopify/</code> and
+  <code>team/</code>, only (see the refinements noted in § Structure &amp; Storage).
   The current working repo qualifies if either is true:</p>
   <ul>
     <li><code>docs/development-workflow.md</code> exists at the repo root, or</li>

@@ -8,9 +8,10 @@ description: Use when the user wants to extract coding standards or conventions 
 ## Overview
 
 Extracts tribal knowledge from a codebase into concise, documented
-standards under `standards/global/` or `standards/shopify/`. One standard
-completes the full ask-why → draft → confirm → write loop before the next
-one starts — never batch multiple standards through the loop at once.
+standards under `standards/global/`, `standards/shopify/`, or
+`standards/team/`. One standard completes the full ask-why → draft →
+confirm → write loop before the next one starts — never batch multiple
+standards through the loop at once.
 
 ## When to Use
 
@@ -99,10 +100,20 @@ Do not batch questions for multiple standards upfront.
 
 ### Step 4: Determine the Folder and Write
 
-Pick `standards/global/` (any stack) or `standards/shopify/`
-(Shopify/Liquid/Emma-theme specific). Check for an existing related file
-first — append rather than create a duplicate if one exists. Write
-`standards/<folder>/<name>.md`.
+Two independent axes decide the folder: *scope* (universal vs.
+Shopify/Emma-specific) and *kind* (a coding technique vs. a team/process
+convention with no code aspect):
+
+- `standards/global/` — universal principles, any stack
+- `standards/shopify/` — Shopify/Liquid/Emma-theme *technical* patterns
+  (code-level: components, asset loading, etc.)
+- `standards/team/` — Emma team/process conventions with no coding-technique
+  aspect (branch naming, commit style, docs layout, etc.) — code analysis
+  rarely surfaces these directly, but a pattern you find (e.g. a commit
+  history convention) may belong here instead of `shopify/`
+
+Check for an existing related file first — append rather than create a
+duplicate if one exists. Write `standards/<folder>/<name>.md`.
 
 Then repeat Steps 3-4 for the next selected standard.
 
@@ -115,8 +126,8 @@ Once all selected standards for this area are written, invoke the
 
 ```
 Standards created for [area]:
-- shopify/branch-naming.md
-- shopify/commit-style.md
+- shopify/custom-element-components.md
+- team/commit-style.md
 
 Discover standards in another area, or are we done?
 ```
@@ -142,6 +153,6 @@ tokens.
 | 1 | Determine focus area (ask if not specified) |
 | 2 | Read representative files, present findings |
 | 3 | Per standard: ask why → draft → confirm |
-| 4 | Write to `global/` or `shopify/`, check for append-vs-duplicate |
+| 4 | Write to `global/`, `shopify/`, or `team/`, check for append-vs-duplicate |
 | 5 | Invoke `digismith:index-standards` |
 | 6 | Offer to continue with another area |
