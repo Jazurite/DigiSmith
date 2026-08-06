@@ -21,6 +21,23 @@ a one-line description.
   in `standards/`
 - To clean up a stale or messy index
 
+## Locating the Standards Library
+
+`standards/` always means DigiSmith's own repo, never a path relative to
+the current working directory.
+
+Resolve it in order:
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Never read or write `standards/` under a plugin cache path (e.g.
+`~/.claude/plugins/cache/.../digismith/<version>/`) — that is a stale,
+version-locked snapshot, not the live repo. Writes there are silently
+lost on the next plugin update.
+
 ## Process
 
 ### Step 1: Scan for Standards Files
@@ -39,12 +56,16 @@ descriptions.
 Compare the scan against the existing index:
 - **New files** — no index entry yet
 - **Deleted files** — index entry with no matching file
-- **Existing files** — already indexed, keep as-is
+- **Content-changed files** — already indexed, but the file's content no
+  longer matches what the existing description implies (this includes
+  files `add-standards` or `discover-standards` appended to rather than
+  created fresh)
+- **Unchanged files** — already indexed, content matches, keep as-is
 
-### Step 4: Handle New Files
+### Step 4: Handle New and Content-Changed Files
 
-For each new file, read it and use `AskUserQuestion` to propose a one-line
-description:
+For each new or content-changed file, read it and use `AskUserQuestion`
+to propose a one-line description:
 
 ```
 New standard needs indexing:
@@ -54,6 +75,9 @@ Suggested description: "Branch naming convention for Emma tickets"
 
 Accept? (yes / or type a better description)
 ```
+
+For a content-changed file, propose an updated description that reflects
+what changed — don't default to keeping the old one.
 
 Keep descriptions to one short sentence — they're for matching, not
 documentation.
@@ -106,7 +130,7 @@ Index updated:
   1 stale entry removed
   8 entries unchanged
 
-Total: 9 standards indexed
+Total: 10 standards indexed
 ```
 
 ## Output

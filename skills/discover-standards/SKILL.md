@@ -18,6 +18,23 @@ The user wants existing code analyzed for patterns worth documenting. If
 they're instead dictating a rule directly with no codebase analysis
 needed, use `add-standards` instead.
 
+## Locating the Standards Library
+
+`standards/` always means DigiSmith's own repo, never a path relative to
+the current working directory.
+
+Resolve it in order:
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Never read or write `standards/` under a plugin cache path (e.g.
+`~/.claude/plugins/cache/.../digismith/<version>/`) — that is a stale,
+version-locked snapshot, not the live repo. Writes there are silently
+lost on the next plugin update.
+
 ## Process
 
 ### Step 1: Determine Focus Area
@@ -92,7 +109,7 @@ Then repeat Steps 3-4 for the next selected standard.
 ### Step 5: Trigger Indexing
 
 Once all selected standards for this area are written, invoke the
-`index-standards` skill.
+`digismith:index-standards` skill.
 
 ### Step 6: Offer to Continue
 
@@ -123,5 +140,5 @@ tokens.
 | 2 | Read representative files, present findings |
 | 3 | Per standard: ask why → draft → confirm |
 | 4 | Write to `global/` or `shopify/`, check for append-vs-duplicate |
-| 5 | Invoke `index-standards` |
+| 5 | Invoke `digismith:index-standards` |
 | 6 | Offer to continue with another area |

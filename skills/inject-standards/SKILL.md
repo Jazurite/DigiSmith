@@ -11,6 +11,23 @@ Reads `standards/index.yml`, matches relevant standards against the
 current work, and folds them into context — formatted differently
 depending on which of four scenarios is in play.
 
+## Locating the Standards Library
+
+`standards/` always means DigiSmith's own repo, never a path relative to
+the current working directory.
+
+Resolve it in order:
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Never read or write `standards/` under a plugin cache path (e.g.
+`~/.claude/plugins/cache/.../digismith/<version>/`) — that is a stale,
+version-locked snapshot, not the live repo. Writes there are silently
+lost on the next plugin update.
+
 ## Usage Modes
 
 **Auto-suggest** (no target named) — analyze context, suggest matches.
@@ -25,11 +42,14 @@ still validate the target exists.
 Read `standards/index.yml`. If it doesn't exist:
 
 ```
-No standards index found. Run discover-standards or add-standards first,
-or index-standards if standards files exist without an index.
+No standards index found. Run digismith:discover-standards or
+digismith:add-standards first, or digismith:index-standards if standards
+files exist without an index.
 ```
 
-Stop here if missing.
+Stop here if missing — except in Scenario 4 (Dispatching a Subagent),
+where you proceed without a `## Standards` section instead of blocking
+the dispatch (see Scenario 4 below).
 
 ### Step 2: Detect the Scenario
 
@@ -165,7 +185,7 @@ augments the brief, it doesn't gate dispatch.
 
 | Step | Action |
 |---|---|
-| 1 | Read `standards/index.yml`, stop if missing |
+| 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |
 | 3 | Detect Shopify-repo layer (2 signals) — gates only Scenario 4's auto-include, never a filter in Scenarios 1-3 |
 | 4 | Match + suggest (skip if explicit target given) |

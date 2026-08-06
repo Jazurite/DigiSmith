@@ -19,6 +19,23 @@ future subagent briefs — without asking you to go analyze a codebase for
 it. If they instead want you to look at existing code and infer patterns,
 use `discover-standards` instead.
 
+## Locating the Standards Library
+
+`standards/` always means DigiSmith's own repo, never a path relative to
+the current working directory.
+
+Resolve it in order:
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Never read or write `standards/` under a plugin cache path (e.g.
+`~/.claude/plugins/cache/.../digismith/<version>/`) — that is a stale,
+version-locked snapshot, not the live repo. Writes there are silently
+lost on the next plugin update.
+
 ## Process
 
 ### Step 1: Capture the Rule
@@ -60,7 +77,7 @@ Create or append to `standards/<folder>/<name>.md`.
 
 ### Step 5: Trigger Indexing
 
-Invoke the `index-standards` skill so the new/updated file gets indexed.
+Invoke the `digismith:index-standards` skill so the new/updated file gets indexed.
 
 ## Writing Concise Standards
 
@@ -81,4 +98,4 @@ tokens.
 | 2 | Pick `global/` or `shopify/`, check for an existing file to append to |
 | 3 | Draft, confirm via `AskUserQuestion` |
 | 4 | Write `standards/<folder>/<name>.md` |
-| 5 | Invoke `index-standards` |
+| 5 | Invoke `digismith:index-standards` |
