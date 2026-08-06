@@ -94,6 +94,9 @@ this repo check. Scenario 4: if the repo qualifies, auto-include matched
 
 If the repo qualifies but `standards/shopify/` is empty or doesn't exist,
 silently skip it — there's nothing to inject, and this is not an error.
+The same goes for `standards/global/`: it has no repo-type gate, so if
+it's empty or doesn't exist there's simply nothing indexed to match
+against — also not an error.
 
 ### Step 4: Match and Suggest (skip in Explicit Mode)
 

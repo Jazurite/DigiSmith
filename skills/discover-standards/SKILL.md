@@ -16,7 +16,7 @@ one starts — never batch multiple standards through the loop at once.
 
 The user wants existing code analyzed for patterns worth documenting. If
 they're instead dictating a rule directly with no codebase analysis
-needed, use `add-standards` instead.
+needed, use `digismith:add-standards` instead.
 
 ## Locating the Standards Library
 
@@ -131,6 +131,9 @@ tokens.
 - **Skip the obvious** — don't document what the code already makes clear
 - **One standard per concept** — don't combine unrelated patterns
 - **Bullets over paragraphs** — scannable beats readable
+- **State the why briefly, when it's not obvious** — a short `**Why:**`
+  line (and `**Exception:**` / `**Common mistake:**` if relevant) beats
+  folding the reasoning into prose
 
 ## Quick Reference
 

@@ -7,17 +7,17 @@ description: Use when the user wants to manually add, dictate, or record a codin
 
 ## Overview
 
-Manual-entry counterpart to `discover-standards`. The user dictates a rule
-directly ("always use Shopify sections, never templates") instead of it
-being extracted from code. Drafts the standard, confirms, writes the file,
-then hands off to `index-standards`.
+Manual-entry counterpart to `digismith:discover-standards`. The user
+dictates a rule directly ("always use Shopify sections, never templates")
+instead of it being extracted from code. Drafts the standard, confirms,
+writes the file, then hands off to `digismith:index-standards`.
 
 ## When to Use
 
 The user states a rule, convention, or preference they want captured for
 future subagent briefs — without asking you to go analyze a codebase for
 it. If they instead want you to look at existing code and infer patterns,
-use `discover-standards` instead.
+use `digismith:discover-standards` instead.
 
 ## Locating the Standards Library
 
@@ -89,6 +89,9 @@ tokens.
 - **Skip the obvious** — don't document what the code already makes clear
 - **One standard per concept** — don't combine unrelated patterns
 - **Bullets over paragraphs** — scannable beats readable
+- **State the why briefly, when it's not obvious** — a short `**Why:**`
+  line (and `**Exception:**` / `**Common mistake:**` if relevant) beats
+  folding the reasoning into prose
 
 ## Quick Reference
 

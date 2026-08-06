@@ -169,7 +169,16 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 
 ## Conventions
 
-- Specs and plans for DigiSmith work live at the knowpolis vault root:
-  `Knowpolis/.superpowers/{specs,plans}/`.
-- Record decisions in plain, git-committed markdown — not any single LLM's
+- Specs and plans for DigiSmith work live inside this repo, git-committed,
+  at `docs/superpowers/{specs,plans}/`. (Originally documented as living
+  at the knowpolis vault root — that path doesn't exist on the machine
+  this was built on, so this repo's own `docs/` became the default.)
+- Specs are authored in HTML — richer structure and presentation for a
+  document a human reviews once. Plans stay Markdown:
+  `superpowers:subagent-driven-development`'s `task-brief` script parses
+  task boundaries by Markdown `### Task N:` headers, so an HTML plan would
+  break automatic task dispatch. The standards library itself also stays
+  plain Markdown — optimized for compact injection into subagent context,
+  not visual review.
+- Record decisions in plain, git-committed text — not any single LLM's
   private memory — so any harness opening the project picks up context.

@@ -7,18 +7,18 @@ description: Use when standards files were added, edited, or deleted under DigiS
 
 ## Overview
 
-Rebuilds `standards/index.yml`, the lookup table `inject-standards` uses to
-match relevant standards without reading every file. Maps each standard to
-a one-line description.
+Rebuilds `standards/index.yml`, the lookup table `digismith:inject-standards`
+uses to match relevant standards without reading every file. Maps each
+standard to a one-line description.
 
 ## When to Use
 
-- After `discover-standards` or `add-standards` create or edit files (they
-  call this skill automatically as their last step — you don't normally
-  invoke it directly for that case)
+- After `digismith:discover-standards` or `digismith:add-standards` create
+  or edit files (they call this skill automatically as their last step —
+  you don't normally invoke it directly for that case)
 - After manually creating, editing, or deleting files under `standards/`
-- If `inject-standards` suggestions seem out of sync with what's actually
-  in `standards/`
+- If `digismith:inject-standards` suggestions seem out of sync with what's
+  actually in `standards/`
 - To clean up a stale or messy index
 
 ## Locating the Standards Library
@@ -58,8 +58,8 @@ Compare the scan against the existing index:
 - **Deleted files** — index entry with no matching file
 - **Content-changed files** — already indexed, but the file's content no
   longer matches what the existing description implies (this includes
-  files `add-standards` or `discover-standards` appended to rather than
-  created fresh)
+  files `digismith:add-standards` or `digismith:discover-standards`
+  appended to rather than created fresh)
 - **Unchanged files** — already indexed, content matches, keep as-is
 
 ### Step 4: Handle New and Content-Changed Files
@@ -77,7 +77,17 @@ Accept? (yes / or type a better description)
 ```
 
 For a content-changed file, propose an updated description that reflects
-what changed — don't default to keeping the old one.
+what changed — don't default to keeping the old one:
+
+```
+Standard content changed, description may need updating:
+  File: shopify/docs-conventions.md
+
+Current description: "Documentation file structure and gitignore conventions"
+Suggested description: "Documentation file structure, gitignore conventions, and Jira copy-over process"
+
+Accept the updated description? (yes / or type a better one)
+```
 
 Keep descriptions to one short sentence — they're for matching, not
 documentation.
@@ -127,10 +137,11 @@ shopify:
 ```
 Index updated:
   2 new entries added
+  1 entry refreshed (content changed)
   1 stale entry removed
   8 entries unchanged
 
-Total: 10 standards indexed
+Total: 11 standards indexed
 ```
 
 ## Output

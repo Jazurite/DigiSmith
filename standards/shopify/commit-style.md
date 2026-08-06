@@ -1,8 +1,6 @@
 # Commit Style
 
-Use prefixes: `feat(scope):`, `fix(scope):`, or `refactor(scope):`
+Use prefixes: `feat(scope):`, `fix(scope):`, or `refactor(scope):` (new
+feature / bug fix / refactor)
 
-- `feat(scope):` for new features
-- `fix(scope):` for bug fixes
-- `refactor(scope):` for refactoring
 - Never reference AI tools or assistants in commit messages

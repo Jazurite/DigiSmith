@@ -7,7 +7,7 @@ not plain `HTMLElement` or ad-hoc jQuery:
 ```js
 if (!customElements.get("quantity-adjuster")) {
   customElements.define("quantity-adjuster", class QuantityAdjuster extends Element {
-    props = { index: 0, size: 32, min: null, max: null };
+    props = { index: 0, value: 1, min: 1, max: null };
 
     template() { return `...`; }
   });
@@ -15,7 +15,11 @@ if (!customElements.get("quantity-adjuster")) {
 ```
 
 ```liquid
-<quantity-adjuster :index="{{ item.index }}" :value="{{ item.quantity }}"></quantity-adjuster>
+<quantity-adjuster
+  :index="{{ item.index }}"
+  :value="{{ item.quantity }}"
+  :max="{{ item.variant.inventory_quantity }}"
+></quantity-adjuster>
 ```
 
 - Declare a `props` object with defaults; the base class reads matching
