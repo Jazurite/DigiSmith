@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Standards Injection (G) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — merged to main</span>
+  <h1>Standards Injection (G) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-06</span>
+    <span>Map item: <strong>G</strong> — Tier 1, "The frame"</span>
+    <span>Merge commit: <code>169a9c6</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Merge</a></li>
+    <li><a href="#sweep">Post-Merge Sweep</a></li>
+    <li><a href="#action">Outstanding Action</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built and merged the standards library plus four Claude Code skills that capture
+  Jack's coding standards and fold them into context — the mechanism map item
+  <strong>G</strong> exists for. Followed the full Superpowers process: brainstorming →
+  spec → writing-plans → subagent-driven-development (5 tasks, each dispatched to a
+  fresh implementer subagent and independently reviewed) → a final whole-branch review
+  → one fix round → merge → a follow-up sweep of everything the final review flagged
+  as non-blocking.</p>
+  <p>Reference documents: the
+  <a href="../specs/2026-08-05-standards-injection-design.html">design spec</a> and the
+  <a href="../plans/2026-08-05-standards-injection-plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Scaffold</div>
+      <h4>Plugin manifests</h4>
+      <p><code>.claude-plugin/plugin.json</code> + <code>marketplace.json</code> — makes
+      DigiSmith a real, installable, self-hosted plugin.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Maintain</div>
+      <h4>index-standards</h4>
+      <p>Rebuilds <code>standards/index.yml</code>; now tracks new, deleted,
+      content-changed, and unchanged files.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Capture · manual</div>
+      <h4>add-standards</h4>
+      <p>Dictate a rule directly. Seeded three real standards from Jack's Emma
+      conventions.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Capture · from code</div>
+      <h4>discover-standards</h4>
+      <p>Extracts patterns from a real codebase. Dogfooded against
+      <code>shopify-template-ca</code>, found two genuine tribal-knowledge patterns.</p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="tag">Use</div>
+      <h4>inject-standards</h4>
+      <p>The mechanism G exists for — reads the index and folds matched standards into
+      four scenarios: Conversation, Creating a Skill, Shaping/Planning, and Dispatching
+      a Subagent. All four dogfooded, plus the zero-standards edge case.</p>
+    </div>
+  </div>
+  <p>Five real standards now live in <code>standards/shopify/</code>: branch naming,
+  commit style, docs conventions, custom-element components, and quickscript asset
+  loading — a mix of manually dictated and codebase-discovered content.</p>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1</td><td>Plugin scaffold</td>
+      <td><span class="status-ok">✓ Approved, clean</span></td><td>—</td>
+    </tr>
+    <tr>
+      <td>2</td><td>index-standards + fixture dogfood</td>
+      <td><span class="status-ok">✓ Approved</span></td>
+      <td>Example arithmetic typo; no content-change refresh path</td>
+    </tr>
+    <tr>
+      <td>3</td><td>add-standards + 3 seeded standards</td>
+      <td><span class="status-ok">✓ Approved</span></td>
+      <td>Mild repetition in commit-style.md</td>
+    </tr>
+    <tr>
+      <td>4</td><td>discover-standards + real-repo dogfood</td>
+      <td><span class="status-ok">✓ Approved</span></td>
+      <td>Unprompted Why/Exception template in output</td>
+    </tr>
+    <tr>
+      <td>5</td><td>inject-standards + all 4 scenarios + edge case</td>
+      <td><span class="status-ok">✓ Approved</span></td>
+      <td>Report itemization slightly incomplete (untracked scratch file)</td>
+    </tr>
+  </table>
+  </div>
+  <p>Each task's dogfood test dispatched a separate subagent with the skill's own
+  content as its instructions against a concrete scenario — the project's chosen
+  substitute for an automated test suite, since these are instruction files, not code.</p>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>The whole-branch review (dispatched on the most capable available model) came back
+  <strong>"Ready to merge: With fixes"</strong> — one Critical finding, three Important:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td><span class="status-fixed">Critical</span></td>
+      <td>Every skill used bare relative paths to <code>standards/</code> — resolves
+      against whatever repo the agent happens to be sitting in, not DigiSmith's own
+      directory. Breaks in G's actual intended use (dispatched into e.g. an Emma repo).
+      Compounded by installed plugins living in a version-scoped cache, confirmed
+      empirically against another plugin already on this machine.</td>
+      <td>Added a "Locating the Standards Library" section to all four skills:
+      check whether cwd is DigiSmith itself, otherwise ask the user for the repo path
+      and remember it for the session. Never read/write under the plugin cache.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>inject-standards</code> Step 1 unconditionally blocked on a missing
+      index, contradicting Scenario 4's own "don't block dispatch" fallback.</td>
+      <td>Step 1 now excepts Scenario 4 explicitly.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>Cross-skill invocations used unqualified names
+      (<code>index-standards</code> instead of <code>digismith:index-standards</code>).</td>
+      <td>Qualified in all Process-step invocations.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>index-standards</code> had no path to refresh a description when a
+      file's content changed without being added or deleted (the append case).</td>
+      <td>Added a content-changed bucket to the diff logic and its own report line.</td>
+    </tr>
+  </table>
+  </div>
+  <p>The Critical finding was a real architecture gap neither the original spec nor the
+  plan resolved — it needed a decision, not a guess, so it went back to Jack before any
+  fix was dispatched. One fix subagent addressed all four findings in a single commit;
+  a scoped re-review confirmed everything was addressed with no new breakage.</p>
+</section>
+
+<section id="merge">
+  <h2>Merge</h2>
+  <p>Fast-forward merge, <code>worktree-standards-injection</code> → <code>main</code>.
+  Worktree and branch cleaned up afterward.</p>
+  <ul class="commit-list">
+    <li><span class="sha">2cabb22</span> feat(plugin): bootstrap digismith plugin scaffold</li>
+    <li><span class="sha">028926e</span> feat(standards): add index-standards skill</li>
+    <li><span class="sha">f2826d5</span> feat(standards): add add-standards skill, seed shopify standards</li>
+    <li><span class="sha">5264e7f</span> feat(standards): add discover-standards skill</li>
+    <li><span class="sha">2df2866</span> feat(standards): add inject-standards skill</li>
+    <li><span class="sha">169a9c6</span> fix(standards): resolve final-review findings</li>
+  </ul>
+</section>
+
+<section id="sweep">
+  <h2>Post-Merge Sweep</h2>
+  <p>All Minor findings from the task reviews and the final review — deferred as
+  non-blocking at the time — were swept in a follow-up commit
+  (<code>6991e5b</code>):</p>
+  <ul>
+    <li><code>commit-style.md</code> — removed redundant per-bullet prefix repetition</li>
+    <li><code>custom-element-components.md</code> — fixed an internally inconsistent
+      code example (props declared but not passed, and vice versa)</li>
+    <li><code>index-standards</code> — added the content-changed report line and a
+      matching example prompt; fixed the resulting arithmetic</li>
+    <li><code>add-standards</code>, <code>discover-standards</code> — qualified
+      remaining cross-skill references; formalized the <code>Why:</code>/
+      <code>Exception:</code>/<code>Common mistake:</code> shape (which
+      <code>discover-standards</code>'s dogfood run invented on its own) into both
+      skills' Writing Concise Standards section</li>
+    <li><code>inject-standards</code> — generalized the empty-folder-skip clause to
+      cover <code>global/</code>, not just <code>shopify/</code></li>
+    <li><code>MEMORY.md</code> — fixed the stale Knowpolis vault path convention;
+      documented the actual HTML-specs / Markdown-plans split and why</li>
+    <li>Spec — reconciled the <code>shopify/</code> gating description with what was
+      actually implemented (gates scenario 4's auto-include only)</li>
+  </ul>
+</section>
+
+<section id="action">
+  <h2>Outstanding Action</h2>
+  <div class="callout action">
+    <strong>Needs Jack, not Claude:</strong> register and install the plugin for real.
+    Everything above was verified by dispatching subagents with each skill's content
+    pasted directly into their instructions — not through the actual <code>Skill</code>
+    tool, since that requires the interactive <code>/plugin</code> commands only a human
+    can run:
+    <pre><code>/plugin marketplace add D:\Workspace\Jazurite\DigiSmith
+/plugin install digismith@digismith</code></pre>
+    Once installed, the four skills become invocable by name in any Claude Code session.
+  </div>
+</section>
+
+<footer>DigiSmith · docs/superpowers/reports/2026-08-05-standards-injection-report.html</footer>
+
+</body>
+</html>
