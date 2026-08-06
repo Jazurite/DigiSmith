@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DigiSmith — Build History</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --next: #7a4fb5; --next-bg: #f3edfb;
+    --todo: #8a8a8a; --todo-bg: #f2f2f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --next:#b892ea; --next-bg:#241f30;
+      --todo:#8f8b9a; --todo-bg:#211f28; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 920px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  a { color: var(--accent); }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  @media (max-width: 560px) { nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+
+  .status { display: inline-block; border-radius: 999px; padding: .1rem .6rem;
+    font-size: .74rem; font-weight: 600; white-space: nowrap; }
+  .status.done { color: var(--good); background: var(--good-bg); border: 1px solid var(--good); }
+  .status.next { color: var(--next); background: var(--next-bg); border: 1px solid var(--next); }
+  .status.todo { color: var(--todo); background: var(--todo-bg); border: 1px solid var(--border); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
+  .stat { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px;
+    padding: 1rem 1.2rem; text-align: center; }
+  .stat .n { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
+
+  .timeline { position: relative; padding-left: 1.6rem; margin-top: 1.2rem; }
+  .timeline::before { content: ""; position: absolute; left: .3rem; top: .3rem; bottom: .3rem;
+    width: 2px; background: var(--border); }
+  .event { position: relative; margin-bottom: 1.6rem; }
+  .event::before { content: ""; position: absolute; left: -1.6rem; top: .3rem; width: .6rem; height: .6rem;
+    border-radius: 50%; background: var(--accent); }
+  .event .date { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .event h4 { margin: .15rem 0 .4rem; font-size: 1rem; }
+  .event p { margin: 0 0 .4rem; font-size: .92rem; }
+  .event ul { margin: .3rem 0 0; font-size: .88rem; color: var(--muted); }
+  .event.shelved::before { background: var(--todo); }
+  .event.shelved h4 { color: var(--todo); }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .9rem; margin: 1rem 0; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <h1>DigiSmith — Build History</h1>
+  <div class="meta">
+    <span>Last updated: 2026-08-06</span>
+    <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
+  </div>
+</header>
+
+<div class="callout">
+  This page tracks progress against the roadmap in <code>MEMORY.md</code> and logs what's
+  actually happened, in order. Update it whenever a map item ships or a real design
+  decision gets made or reversed — flip the status badge, add a timeline entry.
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Progress Overview</a></li>
+    <li><a href="#map">The Map</a></li>
+    <li><a href="#tiers">Build Order</a></li>
+    <li><a href="#timeline">Timeline</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Progress Overview</h2>
+  <div class="stats">
+    <div class="stat"><div class="n">1 / 12</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
+    <div class="stat"><div class="n">E</div><div class="l">next up (the spine)</div></div>
+  </div>
+</section>
+
+<section id="map">
+  <h2>The Map</h2>
+  <p>Letters are stable identifiers, not an ordering — see Build Order below for sequence.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>#</th><th>Gap</th><th>What it is</th><th>Status</th></tr>
+    <tr><td><strong>A</strong></td><td>Intake/creation</td>
+      <td>Ticket exists → ingest it; doesn't → shape one from a raw need</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>B</strong></td><td>Spec seam</td>
+      <td>Carry ticket context into <code>superpowers:brainstorming</code> so it doesn't start cold</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>C</strong></td><td>Live work journal</td>
+      <td><code>0. Terminal/Working Notes/&lt;KEY&gt;.md</code> kept current as work happens — the handoff artifact to <code>2. Career/</code></td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>D</strong></td><td>Delivery</td>
+      <td>merge → release → verification → announcement</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>E</strong></td><td>The spine</td>
+      <td><code>using-digismith</code> — the prescriptive driver that enforces stage order and routes to everything else</td>
+      <td><span class="status next">Next up</span></td></tr>
+    <tr><td><strong>F</strong></td><td>Design review</td>
+      <td>Independent critique of a design, then the jade-and-ink artifact rendering for human approval</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>G</strong></td><td>Standards injection</td>
+      <td>Jack's coding standards + style guide carried into every implementer subagent's brief</td>
+      <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>H</strong></td><td>Subagent-driven always</td>
+      <td>Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>I</strong></td><td>QA handoff</td>
+      <td><strong>I.1</strong> capture Emma CI/CD's ephemeral URL → JIRA comment + status transition · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>J</strong></td><td>Estimation</td>
+      <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>K</strong></td><td>Model tiering</td>
+      <td>Extend <code>subagent-driven-development</code> across a pool spanning frontier → open-weight models</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
+      <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
+      <td><span class="status todo">Not started</span></td></tr>
+  </table>
+  </div>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>G — Standards injection:</strong>
+    <a href="superpowers/specs/2026-08-05-standards-injection-design.html">design spec</a> ·
+    <a href="superpowers/plans/2026-08-05-standards-injection-plan.md">implementation plan</a> ·
+    <a href="superpowers/reports/2026-08-05-standards-injection-report.html">implementation report</a>
+  </p>
+</section>
+
+<section id="tiers">
+  <h2>Build Order</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Tier</th><th>Theme</th><th>Items</th><th>Status</th></tr>
+    <tr><td><strong>1</strong></td><td>The frame</td>
+      <td><strong>G</strong> standards injection · <strong>E</strong> spine</td>
+      <td><span class="status next">In progress (1/2)</span></td></tr>
+    <tr><td><strong>2</strong></td><td>The override</td>
+      <td><strong>H</strong> subagent-driven always · <strong>K</strong> open-weight model extension</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>3</strong></td><td>Intake & estimation</td>
+      <td><strong>A</strong> intake/creation · <strong>J</strong> estimation</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>4</strong></td><td>Process expansion</td>
+      <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>5</strong></td><td>Technical expansion</td>
+      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>I.1/I.2/I.3</strong> QA handoff</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>6</strong></td><td>Last</td>
+      <td><strong>C</strong> live work journal</td>
+      <td><span class="status todo">Not started</span></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="timeline">
+  <h2>Timeline</h2>
+  <div class="timeline">
+
+    <div class="event">
+      <div class="date">2026-08-05</div>
+      <h4>Project memory established</h4>
+      <p><code>MEMORY.md</code> written: philosophy, the map (A-L), build order (6 tiers).
+      Tier 1 chosen as <strong>G</strong> (standards injection) + <strong>E</strong> (the spine).</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-05</div>
+      <h4>G brainstormed and specced</h4>
+      <p>Modeled on Agent OS's discover/index/inject-standards pattern, adapted for
+      DigiSmith: skills instead of slash commands, no profile/inheritance system.
+      Spec approved; implementation plan written.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>G built — 5 tasks, subagent-driven-development</h4>
+      <p>Repo initialized (first commit). Plugin scaffold, then
+      <code>index-standards</code> → <code>add-standards</code> → <code>discover-standards</code>
+      → <code>inject-standards</code>, each dispatched to a fresh implementer subagent and
+      independently reviewed.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>Final review found a real architecture gap</h4>
+      <p>All four skills used bare relative paths to <code>standards/</code> — broke the
+      moment they'd be invoked from any repo other than DigiSmith itself. Fixed with an
+      explicit "locate DigiSmith, ask if unknown" resolution rule, plus three Important
+      findings (Scenario 4 contradiction, unqualified skill refs, no content-change
+      refresh path). Re-reviewed clean, merged to <code>main</code>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>Polish, restructure, and go live</h4>
+      <ul>
+        <li>Swept every deferred Minor finding from the build (typos, an inconsistent
+          code example, unqualified references)</li>
+        <li>Split <code>standards/team/</code> out of <code>shopify/</code> — the
+          original two-folder design conflated <em>scope</em> (universal vs. Emma-specific)
+          with <em>kind</em> (code technique vs. process convention); real content made
+          the seam obvious</li>
+        <li>Renamed the marketplace <code>digismith</code> → <code>jazurite</code>
+          (matches the GitHub owner; the plugin itself is unaffected)</li>
+        <li>Pushed to <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a>
+          so it installs from any machine</li>
+      </ul>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>Live validation</h4>
+      <p><code>discover-standards</code> captured <code>snippet-render-vs-include.md</code>
+      in an actual session against a real Emma repo — not a dogfood simulation. First
+      real proof the installed plugin works end to end.</p>
+    </div>
+
+    <div class="event shelved">
+      <div class="date">2026-08-06</div>
+      <h4>Explored and shelved: local standards cache + fetch-standards</h4>
+      <p>Live testing surfaced friction — being asked to locate DigiSmith's repo path
+      every time. Proposed fix: a local <code>.digismith/</code> cache per consuming
+      repo, refreshed by a new <code>fetch-standards</code> skill. Mid-brainstorm,
+      self-corrected: this solves a multi-tenant sync/merge problem DigiSmith doesn't
+      have. Shelved before any design was written — writes still go straight to
+      canonical DigiSmith, unchanged.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>G closed</h4>
+      <p>Map item <strong>G</strong> done. <strong>E</strong> (the spine) is next in Tier 1.</p>
+    </div>
+
+  </div>
+</section>
+
+<footer>DigiSmith · docs/history.html</footer>
+
+</body>
+</html>
