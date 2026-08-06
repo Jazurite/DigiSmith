@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket Intake (A) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Ticket Intake (A) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-06</span>
+    <span>Map item: <strong>A</strong> — pulled forward ahead of E, per Jack's explicit reprioritization</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture — One Skill, Two Doors</a></li>
+    <li><a href="#template">Ticket Template &amp; Output</a></li>
+    <li><a href="#detection">JIRA Detection Logic</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>DigiSmith's roadmap (<code>MEMORY.md</code>) defines A as: "Ticket exists → ingest
+  it; doesn't → shape one from a raw need." Philosophy #4 frames this as "one entry
+  point, two doors" — both converge into the same downstream flow. Right now there is no
+  mechanism for either door: no way to pull a JIRA ticket into a structured, usable
+  artifact, and no way to turn a raw need into one either.</p>
+  <p>The goal is a single skill that produces a consistently-shaped ticket artifact
+  regardless of which door was used — the foundation later stages (eventually B's spec
+  seam, L's codebase grounding) can rely on having the same fields in the same place.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li>Not grounding the ticket in the codebase — which files/areas it touches. That's
+      <strong>L</strong> (Tier 4), a separate capability. This spec resolves
+      <code>MEMORY.md</code>'s open question ("A and L may be one skill, not two") in
+      favor of keeping them separate: A stops once it has a well-structured ticket.</li>
+    <li>Not estimating Story Points. The template has a field for it — captured as-is
+      when an ingested JIRA ticket already has one set — but <strong>A never estimates
+      it</strong>. That's <strong>J</strong>'s job (Tier 3, dual-track estimation).</li>
+    <li>Not writing back to JIRA. The "shape one from a raw need" door produces a local
+      draft only. Turning that into a real JIRA ticket is the noted "JIRA write-back"
+      shared primitive — not built anywhere yet, out of scope here.</li>
+    <li>Not building any real JIRA API/MCP integration. No such tool exists in this
+      environment today. A assumes whatever session is actually using it may or may not
+      have one, checks at runtime, and falls back to pasted content when it doesn't.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture — One Skill, Two Doors</h2>
+  <p>A single skill, <code>jira-intake</code>. Both doors write the same template (see
+  below) — the fork is only in how the content gets gathered.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Door 1</div>
+      <h4>Ticket Exists</h4>
+      <p>Ask for the ticket key. Check whether a JIRA/Atlassian-capable tool is available
+      in the current session (see Detection Logic). If yes, fetch by key. If no, ask the
+      user to paste the ticket content directly. Map the result into the template — no
+      confirmation step, since this is transcription of already-real content, not a
+      draft.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Door 2</div>
+      <h4>Raw Need → Shaped Ticket</h4>
+      <p>Take the user's description as the seed. Ask only what's missing to fill
+      required fields (typically Acceptance Criteria, if none were stated) — one
+      question at a time, never a batch of questions for information already inferable
+      from what was said. Draft the ticket, confirm with the user before writing — same
+      ask → draft → confirm shape <code>discover-standards</code> already uses.</p>
+    </div>
+  </div>
+</section>
+
+<section id="template">
+  <h2>Ticket Template &amp; Output</h2>
+  <p>Both doors write this same shape to <code>docs/&lt;feature-slug&gt;/ticket.md</code>,
+  inside the repo currently being worked in — the same folder specs/plans/reports will
+  eventually use for that feature, gitignored, matching the existing convention already
+  in place for Emma repos.</p>
+  <pre><code># &lt;Title&gt;
+
+**Key:** EMKT-1234 (Door 1 only — omitted if the ticket doesn't exist yet)
+**URL:** https://... (Door 1 only, if available)
+**Story Points:** 3 (captured as-is if already set; otherwise "TBD" — A never estimates)
+
+## Description
+
+...
+
+## Acceptance Criteria
+
+- ...
+- ...</code></pre>
+  <p><strong>Slug derivation:</strong> lowercase the title, replace non-alphanumeric runs
+  with a single hyphen, truncate to a handful of significant words (roughly 40 characters,
+  cut at a word boundary). E.g. "Fix cart drawer padding on mobile checkout" →
+  <code>fix-cart-drawer-padding-mobile</code>.</p>
+</section>
+
+<section id="detection">
+  <h2>JIRA Detection Logic</h2>
+  <p>Door 1 does not assume any specific JIRA integration exists. At runtime, check
+  whether a JIRA- or Atlassian-capable tool is available in the current session (the
+  same kind of runtime check <code>inject-standards</code> already does for its own
+  scenario detection — infer from what's actually available, don't hardcode an
+  assumption). If found, use it to fetch the ticket by key. If not found, tell the user
+  plainly and ask them to paste the ticket content instead — never block on JIRA access
+  that doesn't exist in this environment today.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li>No JIRA tool available <em>and</em> the user declines to paste content → stop
+      cleanly, explain that <code>jira-intake</code> needs either a JIRA tool in this
+      session or pasted ticket content to proceed. Don't fabricate a ticket.</li>
+    <li><code>docs/&lt;slug&gt;/</code> already exists: same ticket key (a re-run/refresh)
+      → confirm before overwriting <code>ticket.md</code>. Different ticket, same slug
+      (collision) → ask whether to disambiguate (append the ticket key to the slug, or
+      choose a different slug) rather than silently overwriting.</li>
+    <li>Existing <code>ticket.md</code> at the target slug has no Key/URL set (a Door 2
+      draft) and Door 1 is now being run — this is the expected "draft became real" path,
+      not a collision. Treat it as an upgrade: fill in Key/URL/Story Points on the
+      existing file rather than creating a duplicate or asking about a conflict.</li>
+    <li>Pasted content too sparse to extract a title/description → say so, offer either a
+      cleaner paste or switching to Door 2's raw-need flow instead.</li>
+    <li>Raw-need description already complete enough (title, description, and acceptance
+      criteria all inferable) → skip the clarifying question entirely. Same principle
+      <code>discover-standards</code> follows: don't ask for information already given.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — these are instruction files, consistent with G's
+  established convention. Verification is a dogfooding pass after implementation:</p>
+  <ol>
+    <li>Door 1 against a real ticket, paste-based (no JIRA tool exists in this
+      environment yet) — confirm the template maps correctly, including Story Points
+      when the pasted ticket has one set.</li>
+    <li>Door 2 from a genuinely rough, incomplete raw need — confirm it asks only for
+      what's missing, drafts, confirms, and writes.</li>
+    <li>Re-run intake on the same ticket key — confirm the overwrite-confirm path fires
+      instead of silently clobbering the existing file.</li>
+    <li>A slug collision between two different tickets — confirm the disambiguation path
+      fires rather than one ticket silently overwriting the other.</li>
+    <li>Run Door 2 to create a draft, then run Door 1 for the same feature once a real
+      ticket exists — confirm it upgrades the existing file in place (Key/URL/Story
+      Points filled in) rather than treating it as a collision.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>L</strong> (refinement &amp; exploration, Tier 4) grounds the ticket A
+      produces in the actual codebase. Deliberately kept separate — see Non-Goals.</li>
+    <li><strong>J</strong> (estimation, Tier 3) is responsible for actually filling in
+      Story Points via its dual-track methodology. A's template just reserves the field.</li>
+    <li><strong>B</strong> (spec seam, Tier 4) will eventually carry A's
+      <code>ticket.md</code> into <code>superpowers:brainstorming</code> so a spec
+      session doesn't start cold. Until B exists, that handoff is manual — the user
+      reads or references <code>ticket.md</code> themselves when starting to brainstorm.</li>
+    <li><strong>JIRA write-back</strong> (shared primitive, not yet built) would be what
+      turns Door 2's local draft into a real JIRA ticket. Out of scope here.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-06-jira-intake-design.html</footer>
+
+</body>
+</html>
