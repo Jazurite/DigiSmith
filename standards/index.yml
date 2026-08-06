@@ -3,6 +3,8 @@ shopify:
     description: Custom element base-class pattern for interactive theme components
   quickscript-asset-loading:
     description: Deferred JS/CSS loading convention using inert quickscript tags
+  snippet-render-vs-include:
+    description: Use render (not deprecated include) for snippet calls, with migration guidance
 
 team:
   branch-naming:
