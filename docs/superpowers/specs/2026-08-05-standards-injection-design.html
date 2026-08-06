@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Standards Injection (G) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Standards Injection (G) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-05</span>
+    <span>Map item: <strong>G</strong> — Tier 1, "The frame"</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#reference">Reference &amp; Departures</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#structure">Structure &amp; Storage</a></li>
+    <li><a href="#skills">The Four Skills</a></li>
+    <li><a href="#detection">Detection Logic</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>DigiSmith's roadmap (<code>MEMORY.md</code>) defines G as: "Jack's coding standards
+  + style guide carried into every implementer subagent's brief." Right now no standards
+  content exists anywhere, and there is no mechanism to carry whatever standards do exist
+  into an implementer subagent's prompt.</p>
+  <p>The goal is to build both:</p>
+  <ol>
+    <li>A place to capture coding standards — extracted from real codebases, or entered
+      manually — organized so they stay scannable rather than becoming a wall of text.</li>
+    <li>A mechanism that reads the applicable standards and folds them into context at the
+      moments that need them: plain conversation, building a new DigiSmith skill,
+      brainstorming/planning, and — the case G exists for — dispatching an implementer
+      subagent.</li>
+  </ol>
+</section>
+
+<section id="reference">
+  <h2>Reference &amp; Departures</h2>
+  <p>Modeled on <a href="https://buildermethods.com/agent-os">Agent OS</a>
+  (<code>D:\Workspace\Library\AgentOS</code>), specifically its <code>discover-standards</code> /
+  <code>index-standards</code> / <code>inject-standards</code> commands and its
+  <code>standards/[folder]/[standard].md</code> + <code>index.yml</code> layout. Two
+  deliberate departures, decided during brainstorming:</p>
+  <ul>
+    <li><strong>Skills, not slash commands.</strong> DigiSmith is a single plugin whose
+      stages are all skills (per <code>MEMORY.md</code>'s structure section); G follows
+      that convention rather than introducing commands.</li>
+    <li><strong>No profile/install system.</strong> Agent OS's profile-inheritance and
+      <code>project-install.sh</code> exist to serve many unrelated projects with different
+      stacks from one shared base. DigiSmith is personal and singular (philosophy #1:
+      "not a framework"). Standards live once, inside the DigiSmith repo itself — no
+      per-project copy step, no profiles.</li>
+  </ul>
+  <div class="callout">
+    <strong>Format note (this document):</strong> per-conversation decision, DigiSmith
+    specs are now authored in HTML rather than Markdown — richer structure and
+    presentation for documents meant to be read by a human once, following the reasoning in
+    <a href="https://www.lennysnewsletter.com/p/how-i-ai-html-is-the-new-markdown">"HTML is
+    the new Markdown"</a>. <strong>Scope, refined during plan-writing:</strong> specs only,
+    not plans — <code>superpowers:subagent-driven-development</code>'s <code>task-brief</code>
+    script mechanically parses plan files by Markdown <code>### Task N:</code> headers
+    (see <code>skills/subagent-driven-development/scripts/task-brief</code>), so plans stay
+    Markdown to remain compatible with that tooling. The standards library itself
+    (§ Structure &amp; Storage) also stays plain Markdown — it's optimized for compact
+    injection into subagent context, not visual review, and token cost there matters in a
+    way it doesn't for a spec a human reads once.
+  </div>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li>Not building the automatic call-site — this does not make every subagent dispatch
+      automatically pull in standards. That's Tier 2's <strong>H</strong> (subagent-driven
+      always). G produces the mechanism and the seam H will call; wiring H itself is out of
+      scope here.</li>
+    <li>Not building <strong>E</strong> (the spine). G is usable standalone (invoked
+      directly) until E exists to route to it automatically.</li>
+    <li>Not populating a comprehensive standards library. First-pass content is a
+      dogfooding-scale seed (see Testing), not exhaustive documentation of every convention
+      Jack has ever used.</li>
+  </ul>
+</section>
+
+<section id="structure">
+  <h2>Structure &amp; Storage</h2>
+  <pre><code>DigiSmith/
+├── skills/
+│   ├── discover-standards/SKILL.md
+│   ├── add-standards/SKILL.md
+│   ├── index-standards/SKILL.md
+│   ├── inject-standards/SKILL.md
+│   └── ...
+└── standards/
+    ├── index.yml
+    ├── global/
+    │   └── *.md            # universal principles, any stack
+    └── shopify/
+        └── *.md             # Shopify/Liquid/Emma-theme layer</code></pre>
+  <p>Everything lives inside the DigiSmith repo. <code>global/</code> and
+  <code>shopify/</code> are plain folders (mirroring Agent OS's <code>root/</code>,
+  <code>api/</code>, <code>database/</code> convention) — not a profile-inheritance system.
+  The <code>shopify/</code> layer is pulled in only when the current working repo looks
+  like a Shopify theme repo (see Detection Logic).</p>
+</section>
+
+<section id="skills">
+  <h2>The Four Skills</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Capture · from code</div>
+      <h4>discover-standards</h4>
+      <p>Analyze the codebase → 3–5 candidate areas → present findings → ask "why" per
+      pattern → draft → confirm → write. One standard fully completes the loop before the
+      next starts. Triggers <code>index-standards</code> at the end.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Capture · manual</div>
+      <h4>add-standards</h4>
+      <p>"Add a standard: always do X" → draft → confirm → write. No codebase analysis —
+      the rule is dictated directly. Shares the overlap check (append vs. duplicate) with
+      <code>discover-standards</code>. Also triggers <code>index-standards</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Maintain</div>
+      <h4>index-standards</h4>
+      <p>Scans <code>standards/</code>, diffs against <code>index.yml</code>, prompts for a
+      one-line description on new files, prunes entries for deleted files.
+      <code>root:</code> sorts first, then folders and files alphabetically.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Use</div>
+      <h4>inject-standards</h4>
+      <p>The mechanism G exists to build — reads matched standards and folds them into
+      context. Four scenarios, detailed below.</p>
+    </div>
+  </div>
+
+  <p>Both capture skills follow Agent OS's "writing concise standards" rules: lead with the
+  rule, use code examples over prose, skip what the code already makes obvious, one
+  standard per concept, bullets over paragraphs. Both write to
+  <code>standards/global/*.md</code> or <code>standards/shopify/*.md</code>, folder
+  confirmed at file-creation time.</p>
+
+  <h3>inject-standards — four scenarios</h3>
+  <table>
+    <tr><th>#</th><th>Scenario</th><th>Trigger</th><th>Format</th></tr>
+    <tr>
+      <td>1</td><td>Conversation</td>
+      <td>Regular chat / implementation work</td>
+      <td>Reads matched standards into context, announces inline</td>
+    </tr>
+    <tr>
+      <td>2</td><td>Creating a Skill</td>
+      <td>Building a <code>skills/*/SKILL.md</code> file</td>
+      <td>Asks: <code>@</code>-file references (stays in sync) or copied content
+        (self-contained)</td>
+    </tr>
+    <tr>
+      <td>3</td><td>Shaping/Planning</td>
+      <td>Plan mode, brainstorming, writing-plans</td>
+      <td>Same reference-vs-copy choice as above</td>
+    </tr>
+    <tr>
+      <td>4</td><td><strong>Dispatching a Subagent</strong> <em>(new)</em></td>
+      <td>About to fire an <code>Agent</code> tool call to build something</td>
+      <td>Full content folded into the prompt under <code>## Standards</code> — not
+        references, since a fresh subagent has no guaranteed visibility into DigiSmith's
+        plugin path. Auto-includes <code>shopify/</code> via repo detection, no prompt.</td>
+    </tr>
+  </table>
+  <p>Scenario detection: infer from context (plan mode or "spec"/"plan"/"shape" language →
+  Shaping/Planning; editing a <code>skills/*/SKILL.md</code> → Creating a Skill; about to
+  fire an <code>Agent</code> tool call → Dispatching a Subagent; otherwise → Conversation).
+  If ambiguous, ask rather than guess — ported directly from Agent OS's rule.</p>
+  <p>Matching: read <code>standards/index.yml</code>, match descriptions against the current
+  work context, present 2–5 suggestions for confirmation (skipped only for scenario 4's
+  <code>shopify/</code> auto-include). Explicit-mode invocation (naming a folder/file
+  directly) skips suggestion but still validates the target exists.</p>
+</section>
+
+<section id="detection">
+  <h2>Detection Logic</h2>
+  <p><strong>Scenario detection</strong> — see <code>inject-standards</code> above.</p>
+  <p><strong>Shopify-repo detection</strong> — the current working repo qualifies for the
+  <code>shopify/</code> layer if either is true:</p>
+  <ul>
+    <li><code>docs/development-workflow.md</code> exists at the repo root, or</li>
+    <li>the repo name matches <code>shopify-template-*</code></li>
+  </ul>
+  <p>These are the same two signals Jack's global CLAUDE.md already uses to identify Emma
+  theme repos (<code>shopify-template-kr</code>, <code>-jp</code>, <code>-ca</code>, etc.) —
+  reusing an existing convention rather than inventing a new one.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><code>inject-standards</code> finds no <code>standards/index.yml</code> → tells the
+      user to run <code>discover-standards</code> or <code>add-standards</code> first (or
+      <code>index-standards</code> if standards files exist without an index).</li>
+    <li>Explicit-mode <code>inject-standards</code> given a folder/file that doesn't exist →
+      lists what's actually available, asks if one of those was meant.</li>
+    <li><code>discover-standards</code> finds nothing notable in a chosen area → says so,
+      offers another area or skip.</li>
+    <li><code>discover-standards</code> / <code>add-standards</code> drafts a standard
+      overlapping an existing file → offers to append instead of creating a duplicate.</li>
+    <li>Shopify detection fires but <code>standards/shopify/</code> is empty or doesn't
+      exist → silently skip, nothing to inject, not an error.</li>
+    <li>Scenario 4 (subagent dispatch) with zero standards captured anywhere (fresh
+      install) → dispatch proceeds without a <code>## Standards</code> section rather than
+      blocking. G augments the brief; it doesn't gate dispatch — gating is H's future job,
+      not G's.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>These are instruction files (<code>SKILL.md</code>), not executable code — no
+  automated test suite, consistent with the existing "no automated JS syntax validation,
+  done manually" convention already in Jack's Emma workflow docs. Verification is a
+  dogfooding pass after implementation:</p>
+  <ol>
+    <li>Run <code>add-standards</code> to manually capture a handful of rules already known
+      today (e.g. pulled from the Emma CLAUDE.md conventions) as first real content in
+      <code>standards/shopify/</code>.</li>
+    <li>Run <code>discover-standards</code> against a real Emma repo on disk to validate the
+      extraction loop end-to-end.</li>
+    <li>Exercise all four <code>inject-standards</code> scenarios at least once each — plain
+      conversation, building a new DigiSmith skill, a brainstorming/writing-plans pass, and
+      an actual subagent dispatch — confirming standards appear correctly formatted in
+      each.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>H</strong> (subagent-driven always, Tier 2) will later call
+      <code>inject-standards</code> scenario 4 automatically before every implementer
+      dispatch. Until H exists, scenario 4 is invoked explicitly.</li>
+    <li><strong>E</strong> (the spine, Tier 1) will eventually route to all four skills as
+      part of enforcing stage order. G is designed to work standalone in the meantime.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-05-standards-injection-design.html</footer>
+
+</body>
+</html>
