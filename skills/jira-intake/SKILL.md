@@ -1,6 +1,6 @@
 ---
 name: jira-intake
-description: Use when the user wants to bring a ticket into DigiSmith's workflow — names an existing JIRA/Atlassian ticket by key or pastes its content, or describes a raw feature need with no ticket yet that should be shaped into one. Produces a structured docs/<slug>/ticket.md for either path.
+description: Use when the user wants to bring a ticket into DigiSmith's workflow — names an existing JIRA/Atlassian ticket by key or pastes its content, or describes a raw feature need with no ticket yet that should be shaped into one.
 ---
 
 # Jira Intake
