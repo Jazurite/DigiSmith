@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using DigiSmith (E, first slice) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Using DigiSmith (E, first slice) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-07</span>
+    <span>Map item: <strong>E</strong> — pulled forward, scoped to one slice, per Jack's explicit request</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture — Three Steps, Not Four</a></li>
+    <li><a href="#branch">Branch Naming &amp; Worktree Mechanics</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>Getting from "I have a ticket" to "I'm building it" is currently manual: invoke
+  <code>jira-intake</code>, remember the <code>team/branch-naming</code> standard, create the
+  branch by hand, then separately invoke <code>superpowers:brainstorming</code>. MEMORY.md
+  already names this gap <strong>E</strong> — "the spine... the prescriptive driver that
+  enforces stage order and routes to everything else" — but E has never been started; it sat
+  untouched in Tier 1 while G and A shipped instead.</p>
+  <p>The goal here is not E's full future scope. It's one new skill, <code>using-digismith</code>
+  (name already set by MEMORY.md's map), that closes the specific gap Jack described: after a
+  real ticket exists, create the correctly-named implementation branch and hand off into the
+  existing brainstorming → plan → build pipeline. E grows into its fuller "routes to everything"
+  role over time, as later map items (QA handoff, delivery, etc.) each add their own routing step
+  to this same skill — this build is the first slice, not a placeholder to be replaced.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li>Not building <strong>B</strong> (spec seam). Carrying ticket context into
+      <code>brainstorming</code> so it doesn't start cold is B's eventual, fuller job. This
+      build does the simplest possible version — pass <code>ticket.md</code>'s content into the
+      invocation — as a stand-in B can later replace without disturbing the rest of
+      <code>using-digismith</code>.</li>
+    <li>Not building E's fuller routing (QA handoff, delivery, estimation, etc.). Only the
+      intake → branch → brainstorming handoff ships now.</li>
+    <li>Not modifying <code>jira-intake</code>. It stays exactly as shipped, independently
+      invocable for intake-only use; <code>using-digismith</code> calls it, not the reverse.</li>
+    <li>Not re-implementing any part of <code>brainstorming</code>'s or <code>writing-plans</code>'s
+      own terminal-step chaining. Each already declares what it invokes next (brainstorming →
+      writing-plans; writing-plans → subagent-driven-development/executing-plans) — duplicating
+      that chain here would violate DigiSmith's own philosophy #2 ("duplicating a Superpowers
+      capability is a bug, not a feature").</li>
+    <li>Not handling a ticket with no real key. A Door 2 draft that hasn't been upgraded to a
+      real ticket (see <a href="#errors">Error Handling</a>) stops this skill before any branch
+      is created — same manual path as today.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture — Three Steps, Not Four</h2>
+  <p>It initially reads like "chain four pipeline stages together," but <code>brainstorming</code>
+  and <code>writing-plans</code> each already declare their own next step as a hard-coded
+  terminal move. <code>using-digismith</code>'s real job is only the part nothing else owns:</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Step 1</div>
+      <h4>Get a Real Ticket</h4>
+      <p>If this conversation doesn't already have one, invoke <code>digismith:jira-intake</code>.
+      If it produces a key-less Door 2 draft, stop here — see Error Handling.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 2</div>
+      <h4>Create the Branch</h4>
+      <p><code>&lt;Key&gt;__&lt;slug&gt;</code> as an isolated worktree, reusing
+      <code>jira-intake</code>'s own slug derivation on the ticket title.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 3</div>
+      <h4>Hand Off</h4>
+      <p>Invoke <code>superpowers:brainstorming</code> from inside that worktree, with
+      <code>ticket.md</code>'s content passed in as seed context. Superpowers' own chain takes
+      over from there, untouched.</p>
+    </div>
+  </div>
+</section>
+
+<section id="branch">
+  <h2>Branch Naming &amp; Worktree Mechanics</h2>
+  <ul>
+    <li><strong>Format:</strong> <code>&lt;ticket.md's Key field&gt;__&lt;slug&gt;</code> — e.g.
+      <code>EMKT-9001__fix-cart-drawer-padding-mobile</code>. Using the ticket's actual Key
+      (rather than a hardcoded <code>EMKT-</code> prefix) means this works correctly regardless
+      of JIRA project prefix, with no separate repo-type detection needed.</li>
+    <li><strong>Slug:</strong> reuse <code>jira-intake</code>'s slug-derivation algorithm on the
+      ticket's title verbatim — same determinism guarantee, not a second implementation to keep
+      in sync.</li>
+    <li><strong>Creation:</strong> prefer a native worktree tool if the session has one; fall
+      back to <code>superpowers:using-git-worktrees</code> otherwise.</li>
+    <li><strong>Reuse over duplication:</strong> before creating anything, check whether a
+      worktree for this exact branch name already exists (e.g. resuming a ticket started in an
+      earlier session). If so, switch into it instead of creating a second one.</li>
+  </ul>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>No real key yet</strong> (a Door 2 draft never upgraded to a real ticket) → stop
+      after intake. Explain that <code>using-digismith</code> needs a real ticket key to name a
+      branch; the user can continue manually, or run Door 1 later once the ticket is real. No
+      branch, no worktree, no pipeline invocation.</li>
+    <li><strong>Existing worktree/branch for this ticket</strong> → switch into it; never create
+      a duplicate.</li>
+    <li><strong><code>jira-intake</code>'s own stop conditions</strong> (no JIRA tool and
+      declines to paste, sparse paste, etc.) → <code>using-digismith</code> doesn't proceed past
+      whatever <code>jira-intake</code> itself decided; this isn't a new failure mode to
+      reinvent, just don't advance past it.</li>
+    <li><strong>Branch name collision with an unrelated ticket</strong> (the git-branch-level
+      case, distinct from <code>jira-intake</code>'s own docs-folder collision check) → don't
+      silently reuse a stranger's branch. Ask before proceeding — the same "never silently
+      overwrite/reuse" posture used everywhere else in this project.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Verification is a
+  dogfooding pass after implementation:</p>
+  <ol>
+    <li>Happy path — a fixture <code>ticket.md</code> with a real Key already on disk; confirm
+      <code>using-digismith</code> derives the correct branch name, creates the worktree, and
+      constructs the <code>brainstorming</code> handoff with the ticket's actual content
+      included. (Verifying the constructed invocation's content is the achievable bar here — a
+      dogfood subagent can't complete a full live, <code>AskUserQuestion</code>-gated
+      brainstorming session end-to-end, the same limitation surfaced testing <code>jira-intake</code>'s
+      confirmation-gated edge cases.)</li>
+    <li>No ticket yet — confirm <code>jira-intake</code> is triggered first, and the skill
+      continues once a real key exists.</li>
+    <li>Key-less Door 2 draft — confirm a clean stop, no branch or worktree created.</li>
+    <li>Resuming an existing worktree — confirm reuse rather than duplication.</li>
+    <li>Branch-name collision with an unrelated ticket — confirm the skill asks rather than
+      silently reusing someone else's branch.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>B</strong> (spec seam, Tier 4, not yet built) — this skill's ticket-context
+      hand-off to <code>brainstorming</code> is a deliberately minimal stand-in for B's eventual
+      fuller design. When B ships, it replaces this one step; the rest of
+      <code>using-digismith</code> doesn't need to change.</li>
+    <li><strong>E</strong>'s fuller scope — QA handoff routing, delivery routing, and the rest of
+      "routes to everything else" — is explicitly deferred to later map items, each adding their
+      own step to this same skill.</li>
+    <li><strong>A</strong> (<code>jira-intake</code>) — unchanged; still independently invocable
+      for intake-only use.</li>
+    <li><strong>H</strong> (subagent-driven always, Tier 2) and <strong>L</strong> (refinement,
+      Tier 4) — not touched by this build.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-07-using-digismith-design.html</footer>
+
+</body>
+</html>
