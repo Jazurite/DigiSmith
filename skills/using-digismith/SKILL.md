@@ -54,7 +54,13 @@ create a branch or worktree for a key-less ticket.
 5. Otherwise, create the isolated worktree with this branch name: prefer
    a native worktree tool if this session has one (it owns placement,
    branching, and cleanup); fall back to
-   `superpowers:using-git-worktrees` otherwise.
+   `superpowers:using-git-worktrees` otherwise. Immediately after
+   creation, verify the resulting branch is named exactly `<Key>__<slug>`
+   — some native tools alter the name you asked for (e.g. adding their own
+   prefix). If it doesn't match, rename it from inside the new worktree
+   (`git branch -m <actual-name> <Key>__<slug>`) before continuing to Step
+   3. Steps 2.3 and 2.4 key off this exact name on future runs, so a
+   silently-altered name breaks reuse and collision detection.
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -87,5 +93,5 @@ yourself.
 | Step | Action |
 |---|---|
 | 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less |
-| 2 | Derive `<Key>__<slug>` branch name, reuse existing worktree or create one, ask on collision |
+| 2 | Derive `<Key>__<slug>` branch name, reuse existing worktree or create one (verify/rename to the exact name if the creation tool altered it), ask on collision |
 | 3 | Invoke `superpowers:brainstorming` with the ticket's content as seed context; Superpowers' own chain takes over from there |
