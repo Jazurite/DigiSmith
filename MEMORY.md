@@ -98,7 +98,7 @@ tiering below.
 | **I** | QA handoff | **I.1** capture Emma CI/CD's ephemeral URL → JIRA comment + status transition · **I.2** end-to-end testing · **I.3** visual regression vs Figma (custom Figma skill) |
 | **J** | Estimation | Dual-track: the internal number (real) and the client-facing number (committed). The dilution is deliberate and is the point of the stage |
 | **K** | Model tiering | Extend `subagent-driven-development` across a pool spanning frontier → open-weight models, dispatching each agent to the cheapest one that can handle its task |
-| **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed |
+| **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed — deliberately kept separate from **A**, which stops once a well-structured ticket exists |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).

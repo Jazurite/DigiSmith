@@ -60,12 +60,18 @@ ticket already exist, or are we shaping one from a raw need?
 
 ### Step 3: Derive the Slug and Write
 
-1. Derive the slug from the title: lowercase, replace non-alphanumeric
-   runs with a single hyphen, truncate to ~40 characters cut at a word
-   boundary. Example: "Fix cart drawer padding on mobile checkout" →
-   `fix-cart-drawer-padding-mobile`.
+1. Derive the slug from the title: lowercase, drop filler words (a, an,
+   the, on, to, of, for, in), replace remaining non-alphanumeric runs with
+   a single hyphen, then truncate to ~40 characters at a word boundary —
+   never leaving a trailing filler word or hyphen. Example: "Fix cart
+   drawer padding on mobile checkout" → `fix-cart-drawer-padding-mobile`.
+   Determinism matters here: two independent runs for the same feature
+   must land on the same slug, or the Handling Existing Files table below
+   never fires.
 2. Target path: `docs/<slug>/ticket.md`, in the repo currently being
-   worked in.
+   worked in — never DigiSmith's own repo, which only hosts this skill,
+   not the tickets it processes — gitignored, matching the existing
+   convention for specs/plans/reports in that same folder.
 3. Check for an existing file at that path first — see Handling Existing
    Files below — before writing.
 4. Write the file in the Ticket Template shape.
@@ -76,7 +82,7 @@ ticket already exist, or are we shaping one from a raw need?
 # <Title>
 
 **Key:** EMKT-1234 (Door 1 only — omitted if the ticket doesn't exist yet)
-**URL:** https://... (Door 1 only, if available)
+**URL:** https://... (Door 1 only — include only if actually fetched or supplied by the user; never construct one from the key)
 **Story Points:** 3 (captured as-is if already set; otherwise "TBD" — jira-intake never estimates)
 
 ## Description
@@ -110,6 +116,7 @@ Before writing, check whether `docs/<slug>/ticket.md` already exists:
 | Same as incoming key | Door 1, same key (a re-run) | Confirm before overwriting via `AskUserQuestion` |
 | Different from incoming key | Door 1, different key, same slug (a collision) | Ask whether to disambiguate — append the ticket key to the slug, or choose a different slug — rather than silently overwriting |
 | Blank/absent (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — fill in Key/URL/Story Points on the existing file rather than creating a duplicate or asking about a conflict |
+| Any existing file | Door 2 (raw need arrives again at this slug) | Confirm before overwriting via `AskUserQuestion` — same as a Door 1 refresh — regardless of whether the existing file already has a Key set |
 
 ## Error Handling
 
