@@ -110,7 +110,7 @@
   <div class="stats">
     <div class="stat"><div class="n">2 / 12</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
-    <div class="stat"><div class="n">E</div><div class="l">next up (the spine)</div></div>
+    <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
 </section>
 
@@ -134,7 +134,7 @@
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>E</strong></td><td>The spine</td>
       <td><code>using-digismith</code> — the prescriptive driver that enforces stage order and routes to everything else</td>
-      <td><span class="status next">Next up</span></td></tr>
+      <td><span class="status next">In progress</span></td></tr>
     <tr><td><strong>F</strong></td><td>Design review</td>
       <td>Independent critique of a design, then the jade-and-ink artifact rendering for human approval</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -169,6 +169,12 @@
     <a href="superpowers/specs/2026-08-06-jira-intake-design.html">design spec</a> ·
     <a href="superpowers/plans/2026-08-07-jira-intake-plan.md">implementation plan</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>E — The spine (first slice):</strong> First slice shipped: intake → branch →
+    brainstorming hand-off — <code>using-digismith</code> skill —
+    <a href="superpowers/specs/2026-08-07-using-digismith-design.html">design spec</a> ·
+    <a href="superpowers/plans/2026-08-07-using-digismith-plan.md">implementation plan</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -177,8 +183,8 @@
   <table>
     <tr><th>Tier</th><th>Theme</th><th>Items</th><th>Status</th></tr>
     <tr><td><strong>1</strong></td><td>The frame</td>
-      <td><strong>G</strong> standards injection <span class="status done">Done</span> · <strong>E</strong> spine</td>
-      <td><span class="status next">In progress (1/2)</span></td></tr>
+      <td><strong>G</strong> standards injection <span class="status done">Done</span> · <strong>E</strong> spine <span class="status next">In progress</span></td>
+      <td><span class="status next">In progress — both items underway (1 done, 1 partial)</span></td></tr>
     <tr><td><strong>2</strong></td><td>The override</td>
       <td><strong>H</strong> subagent-driven always · <strong>K</strong> open-weight model extension</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -312,6 +318,26 @@
       <h4>A closed</h4>
       <p>Map item <strong>A</strong> done. Tier 3 ("Intake & estimation") moves to in
       progress (1/2) — <strong>J</strong> (estimation) is still outstanding.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-07</div>
+      <h4>E pulled forward, specced as a first slice</h4>
+      <p>Design spec approved for <code>using-digismith</code>, deliberately scoped to a
+      first slice — intake → branch → brainstorming hand-off — rather than E's full future
+      role enforcing stage order and routing to everything else. Implementation plan
+      written (3 tasks).</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-07</div>
+      <h4>E first slice built — 3 tasks, subagent-driven-development</h4>
+      <p><code>skills/using-digismith/SKILL.md</code> delivered: Task 1 built the skill
+      and dogfooded the happy path; Task 2 dogfooded three edge cases and found one real
+      gap — the skill's native-worktree-tool branch-naming didn't guarantee the exact
+      <code>&lt;Key&gt;__&lt;slug&gt;</code> name, fixed with a verify/rename step; Task 3
+      is this history.html update. Map item <strong>E</strong> stays in progress — only
+      the first slice has shipped, not the spine's full future scope.</p>
     </div>
 
   </div>
