@@ -159,10 +159,6 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   endpoint — natively, via proxy, or not at all — is unknown. Chutes is the
   likely vehicle for the open-weight side (DeepSeek/Qwen/Kimi/GLM). Run a
   feasibility spike before speccing Tier 2, not during.
-- **A and L may be one skill, not two.** "Get the ticket" and "ground it in
-  the codebase" are arguably a single continuous act; splitting them means
-  designing a handoff between two halves of one thought. Decide when Tier 3
-  or 4 gets specced.
 - **F's shape is undecided.** Whether design review is (a) present-for-human-
   review only, (b) independent agent critique only, or (c) critique then
   present, was raised but never settled. Decide when Tier 5 gets specced.
