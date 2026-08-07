@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-08-06</span>
+    <span>Last updated: 2026-08-07</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">1 / 12</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">2 / 12</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">next up (the spine)</div></div>
   </div>
@@ -122,7 +122,7 @@
     <tr><th>#</th><th>Gap</th><th>What it is</th><th>Status</th></tr>
     <tr><td><strong>A</strong></td><td>Intake/creation</td>
       <td>Ticket exists → ingest it; doesn't → shape one from a raw need</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>B</strong></td><td>Spec seam</td>
       <td>Carry ticket context into <code>superpowers:brainstorming</code> so it doesn't start cold</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -164,6 +164,11 @@
     <a href="superpowers/plans/2026-08-05-standards-injection-plan.md">implementation plan</a> ·
     <a href="superpowers/reports/2026-08-05-standards-injection-report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>A — Two-door ticket intake:</strong> <code>jira-intake</code> skill —
+    <a href="superpowers/specs/2026-08-06-jira-intake-design.html">design spec</a> ·
+    <a href="superpowers/plans/2026-08-07-jira-intake-plan.md">implementation plan</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -178,8 +183,8 @@
       <td><strong>H</strong> subagent-driven always · <strong>K</strong> open-weight model extension</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>3</strong></td><td>Intake & estimation</td>
-      <td><strong>A</strong> intake/creation · <strong>J</strong> estimation</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>A</strong> intake/creation <span class="status done">Done</span> · <strong>J</strong> estimation</td>
+      <td><span class="status next">In progress (1/2)</span></td></tr>
     <tr><td><strong>4</strong></td><td>Process expansion</td>
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -271,6 +276,42 @@
       <div class="date">2026-08-06</div>
       <h4>G closed</h4>
       <p>Map item <strong>G</strong> done. <strong>E</strong> (the spine) is next in Tier 1.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>A reprioritized ahead of E</h4>
+      <p>Jack pulled <strong>A</strong> (intake/creation) ahead of <strong>E</strong> (the
+      spine) by direct request, out of the Tier 1/Tier 3 build order — E was still open.
+      Tier order in <code>MEMORY.md</code> is a plan, not a lock.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-06</div>
+      <h4>A brainstormed and specced</h4>
+      <p>Settled on a single skill with two doors: Door 1, a ticket already exists — ingest
+      by key or paste; Door 2, a raw need with no ticket yet — shape one. Both converge on
+      <code>docs/&lt;slug&gt;/ticket.md</code>. This resolved the open question logged in
+      <code>MEMORY.md</code> — "A and L may be one skill, not two" — in favor of keeping
+      them separate: A stops once the ticket exists, while L (grounding it in the actual
+      codebase) stays a distinct future map item. Spec approved; implementation plan
+      written.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-07</div>
+      <h4>A built — 3 tasks, subagent-driven-development</h4>
+      <p><code>skills/jira-intake/SKILL.md</code> delivered: both doors' happy path first,
+      then edge-case handling for existing-file branching (re-run, collision, Door 2 →
+      Door 1 upgrade) and can't-proceed paths, each dispatched to a fresh implementer
+      subagent and independently reviewed.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-07</div>
+      <h4>A closed</h4>
+      <p>Map item <strong>A</strong> done. Tier 3 ("Intake & estimation") moves to in
+      progress (1/2) — <strong>J</strong> (estimation) is still outstanding.</p>
     </div>
 
   </div>
