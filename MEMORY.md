@@ -180,3 +180,8 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   not visual review.
 - Record decisions in plain, git-committed text — not any single LLM's
   private memory — so any harness opening the project picks up context.
+- **DigiSmith's own feature work always happens in an isolated
+  worktree/branch**, never directly on `main` — decided 2026-08-08 (a
+  reversal of the pattern G, A, and E were built under, all committed
+  straight to `main`). Applies to every implementation plan executed
+  against this repo, regardless of who's running it.
