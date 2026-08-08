@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capture Ephemeral URL (M) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Capture Ephemeral URL (M) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>Map item: <strong>M</strong></span>
+    <span>Commit range: <code>c25f658..abb3ac1</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>capture-ephemeral-url</code> — DigiSmith's map item <strong>M</strong> —
+  a skill that, once a PR is open in an Emma theme repo, waits for the ephemeral-deploy
+  GitHub Actions check, extracts the Shopify Preview Theme and Theme Editor URLs from the
+  <code>github-actions</code> bot's PR comment, and reports them. No PR creation (that
+  stays <code>superpowers:finishing-a-development-branch</code>'s job) and no JIRA
+  write-back (backlogged as the separate, later map item <strong>I.1</strong>, which will
+  consume M's output) — M's job ends at reporting the two URLs in-session. Followed the
+  full Superpowers process: brainstorming → spec → writing-plans →
+  <code>superpowers:subagent-driven-development</code> (3 tasks, each dispatched to a
+  fresh implementer subagent and independently reviewed) → a final whole-branch review →
+  one fix wave → a follow-up commit closing the one item the final review had parked
+  rather than fixed outright. Because the authenticated <code>gh</code> account in this
+  environment can't resolve DigiSmith's own repo, and creating a scratch PR against a real
+  Emma repo purely to dogfood a personal tool would be visible to teammates, Tasks 1–2
+  dogfooded the skill's decision logic (branch parsing, poll-decision branching, regex
+  extraction) against fixture JSON/text rather than live <code>gh pr view</code> /
+  <code>gh pr checks</code> calls — those get their first live verification the next time
+  this skill runs against a real Emma PR.</p>
+  <p>Reference documents: the
+  <a href="../specs/2026-08-08-capture-ephemeral-url-design.html">design spec</a> and the
+  <a href="../plans/2026-08-08-capture-ephemeral-url-plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Skill · happy path</div>
+      <h4>Task 1 — <code>capture-ephemeral-url</code> Skill, Happy Path</h4>
+      <p>Produces a plain-language report of the resolved ticket key (if any), the Preview
+      Theme URL, and the Theme Editor URL.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Verification · edge cases</div>
+      <h4>Task 2 — <code>capture-ephemeral-url</code> Edge Cases</h4>
+      <p>Produces nothing new downstream — verifies the remaining spec-required scenarios
+      not covered in Task 1: no-match branch, check failure, timeout, and
+      missing/malformed comment.</p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="tag">Docs</div>
+      <h4>Task 3 — Update <code>docs/history.html</code> for Map Item M</h4>
+      <p>Produces an up-to-date living tracker.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1</td>
+      <td><code>capture-ephemeral-url</code> Skill — Happy Path</td>
+      <td><span class="status-ok">✓ Approved, clean</span></td>
+      <td>Dogfood sub-dispatches used the haiku model for reasoning-style verification
+      (reviewer independently re-verified regex extraction in Python — not a compliance
+      gap); SKILL.md Step 1 didn't state how the current branch name is obtained before
+      parsing (omission in the plan's own literal text, not implementer-introduced).</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>capture-ephemeral-url</code> Edge Cases</td>
+      <td><span class="status-ok">✓ Approved, no code change</span> — review clean modulo
+      1 parked report-hygiene item (closed at final review; see below)</td>
+      <td>Step 1 dogfood substituted the real worktree branch name for the brief's
+      specified hypothetical ("main") — same regex failure mode either way, harmless this
+      run, but worth tightening future briefs to hold fixture inputs constant.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Update <code>docs/history.html</code> for Map Item M</td>
+      <td><span class="status-ok">✓ Approved, clean</span></td>
+      <td><code>docs/history.html</code>'s I.3 description drops the "(custom Figma
+      skill)" parenthetical present in MEMORY.md — pre-existing drift between the two
+      docs, not introduced by this task.</td>
+    </tr>
+  </table>
+  </div>
+  <p>Each dogfood test dispatched a separate subagent against a concrete fixture scenario
+  (branch names, poll-tick sequences, a real example bot comment) — the project's chosen
+  substitute for an automated test suite, since this is an instruction file, not code.</p>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>The whole-branch review (dispatched on the most capable available model, opus) came
+  back <strong>"Ready to merge: With fixes"</strong> — 3 Important findings plus 1 Minor
+  promoted to must-fix. The same pass closed Task 2's parked report-hygiene item (confirmed
+  <code>.superpowers/sdd/</code> is gitignored and untracked, so it never reached a shipped
+  artifact) and left Task 1's and Task 3's deferred minors as non-blocking. One fix
+  subagent (sonnet) addressed all four must-fix items in a single commit; a scoped
+  re-review confirmed three of the four fully addressed, but caught that the Finding 2
+  rewrite introduced a new Important-severity regression of its own.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td><code>gh pr checks</code> exits non-zero on the normal polling path (pending
+      state, or another unrelated check failing) — Step 3 never said so, risking the poll
+      loop being misread as "the command failed" instead of "keep polling."</td>
+      <td><span class="status-ok">Fixed</span> — Step 3 now says to ignore the command's
+      exit code entirely and branch only on the <code>bucket</code> value the
+      <code>--jq</code> filter prints.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>Step 4's jq took the <em>first</em> (oldest) <code>github-actions</code> comment
+      matching the filter, not the most recent ephemeral-deploy comment — stale on any PR
+      that received more than one push.</td>
+      <td><span class="status-fixed">Fixed, with a caveat</span> — jq rewritten to filter
+      on comments containing "Ephemeral Theme Deployed Successfully" and take the
+      <strong>last</strong> match. That rewrite introduced a new Important-severity
+      regression, caught by the scoped re-review: <code>| last</code> on zero matches
+      (comment not posted yet) prints the literal string <code>"null"</code> instead of
+      empty output, which would be misdiagnosed as format drift instead of triggering the
+      60-second retry-then-give-up path. Final review parked this residual finding rather
+      than dispatch a second fix wave — ruling: "real but non-load-bearing … doesn't
+      reveal a plan-level design defect, just a jq idiom gap" — and flagged the exact
+      one-token fix (<code>| last</code> → <code>| last // empty</code>) directly to Jack.
+      <strong>Update:</strong> that flagged fix — plus a README mention of the skill,
+      which otherwise had no discoverable entry point — shipped in a follow-up commit,
+      <code>abb3ac1</code>, which is included in this report's commit range even though it
+      postdates the ledger excerpted above.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>The format-drift fallback triggered only when <strong>neither</strong> URL regex
+      matched, so a partial match (only one of the two URLs found) would silently ship an
+      incomplete report instead of falling back to the raw comment body.</td>
+      <td><span class="status-ok">Fixed</span> — the gate now triggers when
+      <strong>either</strong> regex fails to match, including a partial match.</td>
+    </tr>
+    <tr>
+      <td>Minor (promoted to must-fix)</td>
+      <td>Step 1 never stated how the current branch name is obtained before parsing — the
+      SKILL.md text jumped straight to the regex. Originally deferred at the Task 1
+      review; final review promoted it to must-fix.</td>
+      <td><span class="status-ok">Fixed</span> — added the literal
+      <code>git branch --show-current</code> command to Step 1.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">2839cce</span> feat(qa): add capture-ephemeral-url skill (M), happy path</li>
+    <li><span class="sha">bf04405</span> docs: update history — capture-ephemeral-url (M) shipped</li>
+    <li><span class="sha">e689c6f</span> fix(qa): close final-review gaps for capture-ephemeral-url (M)</li>
+    <li><span class="sha">abb3ac1</span> fix(qa): guard jq null output, document capture-ephemeral-url in README</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/reports/2026-08-08-capture-ephemeral-url-report.html</footer>
+
+</body>
+</html>
