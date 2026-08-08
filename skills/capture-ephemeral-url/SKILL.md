@@ -88,13 +88,17 @@ Branch on the returned `bucket` value:
 
 ```bash
 gh pr view <PR> --json comments \
-  --jq '[.comments[] | select(.author.login=="github-actions") | .body | select(contains("Ephemeral Theme Deployed Successfully"))] | last'
+  --jq '[.comments[] | select(.author.login=="github-actions") | .body | select(contains("Ephemeral Theme Deployed Successfully"))] | last // empty'
 ```
 
 This filters to `github-actions` comments whose body contains "Ephemeral
 Theme Deployed Successfully" and takes the **last** one — i.e. the most
 recent deploy comment, not an earlier one left over from a prior push to
-the same PR. Extract both URLs from that comment's body with:
+the same PR. The trailing `// empty` matters: without it, `last` on an
+empty list (no matching comment posted yet) prints the literal text
+`null` instead of nothing, which would be mistaken for a malformed
+comment body instead of triggering the "not found yet, retry" path below.
+Extract both URLs from that comment's body with:
 
 ```
 Preview Theme:\**\s*(https://\S+?preview_theme_id=\d+)
