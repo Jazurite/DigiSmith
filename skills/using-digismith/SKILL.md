@@ -27,16 +27,16 @@ just want the ticket captured with no branch/pipeline yet, use
 
 ### Step 1: Get a Real Ticket
 
-Check whether this conversation already produced a `docs/<slug>/ticket.md`
-via `digismith:jira-intake` earlier this session. If not, invoke
-`digismith:jira-intake` now.
+Check whether this conversation already produced a
+`.digismith/docs/<slug>/ticket.md` via `digismith:jira-intake` earlier
+this session. If not, invoke `digismith:jira-intake` now.
 
 If the result has no `**Key:**` line set — it's a Door 2 draft that was
 never upgraded to a real ticket — stop here. See Error Handling. Do not
 create a branch or worktree for a key-less ticket.
 
 Then, still in the original checkout and **before any worktree exists**,
-read the full content of the `docs/<slug>/ticket.md` that
+read the full content of the `.digismith/docs/<slug>/ticket.md` that
 `digismith:jira-intake` just wrote (or that this session already had)
 into your own context now — title, description, acceptance criteria,
 key. `digismith:jira-intake` writes that file gitignored, and a freshly
@@ -47,10 +47,11 @@ inside the new worktree.
 
 ### Step 2: Create the Branch
 
-1. Derive the slug: reuse the folder name `ticket.md` is already sitting
-   in (`docs/<slug>/ticket.md`) — that folder name already is the correct
-   slug, produced by `digismith:jira-intake`'s own deterministic slug
-   algorithm. Never re-derive the slug independently from the title.
+1. Derive the slug: reuse the folder name `ticket.md` is already
+   sitting in (`.digismith/docs/<slug>/ticket.md`) — that folder name
+   already is the correct slug, produced by `digismith:jira-intake`'s
+   own deterministic slug algorithm. Never re-derive the slug
+   independently from the title.
 2. Branch name: `<Key>__<slug>` — e.g.
    `EMKT-9001__fix-cart-drawer-padding-mobile`, using the ticket's actual
    `**Key:**` value verbatim (not a hardcoded `EMKT-` prefix).
@@ -132,6 +133,6 @@ chain yourself.
 
 | Step | Action |
 |---|---|
-| 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less; read `ticket.md`'s full content into context now — it's gitignored and won't exist in the worktree |
+| 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less; read `.digismith/docs/<slug>/ticket.md`'s full content into context now — it's gitignored and won't exist in the worktree |
 | 2 | Derive `<Key>__<slug>` branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket |
 | 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context; Superpowers' own chain takes over from there |

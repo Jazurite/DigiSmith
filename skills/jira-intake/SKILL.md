@@ -9,9 +9,10 @@ description: Use when the user wants to bring a ticket into DigiSmith's workflow
 
 One entry point, two doors, per DigiSmith's philosophy #4. A ticket
 already exists → ingest it (Door 1). No ticket yet, just a need → shape
-one (Door 2). Both converge on the same `docs/<slug>/ticket.md` shape.
-`jira-intake` stops once that file exists — grounding it in the codebase
-is **L**, estimating Story Points is **J**, both separate later stages.
+one (Door 2). Both converge on the same
+`.digismith/docs/<slug>/ticket.md` shape. `jira-intake` stops once that
+file exists — grounding it in the codebase is **L**, estimating Story
+Points is **J**, both separate later stages.
 
 ## When to Use
 
@@ -68,13 +69,28 @@ ticket already exist, or are we shaping one from a raw need?
    Determinism matters here: two independent runs for the same feature
    must land on the same slug, or the Handling Existing Files table below
    never fires.
-2. Target path: `docs/<slug>/ticket.md`, in the repo currently being
-   worked in — never DigiSmith's own repo, which only hosts this skill,
-   not the tickets it processes — gitignored, matching the existing
-   convention for specs/plans/reports in that same folder.
-3. Check for an existing file at that path first — see Handling Existing
+2. Target path: `.digismith/docs/<slug>/ticket.md`, in the repo currently
+   being worked in — never DigiSmith's own repo, which only hosts this
+   skill, not the tickets it processes.
+3. **Commit-vs-gitignore, decided once per repo:** before writing into
+   `.digismith/docs/` in this repo for the first time, check that repo's
+   own `.gitignore` for a `.digismith/` (or `.digismith/docs/`) entry:
+   - **Entry found** → write gitignored, proceed, no question asked.
+   - **No entry, and `.digismith/docs/` doesn't already exist in this
+     repo** → ask once via `AskUserQuestion` ("commit this repo's
+     DigiSmith docs, or keep them local-only?"). If gitignored is chosen,
+     append the entry to this repo's `.gitignore` (creating the file if it
+     doesn't exist) — its presence is now the remembered answer for every
+     future session in this repo. If committed is chosen, do nothing
+     further; the entry's continued absence is itself the remembered
+     "committed" signal.
+   - **No entry, but `.digismith/docs/` already exists in this repo** →
+     an earlier write already happened without adding a `.gitignore`
+     entry; treat as "committed" (matches the existing files' actual
+     state), don't ask again.
+4. Check for an existing file at that path first — see Handling Existing
    Files below — before writing.
-4. Write the file in the Ticket Template shape.
+5. Write the file in the Ticket Template shape.
 
 ## Ticket Template
 
@@ -108,7 +124,8 @@ in this environment today.
 
 ## Handling Existing Files at the Target Slug
 
-Before writing, check whether `docs/<slug>/ticket.md` already exists:
+Before writing, check whether `.digismith/docs/<slug>/ticket.md` already
+exists:
 
 | Existing file's `Key` | Incoming | Action |
 |---|---|---|
@@ -136,4 +153,5 @@ Before writing, check whether `docs/<slug>/ticket.md` already exists:
 | 1 | Determine the door |
 | 2a | Door 1: get key, detect JIRA tool, fetch or ask for paste |
 | 2b | Door 2: seed from description, ask only what's missing, draft, confirm |
-| 3 | Derive slug, branch on existing file (refresh / collision / upgrade / none), write `docs/<slug>/ticket.md` |
+| 3 | Derive slug, branch on existing file (refresh / collision / upgrade / none), write `.digismith/docs/<slug>/ticket.md` |
+| 4 | Commit-vs-gitignore, decided once per repo: entry found → proceed gitignored; no entry + folder doesn't exist yet → ask once via `AskUserQuestion`, then add the `.gitignore` entry if gitignored is chosen; no entry + folder already exists → treat as committed, don't ask |
