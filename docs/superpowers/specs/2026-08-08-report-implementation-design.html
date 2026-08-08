@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Implementation Reporting (N) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Implementation Reporting (N) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>Map item: <strong>N</strong> — new item, formalizes the manually-written G report into a required step</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#sections">Report Sections</a></li>
+    <li><a href="#dataflow">Data Flow</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>When map item <strong>G</strong> (standards injection) finished, Jack got a rich HTML
+  implementation report (<code>docs/superpowers/reports/2026-08-05-standards-injection-report.html</code>)
+  summarizing the build: what shipped, a per-task review table, the final-review findings and how
+  they were resolved, the merge commit list. It was written by hand, in-session, after the fact.
+  Every DigiSmith feature since (A, E, M) skipped this — no report exists for any of them.</p>
+  <p>The goal is to make this automatic and required rather than something the controller
+  session may or may not remember to do: a new skill, <code>digismith:report-implementation</code>,
+  that generates the same shape of report for every <code>subagent-driven-development</code> plan,
+  without needing to be asked.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not covering <code>finishing-a-development-branch</code>'s Option 2</strong>
+      (push + PR). A PR often merges later on GitHub, in nobody's Claude Code session — there is
+      no session present to observe that event or write a report about it. Left for a future
+      slice if it turns out to matter.</li>
+    <li><strong>Not covering plans executed via <code>superpowers:executing-plans</code></strong>
+      ("jdi" — Jack's own nickname for it). That path has no per-task ledger in the shape this
+      skill reads; its trigger condition (see Architecture) simply won't match.</li>
+    <li><strong>Not automating the "Post-Merge Sweep" section.</strong> G's report had one because
+      Jack asked for a follow-up sweep of deferred Minor findings after merging. That stays a
+      manual, occasional thing this skill doesn't try to trigger or generate on its own.</li>
+    <li><strong>Not modifying <code>subagent-driven-development</code> or
+      <code>finishing-a-development-branch</code></strong> (both Superpowers files). This skill
+      inserts itself by trigger-matching at the right moment, the same way
+      <code>capture-ephemeral-url</code> hooks in after <code>finishing-a-development-branch</code>'s
+      PR-creation option without editing that skill's file.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>New skill: <code>digismith:report-implementation</code>. Its trigger is narrow and specific:
+  <em>a <code>subagent-driven-development</code> plan's final whole-branch review has just come
+  back clean (all findings fixed, parked, or accepted) — right before that skill's own Finish step
+  deletes the plan's workspace (<code>.superpowers/sdd/&lt;plan&gt;/</code>).</em> This is earlier
+  than "after the branch is merged," and deliberately so: the ledger and per-task review detail
+  that make the report worth reading exist only in that soon-to-be-deleted workspace (or in the
+  controller's own conversational memory, which is not durable across compaction). Because every
+  merge in this repo's history has been a fast-forward, the commit range this skill cites
+  (<code>MERGE_BASE..HEAD</code>) is already final at that point — nothing about it changes once
+  <code>finishing-a-development-branch</code> actually runs.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Step 1</div>
+      <h4>Gather Sources</h4>
+      <p>Read the plan file (Goal/Architecture/task list), the ledger
+      (<code>progress.md</code> — per-task completion lines, deferred minors, final-review
+      findings, parked rulings), and <code>git log --oneline</code> /
+      <code>git diff --stat</code> over <code>MERGE_BASE..HEAD</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 2</div>
+      <h4>Render the HTML</h4>
+      <p>Reuse the exact template/CSS from
+      <code>docs/superpowers/reports/2026-08-05-standards-injection-report.html</code> — same
+      section shape, same visual language. Populate each section from Step 1's sources (see
+      Report Sections below).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 3</div>
+      <h4>Write and Commit</h4>
+      <p>Save to <code>docs/superpowers/reports/&lt;plan's date-slug&gt;-report.html</code>
+      (same date/slug the plan and spec already use) and commit it — as part of the same commit
+      range this report describes, so the report and the code it documents land together.</p>
+    </div>
+  </div>
+  <p>After Step 3, control returns to <code>subagent-driven-development</code>'s own Finish step
+  exactly as written (delete the workspace, then invoke
+  <code>finishing-a-development-branch</code>) — this skill doesn't touch or duplicate that
+  sequencing, it just runs once, immediately before it.</p>
+</section>
+
+<section id="sections">
+  <h2>Report Sections</h2>
+  <p>Same shape as G's report, adapted to pull from the ledger instead of the controller's memory:</p>
+  <ul>
+    <li><strong>Header</strong> — badge (e.g. "implementation complete — ready to merge"), title,
+      date, map item, commit range.</li>
+    <li><strong>Summary</strong> — one paragraph, links to the design spec and implementation
+      plan.</li>
+    <li><strong>What Was Delivered</strong> — one card per task, drawn from each task's brief
+      "Files" section (what was created/modified) plus its one-line purpose from the plan.</li>
+    <li><strong>Build Process</strong> — table: task number, what was delivered, review verdict,
+      deferred minors — one row per <code>Task &lt;N&gt;: complete (...)</code> line in the
+      ledger.</li>
+    <li><strong>Final Review &amp; Fix</strong> — table: finding, resolution — sourced from the
+      ledger's final-review line plus any fix-round and parked/adjudicated lines. Omit this
+      section entirely if the final review had zero findings (nothing to report beyond "clean").</li>
+    <li><strong>Merge</strong> — commit list from <code>git log</code> over the plan's range.</li>
+  </ul>
+</section>
+
+<section id="dataflow">
+  <h2>Data Flow</h2>
+  <p><code>ledger + plan file + git log/diff → populated HTML template →
+  docs/superpowers/reports/&lt;date-slug&gt;-report.html → committed</code></p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>No ledger found</strong> at the expected workspace path → this skill's trigger
+      doesn't really apply (likely a "jdi"/<code>executing-plans</code> run) — skip silently,
+      don't fabricate a report from nothing.</li>
+    <li><strong>Ledger present but missing expected lines</strong> (e.g. no final-review line
+      yet — this skill fired too early) → generate what's derivable from what exists, and note
+      the gap in the report rather than guessing at unwritten content.</li>
+    <li><strong>Report file already exists</strong> at the target path (a re-run) → ask before
+      overwriting, matching <code>jira-intake</code>'s existing-file posture rather than silently
+      clobbering.</li>
+    <li><strong>Empty commit range</strong> (<code>MERGE_BASE == HEAD</code>) → stop and say so;
+      this shouldn't happen if the trigger fires at the right point, so treat it as a signal
+      something upstream is wrong rather than emit a vacuous report.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. The
+  <code>capture-ephemeral-url</code> plan's own real ledger was already deleted by the time this
+  skill exists, so verification uses a reconstructed fixture instead of an invented toy scenario:</p>
+  <ol>
+    <li>Rebuild a fixture ledger matching what that plan's actual ledger contained (from this
+      session's own record of it) at a temporary path.</li>
+    <li>Point the skill at that fixture ledger plus the <strong>real</strong> git history for
+      commit range <code>c25f658..abb3ac1</code>, which still exists in this repo.</li>
+    <li>Confirm the rendered report's Build Process and Final Review &amp; Fix tables match what
+      actually happened (3 tasks approved; one parked report-hygiene item; the final-review fix
+      wave and its one parked residual finding), and that the commit list matches
+      <code>git log</code> for that real range.</li>
+    <li>Separately dogfood the "no ledger found" and "report already exists" edge cases against
+      empty/pre-existing fixtures.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>G</strong> — this skill's report template is lifted directly from G's
+      hand-written report; no change to G itself.</li>
+    <li><strong>E</strong> (<code>using-digismith</code>) — unchanged; this skill triggers at the
+      opposite end of the pipeline, after implementation, not at intake.</li>
+    <li><strong>D</strong> (delivery, Tier 5, not yet built) — a future, fuller D could reference
+      or link these reports as part of "verification"/"announcement," but this skill doesn't wait
+      for D to exist.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-08-report-implementation-design.html</footer>
+
+</body>
+</html>
