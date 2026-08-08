@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Capture Ephemeral URL (I.1, first slice) — Design</title>
+<title>Capture Ephemeral URL (M) — Design</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -63,10 +63,10 @@
 
 <header class="doc-head">
   <span class="badge">approved for planning</span>
-  <h1>Capture Ephemeral URL (I.1, first slice) — Design</h1>
+  <h1>Capture Ephemeral URL (M) — Design</h1>
   <div class="meta">
     <span>Date: 2026-08-08</span>
-    <span>Map item: <strong>I.1</strong> — pulled forward out of Tier 5, scoped to URL capture only, per Jack's explicit request</span>
+    <span>Map item: <strong>M</strong> — split out from <strong>I.1</strong> during this brainstorm, pulled forward out of Tier 5, and built now per Jack's explicit request</span>
   </div>
 </header>
 
@@ -90,24 +90,26 @@
   ephemeral theme and the <code>github-actions</code> bot comments on the PR with a Shopify
   Preview URL and a Theme Editor URL. Today, getting those two URLs means manually watching the
   PR's checks and re-reading the bot comment by hand.</p>
-  <p>MEMORY.md's map names this gap <strong>I.1</strong> — "capture Emma CI/CD's ephemeral URL →
-  JIRA comment + status transition" — filed in Tier 5. Jack pulled it forward directly (same
-  pattern as A being pulled ahead of E earlier) and, during brainstorming, scoped it down twice
-  from the original ask: no automated JIRA status transition (kept permanently manual), and no
-  JIRA comment write-back for this slice either (backlogged — see Non-Goals). What ships here is
-  the first, narrower half of I.1: wait for that specific check, extract both URLs from the bot's
-  comment, and report them in-session.</p>
+  <p>MEMORY.md's map originally filed this under <strong>I.1</strong> — "capture Emma CI/CD's
+  ephemeral URL → JIRA comment + status transition" — in Tier 5. Jack pulled it forward directly
+  (same pattern as A being pulled ahead of E earlier) and, during brainstorming, scoped it down
+  twice from the original ask: no automated JIRA status transition (kept permanently manual), and
+  no JIRA comment write-back either (see Non-Goals). With the JIRA piece removed entirely, what's
+  left — poll the check, extract both URLs, report them in-session — has no JIRA dependency at
+  all, so it was split out into its own map item, <strong>M</strong>, rather than staying a
+  narrower slice of I.1. I.1 itself still exists as a separate, later feature: JIRA comment
+  write-back that consumes M's captured URLs as input.</p>
 </section>
 
 <section id="nongoals">
   <h2>Non-Goals</h2>
   <ul>
     <li><strong>Not writing to JIRA.</strong> Posting the captured URLs as a JIRA comment is
-      backlogged to a later slice of I.1, not built now. This build's job ends at reporting the
-      two URLs in the conversation.</li>
+      <strong>I.1</strong>, a separate later feature that consumes this one's output — not built
+      now. This build's job ends at reporting the two URLs in the conversation.</li>
     <li><strong>Not transitioning JIRA ticket status.</strong> This is a permanent product
-      decision, not a deferral — Jack changes ticket status manually. No future slice of I.1
-      should add this.</li>
+      decision, not a deferral — Jack changes ticket status manually. I.1, when it's eventually
+      built, shouldn't add this either.</li>
     <li><strong>Not creating the PR.</strong> <code>superpowers:finishing-a-development-branch</code>
       already handles "push and create PR," following the repo's template and reporting the URL.
       Rebuilding that would violate DigiSmith's philosophy #2 ("duplicating a Superpowers
@@ -214,10 +216,11 @@
 <section id="relationship">
   <h2>Relationship to Other Map Items</h2>
   <ul>
-    <li><strong>I.1</strong>'s fuller scope (JIRA comment write-back) is backlogged, not
-      abandoned — a later slice picks up "detect a JIRA-capable tool at runtime (same principle
+    <li><strong>I.1</strong> is now a separate, later feature — JIRA comment write-back that
+      consumes M's captured URLs as input: "detect a JIRA-capable tool at runtime (same principle
       <code>jira-intake</code> already uses); found → post comment, not found → draft it for
-      Jack to paste" without needing to change anything built here.</li>
+      Jack to paste." Backlogged, not abandoned, and buildable without changing anything shipped
+      here.</li>
     <li><strong>D</strong> (delivery, Tier 5, not yet built) — PR creation itself lives in
       Superpowers' <code>finishing-a-development-branch</code>, not in DigiSmith's eventual D.
       This skill only ever consumes an already-created PR.</li>

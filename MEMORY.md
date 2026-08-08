@@ -95,10 +95,11 @@ tiering below.
 | **F** | Design review | Independent critique of a design, then the jade-and-ink artifact rendering for human approval |
 | **G** | Standards injection | Jack's coding standards + style guide carried into every implementer subagent's brief |
 | **H** | Subagent-driven always | Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2 |
-| **I** | QA handoff | **I.1** capture Emma CI/CD's ephemeral URL → JIRA comment + status transition · **I.2** end-to-end testing · **I.3** visual regression vs Figma (custom Figma skill) |
+| **I** | QA handoff | **I.1** JIRA comment write-back for a captured ephemeral URL (consumes **M**'s output) — no status transition, that stays manual by design · **I.2** end-to-end testing · **I.3** visual regression vs Figma (custom Figma skill) |
 | **J** | Estimation | Dual-track: the internal number (real) and the client-facing number (committed). The dilution is deliberate and is the point of the stage |
 | **K** | Model tiering | Extend `subagent-driven-development` across a pool spanning frontier → open-weight models, dispatching each agent to the cheapest one that can handle its task |
 | **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed — deliberately kept separate from **A**, which stops once a well-structured ticket exists |
+| **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).
@@ -111,7 +112,7 @@ driving status transitions).
 | **2** | The override | **H** subagent-driven always · **K** open-weight model extension |
 | **3** | Intake & estimation | **A** intake/creation · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
-| **5** | Technical expansion | **D** delivery · **F** design review · **I.1** ephemeral URL → JIRA · **I.2** E2E · **I.3** Figma visual regression |
+| **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** E2E · **I.3** Figma visual regression |
 | **6** | Last | **C** live work journal |
 
 The shape of this ordering: Tier 1 establishes *what DigiSmith is* — its
