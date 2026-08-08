@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unified Docs Convention — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Unified Docs Convention — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>No map letter — a structural/Convention change, not a new pipeline capability</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#migration">Migration Plan — DigiSmith's Own Repo</a></li>
+    <li><a href="#consumer">Consumer-Repo Changes</a></li>
+    <li><a href="#errors">Error Handling &amp; Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>DigiSmith currently uses two separate, inconsistent storage conventions. Its own
+  self-development history lives in <code>docs/superpowers/{specs,plans,reports}/</code> —
+  organized by artifact <em>type</em>, so a single feature's design, plan, and report are three
+  files scattered across three folders, linked together only by a shared date-slug prefix.
+  Separately, <code>jira-intake</code> writes ticket content into a consumer repo (an Emma theme
+  repo, say) at <code>docs/&lt;slug&gt;/ticket.md</code>, gitignored unconditionally — a
+  different shape, in a different place, with no user choice in the matter.</p>
+  <p>Jack asked to replace both with one convention: everything DigiSmith writes about a single
+  feature — its ticket, design spec, implementation plan, and implementation report — lives
+  together in one folder, named for the feature, under a dot-prefixed <code>.digismith/</code>
+  root. This applies everywhere DigiSmith writes docs, not just its own repo, and makes
+  commit-vs-gitignore an explicit per-repo choice instead of a hardcoded assumption.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>No map letter.</strong> This doesn't add a new gap to the SDLC pipeline map — it
+      reorganizes how existing capabilities store their output. Recorded as a
+      <code>MEMORY.md</code> Convention update and a <code>history.html</code> timeline entry,
+      the same treatment the <code>digismith</code>→<code>jazurite</code> marketplace rename
+      got.</li>
+    <li><strong>Not touching <code>standards/</code>.</strong> A different content category —
+      the coding-standards library, not tickets/specs/plans/reports — untouched by this
+      change.</li>
+    <li><strong>Not building PR-merge (Option 2) awareness</strong> for consumer-repo
+      commit/gitignore detection beyond what's described here — the ask-once/detect mechanism is
+      the whole of this change's consumer-repo scope.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>New convention, wherever DigiSmith writes docs — its own repo or any consumer repo:</p>
+  <pre><code>.digismith/
+  history.html                          (DigiSmith's own repo only — the living tracker)
+  docs/
+    &lt;feature-slug&gt;/
+      ticket.md                         (from jira-intake, when a real ticket exists)
+      design.html                       (from brainstorming)
+      plan.md                           (from writing-plans)
+      report.html                       (from report-implementation)</code></pre>
+  <p>One folder per feature, named for its slug, holding every artifact about that feature
+  together — no more date-prefixed filenames scattered across type-named folders. Files are
+  renamed to their role only (<code>ticket.md</code>, <code>design.html</code>,
+  <code>plan.md</code>, <code>report.html</code>) since the folder name and git history already
+  carry the date/slug.</p>
+  <p><strong>Consumer-repo commit-vs-gitignore is a per-repo, ask-once-then-remember choice.</strong>
+  Before writing into <code>.digismith/docs/</code> in a given repo for the first time, check
+  that repo's own <code>.gitignore</code> for a <code>.digismith/</code> entry:</p>
+  <ul>
+    <li><strong>Entry found</strong> → write gitignored, no question asked.</li>
+    <li><strong>No entry, and <code>.digismith/docs/</code> doesn't exist there yet</strong> →
+      ask once via <code>AskUserQuestion</code> ("commit this repo's DigiSmith docs, or keep
+      them local-only?"). Choosing gitignored appends the entry to that repo's
+      <code>.gitignore</code> (creating the file if needed) — the entry's presence <em>is</em>
+      the remembered answer for every future session, no separate state store needed. Choosing
+      committed does nothing further; the entry's absence is itself the remembered "committed"
+      signal.</li>
+  </ul>
+</section>
+
+<section id="migration">
+  <h2>Migration Plan — DigiSmith's Own Repo</h2>
+  <p>All 13 existing files across 5 shipped features move now, not gradually:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Feature</th><th>Old files</th><th>New folder</th></tr>
+    <tr><td>G</td><td><code>specs/2026-08-05-standards-injection-design.html</code>,
+      <code>plans/2026-08-05-standards-injection-plan.md</code>,
+      <code>reports/2026-08-05-standards-injection-report.html</code></td>
+      <td><code>.digismith/docs/standards-injection/</code></td></tr>
+    <tr><td>A</td><td><code>specs/2026-08-06-jira-intake-design.html</code>,
+      <code>plans/2026-08-07-jira-intake-plan.md</code></td>
+      <td><code>.digismith/docs/jira-intake/</code></td></tr>
+    <tr><td>E</td><td><code>specs/2026-08-07-using-digismith-design.html</code>,
+      <code>plans/2026-08-07-using-digismith-plan.md</code></td>
+      <td><code>.digismith/docs/using-digismith/</code></td></tr>
+    <tr><td>M</td><td><code>specs/2026-08-08-capture-ephemeral-url-design.html</code>,
+      <code>plans/…-plan.md</code>, <code>reports/…-report.html</code></td>
+      <td><code>.digismith/docs/capture-ephemeral-url/</code></td></tr>
+    <tr><td>N</td><td><code>specs/2026-08-08-report-implementation-design.html</code>,
+      <code>plans/…-plan.md</code>, <code>reports/…-report.html</code></td>
+      <td><code>.digismith/docs/report-implementation/</code></td></tr>
+  </table>
+  </div>
+  <p>Files are <code>git mv</code>'d, not copied, to preserve history. <code>docs/history.html</code>
+  moves to <code>.digismith/history.html</code>. This spec's own design doc and the implementation
+  plan that follows it move too, into <code>.digismith/docs/unified-docs-convention/</code>, as
+  part of the same migration pass — they're subject to the convention they define.</p>
+  <p>Every cross-reference gets rewritten in the same pass:</p>
+  <ul>
+    <li><code>.digismith/history.html</code>'s own links (currently
+      <code>superpowers/specs/…</code>, <code>superpowers/plans/…</code>,
+      <code>superpowers/reports/…</code>) → <code>docs/&lt;slug&gt;/design.html</code> etc.</li>
+    <li>Every spec/plan/report's internal links to its own siblings (e.g. "the
+      <a>design spec</a> and the <a>implementation plan</a>", currently
+      <code>../specs/…</code> / <code>../plans/…</code>) → same-folder links
+      (<code>design.html</code>, <code>plan.md</code>).</li>
+    <li><code>MEMORY.md</code>'s Conventions section — rewritten to describe
+      <code>.digismith/docs/&lt;slug&gt;/</code> as the standard, for both DigiSmith itself and
+      consumer repos.</li>
+    <li><code>skills/report-implementation/SKILL.md</code> — Step 4's target path and the
+      <code>{{SPEC_RELATIVE_LINK}}</code>/<code>{{PLAN_RELATIVE_LINK}}</code> derivation rules
+      change from <code>../specs/</code>/<code>../plans/</code> to same-folder
+      (<code>design.html</code>, <code>plan.md</code>).</li>
+    <li><code>README.md</code>'s <code>docs/history.html</code> link becomes
+      <code>.digismith/history.html</code>.</li>
+  </ul>
+</section>
+
+<section id="consumer">
+  <h2>Consumer-Repo Changes</h2>
+  <ul>
+    <li><strong><code>jira-intake</code></strong>: ticket path becomes
+      <code>.digismith/docs/&lt;slug&gt;/ticket.md</code>. Applies the ask-once/detect logic from
+      Architecture before writing there for the first time in a given repo.</li>
+    <li><strong><code>using-digismith</code></strong>: updates the one place it reads
+      <code>ticket.md</code>'s path from to match.</li>
+  </ul>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Verification</h2>
+  <ul>
+    <li><strong>Migration completeness check:</strong> after moving everything, grep the whole
+      repo for the old path patterns (<code>docs/superpowers/</code>, <code>superpowers/specs/</code>,
+      <code>superpowers/plans/</code>, <code>superpowers/reports/</code>) — zero hits required.</li>
+    <li><strong>Broken-link check:</strong> for every link the migration touches, verify the
+      target file actually exists on disk at its new path.</li>
+    <li><strong><code>jira-intake</code>'s ask-once logic:</strong> dogfooded against a throwaway
+      fixture repo (never DigiSmith's own), both branches — entry present (no ask) and entry
+      absent (asks, then writes the entry back).</li>
+    <li>No automated test suite, consistent with every DigiSmith skill — verification is the
+      grep/link-check pass plus the usual dogfooding for the two changed skills' new logic.</li>
+  </ul>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>G, A, E, M, N</strong> — none of their shipped behavior changes; only where their
+      already-written artifacts live on disk.</li>
+    <li><strong>N (<code>report-implementation</code>)</strong> — most directly affected skill,
+      since its whole job is writing into this structure. Its placeholder-derivation logic
+      (already hardened in its own final review) gets simpler here: same-folder links instead of
+      sibling-folder relative paths.</li>
+    <li><strong>A (<code>jira-intake</code>)</strong> — gains the ask-once/detect
+      commit-vs-gitignore logic; otherwise unchanged.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-08-unified-docs-convention-design.html</footer>
+
+</body>
+</html>
