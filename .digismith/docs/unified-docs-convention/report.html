@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unified Docs Convention — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Unified Docs Convention — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>Map item: <strong>n/a</strong> — structural change, no map letter</span>
+    <span>Commit range: <code>84e6a69..292e45b</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Replaced DigiSmith's two inconsistent storage conventions —
+  <code>docs/superpowers/{specs,plans,reports}/</code> (type-organized, DigiSmith's own repo
+  only) and <code>docs/&lt;slug&gt;/ticket.md</code> (consumer repos, hardcoded gitignored) —
+  with one: <code>.digismith/docs/&lt;feature-slug&gt;/{ticket.md, design.html, plan.md,
+  report.html}</code>, wherever DigiSmith writes docs, with commit-vs-gitignore an explicit
+  per-repo choice instead of an assumption. Task 1 migrated DigiSmith's own repo (13 existing
+  files across 5 shipped features, plus <code>docs/history.html</code>) into the new structure
+  and fixed every cross-reference. Task 2 updated <code>report-implementation</code>'s
+  path-derivation logic to write into the new structure going forward (and gained a
+  simplification: the feature slug is now just the plan file's parent folder name, and sibling
+  links are same-folder instead of <code>../specs/</code>/<code>../plans/</code>). Task 3
+  updated <code>jira-intake</code>'s consumer-repo ticket path and added the ask-once/detect
+  commit-vs-gitignore logic, plus updated <code>using-digismith</code>'s reference to where
+  <code>ticket.md</code> lives. Followed the full Superpowers process: brainstorming → spec →
+  writing-plans → <code>superpowers:subagent-driven-development</code> (3 tasks, each
+  dispatched to a fresh implementer subagent and independently reviewed) → a final
+  whole-branch review, plus 1 fix round before merge.</p>
+  <div class="callout action">
+  <strong>Reference documents are not linked here.</strong> This feature's own
+  <code>design.html</code> and <code>plan.md</code> are the one deliberate exception to the very
+  convention this branch establishes: per the plan's own Global Constraints they stayed at
+  <code>docs/superpowers/specs/2026-08-08-unified-docs-convention-design.html</code> and
+  <code>docs/superpowers/plans/2026-08-08-unified-docs-convention-plan.md</code> throughout
+  execution, because moving the plan mid-flight would have broken
+  <code>subagent-driven-development</code>'s <code>task-brief</code>/<code>review-package</code>
+  scripts, which reference it by fixed path. They are moved by hand, once, after this plan's SDD
+  run fully completes. Because neither file is in this report's own folder yet,
+  <code>report-implementation</code>'s omit-the-link-if-the-file-isn't-there rule dropped both
+  links rather than rendering a 404 — working as designed.
+  </div>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Migration · own repo</div>
+      <h4>Task 1 — Migrate DigiSmith's Own Repo to the New Structure</h4>
+      <p>Produces <code>.digismith/docs/&lt;slug&gt;/{design.html,plan.md,report.html}</code>
+      for 5 features, <code>.digismith/history.html</code>, and an updated <code>MEMORY.md</code>
+      Conventions section that documents the new convention as the standard.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Skill · reporting</div>
+      <h4>Task 2 — Update <code>report-implementation</code> for the New Convention</h4>
+      <p>Produces <code>.digismith/docs/&lt;feature-slug&gt;/report.html</code> (previously
+      <code>docs/superpowers/reports/&lt;date-slug&gt;-report.html</code>), with
+      <code>{{SPEC_RELATIVE_LINK}}</code>/<code>{{PLAN_RELATIVE_LINK}}</code> now same-folder
+      (<code>design.html</code>/<code>plan.md</code>) instead of
+      <code>../specs/…</code>/<code>../plans/…</code>.</p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="tag">Skill · intake</div>
+      <h4>Task 3 — Update <code>jira-intake</code> and <code>using-digismith</code> for Consumer Repos</h4>
+      <p>Produces tickets now written to <code>.digismith/docs/&lt;slug&gt;/ticket.md</code> in a
+      consumer repo, with an explicit ask-once/detect commit-vs-gitignore step before the first
+      write into a given repo.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1</td>
+      <td>Migrate DigiSmith's Own Repo to the New Structure</td>
+      <td><span class="status-ok">✓ Approved, clean</span> — no fix rounds.</td>
+      <td>Step 8's broken-link check was downgraded from an explicit per-file OK/MISSING loop to
+      an <code>ls -la</code> glob call (sandbox blocked the prescribed for-loop as "too complex
+      to verify worktree scope") — functionally equivalent, independently re-verified by
+      reviewer, but less legible as a verification artifact.</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Update <code>report-implementation</code> for the New Convention</td>
+      <td><span class="status-ok">✓ Approved, clean</span> — no fix rounds. Ledger note: the
+      implementer's own nested dogfood dispatch (brief's Step 5) hit a real methodology bug —
+      the brief's dispatch prompt hardcoded main-checkout paths instead of this worktree's
+      paths, so it validated by inference rather than reading the real edited
+      <code>SKILL.md</code>/fixture. Disclosed transparently, not hidden. Reviewer closed the
+      gap by independently re-running the exact same derivation by hand against the real
+      worktree files (<code>SKILL.md</code> at <code>659fea5</code>,
+      <code>.digismith/docs/capture-ephemeral-url/plan.md</code> from Task 1) — all values
+      confirmed correct for real.</td>
+      <td><code>FEATURE_SLUG</code>/<code>SPEC_RELATIVE_LINK</code>/<code>PLAN_RELATIVE_LINK</code>
+      bullets drop the bold-name + em-dash formatting convention used elsewhere in the same list
+      — matches the plan's own literal replacement text, not implementer-introduced.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Update <code>jira-intake</code> and <code>using-digismith</code> for Consumer Repos</td>
+      <td><span class="status-ok">✓ Approved, clean</span> — no fix rounds; dogfood correctly
+      pointed at worktree not main, learned from Task 2's mistake.</td>
+      <td>Fixture repos were deleted before review, so filesystem-level cleanup claims rest on
+      the implementer's own pre-cleanup output rather than independently re-checkable state —
+      not a real concern since the logic-correctness claim was independently verified against
+      the live <code>SKILL.md</code> text.</td>
+    </tr>
+  </table>
+  </div>
+  <p>Ledger triage at final review: all 3 deferred minors above were confirmed still valid or
+  already closed; none needed reopening. There is no automated test suite for this feature —
+  it changes Markdown instruction files and moves documentation, so verification was the plan's
+  scoped grep (deliberately not a blanket repo-wide grep, per Global Constraints) plus
+  dogfooding Tasks 2 and 3's logic changes against real files and throwaway fixture repos.</p>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Critical, 6 Important, and 5 Minor findings, resolved in one
+  comprehensive whole-branch fix wave (opus); 1 Important is documented as a follow-up rather
+  than fixed, and 1 Minor stays deferred.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td><strong>Critical</strong></td>
+      <td><code>report-implementation</code>'s new parent-dir slug derivation would mis-resolve
+      to <code>plans</code> for THIS plan itself, since it's deliberately excluded from migration
+      and sits at <code>docs/superpowers/plans/</code>, not
+      <code>.digismith/docs/&lt;slug&gt;/</code> — it would misfile the very report this branch
+      is about to generate on itself, writing to
+      <code>.digismith/docs/plans/report.html</code>.</td>
+      <td><span class="status-ok">Fixed</span> — Step 1 now guards the parent-directory
+      shortcut. It first checks whether the plan's path actually matches
+      <code>.digismith/docs/&lt;something&gt;/plan.md</code>. If yes, the parent directory name
+      is the slug as before (the fast normal-case path). If no, it falls back to parsing the
+      slug out of the plan's own <code>&lt;date&gt;-&lt;slug&gt;-plan.md</code> filename —
+      stripping the leading <code>&lt;date&gt;-</code> and trailing <code>-plan.md</code> — and
+      uses <code>.digismith/docs/&lt;that-slug&gt;/</code> for everything downstream. Verified
+      end-to-end by generating this very report: the fallback fired and correctly produced
+      <code>unified-docs-convention</code>, not <code>plans</code>.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>standards/team/docs-conventions.md</code> now contradicts
+      <code>jira-intake</code>'s new path/gitignore behavior — it described tickets at
+      <code>docs/&lt;feature&gt;/ticket.md</code> and claimed they are unconditionally
+      gitignored.</td>
+      <td><span class="status-ok">Fixed</span> — the ticket line now reads
+      <code>.digismith/docs/&lt;feature-slug&gt;/ticket.md</code>, and the gitignore line now
+      scopes the always-gitignored claim to specs/plans/progress-reports while stating that for
+      tickets it is an explicit per-repo choice, asked once and then remembered. The file's lines
+      about specs/plans/reports living elsewhere were deliberately left untouched — per the
+      design spec's own investigation they describe the Emma team's separate
+      <code>docs/development-workflow.md</code> convention, unrelated to DigiSmith's
+      storage.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>using-digismith</code> still asserted <code>ticket.md</code> is unconditionally
+      gitignored, as the reason a freshly created worktree won't contain it — reasoning that
+      became sometimes-false once Task 3 made gitignoring a per-repo choice.</td>
+      <td><span class="status-ok">Fixed</span> — both places (Step 1's explanation and Quick
+      Reference row 1) are rewritten around the always-true reason: a worktree checks out only
+      what is already committed, and <code>ticket.md</code> has just been written, so it isn't
+      committed yet — and in a repo that chose the gitignored option it never will be. Gitignoring
+      is now presented as one specific reason among others rather than the rule.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>report-implementation</code> doesn't honor a consumer repo's gitignore choice —
+      Step 4 unconditionally runs <code>git add</code> then <code>git commit</code> on the report
+      path, which hard-fails on an ignored path ("Use -f if you really want to add them").</td>
+      <td><span class="status-ok">Fixed</span> — Step 4 now runs
+      <code>git check-ignore -q</code> on the target report path before staging. Ignored → the
+      report is written but not staged or committed, and the skill says plainly that it wasn't
+      committed because this repo's <code>.digismith/docs/</code> is gitignored, matching the
+      user's own earlier choice; it neither re-asks nor forces with <code>-f</code>. Not ignored
+      → <code>git add</code>/<code>git commit</code> proceed as before. Error Handling and the
+      Quick Reference row were updated to match.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>jira-intake</code>'s <code>.gitignore</code> detection was a naive text-match for
+      a literal <code>.digismith/</code> string, which misses real ignore patterns.</td>
+      <td><span class="status-ok">Fixed</span> — replaced with the authoritative method,
+      <code>git check-ignore -q .digismith/docs/</code>, read by exit code, with an explicit
+      statement that exit code 1 means "not ignored" and is <em>not</em> a command failure. This
+      correctly handles bare <code>.digismith</code> (no trailing slash), wildcards, negations,
+      comments, nested <code>.gitignore</code> files, <code>.git/info/exclude</code>, and a
+      global <code>core.excludesFile</code>. Verified empirically: a fixture repo whose
+      <code>.gitignore</code> contains bare <code>.digismith</code> returns exit 0 — the exact
+      case the old string match would have missed.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>The <code>.gitignore</code> append instruction just said "append", with no guard
+      against clobbering the file or against a missing trailing newline fusing the new entry onto
+      an existing last line.</td>
+      <td><span class="status-ok">Fixed</span> — Step 3.3 now spells out the mechanics: create
+      the file fresh if it doesn't exist; otherwise read the existing content first, add a
+      newline if the last line lacks one, then append a single new line containing
+      <code>.digismith/</code>, using an append operation and never a tool or redirect that
+      replaces the whole file.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>design.html</code>/<code>plan.md</code> have no enforcement point:
+      <code>superpowers:brainstorming</code> and <code>superpowers:writing-plans</code> are
+      third-party skills that don't know the <code>.digismith/docs/&lt;slug&gt;/</code>
+      convention exists, so nothing tells them where to save a NEW feature's spec or plan.</td>
+      <td><span class="status-fixed">Documented, not fixed</span> — per the reviewer's own
+      calibration this is "a genuine follow-up feature, not a merge blocker". Recorded as a new
+      bullet in <code>MEMORY.md</code>'s Open questions section, naming the gap plainly, noting
+      that this very branch's own spec and plan are the proof of it, and identifying
+      <code>using-digismith</code>'s hand-off to <code>superpowers:brainstorming</code> as the
+      natural place to eventually pass the target folder explicitly — to be decided when it is
+      actually blocking someone, not preemptively.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>Formatting drift: three placeholder bullets in
+      <code>report-implementation</code>'s Step 2a drop the bold-name + em-dash convention used
+      by their neighbours.</td>
+      <td><span class="status-fixed">Stays deferred</span> — cosmetic only, and it matches the
+      plan's own literal replacement text rather than being implementer-introduced. Carried over
+      from Task 2's deferred minor; confirmed still valid at ledger triage.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>"Committed" wording clarity: choosing the "committed" option read as though the skill
+      would itself commit something.</td>
+      <td><span class="status-ok">Fixed</span> — Step 3.3 now states that choosing "committed"
+      doesn't itself commit anything; it just means the file is left tracked-and-not-ignored, so
+      it becomes part of whatever commit the user (or a later skill) makes normally.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>Untracked-vs-committed distinction in Step 3.3's third branch: it concluded "committed"
+      from directory existence alone, so an aborted prior run that left untracked files behind
+      would be silently misread as a prior decision.</td>
+      <td><span class="status-ok">Fixed</span> — that branch now checks
+      <code>git ls-files .digismith/docs/</code>. Non-empty output → genuinely committed, don't
+      ask. Directory exists on disk but nothing tracked → treated as the "ask once" branch
+      instead of assuming committed.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>No tracked record of the pending spec/plan move — this feature's own
+      <code>design.html</code> and <code>plan.md</code> are deliberately excluded from the
+      migration and must be moved by hand afterwards, with nothing in git saying so.</td>
+      <td><span class="status-ok">Recorded</span> — <code>MEMORY.md</code>'s new Open-questions
+      bullet states in git-committed text that this branch's own spec and plan ended up at the
+      old <code>docs/superpowers/</code> location, and this report's Summary callout documents
+      the exclusion, its rationale, and the by-hand follow-up move.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>Gitignore-entry-no-op-on-tracked-files edge case: adding <code>.digismith/</code> to
+      <code>.gitignore</code> has no effect on files git already tracks.</td>
+      <td><span class="status-ok">Fixed incidentally</span> — closed by the untracked-vs-committed
+      fix above. The append now only ever happens in the ask-once branch, which by construction
+      fires only when <code>git ls-files .digismith/docs/</code> is empty, so the skill can no
+      longer add an entry that would be a no-op against already-tracked files.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">f69719a</span> docs: migrate to unified .digismith/docs/&lt;feature-slug&gt;/ convention</li>
+    <li><span class="sha">659fea5</span> feat(reporting): update report-implementation for unified docs convention</li>
+    <li><span class="sha">43a46ce</span> feat(intake): move ticket storage to unified .digismith/docs/ convention, add ask-once commit/gitignore choice</li>
+    <li><span class="sha">292e45b</span> fix(docs-convention): close final-review findings across skills and docs</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/unified-docs-convention/report.html</footer>
+
+</body>
+</html>
