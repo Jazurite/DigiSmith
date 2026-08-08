@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">2 / 12</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">3 / 13</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -145,7 +145,7 @@
       <td>Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>I</strong></td><td>QA handoff</td>
-      <td><strong>I.1</strong> capture Emma CI/CD's ephemeral URL → JIRA comment + status transition · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
+      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output) — no status transition, that stays manual by design · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>J</strong></td><td>Estimation</td>
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
@@ -156,6 +156,9 @@
     <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
       <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
       <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>M</strong></td><td>Ephemeral deploy capture</td>
+      <td>Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session</td>
+      <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -174,6 +177,11 @@
     brainstorming hand-off — <code>using-digismith</code> skill —
     <a href="superpowers/specs/2026-08-07-using-digismith-design.html">design spec</a> ·
     <a href="superpowers/plans/2026-08-07-using-digismith-plan.md">implementation plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>M — Ephemeral deploy capture:</strong> <code>capture-ephemeral-url</code> skill —
+    <a href="superpowers/specs/2026-08-08-capture-ephemeral-url-design.html">design spec</a> ·
+    <a href="superpowers/plans/2026-08-08-capture-ephemeral-url-plan.md">implementation plan</a>
   </p>
 </section>
 
@@ -195,8 +203,8 @@
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>5</strong></td><td>Technical expansion</td>
-      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>I.1/I.2/I.3</strong> QA handoff</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>I.1/I.2/I.3</strong> QA handoff</td>
+      <td><span class="status next">In progress (1/4 — M shipped, pulled forward out of tier order)</span></td></tr>
     <tr><td><strong>6</strong></td><td>Last</td>
       <td><strong>C</strong> live work journal</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -338,6 +346,35 @@
       <code>&lt;Key&gt;__&lt;slug&gt;</code> name, fixed with a verify/rename step; Task 3
       is this history.html update. Map item <strong>E</strong> stays in progress — only
       the first slice has shipped, not the spine's full future scope.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-08</div>
+      <h4>M split out from I.1, brainstormed, and specced</h4>
+      <p>Jack asked to build I.1's ephemeral-URL capture as a normal
+      development task, no ticket. During brainstorming, the JIRA piece was
+      scoped out entirely — no automated status transition (permanent), no
+      JIRA comment write-back (backlogged). What remained had no JIRA
+      dependency, so it was split into its own map item, <strong>M</strong>,
+      rather than staying a slice of I.1. I.1 now names the separate, later
+      JIRA write-back feature that will consume M's output. Design spec
+      approved; implementation plan written (3 tasks).</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-08</div>
+      <h4>M built — 3 tasks, subagent-driven-development</h4>
+      <p><code>skills/capture-ephemeral-url/SKILL.md</code> delivered: Task 1
+      built the skill and dogfooded the happy-path decision logic against
+      fixtures (ticket-key parsing, poll-to-success branching, URL extraction
+      from a real example comment); Task 2 dogfooded four edge cases
+      (no-match branch, check failure, timeout, missing/malformed comment).
+      Live <code>gh pr view</code>/<code>gh pr checks</code> calls couldn't be
+      dogfooded against a real PR — the authenticated <code>gh</code> account
+      can't reach DigiSmith's own repo, and creating a scratch PR against a
+      real Emma repo would be visible to teammates — so those get their first
+      live verification the next time this skill runs for real. Task 3 is
+      this history.html update. Map item <strong>M</strong> done.</p>
     </div>
 
   </div>
