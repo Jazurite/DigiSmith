@@ -32,6 +32,10 @@ don't fabricate URLs.
 
 ### Step 1: Resolve the Ticket Key
 
+```bash
+git branch --show-current
+```
+
 Parse `<Key>` from the current branch name, matching the
 `<Key>__<slug>` convention (e.g. `EMKT-9001__fix-cart-drawer-padding-mobile`
 → `EMKT-9001` — pattern `^([A-Z]+-\d+)__`). If the branch name doesn't
@@ -57,6 +61,14 @@ gh pr checks <PR> --json name,bucket \
   --jq '.[] | select(.name=="Continuous Integration / Ephemeral / Comment Ephemeral Information") | .bucket'
 ```
 
+Ignore this command's exit code entirely — `gh pr checks` exits non-zero
+(`8` while any check is pending; `1` if no checks are reported yet or some
+other check has failed) on almost every poll before the deploy finishes,
+so a non-zero exit here is normal and does **not** mean the command
+failed. Branch only on the `bucket` value the `--jq` filter prints for the
+named check. Empty output means the named check hasn't appeared in the
+list yet — keep polling.
+
 Poll every ~30–60 seconds, for up to **20 minutes**. Use whatever
 background-polling primitive the current session has (e.g. an until-loop
 run in the background); a plain sleep-and-recheck loop works too if
@@ -76,12 +88,13 @@ Branch on the returned `bucket` value:
 
 ```bash
 gh pr view <PR> --json comments \
-  --jq '.comments[] | select(.author.login=="github-actions") | .body'
+  --jq '[.comments[] | select(.author.login=="github-actions") | .body | select(contains("Ephemeral Theme Deployed Successfully"))] | last'
 ```
 
-Take the `github-actions` bot's "Ephemeral Theme Deployed Successfully"
-comment (the most recent one, if more than one matches) and extract both
-URLs with:
+This filters to `github-actions` comments whose body contains "Ephemeral
+Theme Deployed Successfully" and takes the **last** one — i.e. the most
+recent deploy comment, not an earlier one left over from a prior push to
+the same PR. Extract both URLs from that comment's body with:
 
 ```
 Preview Theme:\**\s*(https://\S+?preview_theme_id=\d+)
@@ -96,8 +109,10 @@ If the check succeeded but no matching comment is found yet, wait up to
 an additional 60 seconds and check once more (a brief posting lag is
 expected) before giving up.
 
-If a comment is found but **neither** regex matches, don't fail silently
-— report the raw comment body so the format drift is visible.
+If a comment is found but **either** regex fails to match — including a
+partial match where only one of the two URLs is found — don't fail
+silently and don't treat it as partial success; report the raw comment
+body so the format drift is visible.
 
 ### Step 5: Report
 
@@ -117,8 +132,9 @@ and the Theme Editor URL. Nothing is written to a file or to JIRA.
   the timeout.
 - **Check passed but comment not found after the retry** → report "check
   passed but comment not found."
-- **Comment found but neither URL regex matches** → report the raw
-  comment body.
+- **Comment found but either URL regex fails to match (including a
+  partial match with only one URL found)** → report the raw comment
+  body.
 
 ## Quick Reference
 
@@ -126,6 +142,6 @@ and the Theme Editor URL. Nothing is written to a file or to JIRA.
 |---|---|
 | 1 | Resolve `<Key>` from branch name; ask if it doesn't match |
 | 2 | `gh pr view --json number` for the current branch; stop if none found |
-| 3 | Poll `gh pr checks` for the named check's `bucket`, ~30–60s interval, 20-min timeout |
-| 4 | Fetch PR comments, extract both URLs via the anchored regexes; fall back to raw body on drift |
+| 3 | Poll `gh pr checks` for the named check's `bucket` (ignore its exit code), ~30–60s interval, 20-min timeout |
+| 4 | Fetch PR comments, take the most recent `github-actions` deploy comment, extract both URLs via the anchored regexes; fall back to raw body if either regex fails to match |
 | 5 | Report both URLs (and the ticket key, if resolved) — no file write, no JIRA |

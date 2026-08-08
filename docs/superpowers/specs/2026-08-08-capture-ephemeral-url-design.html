@@ -153,6 +153,10 @@
       until-loop) watching specifically for
       <code>Continuous Integration / Ephemeral / Comment Ephemeral Information</code> to reach a
       terminal conclusion. ~30–60s interval, 20-minute timeout.</p>
+      <p><em>Correction: the implementation plan's Global Constraints superseded this example —
+      the actual field polled is <code>--json name,bucket</code>, branching on <code>bucket</code>
+      (<code>pass</code> / <code>fail</code> / <code>cancel</code> / <code>skipping</code> /
+      <code>pending</code>), not <code>state,conclusion</code>.</em></p>
     </div>
     <div class="card">
       <div class="tag">Step 4</div>
