@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capture Ephemeral URL (I.1, first slice) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Capture Ephemeral URL (I.1, first slice) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>Map item: <strong>I.1</strong> — pulled forward out of Tier 5, scoped to URL capture only, per Jack's explicit request</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#dataflow">Data Flow</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>After a PR opens against an Emma Shopify theme repo, a GitHub Actions check
+  (<code>Continuous Integration / Ephemeral / Comment Ephemeral Information</code>) deploys an
+  ephemeral theme and the <code>github-actions</code> bot comments on the PR with a Shopify
+  Preview URL and a Theme Editor URL. Today, getting those two URLs means manually watching the
+  PR's checks and re-reading the bot comment by hand.</p>
+  <p>MEMORY.md's map names this gap <strong>I.1</strong> — "capture Emma CI/CD's ephemeral URL →
+  JIRA comment + status transition" — filed in Tier 5. Jack pulled it forward directly (same
+  pattern as A being pulled ahead of E earlier) and, during brainstorming, scoped it down twice
+  from the original ask: no automated JIRA status transition (kept permanently manual), and no
+  JIRA comment write-back for this slice either (backlogged — see Non-Goals). What ships here is
+  the first, narrower half of I.1: wait for that specific check, extract both URLs from the bot's
+  comment, and report them in-session.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not writing to JIRA.</strong> Posting the captured URLs as a JIRA comment is
+      backlogged to a later slice of I.1, not built now. This build's job ends at reporting the
+      two URLs in the conversation.</li>
+    <li><strong>Not transitioning JIRA ticket status.</strong> This is a permanent product
+      decision, not a deferral — Jack changes ticket status manually. No future slice of I.1
+      should add this.</li>
+    <li><strong>Not creating the PR.</strong> <code>superpowers:finishing-a-development-branch</code>
+      already handles "push and create PR," following the repo's template and reporting the URL.
+      Rebuilding that would violate DigiSmith's philosophy #2 ("duplicating a Superpowers
+      capability is a bug, not a feature"). This skill picks up only once a PR already exists.</li>
+    <li><strong>Not reading raw check/job logs.</strong> Considered as an alternative extraction
+      method (more "source of truth" but slower to navigate and more fragile to parse than one
+      purpose-built bot comment) and rejected in favor of parsing the bot's PR comment directly.</li>
+    <li><strong>Not a webhook or event-driven listener.</strong> Would need a standing server and
+      a public endpoint — infrastructure overkill for a personal, single-developer tool. Polling
+      on demand, while the skill is actively running, is sufficient.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>New skill: <code>digismith:capture-ephemeral-url</code>. It doesn't hook into or modify
+  <code>finishing-a-development-branch</code> — it triggers on its own description ("a PR was
+  just created in an Emma theme repo, capture the ephemeral deploy URLs"), matched the same way
+  any skill match works under <code>superpowers:using-superpowers</code>' discipline. In practice
+  that means the same agent that just ran <code>finishing-a-development-branch</code>'s
+  "push and create PR" option recognizes and invokes this skill immediately after, with no
+  explicit call wired into Superpowers' own file.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Step 1</div>
+      <h4>Resolve Ticket Key</h4>
+      <p>Parse <code>&lt;Key&gt;</code> from the current branch name
+      (<code>&lt;Key&gt;__&lt;slug&gt;</code>, the convention <code>using-digismith</code>
+      already establishes). If the branch doesn't match that shape, ask directly for the key
+      instead of guessing.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 2</div>
+      <h4>Identify the PR</h4>
+      <p><code>gh pr view --json number</code> for the current branch.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 3</div>
+      <h4>Poll the Check</h4>
+      <p>Poll <code>gh pr checks &lt;PR&gt; --json name,state,conclusion</code> (via a Monitor
+      until-loop) watching specifically for
+      <code>Continuous Integration / Ephemeral / Comment Ephemeral Information</code> to reach a
+      terminal conclusion. ~30–60s interval, 20-minute timeout.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 4</div>
+      <h4>Extract URLs</h4>
+      <p>Once the check succeeds, fetch PR comments (<code>gh pr view --json comments</code>),
+      find the <code>github-actions</code> bot's "Ephemeral Theme Deployed Successfully" comment,
+      and regex out the <code>Preview Theme:</code> and <code>Customize your Theme:</code>
+      URLs.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 5</div>
+      <h4>Report</h4>
+      <p>Tell Jack both URLs (and the resolved ticket key) in the conversation. No file write, no
+      JIRA call.</p>
+    </div>
+  </div>
+</section>
+
+<section id="dataflow">
+  <h2>Data Flow</h2>
+  <p><code>branch name → ticket key → PR number → poll check → bot comment body →
+  regex-extracted URLs → report to Jack</code></p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>Branch doesn't match <code>&lt;Key&gt;__&lt;slug&gt;</code></strong> → ask
+      directly for the ticket key rather than guessing.</li>
+    <li><strong>Check never appears, or the 20-minute timeout elapses</strong> → stop and report
+      clearly; don't hang indefinitely.</li>
+    <li><strong>Check completes with a <code>failure</code> conclusion</strong> → stop and report
+      the failure; don't attempt URL extraction (nothing to extract — the deploy didn't
+      succeed).</li>
+    <li><strong>Check succeeds but the bot comment isn't there yet</strong> (brief lag between
+      check completion and the comment posting) → a short additional retry window before giving
+      up and reporting "check passed but comment not found."</li>
+    <li><strong>Comment found but the regex doesn't match either URL</strong> (format drift) →
+      report the raw comment body so Jack can see what changed, rather than failing silently.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Verification is a
+  manual edge-case walkthrough against the written skill, same pattern used for
+  <code>using-digismith</code>:</p>
+  <ol>
+    <li>Branch matches <code>&lt;Key&gt;__&lt;slug&gt;</code> → key resolves correctly.</li>
+    <li>Branch doesn't match → falls back to asking for the key.</li>
+    <li>Check succeeds, comment present and well-formed → both URLs extracted and reported.</li>
+    <li>Check times out (simulate with a short timeout for the test) → clean timeout report, no
+      hang.</li>
+    <li>Check completes with <code>failure</code> → stops, reports failure, doesn't try to parse
+      a comment.</li>
+    <li>Check succeeds but the comment is missing or malformed → retry-then-report /
+      raw-body-fallback behaves as specified.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>I.1</strong>'s fuller scope (JIRA comment write-back) is backlogged, not
+      abandoned — a later slice picks up "detect a JIRA-capable tool at runtime (same principle
+      <code>jira-intake</code> already uses); found → post comment, not found → draft it for
+      Jack to paste" without needing to change anything built here.</li>
+    <li><strong>D</strong> (delivery, Tier 5, not yet built) — PR creation itself lives in
+      Superpowers' <code>finishing-a-development-branch</code>, not in DigiSmith's eventual D.
+      This skill only ever consumes an already-created PR.</li>
+    <li><strong>E</strong> (<code>using-digismith</code>) — unchanged; this skill isn't wired into
+      its routing, since it triggers post-implementation, after E's own job (ticket → branch →
+      brainstorming handoff) is long done.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/specs/2026-08-08-capture-ephemeral-url-design.html</footer>
+
+</body>
+</html>
