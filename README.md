@@ -11,15 +11,28 @@ This README covers the one skill you actually invoke to start working:
 injection, ticket intake, and what's still to come) is wired in behind
 it or reachable directly — `using-digismith` is just the front door.
 
-One skill sits outside that front door because it triggers later in the
-lifecycle, after code is written: **`capture-ephemeral-url`** (map item
-**M**). Once a PR is open in an Emma Shopify theme repo — typically right
-after `superpowers:finishing-a-development-branch`'s "push and create PR"
+Two skills sit outside that front door, because they trigger later in the
+lifecycle, after code is already written.
+
+**`capture-ephemeral-url`** (map item **M**). Once a PR is open in an Emma
+Shopify theme repo — typically right after
+`superpowers:finishing-a-development-branch`'s "push and create PR"
 option — it waits for the ephemeral-deploy CI check and reports the
 Shopify Preview Theme and Theme Editor URLs from the bot's PR comment. It
 doesn't create the PR and doesn't write to JIRA (that's a separate,
 later feature). See
 [`skills/capture-ephemeral-url/SKILL.md`](skills/capture-ephemeral-url/SKILL.md)
+for the exact process, or [`docs/history.html`](docs/history.html) for
+its status.
+
+**`report-implementation`** (map item **N**). It triggers the moment a
+`superpowers:subagent-driven-development` plan's final whole-branch review
+comes back clean, and generates that feature's HTML implementation report
+— what shipped, the per-task review record, the final-review findings and
+how they were resolved, the commit list. Timing is the whole point: it has
+to run before that plan's ledger gets deleted, since the ledger is where
+all of that detail lives. See
+[`skills/report-implementation/SKILL.md`](skills/report-implementation/SKILL.md)
 for the exact process, or [`docs/history.html`](docs/history.html) for
 its status.
 

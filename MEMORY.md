@@ -185,3 +185,14 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   reversal of the pattern G, A, and E were built under, all committed
   straight to `main`). Applies to every implementation plan executed
   against this repo, regardless of who's running it.
+- **Final-review ledger lines are standardized**: `superpowers:subagent-driven-development`'s
+  own ledger grammar covers per-task lines (`Task <N>: complete/minor/parked/BLOCKED/fix round`)
+  but has no format for the whole-branch final review itself. DigiSmith requires recording it as
+  `Final review (base <BASE>..<HEAD>, <model>): <one-line verdict and finding summary>`, with any
+  subsequent fix round as `Scoped re-review (fix base <BASE>..<HEAD>, <model>): <verdict>`, and any
+  residual as `Final review: parked — <finding> — ruling: <why>` (same shape as a per-task parked
+  line). `digismith:report-implementation` depends on this exact grammar to render the Final Review
+  & Fix section — a ledger that doesn't follow it will read as "no final review recorded yet."
+- **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
+  final review passes, before the plan's workspace gets deleted (see N's own design/skill for why
+  the ordering matters).

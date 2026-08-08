@@ -1,6 +1,6 @@
 ---
 name: report-implementation
-description: Use when a subagent-driven-development plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace.
+description: Use when a `superpowers:subagent-driven-development` plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace.
 ---
 
 # Report Implementation
@@ -28,6 +28,12 @@ deletion, and this repo's merges are always fast-forward, so the commit
 range recorded here won't change once
 `superpowers:finishing-a-development-branch` actually runs.
 
+That last point is an assumption, not a guarantee: it holds because every
+DigiSmith feature so far has merged fast-forward. If a real merge commit
+is ever created instead, the commit range recorded at trigger-time could
+differ from what actually lands on `main` — re-examine this design the
+first time that happens.
+
 ## Prerequisites
 
 A ledger must exist at `.superpowers/sdd/<plan-basename>/progress.md`. If
@@ -35,6 +41,12 @@ it doesn't (e.g. the plan ran via `superpowers:executing-plans` instead of
 `superpowers:subagent-driven-development`), this skill's trigger condition
 isn't met — skip it silently and let the other skill's Finish step proceed
 as normal. Don't render a report from nothing.
+
+This skill runs in the **controller session** — the one driving
+`superpowers:subagent-driven-development` — not as a sub-dispatched agent.
+That's what makes `AskUserQuestion` available, which Step 4's
+ask-before-overwrite rule depends on. Don't delegate this skill wholesale
+to a subagent that can't ask.
 
 ## Process
 
@@ -47,30 +59,134 @@ as normal. Don't render a report from nothing.
    - `MERGE_BASE` — the hash before `..` in the ledger's *first*
      `Task 1: complete (commits <base>..<head>, ...)` line.
    - `HEAD` — current `git rev-parse HEAD`.
-4. Run `git log --oneline MERGE_BASE..HEAD` and
-   `git diff --stat MERGE_BASE..HEAD`.
+4. Run `git log --reverse --oneline MERGE_BASE..HEAD` — `--reverse` is
+   required, because the Commits section lists commits oldest-first
+   (chronological build order) and plain `git log` is newest-first.
 
 If no ledger exists at that path, stop here entirely — this skill doesn't
 apply to this run.
 
+**If the ledger has no `Final review (...)` line**, don't quietly proceed.
+This skill's trigger condition *is* "the final review just passed," so a
+missing final-review line means either the ledger doesn't follow
+DigiSmith's required grammar (see `MEMORY.md`'s Conventions section) or
+this skill fired at the wrong moment. Say so plainly to whoever is running
+this skill, and ask before continuing — don't silently render
+"final-review detail isn't available yet" as if it were normal partial
+progress. (The one genuinely-expected case is a deliberate fixture that
+simulates firing before any final review ran at all; that's covered in
+Error Handling, and it's still worth stating out loud rather than
+absorbing silently.)
+
 ### Step 2: Parse the Ledger into Report Content
 
-- **Build Process rows** (one per task): for each `Task <N>: complete
-  (...)` line, the task's title comes from the plan's `### Task N: ...`
-  heading. "Review verdict" is "Approved, clean" when the completion line
-  says "review clean" with no fix-round/parked mentions; otherwise
-  summarize what the ledger records (e.g. "Approved after fix round, 1
-  parked"). "Deferred minors" lists every `Task <N>: minor (deferred):
-  ...` line for that same task number, verbatim.
-- **Final Review & Fix rows:** one row per distinct finding named in the
-  ledger's `Final review (...)` line and any subsequent fix-round /
-  `Scoped re-review (...)` / `parked` lines that reference it. Each row:
-  the finding (trimmed from the ledger text) and its resolution (fixed, or
-  parked with its ruling quoted). **If the final-review line reports zero
-  findings, omit this entire section** — never render an empty table.
-- **What Was Delivered cards:** one per task, titled from the plan's
-  `### Task N: ...` heading, described in one sentence drawn from that
-  task's `**Interfaces:** Produces:` line in the plan file.
+The ledger follows DigiSmith's standardized line grammar — per-task lines
+from `superpowers:subagent-driven-development` itself, plus the
+final-review lines DigiSmith requires on top of it (both documented in
+`MEMORY.md`'s Conventions section). Everything below keys off that
+grammar.
+
+#### 2a. Header-level placeholders
+
+Derive all of these mechanically — a cold-start agent with no
+conversational memory of the feature must be able to produce them from
+the plan file, the ledger, and `git` alone:
+
+- **`{{FEATURE_TITLE}}`** — the plan file's own H1 heading
+  (`# <Title> Implementation Plan`) with the trailing
+  `" Implementation Plan"` stripped. E.g. `# Capture Ephemeral URL (M)
+  Implementation Plan` → `Capture Ephemeral URL (M)`.
+- **`{{DATE}}`** — today's date in ISO `YYYY-MM-DD`: the date this report
+  is generated, not the plan's date.
+- **`{{MAP_ITEM}}`** — the map-item letter/number in `{{FEATURE_TITLE}}`'s
+  own parenthetical. E.g. `Capture Ephemeral URL (M)` → `M`.
+- **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
+  Step 1's commit range.
+- **`{{SPEC_RELATIVE_LINK}}` / `{{PLAN_RELATIVE_LINK}}`** — built from the
+  same `<date>-<slug>` the plan file itself uses, relative to
+  `docs/superpowers/reports/`: `../specs/<date>-<slug>-design.html` and
+  `../plans/<date>-<slug>-plan.md`. Check that a file actually exists at
+  each computed path first; if one doesn't, **omit that link and its
+  surrounding sentence** rather than linking a 404. Since the template's
+  "Reference documents:" sentence carries both links, a missing spec means
+  rewriting it to name only the plan (and a missing plan, only the spec);
+  drop the whole sentence only if neither file exists.
+- **`{{REPORT_FILENAME}}`** — literally the filename chosen in Step 4,
+  `<date>-<slug>-report.html`.
+- **`{{SUMMARY_PARAGRAPH}}`** — derive mechanically; never require memory
+  of the conversation that built the feature. Compose it from three
+  sources:
+  1. the plan's own `**Goal:**` line (what was built and why),
+  2. the plan's own `**Architecture:**` line (how it's shaped),
+  3. this fixed closing sentence: *"Followed the full Superpowers process:
+     brainstorming → spec → writing-plans →
+     `superpowers:subagent-driven-development` (`<N>` tasks, each
+     dispatched to a fresh implementer subagent and independently
+     reviewed) → a final whole-branch review"* — where `<N>` is the number
+     of `### Task N:` headings in the plan. Append
+     *", plus `<R>` fix round(s) before merge"* if any task line or the
+     final review itself recorded a fix round (`<R>` = total fix rounds
+     across the whole run). Trim/rewrap 1-3 for prose flow, but don't add
+     facts that aren't in those sources.
+
+#### 2b. Build Process rows
+
+One per task. For each `Task <N>: complete (...)` line:
+
+- **Task title** — the plan's `### Task N: ...` heading.
+- **Review verdict** — scan **all** `Task <N>: ...` lines for that same
+  task number, not just the completion line:
+  - If any `Task <N>: fix round <R>/5 (...)` lines exist for that task,
+    the verdict is **"Approved after `<R>` fix round(s)"**, where `<R>` is
+    the highest round number found — even if the completion line also
+    says "review clean". A completion line's "review clean" describes the
+    *last* review pass, not the task's whole history.
+  - Only when zero fix-round lines exist for that task number is a bare
+    **"Approved, clean"** correct.
+  - Add any `Task <N>: parked — ...` items to the verdict cell too (e.g.
+    "Approved after 2 fix rounds, 1 parked").
+- **BLOCKED tasks** — if any `Task <N>: BLOCKED` line exists, still render
+  that task's row, and note it plainly in the verdict cell (e.g.
+  "BLOCKED — `<reason>`"). Never silently omit a blocked task.
+- **Deferred minors** — every `Task <N>: minor (deferred): ...` line for
+  that same task number, verbatim.
+
+#### 2c. Final Review & Fix rows
+
+One row per distinct finding named in the ledger's `Final review (...)`
+line and any subsequent `Task <N>: fix round ...` /
+`Scoped re-review (...)` / `Final review: parked — ...` lines that
+reference it. Each row: severity, the finding (trimmed from the ledger
+text), and its resolution (fixed, or parked with its ruling quoted).
+**If the final-review line reports zero findings, omit this entire
+section** — never render an empty table.
+
+#### 2d. What Was Delivered cards
+
+One per task, titled from the plan's `### Task N: ...` heading, described
+in one sentence drawn from that task's `**Interfaces:** Produces:` line in
+the plan file.
+
+#### 2e. Commits
+
+`{{COMMIT_LIST_ITEMS}}` is one
+`<li><span class="sha">&lt;short-sha&gt;</span> &lt;subject&gt;</li>` per
+commit, **oldest-first (chronological)** — exactly the order Step 1's
+`git log --reverse --oneline MERGE_BASE..HEAD` prints. Never newest-first.
+
+#### 2f. Escaping (do this before substituting anything)
+
+Every value pulled from the ledger or plan and dropped into the HTML
+template — deferred-minor text, finding text, resolution text, verdicts,
+summary content, commit subjects — must be escaped first, in this order:
+
+1. Replace `&` → `&amp;`, then `<` → `&lt;`, then `>` → `&gt;`.
+2. Then convert Markdown backtick-spans: `` `text` `` → `<code>text</code>`.
+
+This is not optional. This project's own ledger lines routinely contain
+literal angle brackets (`<Key>__<slug>`, `<plan-basename>`,
+`Task <N>: complete`) that would otherwise be swallowed as unknown tags or
+break the table markup outright.
 
 ### Step 3: Render the HTML
 
@@ -217,9 +333,34 @@ spec/report already uses:
 
 `{{TOC_FINALREVIEW_ITEM}}` is
 `<li><a href="#finalreview">Final Review &amp; Fix</a></li>` when that
-section exists, or an empty string when it's omitted. `{{FINAL_REVIEW_SECTION}}`
-is the full `<section id="finalreview">...</section>` block (same shape as
-G's report — a table of Severity/Finding/Resolution) or an empty string.
+section exists, or an empty string when it's omitted.
+
+`{{FINAL_REVIEW_SECTION}}` is this literal block:
+
+```html
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>{{FINAL_REVIEW_SUMMARY_SENTENCE}}</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    {{FINAL_REVIEW_ROWS}}
+  </table>
+  </div>
+</section>
+```
+
+- `{{FINAL_REVIEW_ROWS}}` — one
+  `<tr><td>...</td><td>...</td><td>...</td></tr>` per finding from Step
+  2c: severity / finding text / resolution text, each escaped per Step 2f.
+- `{{FINAL_REVIEW_SUMMARY_SENTENCE}}` — a one-line summary of the final
+  review's overall verdict, e.g. *"Ready to merge: With fixes — 4
+  Important findings, all resolved."*
+
+When the ledger's final-review line reports **zero** findings, both
+`{{FINAL_REVIEW_SECTION}}` and `{{TOC_FINALREVIEW_ITEM}}` are the empty
+string — the section and its TOC entry are omitted entirely rather than
+rendered empty.
 
 ### Step 4: Write and Commit
 
@@ -227,8 +368,10 @@ G's report — a table of Severity/Finding/Resolution) or an empty string.
    `<date-slug>` is exactly the plan file's own `<date>-<slug>` (e.g. plan
    `docs/superpowers/plans/2026-08-08-capture-ephemeral-url-plan.md` →
    report `docs/superpowers/reports/2026-08-08-capture-ephemeral-url-report.html`).
+   That filename is also what `{{REPORT_FILENAME}}` renders in the footer.
 2. If a file already exists at that path, ask via `AskUserQuestion` before
-   overwriting it — never silently clobber.
+   overwriting it — never silently clobber. (This works because the skill
+   runs in the controller session; see Prerequisites.)
 3. Commit:
    ```bash
    git add docs/superpowers/reports/<file>.html
@@ -247,10 +390,18 @@ duplicate any part of that sequencing.
 
 - **No ledger found** → skip this skill entirely; not applicable to this
   run.
-- **Ledger missing a final-review line** (fired before the final review
-  actually ran) → generate what's derivable from the per-task lines
-  alone, and note in the Summary that final-review detail isn't available
-  yet.
+- **Ledger missing a `Final review (...)` line** → say so plainly and ask
+  before proceeding (Step 1). This is unexpected at this skill's trigger
+  point, so never absorb it silently. If the answer is to proceed anyway
+  (e.g. a deliberate fixture that simulates firing before any final review
+  ran), generate what's derivable from the per-task lines alone, omit the
+  Final Review & Fix section and its TOC entry, and note in the Summary
+  that final-review detail isn't available yet.
+- **Ledger's final-review line reports zero findings** → omit the Final
+  Review & Fix section and its TOC entry. Not an error; never render an
+  empty table.
+- **`Task <N>: BLOCKED` line present** → still render that task's row,
+  with the blockage stated in its verdict cell.
 - **Report file already exists** → ask before overwriting.
 - **Empty commit range** (`MERGE_BASE == HEAD`) → stop and say so —
   treat it as a sign something upstream is wrong, not as "no report
@@ -260,8 +411,8 @@ duplicate any part of that sequencing.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan + commit range; skip entirely if no ledger |
-| 2 | Parse ledger into per-task rows, final-review findings (if any), delivered-cards |
-| 3 | Render using the standard report HTML template |
+| 1 | Locate ledger + plan; compute commit range; `git log --reverse --oneline`; skip entirely if no ledger, ask if no final-review line |
+| 2 | Derive header placeholders (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
 | 4 | Write to `docs/superpowers/reports/<date-slug>-report.html`, ask before overwrite, commit |
-| 5 | Hand back to `subagent-driven-development`'s unmodified Finish step |
+| 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |
