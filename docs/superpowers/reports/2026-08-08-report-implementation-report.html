@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Implementation Reporting (N) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Implementation Reporting (N) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-08</span>
+    <span>Map item: <strong>N</strong></span>
+    <span>Commit range: <code>add03ea..347d591</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>report-implementation</code> — DigiSmith's map item <strong>N</strong> — so
+  that every <code>superpowers:subagent-driven-development</code> plan automatically gets an
+  HTML implementation report (what shipped, per-task review record, final-review findings and
+  resolutions, commit list), generated right before the plan's ledger is deleted, instead of
+  relying on a human remembering to write one by hand (as happened once, manually, for map
+  item <strong>G</strong>). It is a single skill,
+  <code>skills/report-implementation/SKILL.md</code>, that triggers when a
+  <code>subagent-driven-development</code> plan's final review has just passed and reads that
+  plan's ledger (<code>.superpowers/sdd/&lt;plan&gt;/progress.md</code>) plus the plan file and
+  <code>git log</code> over the plan's commit range, renders an HTML report using the same
+  template as the existing hand-written G report, and commits it to
+  <code>docs/superpowers/reports/</code>. It never modifies
+  <code>subagent-driven-development</code> or <code>finishing-a-development-branch</code> — it
+  runs once, immediately before the former's own Finish step deletes the workspace. Followed
+  the full Superpowers process: brainstorming → spec → writing-plans →
+  <code>superpowers:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
+  rounds before merge — two scoped to Task 2, and one comprehensive whole-branch wave after
+  the final review.</p>
+  <p>Reference documents: the
+  <a href="../specs/2026-08-08-report-implementation-design.html">design spec</a> and the
+  <a href="../plans/2026-08-08-report-implementation-plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Skill · happy path</div>
+      <h4>Task 1 — <code>report-implementation</code> Skill, Happy Path (and M's Real Report)</h4>
+      <p>Produces a committed HTML report at
+      <code>docs/superpowers/reports/&lt;date-slug&gt;-report.html</code>. Its dogfood run
+      produced M's real, previously-missing implementation report.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Verification · edge cases</div>
+      <h4>Task 2 — <code>report-implementation</code> Edge Cases</h4>
+      <p>Produces nothing new downstream — verifies the four remaining spec-required scenarios
+      not covered in Task 1: no ledger found, ledger missing a final-review line, report file
+      already exists, empty commit range.</p>
+    </div>
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="tag">Docs</div>
+      <h4>Task 3 — Update <code>docs/history.html</code> and <code>MEMORY.md</code> for Map Item N</h4>
+      <p>Produces an up-to-date living tracker.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1</td>
+      <td><code>report-implementation</code> Skill — Happy Path (and M's Real Report)</td>
+      <td><span class="status-ok">✓ Approved, clean</span> — no fix rounds. Ledger note: the
+      original implementer subagent hit an API session limit mid-task after producing both
+      correct deliverables (<code>SKILL.md</code>, the dogfooded M report) but before
+      committing or writing its own report; the controller independently verified both files
+      against real history, committed them (<code>189b339</code>, <code>058e474</code>), and
+      wrote <code>task-1-report.md</code> itself.</td>
+      <td>(1) <code>SKILL.md</code>'s Step 2 documents deriving Build Process/Final
+      Review/Delivered-card content but never explicitly states how to derive header-level
+      placeholders (FEATURE_TITLE, DATE, MAP_ITEM, SPEC_RELATIVE_LINK, PLAN_RELATIVE_LINK,
+      SUMMARY_PARAGRAPH) — a real gap for a future cold-start run, present in the brief
+      itself, not implementer-introduced. <em>Promoted to fix-before-merge at final review.</em>
+      (2) The dogfooded M report's "implementation complete — ready to merge" badge is
+      anachronistic since M was already merged well before that report was generated.
+      <em>Promoted to fix-before-merge at final review.</em>
+      (3) Cosmetic formatting difference between the plan's Task N headings and the report's
+      card titles. <em>Stays deferred.</em></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>report-implementation</code> Edge Cases</td>
+      <td><span class="status-fixed">✓ Approved after 2 fix rounds</span>, no code change.
+      Round 1/5: 3 addressed, 1 open — Step 4's subagent dispatch was not credibly performed,
+      and the fix introduced a self-contradiction claiming <code>git rev-parse</code> was both
+      run and not run. Round 2/5: Step 4 redone as a genuine subagent dispatch, contradiction
+      removed. Both rounds were report-file-only fixes with no commits, which is why the
+      task's commit range is empty (<code>058e474..058e474</code>).</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Update <code>docs/history.html</code> and <code>MEMORY.md</code> for Map Item N</td>
+      <td><span class="status-ok">✓ Approved, clean</span></td>
+      <td>N's timeline entry omits a closing "Map item N done." sentence that M's entry had —
+      the brief's own template omitted it too, not an implementer deviation.
+      <em>Stays deferred.</em></td>
+    </tr>
+  </table>
+  </div>
+  <p>All four edge cases in Task 2 were dogfooded by dispatching separate subagents against
+  concrete fixture scenarios — the project's chosen substitute for an automated test suite,
+  since this is an instruction file, not code. Task 1's dogfood run was unusual in that its
+  output was kept: it reconstructed map item M's already-deleted ledger and generated M's
+  real missing implementation report against real git history.</p>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 4 Important findings, 7 bundled Minors, 1 security-hardening
+  note, and 1 promoted Task 1 minor, all resolved in one comprehensive whole-branch fix wave
+  (opus); 2 cosmetic nits stay deferred.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td>The ledger parser was written against a controller-invented
+      <code>Final review (...)</code> line format with no upstream or DigiSmith-documented
+      grammar — it only existed because this session's controller happened to write it that
+      way. Compounded by verdict derivation reading only the completion line, so a task with a
+      bruising fix-round history could still render as "Approved, clean" purely because its
+      last line said "review clean".</td>
+      <td><span class="status-ok">Fixed</span> — the final-review line grammar
+      (<code>Final review (...)</code>, <code>Scoped re-review (...)</code>,
+      <code>Final review: parked — ...</code>) is now an official DigiSmith convention recorded
+      in <code>MEMORY.md</code>, alongside a second convention requiring every
+      <code>subagent-driven-development</code> plan to invoke
+      <code>digismith:report-implementation</code>. Step 1 now refuses to silently absorb a
+      missing final-review line — it says so and asks. Step 2b's verdict rule now scans
+      <em>all</em> <code>Task &lt;N&gt;: ...</code> lines and renders "Approved after
+      &lt;R&gt; fix round(s)" whenever any <code>fix round &lt;R&gt;/5</code> line exists for
+      that task.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>Seven header-level placeholders (<code>FEATURE_TITLE</code>, <code>DATE</code>,
+      <code>MAP_ITEM</code>, <code>SPEC_RELATIVE_LINK</code>, <code>PLAN_RELATIVE_LINK</code>,
+      <code>REPORT_FILENAME</code>, <code>SUMMARY_PARAGRAPH</code>) had no derivation rule at
+      all — <code>SUMMARY_PARAGRAPH</code> especially, which as written needed facts only
+      someone who lived through the feature's conversation could supply.</td>
+      <td><span class="status-ok">Fixed</span> — new Step 2a gives each one a mechanical rule.
+      <code>SUMMARY_PARAGRAPH</code> is now composed from the plan's own <code>Goal:</code> and
+      <code>Architecture:</code> lines plus a fixed closing sentence naming the task count and
+      any fix rounds. Missing spec/plan files cause the link (and its clause) to be dropped
+      rather than rendered as a 404.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>The <code>FINAL_REVIEW_SECTION</code> placeholder was described in prose ("same shape as G's
+      report — a table of Severity/Finding/Resolution") instead of being given as a literal
+      template, unlike every other part of the report.</td>
+      <td><span class="status-ok">Fixed</span> — Step 3 now carries the literal
+      <code>&lt;section id="finalreview"&gt;</code> block, with
+      <code>FINAL_REVIEW_ROWS</code> and <code>FINAL_REVIEW_SUMMARY_SENTENCE</code>
+      defined. The zero-findings omission rule (section <em>and</em> its TOC entry) is
+      restated alongside it.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>README.md</code> had no mention of <code>report-implementation</code> — and its
+      "One skill sits outside that front door" sentence had become factually false, since two
+      skills now sit outside <code>using-digismith</code>'s front door. This repeats a gap M's
+      own final review already caught once.</td>
+      <td><span class="status-ok">Fixed</span> — the paragraph now opens "Two skills sit
+      outside that front door", and a new paragraph in the same style describes
+      <code>report-implementation</code>'s trigger, output, and why its timing matters, linking
+      to its <code>SKILL.md</code> and <code>docs/history.html</code>.</td>
+    </tr>
+    <tr>
+      <td>Security (hardening)</td>
+      <td>No escaping rule existed for ledger or plan text substituted into the HTML template.
+      This project's own ledger lines routinely contain literal angle brackets
+      (<code>&lt;Key&gt;__&lt;slug&gt;</code>, <code>&lt;plan-basename&gt;</code>) that would be
+      swallowed as unknown tags or break the table markup outright.</td>
+      <td><span class="status-ok">Fixed</span> — new Step 2f requires escaping <code>&amp;</code>,
+      <code>&lt;</code>, and <code>&gt;</code> (in that order) before substitution, then
+      converting Markdown backtick-spans to <code>&lt;code&gt;</code> elements. Applies to
+      deferred-minor lines, finding text, resolution text, verdicts, summary content, and
+      commit subjects.</td>
+    </tr>
+    <tr>
+      <td>Minor (bundled — 7 items)</td>
+      <td>Dead <code>git diff --stat</code> instruction nothing consumed · commit-list ordering
+      unspecified · <code>Task &lt;N&gt;: BLOCKED</code> lines unhandled ·
+      <code>AskUserQuestion</code> availability assumed but never stated · bare, unqualified
+      cross-skill name in the frontmatter <code>description</code> · unguarded
+      fast-forward-merge assumption · <code>docs/history.html</code>'s Tier 5 status read
+      "2/4" against an Items cell listing 5 groups.</td>
+      <td><span class="status-ok">All fixed</span> — the <code>git diff --stat</code> half of
+      Step 1 removed; Step 1 and Step 2e now mandate
+      <code>git log --reverse --oneline</code> for oldest-first commits; Step 2b renders a row
+      for BLOCKED tasks with the reason in the verdict cell; Prerequisites state the skill runs
+      in the controller session, which is what makes <code>AskUserQuestion</code> usable; the
+      frontmatter now says <code>superpowers:subagent-driven-development</code>; "When to Use"
+      names the fast-forward assumption and what to re-examine if a real merge commit ever
+      appears; Tier 5 now reads "2/5".</td>
+    </tr>
+    <tr>
+      <td>Minor (promoted to must-fix)</td>
+      <td>M's dogfooded report carried an "implementation complete — ready to merge" badge even
+      though M had already merged well before that report was written retroactively. Originally
+      deferred at the Task 1 review; the final review's triage promoted it.</td>
+      <td><span class="status-ok">Fixed</span> — the badge now reads "implementation complete —
+      merged to main", matching G's report, which was written under the same retroactive
+      circumstances.</td>
+    </tr>
+  </table>
+  </div>
+  <p>Two cosmetic nits stay deferred by the final review's own triage: Task 1's formatting
+  difference between plan headings and report card titles, and Task 3's missing "Map item N
+  done." closing sentence in the timeline entry. The final review also corrected the
+  controller's dispatch prompt, which had attributed a deferred minor to Task 2 — that item
+  belongs to the reconstructed M fixture, not this plan's real ledger, where Task 2 has none.
+  After the fix wave, the skill was run for real against this plan's own ledger to produce
+  this report — the first non-fixture exercise of the corrected derivation rules.</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">189b339</span> docs: add capture-ephemeral-url (M) implementation report</li>
+    <li><span class="sha">058e474</span> feat(reporting): add report-implementation skill (N), happy path</li>
+    <li><span class="sha">6750c9c</span> docs: update history — report-implementation (N) shipped</li>
+    <li><span class="sha">2e7d32f</span> fix(reporting): close final-review gaps for report-implementation (N)</li>
+    <li><span class="sha">347d591</span> fix(reporting): correct M report's badge to "merged to main"</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · docs/superpowers/reports/2026-08-08-report-implementation-report.html</footer>
+
+</body>
+</html>
