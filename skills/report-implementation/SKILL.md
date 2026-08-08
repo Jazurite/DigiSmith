@@ -9,12 +9,12 @@ description: Use when a `superpowers:subagent-driven-development` plan's final w
 
 DigiSmith's map item **N**. Formalizes what was, until now, a
 manually-written report (see
-`docs/superpowers/reports/2026-08-05-standards-injection-report.html`,
+`.digismith/docs/standards-injection/report.html`,
 written by hand for map item G) into a required step of every
 `superpowers:subagent-driven-development` plan's completion. Generates an
 HTML implementation report — what shipped, the per-task review record,
 the final-review findings and how they were resolved, the commit list —
-and commits it to `docs/superpowers/reports/`.
+and commits it to `.digismith/docs/<feature-slug>/`.
 
 ## When to Use
 
@@ -52,8 +52,10 @@ to a subagent that can't ask.
 
 ### Step 1: Locate and Read Sources
 
-1. **Plan file** — the same `docs/superpowers/plans/<date>-<slug>-plan.md`
-   the just-finished run executed.
+1. **Plan file** — the same `.digismith/docs/<feature-slug>/plan.md` the
+   just-finished run executed. `<feature-slug>` is that file's own parent
+   directory name — read it directly from the path, don't re-derive it
+   from content.
 2. **Ledger** — `.superpowers/sdd/<plan-basename>/progress.md`, in full.
 3. **Commit range:**
    - `MERGE_BASE` — the hash before `..` in the ledger's *first*
@@ -100,19 +102,16 @@ the plan file, the ledger, and `git` alone:
   is generated, not the plan's date.
 - **`{{MAP_ITEM}}`** — the map-item letter/number in `{{FEATURE_TITLE}}`'s
   own parenthetical. E.g. `Capture Ephemeral URL (M)` → `M`.
+- `{{FEATURE_SLUG}}`: the plan file's own parent directory name (already
+  identified in Step 1) — e.g. `capture-ephemeral-url`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
   Step 1's commit range.
-- **`{{SPEC_RELATIVE_LINK}}` / `{{PLAN_RELATIVE_LINK}}`** — built from the
-  same `<date>-<slug>` the plan file itself uses, relative to
-  `docs/superpowers/reports/`: `../specs/<date>-<slug>-design.html` and
-  `../plans/<date>-<slug>-plan.md`. Check that a file actually exists at
-  each computed path first; if one doesn't, **omit that link and its
-  surrounding sentence** rather than linking a 404. Since the template's
-  "Reference documents:" sentence carries both links, a missing spec means
-  rewriting it to name only the plan (and a missing plan, only the spec);
-  drop the whole sentence only if neither file exists.
-- **`{{REPORT_FILENAME}}`** — literally the filename chosen in Step 4,
-  `<date>-<slug>-report.html`.
+- `{{SPEC_RELATIVE_LINK}}` / `{{PLAN_RELATIVE_LINK}}`: same folder as the
+  report itself — literally `design.html` and `plan.md`. If no
+  `design.html` exists at that path (a plan with no separate design
+  spec), omit that link and its clause from the summary sentence rather
+  than linking a 404; keep the other link's clause if that file exists.
+- **`{{REPORT_FILENAME}}`** — always literally `report.html`.
 - **`{{SUMMARY_PARAGRAPH}}`** — derive mechanically; never require memory
   of the conversation that built the feature. Compose it from three
   sources:
@@ -325,7 +324,7 @@ spec/report already uses:
   </ul>
 </section>
 
-<footer>DigiSmith · docs/superpowers/reports/{{REPORT_FILENAME}}</footer>
+<footer>DigiSmith · .digismith/docs/{{FEATURE_SLUG}}/{{REPORT_FILENAME}}</footer>
 
 </body>
 </html>
@@ -364,17 +363,17 @@ rendered empty.
 
 ### Step 4: Write and Commit
 
-1. Target path: `docs/superpowers/reports/<date-slug>-report.html`, where
-   `<date-slug>` is exactly the plan file's own `<date>-<slug>` (e.g. plan
-   `docs/superpowers/plans/2026-08-08-capture-ephemeral-url-plan.md` →
-   report `docs/superpowers/reports/2026-08-08-capture-ephemeral-url-report.html`).
+1. Target path: `.digismith/docs/<feature-slug>/report.html`, in the same
+   folder as that feature's `plan.md` (and `design.html`, if it exists) —
+   e.g. plan `.digismith/docs/capture-ephemeral-url/plan.md` → report
+   `.digismith/docs/capture-ephemeral-url/report.html`.
    That filename is also what `{{REPORT_FILENAME}}` renders in the footer.
 2. If a file already exists at that path, ask via `AskUserQuestion` before
    overwriting it — never silently clobber. (This works because the skill
    runs in the controller session; see Prerequisites.)
 3. Commit:
    ```bash
-   git add docs/superpowers/reports/<file>.html
+   git add .digismith/docs/<feature-slug>/report.html
    git commit -m "docs: add <feature> (<map-item>) implementation report"
    ```
 
@@ -414,5 +413,5 @@ duplicate any part of that sequencing.
 | 1 | Locate ledger + plan; compute commit range; `git log --reverse --oneline`; skip entirely if no ledger, ask if no final-review line |
 | 2 | Derive header placeholders (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
-| 4 | Write to `docs/superpowers/reports/<date-slug>-report.html`, ask before overwrite, commit |
+| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite, commit |
 | 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |
