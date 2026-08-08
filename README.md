@@ -3,7 +3,7 @@
 Jack's personal SDLC plugin — ticket to delivery, built on top of
 [Superpowers](https://github.com/obra/superpowers). See
 [`MEMORY.md`](MEMORY.md) for the full philosophy and roadmap, and
-[`docs/history.html`](docs/history.html) for a live progress tracker
+[`.digismith/history.html`](.digismith/history.html) for a live progress tracker
 across every map item.
 
 This README covers the one skill you actually invoke to start working:
@@ -22,7 +22,7 @@ Shopify Preview Theme and Theme Editor URLs from the bot's PR comment. It
 doesn't create the PR and doesn't write to JIRA (that's a separate,
 later feature). See
 [`skills/capture-ephemeral-url/SKILL.md`](skills/capture-ephemeral-url/SKILL.md)
-for the exact process, or [`docs/history.html`](docs/history.html) for
+for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.
 
 **`report-implementation`** (map item **N**). It triggers the moment a
@@ -33,7 +33,7 @@ how they were resolved, the commit list. Timing is the whole point: it has
 to run before that plan's ledger gets deleted, since the ledger is where
 all of that detail lives. See
 [`skills/report-implementation/SKILL.md`](skills/report-implementation/SKILL.md)
-for the exact process, or [`docs/history.html`](docs/history.html) for
+for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.
 
 ## Install
@@ -73,7 +73,7 @@ invokes `digismith:jira-intake` for you:
   whatever's missing (title, description, acceptance criteria), drafts
   a ticket, and confirms it with you before writing anything.
 
-Either door writes `docs/<slug>/ticket.md` in the repo you're working
+Either door writes `.digismith/docs/<slug>/ticket.md` in the repo you're working
 in. A Door 2 draft has no ticket key yet — if you try to start real
 implementation work on one, `using-digismith` stops and tells you it
 needs a real key first (see Edge Cases below).
@@ -127,7 +127,7 @@ the hand-off; it never re-invokes or duplicates anything downstream.
 slice: intake → branch → brainstorming hand-off. It's not yet the full
 prescriptive driver described in the roadmap (enforcing stage order
 end-to-end, routing through every future stage). Check
-[`docs/history.html`](docs/history.html) for what's shipped so far and
+[`.digismith/history.html`](.digismith/history.html) for what's shipped so far and
 what's still ahead.
 
 ## Full Skill Reference

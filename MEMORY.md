@@ -167,10 +167,22 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 
 ## Conventions
 
-- Specs and plans for DigiSmith work live inside this repo, git-committed,
-  at `docs/superpowers/{specs,plans}/`. (Originally documented as living
-  at the knowpolis vault root — that path doesn't exist on the machine
-  this was built on, so this repo's own `docs/` became the default.)
+- **Unified docs convention** (adopted 2026-08-08, replacing the two
+  conventions below): everywhere DigiSmith writes docs — its own repo or
+  any consumer repo — they live together at
+  `.digismith/docs/<feature-slug>/{ticket.md, design.html, plan.md,
+  report.html}`, one folder per feature, files named by role only (no
+  date prefix — the folder name and git history carry that). In
+  DigiSmith's own repo, `.digismith/` is git-committed, same as the old
+  `docs/` was. In a consumer repo, commit-vs-gitignore is an explicit
+  per-repo choice: `jira-intake` checks that repo's `.gitignore` for a
+  `.digismith/` entry before writing there for the first time — entry
+  present → write gitignored, no question asked; absent and
+  `.digismith/docs/` doesn't exist there yet → ask once via
+  `AskUserQuestion`, and if gitignored is chosen, add the entry (its
+  presence becomes the remembered answer for every future session; its
+  absence means "committed," equally durable). `.digismith/history.html`
+  replaces `docs/history.html` in DigiSmith's own repo.
 - Specs are authored in HTML — richer structure and presentation for a
   document a human reviews once. Plans stay Markdown:
   `superpowers:subagent-driven-development`'s `task-brief` script parses
