@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">3 / 13</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">4 / 14</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -159,6 +159,9 @@
     <tr><td><strong>M</strong></td><td>Ephemeral deploy capture</td>
       <td>Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session</td>
       <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>N</strong></td><td>Implementation reporting</td>
+      <td>Formalizes G's hand-written report into a required step: once a <code>subagent-driven-development</code> plan's final review passes, generate the HTML implementation report before the plan's ledger gets deleted</td>
+      <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -183,6 +186,12 @@
     <a href="superpowers/specs/2026-08-08-capture-ephemeral-url-design.html">design spec</a> ·
     <a href="superpowers/plans/2026-08-08-capture-ephemeral-url-plan.md">implementation plan</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>N — Implementation reporting:</strong> <code>report-implementation</code> skill —
+    <a href="superpowers/specs/2026-08-08-report-implementation-design.html">design spec</a> ·
+    <a href="superpowers/plans/2026-08-08-report-implementation-plan.md">implementation plan</a> ·
+    its own dogfood run produced <a href="superpowers/reports/2026-08-08-capture-ephemeral-url-report.html">M's real implementation report</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -203,8 +212,8 @@
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>5</strong></td><td>Technical expansion</td>
-      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>I.1/I.2/I.3</strong> QA handoff</td>
-      <td><span class="status next">In progress (1/4 — M shipped, pulled forward out of tier order)</span></td></tr>
+      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1/I.2/I.3</strong> QA handoff</td>
+      <td><span class="status next">In progress (2/4 — M and N shipped, pulled forward out of tier order)</span></td></tr>
     <tr><td><strong>6</strong></td><td>Last</td>
       <td><strong>C</strong> live work journal</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -375,6 +384,24 @@
       real Emma repo would be visible to teammates — so those get their first
       live verification the next time this skill runs for real. Task 3 is
       this history.html update. Map item <strong>M</strong> done.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-08</div>
+      <h4>N brainstormed, specced, and built — 3 tasks, subagent-driven-development</h4>
+      <p>Jack asked to formalize G's hand-written implementation report into a
+      required step. Brainstorming surfaced a real sequencing problem: the
+      ledger content that makes a report worth reading is deleted by
+      <code>subagent-driven-development</code>'s own Finish step before
+      <code>finishing-a-development-branch</code> even runs — so
+      <code>report-implementation</code> triggers earlier than "after merge,"
+      right before that deletion, relying on this repo's merges always being
+      fast-forward so the commit range it records never changes afterward.
+      Task 1's dogfood run reconstructed M's actual (already-deleted) ledger
+      from this session's own record of it and generated M's real missing
+      report against real git history — kept, not discarded as test
+      scaffolding. Task 2 dogfooded four edge cases with no gaps found. Task 3
+      is this history.html update.</p>
     </div>
 
   </div>
