@@ -52,10 +52,34 @@ to a subagent that can't ask.
 
 ### Step 1: Locate and Read Sources
 
-1. **Plan file** — the same `.digismith/docs/<feature-slug>/plan.md` the
-   just-finished run executed. `<feature-slug>` is that file's own parent
-   directory name — read it directly from the path, don't re-derive it
-   from content.
+1. **Plan file** — the same plan file the just-finished run executed,
+   normally `.digismith/docs/<feature-slug>/plan.md`. Derive
+   `<feature-slug>` from that file's path, **guarded**:
+   - **Check first:** does the plan's path actually match
+     `.digismith/docs/<something>/plan.md` — i.e. is its parent directory
+     sitting directly under `.digismith/docs/`?
+   - **Yes (the normal case)** → `<feature-slug>` is that parent directory
+     name. Read it straight off the path; don't re-derive it from content.
+     E.g. `.digismith/docs/capture-ephemeral-url/plan.md` →
+     `capture-ephemeral-url`.
+   - **No (the plan lives somewhere else)** → the parent directory name is
+     *not* a slug and must not be used as one. This happens when a plan
+     predates the unified-docs convention, or was deliberately excluded
+     from a migration, and still sits under the old
+     `docs/superpowers/plans/` layout — where the parent directory is
+     literally `plans`. Fall back to parsing the slug out of the plan
+     file's **own filename**, which follows `<date>-<slug>-plan.md`: strip
+     the leading `<date>-` (`YYYY-MM-DD-`) and the trailing `-plan.md`.
+     E.g. `docs/superpowers/plans/2026-08-08-unified-docs-convention-plan.md`
+     → `unified-docs-convention` (**not** `plans`).
+
+   Either way, the slug you end up with defines
+   `.digismith/docs/<feature-slug>/` as the target folder for everything
+   downstream — report output path (Step 4), the footer, and the sibling
+   spec/plan links. In the fallback case that folder may not yet contain a
+   `design.html` or `plan.md` at all (they're still at their old location);
+   that needs no extra handling — Step 2a's existing
+   omit-the-link-if-the-file-isn't-there rule already covers it.
 2. **Ledger** — `.superpowers/sdd/<plan-basename>/progress.md`, in full.
 3. **Commit range:**
    - `MERGE_BASE` — the hash before `..` in the ledger's *first*
@@ -102,15 +126,20 @@ the plan file, the ledger, and `git` alone:
   is generated, not the plan's date.
 - **`{{MAP_ITEM}}`** — the map-item letter/number in `{{FEATURE_TITLE}}`'s
   own parenthetical. E.g. `Capture Ephemeral URL (M)` → `M`.
-- `{{FEATURE_SLUG}}`: the plan file's own parent directory name (already
-  identified in Step 1) — e.g. `capture-ephemeral-url`.
+- `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
+  parent directory name in the normal case, or the slug parsed out of its
+  filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
+  a bare container directory like `plans`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
   Step 1's commit range.
 - `{{SPEC_RELATIVE_LINK}}` / `{{PLAN_RELATIVE_LINK}}`: same folder as the
-  report itself — literally `design.html` and `plan.md`. If no
-  `design.html` exists at that path (a plan with no separate design
-  spec), omit that link and its clause from the summary sentence rather
-  than linking a 404; keep the other link's clause if that file exists.
+  report itself — literally `design.html` and `plan.md`. Check each one
+  for real: if `design.html` doesn't exist in that folder (a plan with no
+  separate design spec, or a spec that hasn't been migrated there yet),
+  omit that link and its clause from the summary sentence rather than
+  linking a 404; same for `plan.md`; keep whichever clause names a file
+  that does exist. If neither exists, drop the whole "Reference documents"
+  sentence.
 - **`{{REPORT_FILENAME}}`** — always literally `report.html`.
 - **`{{SUMMARY_PARAGRAPH}}`** — derive mechanically; never require memory
   of the conversation that built the feature. Compose it from three
@@ -363,19 +392,42 @@ rendered empty.
 
 ### Step 4: Write and Commit
 
-1. Target path: `.digismith/docs/<feature-slug>/report.html`, in the same
-   folder as that feature's `plan.md` (and `design.html`, if it exists) —
-   e.g. plan `.digismith/docs/capture-ephemeral-url/plan.md` → report
-   `.digismith/docs/capture-ephemeral-url/report.html`.
+1. Target path: `.digismith/docs/<feature-slug>/report.html`, using the
+   slug from Step 1 — normally the same folder as that feature's `plan.md`
+   and `design.html`, e.g. plan
+   `.digismith/docs/capture-ephemeral-url/plan.md` → report
+   `.digismith/docs/capture-ephemeral-url/report.html`. (In Step 1's
+   fallback case the plan itself lives elsewhere; the report still goes
+   into `.digismith/docs/<feature-slug>/`, creating that folder if needed.)
    That filename is also what `{{REPORT_FILENAME}}` renders in the footer.
 2. If a file already exists at that path, ask via `AskUserQuestion` before
    overwriting it — never silently clobber. (This works because the skill
    runs in the controller session; see Prerequisites.)
-3. Commit:
+3. Write the file.
+4. **Before staging, check whether the target path is gitignored in this
+   repo** — `digismith:jira-intake` makes commit-vs-gitignore an explicit
+   per-repo choice, so `.digismith/docs/` is genuinely ignored in some
+   consumer repos and `git add` would hard-fail there ("Use -f if you
+   really want to add them"):
    ```bash
-   git add .digismith/docs/<feature-slug>/report.html
-   git commit -m "docs: add <feature> (<map-item>) implementation report"
+   git check-ignore -q .digismith/docs/<feature-slug>/report.html
    ```
+   Read the exit code, not the (empty) output: **0 = ignored**, **1 = not
+   ignored**. Exit code 1 is a normal, expected answer meaning "this path
+   is not ignored" — it is *not* a command failure, don't treat it as an
+   error.
+   - **Ignored (exit 0)** → the report is written but **not** committed.
+     Say so plainly: the report was written to
+     `.digismith/docs/<feature-slug>/report.html` but not committed,
+     because this repo's `.digismith/docs/` is gitignored — matching the
+     choice already made for this repo. Do **not** re-ask the
+     commit-vs-gitignore question, and do **not** override it with
+     `git add -f`. Skip to Step 5.
+   - **Not ignored (exit 1)** → commit as normal:
+     ```bash
+     git add .digismith/docs/<feature-slug>/report.html
+     git commit -m "docs: add <feature> (<map-item>) implementation report"
+     ```
 
 ### Step 5: Hand Back
 
@@ -401,6 +453,16 @@ duplicate any part of that sequencing.
   empty table.
 - **`Task <N>: BLOCKED` line present** → still render that task's row,
   with the blockage stated in its verdict cell.
+- **Plan file isn't at `.digismith/docs/<slug>/plan.md`** → not an error;
+  use Step 1's fallback and parse the slug out of the plan's
+  `<date>-<slug>-plan.md` filename. Never let the slug come out as a
+  container directory name like `plans`.
+- **Target report path is gitignored in this repo** (`git check-ignore -q`
+  exits 0) → write the report, skip `git add`/`git commit`, and say
+  plainly that it wasn't committed because this repo's `.digismith/docs/`
+  is gitignored. Not an error, and not a reason to re-ask the
+  commit-vs-gitignore question or to force with `-f`. (Exit code 1 from
+  that command means "not ignored" — the normal path — not a failure.)
 - **Report file already exists** → ask before overwriting.
 - **Empty commit range** (`MERGE_BASE == HEAD`) → stop and say so —
   treat it as a sign something upstream is wrong, not as "no report
@@ -410,8 +472,8 @@ duplicate any part of that sequencing.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan; compute commit range; `git log --reverse --oneline`; skip entirely if no ledger, ask if no final-review line |
+| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; skip entirely if no ledger, ask if no final-review line |
 | 2 | Derive header placeholders (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
-| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite, commit |
+| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |

@@ -39,8 +39,10 @@ Then, still in the original checkout and **before any worktree exists**,
 read the full content of the `.digismith/docs/<slug>/ticket.md` that
 `digismith:jira-intake` just wrote (or that this session already had)
 into your own context now — title, description, acceptance criteria,
-key. `digismith:jira-intake` writes that file gitignored, and a freshly
-created worktree checks out tracked files only, so `ticket.md` will
+key. A freshly created worktree checks out only what's already committed,
+and `digismith:jira-intake` has just written `ticket.md` — it is not yet
+committed at this point, and in a repo that chose the gitignored option
+it never will be. Either way the effect is the same: `ticket.md` will
 **not** be present inside the worktree Step 2 creates. Carry the content
 you read here forward to Step 3; never plan on re-reading the file from
 inside the new worktree.
@@ -133,6 +135,6 @@ chain yourself.
 
 | Step | Action |
 |---|---|
-| 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less; read `.digismith/docs/<slug>/ticket.md`'s full content into context now — it's gitignored and won't exist in the worktree |
+| 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less; read `.digismith/docs/<slug>/ticket.md`'s full content into context now — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 2 | Derive `<Key>__<slug>` branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket |
 | 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context; Superpowers' own chain takes over from there |

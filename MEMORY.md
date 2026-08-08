@@ -164,6 +164,18 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 - **F's shape is undecided.** Whether design review is (a) present-for-human-
   review only, (b) independent agent critique only, or (c) critique then
   present, was raised but never settled. Decide when Tier 5 gets specced.
+- **`design.html`/`plan.md` have no enforcement mechanism.** The unified
+  docs convention says a new feature's spec and plan belong at
+  `.digismith/docs/<feature-slug>/`, but nothing today actually points
+  `superpowers:brainstorming` or `superpowers:writing-plans` there — they're
+  third-party skills that don't know the convention exists, so a new
+  feature's spec/plan still land wherever those skills default to. That's
+  exactly how the unified-docs-convention feature's own spec and plan ended
+  up at the old `docs/superpowers/` location. `using-digismith`'s hand-off
+  to `superpowers:brainstorming` is the natural place to eventually pass
+  the target folder explicitly, but that's undesigned. Decide when it's
+  actually blocking someone, not preemptively — the final review that
+  raised it called it a genuine follow-up feature, not a merge blocker.
 
 ## Conventions
 
@@ -175,14 +187,15 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   date prefix — the folder name and git history carry that). In
   DigiSmith's own repo, `.digismith/` is git-committed, same as the old
   `docs/` was. In a consumer repo, commit-vs-gitignore is an explicit
-  per-repo choice: `jira-intake` checks that repo's `.gitignore` for a
-  `.digismith/` entry before writing there for the first time — entry
-  present → write gitignored, no question asked; absent and
-  `.digismith/docs/` doesn't exist there yet → ask once via
-  `AskUserQuestion`, and if gitignored is chosen, add the entry (its
-  presence becomes the remembered answer for every future session; its
-  absence means "committed," equally durable). `.digismith/history.html`
-  replaces `docs/history.html` in DigiSmith's own repo.
+  per-repo choice: `jira-intake` asks git itself
+  (`git check-ignore -q .digismith/docs/`, exit 0 = ignored, exit 1 = not
+  ignored) before writing there for the first time — ignored → write
+  gitignored, no question asked; not ignored and nothing tracked under
+  `.digismith/docs/` yet → ask once via `AskUserQuestion`, and if
+  gitignored is chosen, safely append the entry (its presence becomes the
+  remembered answer for every future session; its absence means
+  "committed," equally durable). `.digismith/history.html` replaces
+  `docs/history.html` in DigiSmith's own repo.
 - Specs are authored in HTML — richer structure and presentation for a
   document a human reviews once. Plans stay Markdown:
   `superpowers:subagent-driven-development`'s `task-brief` script parses

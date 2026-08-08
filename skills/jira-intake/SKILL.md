@@ -73,21 +73,63 @@ ticket already exist, or are we shaping one from a raw need?
    being worked in — never DigiSmith's own repo, which only hosts this
    skill, not the tickets it processes.
 3. **Commit-vs-gitignore, decided once per repo:** before writing into
-   `.digismith/docs/` in this repo for the first time, check that repo's
-   own `.gitignore` for a `.digismith/` (or `.digismith/docs/`) entry:
-   - **Entry found** → write gitignored, proceed, no question asked.
-   - **No entry, and `.digismith/docs/` doesn't already exist in this
-     repo** → ask once via `AskUserQuestion` ("commit this repo's
-     DigiSmith docs, or keep them local-only?"). If gitignored is chosen,
-     append the entry to this repo's `.gitignore` (creating the file if it
-     doesn't exist) — its presence is now the remembered answer for every
-     future session in this repo. If committed is chosen, do nothing
-     further; the entry's continued absence is itself the remembered
-     "committed" signal.
-   - **No entry, but `.digismith/docs/` already exists in this repo** →
-     an earlier write already happened without adding a `.gitignore`
-     entry; treat as "committed" (matches the existing files' actual
-     state), don't ask again.
+   `.digismith/docs/` in this repo for the first time, ask git itself
+   whether that path is already ignored — don't grep `.gitignore` for a
+   literal string:
+
+   ```bash
+   git check-ignore -q .digismith/docs/
+   ```
+
+   Read the **exit code**, not the (empty) output: **0 = ignored**,
+   **1 = not ignored**. Exit code 1 is a normal, expected answer meaning
+   "this path is not ignored" — it is *not* a command failure, so don't
+   treat it as an error or retry it. `git check-ignore` is authoritative
+   where a text match isn't: it correctly resolves a bare `.digismith`
+   (no trailing slash), wildcard patterns, negations (`!`), comments,
+   nested `.gitignore` files deeper in the tree, `.git/info/exclude`, and
+   a global `core.excludesFile` — none of which grepping the root
+   `.gitignore` for `.digismith/` would catch.
+
+   Branch on the result:
+   - **Ignored (exit 0)** → write gitignored, proceed, no question asked.
+   - **Not ignored (exit 1), and nothing under `.digismith/docs/` is
+     tracked by git in this repo** → ask once via `AskUserQuestion`
+     ("commit this repo's DigiSmith docs, or keep them local-only?").
+     - If **gitignored** is chosen, append the entry to this repo's
+       `.gitignore` — safely, never by rewriting the file:
+       1. If `.gitignore` doesn't exist at all, create it containing the
+          single line `.digismith/`. Done.
+       2. If it does exist, **read its current content first**.
+       3. If that content doesn't already end in a newline, add one — an
+          otherwise-valid last line would silently fuse with the entry
+          you're appending and corrupt both.
+       4. Then append one new line: `.digismith/`.
+       5. Use an append operation. Never use a tool or redirect that
+          replaces the whole file's content (`>` rather than `>>`, or a
+          whole-file write) — that would clobber every existing rule in
+          the repo's `.gitignore`.
+
+       Its presence is now the remembered answer for every future session
+       in this repo.
+     - If **committed** is chosen, do nothing further; the entry's
+       continued absence is itself the remembered "committed" signal. Note
+       that choosing "committed" doesn't itself commit anything — it just
+       means the file is left tracked-and-not-ignored, so it becomes part
+       of whatever commit the user (or a later skill) makes normally.
+   - **Not ignored (exit 1), but `.digismith/docs/` already has files
+     tracked by git in this repo** → an earlier write already happened and
+     was committed without adding a `.gitignore` entry; treat as
+     "committed" (matches the existing files' actual state), don't ask
+     again. Confirm tracked-ness with git, not with directory existence:
+     ```bash
+     git ls-files .digismith/docs/
+     ```
+     Non-empty output → genuinely committed, don't ask. **Empty output
+     while the directory nevertheless exists on disk** (e.g. an aborted
+     earlier run left untracked files behind) → that's not evidence of a
+     prior decision at all; fall back to the "ask once" branch above
+     rather than silently assuming "committed".
 4. Check for an existing file at that path first — see Handling Existing
    Files below — before writing.
 5. Write the file in the Ticket Template shape.
@@ -145,6 +187,12 @@ exists:
   instead.
 - **Existing file at the target slug** → see Handling Existing Files
   above; branch by the table, never silently overwrite.
+- **`git check-ignore -q` exits 1** → not an error. It's the normal
+  "this path is not ignored" answer; continue into Step 3.3's
+  not-ignored branch. (Only exit 0 means ignored.)
+- **`.digismith/docs/` exists on disk but `git ls-files` reports nothing
+  tracked there** → treat it as an aborted earlier run, not as a prior
+  "committed" decision; use the ask-once branch.
 
 ## Quick Reference
 
@@ -153,5 +201,6 @@ exists:
 | 1 | Determine the door |
 | 2a | Door 1: get key, detect JIRA tool, fetch or ask for paste |
 | 2b | Door 2: seed from description, ask only what's missing, draft, confirm |
-| 3 | Derive slug, branch on existing file (refresh / collision / upgrade / none), write `.digismith/docs/<slug>/ticket.md` |
-| 4 | Commit-vs-gitignore, decided once per repo: entry found → proceed gitignored; no entry + folder doesn't exist yet → ask once via `AskUserQuestion`, then add the `.gitignore` entry if gitignored is chosen; no entry + folder already exists → treat as committed, don't ask |
+| 3.1–3.2 | Derive the slug; target path is `.digismith/docs/<slug>/ticket.md`, in the repo being worked in — never DigiSmith's own |
+| 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q .digismith/docs/` — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under `.digismith/docs/` → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + `git ls-files .digismith/docs/` non-empty → treat as committed, don't ask |
+| 3.4–3.5 | Branch on any existing file at that path (refresh / collision / upgrade / none), then write the ticket |
