@@ -176,6 +176,15 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   the target folder explicitly, but that's undesigned. Decide when it's
   actually blocking someone, not preemptively — the final review that
   raised it called it a genuine follow-up feature, not a merge blocker.
+- **`{{MAP_ITEM}}` has no derivation rule for a no-map-letter feature.**
+  `report-implementation`'s placeholder is defined as "the map-item
+  letter/number in `{{FEATURE_TITLE}}`'s own parenthetical" (e.g.
+  `Capture Ephemeral URL (M)` → `M`), but a structural feature like the
+  unified docs convention itself has no map letter at all. The self-run
+  report worked around it by hand with `n/a — structural change, no map
+  letter` rather than following a documented rule. Cheap, non-blocking —
+  fold a no-map-letter case into that derivation bullet next time
+  `report-implementation` is touched, not urgent enough on its own.
 
 ## Conventions
 
