@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profiling (O) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Profiling (O) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-11</span>
+    <span>Map item: <strong>O</strong></span>
+    <span>Commit range: <code>b6118fa..b8729c1</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>profiling</code> — DigiSmith's map item <strong>O</strong> — a per-repo behavior
+  profile (standards subset, ticket/ephemeral/reporting on-off) that <code>using-digismith</code>,
+  <code>inject-standards</code>, <code>capture-ephemeral-url</code>, and
+  <code>report-implementation</code> each consult independently at their own trigger point, so the
+  existing "everything on" Emma flow and a lighter Personal flow (no ticket, no ephemeral capture)
+  become a declared per-repo choice instead of an undocumented, ad hoc deviation. Two new flat YAML
+  files (<code>profiles/emma.yml</code>, <code>profiles/personal.yml</code>) ship inside DigiSmith's
+  own repo; each consuming repo records its choice in a one-line <code>.digismith/profile</code>
+  file; four existing skills each gain an additive read of that file at their own trigger point — no
+  central orchestrator, no inheritance, no new skill file for switching. Followed the full
+  Superpowers process: brainstorming → spec → writing-plans →
+  <code>superpowers:subagent-driven-development</code> (5 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix
+  round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Profile Definitions + using-digismith Profile Resolution</h4>
+      <p><code>profiles/emma.yml</code> and <code>profiles/personal.yml</code> (the fixed schema every
+      later task reads), plus the <code>.digismith/profile</code> read/write contract at
+      <code>using-digismith</code>'s Step 0/2/3 that Tasks 2-4 each independently re-read.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>inject-standards Profile Gate</h4>
+      <p>Changes which <code>standards/</code> folders are eligible for matching based on the active
+      profile's <code>standards</code> list — unchanged for any repo with no profile file.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>capture-ephemeral-url Profile Pre-Check</h4>
+      <p>An early stop when the active profile has <code>ephemeral: false</code> — unchanged for any
+      repo with no profile file.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 4</div>
+      <h4>report-implementation Scoped Ticket Field</h4>
+      <p>A new optional <code>{{TICKET_KEY_META}}</code> placeholder in the report's header meta,
+      gated by the active profile's <code>ticket</code> field — every other report behavior
+      unchanged.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 5</div>
+      <h4>Update history.html and MEMORY.md for Map Item O</h4>
+      <p>An up-to-date living tracker: map-table row, progress stats, Tier 1 build-order status, and
+      a timeline entry for O.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Profile Definitions + using-digismith Profile Resolution</td>
+      <td>profiles/emma.yml, profiles/personal.yml, using-digismith Step 0/2/3</td>
+      <td>Approved, clean</td>
+      <td>using-digismith/SKILL.md Step 0 says "see Locating DigiSmith's Repo below" but no heading of that name exists in this file (content is present two paragraphs below regardless) — cosmetic.<br>
+      using-digismith/SKILL.md's "Switching profiles mid-session" clause doesn't explicitly cover switch-requested-but-no-.digismith/profile-exists-yet, though the design spec calls for "same flow as first use" — low practical risk.</td>
+    </tr>
+    <tr>
+      <td>2. inject-standards Profile Gate</td>
+      <td>New Step 0 gating standards/ folder eligibility</td>
+      <td>Approved, clean</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>3. capture-ephemeral-url Profile Pre-Check</td>
+      <td>New Step 0 stopping ephemeral capture when disabled</td>
+      <td>Approved, clean</td>
+      <td>capture-ephemeral-url/SKILL.md's new Error Handling bullet is appended at the list's end rather than in step-chronological order — cosmetic only.</td>
+    </tr>
+    <tr>
+      <td>4. report-implementation Scoped Ticket Field</td>
+      <td>{{TICKET_KEY_META}} placeholder, gated derivation logic</td>
+      <td>Approved, clean</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>5. Update history.html and MEMORY.md for Map Item O</td>
+      <td>Map row, progress stats, Tier 1 status, timeline entry</td>
+      <td>Approved after 1 fix round</td>
+      <td>—</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Critical and 3 Important finding resolved in one fix wave,
+  alongside 2 Minor findings fixed in the same pass; 4 further Minor findings parked with rulings
+  as non-blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td><code>.digismith/profile</code> was written into the original checkout, but <code>using-digismith</code>'s Step 2 then creates a worktree that only contains committed files — so it was invisible to the other three skills on first use, and permanently invisible in repos where <code>.digismith/</code> is gitignored.</td><td>Fixed — new Step 2.6 copies the file into the new worktree via a plain filesystem copy (never <code>git add</code>, never <code>git add -f</code>), with every worktree-creating path in Step 2 routed through it.</td></tr>
+    <tr><td>Important</td><td>The <code>reporting</code> field in <code>profiles/&lt;name&gt;.yml</code> was declared but nothing consumed it.</td><td>Fixed — <code>report-implementation</code> gained a <code>reporting: false</code> skip gate mirroring its existing no-ledger check.</td></tr>
+    <tr><td>Important</td><td><code>README.md</code> still documented the pre-profiling flow, with no mention of the first-use profile picker or the switch front door.</td><td>Fixed — README updated with a Quick Start paragraph and two Edge Cases rows.</td></tr>
+    <tr><td>Important</td><td><code>inject-standards</code>'s Quick Reference table said "<code>global/</code> is never gated", contradicting its own new Step 0.</td><td>Fixed — reworded to "never gated by this specific check", matching the plan's own verbatim wording.</td></tr>
+    <tr><td>Minor</td><td>Two files were missing the "never read <code>profiles/</code> under a plugin cache path" warning present elsewhere.</td><td>Fixed — added to <code>capture-ephemeral-url</code> and <code>report-implementation</code>.</td></tr>
+    <tr><td>Minor</td><td><code>profiles/emma.yml</code>'s <code>standards</code> list has no note that it must be hand-synced with <code>standards/</code>'s folders.</td><td>Fixed — a comment was added to the file.</td></tr>
+    <tr><td>Minor</td><td><code>capture-ephemeral-url</code>'s <code>&lt;Key&gt;</code> parsing has a latent gap under a hypothetical future <code>ticket: false</code> + <code>ephemeral: true</code> profile combination.</td><td>Parked — real but unreachable with the two shipped profiles; noted for whoever adds a third profile.</td></tr>
+    <tr><td>Minor</td><td><code>history.html</code>'s two adjacent sentences about "zero behavior change" vs. the ticket-field addition read as mildly self-contradictory.</td><td>Parked — reviewer's own assessment was that, read whole, it isn't misleading; cosmetic phrasing only.</td></tr>
+    <tr><td>Minor</td><td>No shape constraint exists on <code>.digismith/profile</code>'s content before it's used to build a <code>profiles/&lt;name&gt;.yml</code> path.</td><td>Parked — real hardening opportunity but inert today (a mismatched name simply resolves to "stale"), and this is a single-user personal tool.</td></tr>
+    <tr><td>Minor</td><td>Two prose lines introduced by the fix wave exceed this repo's ~72-column wrap (<code>capture-ephemeral-url/SKILL.md</code>, <code>report-implementation/SKILL.md</code>).</td><td>Parked — cosmetic, not worth a second fix round.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">31cca81</span> feat(profiling): add profile definitions and using-digismith profile resolution</li>
+    <li><span class="sha">b5b082b</span> docs: add profiling (O) implementation plan</li>
+    <li><span class="sha">a8b1b53</span> feat(profiling): add profile gate to inject-standards</li>
+    <li><span class="sha">ae413e4</span> feat(profiling): add profile pre-check to capture-ephemeral-url</li>
+    <li><span class="sha">f777156</span> feat(profiling): add scoped ticket-key field to report-implementation</li>
+    <li><span class="sha">01986af</span> docs: update history — profiling (O) shipped</li>
+    <li><span class="sha">c6fea3a</span> docs: correct O's history.html timeline entry accuracy</li>
+    <li><span class="sha">18836ab</span> fix(profiling): copy .digismith/profile into the worktree so it survives Step 2</li>
+    <li><span class="sha">7b33bfa</span> feat(profiling): gate report-implementation on the profile's reporting field</li>
+    <li><span class="sha">b8729c1</span> docs(profiling): document the profile picker in README, fix inject-standards gating wording</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/profiling/report.html</footer>
+
+</body>
+</html>
