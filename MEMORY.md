@@ -113,9 +113,9 @@ driving status transitions).
 
 | Tier | Theme | Items |
 |---|---|---|
-| **1** | The frame | **G** standards injection · **E** spine · **O** profiling (pulled forward and built 2026-08-11) |
+| **1** | The frame | **G** standards injection · **E** spine (first slice — Tier 1 considered satisfied 2026-08-11) · **O** profiling (pulled forward and built 2026-08-11) |
 | **2** | The override | **H** subagent-driven always · **K** open-weight model extension |
-| **3** | Intake & estimation | **A** intake/creation · **J** estimation |
+| **3** | Intake & estimation | **A** intake/creation · **E** spine (remaining scope — decoupled from Tier 1 2026-08-11) · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
 | **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** E2E · **I.3** Figma visual regression |
 | **6** | Last | **C** live work journal |
