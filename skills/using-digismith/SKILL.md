@@ -56,6 +56,35 @@ first-use flow below instead of guessing.
 5. Write the chosen profile's `name` field, and only that, as the sole
    line of `.digismith/profile` in the repo being worked in.
 
+**`.digismith/profile` is config, not generated docs output.** It sits
+*beside* `.digismith/docs/`, not inside it, and it is deliberately
+outside `digismith:jira-intake`'s per-repo commit-vs-gitignore choice —
+that choice governs the docs this pipeline *generates* (`ticket.md`,
+`design.html`, `plan.md`, `report.html`), while this file is the pointer
+every later skill needs in order to know how to behave at all. Two
+consequences:
+
+- **Never force-add it.** In a repo whose `.gitignore` carries a bare
+  `.digismith/` line — whether `digismith:jira-intake` appended it, or it
+  predates this feature entirely — that entry is a prefix match, so it
+  covers `.digismith/profile` too, not just `.digismith/docs/`. Plain
+  `git add` would hard-fail there and `git add -f` would override a
+  choice the user deliberately made. Don't do either. Where `.digismith/`
+  is *not* ignored, committing this file along with the rest of the work
+  is fine and makes it durable — but it is never required for this
+  skill's flow to work.
+- **What is required is that the file physically exists in whatever
+  working directory the work actually happens in.** Step 2 creates a
+  *worktree*, and `git worktree add` checks out only committed files —
+  the same hazard Step 1 documents below for `ticket.md`. Untracked or
+  gitignored, `.digismith/profile` will not appear inside that new
+  worktree on its own, so **Step 2.6 copies it in explicitly**. Skipping
+  that copy is not cosmetic: `digismith:inject-standards`,
+  `digismith:capture-ephemeral-url`, and `digismith:report-implementation`
+  all read this file from the worktree's own working directory, and a
+  missing file reads as "no profile" — silently restoring unrestricted,
+  pre-profiling behavior for the entire build that follows.
+
 Either way, the resolved profile's `profiles/<name>.yml` content (its
 `ticket`, `ephemeral`, `standards`, `reporting` fields) is now available
 for Step 1 and Step 2 below.
@@ -129,7 +158,7 @@ inside the new worktree.
    own branch — the resume case — unless there's positive evidence it's
    unrelated work, in which case go to 2.4 instead. For the resume case:
    - **A worktree is already attached** (e.g. you're resuming a ticket
-     started in an earlier session) → switch into it. Continue to Step 3.
+     started in an earlier session) → switch into it. Continue to 2.6.
    - **The branch exists but no worktree is attached** (e.g. an earlier
      session exited with the branch kept and its worktree removed) →
      attach a worktree to the branch that already exists rather than
@@ -139,7 +168,7 @@ inside the new worktree.
      `superpowers:using-git-worktrees` would. Use a native worktree tool
      here only if it explicitly supports attaching to an already-existing
      branch; if unsure, use the git command, it's unambiguous. Continue
-     to Step 3.
+     to 2.6.
 
    Either way, do **not** fall through to 2.5. 2.5 creates a *new* branch
    of this name, which hard-fails when the name is already taken — and so
@@ -156,9 +185,29 @@ inside the new worktree.
    creation, verify the resulting branch is named exactly `<Key>__<slug>`
    — some native tools alter the name you asked for (e.g. adding their own
    prefix). If it doesn't match, rename it from inside the new worktree
-   (`git branch -m <actual-name> <Key>__<slug>`) before continuing to Step
-   3. Steps 2.3 and 2.4 key off this exact name on future runs, so a
+   (`git branch -m <actual-name> <Key>__<slug>`) before continuing to 2.6.
+   Steps 2.3 and 2.4 key off this exact name on future runs, so a
    silently-altered name breaks reuse and collision detection.
+6. **Make `.digismith/profile` visible inside the worktree.** Whichever
+   of 2.3 or 2.5 produced the worktree you're now in — reused, freshly
+   attached, or freshly created — check whether
+   `<worktree-path>/.digismith/profile` exists and names the profile Step
+   0 resolved. If it's missing or names something else, copy the file
+   there from the checkout Step 0 read or wrote it in: a plain file copy
+   (creating `<worktree-path>/.digismith/` first if it isn't there),
+   **not** `git add`, **not** `git add -f`, **not** a commit. If the
+   source file isn't reachable for any reason, just write a fresh
+   one-line `.digismith/profile` in the worktree containing the resolved
+   profile name — that name is a single word you're already carrying from
+   Step 0. This is required in
+   every repo, not just gitignored ones: a worktree checks out only
+   committed files, so a `.digismith/profile` that was written moments
+   ago in Step 0 and never committed is simply absent there — and in a
+   repo whose `.gitignore` carries a bare `.digismith/` line it could
+   never arrive by git at all, in this session or any future one. Do this
+   **before** Step 3 hands off; see Step 0's "config, not generated docs
+   output" note for why a missing file here silently unwinds profiling
+   for the whole build.
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -198,12 +247,17 @@ chain yourself.
 - **`.digismith/profile` names a profile with no matching
   `profiles/<name>.yml`** → treat as stale, re-run the first-use picker
   rather than guessing.
+- **`.digismith/profile` absent inside the worktree Step 2 produced** →
+  expected, not an error: a worktree checks out only committed files.
+  Copy it in from the original checkout (Step 2.6). Never resolve this
+  with `git add -f` — the repo's `.digismith/` gitignore choice, if it
+  has one, stands.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) |
+| 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 2; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
-| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6 — copy `.digismith/profile` into the worktree** (plain file copy, never `git add -f`), since a worktree checks out only committed files |
 | 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there |

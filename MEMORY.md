@@ -60,6 +60,9 @@ One plugin, self-hosted marketplace. The repo is both:
 ├── .claude-plugin/
 │   ├── marketplace.json     ← its own marketplace, no upstream owner
 │   └── plugin.json
+├── profiles/                ← per-repo behavior profiles (map item O)
+│   ├── emma.yml
+│   └── personal.yml
 └── skills/
     ├── using-digismith/
     └── ...
@@ -228,6 +231,18 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   residual as `Final review: parked — <finding> — ruling: <why>` (same shape as a per-task parked
   line). `digismith:report-implementation` depends on this exact grammar to render the Final Review
   & Fix section — a ledger that doesn't follow it will read as "no final review recorded yet."
+- **`.digismith/profile` is config, not generated docs output** (map item O). The
+  commit-vs-gitignore choice above governs `.digismith/docs/` — the docs DigiSmith *generates*. The
+  one-line profile pointer sits beside that folder, not inside it, and is outside that choice
+  entirely: it is never `git add -f`'d, so a repo that chose gitignored (or carries a bare
+  `.digismith/` line predating this feature, which prefix-matches the profile file too) keeps its
+  choice intact. What is guaranteed instead is **physical presence wherever work actually
+  happens**: `using-digismith` Step 0 writes it in the original checkout, and Step 2.6 copies it
+  into the worktree Step 2 creates or attaches — a worktree checks out only committed files, so
+  without that copy it simply wouldn't be there. `inject-standards`,
+  `capture-ephemeral-url`, and `report-implementation` each read it from that working directory at
+  their own trigger point; a missing file reads as "no profile" and silently restores
+  unrestricted, pre-profiling behavior.
 - **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
   final review passes, before the plan's workspace gets deleted (see N's own design/skill for why
   the ordering matters).
