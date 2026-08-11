@@ -92,6 +92,23 @@ to a subagent that can't ask.
 If no ledger exists at that path, stop here entirely — this skill doesn't
 apply to this run.
 
+5. **Ticket key (optional):** using the same `<feature-slug>` already
+   derived above, check whether
+   `.digismith/docs/<feature-slug>/ticket.md` exists and has a
+   `**Key:**` line. If so, note that key for Step 2a. Then check for
+   `.digismith/profile` in the repo currently being worked in (the same
+   repo `<feature-slug>` lives in). Missing → the derived key (if any)
+   is used as-is in Step 2a. Present → read its one-line content as the
+   active profile name, locate DigiSmith's own repo (same rule
+   `digismith:inject-standards` uses for `standards/`: current working
+   directory has `.claude-plugin/plugin.json` with
+   `"name": "digismith"` → use it directly; otherwise ask the user for
+   the path and remember it), and read `profiles/<name>.yml` there. No
+   matching file → treat as stale, use the derived key (if any) as-is,
+   same as "missing". Otherwise, if that profile's `ticket` field is
+   `false`, discard the derived key entirely for Step 2a regardless of
+   whether `ticket.md` had one — the ticket-key meta span is omitted.
+
 **If the ledger has no `Final review (...)` line**, don't quietly proceed.
 This skill's trigger condition *is* "the final review just passed," so a
 missing final-review line means either the ledger doesn't follow
@@ -126,6 +143,14 @@ the plan file, the ledger, and `git` alone:
   is generated, not the plan's date.
 - **`{{MAP_ITEM}}`** — the map-item letter/number in `{{FEATURE_TITLE}}`'s
   own parenthetical. E.g. `Capture Ephemeral URL (M)` → `M`.
+- **`{{TICKET_KEY_META}}`** — from Step 1.5: if a ticket key survived
+  that step's profile gate, this is literally
+  `<span>Ticket: <strong><Key></strong></span>` with the real key
+  substituted (escaped per Step 2f, though a JIRA key like `EMKT-9001`
+  never actually needs it). If no key survived (no `ticket.md`, no
+  `**Key:**` line in it, or the active profile has `ticket: false`),
+  this is the empty string — the span is omitted entirely, not rendered
+  blank.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
   parent directory name in the normal case, or the slug parsed out of its
   filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
@@ -303,6 +328,7 @@ spec/report already uses:
   <div class="meta">
     <span>Date: {{DATE}}</span>
     <span>Map item: <strong>{{MAP_ITEM}}</strong></span>
+    {{TICKET_KEY_META}}
     <span>Commit range: <code>{{MERGE_BASE_SHORT}}..{{HEAD_SHORT}}</code></span>
   </div>
 </header>
@@ -472,8 +498,8 @@ duplicate any part of that sequencing.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; skip entirely if no ledger, ask if no final-review line |
-| 2 | Derive header placeholders (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger, ask if no final-review line |
+| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |
