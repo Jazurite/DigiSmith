@@ -94,7 +94,7 @@ tiering below.
 | **B** | Spec seam | Carry ticket context *into* `superpowers:brainstorming` so it doesn't start cold |
 | **C** | Live work journal | `0. Terminal/Working Notes/<KEY>.md` kept current as work happens — the handoff artifact to `2. Career/` |
 | **D** | Delivery | merge → release → verification → announcement |
-| **E** | The spine | `using-digismith` — the prescriptive driver that enforces stage order and routes to everything else |
+| **E** | The spine | **E.1** first slice, shipped: intake → branch → brainstorming hand-off via `using-digismith` · **E.2** the rest of the prescriptive driver — full stage-order enforcement and routing to everything else as later stages ship |
 | **F** | Design review | Independent critique of a design, then the jade-and-ink artifact rendering for human approval |
 | **G** | Standards injection | Jack's coding standards + style guide carried into every implementer subagent's brief |
 | **H** | Subagent-driven always | Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2 |
@@ -113,9 +113,9 @@ driving status transitions).
 
 | Tier | Theme | Items |
 |---|---|---|
-| **1** | The frame | **G** standards injection · **E** spine (first slice — Tier 1 considered satisfied 2026-08-11) · **O** profiling (pulled forward and built 2026-08-11) |
+| **1** | The frame | **G** standards injection · **E.1** spine first slice · **O** profiling (pulled forward and built 2026-08-11) |
 | **2** | The override | **H** subagent-driven always · **K** open-weight model extension |
-| **3** | Intake & estimation | **A** intake/creation · **E** spine (remaining scope — decoupled from Tier 1 2026-08-11) · **J** estimation |
+| **3** | Intake & estimation | **A** intake/creation · **E.2** spine remaining scope (decoupled from Tier 1 2026-08-11) · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
 | **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** E2E · **I.3** Figma visual regression |
 | **6** | Last | **C** live work journal |
