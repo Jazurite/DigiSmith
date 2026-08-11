@@ -42,6 +42,30 @@ it doesn't (e.g. the plan ran via `superpowers:executing-plans` instead of
 isn't met — skip it silently and let the other skill's Finish step proceed
 as normal. Don't render a report from nothing.
 
+The active profile must also have reporting turned on. Check for
+`.digismith/profile` in the repo currently being worked in (never
+DigiSmith's own repo, which only hosts this skill).
+
+- **Missing** → proceed exactly as today; this gate does nothing.
+- **Present** → read its one-line content as the active profile name,
+  then locate DigiSmith's own repo — same rule
+  `digismith:inject-standards` uses for `standards/`: is the current
+  working directory itself the DigiSmith repo
+  (`.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+  directly. Otherwise ask the user for DigiSmith's repo path this session
+  and remember it. Never read `profiles/` under a plugin cache path — a
+  stale, version-locked snapshot. Read `profiles/<name>.yml` there.
+  - **No matching file** → treat as stale; proceed exactly as today, same
+    as "missing."
+  - **`reporting: false`** → this skill's trigger condition isn't met.
+    Skip it entirely and silently — the same disposition as the no-ledger
+    case above — and let
+    `superpowers:subagent-driven-development`'s Finish step proceed as
+    normal. Don't write a report, don't commit anything, don't ask.
+  - **`reporting: true`, or the field absent** → proceed as today.
+    Neither shipped profile turns reporting off, so this is the normal
+    path.
+
 This skill runs in the **controller session** — the one driving
 `superpowers:subagent-driven-development` — not as a sub-dispatched agent.
 That's what makes `AskUserQuestion` available, which Step 4's
@@ -97,13 +121,17 @@ apply to this run.
    `.digismith/docs/<feature-slug>/ticket.md` exists and has a
    `**Key:**` line. If so, note that key for Step 2a. Then check for
    `.digismith/profile` in the repo currently being worked in (the same
-   repo `<feature-slug>` lives in). Missing → the derived key (if any)
+   repo `<feature-slug>` lives in) — Prerequisites already resolved this
+   same file and its `profiles/<name>.yml` for the `reporting` gate, so
+   reuse what you read there rather than re-locating or re-asking. Missing → the derived key (if any)
    is used as-is in Step 2a. Present → read its one-line content as the
    active profile name, locate DigiSmith's own repo (same rule
    `digismith:inject-standards` uses for `standards/`: current working
    directory has `.claude-plugin/plugin.json` with
    `"name": "digismith"` → use it directly; otherwise ask the user for
-   the path and remember it), and read `profiles/<name>.yml` there. No
+   the path and remember it; never read `profiles/` under a plugin cache
+   path — a stale, version-locked snapshot), and read
+   `profiles/<name>.yml` there. No
    matching file → treat as stale, use the derived key (if any) as-is,
    same as "missing". Otherwise, if that profile's `ticket` field is
    `false`, discard the derived key entirely for Step 2a regardless of
@@ -467,6 +495,10 @@ duplicate any part of that sequencing.
 
 - **No ledger found** → skip this skill entirely; not applicable to this
   run.
+- **Active profile has `reporting: false`** → skip this skill entirely
+  and silently, same as the no-ledger case; not applicable to this run.
+  (No `.digismith/profile`, a stale one, `reporting: true`, or the field
+  absent → proceed as normal.)
 - **Ledger missing a `Final review (...)` line** → say so plainly and ask
   before proceeding (Step 1). This is unexpected at this skill's trigger
   point, so never absorb it silently. If the answer is to proceed anyway
@@ -498,7 +530,7 @@ duplicate any part of that sequencing.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger, ask if no final-review line |
+| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites), ask if no final-review line |
 | 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
