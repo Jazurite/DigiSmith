@@ -101,6 +101,7 @@ tiering below.
 | **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed — deliberately kept separate from **A**, which stops once a well-structured ticket exists |
 | **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
+| **O** | Profiling | A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point — new letter, added directly per Jack's request during this brainstorm |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).
@@ -109,7 +110,7 @@ driving status transitions).
 
 | Tier | Theme | Items |
 |---|---|---|
-| **1** | The frame | **G** standards injection · **E** spine |
+| **1** | The frame | **G** standards injection · **E** spine · **O** profiling (pulled forward and built 2026-08-11) |
 | **2** | The override | **H** subagent-driven always · **K** open-weight model extension |
 | **3** | Intake & estimation | **A** intake/creation · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
