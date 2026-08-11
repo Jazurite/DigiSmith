@@ -1,3 +1,6 @@
+# `standards` is hand-maintained: keep it in sync with standards/'s
+# top-level folder names — a new folder there is not picked up here
+# automatically.
 name: emma
 standards: [global, shopify, team]
 ticket: true

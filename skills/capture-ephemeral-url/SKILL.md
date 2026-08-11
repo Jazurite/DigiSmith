@@ -41,8 +41,9 @@ Locate DigiSmith's own repo — same rule `digismith:inject-standards`
 uses for `standards/`: is the current working directory itself the
 DigiSmith repo (`.claude-plugin/plugin.json` with
 `"name": "digismith"`)? Use it directly. Otherwise ask the user for
-DigiSmith's repo path this session and remember it. Read
-`profiles/<name>.yml` there. No matching file → treat as stale; proceed
+DigiSmith's repo path this session and remember it. Never read
+`profiles/` under a plugin cache path — a stale, version-locked
+snapshot. Read `profiles/<name>.yml` there. No matching file → treat as stale; proceed
 as if `.digismith/profile` were missing — continue to Step 1.
 
 Otherwise, if that profile's `ephemeral` field is `false`, stop here:
