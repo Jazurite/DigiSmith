@@ -60,6 +60,9 @@ One plugin, self-hosted marketplace. The repo is both:
 ├── .claude-plugin/
 │   ├── marketplace.json     ← its own marketplace, no upstream owner
 │   └── plugin.json
+├── profiles/                ← per-repo behavior profiles (map item O)
+│   ├── emma.yml
+│   └── personal.yml
 └── skills/
     ├── using-digismith/
     └── ...
@@ -101,6 +104,7 @@ tiering below.
 | **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed — deliberately kept separate from **A**, which stops once a well-structured ticket exists |
 | **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
+| **O** | Profiling | A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point — new letter, added directly per Jack's request during this brainstorm |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).
@@ -109,7 +113,7 @@ driving status transitions).
 
 | Tier | Theme | Items |
 |---|---|---|
-| **1** | The frame | **G** standards injection · **E** spine |
+| **1** | The frame | **G** standards injection · **E** spine · **O** profiling (pulled forward and built 2026-08-11) |
 | **2** | The override | **H** subagent-driven always · **K** open-weight model extension |
 | **3** | Intake & estimation | **A** intake/creation · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
@@ -227,6 +231,18 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   residual as `Final review: parked — <finding> — ruling: <why>` (same shape as a per-task parked
   line). `digismith:report-implementation` depends on this exact grammar to render the Final Review
   & Fix section — a ledger that doesn't follow it will read as "no final review recorded yet."
+- **`.digismith/profile` is config, not generated docs output** (map item O). The
+  commit-vs-gitignore choice above governs `.digismith/docs/` — the docs DigiSmith *generates*. The
+  one-line profile pointer sits beside that folder, not inside it, and is outside that choice
+  entirely: it is never `git add -f`'d, so a repo that chose gitignored (or carries a bare
+  `.digismith/` line predating this feature, which prefix-matches the profile file too) keeps its
+  choice intact. What is guaranteed instead is **physical presence wherever work actually
+  happens**: `using-digismith` Step 0 writes it in the original checkout, and Step 2.6 copies it
+  into the worktree Step 2 creates or attaches — a worktree checks out only committed files, so
+  without that copy it simply wouldn't be there. `inject-standards`,
+  `capture-ephemeral-url`, and `report-implementation` each read it from that working directory at
+  their own trigger point; a missing file reads as "no profile" and silently restores
+  unrestricted, pre-profiling behavior.
 - **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
   final review passes, before the plan's workspace gets deleted (see N's own design/skill for why
   the ordering matters).

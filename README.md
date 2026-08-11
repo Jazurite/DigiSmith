@@ -56,6 +56,17 @@ creates an isolated branch/worktree for it, and hands off into
 `superpowers:brainstorming` with the ticket's content already loaded —
 no cold start.
 
+The first time you run it in a given repo, it asks one extra question
+first: which **profile** this repo uses (map item **O**). **Emma** — the
+full flow: JIRA ticket, `<Key>__<slug>` branch, standards injection,
+ephemeral-URL capture. **Personal** — the same brainstorm → spec → plan →
+build → review core, minus the client machinery: no ticket (the branch is
+just `<slug>`), no ephemeral capture, no standards injected. The answer is
+remembered in `.digismith/profile` in that repo, so you're only asked
+once. To change it later, just say "switch this repo's profile to
+personal" — it'll state exactly what turns on or off and confirm before
+writing.
+
 If you only want a ticket captured — no branch, no build yet — say so
 explicitly (or invoke `digismith:jira-intake` directly) instead.
 
@@ -115,6 +126,8 @@ the hand-off; it never re-invokes or duplicates anything downstream.
 
 | Situation | What happens |
 |---|---|
+| First run in a repo, and you decline to pick a profile | Stops there and explains a profile is required. No branch or worktree gets created. |
+| The repo's profile is `personal` | Step 1's ticket intake is skipped entirely — the slug comes straight from your description and the branch is just `<slug>`. Ephemeral capture and standards injection stay off too. |
 | Ticket has no real key yet (an un-upgraded Door 2 draft) | Stops after intake. Explains it needs a real key to name a branch — continue manually, or run intake again later once the ticket has one. |
 | A worktree already exists for this ticket | Switches into it. No duplicate ever gets created. |
 | A branch exists for this ticket but its worktree was removed | Reattaches a worktree to the existing branch instead of failing. |

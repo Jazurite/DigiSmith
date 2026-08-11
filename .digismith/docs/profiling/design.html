@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profiling (O) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Profiling (O) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-11</span>
+    <span>Map item: <strong>O</strong> — new letter, added directly per Jack's request during this brainstorm</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#dataflow">Data Flow</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+    <li><a href="#roadmap">Roadmap Update</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>Jack works across contexts DigiSmith currently treats identically: real Emma client tickets
+  that want the full SDLC (JIRA ticket, standards injection, ephemeral-deploy capture, an
+  implementation report), and personal projects that want the same brainstorm → spec → plan →
+  build → review → commit/merge core but none of the ticket-tracking or deployment machinery
+  around it. Today every skill's behavior is fixed, so the only way to get the lighter shape is to
+  manually skip steps by hand — an undocumented, ad hoc deviation from pillar 5's prescriptive
+  stance ("no skipping spec because it felt small"), not a declared choice.</p>
+  <p>Profiling makes that variation a first-class, named, per-repo setting: a profile is a small
+  set of on/off toggles over the stages that already exist (ticket intake, standards injection,
+  ephemeral-deploy capture, implementation reporting). Two profiles ship now — <strong>Emma</strong>
+  (everything on) and <strong>Personal</strong> (ticket, standards, and ephemeral off; brainstorm,
+  spec, plan, build, review, and reporting stay on) — and the mechanism is built to add more later
+  by plugging in a different combination, not by writing new code per profile.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not an inheritance/composition system.</strong> When <strong>G</strong> was built,
+      it deliberately adapted Agent OS's pattern with "no profile/inheritance system." This feature
+      doesn't reopen that — profiles here are flat, independent files with no extends/override
+      chain. A future profile that needs to share config with another is still two separate
+      files.</li>
+    <li><strong>Not auto-detected.</strong> The profile is always an explicit choice the user
+      makes (first use or an explicit switch) — never inferred from repo signals. This is
+      additive to, not a replacement for, <code>inject-standards</code>'s existing Shopify-repo-layer
+      heuristic, which still governs repos that have no profile file at all (see Architecture).</li>
+    <li><strong>Not retroactive.</strong> Switching a repo's profile mid-point only changes
+      decisions for stages not yet entered. A ticket already mid-build under Emma doesn't
+      un-inject standards it already received.</li>
+    <li><strong>Not toggles for unbuilt stages.</strong> Delivery (<strong>D</strong>), QA handoff
+      (<strong>I</strong>), design review (<strong>F</strong>), and estimation (<strong>J</strong>)
+      aren't built yet, so there's nothing to gate — no toggle keys are added for them now. When
+      one of those ships and a profile actually needs to vary on it, extend the schema then.</li>
+    <li><strong>Not a separate switch-profile skill.</strong> Switching is a front-door intent
+      inside <code>using-digismith</code> (same pattern as its existing "ticket only, no build"
+      door), not a new skill file.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+
+  <h3>Profile Definitions — <code>profiles/&lt;name&gt;.yml</code></h3>
+  <p>A new top-level <code>profiles/</code> directory in DigiSmith's own repo, one flat YAML file
+  per profile. Ships with two:</p>
+  <pre><code>profiles/emma.yml
+---
+name: emma
+standards: [global, shopify, team]
+ticket: true
+ephemeral: true
+reporting: true
+
+profiles/personal.yml
+---
+name: personal
+standards: []
+ticket: false
+ephemeral: false
+reporting: true</code></pre>
+  <p><code>standards</code> is a list of <code>standards/</code> subfolder names to make eligible
+  for matching; an empty list means <code>inject-standards</code> is never invoked for this repo.
+  <code>ticket</code>, <code>ephemeral</code>, and <code>reporting</code> are booleans. Stages that
+  don't vary between either profile today — brainstorm, spec, plan, build, review,
+  commit/merge — have no toggle key; they're structural to <code>using-digismith</code>'s core and
+  Superpowers' own chain, not profile-dependent.</p>
+
+  <h3>Active Profile — <code>.digismith/profile</code></h3>
+  <p>In the consuming repo, a one-line plain-text file containing just the active profile's name
+  (e.g. <code>emma</code>), living alongside the existing <code>.digismith/docs/</code> convention.
+  Plain text, not YAML — it's a single value today, and a second field can be added later without
+  needing one now (YAGNI).</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>New Step 0: Resolve Profile</h4>
+      <p>Before Step 1 ("Get a Real Ticket"), check for <code>.digismith/profile</code> in the
+      repo root. Missing → first use in this repo → list <code>profiles/*.yml</code> (resolved via
+      the same "locate DigiSmith, ask if unknown" rule <code>inject-standards</code> already
+      uses), present via <code>AskUserQuestion</code>, write the choice. Present → read it. If it
+      names a profile with no matching <code>profiles/&lt;name&gt;.yml</code>, treat as stale (see
+      Error Handling).</p>
+    </div>
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>Step 1 becomes conditional</h4>
+      <p>If the active profile's <code>ticket</code> is <code>false</code>, skip invoking
+      <code>jira-intake</code> entirely — no <code>ticket.md</code> is written. Derive the slug
+      directly from the feature description, applying the exact same deterministic rule
+      <code>jira-intake</code> Step 3.1 already defines (lowercase, drop filler words,
+      kebab-case) — restated inline here since <code>jira-intake</code> itself isn't invoked in
+      this path, not reinvented as a different algorithm.</p>
+    </div>
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>Step 2 branch naming becomes conditional</h4>
+      <p><code>ticket: true</code> → <code>&lt;Key&gt;__&lt;slug&gt;</code> (unchanged).
+      <code>ticket: false</code> → <code>&lt;slug&gt;</code> alone, no key prefix.</p>
+    </div>
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>New front-door intent: switch profile</h4>
+      <p>"Switch this repo's profile to X" is recognized alongside the existing "ticket only, no
+      build" door. Validate <code>X</code> against <code>profiles/*.yml</code>, state the
+      behavioral delta (which stages turn on/off) via <code>AskUserQuestion</code>, then overwrite
+      <code>.digismith/profile</code> on confirmation.</p>
+    </div>
+    <div class="card">
+      <div class="tag">inject-standards</div>
+      <h4>New Step 0: Profile Gate</h4>
+      <p>Before Step 1 (read <code>index.yml</code>), check for <code>.digismith/profile</code> in
+      the repo currently being worked in. Present → only folders in the active profile's
+      <code>standards</code> list are eligible for matching, in every scenario (1-4) — an empty
+      list means skip straight to "proceed without a Standards section," same as the existing
+      zero-standards-exist path. Missing (no profile file — e.g. DigiSmith's own repo, or a repo
+      that hasn't adopted profiling) → unchanged, existing behavior, including the Step 3
+      Shopify-repo-layer heuristic. Additive only; nothing already shipped changes for a repo with
+      no profile.</p>
+    </div>
+    <div class="card">
+      <div class="tag">capture-ephemeral-url</div>
+      <h4>New pre-check</h4>
+      <p>Before Step 1 (Resolve Ticket Key), read <code>.digismith/profile</code> in the repo the
+      PR was opened in. <code>ephemeral: false</code> → report one line ("skipping ephemeral
+      capture — <code>personal</code> profile") and stop; don't poll CI. Missing profile file →
+      unchanged, existing behavior.</p>
+    </div>
+    <div class="card">
+      <div class="tag">report-implementation</div>
+      <h4>Scoped ticket field</h4>
+      <p>When the active profile has <code>ticket: false</code>, the generated report's metadata
+      omits the ticket-key field entirely instead of leaving it blank — there's no ticket to
+      reference. Everything else about the report (delivered work, per-task review table,
+      final-review findings, commit list) is unaffected; <code>reporting: true</code> for
+      <code>personal</code> means the report itself still runs in full.</p>
+    </div>
+  </div>
+</section>
+
+<section id="dataflow">
+  <h2>Data Flow</h2>
+  <p><strong>First use:</strong> <code>using-digismith</code> invoked in a repo →
+  <code>.digismith/profile</code> absent → list <code>profiles/*.yml</code> → user picks → write
+  name to <code>.digismith/profile</code> → continue Step 1 gated by the chosen profile.</p>
+  <p><strong>Every later trigger (this session or a future one):</strong>
+  <code>.digismith/profile</code> → profile name → <code>profiles/&lt;name&gt;.yml</code> →
+  relevant toggle → gate this skill's own stage. Each of the four consuming skills (
+  <code>using-digismith</code>, <code>inject-standards</code>, <code>capture-ephemeral-url</code>,
+  <code>report-implementation</code>) performs this lookup independently, at its own trigger
+  point — there is no central orchestrator relaying the decision, since <strong>M</strong> and
+  <strong>N</strong> already trigger on their own conditions (a PR's CI check, a plan's final
+  review passing) outside <code>using-digismith</code>'s control, often in a different
+  session.</p>
+  <p><strong>Mid-point switch:</strong> explicit "switch profile" request → validate against
+  <code>profiles/*.yml</code> → confirm behavioral delta → overwrite
+  <code>.digismith/profile</code>. Next trigger of any of the four skills reads the new value;
+  nothing already in flight is revisited.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong><code>.digismith/profile</code> names a profile with no matching
+      <code>profiles/&lt;name&gt;.yml</code></strong> (deleted or renamed) → treat as stale,
+      re-run the first-use picker rather than guessing or silently falling back.</li>
+    <li><strong><code>profiles/</code> is missing or empty in DigiSmith's own install</strong> →
+      shouldn't happen (ships with two), but if it does, stop and report clearly — same
+      can't-proceed pattern <code>jira-intake</code> already uses for its own blocking
+      conditions.</li>
+    <li><strong>User declines to pick a profile on first use</strong> → <code>using-digismith</code>
+      stops after explaining a profile is required to proceed, same edge-case shape as the existing
+      key-less-ticket stop.</li>
+    <li><strong>No <code>.digismith/profile</code> exists at all</strong> (repo predates this
+      feature, or <code>using-digismith</code> was never run in it) → every consuming skill treats
+      this as "no profile set," falling back to its prior, unrestricted behavior — non-breaking for
+      every repo already using DigiSmith today.</li>
+    <li><strong>"Switch profile" requested but no <code>.digismith/profile</code> exists yet</strong>
+      → not an error, same flow as first use.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Manual dogfood
+  walkthrough:</p>
+  <ol>
+    <li>First use, pick Emma → ticket flow, branch naming, standards injection, ephemeral capture,
+      and reporting all behave exactly as they do today (regression check).</li>
+    <li>First use, pick Personal → <code>jira-intake</code> never invoked, branch named
+      <code>&lt;slug&gt;</code> with no key, <code>inject-standards</code> proceeds without a
+      Standards section, a PR in this repo skips ephemeral capture with the one-line notice, and
+      the end-of-plan report generates with no ticket field.</li>
+    <li><code>.digismith/profile</code> names an unknown profile → re-prompts instead of
+      guessing.</li>
+    <li>Repo with no <code>.digismith/profile</code> at all → every consuming skill behaves exactly
+      as it did before this feature shipped.</li>
+    <li>Mid-point switch Emma → Personal (and back) → behavioral delta stated correctly before
+      confirmation; a ticket already mid-build under the old profile isn't revisited.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>E</strong> (<code>using-digismith</code>) — gains the Step 0 profile resolution,
+      conditional Step 1/2, and the new switch-profile front door. Its core job (ticket → branch →
+      brainstorming hand-off) is unchanged when a profile has everything on.</li>
+    <li><strong>G</strong> (<code>inject-standards</code>) — gains an additive profile gate ahead
+      of its existing scenario logic. Repos with no profile file see zero behavior change.</li>
+    <li><strong>M</strong> (<code>capture-ephemeral-url</code>) — gains a pre-check; unaffected
+      when <code>ephemeral: true</code> or no profile file exists.</li>
+    <li><strong>N</strong> (<code>report-implementation</code>) — gains one conditional field
+      omission; otherwise unaffected.</li>
+    <li><strong>A</strong> (<code>jira-intake</code>) — unchanged itself; <code>using-digismith</code>
+      simply stops calling it when <code>ticket: false</code>.</li>
+  </ul>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap Update</h2>
+  <p>Adds a new row to <code>MEMORY.md</code>'s map table: <strong>O — Profiling</strong>, "A
+  per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing
+  stages consult independently at their own trigger point." Placed in <strong>Tier 1</strong>
+  ("the frame") alongside <strong>G</strong> and <strong>E</strong> — it's a prerequisite gate for
+  both, not a later pipeline stage.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/profiling/design.html</footer>
+
+</body>
+</html>

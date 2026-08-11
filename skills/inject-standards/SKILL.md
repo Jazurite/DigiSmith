@@ -37,6 +37,37 @@ still validate the target exists.
 
 ## Process
 
+### Step 0: Profile Gate
+
+Check for `.digismith/profile` in the repo currently being worked in
+(the repo whose code this invocation is about — never DigiSmith's own
+repo, which is only where `standards/` and `profiles/` themselves live).
+
+**Missing** → unchanged, existing behavior: every folder in
+`standards/index.yml` is eligible for matching in Steps 4-6, including
+the Step 3 Shopify-repo-layer heuristic exactly as it works today. Skip
+the rest of this step.
+
+**Present** → read its one-line content as the active profile name.
+Locate DigiSmith's own repo — same rule already used above under
+"Locating the Standards Library": is the current working directory
+itself the DigiSmith repo (`.claude-plugin/plugin.json` with
+`"name": "digismith"`)? Use it directly. Otherwise ask the user for
+DigiSmith's repo path this session and remember it. Read
+`profiles/<name>.yml` there. No matching file → treat as stale; proceed
+as if `.digismith/profile` were missing (the "Missing" branch above) for
+this invocation only — `digismith:using-digismith`'s own Step 0 is where
+a stale pointer actually gets corrected, this skill doesn't rewrite
+`.digismith/profile` itself.
+
+Otherwise, only folders named in that profile's `standards` list are
+eligible for matching in every scenario (1-4) below — an empty list
+means skip straight to "proceed without a Standards section," same as
+the existing zero-standards-exist path. This gate applies uniformly to
+every `standards/` subfolder, `global/` included — the "`global/` never
+has a repo-type gate" statement in Step 3 refers only to the Shopify-repo
+auto-include check below, not to this profile gate.
+
 ### Step 1: Check the Index Exists
 
 Read `standards/index.yml`. If it doesn't exist:
@@ -199,9 +230,10 @@ augments the brief, it doesn't gate dispatch.
 
 | Step | Action |
 |---|---|
+| 0 | Profile gate: `.digismith/profile` present → only its `standards` list's folders are eligible below; missing → unchanged, all folders eligible |
 | 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |
-| 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated |
+| 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated by this specific check |
 | 4 | Match + suggest (skip if explicit target given) |
 | 5 | Parse explicit target if given, validate it exists |
 | 6 | Inject formatted for the scenario |

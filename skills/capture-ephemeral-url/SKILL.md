@@ -30,6 +30,27 @@ don't fabricate URLs.
 
 ## Process
 
+### Step 0: Profile Pre-Check
+
+Check for `.digismith/profile` in the repo the PR was opened in.
+
+**Missing** → unchanged, existing behavior; continue to Step 1.
+
+**Present** → read its one-line content as the active profile name.
+Locate DigiSmith's own repo — same rule `digismith:inject-standards`
+uses for `standards/`: is the current working directory itself the
+DigiSmith repo (`.claude-plugin/plugin.json` with
+`"name": "digismith"`)? Use it directly. Otherwise ask the user for
+DigiSmith's repo path this session and remember it. Never read
+`profiles/` under a plugin cache path — a stale, version-locked
+snapshot. Read `profiles/<name>.yml` there. No matching file → treat as stale; proceed
+as if `.digismith/profile` were missing — continue to Step 1.
+
+Otherwise, if that profile's `ephemeral` field is `false`, stop here:
+report one line — "skipping ephemeral capture — `<name>` profile" — and
+don't poll CI or do anything else in this skill. If `ephemeral` is
+`true`, continue to Step 1 exactly as today.
+
 ### Step 1: Resolve the Ticket Key
 
 ```bash
@@ -139,11 +160,14 @@ and the Theme Editor URL. Nothing is written to a file or to JIRA.
 - **Comment found but either URL regex fails to match (including a
   partial match with only one URL found)** → report the raw comment
   body.
+- **Active profile has `ephemeral: false`** → stop at Step 0, report one
+  line, don't poll CI or attempt extraction.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
+| 0 | Profile pre-check: `.digismith/profile` present and its `ephemeral` is `false` → report one line and stop; otherwise (missing, stale, or `ephemeral: true`) continue |
 | 1 | Resolve `<Key>` from branch name; ask if it doesn't match |
 | 2 | `gh pr view --json number` for the current branch; stop if none found |
 | 3 | Poll `gh pr checks` for the named check's `bucket` (ignore its exit code), ~30–60s interval, 20-min timeout |
