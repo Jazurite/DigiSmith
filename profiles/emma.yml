@@ -1,0 +1,5 @@
+name: emma
+standards: [global, shopify, team]
+ticket: true
+ephemeral: true
+reporting: true

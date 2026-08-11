@@ -25,11 +25,68 @@ just want the ticket captured with no branch/pipeline yet, use
 
 ## Process
 
+### Step 0: Resolve Profile
+
+Check for `.digismith/profile` in the repo currently being worked in
+(never DigiSmith's own repo).
+
+**Present** → read its one-line content as the active profile name.
+Validate it against `profiles/<name>.yml` (see Locating DigiSmith's Repo
+below) — no matching file → treat as stale, fall through to the
+first-use flow below instead of guessing.
+
+**Missing, or stale** → first use in this repo (or a stale pointer):
+1. Locate DigiSmith's own repo — same rule `digismith:inject-standards`
+   uses for `standards/`: is the current working directory itself the
+   DigiSmith repo (`.claude-plugin/plugin.json` with
+   `"name": "digismith"`)? Use it directly. Otherwise ask the user for
+   DigiSmith's repo path this session and remember it. Never read
+   `profiles/` under a plugin cache path — a stale, version-locked
+   snapshot.
+2. List `profiles/*.yml` there. If `profiles/` is missing or empty, stop
+   and report clearly — this shouldn't happen in a normal install.
+3. Present the available profiles via `AskUserQuestion`, one option per
+   file, using each file's own `name` field and a one-line summary of
+   its toggles (e.g. "emma — ticket, standards, and ephemeral capture
+   all on" / "personal — ticket and ephemeral capture off; standards
+   empty").
+4. If the user declines to pick (see Error Handling), stop here —
+   explain a profile is required to proceed. Don't create a branch or
+   worktree.
+5. Write the chosen profile's `name` field, and only that, as the sole
+   line of `.digismith/profile` in the repo being worked in.
+
+Either way, the resolved profile's `profiles/<name>.yml` content (its
+`ticket`, `ephemeral`, `standards`, `reporting` fields) is now available
+for Step 1 and Step 2 below.
+
+**Switching profiles mid-session:** if the user's request is "switch
+this repo's profile to X" rather than "start work on a ticket", handle
+it here instead of proceeding to Step 1: validate `X` against
+`profiles/*.yml` (same locate rule as above), state the behavioral delta
+(which of ticket/ephemeral/standards/reporting change, and how) via
+`AskUserQuestion`, and on confirmation overwrite `.digismith/profile`
+with the new name. This is `using-digismith`'s own job done at this
+point — don't fall through into Step 1's ticket flow unless the user's
+original request was also to start work.
+
 ### Step 1: Get a Real Ticket
 
 Check whether this conversation already produced a
 `.digismith/docs/<slug>/ticket.md` via `digismith:jira-intake` earlier
 this session. If not, invoke `digismith:jira-intake` now.
+
+**If the active profile's `ticket` field is `false`:** skip invoking
+`digismith:jira-intake` entirely — no `ticket.md` is written. Derive the
+slug directly from the feature description, applying the exact same
+deterministic rule `digismith:jira-intake` Step 3.1 already defines:
+lowercase, drop filler words (a, an, the, on, to, of, for, in), replace
+remaining non-alphanumeric runs with a single hyphen, then truncate to
+~40 characters at a word boundary — never leaving a trailing filler word
+or hyphen. Restated inline here since `digismith:jira-intake` itself
+isn't invoked in this path, not reinvented as a different algorithm. Skip
+the rest of Step 1 (no ticket content to read into context) and go
+straight to Step 2.
 
 If the result has no `**Key:**` line set — it's a Door 2 draft that was
 never upgraded to a real ticket — stop here. See Error Handling. Do not
@@ -54,9 +111,14 @@ inside the new worktree.
    already is the correct slug, produced by `digismith:jira-intake`'s
    own deterministic slug algorithm. Never re-derive the slug
    independently from the title.
-2. Branch name: `<Key>__<slug>` — e.g.
+2. Branch name: if the active profile's `ticket` field is `true`,
+   `<Key>__<slug>` — e.g.
    `EMKT-9001__fix-cart-drawer-padding-mobile`, using the ticket's actual
-   `**Key:**` value verbatim (not a hardcoded `EMKT-` prefix).
+   `**Key:**` value verbatim (not a hardcoded `EMKT-` prefix). If `ticket`
+   is `false`, `<slug>` alone, with no key prefix at all — e.g.
+   `fix-cart-drawer-padding-mobile`. Everywhere else in this step and
+   Step 3 that says `<Key>__<slug>`, read it as whichever of the two
+   forms this profile produced.
 3. Check whether a **branch** named exactly `<Key>__<slug>` already
    exists — not just a worktree. Run `git worktree prune` first, so a
    worktree directory that was deleted outside git doesn't still show as
@@ -130,11 +192,18 @@ chain yourself.
   isn't a new failure mode to reinvent.
 - **Branch name collision with an unrelated ticket** → ask before
   proceeding via `AskUserQuestion`, never silently reuse.
+- **User declines to pick a profile on first use** → stop after
+  explaining a profile is required to proceed. Don't create a branch or
+  worktree.
+- **`.digismith/profile` names a profile with no matching
+  `profiles/<name>.yml`** → treat as stale, re-run the first-use picker
+  rather than guessing.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 1 | Get a real ticket (invoke `digismith:jira-intake` if needed); stop if key-less; read `.digismith/docs/<slug>/ticket.md`'s full content into context now — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
-| 2 | Derive `<Key>__<slug>` branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket |
-| 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context; Superpowers' own chain takes over from there |
+| 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) |
+| 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 2; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket |
+| 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there |
