@@ -1,6 +1,6 @@
 ---
 name: telemetry
-description: Use right after superpowers:finishing-a-development-branch's Step 4 integration-decision menu has been answered (any of its three options) — checks the current working directory for a .digismith/telemetry-marker and, if present, copies that session's transcript back into DigiSmith's own repo for future process-improvement analysis.
+description: Use right after superpowers:finishing-a-development-branch's Step 4 integration-decision menu has been answered (any of its three options).
 ---
 
 # Telemetry
@@ -39,7 +39,13 @@ no profile was ever set. Hand back immediately; see Step 5.
 **Present** → read its `key: value` lines into `transcript`,
 `start_line`, `started_at`, `repo`, `slug`, and `ticket_key` (present
 only when `digismith:using-digismith` Step 1.5 resolved a real ticket
-key).
+key). Note the current working directory too — this is the *consumer*
+repo, and Step 5 needs to come back here to delete the marker after
+Steps 4-5's writes happen inside DigiSmith's own repo:
+
+```bash
+CONSUMER_REPO_DIR="$(pwd)"
+```
 
 ### Step 2: Slice the Transcript
 
@@ -76,24 +82,48 @@ version-locked snapshot.
 If this can't be resolved (the user declines to provide a path), skip
 capture — see Error Handling. Never block on this.
 
+Store the resolved path as `$DIGISMITH_REPO_PATH` (either the current
+directory, absolute-pathed, or the path the user gave you) — Step 4
+needs to `cd` there before writing anything.
+
 ### Step 4: Compose Metadata and Write
+
+First, move into DigiSmith's own repo — everything in this step and the
+`git add`/`commit` in Step 5 operate on paths relative to it:
+
+```bash
+cd "$DIGISMITH_REPO_PATH"
+```
 
 ```bash
 SESSION_ID=$(basename "$transcript" .jsonl)
 ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 ```
 
-Build the metadata line as a single-line JSON object:
+Build the metadata line as a single-line JSON object. `ticket_key` must
+be the literal string from the marker, quoted, when present — or the
+bare JSON literal `null` (not the string `"null"`) when the marker had
+no `ticket_key` line:
 
-```json
-{"digismith_telemetry_meta":{"repo":"<repo>","slug":"<slug>","ticket_key":"<ticket_key-or-null>","session_id":"<SESSION_ID>","started_at":"<started_at>","ended_at":"<ENDED_AT>"}}
+```bash
+if [ -n "$ticket_key" ]; then
+  TICKET_KEY_JSON="\"$ticket_key\""
+else
+  TICKET_KEY_JSON=null
+fi
+
+METADATA_LINE="{\"digismith_telemetry_meta\":{\"repo\":\"$repo\",\"slug\":\"$slug\",\"ticket_key\":$TICKET_KEY_JSON,\"session_id\":\"$SESSION_ID\",\"started_at\":\"$started_at\",\"ended_at\":\"$ENDED_AT\"}}"
 ```
 
-`ticket_key` is the literal string from the marker when present, or the
-JSON literal `null` (not the string `"null"`) when the marker had no
-`ticket_key` line.
+Resulting shape (illustrative — `<ticket_key-or-null>` here stands for
+either `"EMKT-9001"` with quotes, or bare `null` without, per the
+conditional above, never the string `"null"`):
 
-Target path, inside DigiSmith's own repo:
+```json
+{"digismith_telemetry_meta":{"repo":"<repo>","slug":"<slug>","ticket_key":<ticket_key-or-null>,"session_id":"<SESSION_ID>","started_at":"<started_at>","ended_at":"<ENDED_AT>"}}
+```
+
+Target path, inside DigiSmith's own repo (you're already `cd`ed there):
 
 ```bash
 SAFE_TS=$(echo "$started_at" | tr ':' '-')
@@ -109,16 +139,20 @@ mkdir -p "$(dirname "$TARGET")"
 
 DigiSmith's own repo commits `.digismith/` content unconditionally — no
 gitignore check here, unlike a *consumer* repo's `.digismith/docs/`.
+Still `cd`ed into `$DIGISMITH_REPO_PATH` from Step 4:
 
 ```bash
 git add "$TARGET"
 git commit -m "telemetry: capture $repo/$slug session"
 ```
 
-Then, back in the working directory this skill started from (the
-*consumer* repo, not DigiSmith's own repo), delete the marker:
+Then switch back to the working directory this skill started from (the
+*consumer* repo recorded in `$CONSUMER_REPO_DIR` back in Step 1 — not
+DigiSmith's own repo, which is where the marker actually lives) and
+delete the marker there:
 
 ```bash
+cd "$CONSUMER_REPO_DIR"
 rm .digismith/telemetry-marker
 ```
 
@@ -159,8 +193,8 @@ exactly as written — do not re-invoke or duplicate any part of it.
 
 | Step | Action |
 |---|---|
-| 1 | Check for `.digismith/telemetry-marker` in the current working directory; absent → skip entirely and silently |
+| 1 | Check for `.digismith/telemetry-marker` in the current working directory; absent → skip entirely and silently. Save `$CONSUMER_REPO_DIR` (current dir) |
 | 2 | Slice the transcript from `start_line + 1` to end-of-file; missing file or zero new lines → skip, no capture |
-| 3 | Locate DigiSmith's own repo (cwd-is-DigiSmith check, else ask and remember); can't resolve → skip |
-| 4 | Compose the metadata JSON line (repo, slug, ticket key or null, session id, start/end timestamps), write metadata + sliced lines to `.digismith/telemetry/<repo>/<slug>/<timestamp>.jsonl` in DigiSmith's own repo |
-| 5 | `git add` + commit (no gitignore check — DigiSmith's own `.digismith/` is always committed), delete the marker from the working directory, report one line |
+| 3 | Locate DigiSmith's own repo (cwd-is-DigiSmith check, else ask and remember) as `$DIGISMITH_REPO_PATH`; can't resolve → skip |
+| 4 | `cd "$DIGISMITH_REPO_PATH"`; compose the metadata JSON line (repo, slug, ticket key as quoted string or bare `null`, session id, start/end timestamps), write metadata + sliced lines to `.digismith/telemetry/<repo>/<slug>/<timestamp>.jsonl` |
+| 5 | `git add` + commit there (no gitignore check — DigiSmith's own `.digismith/` is always committed); `cd "$CONSUMER_REPO_DIR"` and delete the marker; report one line |
