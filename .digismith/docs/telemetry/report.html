@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry (P) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Telemetry (P) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-12</span>
+    <span>Map item: <strong>P</strong></span>
+    <span>Commit range: <code>525cd5f..bdd7d59</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>telemetry</code> — DigiSmith's map item <strong>P</strong> — a profile-gated capture
+  of the full Claude Code session transcript for a DigiSmith-driven ticket build
+  (<code>using-digismith</code> start → <code>finishing-a-development-branch</code>'s integration
+  decision), committed back into DigiSmith's own repo as a raw data corpus for future
+  process-improvement analysis. A new <code>logging</code> boolean in <code>profiles/*.yml</code>
+  gates everything: when on, <code>using-digismith</code> writes a small
+  <code>.digismith/telemetry-marker</code> state file and copies it into the worktree alongside
+  <code>.digismith/profile</code>, and a new standalone <code>telemetry</code> skill — triggered right
+  after <code>finishing-a-development-branch</code>'s Step 4 menu is answered — reads that marker,
+  slices the transcript from the recorded point onward, prepends a metadata header, and commits the
+  result into DigiSmith's own repo. Followed the full Superpowers process: brainstorming → spec →
+  writing-plans → <code>superpowers:subagent-driven-development</code> (3 tasks, each dispatched to a
+  fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
+  round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Profile Field + using-digismith Marker Write/Copy</h4>
+      <p>The <code>logging</code> field on both profile files, and the
+      <code>.digismith/telemetry-marker</code> write/copy contract at <code>using-digismith</code>'s
+      new Step 1.5 and Step 2's new sub-step 7 — the exact file Task 2 reads.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>telemetry Skill — Capture and Commit</h4>
+      <p><code>.digismith/telemetry/&lt;repo&gt;/&lt;slug&gt;/&lt;timestamp&gt;.jsonl</code> in
+      DigiSmith's own repo, committed — the corpus this whole feature exists to build. Nothing
+      downstream consumes it yet; analysis is future work.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>Update history.html and MEMORY.md for Map Item P</h4>
+      <p>An up-to-date living tracker reflecting Tasks 1-2's completed work.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Profile Field + using-digismith Marker Write/Copy</td>
+      <td>Profile files + Step 1.5/2.7</td>
+      <td>Approved after 1 fix round, 1 parked</td>
+      <td>—</td></tr>
+    <tr><td>2. telemetry Skill — Capture and Commit</td>
+      <td><code>skills/telemetry/SKILL.md</code></td>
+      <td>Approved after 1 fix round</td>
+      <td>Marker parsing shown with no bash (<code>started_at</code> has multiple colons); Error
+      Handling didn't cover <code>git commit</code> failure or same-timestamp double-capture
+      overwrite; <code>NEW_LINE_COUNT</code> could undercount by one with no trailing newline —
+      all three later addressed or explicitly accepted at the final review</td></tr>
+    <tr><td>3. Update history.html and MEMORY.md for Map Item P</td>
+      <td>Docs/roadmap updates</td>
+      <td>Approved, clean</td>
+      <td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Critical, 5 Important, and 5 Minor findings, all fixed or
+  explicitly accepted in one fix wave; scoped re-review confirmed all 11 actionable findings
+  addressed with no new Critical/Important breakage. 4 further Minor observations surfaced by the
+  fix diff itself were adjudicated and parked with rulings rather than triggering a second fix
+  wave.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td>Recorded transcript path invalidated once <code>using-digismith</code>
+      enters a worktree — Claude Code re-homes the session transcript to the project directory
+      matching current cwd, so the marker's absolute path stops resolving and every
+      <code>logging: true</code> build silently captured nothing</td>
+      <td>Fixed — added a <code>session_id</code> marker field (survives the move) and a
+      three-tier resolution in <code>telemetry</code> Step 2 (recorded path →
+      <code>~/.claude/projects/&lt;encoded-cwd&gt;/&lt;session_id&gt;.jsonl</code> → a
+      <code>find</code> sweep by session id), verified against real on-disk state on this
+      machine</td></tr>
+    <tr><td>Important</td><td>Marker's <code>key: value</code> lines were never actually parsed
+      into shell variables in <code>telemetry</code> Step 1</td>
+      <td>Fixed — explicit <code>sed -n 's/^field: //p'</code> parsing added for every field,
+      splitting on the first colon only</td></tr>
+    <tr><td>Important</td><td>Original checkout's marker was never deleted after telemetry ran,
+      and Quick Reference wording could let a stale marker from an unrelated earlier ticket get
+      copied into a new ticket's worktree</td>
+      <td>Fixed — Step 1.5 now unconditionally clears any existing marker before deciding whether
+      to write a fresh one; Quick Reference reworded to require "only if Step 1.5 just wrote one
+      this run"</td></tr>
+    <tr><td>Important</td><td><code>git commit</code> in DigiSmith's own repo had no pathspec (risk
+      of sweeping unrelated staged changes) and no failure handling</td>
+      <td>Fixed — commit now scoped with <code>-- "$TARGET"</code>; commit failure now reports and
+      keeps the marker (unlike other non-blocking failures) so a retry remains possible</td></tr>
+    <tr><td>Important</td><td><code>README.md</code> said "Two skills sit outside that front door"
+      and didn't document telemetry</td>
+      <td>Fixed — updated to "Three skills", added a telemetry (P) paragraph in the existing M/N
+      house style, and noted <code>logging</code> in the Emma/Personal profile description</td></tr>
+    <tr><td>Important</td><td><code>using-digismith</code>'s Step 0 summary, profile-switch delta,
+      and first-use picker never mentioned <code>logging</code> — including the consent-relevant
+      fact that session transcripts may be committed into DigiSmith's own repo</td>
+      <td>Fixed — added to all three locations</td></tr>
+    <tr><td>Minor</td><td>Project-directory encoding only replaced <code>/</code>, but real Claude
+      Code encoding replaces every non-alphanumeric character (e.g. <code>.</code>)</td>
+      <td>Fixed — <code>sed 's/[^a-zA-Z0-9]/-/g'</code> in both consuming skills</td></tr>
+    <tr><td>Minor</td><td>Sliced transcript was written to a fixed
+      <code>/tmp/telemetry-slice.jsonl</code> — collision risk, unredacted leftover data</td>
+      <td>Fixed — uses <code>mktemp</code>, cleaned up after use</td></tr>
+    <tr><td>Minor</td><td>Same-<code>started_at</code> double capture would silently overwrite</td>
+      <td>Documented — one-line Error Handling note added, accepted at second-precision
+      granularity, no functional change</td></tr>
+    <tr><td>Minor</td><td><code>NEW_LINE_COUNT</code> could undercount by one with no trailing
+      newline on the transcript's last line</td>
+      <td>Documented — one-line note added; direction is one fewer captured line, not data loss
+      elsewhere, no functional change</td></tr>
+    <tr><td>Minor</td><td><code>MEMORY.md</code>'s <code>.digismith/profile</code> convention
+      bullet didn't mention the marker file, which now carries the identical treatment</td>
+      <td>Fixed — bullet extended to cover <code>.digismith/telemetry-marker</code> and name
+      <code>using-digismith</code>/<code>telemetry</code> as writer/reader</td></tr>
+    <tr><td>Minor</td><td><code>plan.md</code>'s task bodies are now stale against its own
+      final-review-amended Global Constraints (still show the pre-fix code)</td>
+      <td>Parked — cosmetic; the plan is a historical record of an already-executed run, and the
+      constraints section anyone would actually consult carries the amendment note</td></tr>
+    <tr><td>Minor</td><td>The all-tiers-miss transcript resolution has no explicit executable
+      guard, relies on prose to stop before an empty-path <code>wc -l</code></td>
+      <td>Parked — real but low severity; fails loud via a shell error rather than silently
+      mis-capturing, and telemetry's non-blocking design means even an ugly failure here doesn't
+      break the merge flow it triggers from</td></tr>
+    <tr><td>Minor</td><td><code>mktemp -t telemetry-slice</code> is BSD-only, breaks on GNU
+      coreutils/Linux</td>
+      <td>Parked — this machine and this feature's only current user are macOS; a cheap one-line
+      fix whenever this plugin is used from Linux</td></tr>
+    <tr><td>Minor</td><td>Slice-cleanup instruction has no matching Error Handling entry for the
+      DigiSmith-repo-unresolvable bailout — temp-file leak risk</td>
+      <td>Parked — real, low-severity leak of an unredacted transcript slice into
+      <code>$TMPDIR</code>, only in the rare case DigiSmith's repo path can't be resolved; not a
+      data-corruption or committed-data risk</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">5b2cd56</span> feat(telemetry): add logging profile field and using-digismith marker write/copy</li>
+    <li><span class="sha">9d5e15e</span> feat(telemetry): add telemetry skill — capture and commit session transcripts</li>
+    <li><span class="sha">6b7b06c</span> fix(telemetry): trim frontmatter to trigger-only, fix null ticket_key JSON, explicit cd into DigiSmith repo</li>
+    <li><span class="sha">3f5e3c9</span> docs: update history — telemetry (P) shipped</li>
+    <li><span class="sha">d04b00b</span> fix(telemetry): resolve transcript by session id, parse marker, harden capture</li>
+    <li><span class="sha">bdd7d59</span> docs(telemetry): document P in README, extend MEMORY convention, amend plan</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/telemetry/report.html</footer>
+
+</body>
+</html>
