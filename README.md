@@ -82,11 +82,15 @@ no standards injected, no transcript capture. **Jazurite** — the same
 ticket-less, client-machinery-free core as Personal, but with session
 transcript capture turned back on (`logging: true`); for Jack's own
 branded projects where the process is worth building a corpus from, not
-client work and not throwaway scratch. The answer is
+client work and not throwaway scratch. **DigiSmith** — same fields as
+Jazurite (no ticket, no standards, no ephemeral, transcript capture on);
+reserved specifically for DigiSmith's own repo working on itself, so its
+own dogfooding sessions build the same corpus every other DigiSmith-driven
+project does. The answer is
 remembered in `.digismith/profile` in that repo, so you're only asked
 once. To change it later, just say "switch this repo's profile to
-personal" (or "jazurite") — it'll state exactly what turns on or off and
-confirm before writing.
+personal" (or "jazurite", or "digismith") — it'll state exactly what
+turns on or off and confirm before writing.
 
 If you only want a ticket captured — no branch, no build yet — say so
 explicitly (or invoke `digismith:jira-intake` directly) instead.
