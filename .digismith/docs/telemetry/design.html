@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry (P) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  .risk { border-left: 3px solid #c0392b; background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Telemetry (P) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-12</span>
+    <span>Map item: <strong>P</strong> — new letter, added directly per Jack's request during this brainstorm</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#dataflow">Data Flow</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#risk">Accepted Risk</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+    <li><a href="#roadmap">Roadmap Update</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>Once a ticket ships, DigiSmith has no record of <em>how</em> the work actually happened — which
+  tools got called, how many turns a stage took, where a skill hand-off stumbled, what decisions got
+  made along the way. That's a closed loop with no data feeding back into it: every improvement to
+  DigiSmith's own process today comes from Jack's memory of a session, not from evidence.</p>
+  <p>Telemetry closes that loop for DigiSmith's own process. When a repo's profile has
+  <code>logging: true</code>, the full Claude Code session transcript for a ticket's build —
+  everything from the moment <code>using-digismith</code> starts working it to the moment
+  <code>superpowers:finishing-a-development-branch</code>'s merge decision is made — gets copied back
+  into DigiSmith's own repo as a raw, structured record. No analysis ships with this feature; the
+  goal is building the corpus a future pass can mine for improvement opportunities.</p>
+  <p>This was originally proposed as "log every action for data collection," covering both DigiSmith's
+  own process and the shipped product's runtime behavior (e.g. a Shopify theme's post-deploy user
+  behavior). Those turned out to be two unrelated engineering problems with no shared infrastructure —
+  this design covers <strong>DigiSmith's own process only</strong>. Shipped-product telemetry is
+  deferred as a separate, later sub-project (see <a href="#roadmap">Roadmap Update</a>).</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not analysis, dashboards, or reporting.</strong> This feature captures and stores raw
+      transcripts only. Mining them for patterns is explicitly future work.</li>
+    <li><strong>Not shipped-product telemetry.</strong> Runtime behavior of the theme/app itself,
+      post-deploy, is a separate sub-project — different stack entirely (client-side instrumentation,
+      a collection endpoint, a data pipeline), not touched here.</li>
+    <li><strong>Not redacted or filtered.</strong> The captured transcript is copied verbatim,
+      including any consumer-repo code, ticket content, or raw tool output it contains. See
+      <a href="#risk">Accepted Risk</a>.</li>
+    <li><strong>Not a manual toggle.</strong> No flag or spoken phrase turns capture on or off for a
+      single session — it's purely gated by the repo's profile, same mechanism as <code>ticket</code>,
+      <code>ephemeral</code>, and <code>reporting</code>.</li>
+    <li><strong>Not crash-recovering.</strong> If a session never reaches
+      <code>finishing-a-development-branch</code>'s merge decision (abandoned mid-work, session just
+      ends), nothing gets copied back. No retry or backfill mechanism exists for this.</li>
+    <li><strong>Not merged across sessions.</strong> A ticket resumed in a later session produces a
+      second, independent telemetry file under the same slug folder — not stitched into the first.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+
+  <h3>Profile Field — <code>profiles/&lt;name&gt;.yml</code></h3>
+  <p>New boolean field <code>logging</code>, same shape as <code>ticket</code>/<code>ephemeral</code>/
+  <code>reporting</code>. Proposed defaults: <code>emma.yml</code> → <code>true</code> (this is the
+  UAT target), <code>personal.yml</code> → <code>false</code>.</p>
+
+  <h3>Start Marker — <code>.digismith/telemetry-marker</code></h3>
+  <p>A small state file in the repo being worked in, written once <code>using-digismith</code> begins
+  working a ticket under a <code>logging: true</code> profile. Same "config, not generated docs
+  output" treatment as <code>.digismith/profile</code>: sits beside <code>.digismith/docs/</code>, is
+  never <code>git add -f</code>'d, and must be physically present in whatever working directory the
+  work continues in.</p>
+  <pre><code>.digismith/telemetry-marker
+transcript: /Users/jack/.claude/projects/-Volumes-D-.../&lt;session-id&gt;.jsonl
+start_line: 142
+started_at: 2026-08-12T09:14:00Z
+repo: shopify-hub
+slug: fix-cart-drawer-padding-mobile</code></pre>
+  <p>The transcript path is located by the same rule Claude Code itself uses to store session
+  history: <code>~/.claude/projects/&lt;cwd-with-/-replaced-by-&#45;&gt;/</code>, then the
+  most-recently-modified <code>.jsonl</code> file in that directory — the file actively being
+  appended to by the running session. This is a best-effort heuristic (see
+  <a href="#errors">Error Handling</a>), not a guaranteed session-ID lookup, since no tool in this
+  environment exposes the current session ID directly. <code>repo</code> in the marker (and later in
+  the metadata header) is the basename of the consumer repo's git top-level directory
+  (<code>git rev-parse --show-toplevel</code>) — e.g. <code>shopify-hub</code>.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>Step 0/1 gains marker write</h4>
+      <p>After profile resolution, if the active profile's <code>logging</code> is <code>true</code>:
+      locate the current session's transcript file, record its path and current line count, and write
+      <code>.digismith/telemetry-marker</code> in the original checkout — before any worktree
+      exists, same ordering <code>.digismith/profile</code> already follows.</p>
+    </div>
+    <div class="card">
+      <div class="tag">using-digismith</div>
+      <h4>Step 2.6 gains marker copy</h4>
+      <p>Alongside the existing <code>.digismith/profile</code> copy into the new/attached worktree,
+      copy <code>.digismith/telemetry-marker</code> too, if it exists — a plain file copy, never
+      <code>git add</code>. A worktree checks out only committed files, so without this the marker
+      would simply be absent when capture time comes.</p>
+    </div>
+    <div class="card">
+      <div class="tag">new skill: telemetry</div>
+      <h4>Triggers after finishing-a-development-branch's merge decision</h4>
+      <p>Same integration pattern as <strong>M</strong> and <strong>N</strong>: a separate skill
+      DigiSmith invokes right after a Superpowers primitive completes, not an edit to Superpowers'
+      own skill file. Reads <code>.digismith/telemetry-marker</code> from the current working
+      directory — absent → skip silently, nothing to capture. Present → read all transcript lines
+      after <code>start_line</code>, prepend one metadata JSON line (repo, slug, ticket key if any,
+      session id, start/end timestamps), and write the result to DigiSmith's own repo at
+      <code>.digismith/telemetry/&lt;repo-name&gt;/&lt;slug&gt;/&lt;start-timestamp&gt;.jsonl</code>,
+      then commit it. DigiSmith's own repo path is resolved via the same "is <code>cwd</code> itself
+      DigiSmith, else ask and remember for this session" rule <code>inject-standards</code> already
+      uses. Deletes <code>.digismith/telemetry-marker</code> from the working directory after a
+      successful capture, so a later reuse of the same worktree doesn't replay a stale marker.</p>
+    </div>
+  </div>
+</section>
+
+<section id="dataflow">
+  <h2>Data Flow</h2>
+  <p><strong>Ticket start</strong> (<code>logging: true</code>): <code>using-digismith</code> Step 0/1
+  → locate live transcript file → write <code>.digismith/telemetry-marker</code> in the original
+  checkout → Step 2.6 copies it into the worktree.</p>
+  <p><strong>During the build:</strong> nothing else happens — the transcript keeps growing on its
+  own as Claude Code writes it; Telemetry adds no runtime overhead or extra instrumentation during
+  the session itself.</p>
+  <p><strong>Ticket end:</strong> <code>superpowers:finishing-a-development-branch</code> reaches its
+  merge decision → the <code>telemetry</code> skill triggers → reads the marker → slices the
+  transcript from <code>start_line</code> to end-of-file → writes + commits the sliced, metadata-
+  prefixed copy into DigiSmith's own repo → deletes the marker from the working directory.</p>
+  <p><strong><code>logging: false</code> or no profile file:</strong> no marker is ever written; the
+  <code>telemetry</code> skill's post-merge check finds nothing and is a silent no-op.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>No <code>.digismith/telemetry-marker</code> at capture time</strong> (logging was
+      off, or the marker was lost/never copied into the worktree) → skip silently, no error surfaced.
+      Never blocks the merge.</li>
+    <li><strong>Transcript file from the marker no longer exists, or the most-recently-modified
+      <code>.jsonl</code> heuristic picked the wrong file at start time</strong> (e.g. two DigiSmith
+      sessions running against the same repo directory concurrently) → best-effort only in this MVP;
+      report a one-line note that capture couldn't be completed rather than failing the merge step.
+      Not solved robustly here — flag as a known limitation.</li>
+    <li><strong>DigiSmith's own repo path can't be resolved</strong> (not the cwd, and the user
+      declines to provide it this session) → skip capture with a one-line note, same non-blocking
+      stance as the missing-marker case.</li>
+    <li><strong>Ticket resumed across multiple sessions</strong> → each session that reaches a merge
+      decision (or, more precisely, each session with its own marker) produces its own telemetry
+      file under the same slug folder. Not an error — documented non-goal.</li>
+    <li><strong>Profile has no <code>logging</code> key at all</strong> (an older profile file
+      predating this feature) → treat as <code>false</code>, same as any other missing boolean field
+      defaulting to off.</li>
+  </ul>
+</section>
+
+<section id="risk">
+  <h2>Accepted Risk</h2>
+  <div class="risk">
+    <p><strong>DigiSmith's repo is going public, and captured transcripts are committed
+    unredacted.</strong> A telemetry file can contain a consumer repo's proprietary source code,
+    full JIRA ticket content, and raw tool output — all of it becomes publicly visible in DigiSmith's
+    git history the moment it's committed. This was raised explicitly during this brainstorm
+    (2026-08-12): recommended against it, Jack chose to commit as-is anyway. Recorded here as a
+    deliberate, informed decision rather than an oversight. If this needs to change later (redaction,
+    gitignoring <code>.digismith/telemetry/</code>, or keeping DigiSmith private after all), that's a
+    revision to this design, not a bug fix.</p>
+  </div>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Manual dogfood
+  walkthrough:</p>
+  <ol>
+    <li><code>logging: true</code> (Emma profile), full ticket flow start to finish → marker written
+      at Step 0/1, survives the worktree copy, and a telemetry file lands at the expected
+      <code>.digismith/telemetry/&lt;repo&gt;/&lt;slug&gt;/...</code> path in DigiSmith's repo once
+      <code>finishing-a-development-branch</code> reaches its merge decision.</li>
+    <li>Captured file's content check: only lines from the recorded <code>start_line</code> onward
+      are present — no earlier, unrelated conversation leaks into the capture.</li>
+    <li><code>logging: false</code> (Personal profile, default) → no marker ever written, no
+      telemetry file produced, no other behavior change.</li>
+    <li>No profile file at all → unaffected, existing behavior.</li>
+    <li>Marker present but transcript file missing/renamed at capture time → skip gracefully with a
+      one-line note; the merge step itself still completes.</li>
+    <li><strong>Real UAT</strong> (the actual acceptance bar for this feature): run the full flow
+      against Emma's repository on a real JIRA ticket, end to end, and confirm the captured file is
+      legible and contains the expected tool-call/skill-invocation sequence.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>E</strong> (<code>using-digismith</code>) — gains the marker-write in Step 0/1 and the
+      marker-copy in Step 2.6, mirroring exactly how <strong>O</strong> added the profile-copy
+      step.</li>
+    <li><strong>O</strong> (profiling) — gains the new <code>logging</code> field alongside
+      <code>ticket</code>/<code>ephemeral</code>/<code>reporting</code>.</li>
+    <li><strong>M</strong> / <strong>N</strong> (<code>capture-ephemeral-url</code> /
+      <code>report-implementation</code>) — Telemetry is a third skill in this same family: triggers
+      later in the lifecycle, after code is already written, as a follow-on step after a Superpowers
+      primitive completes rather than an edit to that primitive's own file. Independent of both —
+      doesn't consume or produce either's output.</li>
+    <li><strong>superpowers:finishing-a-development-branch</strong> — unmodified itself; Telemetry
+      observes its merge decision as a trigger point, same non-invasive relationship M has with
+      "push and create PR."</li>
+  </ul>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap Update</h2>
+  <p>Adds a new row to <code>MEMORY.md</code>'s map table: <strong>P — Telemetry</strong>, "Captures
+  the full Claude Code session transcript for a DigiSmith-driven ticket build (using-digismith start
+  → finishing-a-development-branch's merge decision) and commits it back into DigiSmith's own repo,
+  building a corpus for future process-improvement analysis. Raw and unredacted by deliberate choice
+  — see Accepted Risk." Also adds a note to <code>MEMORY.md</code>'s Open Questions: shipped-product
+  runtime telemetry (the theme/app's own post-deploy behavior) was scoped out of P during this
+  brainstorm as a separate, later sub-project with no shared infrastructure — undesigned, not yet
+  assigned a map letter.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/telemetry/design.html</footer>
+
+</body>
+</html>
