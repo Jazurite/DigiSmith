@@ -36,39 +36,101 @@ test -f .digismith/telemetry-marker
 — not an error, this is the normal case whenever `logging` was off or
 no profile was ever set. Hand back immediately; see Step 5.
 
-**Present** → read its `key: value` lines into `transcript`,
-`start_line`, `started_at`, `repo`, `slug`, and `ticket_key` (present
-only when `digismith:using-digismith` Step 1.5 resolved a real ticket
-key). Note the current working directory too — this is the *consumer*
-repo, and Step 5 needs to come back here to delete the marker after
-Steps 4-5's writes happen inside DigiSmith's own repo:
+**Present** → parse its `key: value` lines into named shell variables.
+Run this verbatim rather than reading the file by eye — every later step
+depends on these being actually assigned, and an empty variable silently
+routes the skill down the wrong branch:
+
+```bash
+m=.digismith/telemetry-marker
+transcript=$(sed -n 's/^transcript: //p' "$m")
+session_id=$(sed -n 's/^session_id: //p' "$m")
+start_line=$(sed -n 's/^start_line: //p' "$m")
+started_at=$(sed -n 's/^started_at: //p' "$m")
+repo=$(sed -n 's/^repo: //p' "$m")
+slug=$(sed -n 's/^slug: //p' "$m")
+ticket_key=$(sed -n 's/^ticket_key: //p' "$m")
+```
+
+Each pattern strips only the leading `<key>: ` prefix, so everything
+after the **first** colon survives — `started_at` values like
+`2026-08-12T14:07:33Z` contain colons of their own and must not be
+truncated. `ticket_key` is empty when the marker has no such line
+(`digismith:using-digismith` Step 1.5 omits it unless a real ticket key
+was resolved); every other variable should be non-empty — if
+`transcript`, `session_id`, `start_line`, `started_at`, `repo`, or `slug`
+comes back empty, the marker is malformed, see Error Handling.
+
+`session_id` is the transcript file's basename with `.jsonl` stripped.
+It is recorded separately from `transcript` on purpose: the recorded
+absolute path is computed in the original checkout, *before*
+`using-digismith` Step 2 enters a worktree, and Claude Code re-homes a
+session's transcript to the project directory matching its current cwd
+— so the recorded path routinely goes stale while the session ID stays
+valid. Step 2 uses the ID to find the file again.
+
+Note the current working directory too — this is the *consumer* repo,
+and Step 5 needs to come back here to delete the marker after Steps 4-5's
+writes happen inside DigiSmith's own repo:
 
 ```bash
 CONSUMER_REPO_DIR="$(pwd)"
 ```
 
-### Step 2: Slice the Transcript
+### Step 2: Resolve the Transcript, Then Slice It
+
+**Resolve first — do not test the recorded path alone.** The path in the
+marker was recorded before `using-digismith` entered a worktree, and the
+session's transcript has almost certainly been re-homed since (Claude
+Code files a session's transcript under the project directory matching
+its *current* cwd). Try three locations in order and take the first that
+exists:
 
 ```bash
-if [ ! -f "$transcript" ]; then
-  # see Error Handling — stale marker, skip capture
-  :
+CWD_ENCODED=$(pwd | sed 's/[^a-zA-Z0-9]/-/g')
+
+if [ -f "$transcript" ]; then
+  : # (a) recorded path still valid — use it as-is
+elif [ -f "$HOME/.claude/projects/$CWD_ENCODED/$session_id.jsonl" ]; then
+  # (b) re-homed to the project dir for the current cwd (usually the worktree)
+  transcript="$HOME/.claude/projects/$CWD_ENCODED/$session_id.jsonl"
 else
-  NEW_LINE_COUNT=$(($(wc -l < "$transcript" | tr -d ' ') - start_line))
+  # (c) cwd changed again since (e.g. a merge switched back to the repo root)
+  transcript=$(find "$HOME/.claude/projects" -maxdepth 2 -name "$session_id.jsonl" 2>/dev/null | head -1)
 fi
 ```
 
-If the transcript file no longer exists at the recorded path, or
-`NEW_LINE_COUNT` is zero or negative (nothing was appended since the
+Claude Code encodes the project directory name by replacing **every**
+non-alphanumeric character with `-`, not just `/` — a path containing
+`/.claude/worktrees/` becomes `--claude-worktrees-`. Use the character
+class above verbatim; a `/`-only substitution silently misses the
+directory.
+
+Only if all three miss — `$transcript` is now empty or still doesn't
+exist — is this a stale marker; see Error Handling. Otherwise slice from
+the resolved path:
+
+```bash
+# wc -l counts newlines: if the transcript's final line has no trailing
+# newline, this undercounts by one and the capture ends up one line
+# short. Accepted — the missing line is the tail of the slice, nothing
+# else shifts.
+NEW_LINE_COUNT=$(($(wc -l < "$transcript" | tr -d ' ') - start_line))
+```
+
+If `NEW_LINE_COUNT` is zero or negative (nothing was appended since the
 marker was written), this is a no-op — see Error Handling. Otherwise:
 
 ```bash
-tail -n "+$((start_line + 1))" "$transcript" > /tmp/telemetry-slice.jsonl
+SLICE=$(mktemp -t telemetry-slice)
+tail -n "+$((start_line + 1))" "$transcript" > "$SLICE"
 ```
 
 This is every line written to the transcript *after* the moment the
 marker was recorded — the ticket's actual build, not the conversation
-that preceded it in the same session.
+that preceded it in the same session. `$SLICE` is a unique temp file, so
+concurrent runs can't collide; Step 4 deletes it once the final output is
+written.
 
 ### Step 3: Locate DigiSmith's Own Repo
 
@@ -96,9 +158,13 @@ cd "$DIGISMITH_REPO_PATH"
 ```
 
 ```bash
-SESSION_ID=$(basename "$transcript" .jsonl)
+SESSION_ID="$session_id"
 ENDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 ```
+
+`$session_id` came straight from the marker in Step 1, so it's correct
+regardless of which of Step 2's three locations the transcript was
+finally found at.
 
 Build the metadata line as a single-line JSON object. `ticket_key` must
 be the literal string from the marker, quoted, when present — or the
@@ -131,9 +197,15 @@ TARGET=".digismith/telemetry/$repo/$slug/$SAFE_TS.jsonl"
 mkdir -p "$(dirname "$TARGET")"
 {
   echo "$METADATA_LINE"
-  cat /tmp/telemetry-slice.jsonl
+  cat "$SLICE"
 } > "$TARGET"
+rm -f "$SLICE"
 ```
+
+Delete `$SLICE` whether the write succeeded or not — it's an unredacted
+copy of the transcript and shouldn't be left lying in the temp
+directory. If any earlier step bailed out to Error Handling after the
+slice was created, delete it there too.
 
 ### Step 5: Commit and Delete the Marker
 
@@ -143,22 +215,35 @@ Still `cd`ed into `$DIGISMITH_REPO_PATH` from Step 4:
 
 ```bash
 git add "$TARGET"
-git commit -m "telemetry: capture $repo/$slug session"
+git commit -m "telemetry: capture $repo/$slug session" -- "$TARGET"
 ```
 
-Then switch back to the working directory this skill started from (the
-*consumer* repo recorded in `$CONSUMER_REPO_DIR` back in Step 1 — not
-DigiSmith's own repo, which is where the marker actually lives) and
-delete the marker there:
+The `-- "$TARGET"` pathspec is required, not stylistic: DigiSmith's own
+repo may have unrelated content already staged (a concurrent DigiSmith
+session mid-flight, say), and a bare `git commit` would sweep it into a
+commit labelled "telemetry: capture …". Commit exactly the one file this
+skill wrote.
+
+If the commit fails — a hook rejects it, or nothing was actually staged
+— see Error Handling. That is the one failure mode where the marker is
+**kept**, not deleted.
+
+Then switch back to the working directory this skill started from — the
+*consumer* repo recorded in `$CONSUMER_REPO_DIR` back in Step 1, which is
+where the marker actually lives, not DigiSmith's own repo you're
+currently `cd`ed into — and delete the marker there:
 
 ```bash
 cd "$CONSUMER_REPO_DIR"
-rm .digismith/telemetry-marker
+rm -f .digismith/telemetry-marker
 ```
 
-Deleting it — success or skipped-with-a-note — prevents a stale marker
-from being replayed if this same worktree is ever reused for unrelated
-work later.
+Deleting it — success, or skipped-with-a-note for any Error Handling case
+**except a failed commit** — prevents a stale marker from being replayed
+if this same worktree is ever reused for unrelated work later. (The
+original checkout's own copy is not this skill's problem:
+`digismith:using-digismith` Step 1.5 unconditionally clears it at the
+start of every run.)
 
 Report one line: what was captured (repo, slug, line count) and where
 it landed in DigiSmith's own repo.
@@ -171,11 +256,17 @@ exactly as written — do not re-invoke or duplicate any part of it.
 
 - **No `.digismith/telemetry-marker`** → skip entirely, silently. Normal
   case, not an error.
-- **Transcript file from the marker no longer exists** → report one
-  line ("telemetry capture skipped — transcript file no longer found")
-  and delete the marker anyway, so a later run in the same worktree
-  doesn't keep retrying against the same stale pointer. Never block
-  `finishing-a-development-branch`'s own flow over this.
+- **Transcript not found at *any* of Step 2's three locations** — not
+  the recorded `transcript:` path, not
+  `~/.claude/projects/<encoded-cwd>/<session_id>.jsonl`, and not the
+  `find` sweep by session ID → report one line ("telemetry capture
+  skipped — transcript file no longer found") and delete the marker
+  anyway, so a later run in the same worktree doesn't keep retrying
+  against the same stale pointer. Never block
+  `finishing-a-development-branch`'s own flow over this. A miss on the
+  recorded path alone is **not** this case — that's the expected state
+  after `using-digismith` entered a worktree, and tiers (b) and (c)
+  exist precisely to recover from it.
 - **Zero or negative new lines since `start_line`** → nothing happened
   since the marker was written (e.g. the marker was written but the
   ticket's build never really started in this session). Skip silently,
@@ -186,15 +277,34 @@ exactly as written — do not re-invoke or duplicate any part of it.
   delete the marker anyway, same non-blocking stance as the missing-
   transcript case.
 - **Marker file present but missing an expected field** (malformed —
-  e.g. no `transcript:` line) → treat the same as "transcript file no
-  longer exists": skip with a one-line note, delete the marker.
+  e.g. Step 1's parse leaves `transcript`, `session_id`, `start_line`,
+  `started_at`, `repo`, or `slug` empty) → treat the same as "transcript
+  file no longer exists": skip with a one-line note, delete the marker.
+  An empty `ticket_key` is not malformed — it's the normal shape for a
+  `ticket: false` profile.
+- **`git commit` fails** (a hook rejects it, or nothing was actually
+  staged) → report one line ("telemetry capture written but not
+  committed — <reason>") and **keep the marker**, unlike every other
+  case here. This is the one failure that is genuinely retryable: the
+  slice is already reconstructible from the same transcript and session
+  ID, so leaving the marker in place lets a later run try again. Still
+  never block `finishing-a-development-branch`'s own flow over it.
+- **Two captures with the same `started_at`** (same consumer repo, same
+  slug, same second) → the second `> "$TARGET"` silently overwrites the
+  first. Accepted: the filename's granularity is one second, and two
+  builds of the same slug starting within the same second isn't a case
+  worth extra machinery.
+- **Off-by-one on `NEW_LINE_COUNT`** → `wc -l` counts newlines, so a
+  transcript whose final line lacks a trailing newline yields a count one
+  lower than the real line count and the capture ends one line short.
+  Accepted; nothing else in the slice shifts.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 1 | Check for `.digismith/telemetry-marker` in the current working directory; absent → skip entirely and silently. Save `$CONSUMER_REPO_DIR` (current dir) |
-| 2 | Slice the transcript from `start_line + 1` to end-of-file; missing file or zero new lines → skip, no capture |
+| 1 | Check for `.digismith/telemetry-marker` in the current working directory; absent → skip entirely and silently. Parse its lines into `transcript`, `session_id`, `start_line`, `started_at`, `repo`, `slug`, `ticket_key` with the `sed` block; save `$CONSUMER_REPO_DIR` (current dir) |
+| 2 | Resolve the transcript in three tiers — (a) recorded `transcript` path, (b) `~/.claude/projects/<encoded-cwd>/<session_id>.jsonl`, (c) `find ~/.claude/projects -maxdepth 2 -name "<session_id>.jsonl"` — all three miss or zero new lines → skip, no capture; otherwise slice from `start_line + 1` to end-of-file into a `mktemp` file `$SLICE` |
 | 3 | Locate DigiSmith's own repo (cwd-is-DigiSmith check, else ask and remember) as `$DIGISMITH_REPO_PATH`; can't resolve → skip |
-| 4 | `cd "$DIGISMITH_REPO_PATH"`; compose the metadata JSON line (repo, slug, ticket key as quoted string or bare `null`, session id, start/end timestamps), write metadata + sliced lines to `.digismith/telemetry/<repo>/<slug>/<timestamp>.jsonl` |
-| 5 | `git add` + commit there (no gitignore check — DigiSmith's own `.digismith/` is always committed); `cd "$CONSUMER_REPO_DIR"` and delete the marker; report one line |
+| 4 | `cd "$DIGISMITH_REPO_PATH"`; compose the metadata JSON line (repo, slug, ticket key as quoted string or bare `null`, session id, start/end timestamps), write metadata + `$SLICE` to `.digismith/telemetry/<repo>/<slug>/<timestamp>.jsonl`, then `rm -f "$SLICE"` |
+| 5 | `git add` + `git commit -m "…" -- "$TARGET"` there (pathspec required; no gitignore check — DigiSmith's own `.digismith/` is always committed); `cd "$CONSUMER_REPO_DIR"` and delete the marker — except after a failed commit, where the marker is kept for retry; report one line |

@@ -47,9 +47,14 @@ first-use flow below instead of guessing.
    and report clearly — this shouldn't happen in a normal install.
 3. Present the available profiles via `AskUserQuestion`, one option per
    file, using each file's own `name` field and a one-line summary of
-   its toggles (e.g. "emma — ticket, standards, and ephemeral capture
-   all on" / "personal — ticket and ephemeral capture off; standards
-   empty").
+   its toggles — including `logging`, which the user is otherwise never
+   told about before choosing, and which decides whether their session
+   transcripts get committed into DigiSmith's own repo (e.g. "emma —
+   ticket, standards, and ephemeral capture all on; session transcripts
+   captured into DigiSmith's repo" / "personal — ticket and ephemeral
+   capture off; standards empty; no transcript capture"). Never omit
+   the logging half of the summary: it's the one toggle with a
+   consent dimension, not just a behavioral one.
 4. If the user declines to pick (see Error Handling), stop here —
    explain a profile is required to proceed. Don't create a branch or
    worktree.
@@ -86,15 +91,17 @@ consequences:
   pre-profiling behavior for the entire build that follows.
 
 Either way, the resolved profile's `profiles/<name>.yml` content (its
-`ticket`, `ephemeral`, `standards`, `reporting` fields) is now available
-for Step 1 and Step 2 below.
+`ticket`, `ephemeral`, `standards`, `reporting`, `logging` fields) is now
+available for Step 1 and Step 2 below.
 
 **Switching profiles mid-session:** if the user's request is "switch
 this repo's profile to X" rather than "start work on a ticket", handle
 it here instead of proceeding to Step 1: validate `X` against
 `profiles/*.yml` (same locate rule as above), state the behavioral delta
-(which of ticket/ephemeral/standards/reporting change, and how) via
-`AskUserQuestion`, and on confirmation overwrite `.digismith/profile`
+(which of ticket/ephemeral/standards/reporting/logging change, and how)
+via `AskUserQuestion` — call out a `logging` flip explicitly, since it
+silently turns session-transcript capture into DigiSmith's own repo on or
+off — and on confirmation overwrite `.digismith/profile`
 with the new name. This is `using-digismith`'s own job done at this
 point — don't fall through into Step 1's ticket flow unless the user's
 original request was also to start work.
@@ -135,20 +142,41 @@ inside the new worktree.
 
 ### Step 1.5: Write Telemetry Marker
 
-If the active profile's `logging` field is `true`, write a marker
+**First, unconditionally clear any marker left over from a previous
+ticket in this same checkout** — before deciding whether this run writes
+a fresh one, and regardless of what the profile says:
+
+```bash
+rm -f .digismith/telemetry-marker
+```
+
+This runs even when `logging` is off. A marker is a pointer into *one*
+specific ticket's build; if an earlier ticket in this checkout wrote one
+and this run doesn't, the stale file would otherwise survive and get
+picked up under the wrong repo/slug/ticket key. Clearing it first makes
+"a marker exists in this checkout" mean exactly "Step 1.5 wrote one this
+run" — which is the condition Step 2.7 keys off.
+
+Then: if the active profile's `logging` field is `true`, write a marker
 recording where telemetry capture should resume from once this ticket's
 build finishes. If `logging` is `false`, absent, or there is no
-`.digismith/profile` at all, skip this step entirely — no marker is
-written, and nothing about the rest of this skill changes.
+`.digismith/profile` at all, skip the rest of this step entirely — no
+marker is written, and nothing about the rest of this skill changes.
 
 Still in the original checkout, **before Step 2 creates or attaches any
 worktree**:
 
 ```bash
-CWD_ENCODED=$(pwd | sed 's/\//-/g')
+CWD_ENCODED=$(pwd | sed 's/[^a-zA-Z0-9]/-/g')
 TRANSCRIPT_DIR="$HOME/.claude/projects/$CWD_ENCODED"
 TRANSCRIPT=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
 ```
+
+Claude Code encodes the project directory name by replacing **every**
+non-alphanumeric character with `-`, not just `/` — a path containing
+`/.claude/worktrees/` becomes `--claude-worktrees-`. Use the character
+class above verbatim; a `/`-only substitution silently misses the
+directory.
 
 If `$TRANSCRIPT` is empty (the directory doesn't exist, or has no
 `.jsonl` files — see Error Handling), skip the rest of this step
@@ -164,12 +192,26 @@ STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 mkdir -p .digismith
 {
   echo "transcript: $TRANSCRIPT"
+  echo "session_id: $(basename "$TRANSCRIPT" .jsonl)"
   echo "start_line: $START_LINE"
   echo "started_at: $STARTED_AT"
   echo "repo: $REPO_NAME"
   echo "slug: <slug>"
 } > .digismith/telemetry-marker
 ```
+
+**Why both `transcript:` and `session_id:`.** The absolute path recorded
+here is computed from the *current* working directory, and Step 2 is
+about to change that directory by entering a worktree. Claude Code
+re-homes a session's transcript to the project directory matching its
+current cwd, so by the time `digismith:telemetry` runs, the file has
+usually moved to
+`~/.claude/projects/<encoded-worktree-path>/<session_id>.jsonl` and the
+recorded path no longer resolves. The session ID is the stable half of
+the pointer — it stays the same wherever the file gets re-homed — so
+`digismith:telemetry` Step 2 can find the transcript again. Record both:
+the path is a useful first-attempt hint, the session ID is the fallback
+that actually survives the move.
 
 `<slug>` is whichever slug Step 1 just produced — the `ticket.md`
 folder name when `ticket: true`, or the directly-derived slug when
@@ -270,8 +312,12 @@ what Step 2's new sub-step 7 below makes possible.
    the original checkout, copy it into
    `<worktree-path>/.digismith/telemetry-marker` the same way sub-step 6
    copies the profile file: a plain file copy, **not** `git add`,
-   **not** `git add -f`, **not** a commit. If Step 1.5 didn't run
-   (logging off, or no profile at all), there's nothing to copy — skip.
+   **not** `git add -f`, **not** a commit. The condition is "Step 1.5
+   wrote one **this run**" — not a bare existence check. Step 1.5 clears
+   any prior marker before it decides, so in practice the two coincide;
+   still, if Step 1.5 skipped the write for any reason (logging off, no
+   profile at all, no transcript directory found), there is nothing to
+   copy — skip, and never copy a file you didn't just write.
    Same reasoning as sub-step 6: a worktree checks out only committed
    files, so a marker written moments ago in Step 1.5 would otherwise
    simply not exist inside the new worktree, and
@@ -324,9 +370,12 @@ chain yourself.
   has one, stands.
 - **`logging: true` but no transcript directory or `.jsonl` file found**
   (`~/.claude/projects/<encoded-cwd>/` doesn't exist, or is empty) → skip
-  Step 1.5 entirely, silently. No marker is written; the rest of
-  `using-digismith` proceeds exactly as if `logging` were `false`. Never
-  block the ticket flow over this.
+  the *write* half of Step 1.5, silently. No marker is written; the rest
+  of `using-digismith` proceeds exactly as if `logging` were `false`.
+  Never block the ticket flow over this. Step 1.5's opening
+  `rm -f .digismith/telemetry-marker` still runs — it is unconditional,
+  and skipping it here is exactly how a stale marker from a prior ticket
+  would leak into this one.
 - **`.digismith/telemetry-marker` absent inside the worktree Step 2
   produced** → expected when `logging` was off or no marker was written;
   not an error. When a marker *was* written but the worktree copy (2.7)
@@ -340,6 +389,6 @@ chain yourself.
 |---|---|
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
-| 1.5 | If the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
-| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` (if it exists) into the worktree — both plain file copies, never `git add -f` |
+| 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` into the worktree, only if Step 1.5 just wrote one this run — both plain file copies, never `git add -f` |
 | 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there |
