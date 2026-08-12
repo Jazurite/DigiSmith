@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subagent-Driven Always (H) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  .risk { border-left: 3px solid #c0392b; background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Subagent-Driven Always (H) — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-12</span>
+    <span>Map item: <strong>H</strong> — Tier 2, "the override"</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#dataflow">Trigger &amp; Behavior Flow</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+    <li><a href="#roadmap">Roadmap Update</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p><code>superpowers:writing-plans</code> ends every plan with an Execution Handoff question:
+  "1. Subagent-Driven (recommended) / 2. Inline Execution — Which approach?" Left as-is, this asks the
+  same question on every single plan DigiSmith drives, even though the answer is always the same for
+  every profile currently in use — <strong>N</strong> (<code>report-implementation</code>) depends
+  entirely on the per-task review and final-review ledger that only <code>subagent-driven-development</code>
+  produces, and <strong>G</strong> (standards injection) has nothing to inject into unless an implementer
+  subagent actually gets dispatched. Inline execution silently breaks both.</p>
+  <p>H's goal: remove that question from the flow. When a DigiSmith-driven plan reaches Execution
+  Handoff, skip straight to <code>subagent-driven-development</code> without asking — matching the map's
+  original framing, "there is no option 2."</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not a profile-gated toggle.</strong> Considered and dropped during this brainstorm —
+      every current profile (<code>emma</code>, <code>personal</code>, <code>jazurite</code>) has
+      <code>reporting: true</code>, so every profile already depends on the ledger
+      <code>subagent-driven-development</code> produces. There's no profile today where an "opt out"
+      branch would be safe to take.</li>
+    <li><strong>Not a task-count rule.</strong> Also considered and dropped: routing single/sequential-
+      task plans to <code>executing-plans</code> instead of <code>subagent-driven-development</code> was
+      briefly proposed, but <code>executing-plans</code> is explicitly the no-subagent fallback (its own
+      skill file says so) — it never dispatches an implementer subagent and produces no ledger, so it
+      breaks G and N regardless of task count.</li>
+    <li><strong>Not a patch to Superpowers' own <code>writing-plans</code> file.</strong> That file is
+      part of a third-party, machine-wide plugin; editing it would change execution behavior for every
+      non-DigiSmith project on the machine too. H intercepts via a DigiSmith-side trigger instead — see
+      Architecture.</li>
+    <li><strong>Not a change to the plan document header.</strong> <code>writing-plans</code>' own
+      boilerplate ("REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or
+      executing-plans") stays exactly as Superpowers writes it inside the committed plan file — it's
+      informational text, not a live decision point, so there's nothing for H to intercept there.</li>
+    <li><strong>Not scoped to <code>using-digismith</code>-started builds only.</strong> Deliberately a
+      standalone rule, not folded into <code>using-digismith</code>'s Step 3 handoff — a build that
+      started mid-flight (ticket and branch already existed before DigiSmith touched it, same shape as
+      this session's own Emma UAT) still needs H to fire when it reaches Execution Handoff.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>One new skill, <code>skills/subagent-driven-always/SKILL.md</code>. No new persisted state — no
+  marker file, no profile field — unlike <strong>G</strong>/<strong>O</strong>/<strong>P</strong>. It's a
+  pure behavioral rule keyed to a trigger point inside a third-party skill's own flow, the same
+  implicit-trigger pattern <strong>M</strong> and <strong>N</strong> already use ("once a PR is open,"
+  "the moment a plan's final review comes back clean") rather than an explicit call from
+  <code>using-digismith</code> or any other DigiSmith skill.</p>
+
+  <h3>Trigger</h3>
+  <p>The moment <code>superpowers:writing-plans</code> reaches its Execution Handoff step and is about
+  to present the "Subagent-Driven / Inline Execution" choice.</p>
+
+  <h3>Behavior</h3>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">default path</div>
+      <h4>Skip the prompt, go straight to subagent-driven-development</h4>
+      <p>Don't ask the two-option question. Announce that Subagent-Driven Development is being used
+      (per DigiSmith map item H), then invoke <code>superpowers:subagent-driven-development</code>
+      directly.</p>
+    </div>
+    <div class="card">
+      <div class="tag">explicit override</div>
+      <h4>User asked for inline anyway</h4>
+      <p>If the user has explicitly requested inline execution for this specific plan — stated earlier
+      in conversation, or in response to H's announcement — honor it and invoke
+      <code>superpowers:executing-plans</code> instead. Not a live question H asks; only activates if
+      the user volunteers it.</p>
+    </div>
+    <div class="card">
+      <div class="tag">environment fallback</div>
+      <h4>No subagent capability available</h4>
+      <p>If the environment genuinely can't dispatch subagents (no <code>Agent</code> tool or
+      equivalent), fall back to <code>superpowers:executing-plans</code> automatically — exactly the
+      scenario that skill's own file documents as its reason to exist.</p>
+    </div>
+  </div>
+
+  <h3>Scope</h3>
+  <p>Global to any DigiSmith-installed environment — no profile gating (see Non-Goals). Fires
+  regardless of whether the current build started via <code>using-digismith</code> or was already
+  mid-flight when DigiSmith first touched it.</p>
+</section>
+
+<section id="dataflow">
+  <h2>Trigger &amp; Behavior Flow</h2>
+  <p><code>superpowers:writing-plans</code> finishes writing and saving the plan → reaches its
+  Execution Handoff section → this skill's trigger condition matches before the two-option question is
+  presented → default path invokes <code>subagent-driven-development</code> directly, unless the user
+  has already stated a preference for inline execution (→ <code>executing-plans</code>) or the
+  environment can't support subagents at all (→ <code>executing-plans</code>, environment fallback).
+  No state is written or read at any point in this flow.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>User explicitly insists on inline execution</strong> → respected, not overridden.
+      Recorded as an intentional, user-directed exception — not a failure of H.</li>
+    <li><strong>No subagent capability in this environment</strong> → falls back to
+      <code>executing-plans</code> automatically. Recorded as an environmental constraint, not a
+      choice — distinct from the explicit-override case above.</li>
+    <li><strong>A plan has exactly one task</strong> → no special case needed.
+      <code>subagent-driven-development</code> dispatches one implementer subagent per task whether
+      there's 1 task or 5; H's default path applies unchanged.</li>
+    <li><strong>Profile has <code>reporting: false</code> in the future</strong> (no such profile
+      exists today) → out of scope for this design, since H is unconditional. If a profile like this is
+      ever added, whether H should still apply to it is a decision for that profile's own change, not a
+      silent behavior shift here.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Manual dogfood
+  walkthrough:</p>
+  <ol>
+    <li>Run a real plan through DigiSmith end to end (this feature's own implementation is the first
+      test case) — confirm Execution Handoff never presents the two-option question, and
+      <code>subagent-driven-development</code> starts automatically.</li>
+    <li>Mid-conversation, explicitly ask for inline execution on a plan → confirm
+      <code>executing-plans</code> is used instead, without argument.</li>
+    <li>Confirm the plan document's own header text is unchanged from Superpowers' default
+      boilerplate.</li>
+    <li><strong>Real UAT</strong>: the Emma repo UAT already underway is a live test of this exact
+      behavior once H ships and that session reaches its own Execution Handoff point.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>G</strong> (standards injection) — H is a precondition for G to ever fire; G injects
+      into "every implementer subagent's brief," which only exist under
+      <code>subagent-driven-development</code>.</li>
+    <li><strong>N</strong> (implementation reporting) — same relationship: N depends on the ledger
+      grammar only <code>subagent-driven-development</code> produces. H guarantees that ledger exists
+      for every DigiSmith-driven plan.</li>
+    <li><strong>O</strong> (profiling) — considered as the mechanism for H (a profile toggle), explicitly
+      rejected; see Non-Goals.</li>
+    <li><strong>E.2</strong> (spine, remaining scope) — H is deliberately independent of
+      <code>using-digismith</code> for the same reason E.2 remains unbuilt: a mid-flight build (no
+      <code>using-digismith</code> Step 0–3 ever ran) still needs to hit this trigger correctly.</li>
+  </ul>
+</section>
+
+<section id="roadmap">
+  <h2>Roadmap Update</h2>
+  <p>Marks map item <strong>H</strong> (Tier 2) as built. Tier 2 becomes "in progress (1/2)" —
+  <strong>K</strong> (open-weight model tiering) remains open and unstarted, feasibility spike still
+  outstanding per <code>MEMORY.md</code>'s open questions.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/subagent-driven-always/design.html</footer>
+
+</body>
+</html>
