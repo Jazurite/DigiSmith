@@ -2,9 +2,10 @@
 
 Jack's personal SDLC plugin — ticket to delivery, built on top of
 [Superpowers](https://github.com/obra/superpowers). See
-[`MEMORY.md`](MEMORY.md) for the full philosophy and roadmap, and
+[`MEMORY.md`](MEMORY.md) for the full philosophy and roadmap,
 [`.digismith/history.html`](.digismith/history.html) for a live progress tracker
-across every map item.
+across every map item, and [`docs/getting-started.md`](docs/getting-started.md)
+for the first-run walkthrough in a brand-new repo.
 
 This README covers the one skill you actually invoke to start working:
 **`using-digismith`**. Everything else on the roadmap (standards
