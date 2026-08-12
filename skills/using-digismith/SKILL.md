@@ -115,7 +115,7 @@ remaining non-alphanumeric runs with a single hyphen, then truncate to
 or hyphen. Restated inline here since `digismith:jira-intake` itself
 isn't invoked in this path, not reinvented as a different algorithm. Skip
 the rest of Step 1 (no ticket content to read into context) and go
-straight to Step 2.
+straight to Step 1.5.
 
 If the result has no `**Key:**` line set — it's a Door 2 draft that was
 never upgraded to a real ticket — stop here. See Error Handling. Do not
@@ -132,6 +132,63 @@ it never will be. Either way the effect is the same: `ticket.md` will
 **not** be present inside the worktree Step 2 creates. Carry the content
 you read here forward to Step 3; never plan on re-reading the file from
 inside the new worktree.
+
+### Step 1.5: Write Telemetry Marker
+
+If the active profile's `logging` field is `true`, write a marker
+recording where telemetry capture should resume from once this ticket's
+build finishes. If `logging` is `false`, absent, or there is no
+`.digismith/profile` at all, skip this step entirely — no marker is
+written, and nothing about the rest of this skill changes.
+
+Still in the original checkout, **before Step 2 creates or attaches any
+worktree**:
+
+```bash
+CWD_ENCODED=$(pwd | sed 's/\//-/g')
+TRANSCRIPT_DIR="$HOME/.claude/projects/$CWD_ENCODED"
+TRANSCRIPT=$(ls -t "$TRANSCRIPT_DIR"/*.jsonl 2>/dev/null | head -1)
+```
+
+If `$TRANSCRIPT` is empty (the directory doesn't exist, or has no
+`.jsonl` files — see Error Handling), skip the rest of this step
+entirely. Logging silently does nothing rather than blocking the ticket
+flow.
+
+Otherwise:
+
+```bash
+START_LINE=$(wc -l < "$TRANSCRIPT" | tr -d ' ')
+REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
+STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+mkdir -p .digismith
+{
+  echo "transcript: $TRANSCRIPT"
+  echo "start_line: $START_LINE"
+  echo "started_at: $STARTED_AT"
+  echo "repo: $REPO_NAME"
+  echo "slug: <slug>"
+} > .digismith/telemetry-marker
+```
+
+`<slug>` is whichever slug Step 1 just produced — the `ticket.md`
+folder name when `ticket: true`, or the directly-derived slug when
+`ticket: false`. Never re-derive it a third way.
+
+If Step 1 resolved a real ticket key (a `**Key:**` line from
+`ticket.md`), append one more line to the same file:
+
+```bash
+echo "ticket_key: <Key>" >> .digismith/telemetry-marker
+```
+
+Omit that line entirely when there's no real key — a Door 2 draft never
+reaches this point at all (Step 1 already stops for those), and
+`ticket: false` profiles never derive a key in the first place.
+
+The `digismith:telemetry` skill reads this file later, after the build
+finishes, from inside whatever worktree Step 2 produces — that's exactly
+what Step 2's new sub-step 7 below makes possible.
 
 ### Step 2: Create the Branch
 
@@ -208,6 +265,19 @@ inside the new worktree.
    **before** Step 3 hands off; see Step 0's "config, not generated docs
    output" note for why a missing file here silently unwinds profiling
    for the whole build.
+7. **Make `.digismith/telemetry-marker` visible inside the worktree, if
+   logging is on.** If Step 1.5 wrote `.digismith/telemetry-marker` in
+   the original checkout, copy it into
+   `<worktree-path>/.digismith/telemetry-marker` the same way sub-step 6
+   copies the profile file: a plain file copy, **not** `git add`,
+   **not** `git add -f`, **not** a commit. If Step 1.5 didn't run
+   (logging off, or no profile at all), there's nothing to copy — skip.
+   Same reasoning as sub-step 6: a worktree checks out only committed
+   files, so a marker written moments ago in Step 1.5 would otherwise
+   simply not exist inside the new worktree, and
+   `digismith:telemetry` — which reads it later, from inside this same
+   worktree, once the build finishes — would silently find nothing to
+   capture.
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -252,12 +322,24 @@ chain yourself.
   Copy it in from the original checkout (Step 2.6). Never resolve this
   with `git add -f` — the repo's `.digismith/` gitignore choice, if it
   has one, stands.
+- **`logging: true` but no transcript directory or `.jsonl` file found**
+  (`~/.claude/projects/<encoded-cwd>/` doesn't exist, or is empty) → skip
+  Step 1.5 entirely, silently. No marker is written; the rest of
+  `using-digismith` proceeds exactly as if `logging` were `false`. Never
+  block the ticket flow over this.
+- **`.digismith/telemetry-marker` absent inside the worktree Step 2
+  produced** → expected when `logging` was off or no marker was written;
+  not an error. When a marker *was* written but the worktree copy (2.7)
+  didn't happen, `digismith:telemetry` will simply find nothing to
+  capture later — same non-blocking disposition as the missing-transcript
+  case above.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
-| 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 2; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
-| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6 — copy `.digismith/profile` into the worktree** (plain file copy, never `git add -f`), since a worktree checks out only committed files |
+| 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
+| 1.5 | If the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` (if it exists) into the worktree — both plain file copies, never `git add -f` |
 | 3 | Invoke `superpowers:brainstorming` with the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there |

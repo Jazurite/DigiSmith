@@ -6,3 +6,4 @@ standards: [global, shopify, team]
 ticket: true
 ephemeral: true
 reporting: true
+logging: true

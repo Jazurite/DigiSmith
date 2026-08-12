@@ -3,3 +3,4 @@ standards: []
 ticket: false
 ephemeral: false
 reporting: true
+logging: false
