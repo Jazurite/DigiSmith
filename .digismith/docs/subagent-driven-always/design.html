@@ -118,8 +118,8 @@
       non-DigiSmith project on the machine too. H intercepts via a DigiSmith-side trigger instead — see
       Architecture.</li>
     <li><strong>Not a change to the plan document header.</strong> <code>writing-plans</code>' own
-      boilerplate ("REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or
-      executing-plans") stays exactly as Superpowers writes it inside the committed plan file — it's
+      boilerplate ("REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
+      superpowers:executing-plans") stays exactly as Superpowers writes it inside the committed plan file — it's
       informational text, not a live decision point, so there's nothing for H to intercept there.</li>
     <li><strong>Not scoped to <code>using-digismith</code>-started builds only.</strong> Deliberately a
       standalone rule, not folded into <code>using-digismith</code>'s Step 3 handoff — a build that
@@ -206,9 +206,12 @@
   <p>No automated test suite — consistent with every DigiSmith skill so far. Manual dogfood
   walkthrough:</p>
   <ol>
-    <li>Run a real plan through DigiSmith end to end (this feature's own implementation is the first
-      test case) — confirm Execution Handoff never presents the two-option question, and
-      <code>subagent-driven-development</code> starts automatically.</li>
+    <li>Four constructed dogfood scenarios (Task 1 — default path, explicit override,
+      no-subagent-capability, single-task plan), each dispatching a subagent to reason through
+      <code>SKILL.md</code> against one Execution Handoff condition and report which Superpowers skill
+      it would invoke. Not a live trigger-point run: the skill didn't exist yet when this plan's own
+      Execution Handoff was reached, so this plan's own build couldn't exercise the real trigger — see
+      item 4 below for where that first happens.</li>
     <li>Mid-conversation, explicitly ask for inline execution on a plan → confirm
       <code>executing-plans</code> is used instead, without argument.</li>
     <li>Confirm the plan document's own header text is unchanged from Superpowers' default

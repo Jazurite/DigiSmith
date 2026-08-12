@@ -522,10 +522,15 @@
       <code>subagent-driven-always</code>, intercepts the Execution Handoff
       trigger directly — the same implicit-trigger pattern <strong>M</strong>
       and <strong>N</strong> already use — rather than patching
-      <code>writing-plans</code> itself. This plan's own build is its first
-      real dogfood run: it started from an already-existing worktree, not
-      via <code>using-digismith</code>, directly testing H's
-      not-scoped-to-using-digismith requirement.</p>
+      <code>writing-plans</code> itself. Verified via four constructed
+      dogfood scenarios (Task 1: default path, explicit override,
+      no-subagent-capability, single-task plan), each dispatching a
+      subagent to reason through the shipped skill file against one
+      condition. Not a live trigger-point run — the skill didn't exist yet
+      when this plan's own Execution Handoff was reached, so this build
+      couldn't have exercised its own trigger. The first real
+      trigger-point exercise will be the next DigiSmith-driven plan, e.g.
+      the Emma UAT already underway.</p>
     </div>
 
   </div>

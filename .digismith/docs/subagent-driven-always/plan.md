@@ -25,7 +25,7 @@ constructed scenarios, consistent with every DigiSmith skill so far.
   workflow summary.
 - **Not profile-gated.** Applies globally in any DigiSmith-installed
   environment. Considered and rejected during brainstorming: every
-  current profile (`emma`, `personal`, `jazurite`, `digismith`) has
+  current profile (`emma`, `personal`, `jazurite`) has
   `reporting: true`, so every profile already depends on the ledger
   `subagent-driven-development` produces — there's no profile today
   where an opt-out branch would be safe.
@@ -39,8 +39,8 @@ constructed scenarios, consistent with every DigiSmith skill so far.
   via its own trigger-matched description, never by editing another
   plugin's file.
 - **Not a change to the plan document header.** `writing-plans`' own
-  boilerplate ("REQUIRED SUB-SKILL: Use subagent-driven-development
-  (recommended) or executing-plans") stays exactly as Superpowers writes
+  boilerplate ("REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+  (recommended) or superpowers:executing-plans") stays exactly as Superpowers writes
   it inside the committed plan file.
 - **Not scoped to `using-digismith`-started builds only.** A build that
   started mid-flight (ticket and branch already existed before DigiSmith
@@ -130,8 +130,8 @@ or 5, so a single-task plan takes the same default path as any other.
 ## What This Skill Does Not Touch
 
 The plan document's own header line (`writing-plans`' boilerplate:
-"REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or
-executing-plans") is untouched — informational text inside the committed
+"REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
+superpowers:executing-plans") is untouched — informational text inside the committed
 plan file, not a live decision point.
 
 ## Error Handling
@@ -378,7 +378,8 @@ git commit -m "docs: update history — subagent-driven-always (H) shipped"
 ("Every `subagent-driven-development` plan invokes
 `digismith:report-implementation`"), invoke
 `digismith:report-implementation` before this plan's ledger is deleted.
-Since this plan's own build never went through `digismith:jira-intake`
-(DigiSmith working on itself, `ticket: false` under the new `digismith`
-profile), the report renders with no ticket-key field — same shape as
-every DigiSmith-own-repo report so far.
+Since this plan's own build never went through `digismith:jira-intake`,
+and this worktree currently has no `.digismith/profile` file at all
+(DigiSmith working on itself, `ticket: false`), the report renders with
+no ticket-key field — same shape as every DigiSmith-own-repo report so
+far.
