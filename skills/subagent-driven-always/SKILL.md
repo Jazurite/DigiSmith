@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-always
-description: Use the moment superpowers:writing-plans reaches its Execution Handoff step and is about to present "1. Subagent-Driven / 2. Inline Execution — Which approach?" — skip the prompt and resolve it automatically.
+description: Use the moment superpowers:writing-plans reaches its Execution Handoff step and is about to present "1. Subagent-Driven / 2. Inline Execution — Which approach?"
 ---
 
 # Subagent-Driven Always
@@ -49,22 +49,22 @@ Step 2.
 3. **Otherwise (default path)** → invoke
    `superpowers:subagent-driven-development` directly.
 
-Task count never changes this decision — `subagent-driven-development`
+Task count never changes this decision — `superpowers:subagent-driven-development`
 dispatches one implementer subagent per task whether a plan has 1 task
 or 5, so a single-task plan takes the same default path as any other.
 
 ## What This Skill Does Not Touch
 
-The plan document's own header line (`writing-plans`' boilerplate:
-"REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or
-executing-plans") is untouched — informational text inside the committed
-plan file, not a live decision point.
+The plan document's own header line (`superpowers:writing-plans`'
+boilerplate: "REQUIRED SUB-SKILL: Use subagent-driven-development
+(recommended) or executing-plans") is untouched — informational text
+inside the committed plan file, not a live decision point.
 
 ## Error Handling
 
 - **User insists on inline execution** → respected, not overridden.
   Intentional, user-directed exception — not a failure of this skill.
-- **No subagent capability** → falls back to `executing-plans`
+- **No subagent capability** → falls back to `superpowers:executing-plans`
   automatically. An environmental constraint, not a choice — distinct
   from the explicit-override case above; don't conflate the two in what
   gets reported.
