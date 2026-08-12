@@ -251,9 +251,19 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   happens**: `using-digismith` Step 0 writes it in the original checkout, and Step 2.6 copies it
   into the worktree Step 2 creates or attaches — a worktree checks out only committed files, so
   without that copy it simply wouldn't be there. `inject-standards`,
-  `capture-ephemeral-url`, and `report-implementation` each read it from that working directory at
-  their own trigger point; a missing file reads as "no profile" and silently restores
-  unrestricted, pre-profiling behavior.
+  `capture-ephemeral-url`, `report-implementation`, and `using-digismith`'s own Step 1.5 (the
+  `logging` gate) each read it from that working directory at their own trigger point; a missing
+  file reads as "no profile" and silently restores unrestricted, pre-profiling behavior.
+- **`.digismith/telemetry-marker` follows the same contract** (map item P). It is config-shaped
+  runtime state, not generated docs output: never `git add -f`'d, never committed on purpose, and
+  guaranteed only by **physical presence wherever work happens** — `digismith:using-digismith`
+  Step 1.5 writes it in the original checkout and Step 2.7 copies it into the worktree, exactly as
+  2.6 does for `.digismith/profile`. Two skills touch it and no others:
+  `digismith:using-digismith` writes it (and unconditionally `rm -f`s any prior one at the start of
+  every run, so a stale marker can never be inherited by an unrelated ticket), and
+  `digismith:telemetry` reads it after the build finishes and deletes it. Unlike the profile
+  pointer, a missing marker is always benign — it means "nothing to capture," which is the correct
+  default.
 - **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
   final review passes, before the plan's workspace gets deleted (see N's own design/skill for why
   the ordering matters).

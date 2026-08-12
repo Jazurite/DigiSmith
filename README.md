@@ -11,8 +11,8 @@ This README covers the one skill you actually invoke to start working:
 injection, ticket intake, and what's still to come) is wired in behind
 it or reachable directly — `using-digismith` is just the front door.
 
-Two skills sit outside that front door, because they trigger later in the
-lifecycle, after code is already written.
+Three skills sit outside that front door, because they trigger later in
+the lifecycle, after code is already written.
 
 **`capture-ephemeral-url`** (map item **M**). Once a PR is open in an Emma
 Shopify theme repo — typically right after
@@ -33,6 +33,20 @@ how they were resolved, the commit list. Timing is the whole point: it has
 to run before that plan's ledger gets deleted, since the ledger is where
 all of that detail lives. See
 [`skills/report-implementation/SKILL.md`](skills/report-implementation/SKILL.md)
+for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+its status.
+
+**`telemetry`** (map item **P**). It triggers right after
+`superpowers:finishing-a-development-branch`'s integration decision has
+been answered — merge, PR, or keep as-is, all three count as "done for
+now." When the active profile has `logging: true`, it copies this
+ticket's slice of the live session transcript back into DigiSmith's own
+repo and commits it there, using a marker `using-digismith` dropped
+before the build began to know where that slice starts. It's raw
+capture, not analysis: the point is building the corpus a later pass can
+mine for how the process actually behaves. With `logging: false` (or no
+profile) it does nothing at all. See
+[`skills/telemetry/SKILL.md`](skills/telemetry/SKILL.md)
 for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.
 
@@ -59,9 +73,11 @@ no cold start.
 The first time you run it in a given repo, it asks one extra question
 first: which **profile** this repo uses (map item **O**). **Emma** — the
 full flow: JIRA ticket, `<Key>__<slug>` branch, standards injection,
-ephemeral-URL capture. **Personal** — the same brainstorm → spec → plan →
-build → review core, minus the client machinery: no ticket (the branch is
-just `<slug>`), no ephemeral capture, no standards injected. The answer is
+ephemeral-URL capture, and session transcripts captured into DigiSmith's
+own repo once each build finishes (`logging: true`). **Personal** — the
+same brainstorm → spec → plan → build → review core, minus the client
+machinery: no ticket (the branch is just `<slug>`), no ephemeral capture,
+no standards injected, no transcript capture. The answer is
 remembered in `.digismith/profile` in that repo, so you're only asked
 once. To change it later, just say "switch this repo's profile to
 personal" — it'll state exactly what turns on or off and confirm before
@@ -127,7 +143,7 @@ the hand-off; it never re-invokes or duplicates anything downstream.
 | Situation | What happens |
 |---|---|
 | First run in a repo, and you decline to pick a profile | Stops there and explains a profile is required. No branch or worktree gets created. |
-| The repo's profile is `personal` | Step 1's ticket intake is skipped entirely — the slug comes straight from your description and the branch is just `<slug>`. Ephemeral capture and standards injection stay off too. |
+| The repo's profile is `personal` | Step 1's ticket intake is skipped entirely — the slug comes straight from your description and the branch is just `<slug>`. Ephemeral capture, standards injection, and session-transcript capture stay off too. |
 | Ticket has no real key yet (an un-upgraded Door 2 draft) | Stops after intake. Explains it needs a real key to name a branch — continue manually, or run intake again later once the ticket has one. |
 | A worktree already exists for this ticket | Switches into it. No duplicate ever gets created. |
 | A branch exists for this ticket but its worktree was removed | Reattaches a worktree to the existing branch instead of failing. |

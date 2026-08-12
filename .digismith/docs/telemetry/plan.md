@@ -44,6 +44,7 @@ fixtures, consistent with every DigiSmith skill so far.
   no YAML nesting —
   ```
   transcript: <absolute path to the session's .jsonl file>
+  session_id: <that file's basename with .jsonl stripped>
   start_line: <line count of that file at marker-write time>
   started_at: <UTC ISO 8601 timestamp>
   repo: <basename of `git rev-parse --show-toplevel`>
@@ -56,11 +57,17 @@ fixtures, consistent with every DigiSmith skill so far.
 - **Transcript location rule** (restated in both consuming skills, not
   cross-referenced at runtime — a freshly dispatched subagent only sees
   the one `SKILL.md` it was told to follow): the directory is
-  `~/.claude/projects/<cwd-with-every-/-replaced-by-->/`, computed from
-  the working directory at the moment of the check. The file is the
-  most-recently-modified `.jsonl` in that directory. This is a
-  best-effort heuristic, not a guaranteed session-ID lookup — no tool in
-  this environment exposes the current session ID directly.
+  `~/.claude/projects/<cwd-with-every-non-alphanumeric-char-replaced-by-->/`,
+  computed from the working directory at the moment of the check
+  (`sed 's/[^a-zA-Z0-9]/-/g'` — amended after final review Finding 7; a
+  `/`-only substitution misses any path containing a `.`, e.g.
+  `/.claude/worktrees/` → `--claude-worktrees-`). On the *write* side
+  (`using-digismith` Step 1.5) the file is the most-recently-modified
+  `.jsonl` in that directory — a best-effort heuristic, since no tool in
+  this environment exposes the current session ID directly. On the *read*
+  side (`telemetry` Step 2) the session ID recorded by that write is
+  authoritative, and the file is resolved by ID across project
+  directories rather than by the stale recorded path.
 - **Telemetry file target path** (DigiSmith's own repo):
   `.digismith/telemetry/<repo>/<slug>/<started_at-with-:-replaced-by-->.jsonl`.
   Content is one metadata JSON line, then the sliced transcript lines
@@ -71,8 +78,20 @@ fixtures, consistent with every DigiSmith skill so far.
   {"digismith_telemetry_meta":{"repo":"<repo>","slug":"<slug>","ticket_key":"<key-or-null>","session_id":"<session_id>","started_at":"<started_at>","ended_at":"<ended_at>"}}
   ```
   `session_id` is the transcript file's own basename with `.jsonl`
-  stripped — never stored separately, since the marker's `transcript:`
-  line already carries it.
+  stripped.
+
+  > **Amended after final review (Finding 1).** This constraint
+  > originally read "never stored separately, since the marker's
+  > `transcript:` line already carries it." That assumption is what broke
+  > the feature: Claude Code re-homes a session's transcript to the
+  > project directory matching its *current* cwd, so the moment
+  > `using-digismith` Step 2 enters a worktree, the recorded absolute path
+  > stops resolving and the marker's only pointer is dead. The session ID
+  > is now recorded on its own `session_id:` line — it survives the move —
+  > and `telemetry` Step 2 resolves the file in three tiers (recorded
+  > path → `~/.claude/projects/<encoded-cwd>/<session_id>.jsonl` → a
+  > `find` sweep by session ID). A deliberate amendment to the design,
+  > not a plan violation.
 - **DigiSmith's own repo is always git-committed for `.digismith/`**
   (per `MEMORY.md`'s unified docs convention) — unlike a *consumer*
   repo's `.digismith/docs/`, there is no gitignore check before
