@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">5 / 15</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">6 / 16</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -165,6 +165,9 @@
     <tr><td><strong>O</strong></td><td>Profiling</td>
       <td>A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point</td>
       <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>P</strong></td><td>Telemetry</td>
+      <td>Captures the full session transcript for a DigiSmith-driven ticket build and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis</td>
+      <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -202,6 +205,12 @@
     <a href="docs/profiling/plan.md">implementation plan</a> ·
     <a href="docs/profiling/report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>P — Telemetry:</strong>
+    <a href="docs/telemetry/design.html">design spec</a> ·
+    <a href="docs/telemetry/plan.md">implementation plan</a> ·
+    <a href="docs/telemetry/report.html">implementation report</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -229,6 +238,11 @@
       <td><span class="status todo">Not started</span></td></tr>
   </table>
   </div>
+  <p style="font-size:.85rem; color:var(--muted); margin-top:.8rem;">
+    <strong>P — Telemetry</strong> <span class="status done">Done</span> —
+    pulled forward and built 2026-08-12, outside any tier (a new map letter
+    added directly per Jack's request, same as <strong>O</strong>).
+  </p>
 </section>
 
 <section id="timeline">
@@ -465,6 +479,26 @@
       stage-order enforcement and routing to everything else, Not started), with
       E.2 decoupled into Tier 3 alongside <strong>A</strong> and <strong>J</strong>.
       Same kind of reprioritization as A moving ahead of E on 2026-08-06.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-12</div>
+      <h4>P brainstormed, specced, and built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack asked for a feature to fully log and track DigiSmith's own actions
+      for data collection, aimed at finding future improvement opportunities —
+      originally framed as covering both DigiSmith's own process and the
+      shipped product's runtime behavior. Those turned out to be two
+      unrelated engineering problems; this feature covers DigiSmith's own
+      process only, with shipped-product telemetry deferred as a separate,
+      undesigned sub-project. A new <code>logging</code> profile field gates
+      capture; <code>using-digismith</code> marks where a ticket's build
+      began in the live session transcript, and a new <code>telemetry</code>
+      skill — triggered right after
+      <code>superpowers:finishing-a-development-branch</code>'s integration
+      decision — slices the transcript from that point and commits it into
+      DigiSmith's own repo. Raw and unredacted by deliberate choice, recorded
+      as an explicit accepted risk given DigiSmith's repo is public. UAT
+      planned against a real Emma repository and JIRA ticket.</p>
     </div>
 
   </div>

@@ -105,6 +105,7 @@ tiering below.
 | **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
 | **O** | Profiling | A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point — new letter, added directly per Jack's request during this brainstorm |
+| **P** | Telemetry | Captures the full Claude Code session transcript for a DigiSmith-driven ticket build (using-digismith start → finishing-a-development-branch's integration decision) and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis. Raw and unredacted by deliberate choice — new letter, added directly per Jack's request during this brainstorm |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).
@@ -189,6 +190,16 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   letter` rather than following a documented rule. Cheap, non-blocking —
   fold a no-map-letter case into that derivation bullet next time
   `report-implementation` is touched, not urgent enough on its own.
+- **Shipped-product telemetry has no map letter or design.** Originally
+  proposed alongside **P** (Telemetry) as "log every action for data
+  collection," covering both DigiSmith's own process and the deployed
+  theme/app's own runtime behavior (e.g. post-deploy Shopify storefront
+  user behavior). Decomposed during **P**'s brainstorm (2026-08-12): the
+  two are unrelated engineering problems with no shared infrastructure —
+  a client-side instrumentation, collection-endpoint, and data-pipeline
+  project, not a DigiSmith-session-transcript one. **P** covers DigiSmith's
+  own process only. Undesigned, unscoped, no map letter yet — pick this up
+  as its own brainstorm when it's actually wanted, not preemptively.
 
 ## Conventions
 
