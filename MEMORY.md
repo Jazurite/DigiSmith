@@ -62,7 +62,8 @@ One plugin, self-hosted marketplace. The repo is both:
 │   └── plugin.json
 ├── profiles/                ← per-repo behavior profiles (map item O)
 │   ├── emma.yml
-│   └── personal.yml
+│   ├── personal.yml
+│   └── jazurite.yml
 └── skills/
     ├── using-digismith/
     └── ...
