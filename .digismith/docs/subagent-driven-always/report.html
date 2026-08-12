@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subagent-Driven Always (H) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Subagent-Driven Always (H) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-12</span>
+    <span>Map item: <strong>H</strong></span>
+    <span>Commit range: <code>00597dd..f518364</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Builds <code>subagent-driven-always</code> — DigiSmith's map item H — a skill that removes
+  <code>superpowers:writing-plans</code>' "1. Subagent-Driven / 2. Inline Execution — Which approach?"
+  question for any DigiSmith-driven plan, defaulting unconditionally to
+  <code>subagent-driven-development</code>. One new skill,
+  <code>skills/subagent-driven-always/SKILL.md</code>, triggered by the same implicit-trigger pattern
+  M and N already use — a specific point inside another skill's flow, not an explicit call from
+  <code>using-digismith</code> — with no new persisted state. Followed the full Superpowers process:
+  brainstorming → spec → writing-plans → <code>superpowers:subagent-driven-development</code> (2 tasks,
+  each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch
+  review, plus 2 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>subagent-driven-always Skill</h4>
+      <p>The skill file itself — nothing else in the repo depends on its internals; it's a standalone
+      behavioral rule with no callers to update.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>Update history.html and MEMORY.md for Map Item H</h4>
+      <p>An up-to-date living tracker.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1</td><td>subagent-driven-always Skill</td><td>Approved after 1 fix round(s)</td><td>None</td></tr>
+    <tr><td>2</td><td>Update history.html and MEMORY.md for Map Item H</td><td>Approved, clean</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 5 Important and 4 Minor findings from the final review, plus 1
+  additional Important finding surfaced by the scoped re-review (stale doc copies of already-fixed
+  text), all resolved before merge.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Announce-before-decide contradiction: <code>SKILL.md</code> Step 1 announced Subagent-Driven Development before Step 2 decided which path applied, self-contradicting on the two branches that route to <code>executing-plans</code>.</td><td>Fixed — Step 1/2 restructured to decide first, then announce the matching outcome (commit <code>9e6230a</code>)</td></tr>
+    <tr><td>Important</td><td>Dangling "in direct response to Step 1's announcement" clause on the explicit-override condition, incompatible with the decide-then-announce fix.</td><td>Fixed — clause dropped, only "stated earlier in conversation" remains (commit <code>9e6230a</code>)</td></tr>
+    <tr><td>Important</td><td>Overclaimed dogfood: <code>history.html</code> and <code>design.html</code> both claimed this plan's own build tested the skill firing at its own trigger point — chronologically impossible, since the skill didn't exist yet at that point in the build.</td><td>Fixed — reworded to describe the four constructed dogfood scenarios; real first trigger-point test deferred to a future DigiSmith-driven plan (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Important</td><td>Dogfood scenario set only checked which skill gets invoked, never what gets announced — exactly how the announce-before-decide bug went undetected.</td><td>Fixed — one new dogfood re-verification of the no-subagent-capability scenario, confirming the corrected announcement text (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Important</td><td><code>README.md</code> never documented H, and its "skills trigger after code is already written" framing doesn't fit H (which triggers mid-build, before task code exists).</td><td>Fixed — section intro reworded, new H paragraph added matching the M/N/P style (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Minor</td><td><code>plan.md</code> referenced a <code>digismith</code> profile that doesn't exist in this branch (added on a different, already-merged branch this one forked before).</td><td>Fixed — reworded to cite no <code>.digismith/profile</code> file and no <code>jira-intake</code> run instead (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Minor</td><td>Quoted <code>writing-plans</code> boilerplate was unqualified ("Use subagent-driven-development...") where the real text is plugin-qualified — ironic given this fix round's own subject.</td><td>Fixed — all quotes corrected to <code>superpowers:subagent-driven-development</code> / <code>superpowers:executing-plans</code> (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Minor</td><td><code>SKILL.md</code>'s Overview said "For any profile currently in use," understating that the skill applies even with no profile at all.</td><td>Fixed — reworded to state the not-profile-gated scope explicitly (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Minor</td><td>Error Handling's "don't conflate the two in what gets reported" had no concrete referent.</td><td>Fixed — states explicitly that <code>executing-plans</code> produces no per-task ledger, so <code>report-implementation</code> has nothing to render from (commit <code>890ddbe</code>)</td></tr>
+    <tr><td>Important</td><td>Scoped re-review of the fix wave found new breakage: <code>plan.md</code>'s embedded Task 1 example and <code>design.html</code>'s explicit-override card still carried the pre-fix, self-contradictory text — restating the exact defects the fix round had just eliminated from <code>SKILL.md</code> itself.</td><td>Adjudicated real, not load-bearing (the operative <code>SKILL.md</code> was already correct). Fixed directly by the controller rather than a second dispatch round, since it was a verbatim mechanical sync with zero judgment risk; verified clean via grep for both dangling phrases (commit <code>f518364</code>)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">39e30b1</span> feat(subagent-driven-always): add skill to kill writing-plans' execution-mode question</li>
+    <li><span class="sha">6e6260b</span> docs(subagent-driven-always): add implementation plan for map item H</li>
+    <li><span class="sha">19ec060</span> fix(subagent-driven-always): qualify cross-skill references, trim description to trigger-only</li>
+    <li><span class="sha">f9fbd6b</span> docs: update history — subagent-driven-always (H) shipped</li>
+    <li><span class="sha">9e6230a</span> fix(subagent-driven-always): decide execution path before announcing it</li>
+    <li><span class="sha">890ddbe</span> docs(subagent-driven-always): correct dogfood claim, profile reference, and README scope</li>
+    <li><span class="sha">f518364</span> docs(subagent-driven-always): sync plan.md and design.html to the final skill wording</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/subagent-driven-always/report.html</footer>
+
+</body>
+</html>

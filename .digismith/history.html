@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">6 / 16</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">7 / 16</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -143,7 +143,7 @@
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>H</strong></td><td>Subagent-driven always</td>
       <td>Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>I</strong></td><td>QA handoff</td>
       <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output) — no status transition, that stays manual by design · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -211,6 +211,12 @@
     <a href="docs/telemetry/plan.md">implementation plan</a> ·
     <a href="docs/telemetry/report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>H — Subagent-driven always:</strong>
+    <a href="docs/subagent-driven-always/design.html">design spec</a> ·
+    <a href="docs/subagent-driven-always/plan.md">implementation plan</a> ·
+    <a href="docs/subagent-driven-always/report.html">implementation report</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -222,8 +228,8 @@
       <td><strong>G</strong> standards injection <span class="status done">Done</span> · <strong>E.1</strong> spine first slice <span class="status done">Done</span> · <strong>O</strong> profiling <span class="status done">Done</span></td>
       <td><span class="status done">Done — considered satisfied 2026-08-11; E.2 decoupled to Tier 3</span></td></tr>
     <tr><td><strong>2</strong></td><td>The override</td>
-      <td><strong>H</strong> subagent-driven always · <strong>K</strong> open-weight model extension</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>H</strong> subagent-driven always <span class="status done">Done</span> · <strong>K</strong> open-weight model extension</td>
+      <td><span class="status next">In progress (1/2)</span></td></tr>
     <tr><td><strong>3</strong></td><td>Intake & estimation</td>
       <td><strong>A</strong> intake/creation <span class="status done">Done</span> · <strong>E.2</strong> spine remaining scope · <strong>J</strong> estimation</td>
       <td><span class="status next">In progress (1/3)</span></td></tr>
@@ -499,6 +505,32 @@
       DigiSmith's own repo. Raw and unredacted by deliberate choice, recorded
       as an explicit accepted risk given DigiSmith's repo is public. UAT
       planned against a real Emma repository and JIRA ticket.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-12</div>
+      <h4>H brainstormed, specced, and built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack asked to remove <code>superpowers:writing-plans</code>' live
+      "Subagent-Driven or Inline Execution" choice for every DigiSmith-driven
+      plan. A profile toggle and a task-count rule were both explored and
+      rejected during brainstorming — every current profile already depends
+      on <code>subagent-driven-development</code>'s ledger for <strong>N</strong>,
+      and <code>executing-plans</code> turned out to be the no-subagent
+      fallback, not a lighter-weight mode, so routing any plan there by task
+      count would have broken <strong>G</strong> and <strong>N</strong>
+      regardless of size. One new skill,
+      <code>subagent-driven-always</code>, intercepts the Execution Handoff
+      trigger directly — the same implicit-trigger pattern <strong>M</strong>
+      and <strong>N</strong> already use — rather than patching
+      <code>writing-plans</code> itself. Verified via four constructed
+      dogfood scenarios (Task 1: default path, explicit override,
+      no-subagent-capability, single-task plan), each dispatching a
+      subagent to reason through the shipped skill file against one
+      condition. Not a live trigger-point run — the skill didn't exist yet
+      when this plan's own Execution Handoff was reached, so this build
+      couldn't have exercised its own trigger. The first real
+      trigger-point exercise will be the next DigiSmith-driven plan, e.g.
+      the Emma UAT already underway.</p>
     </div>
 
   </div>
