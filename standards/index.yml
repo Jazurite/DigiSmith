@@ -1,3 +1,15 @@
+global:
+  branch-scope-discipline:
+    description: Verify file scope before squashing a branch, diffed against the target base
+  code-comments:
+    description: Code comment conventions — default to none, WHY-only when non-obvious
+  commit-style:
+    description: Commit message format — title only, no AI references
+  fixing-blockers-mid-task:
+    description: Fix genuine blockers found mid-task in the same PR, without bundling unrelated work
+  pr-descriptions:
+    description: PR description conventions — short and plain, no templated headers/checklists
+
 shopify:
   custom-element-components:
     description: Custom element base-class pattern for interactive theme components
@@ -9,7 +21,5 @@ shopify:
 team:
   branch-naming:
     description: Branch naming convention for Jira tickets (EMKT-XXX__description format)
-  commit-style:
-    description: Commit message format with feat/fix/refactor prefixes
   docs-conventions:
     description: Documentation file structure and gitignore conventions

@@ -1,5 +1,5 @@
 name: digismith
-standards: []
+standards: [global]
 ticket: false
 ephemeral: false
 reporting: true
