@@ -9,6 +9,8 @@ global:
     description: Fix genuine blockers found mid-task in the same PR, without bundling unrelated work
   pr-descriptions:
     description: PR description conventions — short and plain, no templated headers/checklists
+  surgical-changes:
+    description: Touch only what the request requires; don't refactor or clean up adjacent code
 
 shopify:
   custom-element-components:

@@ -18,3 +18,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Per-worktree dev server port allocation](dev-server-port-allocation.md) — medium confidence; only matters if concurrent worktrees' dev servers are actually a thing Jack does
 - [Telemetry: automatic session lifecycle](telemetry-auto-lifecycle.md) — start/stop tied to session start/close/delete instead of manual trigger; deferred until real telemetry data exists
 - [Workflow: support joining mid-development](mid-development-workflow-injection.md) — DigiSmith's pipeline is too strict about starting from the top; need a way to inject mid-stream
+- [`inject-standards` has no scenario for review-time dispatch](review-time-standards-injection-gap.md) — diff-hygiene standards shape what implementers write but never reach the whole-branch final review
