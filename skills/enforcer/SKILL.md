@@ -15,10 +15,15 @@ own default output locations (`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.
 unified docs convention requires `.digismith/docs/<slug>/design.html`
 (HTML) and `.digismith/docs/<slug>/plan.md` (Markdown — already the right
 format, just the wrong location by default) instead. Both skills already
-expose the hook this needs: "(User preferences for spec/plan location
-override this default)." Nothing told them the override existed until
-now — this skill is that explicit telling, plus a check that it actually
-worked.
+expose the hook this needs, each in its own one-line form — no single
+merged quote exists verbatim in either: `brainstorming` notes that user
+preferences for spec *location* override its default, and
+`writing-plans` says the same for plan *location*. Nothing told them the
+override existed until now — this skill is that explicit telling, plus a
+check that it actually worked. For `brainstorming` specifically, Enforcer's
+Advisory goes one step further than that location hook literally covers:
+it also overrides *format* — HTML instead of `brainstorming`'s own default
+Markdown — which the upstream hook says nothing about on its own.
 
 ## When to Use
 
@@ -167,6 +172,15 @@ byte-for-byte, never modify it:
 change with no map letter, same as `unified-docs-convention/design.html`
 already does — never leave it blank or invent a letter.
 
+Also append a gitignore check, mirroring `digismith:report-implementation`'s
+identical check for `report.html`: `.digismith/docs/` can be gitignored in
+a consumer repo per `digismith:jira-intake`'s own per-repo choice, and
+`git add` hard-fails on an ignored path. Before committing,
+`git check-ignore -q .digismith/docs/<slug>/design.html` — **0 = ignored**
+→ write the file but skip `git add`/commit, never force with `-f`;
+**1 = not ignored** → commit normally. Exit code 1 is the normal, expected
+answer, not a failure.
+
 ### Step 2: Verified — After `superpowers:brainstorming` Reports Completion
 
 `brainstorming` reports its own output path when it finishes (e.g. "Spec
@@ -189,7 +203,9 @@ the expected `.digismith/docs/<slug>/design.html`:
 ### Step 3: Publish — HTML Artifact, Convention Amendment
 
 Per `MEMORY.md`'s Conventions section (Unified Docs Convention entry),
-any HTML doc DigiSmith writes gets published for readability. Once Step 2
+the per-feature HTML docs — `design.html` and `report.html`, specifically,
+never `.digismith/history.html` or the plain `plan.md`/`ticket.md`
+working files — get published for readability. Once Step 2
 confirms `.digismith/docs/<slug>/design.html` is correctly placed, call
 the `Artifact` tool on it: `title` from the doc's own `<title>` tag,
 `description` one sentence summarizing the feature, `favicon` one or two
@@ -220,6 +236,13 @@ either way):
   if needed. Report the correction, same phrasing as Step 2.
 - **Nothing found** → stop and say so plainly.
 
+This step fires at the same moment `digismith:subagent-driven-always`
+(map item H) intercepts `writing-plans`' Execution Handoff step — both
+trigger right after the plan is saved. This step must complete first:
+a misplaced `plan.md` needs to be corrected before
+`subagent-driven-always` dispatches `subagent-driven-development` against
+the wrong path.
+
 `plan.md` is not published as an artifact — see the convention
 amendment's own scope note: it's a working document, not something
 presented.
@@ -234,6 +257,12 @@ presented.
   what Step 2/Step 5's move-and-correct exists for.
 - **Neither the expected path nor the reported actual path has anything
   written** → stop, say so, don't fabricate a location.
+- **Target `design.html` path is gitignored in this repo**
+  (`git check-ignore -q .digismith/docs/<slug>/design.html` exits 0) →
+  write the file, skip `git add`/`git commit`, and say plainly that it
+  wasn't committed because this repo's `.digismith/docs/` is gitignored.
+  Not an error, and not a reason to force with `-f`. (Exit code 1 means
+  "not ignored" — the normal path — not a failure.)
 - **`Artifact` publish call fails** (e.g. size limit, malformed HTML) →
   report the failure plainly; the file itself is still correctly placed,
   so this doesn't roll back Step 2's correction — only the publish step

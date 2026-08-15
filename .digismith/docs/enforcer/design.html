@@ -243,6 +243,12 @@
       under the same convention amendment as <code>design.html</code>; otherwise unchanged, and
       it already writes to the same <code>.digismith/docs/&lt;slug&gt;/</code> convention Enforcer
       is protecting for the two artifacts upstream of it.</li>
+    <li><strong>H (subagent-driven always) / <code>subagent-driven-always</code></strong> — both
+      trigger at the same moment, right after <code>writing-plans</code> saves the plan (Enforcer's
+      Verified step for <code>plan.md</code>; <code>subagent-driven-always</code>'s Execution
+      Handoff intercept). Enforcer's check-and-correct must complete first, so a misplaced
+      <code>plan.md</code> is fixed before <code>subagent-driven-development</code> is dispatched
+      against the wrong path.</li>
     <li><strong>Unified docs convention (no map letter)</strong> — Enforcer is this convention's
       missing enforcement mechanism, called out as an explicit open question when that feature
       shipped.</li>
