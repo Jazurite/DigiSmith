@@ -1,9 +1,18 @@
 # `report-implementation`'s Artifact-publish has no independent opt-out
 
-**Status:** Not applied. Idea only.
+**Status:** Not applied — committed fast-follow, not a someday-maybe.
+Jack decided 2026-08-15 to ship Task 3's unconditional publish step as
+designed (see the plan's own risk flag below) and pick this up
+immediately after Enforcer (Q) ships, rather than blocking or expanding
+this build to gate it now.
 
 **Source:** Jack's own observation, 2026-08-15, prompted by writing the
-Enforcer (Q) plan's `report-implementation` addition (Task 3).
+Enforcer (Q) plan's `report-implementation` addition (Task 3). Escalated
+mid-build when the harness's own instruction-poisoning check flagged
+Task 3's unconditional publish as conflicting with the Emma
+theme-repo convention (`docs/development-workflow.md`: progress reports
+are gitignored, copied into Jira manually — private by design). Jack's
+call: ship now, fix immediately after, not before.
 
 ## The gap
 
