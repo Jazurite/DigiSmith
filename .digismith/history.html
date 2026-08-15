@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">7 / 16</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">8 / 17</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -168,6 +168,9 @@
     <tr><td><strong>P</strong></td><td>Telemetry</td>
       <td>Captures the full session transcript for a DigiSmith-driven ticket build and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis</td>
       <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>Q</strong></td><td>Convention enforcement</td>
+      <td>Makes <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability</td>
+      <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -217,6 +220,12 @@
     <a href="docs/subagent-driven-always/plan.md">implementation plan</a> ·
     <a href="docs/subagent-driven-always/report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>Q — Convention enforcement:</strong> <code>enforcer</code> skill —
+    <a href="docs/enforcer/design.html">design spec</a> ·
+    <a href="docs/enforcer/plan.md">implementation plan</a> ·
+    <a href="docs/enforcer/report.html">implementation report</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -228,8 +237,8 @@
       <td><strong>G</strong> standards injection <span class="status done">Done</span> · <strong>E.1</strong> spine first slice <span class="status done">Done</span> · <strong>O</strong> profiling <span class="status done">Done</span></td>
       <td><span class="status done">Done — considered satisfied 2026-08-11; E.2 decoupled to Tier 3</span></td></tr>
     <tr><td><strong>2</strong></td><td>The override</td>
-      <td><strong>H</strong> subagent-driven always <span class="status done">Done</span> · <strong>K</strong> open-weight model extension</td>
-      <td><span class="status next">In progress (1/2)</span></td></tr>
+      <td><strong>H</strong> subagent-driven always <span class="status done">Done</span> · <strong>Q</strong> convention enforcement <span class="status done">Done</span> · <strong>K</strong> open-weight model extension</td>
+      <td><span class="status next">In progress (2/3)</span></td></tr>
     <tr><td><strong>3</strong></td><td>Intake & estimation</td>
       <td><strong>A</strong> intake/creation <span class="status done">Done</span> · <strong>E.2</strong> spine remaining scope · <strong>J</strong> estimation</td>
       <td><span class="status next">In progress (1/3)</span></td></tr>
@@ -531,6 +540,27 @@
       couldn't have exercised its own trigger. The first real
       trigger-point exercise will be the next DigiSmith-driven plan, e.g.
       the Emma UAT already underway.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-15</div>
+      <h4>Q brainstormed, specced, and built — 4 tasks, subagent-driven-development</h4>
+      <p>The open question logged when the unified docs convention shipped —
+      "<code>design.html</code>/<code>plan.md</code> have no enforcement
+      mechanism" — stopped being hypothetical: a real hand-off produced a
+      plain Markdown spec at the old <code>docs/superpowers/specs/</code>
+      location instead of <code>.digismith/docs/&lt;slug&gt;/design.html</code>.
+      Brainstorming settled on Advisory + Verified: tell
+      <code>brainstorming</code>/<code>writing-plans</code> explicitly where
+      and in what format to write before each hand-off, then check afterward
+      that it landed there and correct it if not — plus a convention
+      amendment publishing every per-feature HTML doc (<code>design.html</code>,
+      <code>report.html</code>) via the <code>Artifact</code> tool once
+      written. Task 1 built and dogfooded <code>skills/enforcer/SKILL.md</code>;
+      Task 2 added the explicit call from <code>using-digismith</code> Step 3;
+      Task 3 added the matching publish step to <code>report-implementation</code>
+      (N); Task 4 is this history.html and MEMORY.md update. Map item
+      <strong>Q</strong> done.</p>
     </div>
 
   </div>
