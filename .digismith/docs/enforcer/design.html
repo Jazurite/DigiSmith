@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enforcer — Design</title>
+<title>Enforcer</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -157,6 +157,21 @@
   step minimizes how often the verify step has to intervene, and the verify step is the actual
   guarantee — a mismatch gets caught and fixed in the same run, not discovered later as a stray
   file no one notices.</p>
+
+  <div class="callout">
+    <strong>Convention amendment, not a third job.</strong> Once Verified confirms an HTML artifact
+    is correctly placed, it gets published via the <code>Artifact</code> tool and the link is
+    reported back — a local <code>.html</code> file nobody can comfortably open is still a failure,
+    even when it's in the right place. This isn't Enforcer-specific behavior bolted on as a "Job 3"
+    — it's an amendment to the unified docs convention itself (<code>MEMORY.md</code>'s Conventions
+    section gains a clause: any HTML doc DigiSmith writes gets published for readability), so it
+    applies wherever it's suitable, not only where Enforcer happens to be watching. Concretely, two
+    touchpoints ship under this same change: Enforcer performs it for <code>design.html</code> as
+    the tail end of its Verified step, and <strong>report-implementation (map item N)</strong> gets
+    a matching one-line addition to publish <code>report.html</code> the same way after it writes
+    it. <code>plan.md</code> and <code>ticket.md</code> are unaffected — they're
+    working documents meant to be read as files/parsed by tooling, not presented.
+  </div>
 </section>
 
 <section id="trigger">
@@ -223,9 +238,11 @@
       mechanism, not a dependency. Both fire around the same "brainstorming/planning" moment but
       inject different things (coding standards vs. doc location/format) and stay
       architecturally separate.</li>
-    <li><strong>N (implementation reporting) / <code>report-implementation</code></strong> — no
-      direct interaction; N already writes to the same <code>.digismith/docs/&lt;slug&gt;/</code>
-      convention Enforcer is protecting for the two artifacts upstream of it.</li>
+    <li><strong>N (implementation reporting) / <code>report-implementation</code></strong> — gets
+      the one-line publish-as-artifact addition described above for <code>report.html</code>,
+      under the same convention amendment as <code>design.html</code>; otherwise unchanged, and
+      it already writes to the same <code>.digismith/docs/&lt;slug&gt;/</code> convention Enforcer
+      is protecting for the two artifacts upstream of it.</li>
     <li><strong>Unified docs convention (no map letter)</strong> — Enforcer is this convention's
       missing enforcement mechanism, called out as an explicit open question when that feature
       shipped.</li>
