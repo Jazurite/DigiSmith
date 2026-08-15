@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enforcer — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Enforcer — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-08-15</span>
+    <span>Map item: Q</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#trigger">Trigger Wiring</a></li>
+    <li><a href="#template">HTML Template Requirement</a></li>
+    <li><a href="#errors">Error Handling &amp; Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+    <li><a href="#openq">Open Questions</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>DigiSmith's unified docs convention says every feature's spec and plan live together at
+  <code>.digismith/docs/&lt;feature-slug&gt;/</code>, with the spec authored in HTML. Nothing
+  today actually tells <code>superpowers:brainstorming</code> or
+  <code>superpowers:writing-plans</code> that this convention exists — they are third-party
+  Superpowers skills with their own defaults (<code>docs/superpowers/specs/YYYY-MM-DD-&lt;topic&gt;-design.md</code>,
+  plain Markdown). This was a known open question in <code>MEMORY.md</code>
+  ("<code>design.html</code>/<code>plan.md</code> have no enforcement mechanism") that went from
+  hypothetical to actually blocking Jack on 2026-08-15: a real hand-off produced a plain Markdown
+  spec in the wrong location.</p>
+  <p>Goal: a standing mechanism that makes any Superpowers skill DigiSmith calls honor DigiSmith's
+  own conventions at the hand-off point — named <strong>Enforcer</strong> because the job is
+  general (today: doc location and format; later: other convention gaps of the same shape, e.g.
+  the already-logged <code>backlog/review-time-standards-injection-gap.md</code> item), even
+  though this first slice implements only the doc-location/format rule.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Scoped to doc-location/format only.</strong> Explicitly deferred: folding in the
+      review-time standards-injection gap, or any other future enforcement rule. Enforcer is
+      architected so a second rule can be added later without re-architecting, but only one rule
+      ships now.</li>
+    <li><strong>Not modifying Superpowers' own skill files.</strong> Per DigiSmith's philosophy
+      (augment, never replace), Enforcer never patches
+      <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> themselves. It
+      works entirely by (a) what it tells them at invocation time and (b) what it checks/fixes
+      after they finish — both hooks those skills already expose ("user preferences override the
+      default").</li>
+    <li><strong>Not a generic interception framework.</strong> Enforcer does not wrap every
+      Superpowers skill DigiSmith might ever call — only the two hand-offs this feature is scoped
+      to (<code>brainstorming</code>, <code>writing-plans</code>).</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>A new standalone skill, <code>digismith:enforcer</code> — not a new scenario on
+  <code>inject-standards</code>, which governs coding-standard <em>content</em> for implementers, a
+  different concern from artifact <em>location/format</em> for doc-producing skills. Same
+  detection pattern <code>inject-standards</code> and <code>using-digismith</code> already use:
+  current working directory is DigiSmith's own repo (<code>.claude-plugin/plugin.json</code> name
+  <code>"digismith"</code>), or a consumer repo with <code>.digismith/profile</code> present.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Job 1 — Advisory</div>
+      <h4>Before the hand-off</h4>
+      <p>Tell <code>brainstorming</code> explicitly: write the spec to
+      <code>.digismith/docs/&lt;slug&gt;/design.html</code>, in HTML, matching the existing house
+      template (see <a href="#template">HTML Template Requirement</a>). Tell
+      <code>writing-plans</code> explicitly: write the plan to
+      <code>.digismith/docs/&lt;slug&gt;/plan.md</code> — same Markdown format it already defaults
+      to, just relocated.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Job 2 — Verified</div>
+      <h4>After the hand-off</h4>
+      <p>Check the file actually landed at the expected path in the expected format. If it landed
+      at the wrong path (today's actual failure mode), move/rewrap it into place — the content was
+      just produced in this same session, so re-packaging it is low-risk, not a blind automated
+      transform of opaque output. Report what it corrected; never silently no-op on a mismatch.</p>
+    </div>
+  </div>
+
+  <p>Advisory alone was already tried, implicitly, and failed silently — nobody told
+  <code>brainstorming</code> the override existed at all. Verified alone would catch the failure
+  after the fact but do nothing to prevent it recurring on every call. Both together: the advisory
+  step minimizes how often the verify step has to intervene, and the verify step is the actual
+  guarantee — a mismatch gets caught and fixed in the same run, not discovered later as a stray
+  file no one notices.</p>
+</section>
+
+<section id="trigger">
+  <h2>Trigger Wiring</h2>
+  <p>Two paths reach <code>brainstorming</code>/<code>writing-plans</code>, so Enforcer needs two
+  triggers:</p>
+  <ul>
+    <li><strong>Explicit call.</strong> <code>using-digismith</code> Step 3 gets a line: invoke
+      <code>digismith:enforcer</code> immediately before
+      <code>superpowers:brainstorming</code> — the same explicit-call pattern
+      <code>subagent-driven-development</code> already uses for
+      <code>digismith:report-implementation</code> once its final review passes.</li>
+    <li><strong>Implicit backstop.</strong> <code>digismith:enforcer</code>'s own skill description
+      mirrors <code>inject-standards</code>' Scenario 3 trigger wording ("running
+      brainstorming/writing-plans") so it self-triggers even when
+      <code>brainstorming</code> is invoked directly for DigiSmith's own self-development, with no
+      ticket and no <code>using-digismith</code> in the loop at all — exactly the path that
+      produced this feature's own design spec, and the gap a Step-3-only fix would have missed
+      entirely.</li>
+  </ul>
+</section>
+
+<section id="template">
+  <h2>HTML Template Requirement</h2>
+  <p>The advisory instruction Enforcer gives <code>brainstorming</code> doesn't just say "write
+  HTML" — it points at the existing house style so new specs stay visually consistent with old
+  ones: the CSS-variable light/dark palette, the <code>nav.toc</code> table of contents, the
+  <code>.card</code> grid for parallel options, the <code>.callout</code> block, the standard
+  section set (Problem &amp; Goal, Non-Goals, Architecture, Error Handling &amp; Verification,
+  Relationship to Other Map Items). This document is itself built from that template, reusing the
+  same CSS block verbatim from <code>unified-docs-convention/design.html</code> — Enforcer's own
+  advisory instruction to <code>brainstorming</code> should tell it to do the same: copy the CSS
+  block from the most recent existing <code>design.html</code> rather than inventing new styling
+  per feature.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Verification</h2>
+  <ul>
+    <li><strong>Wrong location, right format</strong> (the failure this feature fixes): Enforcer
+      moves the file into <code>.digismith/docs/&lt;slug&gt;/</code> under its correct role name
+      (<code>design.html</code> / <code>plan.md</code>) and reports the move.</li>
+    <li><strong>Right location, wrong format</strong> (e.g. Markdown written where HTML was
+      expected): Enforcer rewraps the content into the house HTML template in place — same
+      re-packaging logic as the location fix, just also converting structure.</li>
+    <li><strong>Nothing found at either the expected or a plausible default location</strong>: stop
+      and flag it rather than guessing — this means the upstream skill produced no artifact at
+      all, a different failure than a misplaced one.</li>
+    <li>No automated test suite, consistent with every DigiSmith skill — verification is dogfooding
+      Enforcer against this very feature's own build (its plan and eventual implementation report
+      must land at <code>.digismith/docs/enforcer/</code> in the correct formats) plus a
+      repo-wide grep for stray <code>docs/superpowers/specs/</code> or
+      <code>docs/superpowers/plans/</code> paths after rollout — zero hits expected going
+      forward.</li>
+  </ul>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>E (the spine) / using-digismith</strong> — Step 3 gains one explicit call to
+      <code>digismith:enforcer</code>; nothing else about the hand-off changes.</li>
+    <li><strong>G (standards injection) / <code>inject-standards</code></strong> — sibling
+      mechanism, not a dependency. Both fire around the same "brainstorming/planning" moment but
+      inject different things (coding standards vs. doc location/format) and stay
+      architecturally separate.</li>
+    <li><strong>N (implementation reporting) / <code>report-implementation</code></strong> — no
+      direct interaction; N already writes to the same <code>.digismith/docs/&lt;slug&gt;/</code>
+      convention Enforcer is protecting for the two artifacts upstream of it.</li>
+    <li><strong>Unified docs convention (no map letter)</strong> — Enforcer is this convention's
+      missing enforcement mechanism, called out as an explicit open question when that feature
+      shipped.</li>
+  </ul>
+</section>
+
+<section id="openq">
+  <h2>Open Questions</h2>
+  <ul>
+    <li><strong>Second enforcement rule's shape is undecided.</strong> The review-time
+      standards-injection gap is thematically identical (a Superpowers hand-off DigiSmith's
+      conventions don't reach) but explicitly out of scope for this slice. Decide whether it
+      becomes Enforcer's second rule or its own separate mechanism when it's actually picked up,
+      not preemptively.</li>
+    <li><strong>Rewrap-on-format-mismatch fidelity is unverified.</strong> The location-fix case
+      (move a file) is mechanical and safe. The format-fix case (Markdown → house-template HTML)
+      asks the same agent to restructure its own just-written content into the template — should
+      work in the common case since the content is still in context, but hasn't been exercised
+      against a real mismatch yet. Watch for this during Enforcer's own dogfooding.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/enforcer/design.html</footer>
+
+</body>
+</html>
