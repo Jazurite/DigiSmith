@@ -483,6 +483,16 @@ rendered empty.
      git commit -m "docs: add <feature> (<map-item>) implementation report"
      ```
 
+5. **Publish as an artifact.** Per `MEMORY.md`'s Conventions section
+   (Unified Docs Convention entry), any HTML doc DigiSmith writes gets
+   published for readability. Call the `Artifact` tool on the just-written
+   `report.html`: `title` from `{{FEATURE_TITLE}}`, `description` from the
+   plan's own `**Goal:**` line, `favicon` one or two emoji fitting the
+   feature's topic. Report the returned URL alongside the report path in
+   Step 5's hand-back. This runs regardless of whether Step 4 committed
+   the file — publishing to `Artifact` doesn't depend on the repo's
+   gitignore choice.
+
 ### Step 5: Hand Back
 
 This skill's job ends here.
