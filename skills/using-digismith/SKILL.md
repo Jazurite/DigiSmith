@@ -327,7 +327,9 @@ what Step 2's new sub-step 7 below makes possible.
 
 ### Step 3: Hand Off to Brainstorming
 
-From inside that worktree, invoke `superpowers:brainstorming`, passing
+From inside that worktree, invoke `digismith:enforcer` — it needs the
+slug Step 2 already derived, so pass that along rather than letting
+`enforcer` re-derive it. Then invoke `superpowers:brainstorming`, passing
 the ticket content **you already read in Step 1** — title, description,
 acceptance criteria — as seed context so it doesn't start
 cold. Pass the content you're carrying; do not try to re-read
