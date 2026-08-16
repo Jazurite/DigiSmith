@@ -26,8 +26,9 @@ unified docs location (`.digismith/docs/<slug>/design.html`, HTML;
 third-party default — then right after each one reports it's finished,
 it verifies the file actually landed there in the right format,
 correcting it if not. Once `design.html` is confirmed in place, it also
-publishes it via the `Artifact` tool for readability
-(`report-implementation` does the same for `report.html`). See
+publishes it via the `Artifact` tool for readability, unless the active
+profile has `publish_artifact: false` (`report-implementation` does the
+same for `report.html`). See
 [`skills/enforcer/SKILL.md`](skills/enforcer/SKILL.md) for the exact
 process, or [`.digismith/history.html`](.digismith/history.html) for its
 status.
