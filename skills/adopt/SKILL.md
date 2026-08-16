@@ -69,8 +69,8 @@ Continue to Step 4.
 2. Check whether the current branch already matches `<Key>__<slug>`. If it
    does, and that slug differs from the slug `digismith:jira-intake` just
    derived, the branch's slug wins — it's already committed to the branch
-   name, and `digismith:adopt` never renames a branch (see Global
-   Constraints). Move `.digismith/docs/<its-own-derived-slug>/` to
+   name, and `digismith:adopt` never renames a branch. Move
+   `.digismith/docs/<its-own-derived-slug>/` to
    `.digismith/docs/<branch's-slug>/` in its entirety (same move-and-correct
    idiom `digismith:enforcer` already uses for a misplaced `design.html`/
    `plan.md` — applied here to a misplaced `ticket.md` folder).
@@ -181,7 +181,7 @@ Invoke `superpowers:subagent-driven-development` directly against
 so they are not invoked here. From this point on,
 `digismith:subagent-driven-always` and `digismith:inject-standards`
 Scenario 4 apply exactly as they would for any other
-`subagent-driven-development` dispatch — no special-casing needed, since
+`superpowers:subagent-driven-development` dispatch — no special-casing needed, since
 both trigger off the dispatch itself, not off which entry point produced it.
 
 ## Error Handling
