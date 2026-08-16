@@ -67,7 +67,6 @@ One plugin, self-hosted marketplace. The repo is both:
 │   └── digismith.yml
 └── skills/
     ├── init/
-    ├── adopt/
     └── ...
 ```
 
