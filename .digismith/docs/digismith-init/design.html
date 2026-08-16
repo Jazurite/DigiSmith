@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DigiSmith Init — Unified Entry Point (E, amendment) — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>DigiSmith Init — Unified Entry Point</h1>
+  <div class="meta">
+    <span>Date: 2026-08-16</span>
+    <span>Map item: <strong>E</strong> (amendment) — extends the spine's entry point to detect and adopt mid-stream work; resolves the deferred backlog item <code>mid-development-workflow-injection</code>, not a new map letter</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture — One Front Door, Two Internal Workers</a></li>
+    <li><a href="#already-init">Already-Initialized Check</a></li>
+    <li><a href="#detection">Detection Logic</a></li>
+    <li><a href="#bootstrap">bootstrap (Fresh-Start Path)</a></li>
+    <li><a href="#adopt">adopt (Mid-Stream Path)</a></li>
+    <li><a href="#errors">Error Handling &amp; Edge Cases</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>DigiSmith's real Emma workflow doesn't always start at <code>using-digismith</code>. Jack's
+  actual routine pulls a ticket ID through his own Atlassian MCP connector and lets vanilla
+  <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> produce a spec and
+  plan directly — <code>using-digismith</code> never runs. By the time he wants DigiSmith's
+  behavior active (profile-scoped standards injection, the unified docs convention, the Emma
+  standards subset), <code>.digismith/profile</code> was never written, <code>enforcer</code> never
+  fired (it gates on repo identity or that same file), and the spec/plan sit in Superpowers'
+  default locations in the wrong format. This is exactly the friction
+  <code>backlog/mid-development-workflow-injection.md</code> was deliberately deferred waiting
+  for — DigiSmith's pipeline assumed starting from the top, with no entry point for work already
+  mid-stream.</p>
+  <p>The goal is a single command, <code>digismith:init</code>, that is safe to invoke regardless
+  of where a ticket's work actually stands — the same way <code>git init</code> is safe to run in
+  a fresh directory or an already-initialized repo. It inspects state and either kicks off the
+  existing fresh-start flow or adopts already-existing artifacts into DigiSmith's conventions, then
+  hands off to the same build stage either way.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li>Not redesigning <code>enforcer</code>, <code>inject-standards</code>, or
+      <code>jira-intake</code>. All three are reused as-is; this feature only adds a new caller for
+      each, never new logic inside them.</li>
+    <li>Not renaming a branch that doesn't match <code>&lt;Key&gt;__&lt;slug&gt;</code>.
+      <code>capture-ephemeral-url</code> already degrades gracefully on a non-matching branch name
+      (asks for the key directly) — confirmed by reading its Error Handling section — so adopting a
+      differently-named branch as-is is sufficient; no rename step is needed.</li>
+    <li>Not supporting joining at any pipeline stage other than the one recurring case: ticket known,
+      spec written, plan written, nothing built yet. Joining before a spec/plan exists, or mid-build,
+      is out of scope for this pass — narrower scoping was an explicit choice, not an oversight.</li>
+    <li>Not building content-diffing or partial-redo recovery for a re-run. The already-initialized
+      check (see below) makes re-running <code>init</code> on a fully set-up ticket a plain no-op
+      report, not a repair tool for a run that failed partway through — that failure mode is left
+      for a future pass if it turns out to matter.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture — One Front Door, Two Internal Workers</h2>
+  <p><code>digismith:init</code> is the only skill either Jack or a future session invokes by name
+  for starting or resuming ticket work. It dispatches to one of two internal-only workers, neither
+  of which is meant to be triggered directly:</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Front door</div>
+      <h4>digismith:init</h4>
+      <p>Checks whether this worktree is already initialized; if not, detects fresh-start vs.
+      mid-stream and dispatches accordingly.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Internal</div>
+      <h4>digismith:bootstrap</h4>
+      <p>Renamed from today's <code>using-digismith</code>, logic unchanged: profile → ticket →
+      telemetry marker → branch/worktree → hand off to <code>brainstorming</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Internal</div>
+      <h4>digismith:adopt</h4>
+      <p>New. Backfills profile/ticket/branch state for work that already has a spec and plan, then
+      relocates those docs and hands off straight to the build stage.</p>
+    </div>
+  </div>
+  <p><code>bootstrap</code> and <code>adopt</code> keep their own <code>SKILL.md</code> files and
+  remain independently readable/testable — only their trigger surface changes: neither declares a
+  user-facing "use when" description anymore, since <code>init</code> is the only caller.</p>
+</section>
+
+<section id="already-init">
+  <h2>Already-Initialized Check</h2>
+  <p><code>.digismith/profile</code> is DigiSmith's own equivalent of <code>.git/</code>: both
+  <code>bootstrap</code> (Step 2.6) and <code>adopt</code> (its own equivalent step) copy it into
+  the worktree as the last thing they do before handing off to the build. <code>init</code> checks
+  for it first, before any detection logic runs:</p>
+  <ul>
+    <li><strong>Present in the current working directory</strong> → this worktree was already fully
+      set up by DigiSmith. Report plainly — "Already initialized for DigiSmith (profile:
+      <code>&lt;name&gt;</code>, docs at <code>.digismith/docs/&lt;slug&gt;/</code>)" — and stop.
+      No re-detection, no re-relocating docs, no questions asked. Same posture as <code>git
+      init</code> on an existing repo: a notice, not a cascade.</li>
+    <li><strong>Absent</strong> → proceed to Detection Logic below.</li>
+  </ul>
+</section>
+
+<section id="detection">
+  <h2>Detection Logic</h2>
+  <p>Only reached when <code>.digismith/profile</code> is absent from the current working
+  directory. Checked in order:</p>
+  <table>
+    <thead><tr><th>#</th><th>Signal</th><th>Dispatch</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Current branch is the repo's base branch (main/master)</td><td>fresh start → <code>bootstrap</code></td></tr>
+      <tr><td>2</td><td>Already on a feature branch, and <code>.digismith/docs/&lt;slug&gt;/plan.md</code> already exists for it</td><td>normal resume → <code>bootstrap</code> (its existing branch/worktree reuse logic already covers this)</td></tr>
+      <tr><td>3</td><td>Already on a feature branch, no <code>.digismith/docs/</code> for it, but a plan file exists somewhere (Superpowers' default location, or wherever the user points)</td><td>mid-stream → <code>adopt</code></td></tr>
+      <tr><td>4</td><td>On a feature branch, no plan found anywhere</td><td>ambiguous → ask directly, never guess</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="bootstrap">
+  <h2>bootstrap (Fresh-Start Path)</h2>
+  <p>Unchanged from today's <code>using-digismith</code>: Step 0 (resolve/pick profile) → Step 1
+  (get ticket via <code>jira-intake</code>, or derive slug directly under <code>ticket: false</code>)
+  → Step 1.5 (telemetry marker) → Step 2 (create/attach branch+worktree; copy
+  <code>.digismith/profile</code> and the telemetry marker in) → Step 3 (hand off to
+  <code>superpowers:brainstorming</code>, passing ticket content as seed). Only the file is renamed
+  and its trigger narrowed to internal-only; no process step changes.</p>
+</section>
+
+<section id="adopt">
+  <h2>adopt (Mid-Stream Path)</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Step 1</div>
+      <h4>Confirm Inputs</h4>
+      <p>Ask for whatever isn't already obvious: ticket key, path to the existing plan (required),
+      path to the existing spec (optional — some tickets skip <code>brainstorming</code> entirely).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 2</div>
+      <h4>Resolve Profile</h4>
+      <p>Reuse <code>bootstrap</code> Step 0 verbatim — same resolution and first-use picker.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 3</div>
+      <h4>Derive the Slug</h4>
+      <p>Current branch already matches <code>&lt;Key&gt;__&lt;slug&gt;</code> → reuse that slug.
+      Otherwise derive from the ticket title via <code>jira-intake</code> Step 3.1's algorithm —
+      same one <code>bootstrap</code> already restates inline for its <code>ticket: false</code>
+      path.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 4</div>
+      <h4>Write ticket.md</h4>
+      <p>Invoke <code>jira-intake</code> Door 1 with the already-known key — reuses its detection,
+      template, and collision handling rather than duplicating it. Skipped entirely if the active
+      profile's <code>ticket</code> field is <code>false</code>, same as <code>bootstrap</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 5</div>
+      <h4>Adopt Branch/Worktree</h4>
+      <p>Reuse <code>bootstrap</code> Step 2's exact reuse/attach/create logic. Whatever already
+      exists is adopted as-is — no renaming, even off-convention. Copy
+      <code>.digismith/profile</code> (and the telemetry marker, if logging is on) into the
+      worktree, same as <code>bootstrap</code> Step 2.6/2.7.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 6</div>
+      <h4>Relocate the Docs</h4>
+      <p>Reuse <code>enforcer</code> Step 2/5's "Verified" move-and-correct logic directly: rewrap
+      the existing spec into <code>enforcer</code>'s HTML shell at
+      <code>.digismith/docs/&lt;slug&gt;/design.html</code> (respecting gitignore/commit and
+      <code>publish_artifact</code>); move the plan as-is to
+      <code>.digismith/docs/&lt;slug&gt;/plan.md</code>. No spec found → skip
+      <code>design.html</code>, note it, proceed with the plan alone.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Step 7</div>
+      <h4>Hand Off to Build</h4>
+      <p>Invoke <code>superpowers:subagent-driven-development</code> directly against the relocated
+      <code>plan.md</code> — <code>brainstorming</code>/<code>writing-plans</code> already ran
+      outside DigiSmith, so they're skipped. <code>subagent-driven-always</code> and
+      <code>inject-standards</code> Scenario 4 apply unmodified from here on, exactly as if
+      <code>writing-plans</code> had just finished normally.</p>
+    </div>
+  </div>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Edge Cases</h2>
+  <ul>
+    <li><strong>Detection ambiguous</strong> (row 4 above) → ask directly: "start fresh, or is there
+      a plan somewhere I should adopt?" Never guess.</li>
+    <li><strong><code>adopt</code> invoked but no plan file can be found or provided</strong> → stop,
+      explain a plan file is required for this path; don't fabricate one or silently fall back to
+      <code>bootstrap</code>.</li>
+    <li><strong>Active profile has <code>ticket: false</code></strong> → skip
+      <code>jira-intake</code>/<code>ticket.md</code> entirely, same as <code>bootstrap</code> —
+      <code>adopt</code> isn't ticket-mandatory just because the recurring case usually has one.</li>
+    <li><strong>Branch name collision with an unrelated ticket</strong> during Step 5's branch reuse →
+      same as <code>bootstrap</code> today: ask via <code>AskUserQuestion</code>, never silently
+      reuse a stranger's branch.</li>
+    <li><strong><code>jira-intake</code>'s own stop conditions</strong> (no JIRA tool and the user
+      declines to paste, sparse paste, existing-file collision, etc.) → <code>adopt</code> doesn't
+      proceed past whatever <code>jira-intake</code> itself decided; not a new failure mode to
+      reinvent.</li>
+    <li><strong>No spec found, only a plan</strong> → not an error (see Step 6) — some tickets go
+      straight from a raw need to a hand-written plan with no formal spec step.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>No automated test suite — consistent with every DigiSmith skill so far. Verification is a
+  dogfooding pass after implementation:</p>
+  <ol>
+    <li><strong>Fresh start</strong> — on the base branch, invoke <code>init</code>; confirm it
+      dispatches to <code>bootstrap</code> and the existing fresh-start behavior is unchanged.</li>
+    <li><strong>Normal resume</strong> — on a feature branch with <code>.digismith/docs/&lt;slug&gt;/plan.md</code>
+      already present; confirm dispatch to <code>bootstrap</code>, which reuses the existing
+      worktree rather than creating a new one.</li>
+    <li><strong>Mid-stream adopt, happy path</strong> — a fixture feature branch with a plan (and a
+      spec) sitting in Superpowers' default locations; confirm <code>init</code> dispatches to
+      <code>adopt</code>, which writes <code>ticket.md</code>, relocates both docs into
+      <code>.digismith/docs/&lt;slug&gt;/</code> correctly formatted, and constructs the
+      <code>subagent-driven-development</code> hand-off against the relocated plan.</li>
+    <li><strong>Mid-stream adopt, plan only</strong> — same as above but no spec file exists; confirm
+      <code>design.html</code> is skipped without error and the hand-off still proceeds.</li>
+    <li><strong>Already-initialized</strong> — re-invoke <code>init</code> in a worktree that already
+      has <code>.digismith/profile</code>; confirm a plain report-and-stop, no re-processing.</li>
+    <li><strong>Ambiguous state</strong> — feature branch, no plan anywhere; confirm <code>init</code>
+      asks rather than guessing.</li>
+    <li><strong>Off-convention branch name</strong> — adopt a branch that doesn't match
+      <code>&lt;Key&gt;__&lt;slug&gt;</code>; confirm it's adopted as-is with no rename attempt.</li>
+  </ol>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>E</strong> — this is an amendment to the spine's entry point, not a new map item.
+      <code>using-digismith</code>'s process content survives unchanged inside
+      <code>bootstrap</code>; only its name and trigger surface change.</li>
+    <li><strong>G</strong> (standards injection) — untouched. <code>adopt</code>'s build hand-off
+      relies on <code>inject-standards</code> Scenario 4 firing exactly as it does today for any
+      <code>subagent-driven-development</code> dispatch.</li>
+    <li><strong>Q</strong> (convention enforcement) — <code>adopt</code> reuses <code>enforcer</code>'s
+      existing move-and-correct logic rather than adding a second implementation of the same
+      relocate-and-reformat behavior.</li>
+    <li><strong>A</strong> (<code>jira-intake</code>) — unchanged; still independently invocable, and
+      now also called internally by <code>adopt</code> for a mid-stream ticket key.</li>
+    <li>Resolves <code>backlog/mid-development-workflow-injection.md</code> — the item can be
+      deleted once this ships, per the backlog's own convention of removing applied items.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/digismith-init/design.html</footer>
+
+</body>
+</html>
