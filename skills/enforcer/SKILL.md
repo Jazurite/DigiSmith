@@ -1,6 +1,6 @@
 ---
 name: enforcer
-description: Use when about to invoke superpowers:brainstorming or superpowers:writing-plans for DigiSmith-tracked feature work, or immediately after either one finishes writing its output — via using-digismith's hand-off, or directly for DigiSmith's own self-development with no ticket involved. Also covers: in plan mode, or "spec"/"plan"/"shape" language, or running brainstorming/writing-plans, for DigiSmith-tracked work specifically.
+description: Use when about to invoke superpowers:brainstorming or superpowers:writing-plans for DigiSmith-tracked feature work, or immediately after either one finishes writing its output — via digismith:bootstrap's hand-off, or directly for DigiSmith's own self-development with no ticket involved. Also covers: in plan mode, or "spec"/"plan"/"shape" language, or running brainstorming/writing-plans, for DigiSmith-tracked work specifically.
 ---
 
 # Enforcer
@@ -39,7 +39,7 @@ DigiSmith-Tracked Work below):
   it landed correctly (Verified).
 
 Both moments happen inside the same continuous session as
-`using-digismith` or the ad-hoc brainstorming call itself. There is no
+`digismith:bootstrap` or the ad-hoc brainstorming call itself. There is no
 separate dispatch for this — it's a self-check the acting agent runs on
 its own next actions, the same way `inject-standards`' Scenario 3 already
 self-triggers on "running brainstorming/writing-plans" today.
@@ -54,17 +54,17 @@ unmodified defaults.
 
 ## Resolving the Slug
 
-- Invoked from `using-digismith` Step 3: the slug is already known —
-  reuse it exactly as `using-digismith` derived it (the folder
+- Invoked from `digismith:bootstrap` Step 3: the slug is already known —
+  reuse it exactly as `digismith:bootstrap` derived it (the folder
   `ticket.md` sits in, or the directly-derived slug under
   `ticket: false`). Never re-derive independently.
-- Invoked ad hoc — no ticket, no `using-digismith` in the loop (DigiSmith's
+- Invoked ad hoc — no ticket, no `digismith:bootstrap` in the loop (DigiSmith's
   own self-development, or any other untracked-by-a-ticket case): derive
   the slug directly from the feature description, applying
   `digismith:jira-intake` Step 3.1's deterministic rule — lowercase, drop
   filler words (a, an, the, on, to, of, for, in), replace remaining
   non-alphanumeric runs with a single hyphen, truncate to ~40 characters
-  at a word boundary. Same algorithm `using-digismith` itself restates
+  at a word boundary. Same algorithm `digismith:bootstrap` itself restates
   inline for its own `ticket: false` path — not reinvented here either.
 
 ## Process
@@ -241,7 +241,7 @@ plugin cache path — a stale, version-locked snapshot. Read
 ### Step 4: Advisory — Before `superpowers:writing-plans`
 
 `writing-plans` runs as `brainstorming`'s own terminal step once the user
-approves the spec — there is no separate `using-digismith` hook here, so
+approves the spec — there is no separate `digismith:bootstrap` hook here, so
 this step fires from this skill's own trigger recognition (see When to
 Use), not from a second explicit call anywhere else. Append to the
 invocation:
@@ -302,7 +302,7 @@ presented.
 | Step | Action |
 |---|---|
 | — | Detect DigiSmith-tracked work (repo identity or `.digismith/profile`); skip entirely if neither |
-| — | Resolve `<slug>` (reuse `using-digismith`'s, or derive via `jira-intake` Step 3.1's rule for ad-hoc calls) |
+| — | Resolve `<slug>` (reuse `digismith:bootstrap`'s, or derive via `digismith:jira-intake` Step 3.1's rule for ad-hoc calls) |
 | 1 | Advisory before `brainstorming`: exact target path + HTML shell (style block verbatim) |
 | 2 | Verified after `brainstorming`: check `design.html` landed correctly; move/rewrap if not |
 | 3 | Publish `design.html` via `Artifact` unless the active profile has `publish_artifact: false`; report the link |
