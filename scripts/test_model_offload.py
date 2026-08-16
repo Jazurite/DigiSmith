@@ -1,4 +1,6 @@
+import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -10,49 +12,134 @@ import model_offload
 
 
 class TestReadProfileProvider(unittest.TestCase):
-    def test_missing_file_returns_none(self):
+    def setUp(self):
+        # Create a temporary directory to act as DigiSmith's repo
+        self.temp_repo_dir = tempfile.mkdtemp()
+
+        # Create .claude-plugin/plugin.json
+        plugin_dir = os.path.join(self.temp_repo_dir, ".claude-plugin")
+        os.makedirs(plugin_dir, exist_ok=True)
+        plugin_json = os.path.join(plugin_dir, "plugin.json")
+        with open(plugin_json, "w", encoding="utf-8") as f:
+            json.dump({"name": "digismith"}, f)
+
+        # Create profiles/digismith.yml
+        profiles_dir = os.path.join(self.temp_repo_dir, "profiles")
+        os.makedirs(profiles_dir, exist_ok=True)
+        self.profile_yml = os.path.join(profiles_dir, "digismith.yml")
+        with open(self.profile_yml, "w", encoding="utf-8") as f:
+            f.write("name: digismith\nmodel_offload_provider: chutes\n")
+
+        # Create the pointer file (one-line profile name)
+        self.pointer_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".profile", delete=False
+        )
+        self.pointer_file.write("digismith")
+        self.pointer_file.close()
+
+        # Save original cwd and change to temp repo
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_repo_dir)
+
+    def tearDown(self):
+        try:
+            # Restore cwd first, before cleanup
+            os.chdir(self.original_cwd)
+        finally:
+            # Clean up files
+            try:
+                os.unlink(self.pointer_file.name)
+            except OSError:
+                pass
+            try:
+                shutil.rmtree(self.temp_repo_dir)
+            except OSError:
+                pass
+
+    def test_missing_pointer_file_returns_none(self):
         self.assertIsNone(
             model_offload.read_profile_provider("/nonexistent/path/profile")
         )
 
     def test_present_field_returns_value(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".profile", delete=False) as f:
-            f.write("name: digismith\nmodel_offload_provider: chutes\n")
-            path = f.name
-        try:
-            self.assertEqual(model_offload.read_profile_provider(path), "chutes")
-        finally:
-            os.unlink(path)
+        self.assertEqual(
+            model_offload.read_profile_provider(self.pointer_file.name), "chutes"
+        )
 
     def test_absent_field_returns_none(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".profile", delete=False) as f:
+        # Create a profile without the model_offload_provider field
+        with open(self.profile_yml, "w", encoding="utf-8") as f:
             f.write("name: digismith\n")
-            path = f.name
-        try:
-            self.assertIsNone(model_offload.read_profile_provider(path))
-        finally:
-            os.unlink(path)
+
+        self.assertIsNone(
+            model_offload.read_profile_provider(self.pointer_file.name)
+        )
+
+    def test_no_digismith_repo_returns_none(self):
+        # Change to a directory without .claude-plugin/plugin.json
+        os.chdir(self.original_cwd)
+
+        result = model_offload.read_profile_provider(self.pointer_file.name)
+        self.assertIsNone(result)
+
+        # Change back to temp repo so tearDown doesn't fail
+        os.chdir(self.temp_repo_dir)
 
 
 class TestOffload(unittest.TestCase):
     def setUp(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".profile", delete=False) as f:
+        # Create a temporary directory to act as DigiSmith's repo
+        self.temp_repo_dir = tempfile.mkdtemp()
+
+        # Create .claude-plugin/plugin.json
+        plugin_dir = os.path.join(self.temp_repo_dir, ".claude-plugin")
+        os.makedirs(plugin_dir, exist_ok=True)
+        plugin_json = os.path.join(plugin_dir, "plugin.json")
+        with open(plugin_json, "w", encoding="utf-8") as f:
+            json.dump({"name": "digismith"}, f)
+
+        # Create profiles/digismith.yml with chutes provider
+        profiles_dir = os.path.join(self.temp_repo_dir, "profiles")
+        os.makedirs(profiles_dir, exist_ok=True)
+        self.profile_yml = os.path.join(profiles_dir, "digismith.yml")
+        with open(self.profile_yml, "w", encoding="utf-8") as f:
             f.write("name: digismith\nmodel_offload_provider: chutes\n")
-            self.profile_path = f.name
+
+        # Create the pointer file (one-line profile name)
+        self.pointer_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".profile", delete=False
+        )
+        self.pointer_file.write("digismith")
+        self.pointer_file.close()
+        self.profile_path = self.pointer_file.name
+
+        # Save original cwd and change to temp repo
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_repo_dir)
 
     def tearDown(self):
-        os.unlink(self.profile_path)
+        try:
+            # Restore cwd first, before cleanup
+            os.chdir(self.original_cwd)
+        finally:
+            # Clean up files
+            try:
+                os.unlink(self.profile_path)
+            except OSError:
+                pass
+            try:
+                shutil.rmtree(self.temp_repo_dir)
+            except OSError:
+                pass
 
     def test_skips_when_provider_not_chutes(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".profile", delete=False) as f:
-            f.write("name: personal\n")
-            other_path = f.name
-        try:
-            content, status = model_offload.offload("hello", other_path)
-            self.assertIsNone(content)
-            self.assertIn("skipped", status)
-        finally:
-            os.unlink(other_path)
+        # Create a profile with a different provider
+        with open(self.profile_yml, "w", encoding="utf-8") as f:
+            f.write("name: digismith\nmodel_offload_provider: openai\n")
+
+        content, status = model_offload.offload("hello", self.profile_path)
+        self.assertIsNone(content)
+        self.assertIn("skipped", status)
 
     @patch("model_offload.get_chutes_api_key", return_value=None)
     def test_skips_when_no_credentials(self, _mock):

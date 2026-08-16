@@ -22,13 +22,40 @@ TIMEOUT_SECONDS = 60
 
 
 def read_profile_provider(profile_path):
+    # Step 1: Read the pointer file to get profile name
     if not os.path.isfile(profile_path):
         return None
+
     with open(profile_path, "r", encoding="utf-8") as f:
+        profile_name = f.read().strip()
+
+    if not profile_name:
+        return None
+
+    # Step 2: Locate DigiSmith's repo by checking for .claude-plugin/plugin.json
+    plugin_json_path = os.path.join(os.getcwd(), ".claude-plugin", "plugin.json")
+    if not os.path.isfile(plugin_json_path):
+        return None
+
+    try:
+        with open(plugin_json_path, "r", encoding="utf-8") as f:
+            plugin_config = json.load(f)
+        if plugin_config.get("name") != "digismith":
+            return None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    # Step 3: Read profiles/<name>.yml and extract model_offload_provider field
+    profiles_file = os.path.join(os.getcwd(), "profiles", f"{profile_name}.yml")
+    if not os.path.isfile(profiles_file):
+        return None
+
+    with open(profiles_file, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line.startswith("model_offload_provider:"):
                 return line.split(":", 1)[1].strip()
+
     return None
 
 
