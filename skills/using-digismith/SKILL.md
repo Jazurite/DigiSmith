@@ -91,20 +91,20 @@ consequences:
   pre-profiling behavior for the entire build that follows.
 
 Either way, the resolved profile's `profiles/<name>.yml` content (its
-`ticket`, `ephemeral`, `standards`, `reporting`, `logging` fields) is now
-available for Step 1 and Step 2 below.
+`ticket`, `ephemeral`, `standards`, `reporting`, `publish_artifact`,
+`logging` fields) is now available for Step 1 and Step 2 below.
 
 **Switching profiles mid-session:** if the user's request is "switch
 this repo's profile to X" rather than "start work on a ticket", handle
 it here instead of proceeding to Step 1: validate `X` against
 `profiles/*.yml` (same locate rule as above), state the behavioral delta
-(which of ticket/ephemeral/standards/reporting/logging change, and how)
-via `AskUserQuestion` — call out a `logging` flip explicitly, since it
-silently turns session-transcript capture into DigiSmith's own repo on or
-off — and on confirmation overwrite `.digismith/profile`
-with the new name. This is `using-digismith`'s own job done at this
-point — don't fall through into Step 1's ticket flow unless the user's
-original request was also to start work.
+(which of ticket/ephemeral/standards/reporting/publish_artifact/logging
+change, and how) via `AskUserQuestion` — call out a `logging` flip
+explicitly, since it silently turns session-transcript capture into
+DigiSmith's own repo on or off — and on confirmation overwrite
+`.digismith/profile` with the new name. This is `using-digismith`'s own
+job done at this point — don't fall through into Step 1's ticket flow
+unless the user's original request was also to start work.
 
 ### Step 1: Get a Real Ticket
 
