@@ -76,14 +76,19 @@ class TestReadProfileProvider(unittest.TestCase):
         )
 
     def test_no_digismith_repo_returns_none(self):
-        # Change to a directory without .claude-plugin/plugin.json
-        os.chdir(self.original_cwd)
-
-        result = model_offload.read_profile_provider(self.pointer_file.name)
-        self.assertIsNone(result)
-
-        # Change back to temp repo so tearDown doesn't fail
-        os.chdir(self.temp_repo_dir)
+        # Change to a genuinely empty temporary directory without .claude-plugin/plugin.json
+        empty_temp_dir = tempfile.mkdtemp()
+        try:
+            os.chdir(empty_temp_dir)
+            result = model_offload.read_profile_provider(self.pointer_file.name)
+            self.assertIsNone(result)
+        finally:
+            # Always restore to temp repo so tearDown doesn't fail
+            os.chdir(self.temp_repo_dir)
+            try:
+                shutil.rmtree(empty_temp_dir)
+            except OSError:
+                pass
 
 
 class TestOffload(unittest.TestCase):
