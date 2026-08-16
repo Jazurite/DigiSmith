@@ -189,12 +189,23 @@ the expected `.digismith/docs/<slug>/design.html`:
 
 - **Matches, and the file is HTML** → done, continue to Step 3 (Publish).
 - **Doesn't match, or wrong format** → read the file `brainstorming`
-  actually wrote (its reported path). Rewrap its content into the Step
-  1 HTML shell — the body content it already wrote becomes
-  `{{BODY_SECTIONS}}` — and write the result to
-  `.digismith/docs/<slug>/design.html`, creating the folder if needed.
-  Report what was corrected: "Enforcer: brainstorming wrote to
-  `<old-path>` — moved and reformatted to
+  actually wrote (its reported path). Before rewrapping it yourself, try
+  offloading the rewrap: write a prompt file containing (1) the exact
+  Step 1 HTML shell with `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}` already
+  filled in and `{{TOC_ITEMS}}`/`{{BODY_SECTIONS}}` left as literal
+  placeholders, (2) the misplaced file's full content, and (3) one
+  instruction line: "Fill `{{TOC_ITEMS}}` and `{{BODY_SECTIONS}}` from
+  the content above, preserving all of its information; return only the
+  complete HTML document, nothing else." Run:
+  `python scripts/model_offload.py --prompt-file <prompt-file>
+  --profile-path .digismith/profile`. On exit 0, use its stdout as the
+  file content verbatim. On any non-zero exit (offload unavailable,
+  off, or failed — the stderr line names which), rewrap it yourself
+  exactly as before: the body content it already wrote becomes
+  `{{BODY_SECTIONS}}`. Either way, write the result to
+  `.digismith/docs/<slug>/design.html`, creating the folder if needed,
+  and report what was corrected: "Enforcer: brainstorming wrote to
+  `<old-path>` — moved and reformatted (<via Chutes|in-session>) to
   `.digismith/docs/<slug>/design.html`."
 - **Nothing found at the reported location** → stop and say so plainly;
   don't guess or silently proceed. This means `brainstorming` produced no
