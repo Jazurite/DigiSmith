@@ -12,10 +12,25 @@ This README covers the one skill you actually invoke to start working:
 injection, ticket intake, and what's still to come) is wired in behind
 it or reachable directly — `using-digismith` is just the front door.
 
-Four skills sit outside that front door, because they trigger at
+Five skills sit outside that front door, because they trigger at
 specific points inside the build rather than at the front door itself —
-one right after a plan is saved, before any task code is written; the
+one right before and after the spec and plan themselves get written,
+another right after a plan is saved, before any task code is written; the
 other three later, once code already exists.
+
+**`enforcer`** (map item **Q**). It fires twice around the
+`brainstorming`/`writing-plans` hand-off: right before either one is
+invoked, it tells it explicitly to write its output to DigiSmith's
+unified docs location (`.digismith/docs/<slug>/design.html`, HTML;
+`.digismith/docs/<slug>/plan.md`, Markdown) instead of its own
+third-party default — then right after each one reports it's finished,
+it verifies the file actually landed there in the right format,
+correcting it if not. Once `design.html` is confirmed in place, it also
+publishes it via the `Artifact` tool for readability
+(`report-implementation` does the same for `report.html`). See
+[`skills/enforcer/SKILL.md`](skills/enforcer/SKILL.md) for the exact
+process, or [`.digismith/history.html`](.digismith/history.html) for its
+status.
 
 **`subagent-driven-always`** (map item **H**). It intercepts
 `superpowers:writing-plans`' Execution Handoff question — "1.
@@ -155,9 +170,12 @@ Once a real ticket exists, `using-digismith`:
 
 ### 3. Hand off to brainstorming
 
-From inside that worktree, `using-digismith` invokes
-`superpowers:brainstorming` with the ticket's title, description, and
-acceptance criteria already loaded as seed context. From there,
+From inside that worktree, `using-digismith` invokes `digismith:enforcer`
+— which tells `superpowers:brainstorming`/`superpowers:writing-plans`
+where and in what format DigiSmith needs their output, then checks it
+landed there once each finishes — before invoking
+`superpowers:brainstorming` itself with the ticket's title, description,
+and acceptance criteria already loaded as seed context. From there,
 Superpowers' own chain takes over unmodified — brainstorming →
 `writing-plans` → `subagent-driven-development`/`executing-plans` — with
 its own approval gates at each stage. `using-digismith`'s job ends at

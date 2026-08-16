@@ -108,6 +108,7 @@ tiering below.
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
 | **O** | Profiling | A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point — new letter, added directly per Jack's request during this brainstorm |
 | **P** | Telemetry | Captures the full Claude Code session transcript for a DigiSmith-driven ticket build (using-digismith start → finishing-a-development-branch's integration decision) and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis. Raw and unredacted by deliberate choice — new letter, added directly per Jack's request during this brainstorm |
+| **Q** | Convention enforcement | Makes `superpowers:brainstorming`/`superpowers:writing-plans` honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that any HTML doc DigiSmith writes gets published via the `Artifact` tool for readability |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
 driving status transitions).
@@ -117,7 +118,7 @@ driving status transitions).
 | Tier | Theme | Items |
 |---|---|---|
 | **1** | The frame | **G** standards injection · **E.1** spine first slice · **O** profiling (pulled forward and built 2026-08-11) |
-| **2** | The override | **H** subagent-driven always (built 2026-08-12) · **K** open-weight model extension |
+| **2** | The override | **H** subagent-driven always (built 2026-08-12) · **Q** convention enforcement (built 2026-08-15) · **K** open-weight model extension |
 | **3** | Intake & estimation | **A** intake/creation · **E.2** spine remaining scope (decoupled from Tier 1 2026-08-11) · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
 | **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** E2E · **I.3** Figma visual regression |
@@ -171,18 +172,6 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 - **F's shape is undecided.** Whether design review is (a) present-for-human-
   review only, (b) independent agent critique only, or (c) critique then
   present, was raised but never settled. Decide when Tier 5 gets specced.
-- **`design.html`/`plan.md` have no enforcement mechanism.** The unified
-  docs convention says a new feature's spec and plan belong at
-  `.digismith/docs/<feature-slug>/`, but nothing today actually points
-  `superpowers:brainstorming` or `superpowers:writing-plans` there — they're
-  third-party skills that don't know the convention exists, so a new
-  feature's spec/plan still land wherever those skills default to. That's
-  exactly how the unified-docs-convention feature's own spec and plan ended
-  up at the old `docs/superpowers/` location. `using-digismith`'s hand-off
-  to `superpowers:brainstorming` is the natural place to eventually pass
-  the target folder explicitly, but that's undesigned. Decide when it's
-  actually blocking someone, not preemptively — the final review that
-  raised it called it a genuine follow-up feature, not a merge blocker.
 - **`{{MAP_ITEM}}` has no derivation rule for a no-map-letter feature.**
   `report-implementation`'s placeholder is defined as "the map-item
   letter/number in `{{FEATURE_TITLE}}`'s own parenthetical" (e.g.
@@ -222,6 +211,10 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   remembered answer for every future session; its absence means
   "committed," equally durable). `.digismith/history.html` replaces
   `docs/history.html` in DigiSmith's own repo.
+  Any HTML doc in that set — `design.html`, `report.html` — also gets
+  published via the `Artifact` tool once written, with the link reported
+  back; `plan.md` and `ticket.md` stay as plain working files, never
+  published (added 2026-08-15 alongside map item **Q**).
 - Specs are authored in HTML — richer structure and presentation for a
   document a human reviews once. Plans stay Markdown:
   `superpowers:subagent-driven-development`'s `task-brief` script parses

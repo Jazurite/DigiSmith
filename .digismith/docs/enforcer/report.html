@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enforcer (Q)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Enforcer (Q) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-15</span>
+    <span>Map item: <strong>Q</strong></span>
+    <span>Commit range: <code>b261ea7..4d46e4d</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Builds <code>digismith:enforcer</code> so <code>superpowers:brainstorming</code> and
+  <code>superpowers:writing-plans</code> — third-party Superpowers skills with their own default
+  output locations/formats — honor DigiSmith's unified docs convention
+  (<code>.digismith/docs/&lt;slug&gt;/design.html</code> in HTML,
+  <code>.digismith/docs/&lt;slug&gt;/plan.md</code> in Markdown) instead of silently falling back
+  to their own defaults, the way <code>brainstorming</code> actually did on 2026-08-15. A new
+  standalone skill does two things around each hand-off: tells the target skill explicitly
+  where/how to write (Advisory), then checks afterward that it actually landed there and corrects
+  it if not (Verified). Two wiring points reach it — an explicit call added to
+  <code>using-digismith</code> Step 3, and the skill's own trigger description mirroring
+  <code>inject-standards</code>'s existing wording so it also fires for ad-hoc DigiSmith
+  self-development with no ticket involved. A same-change convention amendment makes any HTML doc
+  DigiSmith writes get published via the <code>Artifact</code> tool for readability, implemented
+  here for <code>design.html</code> and, via a matching addition, in
+  <code>report-implementation</code> (map item N) for <code>report.html</code>. Followed the full
+  Superpowers process: brainstorming → spec → writing-plans →
+  <code>superpowers:subagent-driven-development</code> (4 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round
+  before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <h4>Task 1: <code>digismith:enforcer</code> Skill</h4>
+      <p>The <code>digismith:enforcer</code> skill itself — Task 2 references it by name from
+      <code>using-digismith</code> Step 3; Task 3's <code>report-implementation</code> addition
+      follows the same publish pattern this task establishes for <code>design.html</code>, applied
+      to <code>report.html</code>.</p>
+    </div>
+    <div class="card">
+      <h4>Task 2: Wire Enforcer into <code>using-digismith</code></h4>
+      <p>The explicit-call wiring point described in the design's "Trigger Wiring" section.
+      Enforcer's own self-trigger description (already written in Task 1) covers the ad-hoc path
+      independently of this task.</p>
+    </div>
+    <div class="card">
+      <h4>Task 3: <code>report-implementation</code> Publish Step</h4>
+      <p>Nothing downstream in this plan consumes this task — it applies Task 1's convention
+      amendment to <code>report.html</code>, standalone.</p>
+    </div>
+    <div class="card">
+      <h4>Task 4: <code>MEMORY.md</code> Documentation</h4>
+      <p>The durable record future sessions read cold — map row, build-order placement, and the
+      Unified Docs Convention amendment, per this repo's own "record decisions in plain,
+      git-committed text" convention.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. <code>digismith:enforcer</code> Skill</td>
+      <td>Advisory, Verified, and Publish logic for the design.html/plan.md hand-offs; 3 dogfood
+      scenarios (no-op, spec move-and-rewrap, plan move)</td>
+      <td>Approved, clean</td>
+      <td>"Nothing found at reported location" branch (Step 2/5) never dogfooded — brief gap, not
+      implementer error, low risk</td>
+    </tr>
+    <tr>
+      <td>2. Wire Enforcer into <code>using-digismith</code></td>
+      <td>Explicit invocation of <code>digismith:enforcer</code> added to Step 3</td>
+      <td>Approved, clean</td>
+      <td>Implementer's report file stated an incorrect commit range — doesn't affect the actual
+      diff, just self-reported bookkeeping</td>
+    </tr>
+    <tr>
+      <td>3. <code>report-implementation</code> Publish Step</td>
+      <td>Matching "Publish as an artifact" item added to Step 4 for <code>report.html</code></td>
+      <td>Approved, 1 parked</td>
+      <td>Forward citation to a <code>MEMORY.md</code> convention clause that Task 4 adds later in
+      this same plan — sequencing quirk, resolved once the whole branch completed</td>
+    </tr>
+    <tr>
+      <td>4. <code>MEMORY.md</code> Documentation</td>
+      <td>Map table row, build-order placement, and Unified Docs Convention amendment</td>
+      <td>Approved, clean</td>
+      <td>None</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 6 Important and 5 Minor findings from the final whole-branch
+  review, 10 fixed in one wave and verified by scoped re-review, 1 Minor parked with a ruling
+  (cosmetic wording only, no functional gap).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>report-implementation</code>'s gitignored-branch text said
+    "Skip to Step 5," which now incorrectly skipped past the new Publish item inserted before that
+    heading</td><td>Fixed — reworded to "Continue to item 5 below."</td></tr>
+    <tr><td>Important</td><td><code>MEMORY.md</code>'s Open Questions bullet
+    ("<code>design.html</code>/<code>plan.md</code> have no enforcement mechanism") was now false
+    and contradicted the new map item Q row</td><td>Fixed — bullet removed</td></tr>
+    <tr><td>Important</td><td><code>.digismith/history.html</code> had no entry anywhere for map
+    item Q (map table, Tier 2 row, doc-links, timeline, shipped-count stat), and
+    <code>MEMORY.md</code>'s Tier 2 row lacked the <code>(built …)</code> annotation</td>
+    <td>Fixed — all locations added/corrected, stat corrected for 17 letters, <code>(built
+    2026-08-15)</code> annotation added</td></tr>
+    <tr><td>Important</td><td>Enforcer's Advisory (Step 1) had no handling for a gitignored
+    consumer repo, where <code>git add</code> hard-fails on the redirected path</td>
+    <td>Fixed — <code>git check-ignore -q</code> clause added to Advisory plus a matching Error
+    Handling bullet</td></tr>
+    <tr><td>Important</td><td>Enforcer Step 5 and <code>subagent-driven-always</code> (H) both
+    claimed the same trigger moment with no stated ordering between them</td>
+    <td>Fixed — Enforcer Step 5 now states it completes first; H added to the design's
+    "Relationship to Other Map Items"</td></tr>
+    <tr><td>Important</td><td>Quick Reference tables in <code>using-digismith</code> and
+    <code>report-implementation</code> omitted the new steps this branch added</td>
+    <td>Fixed — both tables updated</td></tr>
+    <tr><td>Minor</td><td><code>using-digismith</code>'s slug-derivation wording only covered the
+    <code>ticket: true</code> path</td><td>Fixed — now covers both paths</td></tr>
+    <tr><td>Minor</td><td>Enforcer's <code>SKILL.md</code> misquoted the upstream "override the
+    default" hook as one merged verbatim sentence</td><td>Fixed — rephrased as two separate hooks,
+    format-override noted explicitly</td></tr>
+    <tr><td>Minor</td><td><code>report-implementation</code>'s Error Handling had no entry for a
+    failed/unavailable <code>Artifact</code> call, though Enforcer already had one for the same
+    operation</td><td>Fixed — matching bullet added</td></tr>
+    <tr><td>Minor</td><td><code>MEMORY.md</code>'s "any HTML doc" wording was ambiguous against
+    <code>.digismith/history.html</code> (an HTML doc DigiSmith writes but never publishes)</td>
+    <td>Parked — the map-table row (<code>MEMORY.md:111</code>) is a compressed one-line pointer,
+    not the source of truth; the authoritative Conventions-section bullet and both
+    <code>SKILL.md</code> files are already correctly scoped to <code>design.html</code>/<code>report.html</code>
+    only. Cosmetic imprecision, not a functional gap — no second fix wave per this repo's own
+    final-review protocol.</td></tr>
+    <tr><td>Minor</td><td><code>README.md</code> still enumerated a stale skill count with no
+    Enforcer paragraph or hand-off mention</td><td>Fixed — paragraph and hand-off wording
+    added</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">2309107</span> feat(enforcer): add digismith:enforcer skill (map item Q)</li>
+    <li><span class="sha">070422e</span> feat(using-digismith): invoke digismith:enforcer before brainstorming hand-off</li>
+    <li><span class="sha">d291217</span> feat(report-implementation): publish report.html as an artifact</li>
+    <li><span class="sha">90c0901</span> docs(backlog): mark artifact-publish opt-out as a fast-follow after Enforcer</li>
+    <li><span class="sha">4b1bbe7</span> docs: add map item Q (Enforcer), amend unified docs convention</li>
+    <li><span class="sha">fbcf8ef</span> fix(report-implementation): fix step-5 wording, add artifact-failure handling, tighten HTML-doc scope, note publish in quick reference</li>
+    <li><span class="sha">9e3cef0</span> fix(enforcer): handle gitignored design.html, order vs subagent-driven-always, correct upstream hook wording, tighten HTML-doc scope</li>
+    <li><span class="sha">b0031ed</span> fix(using-digismith): cover both ticket paths in slug wording, note enforcer call in quick reference</li>
+    <li><span class="sha">4d46e4d</span> docs: record map item Q in history.html and README, drop resolved enforcement open question from MEMORY</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/enforcer/report.html</footer>
+
+</body>
+</html>
