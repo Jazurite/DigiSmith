@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Tiering (K.1) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Model Tiering (K.1) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-16</span>
+    <span>Map item: <strong>K.1</strong></span>
+    <span>Commit range: <code>82cdf81..195824b</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Offload two of DigiSmith's own mechanical HTML-generation steps — <code>enforcer</code>'s rewrap correction and <code>report-implementation</code>'s template render — to a Chutes-hosted open-weight model, with silent fallback to today's in-session generation whenever offload isn't configured, unavailable, or fails. A single shared script (<code>scripts/model_offload.py</code>) reads a new <code>model_offload_provider</code> profile field, fetches the Chutes API key from the credential store <code>chutes-ai</code> already manages, POSTs a prompt to Chutes' chat/completions endpoint, and returns the result over a simple exit-code contract; <code>enforcer</code> and <code>report-implementation</code> each call it at one specific point in their existing process, falling back to their current in-session behavior on any non-zero exit. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>superpowers:subagent-driven-development</code> (4 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 5 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+  <p><em>This report itself was generated in-session, not via Chutes: an offload attempt was made per <code>report-implementation</code>'s own new Step 3, and it failed with <code>offload: failed (connection error: The read operation timed out)</code> — a real-world confirmation that the fallback contract holds under an actual failure, not just simulated ones.</em></p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 1</div><h4>Shared offload script + profile field</h4><p>Provides <code>read_profile_provider</code>, <code>get_chutes_api_key</code>, <code>call_chutes</code>, and <code>offload()</code> in <code>scripts/model_offload.py</code>, plus its CLI contract: exit 0 with generated content on stdout on success, exit 1 with nothing on stdout on failure.</p></div>
+    <div class="card"><div class="tag">Task 2</div><h4>Wire enforcer to the offload script</h4><p>enforcer's Step 2 rewrap now tries the offload script first, falling back to in-session rewrapping on any failure.</p></div>
+    <div class="card"><div class="tag">Task 3</div><h4>Wire report-implementation to the offload script</h4><p>report-implementation's Step 3 render now tries the offload script first, falling back to in-session rendering on any failure.</p></div>
+    <div class="card"><div class="tag">Task 4</div><h4>Manual end-to-end verification</h4><p>Confirmed both wired call sites and the fallback path work against the real Chutes API — this task's own testing surfaced two real bugs later fixed in Task 1.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Shared offload script + profile field</td><td>scripts/model_offload.py, scripts/test_model_offload.py, profiles/digismith.yml</td><td>Approved after 4 fix round(s)</td><td>read_profile_provider is a naive line-prefix parser, not real YAML (later fixed by a final-review finding); test suite coverage gaps around URLError/CLI-level behavior (later partly closed); get_chutes_api_key collapses distinct credential-script exit codes</td></tr>
+    <tr><td>Task 2: Wire enforcer's rewrap step to the offload script</td><td>skills/enforcer/SKILL.md</td><td>Approved, clean</td><td>the "via Chutes|in-session" reporting convention is implicit rather than its own explicit rule</td></tr>
+    <tr><td>Task 3: Wire report-implementation's render step to the offload script</td><td>skills/report-implementation/SKILL.md</td><td>Approved, clean</td><td>none</td></tr>
+    <tr><td>Task 4: Manual end-to-end verification</td><td>(verification only, no files)</td><td>Approved, clean</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 8 Critical/Important findings and 2 minor documentation gaps, all resolved in one fix wave; 3 additional minor findings surfaced during the re-review were parked as fail-safe and non-blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td>Offloaded HTML was written verbatim with no shape validation</td><td>Fixed — offload() now validates the response starts with &lt;!doctype html&gt;, ends with &lt;/html&gt;, and contains no unsubstituted placeholders or code fences before it's used</td></tr>
+    <tr><td>Important</td><td>Two unguarded file reads in read_profile_provider could raise UnicodeDecodeError/PermissionError uncaught</td><td>Fixed — both reads wrapped in try/except returning None</td></tr>
+    <tr><td>Important</td><td>offload() let TypeError/AttributeError/UnicodeDecodeError escape call_chutes on malformed response shapes</td><td>Fixed — exception tuple widened, emptiness check hardened against non-string content</td></tr>
+    <tr><td>Important</td><td>Line parser silently disabled offload on inline comments or quoted values, including the spec's own documented example</td><td>Fixed — value extraction now strips inline comments and quotes</td></tr>
+    <tr><td>Important</td><td>report-implementation never stated whether the render was generated via Chutes or in-session</td><td>Fixed — added the same reporting sentence enforcer already had</td></tr>
+    <tr><td>Important</td><td>Both skills unconditionally invoked a repo-root-relative script path that fails in consumer repos</td><td>Fixed — offload attempt now gated on the current working directory being DigiSmith's own repo</td></tr>
+    <tr><td>Important</td><td>The cwd-based repo-location gate was undocumented, and its skip reason wasn't distinct from "field absent"</td><td>Fixed — documented in the script's module docstring; skip status now names the reason</td></tr>
+    <tr><td>Important</td><td>MEMORY.md's map (row K) and Open Questions section were stale, describing the disproven original idea</td><td>Fixed — row K rewritten with the K.1/K.2 sub-item convention; stale Open Questions bullet removed</td></tr>
+    <tr><td>Minor</td><td>model_offload_provider profile field undocumented in getting-started.md and using-digismith/SKILL.md</td><td>Fixed — added to both</td></tr>
+    <tr><td>Minor</td><td>scripts/__pycache__/ wasn't gitignored</td><td>Fixed — added to .gitignore</td></tr>
+    <tr><td>Minor</td><td>A non-ASCII em dash in the new "not DigiSmith's repo" skip status could theoretically raise UnicodeEncodeError on a non-UTF-8 stderr encoding</td><td>Parked — fails safe (exit code stays non-zero, fallback still engages), not reproducible on this machine, trivial fix deferred to next touch of this file</td></tr>
+    <tr><td>Minor</td><td>Content-as-list responses report "empty response" rather than a more specific malformed-shape message</td><td>Parked — correct disposition (falls back), only the diagnostic wording is imprecise</td></tr>
+    <tr><td>Minor</td><td>BOM-prefixed offloaded content would fail the doctype-prefix shape check</td><td>Parked — fails safe to in-session generation, not a realistic Chutes response shape</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">b4270ad</span> feat(model-tiering): add shared Chutes offload script and profile field</li>
+    <li><span class="sha">e96cfb4</span> fix(model-tiering): add OSError guard in main() to preserve one-line status contract</li>
+    <li><span class="sha">f1db420</span> feat(model-tiering): wire enforcer's rewrap step to the offload script</li>
+    <li><span class="sha">d5aa5e3</span> feat(model-tiering): wire report-implementation's render step to the offload script</li>
+    <li><span class="sha">548a622</span> fix(model-tiering): implement correct two-step profile resolution and restructure tests</li>
+    <li><span class="sha">ab636ef</span> fix(model-tiering): ensure test_no_digismith_repo_returns_none uses genuinely empty directory</li>
+    <li><span class="sha">365ffcb</span> fix(model-tiering): catch OSError/TimeoutError in offload() to preserve one-line status contract</li>
+    <li><span class="sha">16d945a</span> fix(model-tiering): validate offloaded HTML shape and guard remaining unhandled exceptions</li>
+    <li><span class="sha">c481bbb</span> fix(model-tiering): gate offload attempts to DigiSmith's own repo and report which render path ran</li>
+    <li><span class="sha">195824b</span> docs(model-tiering): record K.1 in the map, document model_offload_provider, ignore __pycache__</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/model-tiering/report.html</footer>
+
+</body>
+</html>
