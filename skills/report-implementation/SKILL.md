@@ -552,10 +552,10 @@ duplicate any part of that sequencing.
   written (and committed, per the gitignore disposition above) regardless
   — only the publish step didn't complete.
 - **Active profile has `publish_artifact: false`** → `report.html` is
-  still written and committed exactly as normal; only the `Artifact`
-  publish call (item 5) is skipped. Not the same disposition as
-  `reporting: false` — the report itself is never skipped, only its
-  publication.
+  still written (and committed, per the gitignore disposition above)
+  exactly as normal; only the `Artifact` publish call (item 5) is
+  skipped. Not the same disposition as `reporting: false` — the report
+  itself is never skipped, only its publication.
 - **Empty commit range** (`MERGE_BASE == HEAD`) → stop and say so —
   treat it as a sign something upstream is wrong, not as "no report
   needed."
