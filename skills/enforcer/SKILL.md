@@ -190,7 +190,14 @@ the expected `.digismith/docs/<slug>/design.html`:
 - **Matches, and the file is HTML** → done, continue to Step 3 (Publish).
 - **Doesn't match, or wrong format** → read the file `brainstorming`
   actually wrote (its reported path). Before rewrapping it yourself, try
-  offloading the rewrap: write a prompt file containing (1) the exact
+  offloading the rewrap — but **only when the current working directory is
+  DigiSmith's own repo** (`.claude-plugin/plugin.json` with `"name":
+  "digismith"`, the same repo-identity check this file already uses in
+  Step 3). The script lives at DigiSmith's repo root and its profile field
+  is read from there, so anywhere else — which is every consumer repo, the
+  normal case for real ticket work — skip the offload attempt entirely and
+  rewrap in-session, with no error noise. When the check passes: write a
+  prompt file containing (1) the exact
   Step 1 HTML shell with `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}` already
   filled in and `{{TOC_ITEMS}}`/`{{BODY_SECTIONS}}` left as literal
   placeholders, (2) the misplaced file's full content, and (3) one
@@ -199,8 +206,10 @@ the expected `.digismith/docs/<slug>/design.html`:
   complete HTML document, nothing else." Run:
   `python scripts/model_offload.py --prompt-file <prompt-file>
   --profile-path .digismith/profile`. On exit 0, use its stdout as the
-  file content verbatim. On any non-zero exit (offload unavailable,
-  off, or failed — the stderr line names which), rewrap it yourself
+  file content verbatim — the script already validated it's a complete,
+  fully-substituted HTML document and exits non-zero if it isn't. On any
+  non-zero exit (offload unavailable, off, skipped because this isn't
+  DigiSmith's repo, or failed — the stderr line names which), rewrap it yourself
   exactly as before: the body content it already wrote becomes
   `{{BODY_SECTIONS}}`. Either way, write the result to
   `.digismith/docs/<slug>/design.html`, creating the folder if needed,
