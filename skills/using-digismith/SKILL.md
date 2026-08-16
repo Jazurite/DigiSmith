@@ -92,13 +92,18 @@ consequences:
 
 Either way, the resolved profile's `profiles/<name>.yml` content (its
 `ticket`, `ephemeral`, `standards`, `reporting`, `publish_artifact`,
-`logging` fields) is now available for Step 1 and Step 2 below.
+`logging`, `model_offload_provider` fields) is now available for Step 1
+and Step 2 below. `model_offload_provider` names the provider DigiSmith's
+own mechanical HTML generation is offloaded to (`chutes` is the only one
+implemented; absent = off), and only takes effect while working inside
+DigiSmith's own repo — no shipped consumer profile sets it.
 
 **Switching profiles mid-session:** if the user's request is "switch
 this repo's profile to X" rather than "start work on a ticket", handle
 it here instead of proceeding to Step 1: validate `X` against
 `profiles/*.yml` (same locate rule as above), state the behavioral delta
-(which of ticket/ephemeral/standards/reporting/publish_artifact/logging
+(which of
+ticket/ephemeral/standards/reporting/publish_artifact/logging/model_offload_provider
 change, and how) via `AskUserQuestion` — call out a `logging` flip
 explicitly, since it silently turns session-transcript capture into
 DigiSmith's own repo on or off — and on confirmation overwrite

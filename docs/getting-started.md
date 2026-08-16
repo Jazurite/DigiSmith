@@ -44,6 +44,14 @@ and confirms before writing.
 | `personal` | – | – | – | ✓ | ✓ | – | Throwaway / scratch personal work |
 | `jazurite` | – | – | – | ✓ | ✓ | ✓ | Your own branded projects — process worth a corpus, no client machinery |
 
+There's one more field, `model_offload_provider`, deliberately left off
+the table because none of the three profiles above set it: it names the
+provider (`chutes` is the only one implemented) that DigiSmith's own
+mechanical HTML generation gets offloaded to, and absent means the
+feature is off. Only DigiSmith's own `digismith` profile turns it on, and
+it only ever applies while working in DigiSmith's own repo — everywhere
+else that generation stays in-session.
+
 Declining the picker stops everything — no branch or worktree gets
 created until a profile is chosen.
 

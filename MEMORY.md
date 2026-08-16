@@ -102,7 +102,7 @@ tiering below.
 | **H** | Subagent-driven always | Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2 |
 | **I** | QA handoff | **I.1** JIRA comment write-back for a captured ephemeral URL (consumes **M**'s output) — no status transition, that stays manual by design · **I.2** end-to-end testing · **I.3** visual regression vs Figma (custom Figma skill) |
 | **J** | Estimation | Dual-track: the internal number (real) and the client-facing number (committed). The dilution is deliberate and is the point of the stage |
-| **K** | Model tiering | Extend `subagent-driven-development` across a pool spanning frontier → open-weight models, dispatching each agent to the cheapest one that can handle its task |
+| **K** | Model tiering | **K.1** offload DigiSmith's own mechanical HTML-generation steps — `enforcer`'s spec rewrap and `report-implementation`'s report render — to a cheap Chutes-hosted model via a shared `scripts/model_offload.py`, falling back to in-session generation whenever it's off, unavailable, or returns something malformed. The original idea (dispatch `subagent-driven-development`'s agents across a frontier → open-weight pool) was ruled out by the feasibility spike (2026-08-16): Claude Code's `Agent` tool has no per-subagent non-Anthropic endpoint, and `subagent-driven-development` already does Anthropic-tier cost routing on its own · **K.2+** everything wider — implementer-task offload, multi-provider routing — left undesigned, see the design spec's Future Phases |
 | **L** | Refinement & exploration | **L.1** connect a new ticket to the established feature network · **L.2** source the codebase and return the actual code list — which files/sections it touches, what assets are needed — deliberately kept separate from **A**, which stops once a well-structured ticket exists |
 | **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
@@ -118,7 +118,7 @@ driving status transitions).
 | Tier | Theme | Items |
 |---|---|---|
 | **1** | The frame | **G** standards injection · **E.1** spine first slice · **O** profiling (pulled forward and built 2026-08-11) |
-| **2** | The override | **H** subagent-driven always (built 2026-08-12) · **Q** convention enforcement (built 2026-08-15) · **K** open-weight model extension |
+| **2** | The override | **H** subagent-driven always (built 2026-08-12) · **Q** convention enforcement (built 2026-08-15) · **K.1** model offload for DigiSmith's own HTML generation (built 2026-08-16) · **K.2+** the rest of model tiering |
 | **3** | Intake & estimation | **A** intake/creation · **E.2** spine remaining scope (decoupled from Tier 1 2026-08-11) · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
 | **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** E2E · **I.3** Figma visual regression |
@@ -164,11 +164,6 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 
 ## Open questions
 
-- **K's feasibility is unverified.** Claude Code's `Agent` tool takes a
-  model parameter, but whether it accepts a non-Anthropic open-weight
-  endpoint — natively, via proxy, or not at all — is unknown. Chutes is the
-  likely vehicle for the open-weight side (DeepSeek/Qwen/Kimi/GLM). Run a
-  feasibility spike before speccing Tier 2, not during.
 - **F's shape is undecided.** Whether design review is (a) present-for-human-
   review only, (b) independent agent critique only, or (c) critique then
   present, was raised but never settled. Decide when Tier 5 gets specced.

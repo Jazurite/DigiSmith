@@ -1,3 +1,4 @@
 .idea/
 .worktrees/
 .claude/worktrees/
+__pycache__/
