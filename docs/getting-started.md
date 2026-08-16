@@ -23,11 +23,12 @@ whatever was published at install time.
 From a session rooted in the target repo:
 
 ```
-/digismith:using-digismith
+/digismith:init
 ```
 
 or naturally: "start work on this ticket" / "begin implementation" /
-"let's build this now — [paste ticket or describe the need]".
+"let's build this now — [paste ticket or describe the need]" — or, for a
+ticket already mid-stream elsewhere, "pick this up in DigiSmith."
 
 Only want a ticket captured, no branch or build yet? Invoke
 `digismith:jira-intake` directly instead.
@@ -77,16 +78,18 @@ trigger point inside the chain above, gated by the active profile:
   decision (merge, PR, or keep-as-is all count), commits this session's
   transcript slice back into DigiSmith's own repo. Gated by `logging`;
   the capture window starts wherever the marker gets written (normally
-  `using-digismith` Step 1.5), not from true session start.
+  `bootstrap` Step 1.5, or `adopt`'s equivalent step for mid-stream work),
+  not from true session start.
 
 ## 6. Known gaps — don't expect these yet
 
-- **E.2 isn't built.** There's no full stage-order enforcement or
-  resume-mid-flight logic. Starting real work without going through
-  `using-digismith` first (already on a branch, already coding) means
-  G/M/N still fire fine off their own hooks, but P only captures from
-  wherever its marker ends up written, not from wherever the work
-  actually started.
+- **E.2 isn't built.** There's no full stage-order enforcement across
+  every future stage. `init`'s mid-stream adoption (`adopt`) covers one
+  specific recurring case — ticket known, spec and plan already written
+  outside DigiSmith, nothing built yet — not joining at an arbitrary point
+  (before a spec/plan exists, or mid-build). Outside that one case, G/M/N
+  still fire fine off their own hooks, but P only captures from wherever
+  its marker ends up written, not from wherever the work actually started.
 - **Backlog items aren't applied yet.** Check
   [`backlog/README.md`](../backlog/README.md) before assuming a stage is
   airtight — known open ones include a comment-fetch bug in M and no
