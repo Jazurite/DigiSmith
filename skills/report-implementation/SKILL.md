@@ -275,6 +275,19 @@ break the table markup outright.
 
 ### Step 3: Render the HTML
 
+Before rendering it yourself, try offloading this step: write a prompt
+file containing (1) every placeholder value derived in Step 2 (2a-2f),
+clearly labeled by name, and (2) the exact template below plus one
+instruction line: "Substitute each `{{PLACEHOLDER}}` with the labeled
+value above exactly — escaping is already applied, don't re-escape;
+return only the complete HTML document, nothing else." Run:
+`python scripts/model_offload.py --prompt-file <prompt-file>
+--profile-path .digismith/profile`. On exit 0, use its stdout as
+`report.html`'s content verbatim and skip the manual substitution below
+— continue straight to Step 4. On any non-zero exit (offload
+unavailable, off, or failed — the stderr line names which), render it
+yourself exactly as described below.
+
 Use this exact template, replacing each `{{PLACEHOLDER}}`. Keep the
 `<style>` block byte-for-byte — it's the same one every DigiSmith
 spec/report already uses:
