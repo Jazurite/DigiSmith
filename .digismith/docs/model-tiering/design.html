@@ -125,12 +125,12 @@
   within real implementer tasks via an MCP tool call, (2) formalize the
   existing Anthropic-tier routing convention into something enforceable, or
   (3) target DigiSmith's own internal mechanical text-generation steps —
-  places where the acting Claude session drafts well-specified text (HTML
-  formatting, report/PR-description drafting) with no code-correctness risk
-  at stake, since a human or a downstream skill reviews the result either
-  way. Option 3 was chosen as the lowest-risk, most concretely valuable
-  first slice, and doesn't touch the implementer/reviewer/fix-loop machinery
-  that real code changes depend on at all.</p>
+  places where the acting Claude session produces well-specified HTML
+  output with no code-correctness risk at stake, since a human or a
+  downstream skill reviews the result either way. Option 3 was chosen as
+  the lowest-risk, most concretely valuable first slice, and doesn't touch
+  the implementer/reviewer/fix-loop machinery that real code changes depend
+  on at all.</p>
   <p>Model tiering is understood to be a larger, multi-phase initiative —
   this document specs only its first slice, designated <strong>K.1</strong>
   following the same sub-item convention the map already uses for other
@@ -176,9 +176,12 @@
         </div>
         <div class="card">
           <div class="tag">report-implementation · map item N</div>
-          <h4>Report/PR-description drafting</h4>
-          <p>Drafting <code>report.html</code> from the ledger, commit
-          list, and final-review findings becomes the offloaded call.</p>
+          <h4>Step 3 HTML render</h4>
+          <p>Rendering <code>report.html</code> from Step 2's already-derived
+          placeholder values (summary paragraph, per-task rows, final-review
+          rows, delivered cards, commit list) into the fixed template becomes
+          the offloaded call — not Step 2's own derivation, which stays
+          mechanical/deterministic and runs in-session either way.</p>
         </div>
       </div>
     </li>
@@ -209,11 +212,14 @@
     <code>scripts/model-offload.py</code>. On success, writes the returned
     HTML to <code>.digismith/docs/&lt;slug&gt;/design.html</code>. On
     failure, performs the rewrap itself, exactly as it does today.</li>
-    <li><strong>report-implementation's drafting step:</strong> has the
-    ledger, commit list, and final-review findings already assembled. It
-    builds a prompt with that structured input and the report template,
-    pipes it to the same script. On success, writes <code>report.html</code>.
-    On failure, drafts it in-session as today.</li>
+    <li><strong>report-implementation's Step 3 render:</strong> Step 2 has
+    already mechanically derived every placeholder value (header fields,
+    per-task rows, final-review rows, delivered cards, oldest-first commit
+    list) — that derivation itself stays in-session, unchanged. Step 3
+    builds a prompt containing those derived values plus the fixed HTML
+    template and pipes it to the same script. On success, writes
+    <code>report.html</code>. On failure, renders the template in-session
+    as today.</li>
     <li>Both call sites report which path was taken ("generated via
     Chutes" vs. "generated in-session, offload unavailable/off") so the
     choice is visible after the fact, never silent either way.</li>
