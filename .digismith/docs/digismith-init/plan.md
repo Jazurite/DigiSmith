@@ -395,7 +395,7 @@ git commit -m "feat(digismith-init): add init skill with already-initialized che
 ```markdown
 ---
 name: adopt
-description: Invoked internally by digismith:init when a ticket's spec and plan already exist outside DigiSmith (an external ticket source, vanilla superpowers:brainstorming/superpowers:writing-plans) — never invoke directly. Backfills DigiSmith's profile/ticket/branch state, relocates the existing docs into DigiSmith's convention, and hands off straight to the build stage.
+description: Invoked internally by digismith:init when a ticket's spec and plan already exist outside DigiSmith (an external ticket source, vanilla superpowers:brainstorming/superpowers:writing-plans) — never invoke directly.
 ---
 
 # Adopt (Mid-Stream Path)
@@ -407,8 +407,8 @@ a ticket ID pulled through an external source (e.g. an Atlassian MCP
 connector) plus a spec and plan already written by vanilla
 `superpowers:brainstorming`/`superpowers:writing-plans`, with none of
 DigiSmith's profile-scoped standards injection or docs convention ever having
-kicked in. `adopt` backfills that state retroactively, then hands off to the
-same build stage a fresh-start ticket would reach.
+kicked in. `digismith:adopt` backfills that state retroactively, then hands
+off to the same build stage a fresh-start ticket would reach.
 
 Scoped narrowly to one entry point: ticket known, spec written (optionally),
 plan written, nothing built yet. Joining before a spec/plan exists, or
@@ -436,12 +436,12 @@ Ask for whatever isn't already obvious from the conversation:
 ### Step 2: Resolve Profile
 
 Run `digismith:bootstrap`'s Step 0 exactly, treating the repo currently
-being worked in the same way `bootstrap` would. This resolves (or, on first
-use in this repo, picks via the same `AskUserQuestion` flow) the active
-profile and ensures `.digismith/profile` exists with the chosen name. The
-resolved profile's `ticket`, `ephemeral`, `standards`, `reporting`,
-`publish_artifact`, and `logging` fields are now available for the rest of
-this process, exactly as they would be for `bootstrap`.
+being worked in the same way `digismith:bootstrap` would. This resolves
+(or, on first use in this repo, picks via the same `AskUserQuestion` flow)
+the active profile and ensures `.digismith/profile` exists with the chosen
+name. The resolved profile's `ticket`, `ephemeral`, `standards`,
+`publish_artifact`, `reporting`, and `logging` fields are now available for
+the rest of this process, exactly as they would be for `digismith:bootstrap`.
 
 ### Step 3: Get the Ticket and Resolve the Slug
 
@@ -457,20 +457,21 @@ Continue to Step 4.
 
 1. Invoke `digismith:jira-intake` Door 1, supplying the ticket key already
    confirmed in Step 1 directly — it does not need to ask for it again.
-   `jira-intake` fetches the ticket (or asks you to paste it, per its own
-   JIRA Detection) and writes `.digismith/docs/<its-own-derived-slug>/ticket.md`
-   using its own Step 3.1 algorithm on the fetched title.
+   `digismith:jira-intake` fetches the ticket (or asks you to paste it, per
+   its own JIRA Detection) and writes
+   `.digismith/docs/<its-own-derived-slug>/ticket.md` using its own Step 3.1
+   algorithm on the fetched title.
 2. Check whether the current branch already matches `<Key>__<slug>`. If it
-   does, and that slug differs from the slug `jira-intake` just derived, the
-   branch's slug wins — it's already committed to the branch name, and
-   `adopt` never renames a branch (see Global Constraints). Move
-   `.digismith/docs/<jira-intake's-slug>/` to
+   does, and that slug differs from the slug `digismith:jira-intake` just
+   derived, the branch's slug wins — it's already committed to the branch
+   name, and `digismith:adopt` never renames a branch (see Global
+   Constraints). Move `.digismith/docs/<its-own-derived-slug>/` to
    `.digismith/docs/<branch's-slug>/` in its entirety (same move-and-correct
    idiom `digismith:enforcer` already uses for a misplaced `design.html`/
    `plan.md` — applied here to a misplaced `ticket.md` folder).
 3. If the branch doesn't match `<Key>__<slug>` at all (an off-convention
-   name), there's nothing to compare against — use `jira-intake`'s derived
-   slug directly, no correction needed.
+   name), there's nothing to compare against — use `digismith:jira-intake`'s
+   derived slug directly, no correction needed.
 
 Whichever slug results from this step is used for every step below —
 never re-derived a third way.
@@ -487,7 +488,7 @@ its own worktree.
 - **On the branch directly in a non-isolated checkout** → attach a worktree
   to the existing branch: prefer a native worktree tool if this session has
   one; otherwise `git worktree add <path> <branch-name>` — no `-b`, the
-  branch already exists. This mirrors `bootstrap` Step 2.3's
+  branch already exists. This mirrors `digismith:bootstrap` Step 2.3's
   branch-exists-no-worktree case exactly. Switch into it.
 
 ### Step 5: Write Config Into the Worktree
@@ -495,12 +496,12 @@ its own worktree.
 **Profile.** If Step 2 resolved/wrote `.digismith/profile` somewhere other
 than the worktree Step 4 left you in (e.g. Step 4 just attached a new
 worktree), copy the file in now: a plain file copy, never `git add`, never
-`git add -f`, never a commit — mirrors `bootstrap` Step 2.6 exactly, same
-reasoning (a worktree checks out only committed files).
+`git add -f`, never a commit — mirrors `digismith:bootstrap` Step 2.6
+exactly, same reasoning (a worktree checks out only committed files).
 
 **Telemetry marker.** First, unconditionally clear any marker left over from
 a previous ticket in this same checkout, regardless of what the profile
-says — same reasoning as `bootstrap` Step 1.5:
+says — same reasoning as `digismith:bootstrap` Step 1.5:
 
 ```bash
 rm -f .digismith/telemetry-marker
@@ -544,8 +545,8 @@ echo "ticket_key: <Key>" >> .digismith/telemetry-marker
 ```
 
 If Step 4 attached a separate worktree after this marker was written, copy
-it in the same way the profile file is copied above — mirrors `bootstrap`
-Step 2.7.
+it in the same way the profile file is copied above — mirrors
+`digismith:bootstrap` Step 2.7.
 
 ### Step 6: Relocate the Docs
 
@@ -556,16 +557,16 @@ targeting the slug resolved in Step 3:
 - **Plan:** move the file from Step 1's supplied path to
   `.digismith/docs/<slug>/plan.md`, creating the folder if needed. Format
   doesn't change — plans are already Markdown.
-- **Spec, if supplied:** rewrap its content into `enforcer`'s HTML shell at
-  `.digismith/docs/<slug>/design.html` (reuse the shell byte-for-byte from
-  `enforcer`'s Step 1), respecting the same gitignore check
-  (`git check-ignore -q .digismith/docs/<slug>/design.html`) and
-  `publish_artifact` gate `enforcer` Step 3 already defines. No spec
-  supplied → skip `design.html` entirely, not an error.
+- **Spec, if supplied:** rewrap its content into `digismith:enforcer`'s HTML
+  shell at `.digismith/docs/<slug>/design.html` (reuse the shell
+  byte-for-byte from `digismith:enforcer`'s Step 1), respecting the same
+  gitignore check (`git check-ignore -q .digismith/docs/<slug>/design.html`)
+  and `publish_artifact` gate `digismith:enforcer` Step 3 already defines.
+  No spec supplied → skip `design.html` entirely, not an error.
 - **Relocation target already exists with different content** (e.g. a
-  previous partial `adopt` run, or a genuine naming collision) → ask before
-  overwriting, same "never silently overwrite" posture used everywhere else
-  in this project.
+  previous partial `digismith:adopt` run, or a genuine naming collision) →
+  ask before overwriting, same "never silently overwrite" posture used
+  everywhere else in this project.
 
 ### Step 7: Hand Off to Build
 
@@ -581,32 +582,33 @@ both trigger off the dispatch itself, not off which entry point produced it.
 ## Error Handling
 
 - **No plan file found or supplied** → stop, explain a plan file is required
-  for this path; don't fabricate one or silently fall back to `bootstrap`.
-- **Active profile has `ticket: false`** → skip `jira-intake`/`ticket.md`
-  entirely (Step 3); `adopt` isn't ticket-mandatory just because the
-  recurring case usually has one.
-- **`jira-intake`'s own stop conditions** (no JIRA tool and the user declines
-  to paste, sparse paste, existing-file collision, etc.) → `adopt` doesn't
-  proceed past whatever `jira-intake` itself decided; not a new failure mode
-  to reinvent.
+  for this path; don't fabricate one or silently fall back to
+  `digismith:bootstrap`.
+- **Active profile has `ticket: false`** → skip
+  `digismith:jira-intake`/`ticket.md` entirely (Step 3); `digismith:adopt`
+  isn't ticket-mandatory just because the recurring case usually has one.
+- **`digismith:jira-intake`'s own stop conditions** (no JIRA tool and the
+  user declines to paste, sparse paste, existing-file collision, etc.) →
+  `digismith:adopt` doesn't proceed past whatever `digismith:jira-intake`
+  itself decided; not a new failure mode to reinvent.
 - **No spec supplied, only a plan** → not an error (Step 6) — proceed with
   the plan alone.
 - **Relocation target already has different content** → ask before
   overwriting (Step 6), never silently clobber.
 - **Logging on but no transcript directory/file found** → skip the marker
-  *write* half of Step 5 silently, same disposition as `bootstrap` Step 1.5;
-  never block adoption over this.
+  *write* half of Step 5 silently, same disposition as `digismith:bootstrap`
+  Step 1.5; never block adoption over this.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
 | 1 | Confirm ticket key, plan path (required), spec path (optional) |
-| 2 | Resolve profile — run `bootstrap` Step 0 exactly |
-| 3 | Get the ticket via `jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
-| 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`bootstrap` Step 2.3's logic, no `-b`) |
+| 2 | Resolve profile — run `digismith:bootstrap` Step 0 exactly |
+| 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
+| 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/profile` in if needed; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
-| 6 | Relocate plan (required) and spec (optional) into `.digismith/docs/<slug>/` via `enforcer`'s move-and-correct logic |
+| 6 | Relocate plan (required) and spec (optional) into `.digismith/docs/<slug>/` via `digismith:enforcer`'s move-and-correct logic |
 | 7 | Invoke `superpowers:subagent-driven-development` directly against the relocated `plan.md` |
 ```
 
