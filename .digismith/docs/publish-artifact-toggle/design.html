@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publish Artifact Toggle</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Publish Artifact Toggle</h1>
+  <div class="meta">
+    <span>Date: 2026-08-16</span>
+    <span>No map letter — extends O's profile schema, closes a gap in Q's own shipped behavior</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; Goal</a></li>
+    <li><a href="#nongoals">Non-Goals</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#behavior">Behavior When False</a></li>
+    <li><a href="#errors">Error Handling &amp; Verification</a></li>
+    <li><a href="#relationship">Relationship to Other Map Items</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem &amp; Goal</h2>
+  <p>Map item Q (Enforcer) shipped an unconditional "publish HTML docs via the <code>Artifact</code>
+  tool" step in both <code>digismith:enforcer</code> (for <code>design.html</code>) and
+  <code>report-implementation</code> (for <code>report.html</code>), gated only by the existing
+  <code>reporting</code> profile field — the same flag that decides whether a report gets generated
+  at all. There is no way to generate a report or spec locally without also publishing it
+  externally. This was flagged mid-build (2026-08-15) as conflicting with the Emma theme-repo
+  convention that progress reports stay private/gitignored, and shipped anyway as a deliberate,
+  tracked risk — this feature is the committed fast-follow (see
+  <code>backlog/artifact-publish-opt-out.md</code>).</p>
+  <p>Goal: a new profile field, <code>publish_artifact</code>, that decouples "generate this HTML
+  doc" from "publish it externally," so a profile can keep doing the former without the latter.</p>
+</section>
+
+<section id="nongoals">
+  <h2>Non-Goals</h2>
+  <ul>
+    <li><strong>Not auto-cleanup.</strong> Deleting/unpublishing an already-published artifact
+      automatically after some approval event was considered and closed as infeasible
+      (2026-08-16) — the <code>Artifact</code> tool has no per-artifact delete, only
+      whole-conversation deletion. This feature is a publish-time gate, not a post-hoc cleanup
+      mechanism.</li>
+    <li><strong>Not changing today's behavior.</strong> All four shipped profiles default
+      <code>publish_artifact: true</code> — per Jack's explicit call, nothing publishes
+      differently the day this ships. The field exists so a profile <em>can</em> be flipped later,
+      not to change any profile's behavior now.</li>
+    <li><strong>Not a new gate on report/spec generation itself.</strong> <code>reporting: false</code>
+      already controls whether <code>report-implementation</code> runs at all; this field only
+      governs the publish step within a run that's already happening.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>One new boolean field, <code>publish_artifact</code>, added to all four
+  <code>profiles/*.yml</code> files (<code>digismith</code>, <code>emma</code>, <code>jazurite</code>,
+  <code>personal</code>), all set to <code>true</code>. Same resolution mechanism every other
+  profile field already uses — <code>.digismith/profile</code> → profile name →
+  <code>profiles/&lt;name&gt;.yml</code> — no new lookup machinery.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="tag">report-implementation</div>
+      <h4>Step 4, item 5 (Publish as an artifact)</h4>
+      <p>Reuses the same profile already resolved for the <code>reporting</code> gate in
+      Prerequisites — no re-locating or re-asking. Checks <code>publish_artifact</code> immediately
+      before the <code>Artifact</code> tool call.</p>
+    </div>
+    <div class="card">
+      <div class="tag">digismith:enforcer</div>
+      <h4>Step 3 (Publish — HTML Artifact)</h4>
+      <p>Same profile-resolution rule <code>inject-standards</code> and <code>using-digismith</code>
+      already use. Checks <code>publish_artifact</code> immediately before the <code>Artifact</code>
+      tool call.</p>
+    </div>
+  </div>
+
+  <p>No central orchestrator relaying the decision — each of the two consuming skills performs this
+  check independently, at its own trigger point, matching the precedent <strong>O</strong>'s own
+  design established for <code>ticket</code>/<code>ephemeral</code>/<code>reporting</code>.</p>
+</section>
+
+<section id="behavior">
+  <h2>Behavior When False</h2>
+  <p>Skip the <code>Artifact</code> tool call only. The HTML doc itself (<code>design.html</code> or
+  <code>report.html</code>) is still written and committed exactly as it is today — generation and
+  publishing stay fully decoupled. State the outcome plainly rather than silently omitting the
+  publish step: <em>"Not published — <code>publish_artifact: false</code> in this repo's
+  profile."</em></p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling &amp; Verification</h2>
+  <ul>
+    <li><strong>Missing <code>.digismith/profile</code></strong> → unchanged existing behavior:
+      publish proceeds (same as <code>reporting</code>'s own missing-file case).</li>
+    <li><strong>Profile exists but predates this field</strong> (an older
+      <code>profiles/&lt;name&gt;.yml</code> written before <code>publish_artifact</code> existed,
+      or a stale <code>.digismith/profile</code> pointer with no matching file) → treat the field as
+      absent, default to <code>true</code> — same absent-field convention already used for
+      <code>reporting: true, or the field absent → proceed as today</code>.</li>
+    <li>No automated test suite, consistent with every DigiSmith skill. Verification is dogfooding:
+      flip one profile's <code>publish_artifact</code> to <code>false</code> in a fixture, confirm
+      the HTML doc still gets written/committed but the <code>Artifact</code> call is skipped and
+      reported plainly; flip back.</li>
+  </ul>
+</section>
+
+<section id="relationship">
+  <h2>Relationship to Other Map Items</h2>
+  <ul>
+    <li><strong>O (Profiling)</strong> — this is a direct schema extension, exactly the kind its own
+      design doc anticipated ("When one of those ships and a profile actually needs to vary on it,
+      extend the schema then"). <code>MEMORY.md</code>'s map-table row for O should mention the new
+      field alongside <code>ticket</code>/<code>ephemeral</code>/<code>reporting</code>.</li>
+    <li><strong>Q (Enforcer)</strong> — closes the gap flagged during Q's own final review and
+      recorded in <code>backlog/artifact-publish-opt-out.md</code>; no other change to Q's shipped
+      behavior.</li>
+    <li><strong>N (report-implementation)</strong> — gains the same conditional gate Q's Task 3
+      already added the publish step for; otherwise unaffected.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/publish-artifact-toggle/design.html</footer>
+
+</body>
+</html>
