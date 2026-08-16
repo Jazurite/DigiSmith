@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: Invoked internally by digismith:init for fresh-start ticket work — never invoke directly. Gets a real ticket, creates its branch/worktree, and hands off to superpowers:brainstorming.
+description: Invoked internally by digismith:init for fresh-start ticket work — never invoke directly.
 ---
 
 # Bootstrap (Fresh-Start Path)
