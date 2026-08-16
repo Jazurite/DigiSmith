@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Tiering — K.1: Chutes-Backed Mechanical Text Offload</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Model Tiering — K.1: Chutes-Backed Mechanical Text Offload</h1>
+  <div class="meta">
+    <span>Date: 2026-08-16</span>
+    <span>Map item: K (first slice, K.1)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; Feasibility Spike</a></li>
+    <li><a href="#scope">Scope: K.1 vs. the Rest of the Initiative</a></li>
+    <li><a href="#architecture">Architecture &amp; Components</a></li>
+    <li><a href="#profile-schema">Profile Schema Change</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#future-phases">Future Phases (K.2+, Not Designed Here)</a></li>
+    <li><a href="#open-questions">Open Questions</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; Feasibility Spike</h2>
+  <p>MEMORY.md's Open Questions section flagged that map item K's feasibility was
+  unverified, and explicitly called for a feasibility spike before speccing —
+  not during. That spike ran first and settled the question:</p>
+  <div class="callout">
+    <strong>No per-subagent non-Anthropic model routing exists.</strong>
+    Verified against the official Agent SDK docs: <code>AgentDefinition.model</code>
+    (and Claude Code's agent frontmatter <code>model:</code> field) accept only
+    Anthropic model aliases or full Anthropic model IDs — no custom
+    <code>baseURL</code>, no OpenAI-compatible endpoint, no per-agent provider
+    override. The only global escape hatch, <code>ANTHROPIC_BASE_URL</code>,
+    repoints the entire session at once, not individual subagents.
+  </div>
+  <p>Chutes.ai — the open-weight provider named in the original roadmap note —
+  was checked directly too. It's a plain OpenAI-compatible HTTP inference API
+  (<code>llm.chutes.ai/v1/chat/completions</code>); nothing on its side plugs
+  into Claude Code's subagent dispatch either. Its own routing/pooling
+  (comma-separated model lists, <code>:latency</code>/<code>:throughput</code>
+  failover, model-alias packs) only spans Chutes-hosted models — it can't
+  reach across to Claude, since Claude isn't hosted there. A unified
+  frontier-to-open-weight routing layer can't live entirely on Chutes' side;
+  DigiSmith itself has to be the thing deciding which call goes where.</p>
+  <p>This also surfaced that <code>superpowers:subagent-driven-development</code>
+  already does cost-aware model selection today — its own "Model Selection"
+  section instructs the controller to pick the least powerful Anthropic tier
+  (haiku/sonnet/opus) per task role, and explicitly warns that cheaper models
+  taking more turns can cost more overall than a mid-tier model would have.
+  So the real, previously-unaddressed gap in K was never "model tiering" in
+  general — it's specifically the open-weight extension, and that extension
+  cannot take the form of literal subagent dispatch with today's tooling.</p>
+</section>
+
+<section id="scope">
+  <h2>Scope: K.1 vs. the Rest of the Initiative</h2>
+  <p>Given the above, three narrower directions were considered instead of a
+  literal subagent-model-swap: (1) offload specific mechanical subtasks
+  within real implementer tasks via an MCP tool call, (2) formalize the
+  existing Anthropic-tier routing convention into something enforceable, or
+  (3) target DigiSmith's own internal mechanical text-generation steps —
+  places where the acting Claude session drafts well-specified text (HTML
+  formatting, report/PR-description drafting) with no code-correctness risk
+  at stake, since a human or a downstream skill reviews the result either
+  way. Option 3 was chosen as the lowest-risk, most concretely valuable
+  first slice, and doesn't touch the implementer/reviewer/fix-loop machinery
+  that real code changes depend on at all.</p>
+  <p>Model tiering is understood to be a larger, multi-phase initiative —
+  this document specs only its first slice, designated <strong>K.1</strong>
+  following the same sub-item convention the map already uses for other
+  large items (<strong>I.1/I.2/I.3</strong>, <strong>L.1/L.2</strong>,
+  <strong>E.1/E.2</strong>). Everything beyond K.1 — including the
+  implementer-task offload and multi-provider directions raised and set
+  aside during this brainstorm — is deliberately left undesigned; see
+  <a href="#future-phases">Future Phases</a>.</p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture &amp; Components</h2>
+  <ul>
+    <li>New profile field <code>model_offload_provider</code> in
+    <code>profiles/*.yml</code> — a string naming the provider
+    (<code>chutes</code> for now), absent/omitted meaning the feature is
+    off. Structured as a single named value, not a list, since only one
+    provider is implemented; adding a second provider later means adding
+    its implementation, not redesigning the config. Only the
+    <code>digismith</code> profile sets it initially — other profiles stay
+    off until this is proven out.</li>
+    <li>New shared script <code>scripts/model-offload.py</code> at the repo
+    root. Takes a prompt (and a target-format hint) as input; reads the
+    active profile's <code>model_offload_provider</code>; reads the Chutes
+    API key from the credential store the <code>chutes-ai</code> skill
+    already manages (<code>~/.chutes/config</code> — no new secret
+    storage); calls <code>POST https://llm.chutes.ai/v1/chat/completions</code>
+    with a fixed cheap-fast model suited to formatting/drafting (e.g.
+    <code>google/gemma-4-31B-turbo-TEE</code>, not a reasoning model);
+    validates the response is non-empty and roughly matches the expected
+    shape; prints either the generated content or a clear failure marker.
+    One script, one credential path, one validation/fallback rule, reused
+    by both call sites below (and any future one).</li>
+    <li>Two call sites, both existing DigiSmith skills modified to use the
+    script for one specific step each:
+      <div class="cards">
+        <div class="card">
+          <div class="tag">enforcer · map item Q</div>
+          <h4>Step 2 rewrap</h4>
+          <p>When <code>brainstorming</code>'s output lands in the wrong
+          place/format, enforcer rewraps it into the HTML shell. This
+          rewrap becomes the offloaded call.</p>
+        </div>
+        <div class="card">
+          <div class="tag">report-implementation · map item N</div>
+          <h4>Report/PR-description drafting</h4>
+          <p>Drafting <code>report.html</code> from the ledger, commit
+          list, and final-review findings becomes the offloaded call.</p>
+        </div>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<section id="profile-schema">
+  <h2>Profile Schema Change</h2>
+  <p>Adds one optional field to the existing profile shape (see
+  <code>profiles/digismith.yml</code> today: <code>name</code>,
+  <code>standards</code>, <code>ticket</code>, <code>ephemeral</code>,
+  <code>reporting</code>, <code>publish_artifact</code>,
+  <code>logging</code>):</p>
+  <pre><code>model_offload_provider: chutes   # optional; absent = feature off</code></pre>
+  <p>A missing field, or a value naming a provider the script doesn't
+  implement, is treated identically to "feature off" — same disposition
+  DigiSmith's other profile-driven gates already use for an absent or
+  stale value.</p>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow</h2>
+  <ul>
+    <li><strong>enforcer's rewrap case:</strong> has the misplaced content
+    <code>brainstorming</code> actually wrote, plus the target HTML shell.
+    It builds a prompt ("wrap this body content into this exact shell,
+    fill these placeholders") and pipes it to
+    <code>scripts/model-offload.py</code>. On success, writes the returned
+    HTML to <code>.digismith/docs/&lt;slug&gt;/design.html</code>. On
+    failure, performs the rewrap itself, exactly as it does today.</li>
+    <li><strong>report-implementation's drafting step:</strong> has the
+    ledger, commit list, and final-review findings already assembled. It
+    builds a prompt with that structured input and the report template,
+    pipes it to the same script. On success, writes <code>report.html</code>.
+    On failure, drafts it in-session as today.</li>
+    <li>Both call sites report which path was taken ("generated via
+    Chutes" vs. "generated in-session, offload unavailable/off") so the
+    choice is visible after the fact, never silent either way.</li>
+  </ul>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <ul>
+    <li>Failure modes the script treats as "fail → let the caller fall
+    back": no <code>model_offload_provider</code> in profile, no Chutes
+    credentials found, network/timeout error, non-2xx response, empty or
+    clearly truncated response.</li>
+    <li>No retries — one attempt, then fall back. This is a cost-saving
+    optimization, not a critical path; retry complexity isn't worth it for
+    a personal tool's nice-to-have.</li>
+    <li>Fallback is always silent-to-the-pipeline (never blocks) but never
+    silent-to-the-user: the calling skill states plainly that it fell back
+    and generated the content itself.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>This hits a real external API, so verification is manual rather than
+  automated: toggle <code>model_offload_provider: chutes</code> on this
+  repo's own (<code>digismith</code>) profile, trigger both call sites for
+  real, and confirm output quality. Separately verify the fallback path by
+  temporarily pointing the script at a bad credential or URL and confirming
+  both skills still complete, using in-session generation, with the
+  fallback stated plainly. Consistent with this project's existing
+  "no automated JS syntax validation, done manually" convention — there is
+  no existing test harness for DigiSmith's own skills to extend, and this
+  script has no internal logic complex enough to warrant one.</p>
+</section>
+
+<section id="future-phases">
+  <h2>Future Phases (K.2+, Not Designed Here)</h2>
+  <p>Raised during this brainstorm and deliberately left unscoped, each a
+  candidate for its own future brainstorm once K.1 has proven the
+  mechanism out:</p>
+  <ul>
+    <li><strong>Implementer-task offload.</strong> Offloading qualifying
+    mechanical CODE subtasks within real <code>subagent-driven-development</code>
+    plans — closer to the roadmap's original literal wording, but carries
+    real code-quality risk and interacts with the existing review/fix-loop
+    machinery. Considered and set aside for K.1 specifically because of
+    that risk.</li>
+    <li><strong>Multi-provider selection.</strong> A list/fallback-order
+    mechanism across several third-party compute providers, each end-user-
+    configurable, rather than the single named provider K.1 implements.
+    Set aside until a second provider actually exists to design against.</li>
+    <li><strong>A custom dispatch shim bypassing the Agent tool entirely</strong>
+    for whole mechanical tasks (not just DigiSmith's own internal steps) —
+    raised as an option during the feasibility discussion, explicitly
+    flagged there as a much bigger scope (a new dependency class, not a
+    skill tweak) likely deserving its own separate roadmap item rather than
+    living under K at all.</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open Questions</h2>
+  <ul>
+    <li>Exact Chutes model choice for <code>scripts/model-offload.py</code>
+    (<code>google/gemma-4-31B-turbo-TEE</code> proposed above as a
+    reasonable default) is not pinned down by user decision — it's a
+    swappable implementation detail the script can adjust if output
+    quality disappoints, not a load-bearing design choice.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/model-tiering/design.html</footer>
+
+</body>
+</html>
