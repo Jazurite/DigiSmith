@@ -66,7 +66,8 @@ One plugin, self-hosted marketplace. The repo is both:
 │   ├── jazurite.yml
 │   └── digismith.yml
 └── skills/
-    ├── using-digismith/
+    ├── init/
+    ├── adopt/
     └── ...
 ```
 
@@ -96,7 +97,7 @@ tiering below.
 | **B** | Spec seam | Carry ticket context *into* `superpowers:brainstorming` so it doesn't start cold |
 | **C** | Live work journal | `0. Terminal/Working Notes/<KEY>.md` kept current as work happens — the handoff artifact to `2. Career/` |
 | **D** | Delivery | merge → release → verification → announcement |
-| **E** | The spine | **E.1** first slice, shipped: intake → branch → brainstorming hand-off via `using-digismith` · **E.2** the rest of the prescriptive driver — full stage-order enforcement and routing to everything else as later stages ship |
+| **E** | The spine | **E.1** first slice, shipped: intake → branch → brainstorming hand-off via `digismith:init` (dispatching to `bootstrap`) · **E.1-amend** unified entry point, shipped: `digismith:init` also detects and adopts mid-stream work (`digismith:adopt`) for the recurring case where a ticket's spec/plan were already written outside DigiSmith · **E.2** the rest of the prescriptive driver — full stage-order enforcement and routing to everything else as later stages ship |
 | **F** | Design review | Independent critique of a design, then the jade-and-ink artifact rendering for human approval |
 | **G** | Standards injection | Jack's coding standards + style guide carried into every implementer subagent's brief |
 | **H** | Subagent-driven always | Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2 |
@@ -107,7 +108,7 @@ tiering below.
 | **M** | Ephemeral deploy capture | Poll Emma CI/CD's ephemeral-deploy check on an open PR and extract the Shopify Preview + Theme Editor URLs from the bot's PR comment, reported in-session. Split out from **I.1** during brainstorming (2026-08-08) once the JIRA write-back was pushed to its own later feature — this piece has no JIRA dependency at all |
 | **N** | Implementation reporting | Formalizes G's hand-written report into a required step: once a `subagent-driven-development` plan's final review passes, generate the HTML implementation report (delivered work, per-task review table, final-review findings, commit list) before the plan's ledger gets deleted |
 | **O** | Profiling | A per-repo behavior profile (standards subset, ticket/ephemeral/reporting/publish_artifact on-off) that existing stages consult independently at their own trigger point — new letter, added directly per Jack's request during this brainstorm |
-| **P** | Telemetry | Captures the full Claude Code session transcript for a DigiSmith-driven ticket build (using-digismith start → finishing-a-development-branch's integration decision) and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis. Raw and unredacted by deliberate choice — new letter, added directly per Jack's request during this brainstorm |
+| **P** | Telemetry | Captures the full Claude Code session transcript for a DigiSmith-driven ticket build (`digismith:init` start, via `bootstrap` or `adopt` → finishing-a-development-branch's integration decision) and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis. Raw and unredacted by deliberate choice — new letter, added directly per Jack's request during this brainstorm |
 | **Q** | Convention enforcement | Makes `superpowers:brainstorming`/`superpowers:writing-plans` honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that any HTML doc DigiSmith writes gets published via the `Artifact` tool for readability, unless the active profile has `publish_artifact: false` |
 
 Shared primitive several stages need: **JIRA write-back** (posting comments,
@@ -245,20 +246,23 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   entirely: it is never `git add -f`'d, so a repo that chose gitignored (or carries a bare
   `.digismith/` line predating this feature, which prefix-matches the profile file too) keeps its
   choice intact. What is guaranteed instead is **physical presence wherever work actually
-  happens**: `using-digismith` Step 0 writes it in the original checkout, and Step 2.6 copies it
+  happens**: `bootstrap` Step 0 writes it in the original checkout, and Step 2.6 copies it
   into the worktree Step 2 creates or attaches — a worktree checks out only committed files, so
-  without that copy it simply wouldn't be there. `inject-standards`,
-  `capture-ephemeral-url`, `report-implementation`, and `using-digismith`'s own Step 1.5 (the
+  without that copy it simply wouldn't be there. `digismith:adopt` reuses this exact Step 0/2.6
+  logic by reference for the mid-stream case, rather than a second implementation. `inject-standards`,
+  `capture-ephemeral-url`, `report-implementation`, and `bootstrap`'s own Step 1.5 (the
   `logging` gate) each read it from that working directory at their own trigger point; a missing
   file reads as "no profile" and silently restores unrestricted, pre-profiling behavior.
 - **`.digismith/telemetry-marker` follows the same contract** (map item P). It is config-shaped
   runtime state, not generated docs output: never `git add -f`'d, never committed on purpose, and
-  guaranteed only by **physical presence wherever work happens** — `digismith:using-digismith`
+  guaranteed only by **physical presence wherever work happens** — `digismith:bootstrap`
   Step 1.5 writes it in the original checkout and Step 2.7 copies it into the worktree, exactly as
-  2.6 does for `.digismith/profile`. Two skills touch it and no others:
-  `digismith:using-digismith` writes it (and unconditionally `rm -f`s any prior one at the start of
-  every run, so a stale marker can never be inherited by an unrelated ticket), and
-  `digismith:telemetry` reads it after the build finishes and deletes it. Unlike the profile
+  2.6 does for `.digismith/profile`. `digismith:adopt` writes its own equivalent for the
+  mid-stream case, mirroring the same unconditional-clear-first behavior. Three skills touch it
+  and no others: `digismith:bootstrap` and `digismith:adopt` write it (each unconditionally
+  `rm -f`s any prior one at the start of its own run, so a stale marker can never be inherited by
+  an unrelated ticket), and `digismith:telemetry` reads it after the build finishes and deletes
+  it. Unlike the profile
   pointer, a missing marker is always benign — it means "nothing to capture," which is the correct
   default.
 - **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
