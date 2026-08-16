@@ -33,9 +33,29 @@ Claude.ai Artifact link," with no way to decouple the two.
 
 ## Where this would land, not yet decided
 
-Likely a new profile field (e.g. `publish: true/false`) sitting alongside
-`reporting` in `profiles/<name>.yml`, consulted by both
-`report-implementation`'s new publish step and `digismith:enforcer`'s own
-`design.html` publish step. Not scoped or confirmed — could also turn out
-that `reporting: false` is judged sufficient on its own (skip generating
-the report entirely) and this never gets built.
+**Direction changed 2026-08-16 (Jack):** not a profile toggle that blocks
+publishing — auto-cleanup instead. Publish stays on by default; once the
+user has reviewed/approved the published artifact (design spec approval,
+or having read the implementation report), it gets deleted/unpublished
+automatically. This shrinks the exposure window instead of avoiding
+publication altogether, and keeps the "readable link" convenience Publish
+exists for.
+
+Two things this needs before it can be scoped for real:
+
+- **Feasibility is unverified.** The `Artifact` tool available this
+  session only exposes `publish` and `list` actions — no delete/unpublish
+  primitive. Confirm whether such a capability exists (perhaps gated
+  differently, or added later) before designing around it; if it doesn't
+  exist, this whole direction is blocked and the original toggle idea (or
+  something else) needs to be revisited.
+- **Trigger point is undefined.** "After user approval" needs a concrete
+  hook — `brainstorming`'s own "User reviews spec" gate for `design.html`
+  publish, but `report-implementation`'s `report.html` publish has no
+  equivalent built-in approval step to key off (the report is generated
+  and committed in one shot, nothing currently waits on the user reading
+  it). Needs its own design pass, not assumed to mirror the spec case.
+
+The original toggle idea (a `publish: true/false` profile field) is still
+a fallback if auto-cleanup turns out infeasible — not discarded, just not
+the lead option anymore.
