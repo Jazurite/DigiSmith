@@ -3,4 +3,5 @@ standards: [global]
 ticket: false
 ephemeral: false
 reporting: true
+publish_artifact: true
 logging: true

@@ -6,4 +6,5 @@ standards: [global, shopify, team]
 ticket: true
 ephemeral: true
 reporting: true
+publish_artifact: true
 logging: true
