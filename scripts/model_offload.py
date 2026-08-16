@@ -115,6 +115,8 @@ def offload(prompt, profile_path):
         return None, f"offload: failed (network error: {e})"
     except (KeyError, IndexError, json.JSONDecodeError) as e:
         return None, f"offload: failed (malformed response: {e})"
+    except OSError as e:
+        return None, f"offload: failed (connection error: {e})"
 
     if not content or not content.strip():
         return None, "offload: failed (empty response)"

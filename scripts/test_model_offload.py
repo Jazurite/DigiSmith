@@ -171,6 +171,13 @@ class TestOffload(unittest.TestCase):
         self.assertIsNone(content)
         self.assertIn("failed", status)
 
+    @patch("model_offload.call_chutes", side_effect=TimeoutError("The read operation timed out"))
+    @patch("model_offload.get_chutes_api_key", return_value="cpk_fake")
+    def test_failure_on_timeout_error(self, _mock_key, _mock_call):
+        content, status = model_offload.offload("hello", self.profile_path)
+        self.assertIsNone(content)
+        self.assertIn("failed", status)
+
     @patch("model_offload.call_chutes", return_value="   ")
     @patch("model_offload.get_chutes_api_key", return_value="cpk_fake")
     def test_failure_on_empty_response(self, _mock_key, _mock_call):
