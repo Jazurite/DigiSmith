@@ -206,14 +206,18 @@ Once Step 2 confirms `.digismith/docs/<slug>/design.html` is correctly
 placed, check whether this repo's profile allows publishing before
 calling `Artifact`.
 
-**Resolve the profile:** if `.digismith/profile` exists (see Detecting
-DigiSmith-Tracked Work above — this step only runs when that check
-already passed), read its one-line content as the active profile name.
-Locate DigiSmith's own repo — same rule used throughout this skill:
-current working directory has `.claude-plugin/plugin.json` with
-`"name": "digismith"` → use it directly; otherwise ask the user for the
-path and remember it; never read `profiles/` under a plugin cache path —
-a stale, version-locked snapshot. Read `profiles/<name>.yml` there.
+**Resolve the profile:** if `.digismith/profile` exists (this step runs
+whenever Detecting DigiSmith-Tracked Work passed — via repo identity *or*
+this file, so it may legitimately be absent), read its one-line content
+as the active profile name. Locate DigiSmith's own repo — same rule
+`digismith:inject-standards` and `report-implementation` use: current
+working directory has `.claude-plugin/plugin.json` with `"name":
+"digismith"` → use it directly; otherwise ask the user for the path and
+remember it. If that path can't be resolved (declined, or wrong), treat
+it the same as "no matching profile" below — proceed as if
+`publish_artifact` were absent/true. Never read `profiles/` under a
+plugin cache path — a stale, version-locked snapshot. Read
+`profiles/<name>.yml` there.
 
 - **No `.digismith/profile` file, or no matching `profiles/<name>.yml`**
   → treat as absent, proceed as below (same disposition as
