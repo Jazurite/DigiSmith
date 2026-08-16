@@ -23,9 +23,10 @@ The moment `superpowers:writing-plans` reaches its Execution Handoff
 step, right after a plan is saved, and is about to present "1.
 Subagent-Driven (recommended) / 2. Inline Execution — Which approach?"
 Applies globally, in any DigiSmith-installed environment — not gated by
-profile, and not limited to plans that started via
-`digismith:using-digismith` (a plan that began mid-flight, on an
-already-existing branch, still reaches this same trigger point).
+profile, and not limited to plans that started via `digismith:init`
+(whether dispatched through `bootstrap` or `adopt` — a plan adopted
+mid-flight, on an already-existing branch, still reaches this same trigger
+point).
 
 ## Process
 
