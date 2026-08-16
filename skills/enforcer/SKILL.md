@@ -202,16 +202,37 @@ the expected `.digismith/docs/<slug>/design.html`:
 
 ### Step 3: Publish — HTML Artifact, Convention Amendment
 
-Per `MEMORY.md`'s Conventions section (Unified Docs Convention entry),
-the per-feature HTML docs — `design.html` and `report.html`, specifically,
-never `.digismith/history.html` or the plain `plan.md`/`ticket.md`
-working files — get published for readability. Once Step 2
-confirms `.digismith/docs/<slug>/design.html` is correctly placed, call
-the `Artifact` tool on it: `title` from the doc's own `<title>` tag,
-`description` one sentence summarizing the feature, `favicon` one or two
-emoji fitting the feature's topic (pick contextually — never reuse a
-generic default across unrelated features). Report the returned URL back
-to whoever is running this.
+Once Step 2 confirms `.digismith/docs/<slug>/design.html` is correctly
+placed, check whether this repo's profile allows publishing before
+calling `Artifact`.
+
+**Resolve the profile:** if `.digismith/profile` exists (see Detecting
+DigiSmith-Tracked Work above — this step only runs when that check
+already passed), read its one-line content as the active profile name.
+Locate DigiSmith's own repo — same rule used throughout this skill:
+current working directory has `.claude-plugin/plugin.json` with
+`"name": "digismith"` → use it directly; otherwise ask the user for the
+path and remember it; never read `profiles/` under a plugin cache path —
+a stale, version-locked snapshot. Read `profiles/<name>.yml` there.
+
+- **No `.digismith/profile` file, or no matching `profiles/<name>.yml`**
+  → treat as absent, proceed as below (same disposition as
+  `publish_artifact: true`).
+- **`publish_artifact: false`** → skip the `Artifact` tool call entirely.
+  State plainly: "Not published — `publish_artifact: false` in this
+  repo's profile." `design.html` itself is unaffected — it was already
+  written (and, per Step 1's gitignore disposition, possibly committed)
+  before this check runs.
+- **`publish_artifact: true`, or the field absent** → proceed: per
+  `MEMORY.md`'s Conventions section (Unified Docs Convention entry), the
+  per-feature HTML docs — `design.html` and `report.html`, specifically,
+  never `.digismith/history.html` or the plain `plan.md`/`ticket.md`
+  working files — get published for readability. Call the `Artifact`
+  tool on `design.html`: `title` from the doc's own `<title>` tag,
+  `description` one sentence summarizing the feature, `favicon` one or
+  two emoji fitting the feature's topic (pick contextually — never reuse
+  a generic default across unrelated features). Report the returned URL
+  back to whoever is running this.
 
 ### Step 4: Advisory — Before `superpowers:writing-plans`
 
@@ -267,6 +288,10 @@ presented.
   report the failure plainly; the file itself is still correctly placed,
   so this doesn't roll back Step 2's correction — only the publish step
   didn't complete.
+- **Active profile has `publish_artifact: false`** → `design.html` is
+  still written (and committed, per Step 1's gitignore disposition)
+  exactly as normal; only the `Artifact` publish call (Step 3) is
+  skipped.
 
 ## Quick Reference
 
@@ -276,6 +301,6 @@ presented.
 | — | Resolve `<slug>` (reuse `using-digismith`'s, or derive via `jira-intake` Step 3.1's rule for ad-hoc calls) |
 | 1 | Advisory before `brainstorming`: exact target path + HTML shell (style block verbatim) |
 | 2 | Verified after `brainstorming`: check `design.html` landed correctly; move/rewrap if not |
-| 3 | Publish `design.html` via `Artifact`, report the link |
+| 3 | Publish `design.html` via `Artifact` unless the active profile has `publish_artifact: false`; report the link |
 | 4 | Advisory before `writing-plans`: exact target path, format unchanged |
 | 5 | Verified after `writing-plans`: check `plan.md` landed correctly; move if not |
