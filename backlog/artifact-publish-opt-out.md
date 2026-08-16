@@ -42,11 +42,14 @@ available is deleting the entire conversation the artifact was published
 from, which isn't a usable per-artifact cleanup primitive. This direction
 is closed, not just deprioritized.
 
-**Back to the original idea:** a new profile field (e.g. `publish:
-true/false`) sitting alongside `reporting` in `profiles/<name>.yml`,
-consulted by both `report-implementation`'s publish step and
-`digismith:enforcer`'s own `design.html` publish step. Still not scoped —
-open question is whether `reporting: false` is judged sufficient on its
-own (skip generating the report entirely, sidestepping the need for a
-separate flag) versus wanting reports generated-but-not-published as a
-genuinely distinct state.
+**Back to the original idea, field name steered by Jack 2026-08-16:** a
+new profile field — `show_artifact: true/false` (naming from Jack; exact
+snake_case vs. `artifact` alone to be finalized against the existing
+single-word style of `ticket`/`ephemeral`/`reporting`/`logging` when this
+is actually built) — sitting alongside `reporting` in
+`profiles/<name>.yml`, consulted by both `report-implementation`'s
+publish step and `digismith:enforcer`'s own `design.html` publish step.
+Still not scoped — open question is whether `reporting: false` is judged
+sufficient on its own (skip generating the report entirely, sidestepping
+the need for a separate flag) versus wanting reports
+generated-but-not-published as a genuinely distinct state.
