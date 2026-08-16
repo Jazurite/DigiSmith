@@ -152,7 +152,7 @@
     its implementation, not redesigning the config. Only the
     <code>digismith</code> profile sets it initially — other profiles stay
     off until this is proven out.</li>
-    <li>New shared script <code>scripts/model-offload.py</code> at the repo
+    <li>New shared script <code>scripts/model_offload.py</code> at the repo
     root. Takes a prompt (and a target-format hint) as input; reads the
     active profile's <code>model_offload_provider</code>; reads the Chutes
     API key from the credential store the <code>chutes-ai</code> skill
@@ -209,7 +209,7 @@
     <code>brainstorming</code> actually wrote, plus the target HTML shell.
     It builds a prompt ("wrap this body content into this exact shell,
     fill these placeholders") and pipes it to
-    <code>scripts/model-offload.py</code>. On success, writes the returned
+    <code>scripts/model_offload.py</code>. On success, writes the returned
     HTML to <code>.digismith/docs/&lt;slug&gt;/design.html</code>. On
     failure, performs the rewrap itself, exactly as it does today.</li>
     <li><strong>report-implementation's Step 3 render:</strong> Step 2 has
@@ -284,7 +284,7 @@
 <section id="open-questions">
   <h2>Open Questions</h2>
   <ul>
-    <li>Exact Chutes model choice for <code>scripts/model-offload.py</code>
+    <li>Exact Chutes model choice for <code>scripts/model_offload.py</code>
     (<code>google/gemma-4-31B-turbo-TEE</code> proposed above as a
     reasonable default) is not pinned down by user decision — it's a
     swappable implementation detail the script can adjust if output
