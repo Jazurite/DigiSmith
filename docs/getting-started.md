@@ -38,11 +38,11 @@ Asked once per repo, remembered in `.digismith/profile`. Change later
 with "switch this repo's profile to X" — it states the behavioral delta
 and confirms before writing.
 
-| Profile | ticket | standards | ephemeral | reporting | logging | Use for |
-|---|---|---|---|---|---|---|
-| `emma` | ✓ | global, shopify, team | ✓ | ✓ | ✓ | Client Shopify theme repos |
-| `personal` | – | – | – | ✓ | – | Throwaway / scratch personal work |
-| `jazurite` | – | – | – | ✓ | ✓ | Your own branded projects — process worth a corpus, no client machinery |
+| Profile | ticket | standards | ephemeral | reporting | publish_artifact | logging | Use for |
+|---|---|---|---|---|---|---|---|
+| `emma` | ✓ | global, shopify, team | ✓ | ✓ | ✓ | ✓ | Client Shopify theme repos |
+| `personal` | – | – | – | ✓ | ✓ | – | Throwaway / scratch personal work |
+| `jazurite` | – | – | – | ✓ | ✓ | ✓ | Your own branded projects — process worth a corpus, no client machinery |
 
 Declining the picker stops everything — no branch or worktree gets
 created until a profile is chosen.
@@ -70,7 +70,9 @@ trigger point inside the chain above, gated by the active profile:
   URLs from the bot's PR comment. Gated by `ephemeral`.
 - **N — implementation report.** The moment a plan's final review comes
   back clean, before that plan's ledger gets deleted. Gated by
-  `reporting`.
+  `reporting`. Report/spec generation itself isn't gated by
+  `publish_artifact` — the separate `Artifact`-publish step inside
+  `report-implementation` and `enforcer` is.
 - **P — telemetry.** At `finishing-a-development-branch`'s integration
   decision (merge, PR, or keep-as-is all count), commits this session's
   transcript slice back into DigiSmith's own repo. Gated by `logging`;

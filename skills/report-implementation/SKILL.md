@@ -66,6 +66,10 @@ DigiSmith's own repo, which only hosts this skill).
     Neither shipped profile turns reporting off, so this is the normal
     path.
 
+The same resolved profile (or its "missing"/"stale" disposition) carries
+forward to Step 4 item 5's `publish_artifact` check — read once here, not
+re-located or re-read there.
+
 This skill runs in the **controller session** — the one driving
 `superpowers:subagent-driven-development` — not as a sub-dispatched agent.
 That's what makes `AskUserQuestion` available, which Step 4's
@@ -476,12 +480,33 @@ rendered empty.
      because this repo's `.digismith/docs/` is gitignored — matching the
      choice already made for this repo. Do **not** re-ask the
      commit-vs-gitignore question, and do **not** override it with
-     `git add -f`. Skip to Step 5.
+     `git add -f`. Continue to item 5 below.
    - **Not ignored (exit 1)** → commit as normal:
      ```bash
      git add .digismith/docs/<feature-slug>/report.html
      git commit -m "docs: add <feature> (<map-item>) implementation report"
      ```
+
+5. **Publish as an artifact — unless the profile says not to.** Reuse the
+   profile already resolved in Prerequisites for the `reporting` gate —
+   don't re-locate or re-read it.
+   - **`publish_artifact: false`** → skip the `Artifact` tool call
+     entirely. State plainly: "Not published — `publish_artifact: false`
+     in this repo's profile." `report.html` itself is unaffected — it was
+     already written and (per item 4's disposition) possibly committed
+     before this item runs.
+   - **`publish_artifact: true`, the field absent, or no profile at
+     all** → proceed: per `MEMORY.md`'s Conventions section (Unified Docs
+     Convention entry), the per-feature HTML docs — `design.html` and
+     `report.html`, specifically, never `.digismith/history.html` or the
+     plain `plan.md`/`ticket.md` working files — get published for
+     readability. Call the `Artifact` tool on the just-written
+     `report.html`: `title` from `{{FEATURE_TITLE}}`, `description` from
+     the plan's own `**Goal:**` line, `favicon` one or two emoji fitting
+     the feature's topic. Report the returned URL alongside the report
+     path in Step 5's hand-back. This runs regardless of whether Step 4
+     committed the file — publishing to `Artifact` doesn't depend on the
+     repo's gitignore choice.
 
 ### Step 5: Hand Back
 
@@ -522,6 +547,15 @@ duplicate any part of that sequencing.
   commit-vs-gitignore question or to force with `-f`. (Exit code 1 from
   that command means "not ignored" — the normal path — not a failure.)
 - **Report file already exists** → ask before overwriting.
+- **`Artifact` publish call fails** (e.g. size limit, malformed HTML) →
+  report the failure plainly; `report.html` itself is still correctly
+  written (and committed, per the gitignore disposition above) regardless
+  — only the publish step didn't complete.
+- **Active profile has `publish_artifact: false`** → `report.html` is
+  still written (and committed, per the gitignore disposition above)
+  exactly as normal; only the `Artifact` publish call (item 5) is
+  skipped. Not the same disposition as `reporting: false` — the report
+  itself is never skipped, only its publication.
 - **Empty commit range** (`MERGE_BASE == HEAD`) → stop and say so —
   treat it as a sign something upstream is wrong, not as "no report
   needed."
@@ -533,5 +567,5 @@ duplicate any part of that sequencing.
 | 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites), ask if no final-review line |
 | 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings) |
-| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
+| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so; then publish `report.html` via the `Artifact` tool regardless of whether it was committed, unless the active profile has `publish_artifact: false` |
 | 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |
