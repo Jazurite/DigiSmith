@@ -1,7 +1,9 @@
 import os
+import sys
 import tempfile
 import unittest
 import urllib.error
+from io import StringIO
 from unittest.mock import patch
 
 import model_offload
@@ -83,6 +85,39 @@ class TestOffload(unittest.TestCase):
         content, status = model_offload.offload("hello", self.profile_path)
         self.assertIsNone(content)
         self.assertIn("empty", status)
+
+
+class TestMainErrorHandling(unittest.TestCase):
+    def test_main_handles_missing_prompt_file(self):
+        """Test main() gracefully handles missing prompt file."""
+        # Capture stderr
+        captured_err = StringIO()
+        old_stderr = sys.stderr
+        sys.stderr = captured_err
+
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                # Save original argv
+                old_argv = sys.argv
+                try:
+                    sys.argv = [
+                        "model_offload.py",
+                        "--prompt-file",
+                        "/nonexistent/path/file.txt",
+                    ]
+                    model_offload.main()
+                finally:
+                    sys.argv = old_argv
+
+            # Verify exit code is 1
+            self.assertEqual(cm.exception.code, 1)
+
+            # Verify stderr contains the expected error message format
+            err_output = captured_err.getvalue()
+            self.assertIn("offload: failed", err_output)
+            self.assertIn("cannot read prompt file", err_output)
+        finally:
+            sys.stderr = old_stderr
 
 
 if __name__ == "__main__":

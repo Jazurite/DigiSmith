@@ -101,8 +101,12 @@ def main():
     parser.add_argument("--profile-path", default=".digismith/profile")
     args = parser.parse_args()
 
-    with open(args.prompt_file, "r", encoding="utf-8") as f:
-        prompt = f.read()
+    try:
+        with open(args.prompt_file, "r", encoding="utf-8") as f:
+            prompt = f.read()
+    except OSError as e:
+        print(f"offload: failed (cannot read prompt file: {e})", file=sys.stderr)
+        sys.exit(1)
 
     content, status = offload(prompt, args.profile_path)
     print(status, file=sys.stderr)
