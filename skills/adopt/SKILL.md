@@ -7,7 +7,9 @@ description: Invoked internally by digismith:init when a ticket's spec and plan 
 
 ## Overview
 
-Resolves the recurring friction behind `backlog/mid-development-workflow-injection.md`:
+Resolves the recurring friction Jack captured as
+`backlog/mid-development-workflow-injection.md` (retired once this shipped —
+see `.digismith/history.html`'s 2026-08-16 entry):
 a ticket ID pulled through an external source (e.g. an Atlassian MCP
 connector) plus a spec and plan already written by vanilla
 `superpowers:brainstorming`/`superpowers:writing-plans`, with none of
@@ -37,6 +39,13 @@ Ask for whatever isn't already obvious from the conversation:
 - Path to the existing spec file, if one exists. **Optional** — some
   tickets go straight from a raw need to a hand-written plan with no formal
   spec step.
+
+Read the full content of the plan file (and the spec file, if supplied) into
+your own context now — mirroring `digismith:bootstrap` Step 1's identical
+concern for `ticket.md`: a later step may switch into a newly-attached
+worktree, and a relative path that was valid in the original directory won't
+necessarily still resolve after that switch. Carry the content forward; never
+plan on re-reading these files from inside a worktree Step 4 might attach.
 
 ### Step 2: Resolve Profile
 
@@ -104,6 +113,16 @@ worktree), copy the file in now: a plain file copy, never `git add`, never
 `git add -f`, never a commit — mirrors `digismith:bootstrap` Step 2.6
 exactly, same reasoning (a worktree checks out only committed files).
 
+**Ticket docs.** If Step 3 wrote (or moved) `.digismith/docs/<slug>/ticket.md`
+somewhere other than the worktree Step 4 left you in — i.e. Step 4 attached a
+brand-new worktree rather than you already being inside an isolated one — copy
+that entire `.digismith/docs/<slug>/` folder into the worktree now: a plain
+file copy, never `git add`, never `git add -f`, never a commit. Same reasoning
+as the profile copy above — a worktree checks out only committed files, so a
+folder written moments ago in a different directory would otherwise simply not
+exist here. When Step 4 found you already inside an isolated worktree, there's
+nothing to copy — Step 3 already wrote directly into it.
+
 **Telemetry marker.** First, unconditionally clear any marker left over from
 a previous ticket in this same checkout, regardless of what the profile
 says — same reasoning as `digismith:bootstrap` Step 1.5:
@@ -159,15 +178,18 @@ Run `digismith:enforcer`'s Step 2/5 "Verified" move-and-correct logic
 directly, against the plan (and spec, if one was supplied) from Step 1,
 targeting the slug resolved in Step 3:
 
-- **Plan:** move the file from Step 1's supplied path to
+- **Plan:** write the content you read into context in Step 1 to
   `.digismith/docs/<slug>/plan.md`, creating the folder if needed. Format
   doesn't change — plans are already Markdown.
-- **Spec, if supplied:** rewrap its content into `digismith:enforcer`'s HTML
-  shell at `.digismith/docs/<slug>/design.html` (reuse the shell
-  byte-for-byte from `digismith:enforcer`'s Step 1), respecting the same
-  gitignore check (`git check-ignore -q .digismith/docs/<slug>/design.html`)
-  and `publish_artifact` gate `digismith:enforcer` Step 3 already defines.
-  No spec supplied → skip `design.html` entirely, not an error.
+- **Spec, if supplied:** rewrap the content you read into context in Step 1
+  into `digismith:enforcer`'s HTML shell at
+  `.digismith/docs/<slug>/design.html` (reuse the shell byte-for-byte from
+  `digismith:enforcer`'s Step 1), respecting the same gitignore check
+  (`git check-ignore -q .digismith/docs/<slug>/design.html`) and
+  `publish_artifact` gate `digismith:enforcer` Step 3 already defines —
+  publishing `design.html` via the `Artifact` tool when that gate allows it,
+  exactly as `digismith:enforcer` Step 3 does. No spec supplied → skip
+  `design.html` entirely, not an error.
 - **Relocation target already exists with different content** (e.g. a
   previous partial `digismith:adopt` run, or a genuine naming collision) →
   ask before overwriting, same "never silently overwrite" posture used
@@ -208,10 +230,10 @@ both trigger off the dispatch itself, not off which entry point produced it.
 
 | Step | Action |
 |---|---|
-| 1 | Confirm ticket key, plan path (required), spec path (optional) |
+| 1 | Confirm ticket key, plan path (required), spec path (optional); read the plan's (and spec's) full content into context now, before any worktree switch |
 | 2 | Resolve profile — run `digismith:bootstrap` Step 0 exactly |
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
-| 5 | Copy `.digismith/profile` in if needed; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
-| 6 | Relocate plan (required) and spec (optional) into `.digismith/docs/<slug>/` via `digismith:enforcer`'s move-and-correct logic |
+| 5 | Copy `.digismith/profile` and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
+| 6 | Write Step 1's in-hand plan (required) and spec (optional) content into `.digismith/docs/<slug>/` via `digismith:enforcer`'s move-and-correct logic, publishing `design.html` when `publish_artifact` allows |
 | 7 | Invoke `superpowers:subagent-driven-development` directly against the relocated `plan.md` |

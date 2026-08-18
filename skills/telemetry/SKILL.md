@@ -58,17 +58,19 @@ after the **first** colon survives — `started_at` values like
 `2026-08-12T14:07:33Z` contain colons of their own and must not be
 truncated. `ticket_key` is empty when the marker has no such line
 (`digismith:bootstrap` Step 1.5, or `digismith:adopt`'s equivalent step,
-omits it unless a real ticket key was resolved); every other variable should be non-empty — if
-`transcript`, `session_id`, `start_line`, `started_at`, `repo`, or `slug`
-comes back empty, the marker is malformed, see Error Handling.
+omits it unless a real ticket key was resolved); every other variable
+should be non-empty — if `transcript`, `session_id`, `start_line`,
+`started_at`, `repo`, or `slug` comes back empty, the marker is
+malformed, see Error Handling.
 
 `session_id` is the transcript file's basename with `.jsonl` stripped.
 It is recorded separately from `transcript` on purpose: the recorded
 absolute path is computed in the original checkout, *before*
-`bootstrap`/`adopt` enters or attaches a worktree, and Claude Code re-homes a
-session's transcript to the project directory matching its current cwd
-— so the recorded path routinely goes stale while the session ID stays
-valid. Step 2 uses the ID to find the file again.
+`digismith:bootstrap`/`digismith:adopt` enters or attaches a worktree,
+and Claude Code re-homes a session's transcript to the project directory
+matching its current cwd — so the recorded path routinely goes stale
+while the session ID stays valid. Step 2 uses the ID to find the file
+again.
 
 Note the current working directory too — this is the *consumer* repo,
 and Step 5 needs to come back here to delete the marker after Steps 4-5's
@@ -81,11 +83,11 @@ CONSUMER_REPO_DIR="$(pwd)"
 ### Step 2: Resolve the Transcript, Then Slice It
 
 **Resolve first — do not test the recorded path alone.** The path in the
-marker was recorded before `bootstrap`/`adopt` entered a worktree, and the
-session's transcript has almost certainly been re-homed since (Claude
-Code files a session's transcript under the project directory matching
-its *current* cwd). Try three locations in order and take the first that
-exists:
+marker was recorded before `digismith:bootstrap`/`digismith:adopt`
+entered a worktree, and the session's transcript has almost certainly
+been re-homed since (Claude Code files a session's transcript under the
+project directory matching its *current* cwd). Try three locations in
+order and take the first that exists:
 
 ```bash
 CWD_ENCODED=$(pwd | sed 's/[^a-zA-Z0-9]/-/g')
@@ -266,8 +268,8 @@ exactly as written — do not re-invoke or duplicate any part of it.
   against the same stale pointer. Never block
   `finishing-a-development-branch`'s own flow over this. A miss on the
   recorded path alone is **not** this case — that's the expected state
-  after `bootstrap`/`adopt` entered a worktree, and tiers (b) and (c)
-  exist precisely to recover from it.
+  after `digismith:bootstrap`/`digismith:adopt` entered a worktree, and
+  tiers (b) and (c) exist precisely to recover from it.
 - **Zero or negative new lines since `start_line`** → nothing happened
   since the marker was written (e.g. the marker was written but the
   ticket's build never really started in this session). Skip silently,

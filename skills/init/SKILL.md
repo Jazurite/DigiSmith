@@ -34,31 +34,50 @@ directly instead.
 
 ### Step 0: Already-Initialized Check
 
-Check for `.digismith/profile` in the current working directory — the repo
-or worktree currently being worked in, never DigiSmith's own repo unless
-that is genuinely the repo being worked in.
+`.digismith/profile` is repo-level config, chosen once and persisted in the
+original checkout for as long as DigiSmith is used in this repo (see
+`digismith:bootstrap` Step 0) — its mere presence means "this repo has a
+profile," not "this specific ticket is done." Don't short-circuit on it
+alone.
 
-**Present** → this worktree was already fully set up by DigiSmith, via
-either `digismith:bootstrap` or `digismith:adopt`. Read its one-line
-content as `<name>`. Derive `<slug>` from the current branch name alone —
-strip a leading `<Key>__` prefix if the branch matches that pattern (regex
-`^([A-Z]+-\d+)__`), otherwise use the branch name as-is; this is a plain
-string operation on the branch name already in hand, not a re-run of
-Step 1's detection. Report plainly:
+Check, in order:
 
-```
-Already initialized for DigiSmith (profile: <name>, docs at
-.digismith/docs/<slug>/).
-```
+1. **Current branch is the repo's base branch** (main/master, or whatever
+   `git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed
+   's@^origin/@@'` resolves to; fall back to checking for a local `main`
+   or `master` branch if that fails) → always fall through to Step 1,
+   regardless of whether `.digismith/profile` exists here. The profile
+   file living in the original checkout is expected and correct at this
+   point — `digismith:bootstrap`'s own Step 0 reads it without re-asking
+   when Step 1 dispatches there.
+2. **Not on the base branch, and `.digismith/profile` is present**: derive
+   `<slug>` from the current branch name — strip a leading `<Key>__`
+   prefix if it matches (regex `^([A-Z]+-\d+)__`), otherwise use the
+   branch name as-is. Check whether `.digismith/docs/<slug>/plan.md`
+   exists.
+   - **Exists** → this worktree was already fully set up by DigiSmith for
+     this specific ticket. Read the profile's one-line content as
+     `<name>` and report plainly:
 
-Stop here — no re-running detection, no re-relocating docs, no further
-questions. Same posture as `git init` on an existing repo: a notice, not a
-cascade. (If the user's actual request was "switch this repo's profile to
-X" rather than "start/resume work," that still routes to `digismith:bootstrap`'s
-existing profile-switch handling — invoke `digismith:bootstrap` directly
-for that specific request only, bypassing Step 1 below.)
+     ```
+     Already initialized for DigiSmith (profile: <name>, docs at
+     .digismith/docs/<slug>/).
+     ```
 
-**Absent** → continue to Step 1.
+     Stop here — no re-running detection, no re-relocating docs, no
+     further questions. Same posture as `git init` on an existing repo: a
+     notice, not a cascade.
+   - **Doesn't exist** → the profile file is present (inherited from the
+     original checkout, or copied in by an earlier partial run) but this
+     specific ticket hasn't been set up yet. Continue to Step 1.
+3. **Not on the base branch, `.digismith/profile` absent** → continue to
+   Step 1.
+
+(If the user's actual request was "switch this repo's profile to X"
+rather than "start/resume work," that still routes to
+`digismith:bootstrap`'s existing profile-switch handling — invoke
+`digismith:bootstrap` directly for that specific request only, bypassing
+the rest of this skill.)
 
 ### Step 1: Detect Fresh-Start vs. Mid-Stream
 
@@ -92,9 +111,12 @@ Never guess between `digismith:bootstrap` and `digismith:adopt` when detection i
 
 ## Error Handling
 
-- **`.digismith/profile` present** → see Step 0; always stops there except
-  for an explicit profile-switch request, which routes straight to
-  `digismith:bootstrap`.
+- **`.digismith/profile` present, not on the base branch, and
+  `.digismith/docs/<slug>/plan.md` exists for this branch's slug** → see
+  Step 0; always stops there except for an explicit profile-switch request,
+  which routes straight to `digismith:bootstrap`. Profile present but on the
+  base branch, or off the base branch with no matching `plan.md` → falls
+  through to Step 1 normally, not an error.
 - **Detection ambiguous** (Step 1, row 4) → ask via `AskUserQuestion`, never
   guess.
 - **Past dispatch** → whichever of `digismith:bootstrap`/`digismith:adopt` was
@@ -105,5 +127,5 @@ Never guess between `digismith:bootstrap` and `digismith:adopt` when detection i
 
 | Step | Action |
 |---|---|
-| 0 | `.digismith/profile` present in cwd → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly) |
+| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + `.digismith/docs/<slug>/plan.md` exists for this branch → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
 | 1 | Base branch → `digismith:bootstrap`. Feature branch + `.digismith/docs/<slug>/plan.md` exists → `digismith:bootstrap`. Feature branch + plan exists elsewhere → `digismith:adopt`. Feature branch + no plan anywhere → ask, don't guess |

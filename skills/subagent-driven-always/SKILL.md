@@ -24,9 +24,9 @@ step, right after a plan is saved, and is about to present "1.
 Subagent-Driven (recommended) / 2. Inline Execution — Which approach?"
 Applies globally, in any DigiSmith-installed environment — not gated by
 profile, and not limited to plans that started via `digismith:init`
-(whether dispatched through `bootstrap` or `adopt` — a plan adopted
-mid-flight, on an already-existing branch, still reaches this same trigger
-point).
+(whether dispatched through `digismith:bootstrap` or `digismith:adopt` —
+a plan adopted mid-flight, on an already-existing branch, still reaches
+this same trigger point).
 
 ## Process
 
