@@ -8,9 +8,14 @@ across every map item, and [`docs/getting-started.md`](docs/getting-started.md)
 for the first-run walkthrough in a brand-new repo.
 
 This README covers the one skill you actually invoke to start working:
-**`using-digismith`**. Everything else on the roadmap (standards
-injection, ticket intake, and what's still to come) is wired in behind
-it or reachable directly — `using-digismith` is just the front door.
+**`digismith:init`**. It's safe to invoke regardless of whether a ticket's
+work is starting fresh or already mid-stream (a ticket ID pulled some other
+way, with a spec and plan already written directly by vanilla Superpowers)
+— it detects which applies and dispatches to one of two internal-only
+workers: `bootstrap` for a fresh ticket, `adopt` for one already mid-stream.
+Neither is invoked by name; `init` is the only front door. Everything else
+on the roadmap (standards injection, ticket intake, and what's still to
+come) is wired in behind it or reachable directly.
 
 Five skills sit outside that front door, because they trigger at
 specific points inside the build rather than at the front door itself —
@@ -74,7 +79,7 @@ its status.
 been answered — merge, PR, or keep as-is, all three count as "done for
 now." When the active profile has `logging: true`, it copies this
 ticket's slice of the live session transcript back into DigiSmith's own
-repo and commits it there, using a marker `using-digismith` dropped
+repo and commits it there, using a marker `bootstrap` or `adopt` dropped
 before the build began to know where that slice starts. It's raw
 capture, not analysis: the point is building the corpus a later pass can
 mine for how the process actually behaves. With `logging: false` (or no
@@ -98,10 +103,19 @@ Say something like:
 > "Begin implementation on this ticket"
 > "Let's build this now — [paste ticket or describe the need]"
 
-That's it. `using-digismith` takes it from there: gets a real ticket,
-creates an isolated branch/worktree for it, and hands off into
-`superpowers:brainstorming` with the ticket's content already loaded —
-no cold start.
+That's it. `digismith:init` takes it from there. For a fresh ticket, it
+gets a real ticket, creates an isolated branch/worktree for it, and hands
+off into `superpowers:brainstorming` with the ticket's content already
+loaded — no cold start.
+
+Already mid-stream — a ticket ID from your own tooling, a spec and plan
+already written directly by vanilla Superpowers, nothing built yet? Say so
+the same way: "pick this up in DigiSmith" or "catch this ticket up to
+DigiSmith." `init` detects the existing work and adopts it instead of
+starting over: backfills the profile/ticket/branch state, relocates the
+existing docs into DigiSmith's convention, and hands off straight to the
+build stage — brainstorming/writing-plans are skipped since they already
+ran.
 
 The first time you run it in a given repo, it asks one extra question
 first: which **profile** this repo uses (map item **O**). **Emma** — the
@@ -131,7 +145,7 @@ explicitly (or invoke `digismith:jira-intake` directly) instead.
 
 ### 1. Get a real ticket
 
-If this conversation doesn't already have a ticket, `using-digismith`
+If this conversation doesn't already have a ticket, `bootstrap`
 invokes `digismith:jira-intake` for you:
 
 - **You named an existing ticket** (a key, a URL, or pasted text) → Door
@@ -143,12 +157,12 @@ invokes `digismith:jira-intake` for you:
 
 Either door writes `.digismith/docs/<slug>/ticket.md` in the repo you're working
 in. A Door 2 draft has no ticket key yet — if you try to start real
-implementation work on one, `using-digismith` stops and tells you it
+implementation work on one, `bootstrap` stops and tells you it
 needs a real key first (see Edge Cases below).
 
 ### 2. Create the branch
 
-Once a real ticket exists, `using-digismith`:
+Once a real ticket exists, `bootstrap`:
 
 1. Derives the slug from the ticket's own folder name (the same slug
    `jira-intake` already used — never re-derived from the title).
@@ -171,7 +185,7 @@ Once a real ticket exists, `using-digismith`:
 
 ### 3. Hand off to brainstorming
 
-From inside that worktree, `using-digismith` invokes `digismith:enforcer`
+From inside that worktree, `bootstrap` invokes `digismith:enforcer`
 — which tells `superpowers:brainstorming`/`superpowers:writing-plans`
 where and in what format DigiSmith needs their output, then checks it
 landed there once each finishes — before invoking
@@ -179,8 +193,12 @@ landed there once each finishes — before invoking
 and acceptance criteria already loaded as seed context. From there,
 Superpowers' own chain takes over unmodified — brainstorming →
 `writing-plans` → `subagent-driven-development`/`executing-plans` — with
-its own approval gates at each stage. `using-digismith`'s job ends at
+its own approval gates at each stage. `bootstrap`'s job ends at
 the hand-off; it never re-invokes or duplicates anything downstream.
+
+Already mid-stream instead? `adopt` reaches the same
+`subagent-driven-development` stage directly — see
+[`skills/adopt/SKILL.md`](skills/adopt/SKILL.md) for its exact process.
 
 ## Edge Cases
 
@@ -192,21 +210,26 @@ the hand-off; it never re-invokes or duplicates anything downstream.
 | A worktree already exists for this ticket | Switches into it. No duplicate ever gets created. |
 | A branch exists for this ticket but its worktree was removed | Reattaches a worktree to the existing branch instead of failing. |
 | Branch name collides with someone else's unrelated ticket | Asks you via a direct question before doing anything. Never silently reuses it. |
+| The current worktree already has `.digismith/profile`, on a non-base branch with a matching `.digismith/docs/<slug>/plan.md` | `init` reports "already initialized" and stops — no re-processing, no questions. Otherwise (base branch, or no matching plan.md yet) it falls through to normal detection. |
 | `jira-intake` itself can't proceed (no JIRA tool and you decline to paste, or pasted content's too sparse) | Stops wherever `jira-intake` stopped — not a new failure mode, just respects its own gate. |
 
 ## Current Scope
 
-`using-digismith` is map item **E** ("the spine") — but only its first
-slice: intake → branch → brainstorming hand-off. It's not yet the full
-prescriptive driver described in the roadmap (enforcing stage order
-end-to-end, routing through every future stage). Check
-[`.digismith/history.html`](.digismith/history.html) for what's shipped so far and
-what's still ahead.
+`digismith:init` and its two workers are map item **E**, amended. The
+fresh-start slice (`bootstrap`, unchanged) is intake → branch →
+brainstorming hand-off; the mid-stream slice (`adopt`) is scoped to one
+recurring case — ticket known, spec written, plan written, nothing built
+yet. Joining before a spec/plan exists, or mid-build, is still out of
+scope, and full stage-order enforcement across every future stage is still
+not built. Check [`.digismith/history.html`](.digismith/history.html) for
+what's shipped so far and what's still ahead.
 
 ## Full Skill Reference
 
 The exact instructions Claude follows live in
-[`skills/using-digismith/SKILL.md`](skills/using-digismith/SKILL.md) and
+[`skills/init/SKILL.md`](skills/init/SKILL.md),
+[`skills/bootstrap/SKILL.md`](skills/bootstrap/SKILL.md),
+[`skills/adopt/SKILL.md`](skills/adopt/SKILL.md), and
 [`skills/jira-intake/SKILL.md`](skills/jira-intake/SKILL.md) — read
 those directly if you want the precise, unabridged process rather than
 this summary.

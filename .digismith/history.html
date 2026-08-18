@@ -133,7 +133,7 @@
       <td>merge → release → verification → announcement</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>E</strong></td><td>The spine</td>
-      <td><strong>E.1</strong> first slice, shipped: intake → branch → brainstorming hand-off via <code>using-digismith</code> <span class="status done">Done</span> · <strong>E.2</strong> the rest of the prescriptive driver — full stage-order enforcement and routing to everything else as later stages ship <span class="status todo">Not started</span></td>
+      <td><strong>E.1</strong> first slice, shipped: intake → branch → brainstorming hand-off via <code>digismith:init</code> (dispatching to <code>bootstrap</code>) <span class="status done">Done</span> · <strong>E.1-amend</strong> unified entry point, shipped: <code>init</code> also detects and adopts mid-stream work via <code>adopt</code>, for the recurring case where a ticket's spec/plan were already written outside DigiSmith <span class="status done">Done</span> · <strong>E.2</strong> the rest of the prescriptive driver — full stage-order enforcement and routing to everything else as later stages ship <span class="status todo">Not started</span></td>
       <td><span class="status next">In progress</span></td></tr>
     <tr><td><strong>F</strong></td><td>Design review</td>
       <td>Independent critique of a design, then the jade-and-ink artifact rendering for human approval</td>
@@ -189,6 +189,12 @@
     brainstorming hand-off — <code>using-digismith</code> skill —
     <a href="docs/using-digismith/design.html">design spec</a> ·
     <a href="docs/using-digismith/plan.md">implementation plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>E — DigiSmith Init (unified entry point):</strong> <code>init</code> /
+    <code>bootstrap</code> / <code>adopt</code> skills —
+    <a href="docs/digismith-init/design.html">design spec</a> ·
+    <a href="docs/digismith-init/plan.md">implementation plan</a>
   </p>
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>M — Ephemeral deploy capture:</strong> <code>capture-ephemeral-url</code> skill —
@@ -561,6 +567,31 @@
       Task 3 added the matching publish step to <code>report-implementation</code>
       (N); Task 4 is this history.html and MEMORY.md update. Map item
       <strong>Q</strong> done.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-16</div>
+      <h4>E amended — unified entry point, 8 tasks, subagent-driven-development</h4>
+      <p>Resolves <code>backlog/mid-development-workflow-injection.md</code> (Jack's own
+      note, 2026-08-14): DigiSmith's pipeline assumed every ticket starts fresh, with no
+      way to join work already mid-stream — a ticket ID pulled some other way, spec and
+      plan already written directly by vanilla Superpowers, nothing built yet. Design spec
+      approved and implementation plan written and executed the same day, 2026-08-16. This
+      amends <strong>E.1</strong> rather than opening a new map item. Task 1 renamed
+      <code>using-digismith</code> to internal-only <code>bootstrap</code>, unchanged in
+      substance. Task 2 built <code>digismith:init</code>, the one front door safe to
+      invoke regardless of fresh-start or mid-stream state — a <code>.digismith/profile</code>
+      check first, then detection and dispatch. Task 3 built <code>digismith:adopt</code>
+      for the mid-stream case: backfills profile/ticket/branch state, relocates an
+      existing spec/plan into DigiSmith's docs convention by reusing <code>enforcer</code>'s
+      move-and-correct logic, then hands off straight to
+      <code>superpowers:subagent-driven-development</code> — brainstorming/writing-plans
+      are skipped since they already ran outside DigiSmith. Task 4 dogfooded the full
+      <code>init</code> → <code>adopt</code> dispatch end to end, no gaps found. Tasks 5-6
+      swept every cross-reference (<code>telemetry</code>, <code>subagent-driven-always</code>,
+      <code>inject-standards</code>, README, getting-started) from <code>using-digismith</code>
+      to <code>bootstrap</code>/<code>adopt</code>. Task 7 updated <code>MEMORY.md</code>'s map
+      and retired the now-resolved backlog item. Task 8 is this history.html update.</p>
     </div>
 
   </div>

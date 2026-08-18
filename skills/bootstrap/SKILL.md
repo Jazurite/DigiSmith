@@ -1,9 +1,9 @@
 ---
-name: using-digismith
-description: Use when the user wants to start real implementation work on a ticket — phrases like "start work on this ticket", "begin implementation", "let's build this now". If they only want the ticket itself, with no branch or pipeline yet, use digismith:jira-intake directly instead.
+name: bootstrap
+description: Invoked internally by digismith:init for fresh-start ticket work — never invoke directly.
 ---
 
-# Using DigiSmith
+# Bootstrap (Fresh-Start Path)
 
 ## Overview
 
@@ -16,12 +16,11 @@ get a real ticket, create its branch, hand off to
 through Superpowers' own terminal steps — this skill does not re-invoke
 or duplicate that chain.
 
-## When to Use
+## Invoked By
 
-The user wants to move from having a ticket to actually building it —
-"start work on X", "begin implementation", "let's build this". If they
-just want the ticket captured with no branch/pipeline yet, use
-`digismith:jira-intake` directly instead.
+Only `digismith:init`, for the fresh-start case (see its Detection Logic).
+Not directly matched against user phrasing — if you're reading this because
+you want to start work on a ticket, invoke `digismith:init` instead.
 
 ## Process
 
@@ -107,7 +106,7 @@ ticket/ephemeral/standards/reporting/publish_artifact/logging/model_offload_prov
 change, and how) via `AskUserQuestion` — call out a `logging` flip
 explicitly, since it silently turns session-transcript capture into
 DigiSmith's own repo on or off — and on confirmation overwrite
-`.digismith/profile` with the new name. This is `using-digismith`'s own
+`.digismith/profile` with the new name. This is `bootstrap`'s own
 job done at this point — don't fall through into Step 1's ticket flow
 unless the user's original request was also to start work.
 
@@ -341,7 +340,7 @@ the ticket content **you already read in Step 1** — title, description,
 acceptance criteria — as seed context so it doesn't start
 cold. Pass the content you're carrying; do not try to re-read
 `ticket.md` from inside the worktree, it isn't there (see Step 1). Once
-invoked, `using-digismith`'s own job is done.
+invoked, `bootstrap`'s own job is done.
 `superpowers:brainstorming`'s own process (including its own
 user-approval gates) and its terminal-step chain into
 `superpowers:writing-plans` and
@@ -352,7 +351,7 @@ chain yourself.
 ## Error Handling
 
 - **No real key** (a Door 2 draft, never upgraded to a real ticket) →
-  stop after intake. Explain that `using-digismith` needs a real ticket
+  stop after intake. Explain that `bootstrap` needs a real ticket
   key to name a branch; the user can continue manually, or run Door 1
   later once the ticket is real. Don't create a branch or worktree.
 - **Existing worktree _or branch_ for this ticket** → never create a
@@ -380,7 +379,7 @@ chain yourself.
 - **`logging: true` but no transcript directory or `.jsonl` file found**
   (`~/.claude/projects/<encoded-cwd>/` doesn't exist, or is empty) → skip
   the *write* half of Step 1.5, silently. No marker is written; the rest
-  of `using-digismith` proceeds exactly as if `logging` were `false`.
+  of `bootstrap` proceeds exactly as if `logging` were `false`.
   Never block the ticket flow over this. Step 1.5's opening
   `rm -f .digismith/telemetry-marker` still runs — it is unconditional,
   and skipping it here is exactly how a stale marker from a prior ticket

@@ -56,9 +56,9 @@ itself the DigiSmith repo (`.claude-plugin/plugin.json` with
 DigiSmith's repo path this session and remember it. Read
 `profiles/<name>.yml` there. No matching file → treat as stale; proceed
 as if `.digismith/profile` were missing (the "Missing" branch above) for
-this invocation only — `digismith:using-digismith`'s own Step 0 is where
-a stale pointer actually gets corrected, this skill doesn't rewrite
-`.digismith/profile` itself.
+this invocation only — `digismith:bootstrap`'s own Step 0 (reused as-is by
+`digismith:adopt`) is where a stale pointer actually gets corrected, this
+skill doesn't rewrite `.digismith/profile` itself.
 
 Otherwise, only folders named in that profile's `standards` list are
 eligible for matching in every scenario (1-4) below — an empty list
