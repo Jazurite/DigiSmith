@@ -1,0 +1,2 @@
+skills/vendored-*/** -text
+vendored/* -text
