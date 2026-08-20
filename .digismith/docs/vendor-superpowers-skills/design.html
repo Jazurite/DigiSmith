@@ -159,8 +159,15 @@
     the <code>SKILL.md</code> frontmatter's <code>name:</code> field, not
     the folder name. A verbatim clone keeps that frontmatter untouched
     (still <code>name: brainstorming</code>, etc.), so the folder name is
-    free to differ without changing the invocable skill name at all. The
-    architecture below reflects the corrected, verified structure.
+    free to differ without changing the invocable skill name at all. This
+    "frontmatter name wins" claim is verified against Claude Code's own
+    skill-discovery documentation but not yet empirically confirmed via a
+    live skill listing — the only attempt found this session's installed
+    plugin cache stale (missing skills merged to <code>main</code> after
+    it was captured), so no fresh listing could show the new vendored
+    skills either way; worth a quick sanity check once a fresh
+    <code>claude</code> process picks up an updated plugin cache. The
+    architecture below reflects the corrected structure.
   </div>
   <ul>
     <li><strong>Flat, name-prefixed skill folders:</strong>
