@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primitive Ownership — R.1: Vendor Superpowers Skills</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Primitive Ownership — R.1: Vendor Superpowers Skills</h1>
+  <div class="meta">
+    <span>Date: 2026-08-20</span>
+    <span>Map item: R (new, first slice R.1)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; Trigger</a></li>
+    <li><a href="#scope">Scope: R.1 vs. the Rest of the Initiative</a></li>
+    <li><a href="#philosophy">Relationship to Philosophy #2</a></li>
+    <li><a href="#architecture">Architecture &amp; Components</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#error-handling">Error Handling &amp; Known Limitations</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#future-phases">Future Phases (R.2+, Not Designed Here)</a></li>
+    <li><a href="#open-questions">Open Questions</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; Trigger</h2>
+  <p>Triggered by a real-world gap: upstream <code>superpowers:finishing-a-development-branch</code>'s
+  Option 1 ("Merge Locally") never pushes the base branch to <code>origin</code> —
+  confirmed by reading its <code>SKILL.md</code> directly (its own Quick
+  Reference table marks <code>Push: -</code> for that option). This is
+  exactly what let DigiSmith's own <code>main</code> silently accumulate 65
+  unpushed commits before anyone noticed (logged as
+  <code>backlog/no-push-after-local-merge.md</code>).</p>
+  <p>DigiSmith already has a no-fork interception pattern for narrow behavior
+  changes — <code>subagent-driven-always</code> (map item H) and
+  <code>enforcer</code> (map item Q) both redirect behavior at a specific
+  decision point inside an upstream skill's flow without duplicating any of
+  its content. That pattern could likely fix the push gap on its own.</p>
+  <p>But the actual ask goes further: Jack wants deeper, ongoing divergence —
+  not just patching isolated gaps, but eventually replacing core Superpowers
+  primitives outright (starting candidate:
+  <code>finishing-a-development-branch</code>) and assimilating other
+  agent methodologies (e.g. Hermes agent, spec-driven development) over
+  time. That scale of change needs DigiSmith to actually own copies of the
+  primitives it intends to evolve, not just intercept them.</p>
+</section>
+
+<section id="scope">
+  <h2>Scope: R.1 vs. the Rest of the Initiative</h2>
+  <p>"Replace Superpowers' core primitives outright" is not one project —
+  it's at least six (one per primitive DigiSmith currently calls into:
+  <code>brainstorming</code>, <code>writing-plans</code>,
+  <code>subagent-driven-development</code>,
+  <code>finishing-a-development-branch</code>, <code>executing-plans</code>,
+  <code>requesting-code-review</code>), each with its own risk profile and
+  worth its own brainstorm. <code>subagent-driven-development</code> alone
+  is load-bearing for nearly everything DigiSmith does today (map item H
+  makes it the default execution path for every plan) — redesigning it
+  carelessly would be far more disruptive than redesigning, say,
+  <code>finishing-a-development-branch</code>.</p>
+  <p>This document specs only the first slice, designated <strong>R.1</strong>
+  following the map's existing sub-item convention
+  (<strong>I.1/I.2/I.3</strong>, <strong>K.1/K.2+</strong>,
+  <strong>L.1/L.2</strong>, <strong>E.1/E.2</strong>): a pure, mechanical,
+  verbatim clone of every Superpowers skill into DigiSmith's own repo.
+  No primitive is redesigned or replaced in this slice — cloning only
+  establishes the baseline DigiSmith will own and evolve from.
+  Deciding <em>which</em> primitive to actually replace, and how, is
+  deliberately deferred to R.2+ (see <a href="#future-phases">Future
+  Phases</a>); <code>finishing-a-development-branch</code> is the leading
+  candidate given the confirmed, scoped gap that triggered this whole
+  initiative, but that choice is not locked in by this document.</p>
+</section>
+
+<section id="philosophy">
+  <h2>Relationship to Philosophy #2</h2>
+  <p>MEMORY.md's philosophy #2 currently reads: "It augments, never
+  replaces... Duplicating a Superpowers capability is a bug, not a
+  feature." Map item R is a deliberate, scoped exception to that rule, not
+  a quiet violation of it — the principle stays the default for every
+  DigiSmith skill that isn't map item R; R is called out by name as the one
+  place ownership (not augmentation) is the intended relationship. This
+  document's own build includes editing philosophy #2 in MEMORY.md to say
+  so explicitly, and adding map item R itself to the map and build-order
+  tables.</p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture &amp; Components</h2>
+  <ul>
+    <li><strong>New <code>skills/vendored/</code> subfolder</strong>,
+    separate from DigiSmith's own hand-authored <code>skills/&lt;name&gt;/</code>
+    tree — makes it immediately obvious which skills are upstream-sourced
+    (frozen, no organic edits expected until activated) versus DigiSmith's
+    own original work. Once placed here, each skill becomes addressable as
+    <code>digismith:&lt;name&gt;</code> instead of
+    <code>superpowers:&lt;name&gt;</code>.</li>
+    <li><strong>All 14 Superpowers skills, cloned verbatim:</strong>
+    <code>brainstorming</code>, <code>dispatching-parallel-agents</code>,
+    <code>executing-plans</code>, <code>finishing-a-development-branch</code>,
+    <code>receiving-code-review</code>, <code>requesting-code-review</code>,
+    <code>subagent-driven-development</code>, <code>systematic-debugging</code>,
+    <code>test-driven-development</code>, <code>using-git-worktrees</code>,
+    <code>using-superpowers</code>, <code>verification-before-completion</code>,
+    <code>writing-plans</code>, <code>writing-skills</code>. Every file
+    (<code>SKILL.md</code> plus any supporting scripts/prompts each skill
+    folder contains, e.g. <code>subagent-driven-development</code>'s
+    <code>scripts/</code> and prompt files) is copied byte-for-byte —
+    zero content edits in this slice.</li>
+    <li><strong><code>skills/vendored/LICENSE</code></strong> — a single
+    copy of Superpowers' MIT license (Jesse Vincent, 2025), satisfying the
+    license's own requirement that the notice travel with copies. One copy
+    covers the whole vendored tree; no per-skill license files.</li>
+    <li><strong><code>skills/vendored/PROVENANCE.md</code></strong> — one
+    file recording the source plugin version/commit hash and the clone
+    date, giving any future "diverge this one" decision a clear baseline to
+    diff against. Per-tree, not per-skill — keeps the record to one file to
+    maintain.</li>
+  </ul>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow</h2>
+  <p>This is a one-time, one-directional copy — there is no ongoing data
+  flow to design. The clone runs once: read each of the 14 skill
+  directories from the installed Superpowers plugin cache, write an
+  identical copy under <code>skills/vendored/&lt;name&gt;/</code>, write
+  <code>LICENSE</code> and <code>PROVENANCE.md</code>, commit.</p>
+  <p><strong>No sync tooling.</strong> This is explicitly a snapshot, not a
+  mirror — consistent with keeping DigiSmith simple as a personal tool (no
+  multi-source merge/sync machinery). Future upstream Superpowers
+  improvements are pulled in manually, if and when noticed and wanted; nothing
+  automated tracks or diffs against upstream after this initial clone.</p>
+  <p>DigiSmith's existing internal call sites — every place a DigiSmith
+  skill currently invokes <code>superpowers:&lt;name&gt;</code>
+  (<code>subagent-driven-always</code>, <code>enforcer</code>,
+  <code>using-digismith</code>, <code>bootstrap</code>, <code>adopt</code>,
+  etc.) — are <strong>left unchanged</strong> in this slice. They keep
+  calling the live upstream skills exactly as today. The vendored clones sit
+  dormant until a future R.2+ brainstorm activates one.</p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling &amp; Known Limitations</h2>
+  <ul>
+    <li><strong>Internal cross-references are not rewritten.</strong>
+    Several vendored skills reference each other by name — e.g.
+    <code>subagent-driven-development</code>'s file literally says "Use
+    <code>superpowers:finishing-a-development-branch</code>." A verbatim
+    clone leaves those references untouched, so a vendored skill can still
+    silently chain back to a <em>live</em> upstream skill when it calls out
+    to another one. Rewriting those references is a content change, and is
+    explicitly out of scope for a byte-identical clone — it gets resolved
+    skill-by-skill, at each one's own future activation (R.2+), not here.
+    This is a known, accepted limitation of R.1, not an oversight: until a
+    given vendored skill is activated, it should not be treated as "fully
+    owned."</li>
+    <li><strong>Clone integrity.</strong> If a file fails to copy or comes
+    back non-identical to its source, that's a hard stop for this slice —
+    fix and re-copy before considering R.1 done. There's no partial-success
+    mode; either all 14 skills are cloned cleanly or the slice isn't
+    finished.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <ul>
+    <li>Diff every file under <code>skills/vendored/&lt;name&gt;/</code>
+    against its source in the installed Superpowers plugin cache — must be
+    byte-identical.</li>
+    <li>Confirm <code>skills/vendored/LICENSE</code> and
+    <code>skills/vendored/PROVENANCE.md</code> are present and correctly
+    filled in (source version/commit, clone date).</li>
+    <li>Confirm at least two sampled vendored skills (e.g.
+    <code>digismith:brainstorming</code>,
+    <code>digismith:finishing-a-development-branch</code>) are recognized
+    as invocable skills in a fresh session's skill listing.</li>
+    <li>Confirm no existing DigiSmith skill file was modified as a side
+    effect — this slice is additive only.</li>
+  </ul>
+</section>
+
+<section id="future-phases">
+  <h2>Future Phases (R.2+, Not Designed Here)</h2>
+  <p>Deliberately left unscoped, each a candidate for its own future
+  brainstorm once R.1 has landed:</p>
+  <ul>
+    <li><strong>Activate <code>finishing-a-development-branch</code>.</strong>
+    The leading candidate, given the confirmed Option-1-no-push gap that
+    triggered this whole initiative. "Activating" means: edit the vendored
+    copy to add the missing push step (and whatever else diverges), update
+    DigiSmith's own internal call sites that reference
+    <code>superpowers:finishing-a-development-branch</code> to reference
+    <code>digismith:finishing-a-development-branch</code> instead, and
+    record the switch in MEMORY.md.</li>
+    <li><strong>Activate other primitives</strong> —
+    <code>subagent-driven-development</code>, <code>brainstorming</code>,
+    <code>writing-plans</code>, <code>executing-plans</code>,
+    <code>requesting-code-review</code> — one at a time, each its own
+    brainstorm, in whatever order future need dictates.</li>
+    <li><strong>Assimilating outside methodologies</strong> (Hermes agent,
+    spec-driven development, etc.) into activated primitives, or as
+    entirely new DigiSmith skills alongside them. Not scoped at all yet —
+    raised as motivation for this initiative, not designed here.</li>
+    <li><strong>Cross-reference cleanup</strong> across vendored skills as
+    each one activates (see <a href="#error-handling">Error Handling</a>) —
+    handled per-skill during its own activation, not as a standalone
+    project.</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open Questions</h2>
+  <ul>
+    <li>None blocking R.1. The order in which R.2+ primitives get activated,
+    and how outside methodologies actually get assimilated, are open by
+    design — deferred to their own future brainstorms rather than decided
+    speculatively here.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/vendor-superpowers-skills/design.html</footer>
+
+</body>
+</html>
