@@ -150,14 +150,34 @@
 
 <section id="architecture">
   <h2>Architecture &amp; Components</h2>
+  <div class="callout">
+    <strong>Correction made during planning (2026-08-20):</strong> this
+    section originally specced a nested <code>skills/vendored/&lt;name&gt;/</code>
+    subfolder. Verified against Claude Code's own skill-discovery docs:
+    plugin skills must be direct children of <code>skills/</code> — no
+    recursive subdirectory scanning — and the invocable name is taken from
+    the <code>SKILL.md</code> frontmatter's <code>name:</code> field, not
+    the folder name. A verbatim clone keeps that frontmatter untouched
+    (still <code>name: brainstorming</code>, etc.), so the folder name is
+    free to differ without changing the invocable skill name at all. The
+    architecture below reflects the corrected, verified structure.
+  </div>
   <ul>
-    <li><strong>New <code>skills/vendored/</code> subfolder</strong>,
-    separate from DigiSmith's own hand-authored <code>skills/&lt;name&gt;/</code>
-    tree — makes it immediately obvious which skills are upstream-sourced
-    (frozen, no organic edits expected until activated) versus DigiSmith's
-    own original work. Once placed here, each skill becomes addressable as
-    <code>digismith:&lt;name&gt;</code> instead of
-    <code>superpowers:&lt;name&gt;</code>.</li>
+    <li><strong>Flat, name-prefixed skill folders:</strong>
+    <code>skills/vendored-&lt;name&gt;/</code> — direct children of
+    <code>skills/</code>, as required, but the <code>vendored-</code>
+    prefix keeps them visually grouped and distinguishable from DigiSmith's
+    own hand-authored <code>skills/&lt;name&gt;/</code> folders (frozen,
+    upstream-sourced, no organic edits expected until activated). Because
+    the frontmatter <code>name:</code> field is untouched by a verbatim
+    clone, each still becomes addressable as the clean
+    <code>digismith:&lt;name&gt;</code> — e.g.
+    <code>skills/vendored-brainstorming/SKILL.md</code> (frontmatter
+    <code>name: brainstorming</code>) resolves to
+    <code>digismith:brainstorming</code>, not
+    <code>digismith:vendored-brainstorming</code>. This also means a future
+    R.2+ activation never needs to touch the <code>name:</code> field —
+    only content and DigiSmith's own call sites change.</li>
     <li><strong>All 14 Superpowers skills, cloned verbatim:</strong>
     <code>brainstorming</code>, <code>dispatching-parallel-agents</code>,
     <code>executing-plans</code>, <code>finishing-a-development-branch</code>,
@@ -170,15 +190,26 @@
     folder contains, e.g. <code>subagent-driven-development</code>'s
     <code>scripts/</code> and prompt files) is copied byte-for-byte —
     zero content edits in this slice.</li>
-    <li><strong><code>skills/vendored/LICENSE</code></strong> — a single
-    copy of Superpowers' MIT license (Jesse Vincent, 2025), satisfying the
-    license's own requirement that the notice travel with copies. One copy
-    covers the whole vendored tree; no per-skill license files.</li>
-    <li><strong><code>skills/vendored/PROVENANCE.md</code></strong> — one
-    file recording the source plugin version/commit hash and the clone
-    date, giving any future "diverge this one" decision a clear baseline to
-    diff against. Per-tree, not per-skill — keeps the record to one file to
-    maintain.</li>
+    <li><strong>New top-level <code>vendored/</code> folder</strong>
+    (repo root, sibling to <code>skills/</code>, not inside it) holds
+    metadata only — kept out of <code>skills/</code> so nothing there is
+    ever mistaken for a skill folder during discovery:
+      <div class="cards">
+        <div class="card">
+          <div class="tag">vendored/LICENSE</div>
+          <p>A single copy of Superpowers' MIT license (Jesse Vincent,
+          2025), satisfying the license's own requirement that the notice
+          travel with copies. One copy covers all 14 clones; no per-skill
+          license files.</p>
+        </div>
+        <div class="card">
+          <div class="tag">vendored/PROVENANCE.md</div>
+          <p>Records the source plugin version/commit and clone date,
+          giving any future "diverge this one" decision a clear baseline
+          to diff against. One file for the whole batch, not per-skill.</p>
+        </div>
+      </div>
+    </li>
   </ul>
 </section>
 
@@ -187,8 +218,9 @@
   <p>This is a one-time, one-directional copy — there is no ongoing data
   flow to design. The clone runs once: read each of the 14 skill
   directories from the installed Superpowers plugin cache, write an
-  identical copy under <code>skills/vendored/&lt;name&gt;/</code>, write
-  <code>LICENSE</code> and <code>PROVENANCE.md</code>, commit.</p>
+  identical copy under <code>skills/vendored-&lt;name&gt;/</code>, write
+  <code>vendored/LICENSE</code> and <code>vendored/PROVENANCE.md</code>,
+  commit.</p>
   <p><strong>No sync tooling.</strong> This is explicitly a snapshot, not a
   mirror — consistent with keeping DigiSmith simple as a personal tool (no
   multi-source merge/sync machinery). Future upstream Superpowers
@@ -229,11 +261,11 @@
 <section id="testing">
   <h2>Testing / Verification</h2>
   <ul>
-    <li>Diff every file under <code>skills/vendored/&lt;name&gt;/</code>
+    <li>Diff every file under <code>skills/vendored-&lt;name&gt;/</code>
     against its source in the installed Superpowers plugin cache — must be
     byte-identical.</li>
-    <li>Confirm <code>skills/vendored/LICENSE</code> and
-    <code>skills/vendored/PROVENANCE.md</code> are present and correctly
+    <li>Confirm <code>vendored/LICENSE</code> and
+    <code>vendored/PROVENANCE.md</code> are present and correctly
     filled in (source version/commit, clone date).</li>
     <li>Confirm at least two sampled vendored skills (e.g.
     <code>digismith:brainstorming</code>,
