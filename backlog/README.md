@@ -18,3 +18,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Per-worktree dev server port allocation](dev-server-port-allocation.md) — medium confidence; only matters if concurrent worktrees' dev servers are actually a thing Jack does
 - [Telemetry: automatic session lifecycle](telemetry-auto-lifecycle.md) — start/stop tied to session start/close/delete instead of manual trigger; deferred until real telemetry data exists
 - [`inject-standards` has no scenario for review-time dispatch](review-time-standards-injection-gap.md) — diff-hygiene standards shape what implementers write but never reach the whole-branch final review
+- [`finishing-a-development-branch` Option 1 never pushes after merging locally](no-push-after-local-merge.md) — confirmed cause of DigiSmith's own 65-commit unpushed `main`; upstream Superpowers gap, not a DigiSmith skill
