@@ -75,7 +75,7 @@
   <ol>
     <li><a href="#overview">Overview</a></li>
     <li><a href="#trigger-gating">Trigger &amp; Gating</a></li>
-    <li><a href="#materials-table">Description Write: Materials &amp; Links Table</a></li>
+    <li><a href="#materials-table">Description Write: Materials &amp; Links</a></li>
     <li><a href="#track-checklist">Description Write: Track Checklist</a></li>
     <li><a href="#comment-skeleton">Comment Write: Progress Update</a></li>
     <li><a href="#adf-technique">The ADF Technique</a></li>
@@ -112,8 +112,9 @@
       <div class="tag">Write 1</div>
       <h4>Description</h4>
       <p>Idempotent, upsert-style. This repo's own Materials &amp; Links
-      table row, and (only if the section already exists) the Technical
-      Development line of the Track checklist.</p>
+      entry (a bullet list, not a table — see below), and (only if the
+      section already exists) the Technical Development line of the
+      Track checklist.</p>
     </div>
     <div class="card">
       <div class="tag">Write 2</div>
@@ -152,47 +153,54 @@
 </section>
 
 <section id="materials-table">
-  <h2>Description Write: Materials &amp; Links Table</h2>
+  <h2>Description Write: Materials &amp; Links</h2>
   <p>
-    Fully automatable: every value in this table is something DigiSmith
-    directly witnesses (M's captured URLs, the PR just opened). Format,
-    confirmed against EMKT-784's real description:
+    Fully automatable: every value here is something DigiSmith directly
+    witnesses (M's captured URLs, the PR just opened). EMKT-784's own
+    table (Country/Preview/Customize/PR columns) is a <em>multi</em>-market
+    shape — a table for one row reads as overkill, a header row with
+    nothing to distinguish. I.1's single-market scope calls for a plain
+    bullet list instead:
   </p>
-  <div class="table-wrap">
-  <table>
-    <tr><th>Country</th><th>Preview Theme</th><th>Customize</th><th>Pull Request</th></tr>
-    <tr><td><strong>JP</strong></td><td>[Link]</td><td>[Link]</td><td>[Link]</td></tr>
-  </table>
-  </div>
+  <pre><code>## 🔗 Materials &amp; Links:
+* **Preview Theme**: [Link]
+* **Customize**: [Link]
+* **Pull Request**: [Link]</code></pre>
+  <p>
+    No country label on the bullets — under single-repo scope there's
+    only ever this ticket's one market in view, so naming it adds nothing
+    a reader doesn't already know from the repo/ticket itself.
+  </p>
   <h3>Single-market scope</h3>
   <p>
     I.1, as designed here, runs against exactly one repo/PR/ticket at a
-    time and writes exactly one row. No classification logic decides
+    time and writes exactly one entry. No classification logic decides
     whether a repo "counts" as a market, no comparison against a known
     market list, no cross-repo awareness at all — that entire
     problem (detecting which markets a ticket touches, looping across
     them, deciding when the set is complete) belongs to
     <strong>I.2</strong> (multi-repo distribution), deferred in full. I.1
-    only ever sees the one repo it's currently running in. The table may
-    already carry other rows from earlier work on this ticket (by a human,
-    or later by I.2) — I.1 leaves every row but its own untouched.
-  </p>
-  <p>
-    Row label: derived from the current repo's directory name — strip a
-    <code>shopify-template-</code> prefix and uppercase the remainder if
-    present (<code>shopify-template-jp</code> → <code>JP</code>);
-    otherwise use the repo name as-is (e.g. <code>shopify-hub</code>).
-    Just a label, not a branch — the table is written the same way either
-    way.
+    only ever sees the one repo it's currently running in.
   </p>
   <h3>Upsert rule</h3>
   <ul>
-    <li>Table missing entirely → create it with this single row.</li>
-    <li>Table exists, this row's label already present → replace that
-    row's three link cells in place.</li>
-    <li>Table exists, this row's label not present yet → append a new
-    row.</li>
+    <li>Section missing entirely → create it as the bullet list above.</li>
+    <li>Section exists as the bullet list already → replace the three
+    link values in place.</li>
+    <li>Section already exists as <strong>a table</strong> — e.g. a ticket
+    with prior multi-market history, human-authored or from a future I.2
+    → don't restructure it into bullets. Same conservative principle as
+    the Track checklist: upsert this repo's own row within the existing
+    table shape (match by the row-label rule below) rather than fighting
+    whatever format is already there.</li>
   </ul>
+  <p>
+    Row label, needed only for the table-fallback case above: derived from
+    the current repo's directory name — strip a
+    <code>shopify-template-</code> prefix and uppercase the remainder if
+    present (<code>shopify-template-jp</code> → <code>JP</code>);
+    otherwise use the repo name as-is (e.g. <code>shopify-hub</code>).
+  </p>
 </section>
 
 <section id="track-checklist">
@@ -333,7 +341,7 @@
   <p>
     <code>editJiraIssue</code>/<code>addCommentToJiraIssue</code> replace
     the <strong>entire</strong> field value — there is no patch/append.
-    Every write (Materials table row, Track line, comment body) means:
+    Every write (Materials entry, Track line, comment body) means:
     fetch the current field as ADF, splice in only the changed piece in
     memory, submit the whole document back. This is why the Track
     checklist's other-stage lines must be preserved verbatim rather than
@@ -360,7 +368,7 @@
     Both writes are team-visible, external-system side effects — unlike
     DigiSmith's own internal docs, this isn't something to publish
     silently. Draft the full comment body and the description delta
-    (table row, Track line) and show them before calling
+    (Materials entry, Track line) and show them before calling
     <code>editJiraIssue</code>/<code>addCommentToJiraIssue</code>. This
     applies every time, not just the first: JIRA's own edit history is
     visible to the whole team, so a bad automatic write is a social cost,
