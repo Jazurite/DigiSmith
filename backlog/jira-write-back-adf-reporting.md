@@ -1,4 +1,4 @@
-# JIRA write-back (I.1): real ADF formatting + multi-repo distribution
+# JIRA write-back (I.1) + multi-repo distribution (I.2): ADF formatting, profile-gated fan-out
 
 **Status:** Not applied. Raw material only — needs a design spec before
 becoming a skill.
@@ -11,11 +11,17 @@ worktree branch that may eventually get deleted.
 
 ## What this covers
 
-Map item **I.1** (JIRA comment write-back, unscoped) has real technique
+Map item **I** (JIRA comment write-back, unscoped) has real technique
 now, not just the "consumes M's output, no status transition" shape
-already in `MEMORY.md`. Two parts:
+already in `MEMORY.md`. Two parts, now split into two sub-items
+(2026-08-26) since one is profile-gated and the other isn't:
 
-### 1. Real Jira formatting via ADF, not markdown approximation
+- **I.1** — JIRA ADF formatting. Applies regardless of profile.
+- **I.2** — multi-repo distribution. Gated behind a profile field
+  (map item **O**): on for Emma (per-market theme repos), off for a
+  single-repo personal profile, where there's nothing to distribute.
+
+### 1. Real Jira formatting via ADF, not markdown approximation (I.1)
 
 Plain markdown with bold text standing in for "DONE"/"IN PROGRESS"
 works and is safe, but doesn't produce Jira's actual native status
@@ -63,7 +69,7 @@ Node schemas confirmed against `developer.atlassian.com/cloud/jira/platform/apis
   be submitted as one ADF document in that call. No mixing "most of
   the description via easy markdown" with "one section via ADF."
 
-### 2. Multi-repo distribution (worktree fan-out across market repos)
+### 2. Multi-repo distribution (worktree fan-out across market repos) (I.2)
 
 Same ticket key + slug branch name (`<KEY>__<slug>`) created as a
 worktree in each affected repo, repeating `digismith:using-digismith`'s
@@ -94,24 +100,26 @@ fan out across siblings today).
   "A shop may only have 100 themes" — that's stale-theme housekeeping,
   not a code bug; flag it for someone with store admin access.
 
-## Suggested shape for I.1 (and a possible new distribution step)
+## Suggested shape
 
-- A **"distribute across markets"** step: given a ticket key + list of
-  affected repos, create worktrees, handle the SSH-identity check, and
-  open PRs using each repo's own template + no-market-suffix title
-  convention, as one repeatable operation. No map letter currently —
-  would need scoping alongside I.1 or as its own item.
-- A **"capture ephemeral links"** step wrapping
+- **I.2** — a "distribute across markets" step: given a ticket key +
+  list of affected repos, create worktrees, handle the SSH-identity
+  check, and open PRs using each repo's own template + no-market-suffix
+  title convention, as one repeatable operation. Only runs when the
+  active profile enables it (map item **O**) — Emma's per-market
+  profiles yes, a single-repo personal profile no.
+- **I.2** — a "capture ephemeral links" step wrapping
   `digismith:capture-ephemeral-url` over every repo in the distribution
-  list.
-- A **"post Jira progress update"** step (this is I.1's actual scope)
-  using the ADF node shapes above, so future reports get genuine
-  formatting on the first attempt. Still no automated status
+  list, same profile gate as above.
+- **I.1** — a "post Jira progress update" step using the ADF node
+  shapes above, so future reports get genuine formatting on the first
+  attempt. Runs regardless of profile. Still no automated status
   transitions — that stays manual per standing preference.
 
 ## Why not applied yet
 
 Raw findings from a single live session, not yet run through
-`superpowers:brainstorming`/`writing-plans` for I.1. Needs a design
-spec before becoming a skill — in particular, deciding whether
-multi-repo distribution is part of I.1 or its own map item.
+`superpowers:brainstorming`/`writing-plans`. Needs a design spec
+before becoming a skill, including the new profile field for **I.2**
+(name, default, which profiles set it) alongside **O**'s existing
+ticket/ephemeral/reporting/publish_artifact fields.
