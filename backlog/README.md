@@ -19,3 +19,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Telemetry: automatic session lifecycle](telemetry-auto-lifecycle.md) — start/stop tied to session start/close/delete instead of manual trigger; deferred until real telemetry data exists
 - [`inject-standards` has no scenario for review-time dispatch](review-time-standards-injection-gap.md) — diff-hygiene standards shape what implementers write but never reach the whole-branch final review
 - [JIRA write-back (I.1) + multi-repo distribution (I.2)](jira-write-back-adf-reporting.md) — real ADF status/emoji/expand formatting, plus profile-gated worktree fan-out learned from EMKT-784
+- [K.2 implementer-task offload: Aider + Chutes, not Chutes MCP](k2-implementer-offload-aider-chutes.md) — traced the real mechanism (Aider's OpenAI-compat target) after a live Kimi K3 experiment, with reasoning-verbosity data to inform the eventual design
