@@ -25,14 +25,20 @@ then writes them via `contentFormat: "adf"`.
 Jira MCP connector's `getJiraIssue` / `editJiraIssue` /
 `addCommentToJiraIssue` / `lookupJiraAccountId` / `getAccessibleAtlassianResources`
 tools. No application code, no test framework — verification is
-dogfooding via dispatched subagents, including at least one pass that
-actually calls the **real** Jira connector against a disposable test
-issue, since ADF correctness (does a node really render as a status
-lozenge, not broken literal text) can only be confirmed by the live API,
-not by reasoning alone. This is a deliberate departure from every prior
-DigiSmith skill's pure-fixture dogfood — flagged here because it means
-this plan creates one real, clearly-labeled Jira issue as a side effect
-of implementing it (see Task 1, Step 2's dogfood).
+dogfooding via reasoning against fabricated ADF fixtures constructed
+inline in Task 1, checked against the node schemas already confirmed
+live (read from real EMKT-784 content during this session's
+brainstorming). **Ruling, made at execution time (see the SDD ledger):**
+the original design called for at least one dogfood pass against the
+real Jira connector using a disposable throwaway issue, since ADF
+correctness (does a node really render as a status lozenge, not broken
+literal text) can only be fully confirmed by the live API. Jack chose to
+skip that in favor of reasoning-only verification rather than have a
+subagent create a real issue on the live Jira instance. Accepted
+consequence: a real ADF construction bug could still exist that only a
+live call would surface — not caught until this skill is actually used
+against a real ticket. This is the point where a live UAT run (see the
+plan's closing note) matters most.
 
 **Spec:** `.digismith/docs/jira-progress-write-back/design.html`
 (published: https://claude.ai/code/artifact/d80cf1bf-d1fe-4677-927a-be07350e063e)
@@ -480,112 +486,151 @@ ends here.
 | 16 | Report what was written |
 ```
 
-- [ ] **Step 2: Dogfood — real ADF write against a disposable test issue**
+- [ ] **Step 2: Dogfood — fresh Materials & Links creation + table-fallback distinction (reasoning only)**
 
-This is the load-bearing verification for this whole feature: whether
-this skill's ADF construction actually produces real status/emoji/mention
-nodes against the live connector, not just well-reasoned JSON that looks
-right. Create one real, clearly-labeled throwaway issue to write against
-— there is no delete-issue capability confirmed available through this
-session's Jira tools, so this issue will remain afterward; that's an
-accepted, visible cost of testing against the real API rather than a
-mock, not an oversight.
+**Ruling (SDD ledger, this execution):** the original design called for
+this dogfood to run against a real disposable Jira issue via live API
+calls. Jack chose reasoning-only verification instead — no real Jira
+issue is created, no live tool calls are made anywhere in this task.
+Verify by reasoning against fabricated ADF fixtures below, checked
+against the node schemas already confirmed live in the design spec.
 
-Using this session's own Jira tool (`cloudId` resolved per Step 3 above,
-`projectKey` matching wherever a real ticket like EMKT-784 lives),
-create:
+**Fixture A — no existing Materials section:**
 
-```
-projectKey: EMKT
-issueTypeName: Task
-summary: [DigiSmith dogfood — safe to delete] I.1 write-back test
+```json
+{"type":"doc","version":1,"content":[
+  {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"📦 Track:"}]},
+  {"type":"paragraph","content":[{"type":"text","text":"Nothing here yet."}]}
+]}
 ```
 
-Record the returned issue key as `<DOGFOOD-KEY>`.
+Reasoning through Steps 6 and 8 of `skills/jira-progress-write-back/SKILL.md`
+against Fixture A, for repo `shopify-template-jp` with Preview Theme
+`https://example-jp.myshopify.com?preview_theme_id=999`, Customize
+`https://example-jp.myshopify.com/admin/themes/999/editor`, Pull Request
+`https://github.com/emma-sleep/shopify-template-jp/pull/9999`: confirm
+Step 6 finds no "Materials & Links" heading, drafts the bullet-list
+shape (not a table), and Step 8's composed document appends it to the
+end of `content` with Fixture A's existing heading/paragraph untouched.
 
-Dispatch a subagent (Agent tool, general-purpose):
+**Fixture B — existing Materials section as a table (pre-existing
+multi-market history):**
 
-```
-Follow Steps 4 through 16 of
-D:\Workspace\Jazurite\DigiSmith\.claude\worktrees\jira-progress-write-back\skills\jira-progress-write-back\SKILL.md
-for real (not just reasoning about it) against this scenario: the ticket
-key is <DOGFOOD-KEY> (skip Steps 0-3 entirely — you already have the key,
-a JIRA tool is available in this session, and cloudId is <cloudId>).
-Simulate map item M having just captured these URLs for repo
-shopify-template-jp: Preview Theme https://example-jp.myshopify.com?preview_theme_id=999,
-Customize https://example-jp.myshopify.com/admin/themes/999/editor, Pull
-Request https://github.com/emma-sleep/shopify-template-jp/pull/9999.
-There is no N report.html this session — draft "What's done" as a single
-placeholder-free bullet describing this as a DigiSmith dogfood run (be
-honest it's a test, don't fabricate real feature work). For Next Steps,
-ask for exactly one role ("QA Needed") and use the real name "Hieu Huynh"
-as the person to tag — resolve it for real via account lookup. At Step
-13's confirmation, treat the user's answer as "post as drafted" (no
-actual human is available in this dogfood — proceed as if confirmed) and
-continue to Steps 14-15 for real. Report: the exact ADF JSON you sent for
-both the description and comment writes, the tool responses (including
-whether returned nodes carry a data-id, confirming real node creation),
-and the final issue key/comment id.
-```
-
-Expected: the subagent reports real API responses (not simulated/refused
-calls) for both `editJiraIssue`/description and
-`addCommentToJiraIssue`/comment, with the response body showing `data-id`
-attributes on the `status`, `emoji`, and `mention` nodes when read back —
-the tell confirmed in the design spec distinguishing "real node created"
-from "text echoed back unparsed." If any node lacks a `data-id`, or the
-tool call errors, this is a real bug in the skill's ADF construction —
-not something to wave off as a dogfood artifact.
-
-- [ ] **Step 3: Dogfood — Materials & Links upsert on a second pass (idempotency)**
-
-Still using `<DOGFOOD-KEY>` from Step 2 (its description now has a real
-Materials & Links bullet list from that run):
-
-Dispatch a subagent (Agent tool, general-purpose):
-
-```
-Follow Steps 4, 6, and 8 only of
-D:\Workspace\Jazurite\DigiSmith\.claude\worktrees\jira-progress-write-back\skills\jira-progress-write-back\SKILL.md,
-reasoning through (no need to actually call the write tools this time)
-this scenario: the ticket is <DOGFOOD-KEY>, which already has a Materials
-& Links bullet list from a prior run for repo shopify-template-jp. This
-run is for the same repo, shopify-template-jp, with a changed Preview
-Theme URL: https://example-jp.myshopify.com?preview_theme_id=888 (same
-Customize/PR links as before). Fetch the real current description via
-getJiraIssue (responseContentFormat adf) and report: did Step 6 correctly
-identify the existing bullet list (not create a duplicate second
-"Materials & Links" heading), and does the composed Step 8 document
-replace only the Preview Theme link's href, leaving Customize/PR and
-everything else byte-for-byte unchanged?
+```json
+{"type":"doc","version":1,"content":[
+  {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"🔗 Materials & Links:"}]},
+  {"type":"table","content":[
+    {"type":"tableRow","content":[
+      {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Country"}]}]},
+      {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Preview Theme"}]}]},
+      {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Customize"}]}]},
+      {"type":"tableHeader","content":[{"type":"paragraph","content":[{"type":"text","text":"Pull Request"}]}]}
+    ]},
+    {"type":"tableRow","content":[
+      {"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"KR","marks":[{"type":"strong"}]}]}]},
+      {"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://example-kr.myshopify.com?preview_theme_id=111"}}]}]}]},
+      {"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://example-kr.myshopify.com/admin/themes/111/editor"}}]}]}]},
+      {"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://github.com/emma-sleep/shopify-template-kr/pull/1"}}]}]}]}
+    ]}
+  ]}
+]}
 ```
 
-Expected: confirms detection of the existing section, a single updated
-link, no duplicate heading, and no drift in unrelated content.
+Reasoning through Step 6 against Fixture B for repo `shopify-template-jp`
+(label `JP`, not present in the table yet), with the same URLs as
+Fixture A above: confirm Step 6 detects the existing section is a
+**table** (not bullets), does not restructure it into a bullet list, and
+drafts a table-row-append delta (a new `JP` row) rather than replacing
+KR's row.
 
-- [ ] **Step 4: Dogfood — Track checklist correctly skipped (section absent)**
+- [ ] **Step 3: Dogfood — Materials & Links idempotent replace + Track checklist, both cases (reasoning only)**
 
-Dispatch a subagent (Agent tool, general-purpose):
+**Fixture C — existing Materials bullet list (this skill's own earlier
+write) for the same repo:**
 
+```json
+{"type":"doc","version":1,"content":[
+  {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"🔗 Materials & Links:"}]},
+  {"type":"bulletList","content":[
+    {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Preview Theme","marks":[{"type":"strong"}]},{"type":"text","text":": "},{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://example-jp.myshopify.com?preview_theme_id=999"}}]}]}]},
+    {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Customize","marks":[{"type":"strong"}]},{"type":"text","text":": "},{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://example-jp.myshopify.com/admin/themes/999/editor"}}]}]}]},
+    {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Pull Request","marks":[{"type":"strong"}]},{"type":"text","text":": "},{"type":"text","text":"Link","marks":[{"type":"link","attrs":{"href":"https://github.com/emma-sleep/shopify-template-jp/pull/9999"}}]}]}]}
+  ]}
+]}
 ```
-Follow Step 7 only of
-D:\Workspace\Jazurite\DigiSmith\.claude\worktrees\jira-progress-write-back\skills\jira-progress-write-back\SKILL.md,
-reasoning through this scenario against the real ticket <DOGFOOD-KEY>
-(fetch its real current description via getJiraIssue,
-responseContentFormat adf, for real). This ticket has no "📦 Track"
-section at all. Report what Step 7 produces.
+
+Reasoning through Steps 6 and 8 against Fixture C, same repo
+`shopify-template-jp`, with a changed Preview Theme URL
+(`...preview_theme_id=888`, same Customize/PR): confirm Step 6 detects
+the existing bullet list (no duplicate heading), and Step 8's composed
+document replaces only the Preview Theme link's `href`, leaving
+Customize/PR and the heading byte-for-byte unchanged.
+
+**Fixture D — existing Track section with Technical Development already
+present, no checkmarks yet:**
+
+```json
+{"type":"doc","version":1,"content":[
+  {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"📦 Track:"}]},
+  {"type":"paragraph","content":[
+    {"type":"text","text":"Technical Development -","marks":[{"type":"strong"}]},
+    {"type":"text","text":" "},
+    {"type":"status","attrs":{"text":"TO DO","color":"neutral"}}
+  ]},
+  {"type":"paragraph","content":[
+    {"type":"text","text":"QA -","marks":[{"type":"strong"}]},
+    {"type":"text","text":" "},
+    {"type":"status","attrs":{"text":"TO DO","color":"neutral"}}
+  ]}
+]}
 ```
 
-Expected: reports no delta, and that this would be noted in the final
-report per Step 16 rather than scaffolding a Track section from nothing.
+Reasoning through Step 7 against Fixture D for repo `shopify-template-jp`
+(label `JP`): confirm it finds the Technical Development paragraph
+(stopping before the QA paragraph, never touching it), drafts a delta
+that sets that `status` node's `attrs` to `{"text":"DONE","color":"green"}`,
+and inserts a new checkmark paragraph (emoji `:check_mark:` + bold "JP")
+immediately after the Technical Development paragraph and before the QA
+paragraph. Confirm the QA paragraph's `status` node is untouched in the
+delta.
+
+**Fixture E — Track section absent entirely** (reuse Fixture C's
+document, which has no "📦 Track" heading at all): reasoning through Step
+7 against Fixture C, confirm it produces no delta and that Step 16 would
+report the Track update as skipped, not scaffold one from nothing.
+
+- [ ] **Step 4: Dogfood — comment dedup and full compose (reasoning only)**
+
+**Fixture F — existing comments array with today's Progress Update
+already present:**
+
+```json
+[
+  {"id":"1001","body":{"type":"doc","version":1,"content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"📣 Progress Update – 26/8"}]}]}},
+  {"id":"1002","body":{"type":"doc","version":1,"content":[{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"Just an unrelated comment"}]}]}}
+]
+```
+
+Reasoning through Step 9 against Fixture F, assuming today's computed
+`D/M` is `26/8`: confirm it matches comment `1001` (not `1002`) and
+records `commentId: "1001"` for Step 15. Then, assuming a different
+today's date not present in the fixture (e.g. `27/8`), confirm Step 9
+finds no match and Step 15 would create a new comment instead.
+
+Finally, reasoning through Step 12 with one "What's done" bullet and one
+"Next Steps" bullet (a fabricated but realistically-shaped accountId):
+confirm the composed document matches the exact node sequence in the
+SKILL.md's own Step 12 example — heading, rule, heading, bulletList,
+paragraph, heading, bulletList, in that order, with no extra or missing
+top-level nodes.
 
 - [ ] **Step 5: If any dogfood run in Steps 2-4 surfaced a real gap, fix it now**
 
-If every report matched its expected outcome, skip this step. Otherwise
-fix `skills/jira-progress-write-back/SKILL.md`'s wording directly — most
-likely candidates are the ADF node-search logic in Steps 6/7/9 — then
-re-run the specific dogfood step that failed to confirm the fix, calling
-the real tools again against `<DOGFOOD-KEY>` where relevant.
+If every fixture's reasoning matched its expected outcome, skip this
+step. Otherwise fix `skills/jira-progress-write-back/SKILL.md`'s wording
+directly — most likely candidates are the ADF node-search logic in Steps
+6/7/9 — then re-reason through the specific fixture that failed to
+confirm the fix.
 
 - [ ] **Step 6: Commit**
 
@@ -749,10 +794,14 @@ git commit -m "docs: update history — jira-progress-write-back (I.1) shipped"
 `digismith:report-implementation`"), invoke `digismith:report-implementation`
 before this plan's ledger is deleted.
 
-**After this plan merges:** the design's real acceptance bar beyond
-Task 1's dogfood is a live run against an actual in-flight ticket (e.g.
-the next time EMKT-784-style work happens) — confirm the skill correctly
-recognizes and updates *pre-existing* human-authored content (a real
-multi-market table, a real Track checklist with stages this skill has
-never touched) rather than only the disposable dogfood issue's clean
-slate. That run is manual and cannot be scripted into this plan.
+**After this plan merges:** Task 1's dogfood is reasoning-only (per the
+SDD-ledger ruling above) — this skill will not have made a single real
+Jira API call before it first runs for real. The design's actual
+acceptance bar is therefore a live run against an actual in-flight
+ticket (e.g. the next time EMKT-784-style work happens): confirm the
+skill correctly recognizes and updates *pre-existing* human-authored
+content (a real multi-market table, a real Track checklist with stages
+this skill has never touched), and confirm the ADF nodes it writes
+actually render as real status lozenges/emoji/mentions (the `data-id`
+tell), not broken literal text. Watch that first real run closely. That
+run is manual and cannot be scripted into this plan.
