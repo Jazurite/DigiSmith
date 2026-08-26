@@ -111,8 +111,8 @@
     <div class="card">
       <div class="tag">Write 1</div>
       <h4>Description</h4>
-      <p>Idempotent, upsert-style. A Materials &amp; Links table row per
-      market, and (only if the section already exists) the Technical
+      <p>Idempotent, upsert-style. This repo's own Materials &amp; Links
+      table row, and (only if the section already exists) the Technical
       Development line of the Track checklist.</p>
     </div>
     <div class="card">
@@ -162,28 +162,35 @@
   <table>
     <tr><th>Country</th><th>Preview Theme</th><th>Customize</th><th>Pull Request</th></tr>
     <tr><td><strong>JP</strong></td><td>[Link]</td><td>[Link]</td><td>[Link]</td></tr>
-    <tr><td><strong>PH</strong></td><td>[Link]</td><td>[Link]</td><td>[Link]</td></tr>
   </table>
   </div>
-  <h3>Market detection</h3>
+  <h3>Single-market scope</h3>
   <p>
-    A repo whose name matches <code>shopify-template-&lt;code&gt;</code>
-    is a market row — country code is <code>&lt;code&gt;</code>,
-    uppercased (<code>shopify-template-jp</code> → <code>JP</code>). A repo
-    that doesn't match this pattern (e.g. <code>shopify-hub</code>) is
-    <strong>not</strong> a market row — confirmed by EMKT-784 itself,
-    where the hub's Storybook-component PR (#83) never appears in the
-    Materials table at all, only mentioned in the comment's "What's done."
-    Non-market repos are comment-only for this iteration (see
-    <a href="#out-of-scope">Out of Scope</a>).
+    I.1, as designed here, runs against exactly one repo/PR/ticket at a
+    time and writes exactly one row. No classification logic decides
+    whether a repo "counts" as a market, no comparison against a known
+    market list, no cross-repo awareness at all — that entire
+    problem (detecting which markets a ticket touches, looping across
+    them, deciding when the set is complete) belongs to
+    <strong>I.2</strong> (multi-repo distribution), deferred in full. I.1
+    only ever sees the one repo it's currently running in. The table may
+    already carry other rows from earlier work on this ticket (by a human,
+    or later by I.2) — I.1 leaves every row but its own untouched.
+  </p>
+  <p>
+    Row label: derived from the current repo's directory name — strip a
+    <code>shopify-template-</code> prefix and uppercase the remainder if
+    present (<code>shopify-template-jp</code> → <code>JP</code>);
+    otherwise use the repo name as-is (e.g. <code>shopify-hub</code>).
+    Just a label, not a branch — the table is written the same way either
+    way.
   </p>
   <h3>Upsert rule</h3>
   <ul>
-    <li>Table missing entirely → create it with a single row for this
-    market.</li>
-    <li>Table exists, this market's row exists → replace that row's three
-    link cells in place.</li>
-    <li>Table exists, this market's row doesn't exist yet → append a new
+    <li>Table missing entirely → create it with this single row.</li>
+    <li>Table exists, this row's label already present → replace that
+    row's three link cells in place.</li>
+    <li>Table exists, this row's label not present yet → append a new
     row.</li>
   </ul>
 </section>
@@ -200,11 +207,10 @@
   </p>
   <div class="callout">
     I.1 touches <strong>only</strong> the <code>Technical Development</code>
-    line: its <code>status</code> node and the per-market
-    <code>emoji</code> checkmark list beneath it. Every other stage line
-    is read and re-emitted byte-for-byte unchanged, since the whole field
-    is replaced on every write (see <a href="#adf-technique">The ADF
-    Technique</a>).
+    line: its <code>status</code> node and the <code>emoji</code>
+    checkmark list beneath it. Every other stage line is read and
+    re-emitted byte-for-byte unchanged, since the whole field is replaced
+    on every write (see <a href="#adf-technique">The ADF Technique</a>).
   </div>
   <h3>If the Track section doesn't exist yet</h3>
   <p>
@@ -214,16 +220,16 @@
     was found, so a human can set one up if they want this ticket to carry
     it at all.
   </p>
-  <h3>Marking this market done</h3>
+  <h3>Marking it done (single-repo scope)</h3>
   <p>
-    Once this market's checkmark is added and no market remains unchecked
-    for this ticket (per the Materials table's row count, if resolvable),
-    the <code>Technical Development</code> line's own <code>status</code>
-    node flips <code>neutral</code>/<code>blue</code> →
-    <code>green</code> ("DONE"). Otherwise it's set to
-    <code>blue</code> ("IN PROGRESS") the first time this line is created,
-    and left as whatever it already is on every subsequent single-market
-    update that doesn't complete the set.
+    I.1 has no visibility into whether a ticket needs other repos too —
+    that cross-repo awareness is I.2's job, not modeled here at all. So
+    within I.1's own scope, adding this repo's checkmark is the whole of
+    what it's tracking: the <code>Technical Development</code> line's
+    <code>status</code> node is set straight to <code>green</code>
+    ("DONE") the same write that adds the checkmark. If a ticket later
+    turns out to need more repos, reopening this status is I.2's
+    concern when it exists, not something I.1 hedges against today.
   </p>
 </section>
 
@@ -373,7 +379,6 @@
     <tr><td>Mention name doesn't resolve via <code>lookupJiraAccountId</code></td><td>Stop and ask for clarification. Never guess an <code>accountId</code>.</td></tr>
     <tr><td>Mistaken/duplicate comment already posted</td><td>No delete capability exists via this connector — edit it via <code>commentId</code> instead of creating a corrective second comment.</td></tr>
     <tr><td>Track section absent from the description</td><td>Skip the Track update, report why. Never scaffold the full stage list from nothing.</td></tr>
-    <tr><td>Repo doesn't match <code>shopify-template-&lt;code&gt;</code></td><td>Not a market row — mention in the comment only, skip the Materials table write for this repo.</td></tr>
   </table>
   </div>
 </section>
@@ -384,12 +389,21 @@
     <li><strong>Status transitions</strong> — standing constraint, stays
     manual by design, not revisited here.</li>
     <li><strong>I.2, multi-repo distribution</strong> — a separate map
-    sub-item. I.1 as designed here handles one repo/PR/ticket at a time;
-    looping it across a ticket's full market list is I.2's job, deferred.</li>
-    <li><strong>Non-market repos' Materials-table participation</strong>
-    (e.g. <code>shopify-hub</code>) — comment-only for now, per the
-    Market detection rule above. Could be revisited if a future ticket
-    needs the hub represented structurally, not just narratively.</li>
+    sub-item. I.1 as designed here handles exactly one repo/PR/ticket at a
+    time, with zero cross-repo awareness. Everything about multiple
+    markets belongs to I.2, deferred in full:
+    <ul>
+      <li>Detecting which markets/repos a ticket touches at all.</li>
+      <li>Looping I.1 (or its writes) across that full list.</li>
+      <li>Multi-row Materials-table orchestration — knowing which rows
+      already exist across the set, not just this one.</li>
+      <li>Cross-market completion tracking — whether the
+      <code>Technical Development</code> stage should reopen from
+      <code>DONE</code> back to <code>IN PROGRESS</code> when a ticket
+      turns out to need another market after I.1 already marked one
+      repo's work complete.</li>
+    </ul>
+    </li>
     <li><strong>Custom site-emoji ID lookup</strong> — no discovered path
     through this connector; noted as a known gap, not solved here.</li>
     <li><strong>Full Track-checklist scaffolding</strong> — deliberately
