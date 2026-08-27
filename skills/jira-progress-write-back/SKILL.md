@@ -86,7 +86,9 @@ Fetch the ticket's `summary`, `description`, and `comment` fields with
 This isn't a display fetch: whatever comes back gets spliced and written
 straight back in Step 8/12, and the markdown rendering lossily flattens
 special nodes into pseudo-HTML text that cannot be reconstructed into
-real nodes (see the Global Constraints' ADF warning). Keep the raw
+real nodes (see the plan's Global Constraints section —
+`.digismith/docs/jira-progress-write-back/plan.md` — for the ADF
+warning). Keep the raw
 `description` ADF document and the `comment.comments` array in memory for
 the rest of this process.
 
@@ -146,6 +148,11 @@ the table's row nodes for one whose first cell's text matches this
 repo's label (Step 5). Found → replace that row's link cells. Not found
 → append a new row with this repo's label and links, same cell shape as
 the existing rows.
+
+**Found, but followed by neither a `bulletList` nor a `table`**
+(unrecognized shape) → treat it the same as "not found" for this delta:
+skip the Materials & Links delta entirely, report why in Step 16. Never
+guess at a risky edit against an unfamiliar structure.
 
 ### Step 7: Draft the Track Checklist Delta
 
@@ -218,9 +225,26 @@ date +%-d/%-m
 
 Search the `comment.comments` array fetched in Step 4 for one whose body
 document's first node is a heading whose text starts with "📣 Progress
-Update – " followed by that exact `D/M` string. **Found** → remember its
-`id` as `commentId` for Step 15. **Not found** → Step 15 creates a new
-comment instead.
+Update – " followed by that exact `D/M` string — but a plain
+string-prefix check is not enough by itself: since `D/M` has no leading
+zeros or fixed width, a shorter day/month string can prefix-collide with
+a longer one from an unrelated date. For example, if today is `3/1` (3
+January) and an old comment is headed "📣 Progress Update – 3/12" (3
+December), that heading literally starts with the string for `3/1`, so a
+naive prefix check would wrongly match it and silently overwrite the
+December comment. Guard against this with a boundary check instead of a
+plain prefix check: the heading matches only if it starts with "📣
+Progress Update – <D/M>" **and** the character immediately after that
+matched substring is either absent (the heading ends there) or a
+non-digit. That boundary correctly rejects the `3/12`-vs-`3/1` case
+(the next character after the match is `2`, a digit) while still
+correctly matching a heading with legitimate trailing content, e.g. "📣
+Progress Update – 26/8 (week 2)" against a search for `26/8` (the next
+character is a space, a non-digit) — do not require full-string equality
+on the whole heading instead, since that would break matching those
+legitimately-suffixed headings. **Found** → remember its `id` as
+`commentId` for Step 15. **Not found** → Step 15 creates a new comment
+instead.
 
 ### Step 10: Draft "What's Done"
 
@@ -304,7 +328,8 @@ and ask via `AskUserQuestion`: post as drafted, let the user revise
 first, or cancel. **Revise** → incorporate the requested change and
 re-present before proceeding. **Cancel** → stop here, nothing is
 written. Only **post as drafted** continues to Step 14. This applies
-every time this skill runs, not just the first — see Global Constraints.
+every time this skill runs, not just the first — see the plan's Global
+Constraints section (`.digismith/docs/jira-progress-write-back/plan.md`).
 
 ### Step 14: Write the Description
 
@@ -346,7 +371,7 @@ ends here.
   toolset enumerates site-specific emoji.
 - **User cancels at Step 13** → stop, nothing written, no partial write
   of just the description or just the comment.
-- **`editJiraIssue` or `addCommentToJiraIssue` call fails** (permissions,
+- **The issue-edit or add-comment tool call fails** (permissions,
   network, malformed field) → report the failure plainly with whatever
   error detail the tool returned; don't retry silently or fall back to
   a markdown write.
