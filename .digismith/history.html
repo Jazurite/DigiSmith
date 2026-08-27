@@ -151,8 +151,8 @@
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>K</strong></td><td>Model tiering</td>
-      <td>Extend <code>subagent-driven-development</code> across a pool spanning frontier → open-weight models</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>enforcer</code>'s spec rewrap, <code>report-implementation</code>'s report render) to a cheap Chutes-hosted model, falling back to in-session generation whenever it's off, unavailable, or returns something malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a Chutes-hosted model (Kimi K3) via a persistent OpenCode server — <code>offload-implementer</code> skill <span class="status done">Done</span></td>
+      <td><span class="status next">In progress (multi-provider routing beyond Chutes still undesigned)</span></td></tr>
     <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
       <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -242,6 +242,11 @@
     <strong>I.1 — JIRA progress write-back:</strong> <code>jira-progress-write-back</code> skill —
     <a href="docs/jira-progress-write-back/design.html">design spec</a> ·
     <a href="docs/jira-progress-write-back/plan.md">implementation plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>K.2 — Implementer-task offload:</strong> <code>offload-implementer</code> skill —
+    <a href="docs/implementer-offload/design.html">design spec</a> ·
+    <a href="docs/implementer-offload/plan.md">implementation plan</a>
   </p>
 </section>
 
@@ -630,6 +635,27 @@
       execution-time ruling — consistent with every prior DigiSmith
       skill's pure-fixture dogfood, not a departure from it. First live
       run against a real ticket is still the acceptance bar.
+      Task 2 is this history.html and MEMORY.md update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>K.2 spiked, brainstormed, specced, and built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack asked to try offloading a real implementer task to a
+      Chutes-hosted model. A raw completion call (K.1's own mechanism)
+      turned out to have no tool access at all — a structural gap, not a
+      quality one. A feasibility spike proved the real fix: OpenCode (not
+      Aider, which needs Python &lt;3.13 and this machine only has 3.14.5),
+      driven by Kimi K3 via Chutes, autonomously read a file, ran a test
+      suite, diagnosed and fixed a real seeded bug, and verified it,
+      unassisted. The architectural brainstorm that followed added a
+      persistent-server-plus-fresh-session-per-task design (verified live
+      that sessions genuinely isolate on a shared server), explicit
+      per-task opt-in (nothing automatic), and surfaced failures instead
+      of silent fallback to Claude given the higher stakes than K.1's
+      document rewrap. Task 1 built and dogfooded
+      <code>skills/offload-implementer/SKILL.md</code> for real against a
+      scratch repo, including a real fix-round session-resumption test.
       Task 2 is this history.html and MEMORY.md update.</p>
     </div>
 
