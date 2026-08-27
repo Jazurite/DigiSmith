@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">8 / 19</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">9 / 20</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -177,6 +177,9 @@
     <tr><td><strong>S</strong></td><td>Figma visual regression</td>
       <td>Visual regression vs Figma designs via a custom Figma skill. Split out of <strong>I</strong> (2026-08-26) for the same reason as <strong>R</strong></td>
       <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>V</strong></td><td>Runtime clone provisioning</td>
+      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith/repo</code>) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh</td>
+      <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -243,6 +246,11 @@
     <a href="docs/jira-progress-write-back/design.html">design spec</a> ·
     <a href="docs/jira-progress-write-back/plan.md">implementation plan</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>V — Runtime clone provisioning:</strong> <code>depot</code> skill —
+    <a href="docs/depot/design.html">design spec</a> ·
+    <a href="docs/depot/plan.md">implementation plan</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -274,6 +282,11 @@
     <strong>P — Telemetry</strong> <span class="status done">Done</span> —
     pulled forward and built 2026-08-12, outside any tier (a new map letter
     added directly per Jack's request, same as <strong>O</strong>).
+  </p>
+  <p style="font-size:.85rem; color:var(--muted); margin-top:.2rem;">
+    <strong>V — Runtime clone provisioning</strong> <span class="status done">Done</span> —
+    pulled forward and built 2026-08-27, outside any tier, same as
+    <strong>O</strong>/<strong>P</strong>.
   </p>
 </section>
 
@@ -631,6 +644,37 @@
       skill's pure-fixture dogfood, not a departure from it. First live
       run against a real ticket is still the acceptance bar.
       Task 2 is this history.html and MEMORY.md update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>I.1 hit a real live-run bug on EMKT-756; depot (V) brainstormed, specced, and built — 3 tasks, subagent-driven-development</h4>
+      <p>I.1's first live run (EMKT-756) found a genuine bug: the Atlassian
+      MCP connector's <code>getJiraIssue</code> returns lossy rendered-markdown
+      for the <code>description</code> field specifically, despite requesting
+      ADF — forcing that write to be skipped. Root-caused and a fix proven
+      live (direct Jira REST API v3, personal token, bypassing the connector
+      entirely), captured in <code>backlog/jira-rest-graphql-direct-api.md</code>.
+      The same session also captured a live-tested Track-section template
+      (<code>backlog/track-section-template.md</code>) and a gap around Jack's
+      own standing tech-stack defaults not being consulted during brainstorming
+      (<code>backlog/opinionated-tech-stack-defaults.md</code>, tentative letter
+      <strong>U</strong>). Brainstorming the REST migration surfaced a genuinely
+      separate prerequisite: consumer repos need shared TypeScript code
+      (starting with a forthcoming <code>jira-client</code> package) without a
+      local DigiSmith development checkout. That became <strong>V</strong>,
+      its own map letter and its own spec — a sparse, blobless git clone of
+      just <code>packages/</code> at a fixed <code>~/.digismith/repo</code>,
+      wired into <code>bootstrap</code> Step 0.5 and reused by
+      <code>adopt</code>. Task 1 built and dogfooded
+      <code>skills/depot/SKILL.md</code> through reasoning against every
+      operation and failure path. Task 2 wired its <code>ensure</code>
+      operation into both entry-point skills. Task 3 is this
+      <code>history.html</code> and <code>MEMORY.md</code> update. The
+      Jira REST migration itself (<code>packages/jira-client</code>,
+      I.1's fix) is specced in
+      <a href="docs/jira-rest-migration/design.html">a separate design doc</a>
+      and has its own plan to follow.</p>
     </div>
 
   </div>
