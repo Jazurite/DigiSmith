@@ -146,15 +146,40 @@ report-contract block above, with a fresh
 
 ### Step 4: Dispatch
 
+Capture the Step 3 prompt into a shell variable first, via a
+single-quoted heredoc — a real task brief or findings list routinely
+contains backticks, `$` variable references, and embedded double quotes,
+any of which would corrupt or trigger unwanted expansion if interpolated
+directly into a double-quoted positional argument. A single-quoted
+heredoc (`<<'PROMPT_EOF'`) is immune to expansion during capture; the
+resulting `"$PROMPT"` reference is then safe to pass double-quoted,
+since a quoted variable reference doesn't re-parse its content.
+
 **Fresh task:**
 
 ```bash
+PROMPT=$(cat <<'PROMPT_EOF'
+<prompt built in Step 3, verbatim>
+PROMPT_EOF
+)
 opencode run --attach "http://127.0.0.1:<port>" \
   --model chutes/moonshotai/Kimi-K3-TEE --auto --format json \
-  --dir "<task-worktree>" "<prompt from Step 3>" > "<workspace>/task-<N>-opencode-events.jsonl"
+  --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events.jsonl"
 ```
 
-**Fix round**, same command plus `--session "<captured sessionID>"`.
+**Fix round**, same heredoc-capture-then-dispatch pattern, plus
+`--session "<captured sessionID>"`:
+
+```bash
+PROMPT=$(cat <<'PROMPT_EOF'
+<prompt built in Step 3, verbatim>
+PROMPT_EOF
+)
+opencode run --attach "http://127.0.0.1:<port>" \
+  --model chutes/moonshotai/Kimi-K3-TEE --auto --format json \
+  --session "<captured sessionID>" \
+  --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events.jsonl"
+```
 
 No session flag on a fresh task — confirmed live that this always starts
 a new, isolated session on an already-running server, never carrying
@@ -170,9 +195,20 @@ any line (they're all the same session). Record it:
 echo '{"task": <N>, "sessionID": "<extracted id>"}' >> "<workspace>/opencode-sessions.jsonl"
 ```
 
-The status contract text is in the `text` field of the **last** event
-whose `"type":"text"` — that's the model's final reply, matching what
-Step 3 asked it to send.
+The status contract text is nested inside the **last** event whose
+top-level `"type"` is `"text"` — that's the model's final reply,
+matching what Step 3 asked it to send. The reply text itself is **not**
+a top-level field on that event: it's one level down, inside a nested
+`part` object. A real `type:text` event looks like:
+
+```json
+{"type":"text","timestamp":1234567890,"sessionID":"ses_...","part":{"id":"prt_...","messageID":"msg_...","sessionID":"ses_...","type":"text","text":"the actual reply content here"}}
+```
+
+Note `"type":"text"` appears at *both* levels — the event and its
+nested `part` each carry their own `type` key. Match on the outer
+(event-level) `type` to find the right line; the text you actually want
+is at `.part.text`, not `.text`.
 
 ### Step 6: Hand Back to the Normal Flow
 
@@ -231,7 +267,7 @@ to kill, but stale state should not survive.
 | 1 | Ensure `opencode.json` exists in the task worktree, gitignored |
 | 2 | Locate or start `opencode serve`, tracking PID+port in the SDD workspace |
 | 3 | Build the prompt — brief + report contract (fresh), or findings + report contract (fix round) |
-| 4 | Dispatch via `opencode run --attach ... --format json`, with `--session <id>` on fix rounds |
-| 5 | Extract `sessionID` and the final status-contract text from the JSON event stream |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch via `opencode run --attach ... --format json "$PROMPT"`, with `--session <id>` on fix rounds |
+| 5 | Extract `sessionID` (event-level) and the final status-contract text (nested at `.part.text`) from the JSON event stream |
 | 6 | Hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
 | — | Stop: `taskkill` the tracked PID, delete the tracking file |
