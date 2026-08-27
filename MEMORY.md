@@ -111,6 +111,7 @@ tiering below.
 | **Q** | Convention enforcement | Makes `superpowers:brainstorming`/`superpowers:writing-plans` honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that any HTML doc DigiSmith writes gets published via the `Artifact` tool for readability, unless the active profile has `publish_artifact: false` |
 | **R** | End-to-end testing | Split out of **I** (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned |
 | **S** | Figma visual regression | Visual regression vs Figma designs via a custom Figma skill. Split out of **I** (2026-08-26) for the same reason as **R** |
+| **V** | Runtime clone provisioning | Maintains a sparse, refreshable local clone of DigiSmith's shared `packages/` code at a fixed, machine-wide location (`~/.digismith/repo`), so a consumer repo can run a shared package (starting with a forthcoming `jira-client`) without a local DigiSmith development checkout. `bootstrap`/`adopt` invoke it automatically at ticket start; also callable directly to refresh. New letter, added directly during the same brainstorm that surfaced the Jira REST migration — pulled forward and built outside any tier, same as **O** and **P**. Shipped: `digismith:depot` skill |
 
 Shared primitive several stages need: **JIRA write-back** (posting
 comments and updating the description — never driving status

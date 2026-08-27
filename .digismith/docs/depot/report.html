@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depot (V) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Depot (V) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: <strong>V</strong></span>
+    <span>Commit range: <code>7a77078..05a6f48</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>digismith:depot</code> — DigiSmith's map item V — a small utility skill that provisions and refreshes a local, sparse clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith/repo</code>), and wired it into <code>digismith:bootstrap</code>/<code>digismith:adopt</code> so every ticket's work starts with that clone guaranteed present. One new skill (<code>skills/depot/SKILL.md</code>) provides two operations — <code>ensure</code> (idempotent clone-if-missing, invoked automatically) and <code>refresh</code> (explicit fetch-and-hard-reset, invoked directly) — scoped to <code>packages/</code> only via git sparse-checkout combined with a blobless partial clone, so nothing outside that directory is downloaded or materialized on a consumer machine. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>superpowers:subagent-driven-development</code> (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>`depot` Skill — Write, Read Back, Dogfood</h4>
+      <p>The <code>digismith:depot</code> skill, invoked by name (<code>ensure</code>/<code>refresh</code>) from Task 2's <code>bootstrap</code>/<code>adopt</code> changes, and directly by the user at any time.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>Wire `depot` into `bootstrap` and `adopt`</h4>
+      <p>Every future <code>digismith:init</code> → <code>bootstrap</code>/<code>adopt</code> run now guarantees <code>~/.digismith/repo</code> exists before ticket work proceeds.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>Update the Roadmap — `MEMORY.md` and `.digismith/history.html`</h4>
+      <p>Map item V recorded as shipped in both roadmap documents — map table row, paragraph links, progress stats, tier note, and timeline entry.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: `depot` Skill — Write, Read Back, Dogfood</td><td>New <code>skills/depot/SKILL.md</code> with <code>ensure</code>/<code>refresh</code> operations, dogfooded via reasoning</td><td>Approved after 1 fix round</td><td>—</td></tr>
+    <tr><td>Task 2: Wire `depot` into `bootstrap` and `adopt`</td><td>New Step 0.5 in <code>bootstrap</code>; Step 2 extended in <code>adopt</code> to reuse it by reference</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 3: Update the Roadmap</td><td><code>MEMORY.md</code> and <code>.digismith/history.html</code> updated for map item V</td><td>Approved, clean</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Important finding fixed, 1 Important finding parked with a ruling (flagged to the user), 5 Minor findings deferred.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>ensure</code>/<code>refresh</code> command blocks had no <code>&amp;&amp;</code> chaining, breaking the atomicity the Error Handling table promised (a failed early command didn't stop later commands in the same block)</td><td>Fixed (commit 05a6f48) — both blocks now chained; re-reviewed, no new breakage</td></tr>
+    <tr><td>Important</td><td>Step 0.5 makes network/SSH access a hard precondition for all ticket-start work — including <code>ticket: false</code> profiles — before <code>packages/</code> has any real content</td><td>Parked with ruling: this is exactly what the approved design spec's Error Handling section specifies, not implementer drift. Flagged directly to the user rather than silently decided, since the cost (no offline ticket-start until <code>packages/jira-client</code> ships) has no benefit yet</td></tr>
+    <tr><td>Minor</td><td><code>design.html</code>/<code>plan.md</code> overstate sparse scope as excluding all root-level files — cone mode always includes them; directories are correctly excluded and the actual goal (not duplicating <code>backlog/</code>/<code>standards/</code>/skill source) is still met</td><td>Deferred</td></tr>
+    <tr><td>Minor</td><td><code>task-1-report.md</code> misnames where git stores the sparse pattern (<code>.git/info/sparse-checkout</code>, not <code>.git/config</code>) — the conclusion itself is still correct, empirically reverified by the final reviewer</td><td>Deferred</td></tr>
+    <tr><td>Minor</td><td><code>ensure</code>/<code>refresh</code> test different paths for "does the clone exist" (<code>~/.digismith/repo/.git</code> vs <code>~/.digismith/repo</code>)</td><td>Deferred</td></tr>
+    <tr><td>Minor</td><td><code>bootstrap</code> Step 0.5's justification describes a <code>jira-progress-write-back</code> dependency that's only true post-migration, not yet</td><td>Deferred</td></tr>
+    <tr><td>Minor</td><td><code>MEMORY.md</code>'s map table jumps S→V with no inline note explaining the gap</td><td>Deferred</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">08cc62c</span> feat(depot): add digismith:depot skill (map item V)</li>
+    <li><span class="sha">7c4a105</span> fix(depot): qualify bootstrap/adopt references in Quick Reference table</li>
+    <li><span class="sha">6ebd708</span> feat(depot): wire ensure into bootstrap Step 0.5 and adopt Step 2</li>
+    <li><span class="sha">1da8591</span> docs(depot): update roadmap for map item V — depot shipped</li>
+    <li><span class="sha">05a6f48</span> fix(depot): chain ensure/refresh commands so a failure stops the sequence</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/depot/report.html</footer>
+
+</body>
+</html>
