@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depot — DigiSmith Runtime Clone</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+  .diagram { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.2rem; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: .82rem; line-height: 1.5; overflow-x: auto; white-space: pre; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Depot — DigiSmith Runtime Clone</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: tentative V (uncommitted)</span>
+    <span>Skill: <code>digismith:depot</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#operations">Two Operations</a></li>
+    <li><a href="#location-scope">Location &amp; Scope</a></li>
+    <li><a href="#credentials-boundary">Relationship to Credentials</a></li>
+    <li><a href="#invocation">Invocation</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    A small utility skill that maintains a local, minimal, refreshable
+    clone of DigiSmith's shared <code>packages/</code> code at a fixed
+    machine-wide location — <code>~/.digismith/repo</code> — so any
+    consumer repo can run a shared package (starting with
+    <a href="../jira-rest-migration/design.html"><code>jira-client</code></a>)
+    without a local DigiSmith development checkout, and without ever
+    needing to know or pass around <em>where</em> one happens to live on
+    a given machine.
+  </p>
+  <p>
+    Discovered as a prerequisite while designing the Jira REST migration,
+    but deliberately generic: it knows nothing about Jira. Any future
+    package added under <code>packages/</code> is available through the
+    same clone automatically, with no changes needed here.
+  </p>
+</section>
+
+<section id="operations">
+  <h2>Two Operations</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Ensure</div>
+      <h4>Idempotent, clone-if-missing</h4>
+      <p>Provisions <code>~/.digismith/repo</code> only if it doesn't
+      already exist; a no-op otherwise. Called automatically by
+      <code>bootstrap</code>/<code>adopt</code> at the start of any
+      ticket's work.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Refresh</div>
+      <h4>Explicit, on demand</h4>
+      <p>Fetches and hard-resets to <code>origin/main</code>. Never runs
+      automatically — invoked conversationally, any time
+      ("update my DigiSmith clone"), mirroring the update-on-request
+      pattern the company's own developer-toolbox already uses.</p>
+    </div>
+  </div>
+</section>
+
+<section id="location-scope">
+  <h2>Location &amp; Scope</h2>
+  <p>
+    A machine already carries at least two other copies of DigiSmith by
+    the time this runs: Jack's own active development checkout, and
+    Claude Code's own plugin-install cache (explicitly called out as
+    a stale, version-locked snapshot in
+    <code>jira-progress-write-back</code>'s own Step 0). A third full
+    clone would triple up on content this skill has no reason to
+    duplicate — <code>backlog/</code>, <code>standards/</code>,
+    <code>MEMORY.md</code>, every skill's own source. The runtime clone
+    only ever needs <code>packages/</code>.
+  </p>
+  <p>
+    A blobless, sparse, cone-mode clone keeps exactly that scope — content
+    outside <code>packages/</code> is never even downloaded, not just
+    hidden from the working tree:
+  </p>
+  <pre><code># ensure (clone-if-missing)
+git clone --filter=blob:none --no-checkout --sparse \
+  git@github.com:Jazurite/DigiSmith.git ~/.digismith/repo
+git -C ~/.digismith/repo sparse-checkout set packages
+git -C ~/.digismith/repo checkout main
+
+# refresh
+git -C ~/.digismith/repo fetch --all --prune --tags -q
+git -C ~/.digismith/repo checkout main
+git -C ~/.digismith/repo reset --hard origin/main</code></pre>
+  <p>
+    Same SSH remote (<code>git@github.com:Jazurite/DigiSmith.git</code>)
+    as Jack's own development checkout — no separate auth path to set up.
+    The sparse-checkout pattern is set once at clone time and persists
+    across every subsequent <code>reset --hard</code>; refresh never needs
+    to reapply it.
+  </p>
+</section>
+
+<section id="credentials-boundary">
+  <h2>Relationship to Credentials</h2>
+  <div class="callout">
+    <code>~/.digismith/.env</code> lives alongside
+    <code>~/.digismith/repo</code> — same parent folder, for tidiness —
+    but <strong>Depot never creates, reads, or manages it.</strong> That
+    file is a Jira-specific concern owned entirely by the
+    <a href="../jira-rest-migration/design.html">Jira client migration</a>,
+    including its own first-use bootstrap prompt. Keeping this boundary
+    strict means Depot stays reusable by any future package that has
+    nothing to do with Jira and needs no credentials of its own.
+  </div>
+</section>
+
+<section id="invocation">
+  <h2>Invocation</h2>
+  <ul>
+    <li><strong><code>bootstrap</code>, new Step 0.5</strong> — right
+    after Step 0 resolves <code>.digismith/profile</code>, invoke
+    Depot's <code>ensure</code> operation. Unlike
+    <code>.digismith/profile</code>/<code>telemetry-marker</code>, this
+    needs no per-worktree copy step (2.6/2.7-style) — the clone lives
+    outside every repo and worktree, shared machine-wide, so it only
+    ever needs provisioning once per machine, not once per ticket.</li>
+    <li><strong><code>adopt</code></strong> — reuses Step 0.5 by
+    reference, the same way it already reuses Step 0/2.6 for the
+    profile, per <code>MEMORY.md</code>'s existing convention. No second
+    implementation.</li>
+    <li><strong>Standalone</strong> — invoked directly, any time, for a
+    <code>refresh</code> (e.g. "update my DigiSmith clone" after pushing
+    a change to a shared package).</li>
+  </ul>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Disposition</th></tr>
+    <tr><td>No SSH access / key not authorized for the repo</td>
+      <td>Report the actual git error plainly. No retry, no fallback to
+      an unauthenticated clone attempt.</td></tr>
+    <tr><td>Network unreachable / GitHub unreachable</td>
+      <td>Report the actual git error plainly.</td></tr>
+    <tr><td><code>ensure</code> fails during <code>bootstrap</code>/<code>adopt</code>
+      Step 0.5</td>
+      <td>Fail the whole ticket-start flow. Jira write-back (and any
+      other package-dependent stage) would be broken for this ticket
+      regardless, so surfacing it at ticket-start beats a confusing
+      failure later, deep inside a consuming skill.</td></tr>
+    <tr><td><code>refresh</code> invoked standalone and it fails</td>
+      <td>Same disposition — report the error, leave the existing clone
+      exactly as it was (a failed <code>fetch</code> never reaches the
+      <code>reset --hard</code> step).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>Credential management</strong> — entirely the Jira
+    client migration's concern; see
+    <a href="#credentials-boundary">Relationship to Credentials</a>.</li>
+    <li><strong>Auto-refresh on every invocation</strong> — deliberately
+    not done. Matches the company developer-toolbox's own precedent
+    (clone once, refresh only on explicit request) and avoids a network
+    round-trip on every package call.</li>
+    <li><strong>Per-package logic</strong> — Depot has no awareness of
+    what's inside <code>packages/</code>; it clones the whole directory
+    as one sparse scope. A consumer picks its own package's path
+    underneath (e.g. <code>packages/jira-client/</code>).</li>
+    <li><strong>Publishing to an npm registry</strong> — considered and
+    rejected for the Jira client specifically (see that spec's
+    Architecture section); Depot is the chosen alternative to a real
+    package-registry publish step.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/depot/design.html</footer>
+
+</body>
+</html>
