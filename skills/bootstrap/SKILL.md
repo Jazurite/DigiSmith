@@ -110,6 +110,38 @@ DigiSmith's own repo on or off — and on confirmation overwrite
 job done at this point — don't fall through into Step 1's ticket flow
 unless the user's original request was also to start work.
 
+### Step 0.5: Ensure DigiSmith Runtime Clone
+
+**Only runs when Step 0 falls through to actual ticket work.** If the
+user's request was a standalone profile switch and Step 0 already
+stopped there (per its own "Switching profiles mid-session" sub-flow),
+this step does not run — there is no ticket work to prepare for. Skip
+straight past it in that case, same as if it didn't exist.
+
+Otherwise, invoke `digismith:depot`'s `ensure` operation. This is
+unrelated to `.digismith/profile` (Step 0) or to the repo currently
+being worked in — `depot` always targets the same fixed, machine-wide
+`~/.digismith/repo`, regardless of which consumer repo `bootstrap` is
+running in.
+
+**Succeeds** (clone already present, or freshly provisioned) → continue
+to Step 1.
+
+**Fails** (see `digismith:depot`'s own Error Handling — no SSH access,
+network unreachable, or any other git failure) → stop here. Report the
+underlying error plainly. Do not create a branch or worktree, do not
+proceed to Step 1. A ticket started without this clone would later hit
+the same failure inside `jira-progress-write-back` or any other
+package-dependent skill, just later and less clearly — surfacing it now,
+at ticket-start, is strictly better.
+
+Unlike `.digismith/profile` (Step 2.6) and `.digismith/telemetry-marker`
+(Step 2.7), `~/.digismith/repo` needs **no per-worktree copy step**. It
+lives outside every repo and worktree entirely, shared machine-wide — once
+`ensure` has run successfully anywhere on this machine, every later
+worktree (for this ticket or any other) already sees it at the same
+fixed path.
+
 ### Step 1: Get a Real Ticket
 
 Check whether this conversation already produced a
@@ -396,6 +428,7 @@ chain yourself.
 | Step | Action |
 |---|---|
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
+| 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` into the worktree, only if Step 1.5 just wrote one this run — both plain file copies, never `git add -f` |
