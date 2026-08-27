@@ -11,9 +11,10 @@ DigiSmith's map item **M**. Waits for Emma's ephemeral-deploy GitHub
 Actions check to finish on an open PR, then extracts the Shopify Preview
 Theme URL and Theme Editor URL from the `github-actions` bot's PR comment
 and reports them. Does not create the PR (that's
-`superpowers:finishing-a-development-branch`'s job) and does not write to
-JIRA (that's a separate, later map item, **I.1**) — this skill's job ends
-at reporting the two URLs.
+`superpowers:finishing-a-development-branch`'s job) and writes nothing to
+JIRA itself — `digismith:jira-progress-write-back` (**I.1**) picks up
+these captured URLs from here. This skill's job ends at reporting the two
+URLs.
 
 ## When to Use
 

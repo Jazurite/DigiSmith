@@ -1,7 +1,11 @@
-# JIRA write-back (I.1) + multi-repo distribution (I.2): ADF formatting, profile-gated fan-out
+# Multi-repo distribution (I.2): profile-gated worktree fan-out
 
 **Status:** Not applied. Raw material only — needs a design spec before
-becoming a skill.
+becoming a skill. (This item originally also covered I.1's real ADF
+formatting technique; **I.1 shipped 2026-08-26** as
+`digismith:jira-progress-write-back` — see
+`.digismith/docs/jira-progress-write-back/` — so this file has been
+narrowed to the still-open **I.2** piece only.)
 
 **Source:** Learned empirically during EMKT-784 (Trial/Returns Banner
 rollout across shopify-hub + 4 market repos), captured in
@@ -11,65 +15,11 @@ worktree branch that may eventually get deleted.
 
 ## What this covers
 
-Map item **I** (JIRA comment write-back, unscoped) has real technique
-now, not just the "consumes M's output, no status transition" shape
-already in `MEMORY.md`. Two parts, now split into two sub-items
-(2026-08-26) since one is profile-gated and the other isn't:
+**I.2** — multi-repo distribution. Gated behind a profile field (map
+item **O**): on for Emma (per-market theme repos), off for a
+single-repo personal profile, where there's nothing to distribute.
 
-- **I.1** — JIRA ADF formatting. Applies regardless of profile.
-- **I.2** — multi-repo distribution. Gated behind a profile field
-  (map item **O**): on for Emma (per-market theme repos), off for a
-  single-repo personal profile, where there's nothing to distribute.
-
-### 1. Real Jira formatting via ADF, not markdown approximation (I.1)
-
-Plain markdown with bold text standing in for "DONE"/"IN PROGRESS"
-works and is safe, but doesn't produce Jira's actual native status
-lozenges, emoji icons, or collapsible "expand" panels.
-
-**The trap:** reading an issue back (`getJiraIssue`, any
-`responseContentFormat`) renders special ADF nodes as pseudo-HTML:
-`<custom data-type="status">DONE</custom>`. This is **read-only** —
-sending that literal text back via `contentFormat: "markdown"` does
-*not* re-parse into real nodes; it round-trips as visibly broken
-literal text on the real ticket. Confirmed by testing directly on a
-live ticket (caught and reverted within a minute).
-
-**What works:** `contentFormat: "adf"` on `editJiraIssue`/
-`addCommentToJiraIssue`, value set to a stringified real ADF document
-(`{"type":"doc","version":1,"content":[...]}`). The response echoes
-special nodes back with an auto-assigned `data-id="id-N"` — that
-`data-id`'s presence (vs. absence for the broken literal-text case) is
-the tell that a real node was created.
-
-Node schemas confirmed against `developer.atlassian.com/cloud/jira/platform/apis/document/nodes/...`:
-
-- `status`: `{"type":"status","attrs":{"text":"DONE","color":"green"}}`
-  — `color` ∈ `neutral|purple|blue|red|yellow|green`.
-- `emoji`: `{"type":"emoji","attrs":{"shortName":":check_mark:","text":"✅"}}`
-  — `id` not required for a standard shortcode; server resolves it.
-- `expand`: `{"type":"expand","attrs":{"title":"..."},"content":[...]}`
-  — a real collapsible panel.
-- Standard nodes (`paragraph`, `heading`, `bulletList`/`listItem`,
-  `table`/`tableRow`/`tableHeader`/`tableCell`, `hardBreak`, `text`
-  with `strong`/`link` marks) all work as expected via the same ADF
-  path.
-
-**Known gaps:**
-- A *custom, site-uploaded* emoji needs a real registered UUID-style
-  `id` to render — no discovered way to look that up through this Jira
-  MCP connector. Don't guess an id; skip the icon or find another way
-  to enumerate site emoji first.
-- No delete-comment capability — a duplicate/mistaken comment can only
-  be edited, never removed. Check for an existing matching comment
-  (e.g. the user's own "📣 Progress Update – <date>" skeleton) and
-  update it via `commentId` before creating a new one.
-- `editJiraIssue` replaces the entire field value, not a patch/append
-  — any section needing a real ADF node forces the *entire* field to
-  be submitted as one ADF document in that call. No mixing "most of
-  the description via easy markdown" with "one section via ADF."
-
-### 2. Multi-repo distribution (worktree fan-out across market repos) (I.2)
+### Multi-repo distribution (worktree fan-out across market repos)
 
 Same ticket key + slug branch name (`<KEY>__<slug>`) created as a
 worktree in each affected repo, repeating `digismith:using-digismith`'s
@@ -111,10 +61,6 @@ fan out across siblings today).
 - **I.2** — a "capture ephemeral links" step wrapping
   `digismith:capture-ephemeral-url` over every repo in the distribution
   list, same profile gate as above.
-- **I.1** — a "post Jira progress update" step using the ADF node
-  shapes above, so future reports get genuine formatting on the first
-  attempt. Runs regardless of profile. Still no automated status
-  transitions — that stays manual per standing preference.
 
 ## Why not applied yet
 
