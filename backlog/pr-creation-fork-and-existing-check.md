@@ -76,3 +76,24 @@ upstream Superpowers skill. Two real paths, undecided:
   upstream.
 
 No ticket exists for either path yet.
+
+## Confirmed live: pattern 1 needs `--state all`, not just open PRs
+
+EMKT-756 hit the specific failure mode pattern 1 guards against, but in
+its *merged* form: a stale worktree's branch name matched a repo's
+original cross-sell PR, which had already been merged two weeks
+earlier. `gh pr list --head <branch>` with no `--state` flag only
+surfaces *open* PRs, so a check written exactly as pattern 1 describes
+would have come back empty and looked safe to push to — when actually
+pushing to that branch would have reopened or added confusing new
+commits onto an already-merged, already-closed PR's history. The
+recovery was to cut a fresh branch off current `main` and cherry-pick
+just the new commit instead, opening a new PR.
+
+**Refinement to pattern 1:** the existing-PR check must be
+`gh pr list --state all --head <branch> --json number,state,url` (or
+equivalent) and branch on `state` — `OPEN` → reuse it as pattern 1
+already says; `MERGED` or `CLOSED` → treat as "no usable PR," cut a
+fresh branch off the current default branch instead of pushing to the
+stale one. Confirmed against real repo state
+(`gh pr list --state all --head <branch>`), not assumed.

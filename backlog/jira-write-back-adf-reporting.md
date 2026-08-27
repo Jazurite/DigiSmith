@@ -62,6 +62,16 @@ fan out across siblings today).
   `digismith:capture-ephemeral-url` over every repo in the distribution
   list, same profile gate as above.
 
+## Related: a live-tested output shape for this item
+
+[[track-section-template.md]] (EMKT-756) hand-built a per-market Track
+table (Dev/Review/QA/Country/Deployment columns) that only makes sense
+with visibility across every affected repo at once — i.e. it's naturally
+this item's output, not something a single-repo `I.1` run should try to
+produce piecemeal. When **I.2** gets a design spec, start the
+Track-section part of its scope from that template rather than
+inventing a fresh one.
+
 ## Why not applied yet
 
 Raw findings from a single live session, not yet run through
