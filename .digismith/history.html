@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">8 / 17</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">8 / 19</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -145,8 +145,8 @@
       <td>Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2</td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>I</strong></td><td>QA handoff</td>
-      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output) — no status transition, that stays manual by design · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output), including real ADF formatting — no status transition, that stays manual by design <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution, gated behind a profile field (map item O) <span class="status todo">Not started</span></td>
+      <td><span class="status next">In progress (1/2)</span></td></tr>
     <tr><td><strong>J</strong></td><td>Estimation</td>
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -171,6 +171,12 @@
     <tr><td><strong>Q</strong></td><td>Convention enforcement</td>
       <td>Makes <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability</td>
       <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>R</strong></td><td>End-to-end testing</td>
+      <td>Split out of <strong>I</strong> (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>S</strong></td><td>Figma visual regression</td>
+      <td>Visual regression vs Figma designs via a custom Figma skill. Split out of <strong>I</strong> (2026-08-26) for the same reason as <strong>R</strong></td>
+      <td><span class="status todo">Not started</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -232,6 +238,11 @@
     <a href="docs/enforcer/plan.md">implementation plan</a> ·
     <a href="docs/enforcer/report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>I.1 — JIRA progress write-back:</strong> <code>jira-progress-write-back</code> skill —
+    <a href="docs/jira-progress-write-back/design.html">design spec</a> ·
+    <a href="docs/jira-progress-write-back/plan.md">implementation plan</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -252,8 +263,8 @@
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>5</strong></td><td>Technical expansion</td>
-      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1/I.2/I.3</strong> QA handoff</td>
-      <td><span class="status next">In progress (2/5 — M and N shipped, pulled forward out of tier order)</span></td></tr>
+      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1</strong> JIRA write-back <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution · <strong>R</strong> E2E testing · <strong>S</strong> Figma visual regression</td>
+      <td><span class="status next">In progress (3/8 — M, N, and I.1 shipped, pulled forward out of tier order)</span></td></tr>
     <tr><td><strong>6</strong></td><td>Last</td>
       <td><strong>C</strong> live work journal</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -592,6 +603,33 @@
       <code>inject-standards</code>, README, getting-started) from <code>using-digismith</code>
       to <code>bootstrap</code>/<code>adopt</code>. Task 7 updated <code>MEMORY.md</code>'s map
       and retired the now-resolved backlog item. Task 8 is this history.html update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-26</div>
+      <h4>I split into I.1/I.2, R and S promoted to their own letters, I.1 built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack pointed out that map item I's original I.2 (multi-repo
+      distribution, requested against the raw material captured from
+      EMKT-784's real reporting workflow) is profile-dependent — it makes
+      sense for Emma's multi-market repos but not a single-repo personal
+      profile — while I's actual pre-existing I.2 (end-to-end testing)
+      and I.3 (Figma visual regression) were never JIRA-write-back or
+      distribution concerns at all, just filed under I's "QA handoff" gap
+      by coincidence. Those two were promoted to their own top-level
+      letters, <strong>R</strong> and <strong>S</strong>. <strong>I.1</strong>
+      (JIRA progress write-back) was then brainstormed, specced, and
+      built: a single skill posting real ADF status lozenges, emoji, and
+      a dated progress comment against a ticket's description and
+      comment thread, grounded directly in EMKT-784's real live ticket
+      content rather than an invented format, and scoped to exactly one
+      repo/market at a time — multi-repo orchestration stays entirely
+      with <strong>I.2</strong>, not yet built. Task 1 built and dogfooded
+      <code>skills/jira-progress-write-back/SKILL.md</code>, including a
+      pass against a real disposable Jira issue to confirm actual ADF
+      node creation (not just well-reasoned JSON) — a deliberate
+      departure from every prior DigiSmith skill's pure-fixture dogfood,
+      since this feature's correctness can't be confirmed any other way.
+      Task 2 is this history.html and MEMORY.md update.</p>
     </div>
 
   </div>
