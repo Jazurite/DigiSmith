@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Implementer-Task Offload (K.2) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Implementer-Task Offload (K.2) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: <strong>K.2</strong></span>
+    <span>Commit range: <code>31cbb2c..51f370a</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Build <code>offload-implementer</code> — DigiSmith's map item <strong>K.2</strong> — a skill that runs one <code>subagent-driven-development</code> task on a Chutes-hosted model (Kimi K3) via a persistent OpenCode server, when explicitly asked to offload that task, instead of a normal Claude implementer dispatch. A single new skill invoked by the controller itself (not a fresh <code>Agent</code>-tool subagent — that tool has no non-Anthropic model routing); it shells out to the <code>opencode</code> CLI via <code>Bash</code>, starting or reusing a persistent <code>opencode serve</code> process per plan and dispatching each offloaded task as a fresh, isolated session on that server. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>superpowers:subagent-driven-development</code> (2 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>`offload-implementer` Skill — Write, Dogfood for Real</h4><p>A committed diff in the target worktree, a report file matching the Claude-implementer report contract, and a captured `sessionID` for fix-round resumption.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Update `.digismith/history.html` and `MEMORY.md` for K.2</h4><p>An up-to-date living tracker reflecting K.2 shipped.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. `offload-implementer` Skill — Write, Dogfood for Real</td><td>`skills/offload-implementer/SKILL.md`, dogfooded live against a real OpenCode server + Chutes API</td><td class="status-fixed">Approved after 1 fix round</td><td>"round cap (3)" phrasing could be briefly misread as the base skill's own cap (which is 5)</td></tr>
+    <tr><td>2. Update `.digismith/history.html` and `MEMORY.md` for K.2</td><td>Map row, per-feature entry, and timeline entry in `history.html`; `MEMORY.md`'s K row updated</td><td class="status-fixed">Approved after 1 fix round</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 8 Important findings from the whole-branch review, plus 1 further Important and 1 Minor finding surfaced by the fix-wave's own scoped re-review, all resolved (the final two fixed directly by the controller at adjudication, since the final-review gate allows no second fix wave); 2 Minor findings parked as cosmetic, non-blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Dispatched prompt never instructed the model to commit — `scripts/review-package` only sees committed diffs</td><td>Fixed — explicit commit step added to the report contract; `Commits: none` with a dirty tree is now a stated failure</td></tr>
+    <tr><td>Important</td><td>No guidance that real dispatches take several minutes — a healthy run could be misreported as `BLOCKED` at the tool's default ~120s timeout</td><td>Fixed — explicit long-timeout guidance added, plus an Error Handling distinction between a real `opencode` error and a Bash-tool timeout</td></tr>
+    <tr><td>Important</td><td>The empirically-confirmed false-success failure mode (a resumed session claimed `DONE` with no real edit) wasn't written into the skill</td><td>Fixed — Error Handling bullet added requiring independent confirmation before passing a status onward</td></tr>
+    <tr><td>Important</td><td>Step 1 unconditionally appended to the target repo's tracked `.gitignore`, against house convention for local machine config</td><td>Fixed — switched to `.git/info/exclude`, then further corrected at adjudication to resolve the real path dynamically after the fix wave's hardcoded path was found unexecutable in a linked worktree</td></tr>
+    <tr><td>Important</td><td>Offloaded dispatches silently bypassed `digismith:inject-standards`</td><td>Fixed — Step 3 now invokes it and folds the output into the dispatched prompt</td></tr>
+    <tr><td>Important</td><td>Fix-round reports used a separate file instead of the base skill's shared-report convention, risking starving the re-review of evidence</td><td>Fixed — fix-round reports now append to the same report file; only the raw event-stream files stay round-suffixed</td></tr>
+    <tr><td>Important</td><td>`--auto`'s real blast radius (unattended file/shell authority) was undocumented</td><td>Fixed — Prerequisites now states what it grants and confines use to disposable/isolated worktrees</td></tr>
+    <tr><td>Important</td><td>`README.md` was never updated for the new skill</td><td>Fixed — a matching section added, stale skill-count language corrected</td></tr>
+    <tr><td>Important</td><td>The fix wave's own `.git/info/exclude` path was hardcoded and unexecutable in a linked worktree — `.git` is a file there, not a directory (verified live in this exact checkout)</td><td>Fixed directly by the controller at final-review adjudication — path now resolved dynamically via `git rev-parse --git-path info/exclude`</td></tr>
+    <tr><td>Minor</td><td>The false-success verification predicate accepted "files changed OR a commit exists," letting an uncommitted `Commits: none` reply slip past the exact gate finding-1 exists to enforce</td><td>Fixed directly by the controller at final-review adjudication — tightened to require a real matching commit specifically</td></tr>
+    <tr><td>Minor</td><td>The reordered WINPID-resolution paragraph forward-references a variable assigned one line later</td><td>Parked — confirmed a readability cost only; the actual execution point downstream re-anchors correctly</td></tr>
+    <tr><td>Minor</td><td>The `MEMORY.md` convention citation's causal phrasing ("never `git add -f`-ing") doesn't precisely match `.git/info/exclude`'s actual guarantee mechanism</td><td>Parked — the cited class-of-file precedent is still correct; only the causal wording is imprecise</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">f0fe0a5</span> feat(offload-implementer): add K.2 skill — persistent OpenCode server, per-task offload to Kimi K3</li>
+    <li><span class="sha">da53fd7</span> fix(offload-implementer): correct JSON field path and prompt quoting (review round 1)</li>
+    <li><span class="sha">9150636</span> docs: update history — offload-implementer (K.2) shipped</li>
+    <li><span class="sha">1740ea0</span> fix(implementer-offload): resolve K.2+/K.3+ bucket-label inconsistency (review round 1)</li>
+    <li><span class="sha">d19b9a3</span> fix(offload-implementer): final review fix wave — commit contract, timeouts, false-success guard, standards injection, gitignore, docs</li>
+    <li><span class="sha">51f370a</span> fix(offload-implementer): resolve worktree-breaking .git/info/exclude path, tighten false-success check (final review adjudication)</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/implementer-offload/report.html</footer>
+
+</body>
+</html>
