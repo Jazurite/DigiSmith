@@ -656,6 +656,14 @@
       document rewrap. Task 1 built and dogfooded
       <code>skills/offload-implementer/SKILL.md</code> for real against a
       scratch repo, including a real fix-round session-resumption test.
+      That fix-round test also surfaced a real mechanism gap: a resumed
+      session once replied with a false <code>DONE</code> and a clean
+      test summary while the target file had never actually changed and
+      the real suite still failed, caught only because the controller
+      independently re-ran the tests; elsewhere in the same dogfood the
+      controller completed part of the live run directly after the
+      original dispatch stalled. Both findings became this skill's
+      false-success and dispatch-timeout guidance during final review.
       Task 2 is this history.html and MEMORY.md update.</p>
     </div>
 

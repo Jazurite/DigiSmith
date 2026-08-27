@@ -30,6 +30,15 @@ binary, since pnpm skips postinstall scripts by default). A Chutes API
 key available via `python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py
 get --field api_key`.
 
+**`--auto` grants real, unattended authority.** Every dispatch below runs
+OpenCode with `--auto` — its own docs describe this as "auto-approve
+permissions that are not explicitly denied (dangerous!)", and the
+shipped `opencode.json` here declares no `permission` block limiting it.
+In practice that means unattended file and shell access within the
+target worktree for the life of the dispatch. Only use this skill
+against a disposable/isolated worktree — never a checkout holding
+anything sensitive.
+
 ## Process
 
 ### Step 0: Determine Intent
@@ -65,19 +74,46 @@ Check for `opencode.json` in the worktree root. **Present** → continue.
 }
 ```
 
-Then check whether `.gitignore` in that worktree already ignores
-`opencode.json`. If not: read the file's current content first (or note
-its absence), ensure it ends in a newline if non-empty, and append a new
-line `opencode.json` — an append operation only, never a whole-file
-rewrite. This file references your API key only via `{env:CHUTES_API_KEY}`,
-never a literal value, but it's still local machine config that
-shouldn't be committed.
+Then check whether `opencode.json` is already ignored one way or
+another (`git check-ignore -q opencode.json`, exit 0 = already ignored).
+If not, ignore it via `<worktree>/.git/info/exclude` — a local-only,
+untracked git mechanism — **never** the worktree's own tracked
+`.gitignore`. This is local machine config, the same class of file as
+`.digismith/profile`/`.digismith/telemetry-marker` (see `MEMORY.md`'s
+"`.digismith/profile` is config, not generated docs output" convention):
+guaranteed never committed by never `git add -f`-ing it, not by editing
+a file that rides along in the worktree's own diff. Read
+`.git/info/exclude`'s current content first (or note its absence),
+ensure it ends in a newline if non-empty, and append a new line
+`opencode.json` — an append operation only, never a whole-file rewrite.
+This file references your API key only via `{env:CHUTES_API_KEY}`, never
+a literal value, but it's still local machine config that shouldn't be
+committed.
 
 ### Step 2: Locate or Start the OpenCode Server
 
 This plan's SDD workspace is `.superpowers/sdd/<plan-basename>/` (same
-directory the ledger lives in). Check for
-`<workspace>/opencode-server.json`.
+directory the ledger lives in).
+
+**Windows Git Bash only:** every `<pid>` named anywhere in this step and
+in Stop the Server means the native Windows PID `tasklist`/`taskkill`
+operate on — never the MSYS/Cygwin PID a plain `$!` gives you, which
+differs (confirmed live: MSYS PID `6140` vs. the WINPID `24816`
+`tasklist` actually needed for the same process). Resolve the real
+WINPID before persisting or checking any PID:
+
+```bash
+WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
+```
+
+If `$WINPID` comes back empty (the `ps -W`/`awk` lookup can miss), fall
+back to resolving the PID by parsing `netstat -ano` for the process
+listening on the captured port instead. Never persist an empty pid — a
+tracking file with an unusable pid means nothing could ever stop that
+server later. On other platforms `$!` is already the right PID — skip
+this lookup there.
+
+Check for `<workspace>/opencode-server.json`.
 
 **Present** → read `{"pid": ..., "port": ...}`. Confirm the process is
 still alive (on Windows: `tasklist //FI "PID eq <pid>"` and check the
@@ -101,48 +137,85 @@ is the real assigned port, not something to guess. If that line isn't
 present after a few seconds, this is a startup failure (see Error
 Handling).
 
-**Windows Git Bash only:** `$!` gives the MSYS/Cygwin PID, not the native
-Windows PID `tasklist`/`taskkill` operate on — the two differ (confirmed
-live: MSYS PID `6140` vs. the WINPID `24816` `tasklist` actually needed
-for the same process). Resolve the real WINPID before persisting it:
-
-```bash
-WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
-```
-
-Use `$WINPID` (not `$SERVER_PID`) everywhere below and in the alive-check
-and Stop-the-Server steps. On other platforms `$!` is already the right
-PID — skip this lookup there.
-
-On success, write `<workspace>/opencode-server.json` as
-`{"pid": <WINPID on Windows, else SERVER_PID>, "port": <port>}`.
+On Windows, resolve `$WINPID` from `$SERVER_PID` now (per above, with the
+`netstat -ano` fallback if it comes back empty) and use `$WINPID` (not
+`$SERVER_PID`) everywhere below and in Stop the Server. On success, write
+`<workspace>/opencode-server.json` as `{"pid": <WINPID on Windows, else
+SERVER_PID>, "port": <port>}`.
 
 ### Step 3: Build the Task Prompt
 
+Before building either prompt below, invoke `digismith:inject-standards`
+using its Scenario 4 (Dispatching a Subagent) formatting — treat this
+offloaded dispatch the same as an `Agent`-tool subagent dispatch for this
+purpose, even though it isn't literally one: the profile's standards
+(`profiles/<name>.yml` → `standards: [...]`) matter at least as much for
+a third-party model as for a Claude one. Its output (a full-content
+`## Standards` block, or nothing if zero standards exist anywhere) gets
+appended to the prompt below, alongside the brief/findings and the report
+contract.
+
 **Fresh task (not a fix round):** combine the task's brief (the same
-content a normal implementer would receive from `scripts/task-brief`)
-with this fixed report contract, appended verbatim:
+content a normal implementer would receive from `scripts/task-brief`),
+the inject-standards output, and this fixed report contract, appended
+verbatim:
 
 ```
 Once you're done (or if you get stuck):
 
-1. Write a full report to <report-file-path>: what you implemented, what
+1. Implement the change.
+2. Run the tests that cover it.
+3. Commit your work with git — a real commit in this worktree, not just
+   changes left sitting in the working tree. This step is required: the
+   controller's review tooling (`scripts/review-package`) builds every
+   review from `git log`/`git diff` over a commit range, so uncommitted
+   work is invisible to it — effectively the same as not having done it.
+4. Write a full report to <report-file-path>: what you implemented, what
    you tested and the results, files changed, any concerns.
-2. Then reply with ONLY this short block:
+5. Then reply with ONLY this short block:
    Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
    Commits: <short SHA + subject, one per line, or "none">
    Test summary: <one line>
    Concerns: <one line, or "none">
+
+A `Commits: none` reply alongside a non-empty working tree (uncommitted
+changes) is a failure to flag — never a valid DONE.
 ```
 
 `<report-file-path>` is `<workspace>/task-<N>-opencode-report.md`
 (mirrors the brief→report naming convention `subagent-driven-development`
 already uses for Claude implementers).
 
-**Fix round:** the prompt is the open findings verbatim (not the brief
-again — the session already has that context), followed by the same
-report-contract block above, with a fresh
-`<workspace>/task-<N>-opencode-report-round<R>.md` path.
+**Fix round:** combine the open findings verbatim (not the brief again —
+the session already has that context), the inject-standards output, and
+this report contract, appended verbatim:
+
+```
+Once you're done (or if you get stuck):
+
+1. Fix the findings above.
+2. Run the tests that cover the amended code.
+3. Commit your work with git — a real commit in this worktree, not just
+   changes left sitting in the working tree. This step is required, same
+   reason as the original dispatch: uncommitted work is invisible to
+   `scripts/review-package`.
+4. Append a fix-report section to <report-file-path> — the SAME report
+   file the original attempt wrote, not a new file: what you fixed, what
+   you tested and the results, any remaining concerns. This matches
+   `subagent-driven-development`'s own convention that every fix round
+   appends to the same report file the re-review dispatch reads.
+5. Then reply with ONLY this short block:
+   Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+   Commits: <short SHA + subject, one per line, or "none">
+   Test summary: <one line>
+   Concerns: <one line, or "none">
+
+A `Commits: none` reply alongside a non-empty working tree (uncommitted
+changes) is a failure to flag — never a valid DONE.
+```
+
+`<report-file-path>` is the same `<workspace>/task-<N>-opencode-report.md`
+used by the original attempt — never a new round-numbered file.
 
 ### Step 4: Dispatch
 
@@ -154,6 +227,14 @@ directly into a double-quoted positional argument. A single-quoted
 heredoc (`<<'PROMPT_EOF'`) is immune to expansion during capture; the
 resulting `"$PROMPT"` reference is then safe to pass double-quoted,
 since a quoted variable reference doesn't re-parse its content.
+
+**Real dispatches routinely take several minutes** — confirmed live:
+some took over 5 minutes today. Issue the `opencode run` call below with
+an explicit `Bash` tool `timeout` of at least 300000ms (5+ minutes), not
+whatever short default the harness would otherwise use. A default
+timeout cutting the call off partway through a perfectly healthy run
+looks indistinguishable from a real failure otherwise — see Error
+Handling for how to tell the two apart.
 
 **Fresh task:**
 
@@ -168,7 +249,9 @@ opencode run --attach "http://127.0.0.1:<port>" \
 ```
 
 **Fix round**, same heredoc-capture-then-dispatch pattern, plus
-`--session "<captured sessionID>"`:
+`--session "<captured sessionID>"` — and events redirect to a
+`-round<R>` suffixed file, never the original attempt's file, so the fix
+round's transcript doesn't overwrite it:
 
 ```bash
 PROMPT=$(cat <<'PROMPT_EOF'
@@ -178,7 +261,7 @@ PROMPT_EOF
 opencode run --attach "http://127.0.0.1:<port>" \
   --model chutes/moonshotai/Kimi-K3-TEE --auto --format json \
   --session "<captured sessionID>" \
-  --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events.jsonl"
+  --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events-round<R>.jsonl"
 ```
 
 No session flag on a fresh task — confirmed live that this always starts
@@ -187,13 +270,21 @@ context from an earlier call.
 
 ### Step 5: Extract the Session ID and the Status Contract
 
-Each line of `<workspace>/task-<N>-opencode-events.jsonl` is one JSON
-event. Every event carries a top-level `sessionID` field — take it from
-any line (they're all the same session). Record it:
+Read events from the file Step 4 actually wrote for this dispatch:
+`<workspace>/task-<N>-opencode-events.jsonl` for a fresh task, or
+`<workspace>/task-<N>-opencode-events-round<R>.jsonl` for a fix round.
+Each line is one JSON event.
+
+**Fresh task only:** every event carries a top-level `sessionID` field —
+take it from any line (they're all the same session) and record it:
 
 ```bash
 echo '{"task": <N>, "sessionID": "<extracted id>"}' >> "<workspace>/opencode-sessions.jsonl"
 ```
+
+**Fix round:** skip this — the session ID doesn't change on a fix round
+(it's the same `--session <id>` just passed on the command line), so
+don't re-append a duplicate line to `opencode-sessions.jsonl`.
 
 The status contract text is nested inside the **last** event whose
 top-level `"type"` is `"text"` — that's the model's final reply,
@@ -211,6 +302,11 @@ nested `part` each carry their own `type` key. Match on the outer
 is at `.part.text`, not `.text`.
 
 ### Step 6: Hand Back to the Normal Flow
+
+Before trusting a `DONE`/`DONE_WITH_CONCERNS` reply, independently verify
+it — see the "a status reply can lie" bullet in Error Handling below.
+Do not skip straight to reporting the contract just because the model
+said so.
 
 Report the same short status contract a normal implementer would, using
 what Step 5 extracted. From here, everything is unmodified
@@ -239,10 +335,28 @@ to kill, but stale state should not survive.
   Don't attempt to install it silently.
 - **Server fails to start** (no "listening on" line in the log within a
   few seconds) → stop, show the log content, don't retry silently.
-- **`opencode run` errors or times out** → report as `BLOCKED`, same
+- **`opencode run` genuinely errors** (a real non-zero exit, an error
+  event in the JSON stream, etc.) → report as `BLOCKED`, same
   disposition a stuck Claude implementer would get — surfaces to the
   user via the normal `subagent-driven-development` blocked-handling
   path. Never retried automatically.
+- **The `Bash` tool's own call times out** — distinct from `opencode`
+  itself erroring, and not a failure by itself: real dispatches routinely
+  take several minutes (see Step 4). Either raise the timeout and retry,
+  or, if the harness auto-backgrounds the command past its own timeout,
+  wait for that command's own completion notification rather than
+  treating the timeout itself as BLOCKED.
+- **A status reply can lie** — confirmed live: a fix-round dispatch once
+  replied "Status: DONE ... Test summary: 4 passed, 0 failed" while the
+  target file had never actually been edited and the real test suite
+  still failed. Before passing a `DONE`/`DONE_WITH_CONCERNS` status
+  onward in Step 6, independently confirm the claimed work actually
+  exists — check that the relevant file(s) actually changed, or that a
+  commit the report claims actually exists in `git log`. On a mismatch
+  (status claims success but nothing changed), do not pass the false
+  status onward — re-dispatch (same session, fix-round pattern) with an
+  explicit message naming exactly what wasn't actually done, not a
+  generic "try again."
 - **Fix round hits the round cap (3) with open findings, or a fix
   attempt reports `BLOCKED`** → stop, report the open findings plainly.
   **Do not** dispatch a fresh implementer on a more capable model the way
@@ -264,10 +378,10 @@ to kill, but stale state should not survive.
 | Step | Action |
 |---|---|
 | 0 | Determine intent — stop request, or a dispatch (fresh/fix round) |
-| 1 | Ensure `opencode.json` exists in the task worktree, gitignored |
-| 2 | Locate or start `opencode serve`, tracking PID+port in the SDD workspace |
-| 3 | Build the prompt — brief + report contract (fresh), or findings + report contract (fix round) |
-| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch via `opencode run --attach ... --format json "$PROMPT"`, with `--session <id>` on fix rounds |
-| 5 | Extract `sessionID` (event-level) and the final status-contract text (nested at `.part.text`) from the JSON event stream |
-| 6 | Hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
+| 1 | Ensure `opencode.json` exists in the task worktree, ignored via `.git/info/exclude` (never the tracked `.gitignore`) |
+| 2 | Locate or start `opencode serve`, tracking PID+port in the SDD workspace (Windows: resolve the real WINPID, falling back to `netstat -ano` if empty — never persist an empty pid) |
+| 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch via `opencode run --attach ... --format json "$PROMPT"` with an explicit ≥300000ms `Bash` timeout, `--session <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
+| 5 | Extract the final status-contract text (nested at `.part.text`) from the JSON event stream; capture `sessionID` (event-level) only on a fresh task, never re-appended on a fix round |
+| 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
 | — | Stop: `taskkill` the tracked PID, delete the tracking file |
