@@ -6,6 +6,14 @@ entirely by hand via direct REST (see
 of this. Needs `superpowers:brainstorming` alongside that item before
 becoming part of `I.1`/`I.2`.
 
+**Independently verified 2026-08-27** against the live EMKT-756 ticket
+(direct REST fetch, not the session's own self-report) — the Deliverable
+section, the Per-Market table (JP/PH/KR, CA correctly absent), the
+icon-replaces-bullet convention, and the Documentation
+stage-DONE-but-sub-item-🔄 rollup mismatch all confirmed exactly as
+described below. Comment `3367093` also confirmed real, ADF-correct, and
+free of any repo/PR/branch mention.
+
 **Source:** EMKT-756 (cross-sell "Default Title" fix, rolled out across
 JP/KR/PH), the single largest change of that session — roughly 15 rounds
 of live iteration against the real ticket description, each round
