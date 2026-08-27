@@ -76,18 +76,33 @@ Check for `opencode.json` in the worktree root. **Present** → continue.
 
 Then check whether `opencode.json` is already ignored one way or
 another (`git check-ignore -q opencode.json`, exit 0 = already ignored).
-If not, ignore it via `<worktree>/.git/info/exclude` — a local-only,
-untracked git mechanism — **never** the worktree's own tracked
-`.gitignore`. This is local machine config, the same class of file as
+If not, ignore it via `info/exclude` — a local-only, untracked git
+mechanism — **never** the worktree's own tracked `.gitignore`. Resolve
+its real path first rather than assuming `<worktree>/.git/info/exclude`:
+in a linked worktree (the normal case for this skill), `.git` is a
+*file* containing a `gitdir:` pointer, not a directory, so that path
+doesn't exist and writing to it fails outright. Use:
+
+```bash
+EXCLUDE_FILE=$(git rev-parse --git-path info/exclude)
+```
+
+This resolves correctly whether the current directory is a plain repo
+or a linked worktree. Note it's the **repo-wide common git dir**, shared
+across every worktree of this repo — not per-worktree isolated, despite
+being reached from inside one.
+
+This is local machine config, the same class of file as
 `.digismith/profile`/`.digismith/telemetry-marker` (see `MEMORY.md`'s
-"`.digismith/profile` is config, not generated docs output" convention):
-guaranteed never committed by never `git add -f`-ing it, not by editing
-a file that rides along in the worktree's own diff. Read
-`.git/info/exclude`'s current content first (or note its absence),
-ensure it ends in a newline if non-empty, and append a new line
-`opencode.json` — an append operation only, never a whole-file rewrite.
-This file references your API key only via `{env:CHUTES_API_KEY}`, never
-a literal value, but it's still local machine config that shouldn't be
+"`.digismith/profile` is config, not generated docs output" convention),
+guaranteed to stay out of any commit because `info/exclude` is never
+part of the repo's tracked tree at all — unlike `.gitignore`, there's no
+file here that could ride along in a diff. Read `$EXCLUDE_FILE`'s
+current content first (or note its absence), ensure it ends in a
+newline if non-empty, and append a new line `opencode.json` — an append
+operation only, never a whole-file rewrite. `opencode.json` itself
+references your API key only via `{env:CHUTES_API_KEY}`, never a
+literal value, but it's still local machine config that shouldn't be
 committed.
 
 ### Step 2: Locate or Start the OpenCode Server
@@ -350,13 +365,17 @@ to kill, but stale state should not survive.
   replied "Status: DONE ... Test summary: 4 passed, 0 failed" while the
   target file had never actually been edited and the real test suite
   still failed. Before passing a `DONE`/`DONE_WITH_CONCERNS` status
-  onward in Step 6, independently confirm the claimed work actually
-  exists — check that the relevant file(s) actually changed, or that a
-  commit the report claims actually exists in `git log`. On a mismatch
-  (status claims success but nothing changed), do not pass the false
-  status onward — re-dispatch (same session, fix-round pattern) with an
-  explicit message naming exactly what wasn't actually done, not a
-  generic "try again."
+  onward in Step 6, independently confirm a real commit backing the
+  claim actually exists — check `git log` in the task worktree for a
+  commit matching what the report/status contract claims. A file having
+  visibly changed is not sufficient on its own: a `Commits: none` reply
+  alongside real but uncommitted changes is the same failure mode this
+  bullet exists to catch (see Step 3's commit requirement above) — only
+  a real commit satisfies this check, `git status` showing a dirty
+  working tree does not. On a mismatch (status claims success but no
+  matching commit exists), do not pass the false status onward —
+  re-dispatch (same session, fix-round pattern) with an explicit message
+  naming exactly what wasn't actually done, not a generic "try again."
 - **Fix round hits the round cap (3) with open findings, or a fix
   attempt reports `BLOCKED`** → stop, report the open findings plainly.
   **Do not** dispatch a fresh implementer on a more capable model the way
