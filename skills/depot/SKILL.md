@@ -93,5 +93,5 @@ across this `reset --hard` — never reapply it.
 
 | Operation | When | Effect |
 |---|---|---|
-| `ensure` | Called by `bootstrap`/`adopt` | Clone if missing, else no-op |
+| `ensure` | Called by `digismith:bootstrap`/`digismith:adopt` | Clone if missing, else no-op |
 | `refresh` | User asks directly, any time | Fetch + hard reset to `origin/main` (runs `ensure` first if the clone doesn't exist yet) |
