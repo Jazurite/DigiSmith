@@ -38,10 +38,10 @@ later needs no change here.
 
 ```bash
 if [ ! -d ~/.digismith/repo/.git ]; then
-  mkdir -p ~/.digismith
+  mkdir -p ~/.digismith && \
   git clone --filter=blob:none --no-checkout --sparse \
-    git@github.com:Jazurite/DigiSmith.git ~/.digismith/repo
-  git -C ~/.digismith/repo sparse-checkout set packages
+    git@github.com:Jazurite/DigiSmith.git ~/.digismith/repo && \
+  git -C ~/.digismith/repo sparse-checkout set packages && \
   git -C ~/.digismith/repo checkout main
 fi
 ```
@@ -60,8 +60,8 @@ ordering one.
 Otherwise:
 
 ```bash
-git -C ~/.digismith/repo fetch --all --prune --tags -q
-git -C ~/.digismith/repo checkout main
+git -C ~/.digismith/repo fetch --all --prune --tags -q && \
+git -C ~/.digismith/repo checkout main && \
 git -C ~/.digismith/repo reset --hard origin/main
 ```
 
