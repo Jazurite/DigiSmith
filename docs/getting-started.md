@@ -77,6 +77,12 @@ trigger point inside the chain above, gated by the active profile:
   `finishing-a-development-branch`'s "push and create PR" option, waits
   for the ephemeral-deploy CI check and reports the Preview/Theme Editor
   URLs from the bot's PR comment. Gated by `ephemeral`.
+- **I.1 — JIRA progress write-back.** Right after **M** succeeds (or on
+  explicit request), posts/updates the ticket's description (Materials &
+  Links, and the Track checklist's Technical Development line if
+  present) and a dated progress comment, using real ADF formatting
+  instead of a markdown approximation. Gated by `ticket` — no ticket key
+  resolves, nothing to write to.
 - **N — implementation report.** The moment a plan's final review comes
   back clean, before that plan's ledger gets deleted. Gated by
   `reporting`. Report/spec generation itself isn't gated by

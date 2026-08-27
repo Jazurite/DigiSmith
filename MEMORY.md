@@ -112,8 +112,9 @@ tiering below.
 | **R** | End-to-end testing | Split out of **I** (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned |
 | **S** | Figma visual regression | Visual regression vs Figma designs via a custom Figma skill. Split out of **I** (2026-08-26) for the same reason as **R** |
 
-Shared primitive several stages need: **JIRA write-back** (posting comments,
-driving status transitions).
+Shared primitive several stages need: **JIRA write-back** (posting
+comments and updating the description — never driving status
+transitions, which stay manual by design).
 
 ## Build order
 
@@ -133,10 +134,10 @@ before mechanics. No lifecycle machinery ships until Tier 3, which means
 DigiSmith's first release is an opinionated execution layer over
 Superpowers, not a ticket tool.
 
-Tier 5 is where the genuinely expensive work lives. **I.2** and **I.3** are
-their own projects rather than skills — I.3 especially, since it's a whole
-new dependency class (Figma API, image diffing) unlike anything else on
-the map, which otherwise just moves text around.
+Tier 5 is where the genuinely expensive work lives. **R** and **S** are
+their own projects rather than skills — **S** especially, since it's a
+whole new dependency class (Figma API, image diffing) unlike anything
+else on the map, which otherwise just moves text around.
 
 ## Relationship to `2. Career/`
 

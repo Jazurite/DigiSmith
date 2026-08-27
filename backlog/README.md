@@ -18,4 +18,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Per-worktree dev server port allocation](dev-server-port-allocation.md) — medium confidence; only matters if concurrent worktrees' dev servers are actually a thing Jack does
 - [Telemetry: automatic session lifecycle](telemetry-auto-lifecycle.md) — start/stop tied to session start/close/delete instead of manual trigger; deferred until real telemetry data exists
 - [`inject-standards` has no scenario for review-time dispatch](review-time-standards-injection-gap.md) — diff-hygiene standards shape what implementers write but never reach the whole-branch final review
-- [JIRA write-back (I.1) + multi-repo distribution (I.2)](jira-write-back-adf-reporting.md) — real ADF status/emoji/expand formatting, plus profile-gated worktree fan-out learned from EMKT-784
+- [Multi-repo distribution (I.2)](jira-write-back-adf-reporting.md) — profile-gated worktree fan-out across market repos, learned from EMKT-784; I.1 (real ADF formatting) shipped 2026-08-26

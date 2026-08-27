@@ -29,13 +29,19 @@ active profile's `ticket` field must be `true` (see Step 0) — if it's
 `false`, there's no ticket key to write to and this skill has nothing to
 do.
 
+The specific tool parameter names used below (`responseContentFormat`,
+`contentFormat`, `commentBody`, `commentId`, and similar) are this
+session's particular connector's own — map them to whatever equivalent
+names the JIRA/Atlassian-capable tool actually available in a given
+session uses, if it differs.
+
 ## Process
 
 ### Step 0: Profile Pre-Check
 
 Check for `.digismith/profile` in the repo currently being worked in.
 
-**Missing** → unchanged, existing behavior; continue to Step 1.
+**Missing** → proceed to Step 1.
 
 **Present** → read its one-line content as the active profile name.
 Locate DigiSmith's own repo — same rule `digismith:inject-standards` uses
@@ -50,7 +56,7 @@ missing — continue to Step 1.
 Otherwise, if that profile's `ticket` field is `false`, stop here: report
 one line — "skipping JIRA write-back — no ticket tracking in `<name>`
 profile" — and don't do anything else in this skill. If `ticket` is
-`true`, continue to Step 1 exactly as today.
+`true`, continue to Step 1.
 
 ### Step 1: Resolve the Ticket Key
 
@@ -86,11 +92,8 @@ Fetch the ticket's `summary`, `description`, and `comment` fields with
 This isn't a display fetch: whatever comes back gets spliced and written
 straight back in Step 8/12, and the markdown rendering lossily flattens
 special nodes into pseudo-HTML text that cannot be reconstructed into
-real nodes (see the plan's Global Constraints section —
-`.digismith/docs/jira-progress-write-back/plan.md` — for the ADF
-warning). Keep the raw
-`description` ADF document and the `comment.comments` array in memory for
-the rest of this process.
+real nodes. Keep the raw `description` ADF document and the
+`comment.comments` array in memory for the rest of this process.
 
 ### Step 5: Determine This Repo's Row Label
 
@@ -150,9 +153,11 @@ repo's label (Step 5). Found → replace that row's link cells. Not found
 the existing rows.
 
 **Found, but followed by neither a `bulletList` nor a `table`**
-(unrecognized shape) → treat it the same as "not found" for this delta:
-skip the Materials & Links delta entirely, report why in Step 16. Never
-guess at a risky edit against an unfamiliar structure.
+(unrecognized shape) → this is **not** the same as "not found": a
+heading already exists, so do not append a second one. Produce no delta
+at all — the existing Materials & Links section (heading and whatever
+follows it) is left exactly as fetched, completely untouched. Report why
+in Step 16. Never guess at a risky edit against an unfamiliar structure.
 
 ### Step 7: Draft the Track Checklist Delta
 
@@ -173,10 +178,11 @@ has no visibility into other repos, so completing this one *is* the
 whole of what it's tracking — see design spec's "Marking it done"
 section.)
 
-Then scan the paragraphs between that Technical Development paragraph
-and the next stage's own bold-labeled paragraph (or end of document) for
-one whose content is exactly an `emoji` node (short name `:check_mark:`)
-followed by this repo's label (Step 5) in bold text. **Already present**
+Then scan the paragraphs after that Technical Development paragraph,
+stopping at whichever comes first — the next stage's own bold-labeled
+paragraph, the next heading, or end of document — for one whose content
+is exactly an `emoji` node (short name `:check_mark:`) followed by this
+repo's label (Step 5) in bold text. **Already present**
 → no further change, idempotent. **Not present** → the delta also
 includes a new paragraph node to insert immediately after the last
 existing checkmark paragraph under Technical Development (or immediately
@@ -205,7 +211,10 @@ every other node untouched:
 - Materials & Links: if Step 6 found nothing, append the new heading +
   bullet list to the end of the top-level `content` array. If Step 6
   found an existing section (bullets or table), replace only that
-  section's content nodes in place, at the same position.
+  section's content nodes in place, at the same position. If Step 6
+  found a heading but produced no delta (unrecognized shape — neither
+  bullets nor a table), the description's Materials & Links section is
+  left exactly as fetched, untouched — do not append a second heading.
 - Track checklist: if Step 7 produced a delta, splice the changed
   `status` node's attrs and (if applicable) the new checkmark paragraph
   into their exact positions within the existing node sequence. If Step
@@ -320,21 +329,27 @@ drafted.
 
 ### Step 13: Confirm With the User
 
-Render both the description delta (in the human-readable terms of what's
+Render the description delta (in the human-readable terms of what's
 changing — "adding a Materials & Links entry with these three links" /
 "marking Technical Development done with a JP checkmark" / "Track
-section not found, skipping" as applicable) and the full comment text,
-and ask via `AskUserQuestion`: post as drafted, let the user revise
-first, or cancel. **Revise** → incorporate the requested change and
-re-present before proceeding. **Cancel** → stop here, nothing is
-written. Only **post as drafted** continues to Step 14. This applies
-every time this skill runs, not just the first — see the plan's Global
-Constraints section (`.digismith/docs/jira-progress-write-back/plan.md`).
+section not found, skipping" as applicable) and the full comment text.
+Alongside the comment text, state plainly whether this write will
+**create a new comment** or **replace the existing comment Step 9
+found** (name its `commentId` when replacing), so the user can catch and
+cancel a wrong match before it lands. Then ask via `AskUserQuestion`:
+post as drafted, let the user revise first, or cancel. **Revise** →
+incorporate the requested change and re-present before proceeding.
+**Cancel** → stop here, nothing is written. Only **post as drafted**
+continues to Step 14. This applies every time this skill runs, not just
+the first — both writes are team-visible external side effects, and
+JIRA's own edit history is visible to the whole team.
 
 ### Step 14: Write the Description
 
-Call the issue-edit tool with `contentFormat: "adf"`, setting the
-`description` field to Step 8's composed document.
+Call the issue-edit tool with `contentFormat: "adf"` and, inside that
+tool's `fields` map (e.g. `fields: {"description": <value>}` — not a
+bare top-level `description` argument), set the `description` field to
+Step 8's composed document, as a JSON string.
 
 ### Step 15: Write the Comment
 
@@ -369,6 +384,9 @@ ends here.
 - **Custom, site-uploaded emoji needed with no resolvable `id`** → skip
   the icon, plain text/status pill only. No tool in this session's
   toolset enumerates site-specific emoji.
+- **Mistaken or duplicate comment already posted** → no delete
+  capability exists via this connector — edit it via `commentId` instead
+  of creating a corrective second comment.
 - **User cancels at Step 13** → stop, nothing written, no partial write
   of just the description or just the comment.
 - **The issue-edit or add-comment tool call fails** (permissions,
@@ -386,7 +404,7 @@ ends here.
 | 3 | Resolve `cloudId` |
 | 4 | Fetch description + comments as **ADF** (never markdown) |
 | 5 | Derive this repo's row label |
-| 6 | Draft Materials & Links delta — bullets by default, table-row upsert if a table already exists |
+| 6 | Draft Materials & Links delta — bullets by default, table-row upsert if a table already exists, no delta (section left untouched) if it's neither |
 | 7 | Draft Track checklist delta — Technical Development line only, only if the section already exists |
 | 8 | Compose the full new description document (whole-field replace) |
 | 9 | Find today's existing Progress Update comment, if any |
