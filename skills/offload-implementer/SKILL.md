@@ -19,8 +19,10 @@ CLI directly. Explicit per-task only: nothing here runs automatically.
 Right when the user asks to offload a specific task while running
 `superpowers:subagent-driven-development` — for the task's first attempt,
 or (a second, distinct trigger) for a fix round on a task this skill
-already dispatched. Also right when the user says offloaded work is done
-for the current plan (stop the server).
+already dispatched. This skill does **not** stop the server — the
+OpenCode server is shared machine-wide by `digismith:depot` now, not
+owned per-plan. When the user says offloaded work is done, invoke
+`digismith:depot`'s `stop-opencode-server` operation directly instead.
 
 ## Prerequisites
 
@@ -118,6 +120,11 @@ on this machine, not scoped to this one — Depot owns starting it,
 tracking its PID and port, and all the Windows-specific WINPID
 resolution that requires, entirely on its own. This skill no longer
 tracks a server itself.
+
+If Depot's operation doesn't return a usable port (any of the failure
+cases in its own Error Handling table — `opencode` not on PATH, server
+fails to start, WINPID unresolvable), stop here and report `BLOCKED`
+rather than continuing to Step 3/4 with an undefined port.
 
 ### Step 3: Build the Task Prompt
 

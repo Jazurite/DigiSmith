@@ -127,10 +127,16 @@ alive** → treat as stale, continue as if the file were absent.
 server, letting the OS pick a free port rather than guessing one:
 
 ```bash
+mkdir -p ~/.digismith
 CHUTES_API_KEY=$(python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key) opencode serve --port 0 --hostname 127.0.0.1 > ~/.digismith/opencode-server.log 2>&1 &
 SERVER_PID=$!
 sleep 2
 ```
+
+`ensure-opencode-server` isn't auto-invoked by `bootstrap`/`adopt` (unlike
+the clone's `ensure`), so `~/.digismith` may not exist yet the first time
+this runs on a machine — the `mkdir -p` above is required, not
+defensive.
 
 Read `~/.digismith/opencode-server.log` for the line `opencode server
 listening on http://127.0.0.1:<port>` and extract `<port>` from it —
@@ -200,6 +206,15 @@ to kill, but stale state should not survive.
 - **Per-package logic** — this skill has no knowledge of what's inside
   `packages/`, and never will; a consumer's own path underneath is its
   own concern.
+- **Locking `ensure-opencode-server`'s check-then-start against a
+  concurrent caller** — two sessions calling it within the same few
+  seconds, both finding no tracked server, can each start their own
+  `opencode serve` process; whichever writes
+  `~/.digismith/opencode-server.json` last wins the tracking slot, and
+  the other's process leaks untracked. Accepted for the same reason as
+  the shared-stop risk above — a personal, single-operator tool doesn't
+  warrant a lockfile/mutex for a window this narrow — but disclosed
+  explicitly rather than left as a silent gap.
 - **Reference-counted or multi-consumer-safe stop** — `stop-opencode-server`
   is explicit-only, same as the clone never auto-deletes itself. If
   another plan is still relying on the server when it's stopped, that
