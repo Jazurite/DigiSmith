@@ -1,6 +1,12 @@
-# AI Gateway Vendors (new letter, tentatively W)
+# AI Gateway Vendors (K.3)
 
 **Status:** Not applied. Raw spike material and scope ideas, not yet brainstormed or spec'd.
+
+**Map item:** **K.3**, not a new letter — **K** ("Model tiering") already explicitly reserves
+this scope in its own MEMORY.md row: *"everything beyond K.1 and K.2 — multi-provider routing
+beyond the single hardcoded Chutes provider — left undesigned, see K.1's design spec's Future
+Phases and K.2's own Out of Scope section."* This file was originally drafted as a proposed new
+letter W before that existing reservation was spotted — corrected the same day.
 
 **Source:** 2026-08-28, sparked mid-conversation while investigating a Chutes-subscription-expiry
 concern for K.2 (`digismith:offload-implementer`). Led to discovering TokenReply
@@ -115,11 +121,11 @@ instead of once.
 
 ## Out of scope / open questions, not yet decided
 
-- Whether this generalizes K.2's existing `offload-implementer` skill, or becomes a separate
-  skill/map item entirely that K.2 could optionally sit on top of.
-- Whether "AI Gateway Vendors" is the right scope boundary, or whether the harness-comparison
-  companion idea (Claude Code vs. OpenCode) actually belongs under a different letter — it's a
-  different axis (which coding-agent harness) than gateway choice (which model provider).
+- Whether this generalizes K.2's existing `offload-implementer` skill in place, or becomes a
+  new K.3 skill that K.2 optionally sits on top of. Both the gateway-vendor axis and the
+  harness axis (Claude Code vs. OpenCode) stay under **K** either way — K's own scope is "model
+  tiering" broadly, not tied to OpenCode specifically, so the harness question doesn't need a
+  separate letter.
 - TokenReply account creation/payment is the user's own action, never DigiSmith's — same
   standing boundary as Chutes credential handling elsewhere in this project.
 - Whether a paid TokenReply tier actually removes the rate-limiting seen on Trial.
