@@ -24,16 +24,12 @@ current ticket.
 
 ## Prerequisites
 
-A JIRA/Atlassian-capable tool available in this session (see Step 2). The
-active profile's `ticket` field must be `true` (see Step 0) — if it's
-`false`, there's no ticket key to write to and this skill has nothing to
-do.
-
-The specific tool parameter names used below (`responseContentFormat`,
-`contentFormat`, `commentBody`, `commentId`, and similar) are this
-session's particular connector's own — map them to whatever equivalent
-names the JIRA/Atlassian-capable tool actually available in a given
-session uses, if it differs.
+A working `digismith:depot`-provisioned Jira client at
+`~/.digismith/repo/packages/jira-client/src/cli.ts`, and complete
+credentials at `~/.digismith/.env` (see Step 2, which provisions both if
+missing). The active profile's `ticket` field must be `true` (see Step
+0) — if it's `false`, there's no ticket key to write to and this skill
+has nothing to do.
 
 ## Process
 
@@ -69,33 +65,57 @@ Parse `<Key>` from the current branch name against `^([A-Z]+-\d+)__`
 branch name doesn't match, ask directly for the ticket key instead of
 guessing.
 
-### Step 2: Detect the JIRA Tool
+### Step 2: Ensure the Jira Client Is Available
 
-Check whether a JIRA/Atlassian-capable tool is available in the current
-session — same principle `digismith:jira-intake` already uses for its
-own scenario detection: infer from what's actually available, don't
-hardcode an assumption. Not found → stop, tell the user plainly that
-this skill needs a JIRA tool in the session, don't fabricate a write.
+Defensively invoke `digismith:depot`'s `ensure` operation — `bootstrap`/
+`adopt` normally already did this at ticket start, but this skill can
+also run standalone in a session that skipped them. Same disposition as
+`digismith:depot`'s own Error Handling: if `ensure` fails, stop here,
+report the error plainly, don't fabricate a write.
 
-### Step 3: Resolve `cloudId`
+Then check credentials:
 
-Try the ticket's own site hostname as `cloudId` first (e.g.
-`your-org.atlassian.net`, from a URL the user gave or a prior fetch in
-this session). If that fails, or no hostname is known yet, call
-whichever tool lists accessible Atlassian resources and use the `id`
-whose `scopes` include Jira read/write access.
+```bash
+node ~/.digismith/repo/packages/jira-client/src/cli.ts check-credentials
+```
 
-### Step 4: Fetch the Current Ticket
+**Exit 0** → credentials are present and complete, continue to Step 3.
 
-Fetch the ticket's `summary`, `description`, and `comment` fields with
-`responseContentFormat: "adf"` — **always ADF here, never markdown**.
+**Exit 1** → `~/.digismith/.env` is missing or incomplete. Ask via
+`AskUserQuestion` for the three values, mentioning where to generate a
+token (`id.atlassian.com/manage-profile/security/api-tokens`):
+
+- Jira account email
+- Jira API token
+- Jira site hostname (e.g. `your-org.atlassian.net`)
+
+Write them to `~/.digismith/.env` (create `~/.digismith/` first if it
+doesn't exist):
+
+```
+JIRA_EMAIL=<email>
+JIRA_API_TOKEN=<token>
+JIRA_SITE=<site>
+```
+
+Then re-run `check-credentials` to confirm before continuing to Step 3.
+This only ever happens once per machine — every future session finds the
+file already there.
+
+### Step 3: Fetch the Current Ticket
+
+```bash
+node ~/.digismith/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description,comment
+```
+
 This isn't a display fetch: whatever comes back gets spliced and written
-straight back in Step 8/12, and the markdown rendering lossily flattens
-special nodes into pseudo-HTML text that cannot be reconstructed into
-real nodes. Keep the raw `description` ADF document and the
-`comment.comments` array in memory for the rest of this process.
+straight back in Step 7/11, and the response is real, structured ADF for
+every field by construction — no `responseContentFormat` parameter to
+get wrong, no lossy rendered-markdown hybrid to guard against, unlike the
+MCP connector this replaced. Keep the raw `description` ADF document and
+the `comment.comments` array in memory for the rest of this process.
 
-### Step 5: Determine This Repo's Row Label
+### Step 4: Determine This Repo's Row Label
 
 From the current repo's directory name: if it matches
 `shopify-template-<code>`, the label is `<code>` uppercased (e.g.
@@ -104,13 +124,13 @@ name as-is (e.g. `shopify-hub`). This is a label only — nothing branches
 on whether it "counts" as a market; the description write below treats
 every repo the same way.
 
-### Step 6: Draft the Materials & Links Delta
+### Step 5: Draft the Materials & Links Delta
 
 Search the fetched `description` document's top-level `content` array
 for a heading node whose text contains "Materials & Links".
 
 **Not found (most common — first write on this ticket)** → the delta is
-a fresh heading + bullet list, to be inserted (Step 8 decides where):
+a fresh heading + bullet list, to be inserted (Step 7 decides where):
 
 ```json
 {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"🔗 Materials & Links:"}]}
@@ -148,7 +168,7 @@ delta is a table-row upsert instead: the table's header row tells you
 column order (expect `Country | Preview Theme | Customize | Pull
 Request`, but read the actual header cells rather than assuming). Search
 the table's row nodes for one whose first cell's text matches this
-repo's label (Step 5). Found → replace that row's link cells. Not found
+repo's label (Step 4). Found → replace that row's link cells. Not found
 → append a new row with this repo's label and links, same cell shape as
 the existing rows.
 
@@ -157,14 +177,14 @@ the existing rows.
 heading already exists, so do not append a second one. Produce no delta
 at all — the existing Materials & Links section (heading and whatever
 follows it) is left exactly as fetched, completely untouched. Report why
-in Step 16. Never guess at a risky edit against an unfamiliar structure.
+in Step 15. Never guess at a risky edit against an unfamiliar structure.
 
-### Step 7: Draft the Track Checklist Delta
+### Step 6: Draft the Track Checklist Delta
 
 Search the same `description` document for a heading node whose text
 contains "Track" (expect "📦 Track:"). **Not found** → no delta; the
 Track checklist is untouched, note this for the final report (see Step
-16 / Error Handling — never scaffold one from nothing).
+15 / Error Handling — never scaffold one from nothing).
 
 **Found** → scan the nodes immediately following that heading (up to the
 next heading node or end of document) for a paragraph whose content
@@ -182,7 +202,7 @@ Then scan the paragraphs after that Technical Development paragraph,
 stopping at whichever comes first — the next stage's own bold-labeled
 paragraph, the next heading, or end of document — for one whose content
 is exactly an `emoji` node (short name `:check_mark:`) followed by this
-repo's label (Step 5) in bold text. **Already present**
+repo's label (Step 4) in bold text. **Already present**
 → no further change, idempotent. **Not present** → the delta also
 includes a new paragraph node to insert immediately after the last
 existing checkmark paragraph under Technical Development (or immediately
@@ -200,30 +220,30 @@ checkmarks yet):
 **If the structure under the Track heading doesn't clearly match this
 shape** (e.g. no paragraph starts with bold "Technical Development" at
 all) → treat it the same as "not found": no delta, report why in Step
-16. Never guess at a risky edit against an unfamiliar structure.
+15. Never guess at a risky edit against an unfamiliar structure.
 
-### Step 8: Compose the Full New Description Document
+### Step 7: Compose the Full New Description Document
 
-Take the `description` document fetched in Step 4 and produce a complete
-new document with Step 6's delta and (if any) Step 7's delta spliced in,
+Take the `description` document fetched in Step 3 and produce a complete
+new document with Step 5's delta and (if any) Step 6's delta spliced in,
 every other node untouched:
 
-- Materials & Links: if Step 6 found nothing, append the new heading +
-  bullet list to the end of the top-level `content` array. If Step 6
+- Materials & Links: if Step 5 found nothing, append the new heading +
+  bullet list to the end of the top-level `content` array. If Step 5
   found an existing section (bullets or table), replace only that
-  section's content nodes in place, at the same position. If Step 6
+  section's content nodes in place, at the same position. If Step 5
   found a heading but produced no delta (unrecognized shape — neither
   bullets nor a table), the description's Materials & Links section is
   left exactly as fetched, untouched — do not append a second heading.
-- Track checklist: if Step 7 produced a delta, splice the changed
+- Track checklist: if Step 6 produced a delta, splice the changed
   `status` node's attrs and (if applicable) the new checkmark paragraph
   into their exact positions within the existing node sequence. If Step
-  7 found nothing, the document is unchanged from Step 4 in this regard.
+  6 found nothing, the document is unchanged from Step 3 in this regard.
 
-This composed document is the exact value Step 14 sends back — hold it
+This composed document is the exact value Step 13 sends back — hold it
 in memory, don't write yet.
 
-### Step 9: Find Today's Existing Progress Comment
+### Step 8: Find Today's Existing Progress Comment
 
 Compute today's date in `D/M` form (day and month, no leading zeros, no
 year — e.g. `26/8`):
@@ -232,7 +252,7 @@ year — e.g. `26/8`):
 date +%-d/%-m
 ```
 
-Search the `comment.comments` array fetched in Step 4 for one whose body
+Search the `comment.comments` array fetched in Step 3 for one whose body
 document's first node is a heading whose text starts with "📣 Progress
 Update – " followed by that exact `D/M` string — but a plain
 string-prefix check is not enough by itself: since `D/M` has no leading
@@ -252,10 +272,10 @@ Progress Update – 26/8 (week 2)" against a search for `26/8` (the next
 character is a space, a non-digit) — do not require full-string equality
 on the whole heading instead, since that would break matching those
 legitimately-suffixed headings. **Found** → remember its `id` as
-`commentId` for Step 15. **Not found** → Step 15 creates a new comment
+`commentId` for Step 14. **Not found** → Step 14 creates a new comment
 instead.
 
-### Step 10: Draft "What's Done"
+### Step 9: Draft "What's Done"
 
 Check whether this session already has
 `.digismith/docs/<slug>/report.html` from map item **N**
@@ -279,7 +299,7 @@ Always end the "What's done" block with this fixed line:
 👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.
 ```
 
-### Step 11: Draft "Next Steps"
+### Step 10: Draft "Next Steps"
 
 Ask the user, via `AskUserQuestion`, which roles need a ping on this
 update and who for each (e.g. code review, design approval, QA) — there
@@ -300,7 +320,7 @@ Draft one bullet per role-with-a-person, matching the real shape:
 **<emoji> <Role> Needed >** (<mention>, <mention>) — <ask, plain text, one sentence>
 ```
 
-### Step 12: Compose the Full Comment Document
+### Step 11: Compose the Full Comment Document
 
 ```json
 {"type":"doc","version":1,"content":[
@@ -323,43 +343,50 @@ Draft one bullet per role-with-a-person, matching the real shape:
 ]}
 ```
 
-One `listItem` per bullet from Steps 10 and 11 — the shape above shows
+One `listItem` per bullet from Steps 9 and 10 — the shape above shows
 one of each for clarity; repeat the pattern for every bullet actually
 drafted.
 
-### Step 13: Confirm With the User
+### Step 12: Confirm With the User
 
 Render the description delta (in the human-readable terms of what's
 changing — "adding a Materials & Links entry with these three links" /
 "marking Technical Development done with a JP checkmark" / "Track
 section not found, skipping" as applicable) and the full comment text.
 Alongside the comment text, state plainly whether this write will
-**create a new comment** or **replace the existing comment Step 9
+**create a new comment** or **replace the existing comment Step 8
 found** (name its `commentId` when replacing), so the user can catch and
 cancel a wrong match before it lands. Then ask via `AskUserQuestion`:
 post as drafted, let the user revise first, or cancel. **Revise** →
 incorporate the requested change and re-present before proceeding.
 **Cancel** → stop here, nothing is written. Only **post as drafted**
-continues to Step 14. This applies every time this skill runs, not just
+continues to Step 13. This applies every time this skill runs, not just
 the first — both writes are team-visible external side effects, and
 JIRA's own edit history is visible to the whole team.
 
-### Step 14: Write the Description
+### Step 13: Write the Description
 
-Call the issue-edit tool with `contentFormat: "adf"` and, inside that
-tool's `fields` map (e.g. `fields: {"description": <value>}` — not a
-bare top-level `description` argument), set the `description` field to
-Step 8's composed document, as a JSON string.
+Write Step 7's composed document to a scratch file (e.g.
+`/tmp/jira-description-<Key>.json`), then:
 
-### Step 15: Write the Comment
+```bash
+node ~/.digismith/repo/packages/jira-client/src/cli.ts update-description --key <Key> --file /tmp/jira-description-<Key>.json
+```
 
-Call the add-comment tool with `contentFormat: "adf"`, `commentBody` set
-to Step 12's composed document (as a JSON string), and — only if Step 9
-found an existing comment — `commentId` set to that comment's `id`. When
-`commentId` is present the same comment is updated in place, not
-duplicated; when absent, a new comment is created.
+### Step 14: Write the Comment
 
-### Step 16: Report
+Write Step 11's composed document to a scratch file (e.g.
+`/tmp/jira-comment-<Key>.json`), then:
+
+```bash
+node ~/.digismith/repo/packages/jira-client/src/cli.ts add-comment --key <Key> --file /tmp/jira-comment-<Key>.json
+```
+
+Only if Step 8 found an existing comment, add `--comment-id <id>` to the
+same command — this updates the existing comment in place instead of
+creating a new one.
+
+### Step 15: Report
 
 Confirm what was written: the ticket key, whether the description's
 Materials & Links entry was created or updated (and the Track line, if
@@ -369,12 +396,15 @@ ends here.
 
 ## Error Handling
 
-- **No JIRA-capable tool in session** → stop, say so plainly. Don't
-  fabricate a write.
+- **No credentials, and the user declines to provide them at Step 2** →
+  stop, say so plainly. Don't fabricate a write.
+- **`digismith:depot`'s `ensure` operation fails at Step 2** → stop, say
+  so plainly (see that skill's own Error Handling for the exact
+  disposition). Don't fabricate a write.
 - **Branch doesn't match `<Key>__<slug>`** → ask directly for the ticket
   key rather than guessing.
 - **Track section absent, or present but not in the expected shape** →
-  skip the Track delta entirely (Step 7), report plainly in Step 16.
+  skip the Track delta entirely (Step 6), report plainly in Step 15.
   Never scaffold or force an edit against an unfamiliar structure.
 - **Materials & Links section already exists as neither bullets nor a
   table** (unrecognized shape) → same disposition as the Track case:
@@ -385,14 +415,14 @@ ends here.
   the icon, plain text/status pill only. No tool in this session's
   toolset enumerates site-specific emoji.
 - **Mistaken or duplicate comment already posted** → no delete
-  capability exists via this connector — edit it via `commentId` instead
-  of creating a corrective second comment.
-- **User cancels at Step 13** → stop, nothing written, no partial write
+  capability exists — edit it via `--comment-id` instead of creating a
+  corrective second comment.
+- **User cancels at Step 12** → stop, nothing written, no partial write
   of just the description or just the comment.
-- **The issue-edit or add-comment tool call fails** (permissions,
-  network, malformed field) → report the failure plainly with whatever
-  error detail the tool returned; don't retry silently or fall back to
-  a markdown write.
+- **The `update-description` or `add-comment` CLI call fails** (HTTP
+  error, network error) → report the failure plainly with whatever
+  error detail it printed to stderr; don't retry silently or fall back
+  to a markdown write.
 
 ## Quick Reference
 
@@ -400,18 +430,17 @@ ends here.
 |---|---|
 | 0 | Profile pre-check — skip entirely if `ticket: false` |
 | 1 | Resolve `<Key>` from branch name |
-| 2 | Detect a JIRA-capable tool in session; stop if none |
-| 3 | Resolve `cloudId` |
-| 4 | Fetch description + comments as **ADF** (never markdown) |
-| 5 | Derive this repo's row label |
-| 6 | Draft Materials & Links delta — bullets by default, table-row upsert if a table already exists, no delta (section left untouched) if it's neither |
-| 7 | Draft Track checklist delta — Technical Development line only, only if the section already exists |
-| 8 | Compose the full new description document (whole-field replace) |
-| 9 | Find today's existing Progress Update comment, if any |
-| 10 | Draft "What's done" — prefer N's report, else session summary |
-| 11 | Draft "Next Steps" — ask roles/people, resolve via account lookup |
-| 12 | Compose the full comment document |
-| 13 | Confirm full draft with the user — post / revise / cancel |
-| 14 | Write the description |
-| 15 | Write the comment (create, or update via `commentId`) |
-| 16 | Report what was written |
+| 2 | Ensure the Jira client is available: defensive `digismith:depot` `ensure` check, then `check-credentials` — bootstrap via `AskUserQuestion` if incomplete |
+| 3 | Fetch description + comments via `get-issue` — real ADF for every field, no format parameter needed |
+| 4 | Derive this repo's row label |
+| 5 | Draft Materials & Links delta — bullets by default, table-row upsert if a table already exists, no delta (section left untouched) if it's neither |
+| 6 | Draft Track checklist delta — Technical Development line only, only if the section already exists |
+| 7 | Compose the full new description document (whole-field replace) |
+| 8 | Find today's existing Progress Update comment, if any |
+| 9 | Draft "What's done" — prefer N's report, else session summary |
+| 10 | Draft "Next Steps" — ask roles/people, resolve via account lookup |
+| 11 | Compose the full comment document |
+| 12 | Confirm full draft with the user — post / revise / cancel |
+| 13 | Write the description via `update-description` |
+| 14 | Write the comment via `add-comment` (create, or update via `--comment-id`) |
+| 15 | Report what was written |
