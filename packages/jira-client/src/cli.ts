@@ -5,10 +5,11 @@ import {
   getIssue,
   updateDescription,
   addComment,
+  getComments,
   getAttachmentContent,
 } from "./client.ts";
 
-function parseArgs(argv: string[]): Record<string, string> {
+export function parseArgs(argv: string[]): Record<string, string> {
   const args: Record<string, string> = {};
   for (let i = 0; i < argv.length; i++) {
     if (argv[i].startsWith("--")) {
@@ -17,6 +18,13 @@ function parseArgs(argv: string[]): Record<string, string> {
     }
   }
   return args;
+}
+
+export function requireArgs(args: Record<string, string>, names: string[]): void {
+  const missing = names.filter((name) => args[name] === undefined);
+  if (missing.length > 0) {
+    throw new Error(`missing required flag${missing.length > 1 ? "s" : ""}: ${missing.map((n) => `--${n}`).join(", ")}`);
+  }
 }
 
 function readAdfFile(path: string): unknown {
@@ -35,13 +43,22 @@ async function main() {
         break;
       }
       case "get-issue": {
+        requireArgs(args, ["key", "fields"]);
         const creds = checkCredentials();
         const fields = args.fields.split(",");
         const result = await getIssue(args.key, fields, creds);
         console.log(JSON.stringify(result));
         break;
       }
+      case "get-comments": {
+        requireArgs(args, ["key"]);
+        const creds = checkCredentials();
+        const result = await getComments(args.key, creds);
+        console.log(JSON.stringify(result));
+        break;
+      }
       case "update-description": {
+        requireArgs(args, ["key", "file"]);
         const creds = checkCredentials();
         const adfDoc = readAdfFile(args.file);
         await updateDescription(args.key, adfDoc, creds);
@@ -49,6 +66,7 @@ async function main() {
         break;
       }
       case "add-comment": {
+        requireArgs(args, ["key", "file"]);
         const creds = checkCredentials();
         const adfDoc = readAdfFile(args.file);
         const result = await addComment(args.key, adfDoc, creds, args["comment-id"]);
@@ -56,6 +74,7 @@ async function main() {
         break;
       }
       case "get-attachment": {
+        requireArgs(args, ["id", "out"]);
         const creds = checkCredentials();
         const savedPath = await getAttachmentContent(args.id, args.out, creds);
         console.log(savedPath);
@@ -63,17 +82,20 @@ async function main() {
       }
       default:
         console.error(`unknown subcommand: ${subcommand}`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
     }
-    process.exit(0);
+    process.exitCode = 0;
   } catch (err) {
     if (err instanceof CredentialsError) {
       console.error(`no credentials: ${err.message}`);
     } else {
       console.error(`failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
 
-main();
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

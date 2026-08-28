@@ -105,15 +105,18 @@ file already there.
 ### Step 3: Fetch the Current Ticket
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description,comment
+node ~/.digismith/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description
 ```
 
 This isn't a display fetch: whatever comes back gets spliced and written
 straight back in Step 7/11, and the response is real, structured ADF for
 every field by construction — no `responseContentFormat` parameter to
 get wrong, no lossy rendered-markdown hybrid to guard against, unlike the
-MCP connector this replaced. Keep the raw `description` ADF document and
-the `comment.comments` array in memory for the rest of this process.
+MCP connector this replaced. Keep the raw `description` ADF document in
+memory for the rest of this process. Comments are fetched separately in
+Step 8, not here — the issue endpoint's embedded `comment` field returns
+only a page of comments with no pagination applied, so a ticket with a
+long comment history would silently look emptier than it is.
 
 ### Step 4: Determine This Repo's Row Label
 
@@ -245,6 +248,13 @@ in memory, don't write yet.
 
 ### Step 8: Find Today's Existing Progress Comment
 
+Fetch every comment on the ticket, paginated to completion (not just the
+first page):
+
+```bash
+node ~/.digismith/repo/packages/jira-client/src/cli.ts get-comments --key <Key>
+```
+
 Compute today's date in `D/M` form (day and month, no leading zeros, no
 year — e.g. `26/8`):
 
@@ -252,7 +262,7 @@ year — e.g. `26/8`):
 date +%-d/%-m
 ```
 
-Search the `comment.comments` array fetched in Step 3 for one whose body
+Search the comments array just fetched for one whose body
 document's first node is a heading whose text starts with "📣 Progress
 Update – " followed by that exact `D/M` string — but a plain
 string-prefix check is not enough by itself: since `D/M` has no leading
@@ -431,12 +441,12 @@ ends here.
 | 0 | Profile pre-check — skip entirely if `ticket: false` |
 | 1 | Resolve `<Key>` from branch name |
 | 2 | Ensure the Jira client is available: defensive `digismith:depot` `ensure` check, then `check-credentials` — bootstrap via `AskUserQuestion` if incomplete |
-| 3 | Fetch description + comments via `get-issue` — real ADF for every field, no format parameter needed |
+| 3 | Fetch the description via `get-issue` — real ADF for every field, no format parameter needed |
 | 4 | Derive this repo's row label |
 | 5 | Draft Materials & Links delta — bullets by default, table-row upsert if a table already exists, no delta (section left untouched) if it's neither |
 | 6 | Draft Track checklist delta — Technical Development line only, only if the section already exists |
 | 7 | Compose the full new description document (whole-field replace) |
-| 8 | Find today's existing Progress Update comment, if any |
+| 8 | Fetch all comments via `get-comments` (paginated to completion) and find today's existing Progress Update comment, if any |
 | 9 | Draft "What's done" — prefer N's report, else session summary |
 | 10 | Draft "Next Steps" — ask roles/people, resolve via account lookup |
 | 11 | Compose the full comment document |

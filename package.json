@@ -1,6 +1,16 @@
 {
   "name": "digismith",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24",
+      "onFail": "error"
+    }
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
