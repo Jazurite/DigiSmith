@@ -244,7 +244,10 @@
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>I.1 — JIRA progress write-back:</strong> <code>jira-progress-write-back</code> skill —
     <a href="docs/jira-progress-write-back/design.html">design spec</a> ·
-    <a href="docs/jira-progress-write-back/plan.md">implementation plan</a>
+    <a href="docs/jira-progress-write-back/plan.md">implementation plan</a> ·
+    migrated to direct REST 2026-08-27, see
+    <a href="docs/jira-rest-migration/design.html">migration spec</a> ·
+    <a href="docs/jira-rest-migration/plan.md">migration plan</a>
   </p>
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>K.2 — Implementer-task offload:</strong> <code>offload-implementer</code> skill —
@@ -709,6 +712,32 @@
       I.1's fix) is specced in
       <a href="docs/jira-rest-migration/design.html">a separate design doc</a>
       and has its own plan to follow.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>I.1 migrated off the MCP connector to direct Jira REST — 4 tasks, subagent-driven-development</h4>
+      <p>The bug found live on EMKT-756 (the MCP connector's <code>getJiraIssue</code>
+      returning lossy, non-ADF content for the <code>description</code> field) is now
+      fixed at the root: <code>packages/jira-client</code>, a new pnpm-workspace
+      package with zero runtime dependencies, calls Jira's REST API v3 directly
+      with a personal API token, provisioned onto consumer machines by
+      <strong>V</strong> (<code>digismith:depot</code>). Task 1 built and
+      fully unit-tested (Vitest) all five client functions
+      (<code>checkCredentials</code>, <code>getIssue</code>,
+      <code>updateDescription</code>, <code>addComment</code>,
+      <code>getAttachmentContent</code>). Task 2 built the thin
+      <code>cli.ts</code> dispatcher and dogfooded it for real against a
+      temporary fake home directory (never the real
+      <code>~/.digismith/.env</code>, never a live network call). Task 3
+      migrated <code>jira-progress-write-back</code>'s <code>SKILL.md</code>
+      wholesale — removing the old <code>cloudId</code>-resolution step
+      entirely and renumbering every step after it, while leaving the ADF
+      business logic (description-delta splicing, comment date-matching, the
+      confirm-before-write gate) completely untouched. Task 4 is this
+      <code>history.html</code> and <code>MEMORY.md</code> update, and
+      retires <code>backlog/jira-rest-graphql-direct-api.md</code> now that
+      its proposal is actually built.</p>
     </div>
 
   </div>
