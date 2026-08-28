@@ -1,10 +1,11 @@
 # Ticket description Track-section template (Deliverable / Per Market)
 
 **Status:** Not applied. Live-tested design, not yet a skill. Produced
-entirely by hand via direct REST (see
-[[jira-rest-graphql-direct-api.md]]) — no DigiSmith skill generated any
-of this. Needs `superpowers:brainstorming` alongside that item before
-becoming part of `I.1`/`I.2`.
+entirely by hand via direct REST (the same transport `I.1` has since
+migrated onto — see
+`.digismith/docs/jira-rest-migration/design.html`) — no DigiSmith skill
+generated any of this. Needs `superpowers:brainstorming` before becoming
+part of `I.1`/`I.2`.
 
 **Independently verified 2026-08-27** against the live EMKT-756 ticket
 (direct REST fetch, not the session's own self-report) — the Deliverable
@@ -109,8 +110,10 @@ writes can do.
 ## Why not applied yet
 
 Single-ticket live-tested design, not run through
-`superpowers:brainstorming`. Blocked on the same prerequisite as
-[[jira-rest-graphql-direct-api.md]] — every edit here happened via
-manual `curl` because `I.1`'s own MCP-based description fetch (Step 4)
-returns lossy ADF, so there's no working skill path to generate this
-template today even for the single-repo Deliverable half.
+`superpowers:brainstorming`. Its transport prerequisite is now resolved
+— see `.digismith/docs/jira-rest-migration/design.html`: every edit here
+happened via manual `curl` because `I.1`'s own description fetch went
+through the MCP connector and returned lossy ADF, which the REST
+migration has since fixed. What remains is the brainstorm — there's
+still no skill path to generate this template today, even for the
+single-repo Deliverable half.
