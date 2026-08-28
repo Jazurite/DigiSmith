@@ -43,9 +43,13 @@ anything sensitive.
 
 ### Step 0: Determine Intent
 
-**"Stop offloaded work for this plan"** (or equivalent) → skip to Stop
-the Server, below. **Otherwise** → this is a dispatch (fresh task or fix
-round); continue to Step 1.
+**"Stop offloaded work"** (or equivalent) → this skill no longer stops
+anything itself. The OpenCode server is shared machine-wide by
+`digismith:depot` now, not owned per-plan — tell the user to invoke
+`digismith:depot`'s `stop-opencode-server` operation directly if they
+want it stopped, since another plan may still be relying on it.
+**Otherwise** → this is a dispatch (fresh task or fix round); continue to
+Step 1.
 
 ### Step 1: Ensure `opencode.json` Exists in the Task's Worktree
 
@@ -105,58 +109,15 @@ references your API key only via `{env:CHUTES_API_KEY}`, never a
 literal value, but it's still local machine config that shouldn't be
 committed.
 
-### Step 2: Locate or Start the OpenCode Server
+### Step 2: Ensure the OpenCode Server Is Running
 
-This plan's SDD workspace is `.superpowers/sdd/<plan-basename>/` (same
-directory the ledger lives in).
-
-**Windows Git Bash only:** every `<pid>` named anywhere in this step and
-in Stop the Server means the native Windows PID `tasklist`/`taskkill`
-operate on — never the MSYS/Cygwin PID a plain `$!` gives you, which
-differs (confirmed live: MSYS PID `6140` vs. the WINPID `24816`
-`tasklist` actually needed for the same process). Resolve the real
-WINPID before persisting or checking any PID:
-
-```bash
-WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
-```
-
-If `$WINPID` comes back empty (the `ps -W`/`awk` lookup can miss), fall
-back to resolving the PID by parsing `netstat -ano` for the process
-listening on the captured port instead. Never persist an empty pid — a
-tracking file with an unusable pid means nothing could ever stop that
-server later. On other platforms `$!` is already the right PID — skip
-this lookup there.
-
-Check for `<workspace>/opencode-server.json`.
-
-**Present** → read `{"pid": ..., "port": ...}`. Confirm the process is
-still alive (on Windows: `tasklist //FI "PID eq <pid>"` and check the
-output actually lists it, not just that the command succeeded — an
-absent PID still exits 0 with an empty-ish table). **Alive** → reuse
-this port, skip to Step 3. **Not alive** → treat as stale, continue as
-if the file were absent.
-
-**Absent, or stale** → start a fresh server, letting the OS pick a free
-port rather than guessing one:
-
-```bash
-CHUTES_API_KEY=$(python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key) opencode serve --port 0 --hostname 127.0.0.1 > "<workspace>/opencode-server.log" 2>&1 &
-SERVER_PID=$!
-sleep 2
-```
-
-Read `<workspace>/opencode-server.log` for the line `opencode server
-listening on http://127.0.0.1:<port>` and extract `<port>` from it — this
-is the real assigned port, not something to guess. If that line isn't
-present after a few seconds, this is a startup failure (see Error
-Handling).
-
-On Windows, resolve `$WINPID` from `$SERVER_PID` now (per above, with the
-`netstat -ano` fallback if it comes back empty) and use `$WINPID` (not
-`$SERVER_PID`) everywhere below and in Stop the Server. On success, write
-`<workspace>/opencode-server.json` as `{"pid": <WINPID on Windows, else
-SERVER_PID>, "port": <port>}`.
+Invoke `digismith:depot`'s `ensure-opencode-server` operation and use
+the port it returns for every dispatch below. This server is shared
+machine-wide across every concurrent `subagent-driven-development` plan
+on this machine, not scoped to this one — Depot owns starting it,
+tracking its PID and port, and all the Windows-specific WINPID
+resolution that requires, entirely on its own. This skill no longer
+tracks a server itself.
 
 ### Step 3: Build the Task Prompt
 
@@ -330,26 +291,8 @@ task reviewer, run the fix loop (resuming via this skill for rounds 1-3,
 surfacing per Error Handling if the cap is hit), mark the task complete.
 This skill's own job for this dispatch ends here.
 
-### Stop the Server
-
-Read `<workspace>/opencode-server.json`. **Absent** → nothing to stop,
-report that plainly. **Present** →
-
-```bash
-taskkill //PID <pid> //F
-```
-
-then delete `<workspace>/opencode-server.json`. If the file's PID is
-already dead (process gone), still delete the tracking file — nothing
-to kill, but stale state should not survive.
-
 ## Error Handling
 
-- **`opencode` not on PATH** → stop, tell the user plainly, point at the
-  `pnpm add -g --allow-build=opencode-ai opencode-ai` install command.
-  Don't attempt to install it silently.
-- **Server fails to start** (no "listening on" line in the log within a
-  few seconds) → stop, show the log content, don't retry silently.
 - **`opencode run` genuinely errors** (a real non-zero exit, an error
   event in the JSON stream, etc.) → report as `BLOCKED`, same
   disposition a stuck Claude implementer would get — surfaces to the
@@ -382,25 +325,24 @@ to kill, but stale state should not survive.
   a normal fix loop's rounds 4-5 would — that escalation is deliberately
   not automated here. The user decides: keep trying offloaded, hand the
   task to a Claude implementer, or park it.
-- **`opencode-server.json` names a PID that's no longer running** (e.g.
-  the machine restarted, or the process was killed outside this skill)
-  → treat as stale, start a fresh server per Step 2, overwrite the
-  tracking file.
-- **A captured `sessionID` no longer resolves on the server** (e.g. the
-  server itself was restarted between the original attempt and a fix
-  round) → report this plainly rather than silently starting a fresh,
-  context-less session under the same session ID assumption — the fix
-  round would silently lose all prior context otherwise.
+- **A captured `sessionID` no longer resolves on the server** (e.g.
+  someone ran `digismith:depot`'s `stop-opencode-server` — possibly for a
+  different plan entirely, since the server is now shared machine-wide —
+  or the machine itself restarted) → report this plainly rather than
+  silently starting a fresh, context-less session under the same session
+  ID assumption. Re-run Step 2 (`digismith:depot`'s
+  `ensure-opencode-server`) to get a fresh server/port, then re-dispatch
+  as a **fresh task**, not a fix round — the old session's context is
+  genuinely gone, so resuming it would silently lose all prior context.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 0 | Determine intent — stop request, or a dispatch (fresh/fix round) |
+| 0 | Determine intent — a stop request is no longer this skill's concern (tell the user to invoke `digismith:depot`'s `stop-opencode-server` directly), otherwise this is a dispatch (fresh/fix round) |
 | 1 | Ensure `opencode.json` exists in the task worktree, ignored via `.git/info/exclude` (never the tracked `.gitignore`) |
-| 2 | Locate or start `opencode serve`, tracking PID+port in the SDD workspace (Windows: resolve the real WINPID, falling back to `netstat -ano` if empty — never persist an empty pid) |
+| 2 | Invoke `digismith:depot`'s `ensure-opencode-server` operation, use the port it returns — Depot owns starting the shared server, tracking its PID/port, and WINPID resolution entirely |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
 | 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch via `opencode run --attach ... --format json "$PROMPT"` with an explicit ≥300000ms `Bash` timeout, `--session <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
 | 5 | Extract the final status-contract text (nested at `.part.text`) from the JSON event stream; capture `sessionID` (event-level) only on a fresh task, never re-appended on a fix round |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
-| — | Stop: `taskkill` the tracked PID, delete the tracking file |
