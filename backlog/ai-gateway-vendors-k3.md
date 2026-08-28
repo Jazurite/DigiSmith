@@ -1,12 +1,20 @@
 # AI Gateway Vendors (K.3)
 
-**Status:** Not applied. Raw spike material and scope ideas, not yet brainstormed or spec'd.
+**Status:** Not applied. Raw spike material, not yet brainstormed or spec'd.
 
 **Map item:** **K.3**, not a new letter — **K** ("Model tiering") already explicitly reserves
 this scope in its own MEMORY.md row: *"everything beyond K.1 and K.2 — multi-provider routing
 beyond the single hardcoded Chutes provider — left undesigned, see K.1's design spec's Future
-Phases and K.2's own Out of Scope section."* This file was originally drafted as a proposed new
-letter W before that existing reservation was spotted — corrected the same day.
+Phases and K.2's own Out of Scope section."* Originally drafted as a proposed new letter W
+before that existing reservation was spotted — corrected the same day.
+
+This is the **core** item: pluggable gateway choice. Four companion ideas that came out of the
+same spike/conversation are split into their own files, since each is independently
+schedulable — read this one first, they all build on its spike evidence:
+- [K.4 — gateway-vs-native-Claude-Code cost comparison](gateway-cost-comparison-k4.md)
+- [K.5 — run multiple gateways in parallel](gateway-parallel-execution-k5.md)
+- [K.6 — harness benchmark: Claude Code vs. OpenCode](harness-benchmark-claude-code-vs-opencode-k6.md)
+- [K.7 — vendor benchmark: Chutes vs. TokenReply vs. future gateways](gateway-vendor-benchmark-k7.md)
 
 **Source:** 2026-08-28, sparked mid-conversation while investigating a Chutes-subscription-expiry
 concern for K.2 (`digismith:offload-implementer`). Led to discovering TokenReply
@@ -21,7 +29,7 @@ user choose or switch between AI gateway providers (Chutes, TokenReply, future o
 being locked into whichever one K.2 shipped with. This is the same structural insight that came
 up when V.1 (Depot managing the OpenCode server) was being designed the same day — "the server
 could be one thing, or another package" — just scoped specifically to the *model gateway* layer
-this time, not the *coding-agent harness* layer.
+this time, not the *coding-agent harness* layer (see K.6 for that layer).
 
 ## Spike evidence: Claude Agent SDK + TokenReply as an alternate offload path
 
@@ -65,7 +73,7 @@ total account spend for the *entire day* of spiking (many runs). The SDK marks t
 internal default cost table (likely calibrated for real Anthropic models) rather than the
 gateway's actual rate. **Lesson for any future work touching this: always read real cost from
 the provider's own dashboard/API, never trust the SDK's self-reported dollar figure for a
-non-Anthropic model.**
+non-Anthropic model.** (K.4 turns this lesson into an actual feature.)
 
 Real TokenReply pricing observed for `kimi-k2.7` (Trial tier, likely the same base rate under
 Plus): $0.95 input / $4.00 output / $0.19 cache-read, per 1M tokens — genuinely cheap, on the
@@ -75,57 +83,10 @@ order of a few cents per real task once the Skill-tool overhead is excluded.
 "Weekly Featured") caps at 200K context — smaller than the 1M context Chutes advertises for
 `kimi-k3` directly. A real capability difference between providers/tiers, not just cost.
 
-## Companion idea: cost-comparison feature
-
-Once a task can run through more than one gateway, show what it actually cost via that gateway
-**vs.** what it would have cost running natively in Claude Code (Anthropic's own pricing) — turn
-"switch providers" into a quantified decision instead of a guess. Building block: use the SDK's
-token *counts* (input/output/cache — these are reliably reported) and apply the correct pricing
-table for each side yourself (the gateway's real rate + Anthropic's own current rate), rather
-than trusting either side's self-reported cost figure — per the methodology finding above.
-
-## Companion idea: run multiple gateways in parallel
-
-Rather than only switching between gateways one at a time, support dispatching the same task
-through more than one gateway simultaneously (e.g., Chutes and TokenReply in parallel) — for
-direct comparison (cost, quality, speed) rather than a serial pick-one choice. Raised
-2026-08-28; not yet scoped how this would actually work operationally (same task run twice and
-diffed? Just for cost-metering purposes on one real dispatch? Unclear.)
-
-## Companion idea: two separate benchmark axes
-
-Raised 2026-08-28, refined across several follow-up messages the same conversation. Two
-genuinely different comparisons, both worth having, neither a substitute for the other:
-
-**1. Harness benchmark — Claude Code vs. OpenCode.** K.2 currently uses OpenCode
-(purpose-built multi-provider agentic coding tool, no DigiSmith/Superpowers scaffolding
-baggage) to drive a third-party model. This spike used the Claude Agent SDK instead (Claude
-Code's own harness, which — as found above — inherits the *full* Superpowers skill-invocation
-instruction set unless explicitly excluded). Worth a real benchmark comparing the two harnesses
-head-to-head on the same task/model/gateway: token overhead, reliability, cost, and whether
-Claude Code's richer built-in tooling (Task tracking, etc. — visibly used unprompted in the
-spike's cleaner run) is worth its scaffolding tax once that tax is properly excluded.
-
-**2. Vendor benchmark — Chutes vs. TokenReply vs. future gateways.** A different axis entirely:
-holding the harness constant and comparing gateway providers against each other directly.
-Dimensions raised explicitly: **models offered**, **token price**, and **quality** (output
-correctness/reliability, not just cost) — the same three the cost-comparison companion idea
-above only partly covers (that one compares gateway-vs-native-Claude-Code cost; this one
-compares gateway-vs-gateway across all three dimensions).
-
-Both axes probably want the same underlying harness (whichever one/ones this feature ends up
-supporting) run against a small fixed set of real tasks, so results are actually comparable
-rather than anecdotal — same spirit as the seeded-bug smoke tests used throughout this project's
-own SDD builds, just repeated across the cells of a vendor × harness (or vendor × model) grid
-instead of once.
-
 ## Out of scope / open questions, not yet decided
 
 - Whether this generalizes K.2's existing `offload-implementer` skill in place, or becomes a
-  new K.3 skill that K.2 optionally sits on top of. Both the gateway-vendor axis and the
-  harness axis (Claude Code vs. OpenCode) stay under **K** either way — K's own scope is "model
-  tiering" broadly, not tied to OpenCode specifically, so the harness question doesn't need a
-  separate letter.
+  new K.3 skill that K.2 optionally sits on top of.
 - TokenReply account creation/payment is the user's own action, never DigiSmith's — same
   standing boundary as Chutes credential handling elsewhere in this project.
 - Whether a paid TokenReply tier actually removes the rate-limiting seen on Trial.

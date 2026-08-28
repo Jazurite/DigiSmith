@@ -23,4 +23,8 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Ticket description Track-section template (Deliverable / Per Market)](track-section-template.md) — live-tested on EMKT-756, tension with `I.1`'s current single-checkmark Step 7 noted; natural output for I.2
 - [Opinionated default tech stack (new letter, tentatively U)](opinionated-tech-stack-defaults.md) — Jack has standing defaults (Vitest, SCSS, Playwright, more not yet captured) that brainstorming currently has no way to know about and re-asks fresh each time
 - [First non-fast-forward merge — re-examine report-implementation's assumption](non-fast-forward-merge-first-occurrence.md) — happened for real merging K.2; didn't break anything since the report is written pre-merge, but the original design note asked to be revisited when this occurred
-- [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; cost-comparison, parallel-gateway, and harness/vendor benchmark companion ideas
+- [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; core item for the four below
+- [Gateway-vs-native-Claude-Code cost comparison (K.4)](gateway-cost-comparison-k4.md) — depends on K.3
+- [Run multiple gateways in parallel (K.5)](gateway-parallel-execution-k5.md) — depends on K.3
+- [Harness benchmark: Claude Code vs. OpenCode (K.6)](harness-benchmark-claude-code-vs-opencode-k6.md) — independent axis, shares K.3's spike evidence
+- [Vendor benchmark: Chutes vs. TokenReply vs. future gateways (K.7)](gateway-vendor-benchmark-k7.md) — depends on K.3
