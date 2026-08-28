@@ -19,6 +19,10 @@ function parseArgs(argv: string[]): Record<string, string> {
   return args;
 }
 
+function readAdfFile(path: string): unknown {
+  return JSON.parse(readFileSync(path, "utf-8").replace(/^\uFEFF/, ""));
+}
+
 async function main() {
   const [subcommand, ...rest] = process.argv.slice(2);
   const args = parseArgs(rest);
@@ -39,14 +43,14 @@ async function main() {
       }
       case "update-description": {
         const creds = checkCredentials();
-        const adfDoc = JSON.parse(readFileSync(args.file, "utf-8"));
+        const adfDoc = readAdfFile(args.file);
         await updateDescription(args.key, adfDoc, creds);
         console.error("update-description: ok");
         break;
       }
       case "add-comment": {
         const creds = checkCredentials();
-        const adfDoc = JSON.parse(readFileSync(args.file, "utf-8"));
+        const adfDoc = readAdfFile(args.file);
         const result = await addComment(args.key, adfDoc, creds, args["comment-id"]);
         console.log(JSON.stringify(result));
         break;
