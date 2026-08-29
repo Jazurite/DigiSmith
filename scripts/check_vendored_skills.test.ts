@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { pickMostRecentDir, resolveUpstreamSkillsDir, readGitBlob, readFileIfExists, listBaselineFiles } from "./check_vendored_skills.ts";
+import { pickMostRecentDir, resolveUpstreamSkillsDir, readGitBlob, readFileIfExists, listBaselineFiles, diffContent } from "./check_vendored_skills.ts";
 
 describe("pickMostRecentDir", () => {
   it("returns the path with the highest mtimeMs", () => {
@@ -77,5 +77,17 @@ describe("listBaselineFiles", () => {
     const files = listBaselineFiles(BASELINE_SHA, "skills/vendored-brainstorming");
     expect(files).toContain("SKILL.md");
     expect(files.every((f) => !f.startsWith("skills/"))).toBe(true);
+  });
+});
+
+describe("diffContent", () => {
+  it("returns an empty string for identical content", () => {
+    expect(diffContent("same\n", "same\n")).toBe("");
+  });
+
+  it("returns a unified diff for differing content", () => {
+    const diff = diffContent("line one\nline two\n", "line one\nline TWO changed\n");
+    expect(diff).toContain("-line two");
+    expect(diff).toContain("+line TWO changed");
   });
 });

@@ -75,3 +75,25 @@ export function listBaselineFiles(sha: string, skillRelDir: string): string[] {
     .filter((line) => line.length > 0)
     .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line));
 }
+
+export function diffContent(contentA: string, contentB: string): string {
+  if (contentA === contentB) {
+    return "";
+  }
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-diff-"));
+  const fileA = path.join(tmpDir, "a");
+  const fileB = path.join(tmpDir, "b");
+  try {
+    fs.writeFileSync(fileA, contentA);
+    fs.writeFileSync(fileB, contentB);
+    const result = spawnSync("git", ["diff", "--no-color", "--no-index", "--", fileA, fileB], {
+      encoding: "utf8",
+    });
+    if (result.status !== 0 && result.status !== 1) {
+      throw new Error(`git diff --no-index failed: ${result.stderr}`);
+    }
+    return result.stdout;
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
