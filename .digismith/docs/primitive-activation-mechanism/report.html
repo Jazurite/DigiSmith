@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primitive Activation Mechanism (W.2) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Primitive Activation Mechanism (W.2) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-29</span>
+    <span>Map item: <strong>W.2</strong></span>
+    <span>Commit range: <code>ee22b51..f9ee127</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Build the reusable mechanism a future vendored-skill activation will use: a fork-provenance
+  tag convention, and an on-demand script that 3-way-diffs every vendored skill (baseline clone
+  vs. currently-installed upstream vs. local working tree) so upstream drift and local divergence
+  are never conflated. A single flat TypeScript file, <code>scripts/check_vendored_skills.ts</code>,
+  exports small pure/testable functions plus a <code>main()</code> CLI entry point, run directly
+  via Node's built-in type-stripping (no build step, no new runtime dependency);
+  <code>vendored/PROVENANCE.md</code> got three doc edits recording the baseline commit and
+  describing the new script. Followed the full Superpowers process: brainstorming → spec →
+  writing-plans → <code>superpowers:subagent-driven-development</code> (6 tasks, each dispatched
+  to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus
+  3 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 1</div><h4>Directory resolution</h4><p>Resolves which Superpowers plugin version is currently installed by picking the most-recently-modified plugin-cache directory (<code>DirEntry</code>, <code>pickMostRecentDir</code>, <code>resolveUpstreamSkillsDir</code>).</p></div>
+    <div class="card"><div class="tag">Task 2</div><h4>Git content readers</h4><p>Reads file content from a specific git commit and from the local filesystem, and lists which files existed in a skill folder at a given commit (<code>readGitBlob</code>, <code>readFileIfExists</code>, <code>listBaselineFiles</code>).</p></div>
+    <div class="card"><div class="tag">Task 3</div><h4>Diff computation</h4><p>Computes a unified diff between two strings via temp files and <code>git diff --no-index</code> (<code>diffContent</code>).</p></div>
+    <div class="card"><div class="tag">Task 4</div><h4>Comparison &amp; formatting</h4><p>Categorizes a file's drift status and keeps upstream drift strictly separate from local divergence, then formats the result into a human-readable report (<code>FileDriftStatus</code>, <code>FileComparison</code>, <code>compareFile</code>, <code>SkillReport</code>, <code>formatSkillReport</code>).</p></div>
+    <div class="card"><div class="tag">Task 5</div><h4>Main CLI orchestration</h4><p>Wires everything into a runnable CLI and was verified live against the actually-installed Superpowers plugin (<code>BASELINE_SHA</code>, <code>VENDORED_SKILLS</code>, <code>checkSkill</code>, <code>main</code>).</p></div>
+    <div class="card"><div class="tag">Task 6</div><h4>PROVENANCE.md documentation</h4><p>Records the baseline commit, rewrites the Sync policy section, fixes a stale cross-reference, and adds the fork-provenance tag convention to the Activation checklist — the terminal task for W.2.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Directory resolution</td><td>Resolves the currently-installed Superpowers plugin dynamically</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 2: Git content readers</td><td>Reads baseline/local file content and lists baseline files via git</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 3: Diff computation via <code>git diff --no-index</code></td><td>Computes unified diffs between two strings</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 4: Per-file 3-way comparison and report formatting</td><td>Load-bearing upstream/local drift separation, plus report formatting</td><td>Approved after 1 fix round</td><td>Import statement for <code>compareFile</code>/<code>formatSkillReport</code> in the test file placed mid-file instead of at the top; <code>diffContent</code>'s output plus <code>lines.join("\n")</code> may leave a double-blank-line artifact in <code>formatSkillReport</code> output — cosmetic</td></tr>
+    <tr><td>Task 5: Main CLI orchestration and live verification</td><td>Wires up <code>main()</code>, verified live against the installed Superpowers plugin — no upstream drift found across all 14 skills as of 2026-08-29</td><td>Approved after 1 fix round</td><td>—</td></tr>
+    <tr><td>Task 6: Document the mechanism in <code>vendored/PROVENANCE.md</code></td><td>Baseline SHA, rewritten Sync policy, fork-provenance tag convention</td><td>Approved, clean</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 3 Important findings (all fixed and re-verified) and 8 Minor
+  findings (all parked as non-blocking, bundled into one backlog item).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>MEMORY.md</code>'s Build order table and map row still used the pre-split meaning of W.2 and said "not yet built" — self-contradicting the map of record</td><td>Fixed (commit a7e99ba), re-verified addressed by scoped re-review</td></tr>
+    <tr><td>Important</td><td>No existence check on the resolved upstream skills directory; the plugin cache on this machine genuinely has more than one version directory present right now, so the failure precondition was live, not hypothetical</td><td>Fixed — existence check plus a multi-candidate warning added with test coverage (commit a7e99ba), re-verified addressed</td></tr>
+    <tr><td>Important</td><td><code>vendored/PROVENANCE.md</code>'s Sync policy section over-promised — didn't mention that files added upstream since the baseline are invisible to the script</td><td>Doc caveat added (commit a7e99ba), re-verified addressed; the underlying capability (detecting newly-added upstream files) is a deliberate design-scope gap, parked and logged to <code>backlog/check-vendored-skills-hardening.md</code></td></tr>
+    <tr><td>Minor</td><td>8 minor findings: false-clean report on a skill absent at baseline, mislabeled error-catch messaging, duplicated <code>BASELINE_SHA</code> constant, leaked temp-file paths in diff headers, no C-style git path-quoting handling, <code>PROVENANCE.md</code> missing its run-from-repo-root precondition, <code>scripts/</code> has no tsconfig (pre-existing repo trait), and a report-string grammar nit</td><td>Parked — none reachable today, script is report-only with a human in the loop; bundled into <code>backlog/check-vendored-skills-hardening.md</code></td></tr>
+    <tr><td>Minor</td><td>Task 4's 2 previously-deferred minors (mid-file test imports, double-blank-line diff artifact)</td><td>Re-confirmed non-blocking by the final review; already recorded in Task 4's Build Process row above</td></tr>
+    <tr><td>Minor</td><td>The fix-wave's own re-review found a new minor: a pre-existing Task 1 test now incidentally triggers the new multi-candidate <code>console.error</code> warning, unmocked</td><td>Parked — cosmetic test-hygiene nit; folded into <code>backlog/check-vendored-skills-hardening.md</code></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">2902c9e</span> feat(vendor-activation): resolve installed Superpowers plugin dir dynamically</li>
+    <li><span class="sha">ae84563</span> feat(vendor-activation): add git-backed baseline/local content readers</li>
+    <li><span class="sha">aa4a6dc</span> feat(vendor-activation): add git diff --no-index based diffContent</li>
+    <li><span class="sha">caf2b2c</span> feat(vendor-activation): add per-file comparison and report formatting</li>
+    <li><span class="sha">79a79d1</span> test(vendor-activation): add coverage for removed-upstream+local-divergence and formatSkillReport local-divergence paths</li>
+    <li><span class="sha">e6627d8</span> feat(vendor-activation): wire up main() CLI, verified live against installed Superpowers</li>
+    <li><span class="sha">64494cc</span> docs(vendor-activation): record baseline SHA and document check_vendored_skills.ts</li>
+    <li><span class="sha">a7e99ba</span> fix(vendor-activation): final-review fixes — MEMORY.md consistency, upstream-dir existence check, PROVENANCE.md caveat</li>
+    <li><span class="sha">f9ee127</span> docs(backlog): log check_vendored_skills hardening items from W.2 final review</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/primitive-activation-mechanism/report.html</footer>
+
+</body>
+</html>
