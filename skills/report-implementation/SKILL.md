@@ -290,7 +290,7 @@ clearly labeled by name, and (2) the exact template below plus one
 instruction line: "Substitute each `{{PLACEHOLDER}}` with the labeled
 value above exactly — escaping is already applied, don't re-escape;
 return only the complete HTML document, nothing else." Run:
-`python scripts/model_offload.py --prompt-file <prompt-file>
+`node scripts/model_offload.ts --prompt-file <prompt-file>
 --profile-path .digismith/profile`. On exit 0, use its stdout as
 `report.html`'s content verbatim — the script already validated it's a
 complete, fully-substituted HTML document and exits non-zero if it isn't
@@ -595,6 +595,6 @@ duplicate any part of that sequencing.
 |---|---|
 | 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites), ask if no final-review line |
 | 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
-| 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings); try `scripts/model_offload.py` first, but only in DigiSmith's own repo, and state which path produced the file |
+| 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so; then publish `report.html` via the `Artifact` tool regardless of whether it was committed, unless the active profile has `publish_artifact: false` |
 | 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |

@@ -204,7 +204,7 @@ the expected `.digismith/docs/<slug>/design.html`:
   instruction line: "Fill `{{TOC_ITEMS}}` and `{{BODY_SECTIONS}}` from
   the content above, preserving all of its information; return only the
   complete HTML document, nothing else." Run:
-  `python scripts/model_offload.py --prompt-file <prompt-file>
+  `node scripts/model_offload.ts --prompt-file <prompt-file>
   --profile-path .digismith/profile`. On exit 0, use its stdout as the
   file content verbatim — the script already validated it's a complete,
   fully-substituted HTML document and exits non-zero if it isn't. On any
