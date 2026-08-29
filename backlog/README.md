@@ -31,3 +31,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Vendor benchmark: Chutes vs. TokenReply vs. future gateways (K.7)](gateway-vendor-benchmark-k7.md) — depends on K.3
 - [offload-implementer: timeout floor too low, undocumented progress-read options](offload-implementer-timeout-and-progress-read.md) — found live during V.1's smoke test, out of that task's scope
 - [DigiSmith self-development can't test its own not-yet-merged Skill-tool calls](plugin-cache-lag-self-development.md) — structural gap, will recur for any future cross-skill integration built before merge
+- [`check_vendored_skills.ts` hardening](check-vendored-skills-hardening.md) — 8 deferred minors from W.2's final review (added-upstream files invisible, path-quoting, duplicated baseline SHA, etc.); none reachable today
