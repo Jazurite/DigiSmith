@@ -91,3 +91,64 @@ describe("diffContent", () => {
     expect(diff).toContain("+line TWO changed");
   });
 });
+
+import { compareFile, formatSkillReport } from "./check_vendored_skills.ts";
+import type { FileComparison } from "./check_vendored_skills.ts";
+
+describe("compareFile", () => {
+  it("reports no-drift when upstream and local both match baseline", () => {
+    const result = compareFile("SKILL.md", "same\n", "same\n", "same\n");
+    expect(result.status).toBe("no-drift");
+    expect(result.upstreamDiff).toBe("");
+    expect(result.localDiff).toBe("");
+  });
+
+  it("reports upstream-changed when only upstream differs from baseline", () => {
+    const result = compareFile("SKILL.md", "old\n", "new\n", "old\n");
+    expect(result.status).toBe("upstream-changed");
+    expect(result.upstreamDiff).not.toBe("");
+    expect(result.localDiff).toBe("");
+  });
+
+  it("reports local divergence separately from upstream drift when both differ from baseline", () => {
+    const result = compareFile("SKILL.md", "base\n", "upstream-edit\n", "local-edit\n");
+    expect(result.status).toBe("upstream-changed");
+    expect(result.upstreamDiff).toContain("upstream-edit");
+    expect(result.localDiff).toContain("local-edit");
+    expect(result.upstreamDiff).not.toContain("local-edit");
+    expect(result.localDiff).not.toContain("upstream-edit");
+  });
+
+  it("reports removed-upstream when the file no longer exists upstream", () => {
+    const result = compareFile("SKILL.md", "base\n", null, "base\n");
+    expect(result.status).toBe("removed-upstream");
+    expect(result.upstreamDiff).toContain("no longer exists upstream");
+  });
+
+  it("notes a locally-missing file without crashing", () => {
+    const result = compareFile("SKILL.md", "base\n", "base\n", null);
+    expect(result.status).toBe("no-drift");
+    expect(result.localDiff).toContain("missing locally");
+  });
+});
+
+describe("formatSkillReport", () => {
+  it("summarizes a skill with no drift", () => {
+    const files: FileComparison[] = [
+      { relPath: "SKILL.md", status: "no-drift", upstreamDiff: "", localDiff: "" },
+    ];
+    const text = formatSkillReport({ skillName: "brainstorming", files });
+    expect(text).toContain("brainstorming: no drift (1 files checked)");
+  });
+
+  it("summarizes and details a skill with upstream drift", () => {
+    const files: FileComparison[] = [
+      { relPath: "SKILL.md", status: "upstream-changed", upstreamDiff: "+new line\n", localDiff: "" },
+    ];
+    const text = formatSkillReport({ skillName: "writing-plans", files });
+    expect(text).toContain("writing-plans: 1 file(s) changed upstream, 0 locally diverged");
+    expect(text).toContain("SKILL.md");
+    expect(text).toContain("upstream diff:");
+    expect(text).toContain("+new line");
+  });
+});
