@@ -549,7 +549,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { offload, readProfileProvider } from "./model_offload.ts";
+import { main, offload, readProfileProvider } from "./model_offload.ts";
 
 const VALID_HTML = '<!doctype html>\n<html lang="en"><body>ok</body>\n</html>';
 
@@ -847,7 +847,6 @@ describe("main", () => {
   });
 
   it("reports a clear error when the prompt file is missing", async () => {
-    const { main } = await import("./model_offload.ts");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const originalArgv = process.argv;
     process.argv = ["node", "model_offload.ts", "--prompt-file", "/nonexistent/path/file.txt"];
@@ -876,7 +875,7 @@ Expected: FAIL — `scripts/model_offload.ts` does not exist yet.
 // there, and a non-interactive script has no way to ask for DigiSmith's path
 // the way a conversational skill can. Run from anywhere else and the caller
 // falls back to in-session generation.
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, requireArgs } from "./cli-args.ts";
@@ -1092,8 +1091,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   main();
 }
 ```
-
-Note: `existsSync` is imported but unused if you follow this listing exactly — remove it from the import line (only `readFileSync` and `statSync` are used from `node:fs`).
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
