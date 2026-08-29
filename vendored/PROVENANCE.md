@@ -29,14 +29,23 @@ MIT (Jesse Vincent, 2025) — see `LICENSE` in this folder.
 
 ## Sync policy
 
-No automated sync or diff-tracking against upstream exists, by design
-(DigiSmith stays a personal tool, not a multi-source merge system). Future
-upstream Superpowers improvements are pulled in manually, skill by skill,
-only if and when actually wanted. See DigiSmith `MEMORY.md` map item W.
+Baseline commit (the original clone, before any divergence):
+`a6418858b5374c2506d1ff799b2dcb418bff53d1` — 2026-08-20,
+"feat(vendor-superpowers-skills): clone all 14 Superpowers skills verbatim".
+
+An on-demand check exists: `node scripts/check_vendored_skills.ts` (map
+item **W.2**) 3-way-diffs every vendored skill against this baseline and
+whatever Superpowers plugin version is currently installed, reporting
+upstream drift and local divergence separately so an activated skill's
+own edits are never confused with genuine upstream changes. Still
+manual-trigger, not automatic-schedule or auto-merge — this is a
+read-only report a human reviews and decides from, not a sync/merge
+system, consistent with DigiSmith staying a personal tool. See DigiSmith
+`MEMORY.md` map item W.
 
 ## Activation
 
-A vendored skill above is "dormant" until a future map item W.2+ brainstorm
+A vendored skill above is "dormant" until a future map item W.4+ brainstorm
 activates it. Until then, every vendored skill listed above is an inert,
 unused copy — nothing in DigiSmith calls into any of them. Activating one
 means:
@@ -57,7 +66,12 @@ means:
   selection can't pick the wrong one once content diverges. Today both
   descriptions are identical and harmless (bodies are identical too, and
   DigiSmith's call sites are always explicitly prefix-qualified), but that
-  stops being true the moment a vendored copy's content changes.
+  stops being true the moment a vendored copy's content changes. Do this
+  by appending a fork-provenance tag to the end of the existing
+  description text: `(DigiSmith fork of Superpowers' <name>)` — e.g.
+  `description: Use when implementation is complete... (DigiSmith fork of
+  Superpowers' finishing-a-development-branch)`. Visible from a skill
+  listing, not just from opening the file.
 - Recording the switch in `MEMORY.md`.
 
 Known stale path to fix during `brainstorming`'s activation specifically:
