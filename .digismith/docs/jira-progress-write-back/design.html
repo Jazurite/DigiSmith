@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JIRA Progress Write-back</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>JIRA Progress Write-back</h1>
+  <div class="meta">
+    <span>Date: 2026-08-26</span>
+    <span>Map item: I.1</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#trigger-gating">Trigger &amp; Gating</a></li>
+    <li><a href="#materials-table">Description Write: Materials &amp; Links</a></li>
+    <li><a href="#track-checklist">Description Write: Track Checklist</a></li>
+    <li><a href="#comment-skeleton">Comment Write: Progress Update</a></li>
+    <li><a href="#adf-technique">The ADF Technique</a></li>
+    <li><a href="#jira-detection">JIRA Tool Detection</a></li>
+    <li><a href="#confirmation">Confirm-Before-Write</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    DigiSmith's map item <strong>I.1</strong>. After work lands on an Emma
+    ticket, post or update JIRA's real native formatting — status
+    lozenges, emoji, a dated progress comment — instead of a markdown
+    approximation. Consumes <strong>M</strong>'s (<code>capture-ephemeral-url</code>)
+    captured Preview/Theme-Editor URLs. Never touches status or performs a
+    workflow transition — that stays a manual, human decision by standing
+    design constraint.
+  </p>
+  <p>
+    Grounded in a real example rather than an invented format: EMKT-784's
+    actual ticket shows the exact target shape — a description with a
+    <strong>🔗 Materials &amp; Links</strong> table and a
+    <strong>📦 Track</strong> checklist, and a comment thread carrying a
+    dated <strong>📣 Progress Update</strong> skeleton that gets edited in
+    place (not duplicated) as the same day's work progresses. This skill
+    reproduces that shape mechanically, on demand, rather than requiring
+    it to be typed by hand each time.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Write 1</div>
+      <h4>Description</h4>
+      <p>Idempotent, upsert-style. This repo's own Materials &amp; Links
+      entry (a bullet list, not a table — see below), and (only if the
+      section already exists) the Technical Development line of the
+      Track checklist.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Write 2</div>
+      <h4>Comment</h4>
+      <p>A dated "📣 Progress Update" skeleton — What's done / Next Steps —
+      created fresh or updated in place if today's already exists.</p>
+    </div>
+  </div>
+</section>
+
+<section id="trigger-gating">
+  <h2>Trigger &amp; Gating</h2>
+  <p>
+    Offered right after <code>digismith:capture-ephemeral-url</code> (M)
+    succeeds — the same relationship M itself has to
+    <code>superpowers:finishing-a-development-branch</code>'s "push and
+    create PR" step — or whenever explicitly asked to post/update the JIRA
+    progress update for a given ticket.
+  </p>
+  <p>
+    <strong>No new profile field.</strong> I.1 only makes sense when a real
+    ticket key exists, which is exactly what the active profile's existing
+    <code>ticket</code> field (map item <strong>O</strong>) already gates.
+    <code>ticket: false</code> profiles (<code>digismith</code>,
+    <code>jazurite</code>, <code>personal</code>) never resolve a ticket
+    key in the first place — I.1 has nothing to attach to and does not
+    run. Adding a second field would duplicate a gate that already exists.
+  </p>
+  <p>
+    Ticket key resolution mirrors <code>digismith:capture-ephemeral-url</code>
+    Step 1 exactly: parse <code>&lt;Key&gt;</code> from the current branch
+    name against <code>^([A-Z]+-\d+)__</code>. A non-matching branch name
+    means asking directly for the key rather than guessing — never look it
+    up.
+  </p>
+</section>
+
+<section id="materials-table">
+  <h2>Description Write: Materials &amp; Links</h2>
+  <p>
+    Fully automatable: every value here is something DigiSmith directly
+    witnesses (M's captured URLs, the PR just opened). EMKT-784's own
+    table (Country/Preview/Customize/PR columns) is a <em>multi</em>-market
+    shape — a table for one row reads as overkill, a header row with
+    nothing to distinguish. I.1's single-market scope calls for a plain
+    bullet list instead:
+  </p>
+  <pre><code>## 🔗 Materials &amp; Links:
+* **Preview Theme**: [Link]
+* **Customize**: [Link]
+* **Pull Request**: [Link]</code></pre>
+  <p>
+    No country label on the bullets — under single-repo scope there's
+    only ever this ticket's one market in view, so naming it adds nothing
+    a reader doesn't already know from the repo/ticket itself.
+  </p>
+  <h3>Single-market scope</h3>
+  <p>
+    I.1, as designed here, runs against exactly one repo/PR/ticket at a
+    time and writes exactly one entry. No classification logic decides
+    whether a repo "counts" as a market, no comparison against a known
+    market list, no cross-repo awareness at all — that entire
+    problem (detecting which markets a ticket touches, looping across
+    them, deciding when the set is complete) belongs to
+    <strong>I.2</strong> (multi-repo distribution), deferred in full. I.1
+    only ever sees the one repo it's currently running in.
+  </p>
+  <h3>Upsert rule</h3>
+  <ul>
+    <li>Section missing entirely → create it as the bullet list above.</li>
+    <li>Section exists as the bullet list already → replace the three
+    link values in place.</li>
+    <li>Section already exists as <strong>a table</strong> — e.g. a ticket
+    with prior multi-market history, human-authored or from a future I.2
+    → don't restructure it into bullets. Same conservative principle as
+    the Track checklist: upsert this repo's own row within the existing
+    table shape (match by the row-label rule below) rather than fighting
+    whatever format is already there.</li>
+  </ul>
+  <p>
+    Row label, needed only for the table-fallback case above: derived from
+    the current repo's directory name — strip a
+    <code>shopify-template-</code> prefix and uppercase the remainder if
+    present (<code>shopify-template-jp</code> → <code>JP</code>);
+    otherwise use the repo name as-is (e.g. <code>shopify-hub</code>).
+  </p>
+</section>
+
+<section id="track-checklist">
+  <h2>Description Write: Track Checklist</h2>
+  <p>
+    Conservative by design. The full checklist (Technical Development,
+    Storybook Conversion, Design Review, QA, Engineering Code Review,
+    Translations, Rollout) covers stages DigiSmith cannot attest to —
+    a human approved a design, QA actually ran, translations arrived.
+    Fabricating a status for any of those would be worse than leaving the
+    checklist alone.
+  </p>
+  <div class="callout">
+    I.1 touches <strong>only</strong> the <code>Technical Development</code>
+    line: its <code>status</code> node and the <code>emoji</code>
+    checkmark list beneath it. Every other stage line is read and
+    re-emitted byte-for-byte unchanged, since the whole field is replaced
+    on every write (see <a href="#adf-technique">The ADF Technique</a>).
+  </div>
+  <h3>If the Track section doesn't exist yet</h3>
+  <p>
+    Skip it — don't scaffold the other stages from nothing; their names
+    and order vary per ticket and aren't DigiSmith's to invent. Report
+    plainly that the Track update was skipped because no existing section
+    was found, so a human can set one up if they want this ticket to carry
+    it at all.
+  </p>
+  <h3>Marking it done (single-repo scope)</h3>
+  <p>
+    I.1 has no visibility into whether a ticket needs other repos too —
+    that cross-repo awareness is I.2's job, not modeled here at all. So
+    within I.1's own scope, adding this repo's checkmark is the whole of
+    what it's tracking: the <code>Technical Development</code> line's
+    <code>status</code> node is set straight to <code>green</code>
+    ("DONE") the same write that adds the checkmark. If a ticket later
+    turns out to need more repos, reopening this status is I.2's
+    concern when it exists, not something I.1 hedges against today.
+  </p>
+</section>
+
+<section id="comment-skeleton">
+  <h2>Comment Write: Progress Update</h2>
+  <p>Verbatim shape, confirmed from EMKT-784's real comment thread:</p>
+  <pre><code>### 📣 Progress Update – &lt;D/M&gt;
+---
+#### ✅ What's done
+* &lt;bullet&gt;
+* &lt;bullet&gt;
+👆 All links (Preview Theme, Customize, Pull Request, Storybook) are in the ticket description above.
+#### 🎯 Next Steps:
+* **&lt;emoji&gt; &lt;Role&gt; Needed &gt;** (@mention, @mention) — &lt;ask&gt;
+* **&lt;emoji&gt; &lt;Role&gt; &gt;** (@mention) — &lt;ask&gt;</code></pre>
+
+  <h3>Dedup, not duplicate</h3>
+  <p>
+    Before creating anything, check the issue's existing comments for one
+    already matching <code>### 📣 Progress Update – &lt;today's date&gt;</code>.
+    Found → update it via <code>commentId</code>. Not found → create new.
+    This is confirmed real behavior, not a hypothetical: EMKT-784's own
+    progress comment was created at 03:58 and edited in place at 09:30 the
+    same day once the PH blocker cleared — same comment, not a second one.
+  </p>
+
+  <h3>"What's done" — source</h3>
+  <p>
+    Prefer <strong>N</strong>'s (<code>report-implementation</code>)
+    already-generated implementation report when this session produced
+    one (<code>.digismith/docs/&lt;slug&gt;/report.html</code>) — augment,
+    don't re-derive, per DigiSmith's own philosophy. When N hasn't run
+    (e.g. I.1 invoked standalone, or the plan used
+    <code>superpowers:executing-plans</code> instead of
+    <code>subagent-driven-development</code>), draft bullets fresh from
+    the session's actual work instead.
+  </p>
+
+  <h3>"Next Steps" — source</h3>
+  <p>
+    No reliable automatic source: this repo's <code>CODEOWNERS</code> only
+    names a team (<code>@emma-sleep/OnlineStore</code>), not individuals,
+    so it cannot resolve who specifically gets tagged for code review,
+    design approval, or QA. Ask the user each round: which roles need a
+    ping this update, and who for each. Skip a role entirely if there's no
+    one to tag rather than inventing a placeholder mention.
+  </p>
+  <p>
+    Resolve each provided name to a JIRA <code>accountId</code> via
+    <code>lookupJiraAccountId</code> before building its <code>mention</code>
+    node. A name that doesn't resolve stops and asks for clarification —
+    never guess an ID; an unresolved mention node renders as nothing or
+    breaks the whole write.
+  </p>
+</section>
+
+<section id="adf-technique">
+  <h2>The ADF Technique</h2>
+  <div class="callout">
+    <strong>The trap:</strong> reading a ticket back
+    (<code>getJiraIssue</code>, any <code>responseContentFormat</code>)
+    renders special nodes as pseudo-HTML —
+    <code>&lt;custom data-type="status"&gt;DONE&lt;/custom&gt;</code>. This
+    is <strong>read-only</strong>. Sending that literal text back via
+    <code>contentFormat: "markdown"</code> does not re-parse into a real
+    node — it round-trips as visibly broken literal text on the actual
+    ticket. Confirmed by testing directly on a live ticket.
+  </div>
+  <p>
+    <strong>What works:</strong> <code>contentFormat: "adf"</code> on
+    <code>editJiraIssue</code> / <code>addCommentToJiraIssue</code>, value
+    set to a stringified real ADF document
+    (<code>{"type":"doc","version":1,"content":[...]}</code>). The
+    response echoes special nodes back with an auto-assigned
+    <code>data-id="id-N"</code> — that <code>data-id</code>'s presence is
+    the tell distinguishing "really created a node" from "echoed my text
+    back unparsed."
+  </p>
+  <h3>Node schemas (confirmed against the ADF reference and EMKT-784 itself)</h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Node</th><th>Shape</th><th>Notes</th></tr>
+    <tr><td><code>status</code></td><td><code>{"type":"status","attrs":{"text":"DONE","color":"green"}}</code></td>
+      <td><code>color</code> ∈ <code>neutral|purple|blue|red|yellow|green</code></td></tr>
+    <tr><td><code>emoji</code></td><td><code>{"type":"emoji","attrs":{"shortName":":check_mark:","text":"✅"}}</code></td>
+      <td>Standard shortcode — no <code>id</code> needed, server resolves it</td></tr>
+    <tr><td><code>mention</code></td><td><code>{"type":"mention","attrs":{"id":"&lt;accountId&gt;"}}</code></td>
+      <td><code>accountId</code> from <code>lookupJiraAccountId</code></td></tr>
+    <tr><td><code>expand</code></td><td><code>{"type":"expand","attrs":{"title":"..."},"content":[...]}</code></td>
+      <td>Real collapsible panel — not used by I.1's current skeleton, available if a future shape needs it</td></tr>
+  </table>
+  </div>
+  <p>
+    Standard nodes (<code>paragraph</code>, <code>heading</code>,
+    <code>bulletList</code>/<code>listItem</code>, <code>table</code> and
+    its children, <code>hardBreak</code>, <code>text</code> with
+    <code>strong</code>/<code>link</code> marks) all work as expected via
+    the same ADF path.
+  </p>
+  <h3>Whole-field replacement</h3>
+  <p>
+    <code>editJiraIssue</code>/<code>addCommentToJiraIssue</code> replace
+    the <strong>entire</strong> field value — there is no patch/append.
+    Every write (Materials entry, Track line, comment body) means:
+    fetch the current field as ADF, splice in only the changed piece in
+    memory, submit the whole document back. This is why the Track
+    checklist's other-stage lines must be preserved verbatim rather than
+    reconstructed — reconstruction risks silently dropping content this
+    skill doesn't understand.
+  </p>
+</section>
+
+<section id="jira-detection">
+  <h2>JIRA Tool Detection</h2>
+  <p>
+    Mirrors <code>digismith:jira-intake</code>'s own principle: infer
+    which JIRA/Atlassian-capable tool is available in the current session
+    rather than hardcoding one connector's tool names. Not found → say so
+    plainly, don't fabricate a write. <code>cloudId</code> resolution
+    follows the same tool's own guidance (site hostname first, else
+    <code>getAccessibleAtlassianResources</code>).
+  </p>
+</section>
+
+<section id="confirmation">
+  <h2>Confirm-Before-Write</h2>
+  <p>
+    Both writes are team-visible, external-system side effects — unlike
+    DigiSmith's own internal docs, this isn't something to publish
+    silently. Draft the full comment body and the description delta
+    (Materials entry, Track line) and show them before calling
+    <code>editJiraIssue</code>/<code>addCommentToJiraIssue</code>. This
+    applies every time, not just the first: JIRA's own edit history is
+    visible to the whole team, so a bad automatic write is a social cost,
+    not just a technical one.
+  </p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Disposition</th></tr>
+    <tr><td>No JIRA-capable tool in session</td><td>Stop, say so plainly. Don't fabricate a write.</td></tr>
+    <tr><td>Branch doesn't match <code>&lt;Key&gt;__&lt;slug&gt;</code></td><td>Ask directly for the ticket key rather than guessing.</td></tr>
+    <tr><td>Custom, site-uploaded emoji with no resolvable <code>id</code></td><td>Skip the icon; plain status pill/text only. No connector tool exists to enumerate site emoji.</td></tr>
+    <tr><td>Mention name doesn't resolve via <code>lookupJiraAccountId</code></td><td>Stop and ask for clarification. Never guess an <code>accountId</code>.</td></tr>
+    <tr><td>Mistaken/duplicate comment already posted</td><td>No delete capability exists via this connector — edit it via <code>commentId</code> instead of creating a corrective second comment.</td></tr>
+    <tr><td>Track section absent from the description</td><td>Skip the Track update, report why. Never scaffold the full stage list from nothing.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>Status transitions</strong> — standing constraint, stays
+    manual by design, not revisited here.</li>
+    <li><strong>I.2, multi-repo distribution</strong> — a separate map
+    sub-item. I.1 as designed here handles exactly one repo/PR/ticket at a
+    time, with zero cross-repo awareness. Everything about multiple
+    markets belongs to I.2, deferred in full:
+    <ul>
+      <li>Detecting which markets/repos a ticket touches at all.</li>
+      <li>Looping I.1 (or its writes) across that full list.</li>
+      <li>Multi-row Materials-table orchestration — knowing which rows
+      already exist across the set, not just this one.</li>
+      <li>Cross-market completion tracking — whether the
+      <code>Technical Development</code> stage should reopen from
+      <code>DONE</code> back to <code>IN PROGRESS</code> when a ticket
+      turns out to need another market after I.1 already marked one
+      repo's work complete.</li>
+    </ul>
+    </li>
+    <li><strong>Custom site-emoji ID lookup</strong> — no discovered path
+    through this connector; noted as a known gap, not solved here.</li>
+    <li><strong>Full Track-checklist scaffolding</strong> — deliberately
+    not automated; see <a href="#track-checklist">Track Checklist</a>.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/jira-progress-write-back/design.html</footer>
+
+</body>
+</html>

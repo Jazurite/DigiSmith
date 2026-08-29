@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Implementer-Task Offload</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Implementer-Task Offload</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: K.2</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#trigger">Trigger: Explicit Per-Task Opt-In</a></li>
+    <li><a href="#architecture">Architecture: Controller-Driven, Not Agent-Tool Dispatch</a></li>
+    <li><a href="#server-lifecycle">Server Lifecycle</a></li>
+    <li><a href="#task-framing">Task Framing &amp; Report Contract</a></li>
+    <li><a href="#review">Review Stays Unchanged</a></li>
+    <li><a href="#fix-loop">Fix Loop</a></li>
+    <li><a href="#model">Model Choice</a></li>
+    <li><a href="#environment">Environment Notes</a></li>
+    <li><a href="#security">Security Note</a></li>
+    <li><a href="#evidence">Spike Evidence</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    DigiSmith's map item <strong>K.2</strong>. Lets a single task inside
+    a real <code>superpowers:subagent-driven-development</code> plan run
+    on a Chutes-hosted third-party model instead of Claude, when
+    explicitly asked for. Distinct from <strong>K.1</strong>
+    (<code>scripts/model_offload.py</code>), which offloads DigiSmith's
+    own single-shot document generation (no tool access needed) — K.2
+    needs a real autonomous implementer with file/git access, which a
+    bare completion call cannot provide.
+  </p>
+  <p>
+    Grounded in a passed spike, not speculation: a Chutes-hosted model
+    (Kimi K3), driven by <a href="https://opencode.ai">OpenCode</a> — a
+    real autonomous coding agent, not a raw API call — autonomously read
+    a file, ran a failing test suite, diagnosed a real seeded bug, fixed
+    it correctly, and re-verified, independently confirmed afterward
+    rather than trusted from its own report. See
+    <a href="#evidence">Spike Evidence</a>.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Trigger</div>
+      <h4>Explicit, per-task</h4>
+      <p>You ask for it when dispatching a specific task. No automatic
+      classification of "qualifying" tasks — that responsibility stays
+      with you.</p>
+    </div>
+    <div class="card">
+      <div class="tag">On failure</div>
+      <h4>Surfaces, never silent</h4>
+      <p>Higher stakes than K.1's document rewrap — a stuck or bad
+      attempt is reported plainly, never quietly handed to a Claude
+      implementer without you knowing.</p>
+    </div>
+  </div>
+</section>
+
+<section id="trigger">
+  <h2>Trigger: Explicit Per-Task Opt-In</h2>
+  <p>
+    Nothing in <code>subagent-driven-development</code>'s own task loop
+    changes by default. When dispatching a specific task, you say you
+    want it offloaded (however phrased — "offload this to Kimi", "use
+    OpenCode for this one"); the controller then invokes
+    <code>digismith:offload-implementer</code> for that task instead of
+    the normal implementer dispatch. Every other task in the same plan
+    still gets a normal Claude implementer unless you say otherwise for
+    it too — offload is a per-task choice, not a plan-wide mode.
+  </p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture: Controller-Driven, Not Agent-Tool Dispatch</h2>
+  <p>
+    Claude Code's <code>Agent</code> tool has no non-Anthropic model
+    routing (confirmed twice: during K.1's own feasibility spike, and
+    again this session). A normal implementer is a fresh, isolated
+    <code>Agent</code> subagent; an offloaded task cannot be that.
+    Instead, the <strong>controller itself</strong> — the session
+    driving <code>subagent-driven-development</code> — shells out to the
+    <code>opencode</code> CLI directly via <code>Bash</code>, waits for
+    it to finish, and reads its output. This is a real, structural
+    difference from normal dispatch, not just an implementation detail:
+    OpenCode's run transcript lands directly in the controller's own
+    context (the way the spike's output did), rather than staying
+    isolated in a separate subagent transcript the way a Claude
+    implementer's full working context does. The controller's context
+    cost per offloaded task is therefore higher than a normal dispatch —
+    worth knowing, not a blocker.
+  </p>
+</section>
+
+<section id="server-lifecycle">
+  <h2>Server Lifecycle: Persistent Server, Fresh Session Per Task</h2>
+  <p>
+    <code>opencode run</code> alone starts a fresh process per
+    invocation. For a plan with multiple offloaded tasks, that's
+    repeated cold-start cost with no benefit — <code>subagent-driven-development</code>
+    already dispatches one fresh implementer context per task
+    deliberately (its own "no context pollution" principle), so nothing
+    is gained by also restarting the underlying process each time.
+  </p>
+  <div class="callout">
+    Verified live this session: a persistent <code>opencode serve</code>
+    process, with two separate <code>opencode run --attach &lt;url&gt;</code>
+    calls against it (no session flags on either), get genuinely isolated
+    sessions — the second call had no memory of information given to the
+    first. Persistent server, fresh session per task, confirmed to hold
+    together in practice, not just assumed compatible.
+  </div>
+  <h3>Start</h3>
+  <p>
+    The first time <code>digismith:offload-implementer</code> is invoked
+    in a plan, start the server in the background and capture its PID
+    directly from the launch (<code>$!</code> in the same shell
+    invocation) — not by scanning for a listening port afterward, which
+    is a weaker, racier signal:
+  </p>
+  <pre><code>opencode serve --port &lt;port&gt; --hostname 127.0.0.1 &gt; opencode-server.log 2&gt;&amp;1 &amp;
+SERVER_PID=$!</code></pre>
+  <p>
+    Record the PID and port in this plan's SDD workspace
+    (<code>.superpowers/sdd/&lt;plan-basename&gt;/</code>, alongside the
+    existing ledger) so later offloaded tasks in the same plan reuse the
+    same server instead of starting a second one, and so the stop step
+    knows what to kill.
+  </p>
+  <h3>Reuse</h3>
+  <p>
+    Every subsequent offloaded task in the same plan attaches to the
+    already-running server:
+  </p>
+  <pre><code>opencode run --attach http://127.0.0.1:&lt;port&gt; --model chutes/moonshotai/Kimi-K3-TEE --auto --dir &lt;task-worktree&gt; "&lt;task prompt&gt;"</code></pre>
+  <p>
+    No session flag — a bare <code>run</code> against an attached server
+    starts a new, isolated session by default, exactly the property
+    verified above.
+  </p>
+  <h3>Stop</h3>
+  <p>
+    Explicit, not automatic after each task — "runs until we say
+    close." When offloaded work is done for this plan (last offloaded
+    task completes, or the plan finishes), kill the tracked PID:
+  </p>
+  <pre><code>taskkill //PID &lt;SERVER_PID&gt; //F</code></pre>
+  <p>
+    (Windows-specific — this environment has no <code>pkill</code> in
+    Git Bash. A Unix environment would use <code>kill &lt;SERVER_PID&gt;</code>.)
+    If the plan's own workspace gets deleted at the end of
+    <code>subagent-driven-development</code> (per its existing Finish
+    step) without an explicit stop having happened yet, stopping the
+    server is part of that same cleanup — never leave it running
+    orphaned past the plan's own lifetime.
+  </p>
+</section>
+
+<section id="task-framing">
+  <h2>Task Framing &amp; Report Contract</h2>
+  <p>
+    Reuse the exact same <code>scripts/task-brief</code> extraction a
+    normal implementer gets — the brief file is the single source of
+    requirements either way. The prompt handed to
+    <code>opencode run</code> wraps that brief with the <strong>same
+    report contract</strong> the Claude implementer template already
+    uses (see <code>subagent-driven-development</code>'s
+    <code>implementer-prompt.md</code>): write a full report to a named
+    report file, then reply with a short status line — <code>Status:
+    DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT</code>, commits
+    created, one-line test summary, concerns. OpenCode has real file
+    write access (confirmed by the spike), so it can write that report
+    file exactly like a Claude implementer does — nothing downstream
+    needs a special case for where the report came from.
+  </p>
+  <p>
+    Dispatch with <code>--format json</code>, not the default
+    human-readable output. Verified live: every event in the JSON stream
+    carries a real <code>sessionID</code>
+    (<code>ses_fbdaa8bcdffeA5QpSHTpk8pd1x</code>-shaped), and text events
+    carry the actual response content — so this one format gives both
+    the status contract text (read from the final <code>text</code>
+    event) <strong>and</strong> the session ID needed later for fix-round
+    resumption (see <a href="#fix-loop">Fix Loop</a>), in one pass. Record
+    the captured <code>sessionID</code> in this plan's SDD workspace
+    alongside the task's other bookkeeping — it's the only reliable way
+    to resume this exact task's session later; guessing or using
+    <code>--continue</code> ("continue the last session") is a weaker,
+    order-dependent substitute since a shared server may see other tasks'
+    sessions in between.
+  </p>
+</section>
+
+<section id="review">
+  <h2>Review Stays Unchanged</h2>
+  <p>
+    The diff an offloaded task produces goes through the exact same
+    <code>task-reviewer</code> dispatch as any other task — same
+    <code>review-package</code> script, same reviewer template, same
+    calibration. Offload replaces the implementer role only; nothing
+    about spec-compliance or quality review needs to know or care that
+    the diff came from OpenCode rather than a Claude subagent.
+  </p>
+</section>
+
+<section id="fix-loop">
+  <h2>Fix Loop</h2>
+  <p>
+    Rounds 1-3 resume OpenCode itself — re-run <code>opencode run
+    --attach ... --session &lt;captured sessionID&gt;</code> against the
+    exact session this task's original attempt used (captured per
+    <a href="#task-framing">Task Framing</a> above), carrying the review
+    findings verbatim, same shape as resuming a Claude implementer that
+    has an intact context. This is not a new decision, just the existing
+    fix-loop pattern applied consistently.
+  </p>
+  <div class="callout">
+    Per the explicit decision behind this design: if OpenCode's own fix
+    attempt gets stuck, or round 3 closes without every finding
+    addressed, this <strong>surfaces to you</strong> rather than
+    silently escalating to a Claude implementer. Rounds 4-5 do not
+    happen automatically the way they would for a normal implementer
+    (dispatch a fresh, more capable model) — report the open findings
+    and let you decide whether to keep trying offloaded, hand the task
+    to a Claude implementer, or park it. Higher stakes than K.1's
+    document rewrap justify not automating this choice away.
+  </div>
+</section>
+
+<section id="model">
+  <h2>Model Choice</h2>
+  <p>
+    Default: <code>moonshotai/Kimi-K3-TEE</code> — the only model
+    actually proven end-to-end by the spike. GLM 5.2
+    (<code>zai-org/GLM-5.2-TEE</code>) failed badly on a raw one-shot
+    completion earlier this session (burned its entire token budget on
+    structured reasoning for a one-sentence question, never answered),
+    but that was a different task shape (unbounded single completion,
+    not a tool-use loop) — worth re-testing inside OpenCode specifically
+    before ruling it out, not assumed settled either way. Model
+    selection beyond the default is not built in this version; changing
+    it means editing the <code>--model</code> flag and the
+    <code>opencode.json</code> provider block by hand.
+  </p>
+</section>
+
+<section id="environment">
+  <h2>Environment Notes</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Gotcha</th><th>Fix</th></tr>
+    <tr><td>Aider (the first candidate harness) requires Python
+    &lt;3.13; this environment has only 3.14.5</td>
+    <td>Use OpenCode instead — Node-based, sidesteps the Python version
+    entirely. Not revisited unless a future environment actually has a
+    compatible Python and a specific reason to prefer Aider.</td></tr>
+    <tr><td><code>pnpm add -g opencode-ai</code> installs but the binary
+    is broken</td>
+    <td>pnpm skips postinstall scripts by default. Use
+    <code>pnpm add -g --allow-build=opencode-ai opencode-ai</code> —
+    remove any broken prior install first, or the postinstall gets
+    skipped again on top of an already-present package.</td></tr>
+    <tr><td>No <code>pkill</code> in this Windows Git Bash environment</td>
+    <td>Use <code>taskkill //PID &lt;pid&gt; //F</code> instead, with the
+    PID captured at server start time (<code>$!</code>).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="security">
+  <h2>Security Note</h2>
+  <p>
+    <code>opencode serve</code> without <code>OPENCODE_SERVER_PASSWORD</code>
+    set is unsecured (it says so on startup). Acceptable here because
+    the server binds to <code>127.0.0.1</code> only — never
+    <code>0.0.0.0</code> or a network-reachable hostname — so it's
+    unreachable outside this machine. Never enable <code>--mdns</code>
+    (which defaults the hostname to <code>0.0.0.0</code>) for this use
+    case.
+  </p>
+</section>
+
+<section id="evidence">
+  <h2>Spike Evidence</h2>
+  <p>
+    Full writeup: <code>backlog/k2-implementer-offload-opencode-chutes.md</code>.
+    Summary: a disposable scratch repo (Python, pytest) with a
+    deliberately seeded date-matching bug (the same shape as a real bug
+    found independently in map item I.1 earlier this session) — 5 tests,
+    1 failing, confirmed RED first. Task given to OpenCode/Kimi K3: run
+    the tests, fix the bug, don't weaken the tests, no hint what the bug
+    was. It read both files, ran <code>pytest</code> itself, diagnosed
+    the real bug from the failure output, edited the file with a correct
+    fix (a boundary check, matching the same fix Kimi proposed earlier
+    via a raw completion call on the unrelated real bug — consistent
+    judgment, not a fluke), re-ran <code>pytest</code> to confirm green,
+    and reported accurately. Independently re-verified afterward: 5/5
+    tests genuinely passing, the real diff matched what was reported,
+    the test file was untouched.
+  </p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>Automatic task classification</strong> — no logic
+    decides which tasks "qualify" for offload; that's your call, every
+    time.</li>
+    <li><strong>Multi-provider selection</strong> — one model, one
+    provider (Chutes), hardcoded as the default. K.1's own Future Phases
+    already named broader multi-provider routing as its own separate
+    scope, not built here either.</li>
+    <li><strong>Testing at real plan scale</strong> — the spike proved
+    the mechanism on a 2-file, single-function bug. A real
+    multi-file DigiSmith task (e.g. a SKILL.md-shaped target) is
+    untested. The first real use of this skill against a real plan task
+    <em>is</em> that test — go in expecting to learn something, not
+    expecting a guaranteed clean pass.</li>
+    <li><strong>Automatic rounds 4-5 escalation</strong> — deliberately
+    not automated; see <a href="#fix-loop">Fix Loop</a>.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/implementer-offload/design.html</footer>
+
+</body>
+</html>

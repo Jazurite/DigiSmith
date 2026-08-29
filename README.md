@@ -17,11 +17,13 @@ Neither is invoked by name; `init` is the only front door. Everything else
 on the roadmap (standards injection, ticket intake, and what's still to
 come) is wired in behind it or reachable directly.
 
-Five skills sit outside that front door, because they trigger at
+Seven skills sit outside that front door, because they trigger at
 specific points inside the build rather than at the front door itself —
 one right before and after the spec and plan themselves get written,
-another right after a plan is saved, before any task code is written; the
-other three later, once code already exists.
+another right after a plan is saved, before any task code is written;
+one more during the build itself, standing in for a normal task dispatch
+when explicitly asked to offload it; the other four later, once code
+already exists.
 
 **`enforcer`** (map item **Q**). It fires twice around the
 `brainstorming`/`writing-plans` hand-off: right before either one is
@@ -57,8 +59,9 @@ Shopify theme repo — typically right after
 `superpowers:finishing-a-development-branch`'s "push and create PR"
 option — it waits for the ephemeral-deploy CI check and reports the
 Shopify Preview Theme and Theme Editor URLs from the bot's PR comment. It
-doesn't create the PR and doesn't write to JIRA (that's a separate,
-later feature). See
+doesn't create the PR, and writes nothing to JIRA itself —
+`jira-progress-write-back` (I.1) picks up these captured URLs from here.
+See
 [`skills/capture-ephemeral-url/SKILL.md`](skills/capture-ephemeral-url/SKILL.md)
 for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.
@@ -85,6 +88,36 @@ capture, not analysis: the point is building the corpus a later pass can
 mine for how the process actually behaves. With `logging: false` (or no
 profile) it does nothing at all. See
 [`skills/telemetry/SKILL.md`](skills/telemetry/SKILL.md)
+for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+its status.
+
+**`jira-progress-write-back`** (map item **I.1**). Right after
+`capture-ephemeral-url` reports its two URLs — or whenever explicitly
+asked to post/update the JIRA progress update for the current ticket —
+it posts or updates the ticket's description (a "🔗 Materials & Links"
+entry, and the "📦 Track" checklist's Technical Development line, if
+already present) and a dated "📣 Progress Update" comment, using real
+JIRA ADF formatting instead of a markdown approximation. Confirms the
+full draft with you before either write, every time. Single repo/ticket
+at a time, no status transitions ever — that stays manual by design. See
+[`skills/jira-progress-write-back/SKILL.md`](skills/jira-progress-write-back/SKILL.md)
+for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+its status.
+
+**`offload-implementer`** (map item **K.2**). Right when explicitly
+asked to offload a specific `superpowers:subagent-driven-development`
+task — its first attempt, or a fix round on a task it already
+dispatched — it runs that one task on a Chutes-hosted model (Kimi K3)
+via a persistent OpenCode server instead of a normal Claude implementer
+subagent. The `Agent` tool has no non-Anthropic model routing, so the
+controller itself drives the `opencode` CLI directly rather than
+dispatching a fresh subagent — a fresh, isolated session runs per task
+on a shared server process. Explicit per-task only — nothing here runs
+automatically, and a stuck or capped fix loop surfaces to you rather
+than silently falling back to Claude. Review stays exactly the same
+`task-reviewer` dispatch and `review-package` script any other task
+gets. See
+[`skills/offload-implementer/SKILL.md`](skills/offload-implementer/SKILL.md)
 for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.
 

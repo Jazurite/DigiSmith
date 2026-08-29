@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jira REST Migration — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Jira REST Migration — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-28</span>
+    <span>Map item: <strong>I.1 (migration)</strong></span>
+    <span>Commit range: <code>e6552ec..18976d2</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Replaced the Atlassian MCP connector as <code>jira-progress-write-back</code> (map item I.1)&#8217;s Jira transport with <code>packages/jira-client</code>, a zero-dependency TypeScript package calling Jira&#8217;s REST API v3 directly &#8212; fixing the lossy-description-ADF bug found live on EMKT-756. A new pnpm workspace package (<code>packages/jira-client</code>) exposes five functions (<code>checkCredentials</code>, <code>getIssue</code>, <code>updateDescription</code>, <code>addComment</code>, <code>getAttachmentContent</code>) as a thin library, plus a <code>cli.ts</code> subcommand wrapper the skill invokes via <code>node</code>; credentials live at <code>~/.digismith/.env</code>, outside every git repo. <code>jira-progress-write-back</code>&#8217;s own ADF business logic is unchanged &#8212; only its transport calls and step numbering change. Followed the full Superpowers process: brainstorming &#8594; spec &#8594; writing-plans &#8594; <code>superpowers:subagent-driven-development</code> (4 tasks) &#8594; a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>packages/jira-client &#8212; Workspace Scaffold + client.ts</h4><p>A pnpm workspace package exporting <code>Credentials</code>, <code>CredentialsError</code>, <code>checkCredentials</code>, <code>getIssue</code>, <code>updateDescription</code>, <code>addComment</code>, and <code>getAttachmentContent</code> &#8212; the REST v3 client library.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>cli.ts &#8212; Subcommand Dispatcher</h4><p>A <code>node packages/jira-client/src/cli.ts &lt;subcommand&gt; [flags]</code> wrapper exposing the client library as the exact invocation the migrated skill calls.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Migrate jira-progress-write-back&#8217;s SKILL.md</h4><p>Rewrote the skill&#8217;s Jira transport to call the new CLI instead of the Atlassian MCP connector, renumbering every step after the removed <code>cloudId</code>-resolution step.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Roadmap Update + Retire the Applied Backlog Item</h4><p>Updated <code>MEMORY.md</code> and <code>.digismith/history.html</code> for the shipped migration, and deleted the now-resolved backlog item that originally captured the MCP connector&#8217;s lossy-ADF bug.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: packages/jira-client &#8212; Workspace Scaffold + client.ts</td><td>REST v3 client library with full test coverage</td><td class="status-fixed">Approved after 1 fix round</td><td>&#8212;</td></tr>
+    <tr><td>Task 2: cli.ts &#8212; Subcommand Dispatcher</td><td>CLI subcommand wrapper over the client library</td><td class="status-ok">Approved, clean</td><td>&#8212;</td></tr>
+    <tr><td>Task 3: Migrate jira-progress-write-back&#8217;s SKILL.md</td><td>Skill transport migrated off MCP onto the new CLI</td><td class="status-ok">Approved, clean</td><td>&#8212;</td></tr>
+    <tr><td>Task 4: Roadmap Update + Retire the Applied Backlog Item</td><td><code>MEMORY.md</code>/<code>history.html</code> updated, backlog item retired</td><td class="status-ok">Approved, clean</td><td>&#8212;</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes &#8212; 2 Critical, 5 Important, and 3 Minor findings, all resolved.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td>The CLI could not run at all on this repo&#8217;s own installed Node version &#8212; <code>ERR_UNKNOWN_FILE_EXTENSION</code> for <code>.ts</code>, reproduced by directly executing it. Every subcommand was broken as shipped, and the passing test suite never caught it because it only exercised <code>client.ts</code> via Vitest&#8217;s transform, never the CLI entry point.</td><td>Fixed &#8212; added <code>engines</code>/<code>devEngines</code> (<code>onFail: "error"</code>) requiring Node &gt;=24 to both <code>package.json</code> files. Verified: <code>pnpm install</code> now hard-fails with a clear message on Node 22, and the CLI runs cleanly under Node 24.</td></tr>
+    <tr><td>Critical</td><td><code>SKILL.md</code> treated any non-zero exit from <code>check-credentials</code> as &#8220;credentials incomplete&#8221; and looped back into re-collecting email/token/site &#8212; so the crash above would have been misdiagnosed and the skill would loop forever without ever finding the real cause.</td><td>Fixed &#8212; closed by the Node-version fix above; the failure mode this finding described can no longer occur once <code>pnpm install</code> gates the Node version up front.</td></tr>
+    <tr><td>Important</td><td><code>getIssue</code> requested the <code>comment</code> field with no pagination handling, even though Jira&#8217;s REST v3 issue-GET embeds only a page of comments &#8212; a long-lived ticket could silently look emptier than it is, causing a duplicate progress comment instead of an update.</td><td>Fixed &#8212; added <code>getComments</code> with real <code>startAt</code>/<code>total</code> pagination via the dedicated <code>/issue/{key}/comment</code> endpoint; <code>SKILL.md</code> Steps 3 and 8 updated to fetch comments separately and completely.</td></tr>
+    <tr><td>Important</td><td><code>baseUrl()</code> interpolated <code>creds.site</code> with no stripping of an accidental scheme or trailing slash &#8212; a user pasting a full URL for the site hostname would double the scheme and break every request.</td><td>Fixed &#8212; added hostname normalization (strips a leading <code>http(s)://</code> and trailing slashes) in <code>checkCredentials</code>.</td></tr>
+    <tr><td>Important</td><td>The <code>.env</code> parser stored values verbatim with no quote-stripping, unlike standard dotenv convention &#8212; a hand-quoted token would break every authenticated call with a generic 401.</td><td>Fixed &#8212; added quote-stripping for matching single/double-quoted values in <code>parseEnvFile</code>.</td></tr>
+    <tr><td>Important</td><td>CLI flag parsing had no presence validation &#8212; a missing required flag surfaced as a raw, undiagnostic JS <code>TypeError</code> instead of a usage error.</td><td>Fixed &#8212; added a <code>requireArgs</code> helper; every subcommand now fails with a clear <code>missing required flag: --x</code> message.</td></tr>
+    <tr><td>Important</td><td><code>getAttachmentContent</code> sent <code>Authorization</code> with <code>redirect: "follow"</code>, which <code>fetch</code> strips across an origin change by spec &#8212; confirmed empirically against a local test server. A same-origin redirect requiring the credential would come back unauthenticated.</td><td>Fixed &#8212; switched to manual redirect handling that re-attaches <code>Authorization</code> only when the redirect stays on the same origin, verified against both same- and cross-origin redirect scenarios.</td></tr>
+    <tr><td>Minor</td><td><code>console.log(JSON.stringify(result))</code> immediately followed by <code>process.exit(0)</code>, which does not guarantee a large piped stdout write finishes flushing.</td><td>Fixed &#8212; replaced every <code>process.exit()</code> call with <code>process.exitCode</code>, letting Node exit naturally once output has flushed.</td></tr>
+    <tr><td>Minor</td><td><code>MEMORY.md</code> pointed at <code>backlog/jira-rest-graphql-direct-api.md</code> as the place to find root-cause history, but this same diff deletes that file.</td><td>Fixed &#8212; repointed the reference to <code>.digismith/docs/jira-rest-migration/design.html</code>.</td></tr>
+    <tr><td>Minor</td><td>The same fetch-then-check-ok-then-throw pattern was repeated near-identically across all four REST functions in <code>client.ts</code>, with no shared helper.</td><td>Fixed &#8212; extracted a shared <code>jiraFetch</code> helper used by all REST calls.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">3cf4c8e</span> docs(jira-rest-migration): add implementation plan</li>
+    <li><span class="sha">a02e2b1</span> feat(jira-client): add pnpm workspace and REST client with full test coverage</li>
+    <li><span class="sha">f5562a5</span> fix(task-1): remove stray allowBuilds from pnpm-workspace.yaml and exclude node_modules from git</li>
+    <li><span class="sha">52fa5e3</span> feat(jira-client): add cli.ts subcommand dispatcher</li>
+    <li><span class="sha">542b998</span> feat(jira-progress-write-back): migrate to direct Jira REST API v3</li>
+    <li><span class="sha">eccc4bf</span> docs(jira-rest-migration): update roadmap, retire applied backlog item</li>
+    <li><span class="sha">09ed16a</span> fix(jira-client): strip a UTF-8 BOM before parsing ADF scratch files</li>
+    <li><span class="sha">7be4fe3</span> chore: commit pnpm-lock.yaml for reproducible installs</li>
+    <li><span class="sha">208ebf9</span> docs: point credential and backlog references at their current locations</li>
+    <li><span class="sha">18976d2</span> fix(jira-rest-migration): final review fix wave &#8212; Node 24 requirement, hostname/quote normalization, comment pagination, arg validation, redirect auth, exit-code flush, docs</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/jira-rest-migration/report.html</footer>
+
+</body>
+</html>

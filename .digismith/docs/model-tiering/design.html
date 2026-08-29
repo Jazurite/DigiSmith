@@ -267,7 +267,19 @@
     plans — closer to the roadmap's original literal wording, but carries
     real code-quality risk and interacts with the existing review/fix-loop
     machinery. Considered and set aside for K.1 specifically because of
-    that risk.</li>
+    that risk. <strong>Real mechanism traced and spiked 2026-08-26</strong>
+    (see <code>backlog/k2-implementer-offload-opencode-chutes.md</code>):
+    neither the <code>Agent</code> tool nor a raw Chutes completion call
+    (what <code>model_offload.py</code> already does) nor Chutes' own MCP
+    server can give a third-party model real tool access — an autonomous
+    coding-agent harness pointed at Chutes via its OpenAI-compatible
+    endpoint is the actual mechanism. Aider was the first candidate but
+    requires Python &lt;3.13; <strong>OpenCode</strong> (Node-based) was
+    substituted and its spike passed — a Chutes-hosted model (Kimi K3)
+    autonomously read a file, ran a test suite, diagnosed and fixed a
+    real bug, and verified it, unassisted. Integration into
+    <code>subagent-driven-development</code>'s actual task loop is still
+    undesigned.</li>
     <li><strong>Multi-provider selection.</strong> A list/fallback-order
     mechanism across several third-party compute providers, each end-user-
     configurable, rather than the single named provider K.1 implements.

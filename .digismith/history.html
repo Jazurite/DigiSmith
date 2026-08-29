@@ -108,7 +108,7 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">8 / 17</div><div class="l">map items shipped</div></div>
+    <div class="stat"><div class="n">9 / 20</div><div class="l">map items shipped</div></div>
     <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
     <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
   </div>
@@ -145,14 +145,14 @@
       <td>Kills Superpowers' "1. Subagent-Driven or 2. Inline?" question — there is no option 2</td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>I</strong></td><td>QA handoff</td>
-      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output) — no status transition, that stays manual by design · <strong>I.2</strong> end-to-end testing · <strong>I.3</strong> visual regression vs Figma</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output), including real ADF formatting — no status transition, that stays manual by design <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution, gated behind a profile field (map item O) <span class="status todo">Not started</span></td>
+      <td><span class="status next">In progress (1/2)</span></td></tr>
     <tr><td><strong>J</strong></td><td>Estimation</td>
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>K</strong></td><td>Model tiering</td>
-      <td>Extend <code>subagent-driven-development</code> across a pool spanning frontier → open-weight models</td>
-      <td><span class="status todo">Not started</span></td></tr>
+      <td><strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>enforcer</code>'s spec rewrap, <code>report-implementation</code>'s report render) to a cheap Chutes-hosted model, falling back to in-session generation whenever it's off, unavailable, or returns something malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a Chutes-hosted model (Kimi K3) via a persistent OpenCode server — <code>offload-implementer</code> skill <span class="status done">Done</span></td>
+      <td><span class="status next">In progress (multi-provider routing beyond Chutes still undesigned)</span></td></tr>
     <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
       <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -170,6 +170,15 @@
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>Q</strong></td><td>Convention enforcement</td>
       <td>Makes <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability</td>
+      <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>R</strong></td><td>End-to-end testing</td>
+      <td>Split out of <strong>I</strong> (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned</td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>S</strong></td><td>Figma visual regression</td>
+      <td>Visual regression vs Figma designs via a custom Figma skill. Split out of <strong>I</strong> (2026-08-26) for the same reason as <strong>R</strong></td>
+      <td><span class="status todo">Not started</span></td></tr>
+    <tr><td><strong>V</strong></td><td>Runtime clone provisioning</td>
+      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith/repo</code>) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh</td>
       <td><span class="status done">Done</span></td></tr>
   </table>
   </div>
@@ -232,6 +241,24 @@
     <a href="docs/enforcer/plan.md">implementation plan</a> ·
     <a href="docs/enforcer/report.html">implementation report</a>
   </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>I.1 — JIRA progress write-back:</strong> <code>jira-progress-write-back</code> skill —
+    <a href="docs/jira-progress-write-back/design.html">design spec</a> ·
+    <a href="docs/jira-progress-write-back/plan.md">implementation plan</a> ·
+    migrated to direct REST 2026-08-27, see
+    <a href="docs/jira-rest-migration/design.html">migration spec</a> ·
+    <a href="docs/jira-rest-migration/plan.md">migration plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>K.2 — Implementer-task offload:</strong> <code>offload-implementer</code> skill —
+    <a href="docs/implementer-offload/design.html">design spec</a> ·
+    <a href="docs/implementer-offload/plan.md">implementation plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>V — Runtime clone provisioning:</strong> <code>depot</code> skill —
+    <a href="docs/depot/design.html">design spec</a> ·
+    <a href="docs/depot/plan.md">implementation plan</a>
+  </p>
 </section>
 
 <section id="tiers">
@@ -252,8 +279,8 @@
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>5</strong></td><td>Technical expansion</td>
-      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1/I.2/I.3</strong> QA handoff</td>
-      <td><span class="status next">In progress (2/5 — M and N shipped, pulled forward out of tier order)</span></td></tr>
+      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1</strong> JIRA write-back <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution · <strong>R</strong> E2E testing · <strong>S</strong> Figma visual regression</td>
+      <td><span class="status next">In progress (3/8 — M, N, and I.1 shipped, pulled forward out of tier order)</span></td></tr>
     <tr><td><strong>6</strong></td><td>Last</td>
       <td><strong>C</strong> live work journal</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -263,6 +290,11 @@
     <strong>P — Telemetry</strong> <span class="status done">Done</span> —
     pulled forward and built 2026-08-12, outside any tier (a new map letter
     added directly per Jack's request, same as <strong>O</strong>).
+  </p>
+  <p style="font-size:.85rem; color:var(--muted); margin-top:.2rem;">
+    <strong>V — Runtime clone provisioning</strong> <span class="status done">Done</span> —
+    pulled forward and built 2026-08-27, outside any tier, same as
+    <strong>O</strong>/<strong>P</strong>.
   </p>
 </section>
 
@@ -592,6 +624,120 @@
       <code>inject-standards</code>, README, getting-started) from <code>using-digismith</code>
       to <code>bootstrap</code>/<code>adopt</code>. Task 7 updated <code>MEMORY.md</code>'s map
       and retired the now-resolved backlog item. Task 8 is this history.html update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-26</div>
+      <h4>I split into I.1/I.2, R and S promoted to their own letters, I.1 built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack pointed out that map item I's original I.2 (multi-repo
+      distribution, requested against the raw material captured from
+      EMKT-784's real reporting workflow) is profile-dependent — it makes
+      sense for Emma's multi-market repos but not a single-repo personal
+      profile — while I's actual pre-existing I.2 (end-to-end testing)
+      and I.3 (Figma visual regression) were never JIRA-write-back or
+      distribution concerns at all, just filed under I's "QA handoff" gap
+      by coincidence. Those two were promoted to their own top-level
+      letters, <strong>R</strong> and <strong>S</strong>. <strong>I.1</strong>
+      (JIRA progress write-back) was then brainstormed, specced, and
+      built: a single skill posting real ADF status lozenges, emoji, and
+      a dated progress comment against a ticket's description and
+      comment thread, grounded directly in EMKT-784's real live ticket
+      content rather than an invented format, and scoped to exactly one
+      repo/market at a time — multi-repo orchestration stays entirely
+      with <strong>I.2</strong>, not yet built. Task 1 built and dogfooded
+      <code>skills/jira-progress-write-back/SKILL.md</code> through
+      reasoning against fabricated ADF fixtures — no real Jira issue was
+      created, no live API call was made anywhere in the task, per an
+      execution-time ruling — consistent with every prior DigiSmith
+      skill's pure-fixture dogfood, not a departure from it. First live
+      run against a real ticket is still the acceptance bar.
+      Task 2 is this history.html and MEMORY.md update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>K.2 spiked, brainstormed, specced, and built — 2 tasks, subagent-driven-development</h4>
+      <p>Jack asked to try offloading a real implementer task to a
+      Chutes-hosted model. A raw completion call (K.1's own mechanism)
+      turned out to have no tool access at all — a structural gap, not a
+      quality one. A feasibility spike proved the real fix: OpenCode (not
+      Aider, which needs Python &lt;3.13 and this machine only has 3.14.5),
+      driven by Kimi K3 via Chutes, autonomously read a file, ran a test
+      suite, diagnosed and fixed a real seeded bug, and verified it,
+      unassisted. The architectural brainstorm that followed added a
+      persistent-server-plus-fresh-session-per-task design (verified live
+      that sessions genuinely isolate on a shared server), explicit
+      per-task opt-in (nothing automatic), and surfaced failures instead
+      of silent fallback to Claude given the higher stakes than K.1's
+      document rewrap. Task 1 built and dogfooded
+      <code>skills/offload-implementer/SKILL.md</code> for real against a
+      scratch repo, including a real fix-round session-resumption test.
+      That fix-round test also surfaced a real mechanism gap: a resumed
+      session once replied with a false <code>DONE</code> and a clean
+      test summary while the target file had never actually changed and
+      the real suite still failed, caught only because the controller
+      independently re-ran the tests; elsewhere in the same dogfood the
+      controller completed part of the live run directly after the
+      original dispatch stalled. Both findings became this skill's
+      false-success and dispatch-timeout guidance during final review.
+      Task 2 is this history.html and MEMORY.md update.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>I.1 hit a real live-run bug on EMKT-756; depot (V) brainstormed, specced, and built — 3 tasks, subagent-driven-development</h4>
+      <p>I.1's first live run (EMKT-756) found a genuine bug: the Atlassian
+      MCP connector's <code>getJiraIssue</code> returns lossy rendered-markdown
+      for the <code>description</code> field specifically, despite requesting
+      ADF — forcing that write to be skipped. Root-caused and a fix proven
+      live (direct Jira REST API v3, personal token, bypassing the connector
+      entirely), captured in <code>backlog/jira-rest-graphql-direct-api.md</code>.
+      The same session also captured a live-tested Track-section template
+      (<code>backlog/track-section-template.md</code>) and a gap around Jack's
+      own standing tech-stack defaults not being consulted during brainstorming
+      (<code>backlog/opinionated-tech-stack-defaults.md</code>, tentative letter
+      <strong>U</strong>). Brainstorming the REST migration surfaced a genuinely
+      separate prerequisite: consumer repos need shared TypeScript code
+      (starting with a forthcoming <code>jira-client</code> package) without a
+      local DigiSmith development checkout. That became <strong>V</strong>,
+      its own map letter and its own spec — a sparse, blobless git clone of
+      just <code>packages/</code> at a fixed <code>~/.digismith/repo</code>,
+      wired into <code>bootstrap</code> Step 0.5 and reused by
+      <code>adopt</code>. Task 1 built and dogfooded
+      <code>skills/depot/SKILL.md</code> through reasoning against every
+      operation and failure path. Task 2 wired its <code>ensure</code>
+      operation into both entry-point skills. Task 3 is this
+      <code>history.html</code> and <code>MEMORY.md</code> update. The
+      Jira REST migration itself (<code>packages/jira-client</code>,
+      I.1's fix) is specced in
+      <a href="docs/jira-rest-migration/design.html">a separate design doc</a>
+      and has its own plan to follow.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-27</div>
+      <h4>I.1 migrated off the MCP connector to direct Jira REST — 4 tasks, subagent-driven-development</h4>
+      <p>The bug found live on EMKT-756 (the MCP connector's <code>getJiraIssue</code>
+      returning lossy, non-ADF content for the <code>description</code> field) is now
+      fixed at the root: <code>packages/jira-client</code>, a new pnpm-workspace
+      package with zero runtime dependencies, calls Jira's REST API v3 directly
+      with a personal API token, provisioned onto consumer machines by
+      <strong>V</strong> (<code>digismith:depot</code>). Task 1 built and
+      fully unit-tested (Vitest) all five client functions
+      (<code>checkCredentials</code>, <code>getIssue</code>,
+      <code>updateDescription</code>, <code>addComment</code>,
+      <code>getAttachmentContent</code>). Task 2 built the thin
+      <code>cli.ts</code> dispatcher and dogfooded it for real against a
+      temporary fake home directory (never the real
+      <code>~/.digismith/.env</code>, never a live network call). Task 3
+      migrated <code>jira-progress-write-back</code>'s <code>SKILL.md</code>
+      wholesale — removing the old <code>cloudId</code>-resolution step
+      entirely and renumbering every step after it, while leaving the ADF
+      business logic (description-delta splicing, comment date-matching, the
+      confirm-before-write gate) completely untouched. Task 4 is this
+      <code>history.html</code> and <code>MEMORY.md</code> update, and
+      retires <code>backlog/jira-rest-graphql-direct-api.md</code> now that
+      its proposal is actually built.</p>
     </div>
 
   </div>

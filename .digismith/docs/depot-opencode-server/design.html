@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depot: OpenCode Server Management</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Depot: OpenCode Server Management</h1>
+  <div class="meta">
+    <span>Date: 2026-08-28</span>
+    <span>Map item: V.1 (amends V and K.2)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#scope-change">Scope Change: One Shared Server, Machine-Wide</a></li>
+    <li><a href="#operations">New Depot Operations</a></li>
+    <li><a href="#credential">The One Credential Depot Now Touches</a></li>
+    <li><a href="#moves-out">What Moves Out of offload-implementer</a></li>
+    <li><a href="#stays">What Stays in offload-implementer</a></li>
+    <li><a href="#sessions">Session Tracking Is Unchanged</a></li>
+    <li><a href="#concurrency">Concurrent Plans Sharing the Server</a></li>
+    <li><a href="#shared-risk">Accepted Risk: A Shared Stop Can Break Another Plan</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#compat">Backward Compatibility</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    <strong>K.2</strong> (<code>digismith:offload-implementer</code>)
+    shipped 2026-08-27 and passed a real end-to-end smoke test
+    2026-08-28: a live linked worktree, a real seeded bug, a real Chutes
+    dispatch, a real commit, independently verified. Its server-lifecycle
+    logic — start-if-not-running, resolve the Windows PID, track it,
+    stop it — was written entirely inline in its own <code>SKILL.md</code>,
+    scoped to one <code>opencode serve</code> process per
+    <code>subagent-driven-development</code> plan.
+  </p>
+  <p>
+    <strong>V</strong> (<code>digismith:depot</code>), shipped the same
+    day, already owns a different machine-wide runtime resource — a
+    sparse clone of <code>packages/</code> at <code>~/.digismith/repo</code>
+    — via the same shape of idea: provision once, reuse everywhere,
+    independent of any single repo or ticket.
+  </p>
+  <p>
+    The structural rhyme between the two was noticed directly: Depot's
+    <code>ensure</code> ("does the resource exist? no → provision it,
+    yes → no-op") is the same shape as offload-implementer's own
+    "locate or start the server" step, just applied to a process instead
+    of a git clone. This design moves the OpenCode server under Depot's
+    ownership as a second resource type, and — per explicit discussion —
+    changes its scope in the process: from one server per plan to one
+    shared server for the whole machine.
+  </p>
+</section>
+
+<section id="scope-change">
+  <h2>Scope Change: One Shared Server, Machine-Wide</h2>
+  <p>
+    Today: each <code>subagent-driven-development</code> plan that uses
+    offload gets its own <code>opencode serve</code> process, tracked in
+    that plan's own <code>.superpowers/sdd/&lt;plan-basename&gt;/opencode-server.json</code>,
+    stopped when that plan's offloaded work is done.
+  </p>
+  <p>
+    Going forward: <strong>one shared server for the entire machine</strong>,
+    tracked at <code>~/.digismith/opencode-server.json</code> — sibling
+    to Depot's existing <code>~/.digismith/repo</code>, same machine-wide
+    scope. Every concurrent plan, in every repo, dispatches through the
+    same process. This is safe because OpenCode sessions are already
+    proven isolated from each other (verified live, twice: during K.2's
+    original spike and again in the 2026-08-28 smoke test) — a fresh
+    dispatch with no <code>--session</code> flag always gets a new,
+    context-free session regardless of what else is running on the
+    server, and <code>--dir</code> is a per-<code>run</code> flag, not a
+    per-server one, so one server instance correctly serves dispatches
+    against different worktrees.
+  </p>
+  <p>
+    This is a deliberate behavior change, not a pure refactor — see
+    <a href="#concurrency">Concurrent Plans</a> and
+    <a href="#shared-risk">Accepted Risk</a> below for what it actually
+    changes and what it costs.
+  </p>
+</section>
+
+<section id="operations">
+  <h2>New Depot Operations</h2>
+  <p>
+    Two new operations, named and scoped like the existing pair rather
+    than folded into a generalized "resource" abstraction — a git clone
+    and a live process don't share mechanics, only the shape of
+    "provision once, reuse everywhere." Depot ends up with two resources,
+    each with its own concrete verbs:
+  </p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Resource</th><th>Provision</th><th>Teardown</th></tr>
+    <tr><td>packages/ clone</td><td><code>ensure</code> — clone if missing</td>
+    <td><code>refresh</code> — fetch + hard reset (never deletes)</td></tr>
+    <tr><td>OpenCode server</td><td><code>ensure-opencode-server</code> — start if not alive</td>
+    <td><code>stop-opencode-server</code> — explicit only</td></tr>
+  </table>
+  </div>
+  <h3><code>ensure-opencode-server</code></h3>
+  <p>
+    Check <code>~/.digismith/opencode-server.json</code> for a tracked
+    <code>{"pid": ..., "port": ...}</code>. Alive (Windows:
+    <code>tasklist //FI "PID eq &lt;pid&gt;"</code> actually lists it,
+    not just exits 0) → return the tracked port, done. Absent or stale →
+    start fresh exactly as offload-implementer does today: let the OS
+    pick a free port (<code>--port 0</code>), read the log for the real
+    assigned port, resolve the real Windows PID
+    (<code>ps -W</code>/<code>awk</code> first, <code>netstat -ano</code>
+    fallback if empty, per the WINPID gotcha already documented and
+    proven in K.2), write the tracking file, return the port.
+  </p>
+  <h3><code>stop-opencode-server</code></h3>
+  <p>
+    Explicit only — never automatic, never tied to any single plan
+    finishing. Invoked directly ("stop the OpenCode server", mirroring
+    how <code>refresh</code> is invoked directly for the clone).
+    <code>taskkill //PID &lt;pid&gt; //F</code>, delete the tracking file.
+    Absent tracking file → nothing to stop, report that plainly (same
+    disposition K.2's own Stop the Server section already has).
+  </p>
+  <div class="callout">
+    Unlike the clone's <code>ensure</code>, <code>ensure-opencode-server</code>
+    is <strong>not</strong> auto-invoked by <code>bootstrap</code>/<code>adopt</code>.
+    The server is a real background process (346-556MB observed in the
+    2026-08-28 smoke test) that exists only to serve K.2's explicit,
+    opt-in offload dispatches — most tickets never touch it. Only
+    <code>offload-implementer</code> itself calls
+    <code>ensure-opencode-server</code>, the first time a task is
+    actually offloaded. No <code>refresh-opencode-server</code> either —
+    "refresh" for a process is just stop-then-ensure, not a distinct
+    operation worth naming.
+  </div>
+</section>
+
+<section id="credential">
+  <h2>The One Credential Depot Now Touches</h2>
+  <p>
+    Depot's clone side is explicitly credential-free (<code>~/.digismith/.env</code>
+    may sit alongside <code>~/.digismith/repo</code>, but Depot never
+    creates, reads, or references it). <code>ensure-opencode-server</code>
+    breaks that pattern narrowly: starting the server needs
+    <code>CHUTES_API_KEY</code> in its process environment (confirmed —
+    <code>opencode.json</code>'s provider block resolves
+    <code>{env:CHUTES_API_KEY}</code> against whichever process is
+    handling the actual model calls, which is the server, not the
+    per-dispatch <code>run</code> client). So <code>ensure-opencode-server</code>
+    fetches the key the same way offload-implementer already does today
+    (<code>manage_credentials.py get --field api_key</code>) and passes
+    it only as an environment variable at server-launch time.
+  </p>
+  <p>
+    This is look-don't-touch, same boundary Depot already keeps
+    elsewhere: it reads one credential value to hand to a subprocess's
+    environment, and stores, inspects, or manages nothing about it
+    afterward. It stays completely agnostic about models, prompts, and
+    <code>opencode.json</code>'s own provider configuration — that
+    remains entirely offload-implementer's concern, resolved per-dispatch,
+    not at server-start.
+  </p>
+</section>
+
+<section id="moves-out">
+  <h2>What Moves Out of offload-implementer</h2>
+  <p>
+    <code>skills/offload-implementer/SKILL.md</code>'s Step 2 ("Locate or
+    Start the OpenCode Server") and its "Stop the Server" section are
+    removed entirely. In their place: Step 2 becomes a single call out —
+    invoke <code>digismith:depot</code>'s <code>ensure-opencode-server</code>
+    operation, use the port it returns. The "Stop the Server" section is
+    deleted outright, not replaced — offload-implementer no longer stops
+    anything; that responsibility belongs entirely to Depot now, invoked
+    directly by you, independent of any specific plan's lifecycle.
+  </p>
+</section>
+
+<section id="stays">
+  <h2>What Stays in offload-implementer</h2>
+  <p>
+    Everything else is untouched — this is the part that was just
+    proven working end-to-end and nothing here has reason to change it:
+  </p>
+  <ul>
+    <li>Step 1 — <code>opencode.json</code> per-worktree config, ignored
+    via the resolved <code>git rev-parse --git-path info/exclude</code>
+    (the exact fix verified live in a real linked worktree during the
+    smoke test)</li>
+    <li>Step 3 — task-brief extraction, <code>digismith:inject-standards</code>
+    invocation, the report contract</li>
+    <li>Step 4 — heredoc-captured dispatch, the long-timeout guidance</li>
+    <li>Step 5 — <code>.part.text</code> status extraction, per-plan
+    <code>sessionID</code> capture</li>
+    <li>Step 6 — independent verification before trusting <code>DONE</code>,
+    hand-back to the normal review/fix-loop flow</li>
+  </ul>
+</section>
+
+<section id="sessions">
+  <h2>Session Tracking Is Unchanged</h2>
+  <p>
+    Only the server <em>process</em> becomes shared. Each dispatch still
+    creates its own isolated OpenCode session, and
+    <code>opencode-sessions.jsonl</code> still lives in the
+    <em>plan's own</em> SDD workspace, tracking only that plan's tasks —
+    exactly as today. Depot has no concept of sessions at all; it only
+    ever sees one process and one port.
+  </p>
+</section>
+
+<section id="concurrency">
+  <h2>Concurrent Plans Sharing the Server</h2>
+  <p>
+    This is the actual payoff of the scope change: plan A (one repo, one
+    worktree) and plan B (a different repo, a different worktree) can
+    each dispatch offloaded tasks through the <em>same</em> server
+    process at the same time, each getting its own isolated session,
+    without either spinning up a second <code>opencode serve</code>
+    instance. This has already happened for real, unplanned, during this
+    project's own development (multiple concurrent Claude Code sessions
+    building I.1, K.2, and V on the same day) — the shared-server model
+    fits that reality instead of fighting it.
+  </p>
+  <p>
+    Within a single plan, this changes nothing: <code>subagent-driven-development</code>
+    never dispatches more than one implementer at a time regardless
+    (its own no-parallel-implementers rule, to avoid conflicts), so a
+    plan never needs more than one active session at once whether the
+    server is shared or not.
+  </p>
+</section>
+
+<section id="shared-risk">
+  <h2>Accepted Risk: A Shared Stop Can Break Another Plan</h2>
+  <p>
+    Sharing the server introduces one real, disclosed risk that owning
+    one per plan never had: if you stop the server while a
+    <em>different</em> plan still has an in-progress offloaded task or an
+    unresolved fix-round session on it, that other plan's session stops
+    resolving — surfacing as the existing "captured sessionID no longer
+    resolves" error case (already documented in K.2's Error Handling),
+    just now reachable by a cause outside that plan's own control instead
+    of only a machine restart.
+  </p>
+  <p>
+    This is accepted, not mitigated — per the explicit decision behind
+    this design (mirror the clone: no reference-counting, no
+    are-other-plans-using-this check before stopping). Building real
+    multi-consumer safety for a personal, single-operator tool is
+    solving a problem that doesn't exist yet; the cost of getting it
+    wrong is "the other plan's next fix-round dispatch reports plainly
+    that its session is gone, you re-run <code>ensure-opencode-server</code>
+    and resume with a fresh one" — annoying, not destructive, and
+    already the documented disposition for the pre-existing
+    machine-restart case.
+  </p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling</h2>
+  <p>
+    Server-lifecycle cases move to Depot, since it now owns that
+    lifecycle. offload-implementer's own Error Handling section keeps
+    only the cases genuinely specific to dispatching and resuming a
+    task.
+  </p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Owned by</th><th>Disposition</th></tr>
+    <tr><td><code>opencode</code> not on PATH</td><td>Depot</td>
+    <td>Stop, point at the correct install command
+    (<code>pnpm add -g --allow-build=opencode-ai opencode-ai</code>).
+    Never install silently.</td></tr>
+    <tr><td>Server fails to start (no "listening on" line)</td>
+    <td>Depot</td><td>Stop, show the log content, don't retry silently.</td></tr>
+    <tr><td>Tracked PID no longer running (stale)</td><td>Depot</td>
+    <td>Treat as absent, start fresh, overwrite the tracking file.</td></tr>
+    <tr><td>WINPID unresolvable (both <code>ps -W</code> and
+    <code>netstat</code> come back empty)</td><td>Depot</td>
+    <td>Never persist an empty PID — report the failure plainly rather
+    than writing an unusable tracking file.</td></tr>
+    <tr><td><code>opencode run</code> itself errors, times out, or lies
+    about success</td><td>offload-implementer</td>
+    <td>Unchanged from K.2's existing Error Handling — these are dispatch
+    concerns, not server-lifecycle ones.</td></tr>
+    <tr><td>Captured <code>sessionID</code> no longer resolves</td>
+    <td>offload-implementer</td>
+    <td>Unchanged, but now reachable via the shared-stop risk above in
+    addition to a machine restart.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="compat">
+  <h2>Backward Compatibility</h2>
+  <p>
+    No plan currently has an in-flight offloaded task sitting mid-fix-loop
+    (K.2 shipped 2026-08-27, the smoke test's own server was stopped and
+    its scratch worktree removed at the end of that test) — there is no
+    live <code>opencode-server.json</code> anywhere to migrate. This
+    ships as a clean cutover: old per-plan tracking format is simply no
+    longer written; any plan workspace still holding one from before this
+    change is inert leftover, not read by anything after this ships.
+  </p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>A DigiSmith CLI entry point</strong> — raised during
+    discussion, explicitly deferred to its own future feature. This
+    design changes only how Depot and offload-implementer talk to each
+    other as Claude Code skills; it does not add any way to trigger
+    either from outside a Claude Code session.</li>
+    <li><strong>Reference-counted or multi-consumer-safe stop</strong> —
+    see <a href="#shared-risk">Accepted Risk</a>. Explicit-only stop,
+    same as the clone.</li>
+    <li><strong>Model or provider abstraction</strong> — Depot's new
+    operations know nothing about Kimi, Chutes routing, or
+    <code>opencode.json</code>'s provider block. Still entirely
+    offload-implementer's concern, unchanged from K.2.</li>
+    <li><strong>A generalized multi-resource interface inside Depot</strong> —
+    two concrete resources, two concrete operation pairs. Not
+    generalized until a third real resource actually needs the same
+    shape.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/depot-opencode-server/design.html</footer>
+
+</body>
+</html>

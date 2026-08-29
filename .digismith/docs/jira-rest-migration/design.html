@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jira Client — Direct REST Migration</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  :root[data-theme="dark"] { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+    --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+  .diagram { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.2rem; font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: .82rem; line-height: 1.5; overflow-x: auto; white-space: pre; }
+  .diff-remove { text-decoration: line-through; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Jira Client — Direct REST Migration</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: I.1 (migration)</span>
+    <span>Depends on: <a href="../depot/design.html"><code>digismith:depot</code></a> (tentative V)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#root-cause">Why: The MCP Connector Bug</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#package-layout">Package Layout</a></li>
+    <li><a href="#credentials">Credentials: Bootstrap-on-First-Use</a></li>
+    <li><a href="#api-surface">Client API Surface</a></li>
+    <li><a href="#i1-migration">I.1 Migration — Step Diff</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    <code>packages/jira-client</code> replaces the Atlassian MCP connector
+    as <strong>I.1</strong>'s (<code>jira-progress-write-back</code>)
+    transport, calling Jira's REST API v3 directly with a personal API
+    token instead of going through a session-specific MCP tool. Root-caused
+    and proven live on EMKT-756 (2026-08-27), not speculative — see
+    <a href="#root-cause">below</a>.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Fixes</div>
+      <h4>The description-write bug</h4>
+      <p>I.1's very first live run had to skip its description write
+      entirely because of this. Direct REST returns real, correctly
+      structured ADF for every field — confirmed by direct comparison
+      against the same field, same ticket.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Also fixes</div>
+      <h4>Two more confirmed gaps</h4>
+      <p>No attachment-content download existed through the connector at
+      all; the connector itself dropped and reconnected mid-session under
+      a new tool-name prefix. Direct REST has neither problem.</p>
+    </div>
+  </div>
+</section>
+
+<section id="root-cause">
+  <h2>Why: The MCP Connector Bug</h2>
+  <div class="callout">
+    <strong>The bug:</strong> the Atlassian MCP connector's
+    <code>getJiraIssue</code>, called with
+    <code>responseContentFormat: "adf"</code>, returns genuine ADF for
+    <code>comment.comments[].body</code> — but a lossy
+    rendered-markdown hybrid for the <code>description</code> field
+    specifically, the same request parameter notwithstanding. Tables,
+    status lozenges, and emoji flatten into
+    <code>&lt;custom data-type="..."&gt;</code> pseudo-HTML that cannot
+    be safely reconstructed into real ADF nodes. This is a bug in the
+    connector's own internal rendering — confirmed by fetching the exact
+    same field on the exact same ticket via direct REST and getting
+    correctly structured <code>status</code>/<code>table</code>/<code>expand</code>
+    nodes back.
+  </div>
+  <p>
+    <strong>The fix, proven live:</strong> a personal Jira API token
+    (generated at
+    <code>id.atlassian.com/manage-profile/security/api-tokens</code>),
+    used with HTTP Basic Auth (<code>email:token</code>) directly against
+    <code>https://&lt;site&gt;.atlassian.net/rest/api/3/...</code> —
+    <strong>not</strong> the
+    <code>api.atlassian.com/ex/jira/{cloudId}/...</code> gateway, which
+    is OAuth-app-only and returned <code>403</code> when tried.
+  </p>
+  <ul>
+    <li><code>GET /rest/api/3/issue/{key}?fields=description</code> —
+    real ADF, confirmed against a live ticket.</li>
+    <li><code>GET /rest/api/3/attachment/content/{id}</code> — downloads
+    actual image bytes (follow the <code>303</code> redirect).</li>
+    <li><code>PUT /rest/api/3/issue/{key}</code> with
+    <code>{"fields":{"description": &lt;ADF doc&gt;}}</code> — writes
+    back successfully (<code>204</code>).</li>
+  </ul>
+  <p>
+    No <code>responseContentFormat</code>/<code>contentFormat</code>
+    parameter anywhere in this path — REST API v3's description/comment
+    bodies are ADF by default. That parameter was purely a connector-side
+    concept, not something the migration needs to replicate.
+  </p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <div class="diagram">skills/jira-progress-write-back/SKILL.md (I.1)
+        │  subprocess/Bash, one call per operation
+        ▼
+~/.digismith/repo/packages/jira-client/src/cli.ts
+        │  (provisioned by digismith:depot)
+        │  reads ~/.digismith/.env directly (email, token, site)
+        │  HTTP Basic Auth, native fetch — zero runtime deps
+        ▼
+https://&lt;site&gt;.atlassian.net/rest/api/3/...</div>
+  <p>
+    The MCP connector is removed from I.1's path entirely — not
+    supplemented, replaced. <code>jira-client</code> is a thin transport
+    layer only: it owns Jira's REST shape and nothing else. Every piece
+    of ADF business logic I.1 already has — description-delta splicing,
+    Track-checklist upserts, comment date-matching — stays exactly where
+    it is, in the skill. Moving that logic into the client would create a
+    second place it could drift out of sync with the skill that actually
+    understands it.
+  </p>
+  <h3>Distribution: considered and rejected</h3>
+  <p>
+    Two alternatives were considered before landing on the
+    <a href="../depot/design.html"><code>digismith:depot</code></a>-provisioned
+    local clone: fetching individual source files fresh
+    from GitHub on every call (works, but re-fetches on every single
+    invocation with no caching, and a consumer repo still needs
+    <em>some</em> place to run the fetched code from), and publishing to
+    a real npm registry (the canonical decoupled answer, but adds a real
+    release/versioning step for a personal tool with effectively one
+    consumer). Depot's sparse local clone gets the same
+    no-local-dev-checkout-dependency property as either alternative,
+    without either's cost.
+  </p>
+</section>
+
+<section id="package-layout">
+  <h2>Package Layout</h2>
+  <div class="diagram">DigiSmith/
+├── pnpm-workspace.yaml
+├── package.json                      (root, private:true, devDeps: typescript, vitest)
+├── packages/
+│   └── jira-client/
+│       ├── package.json
+│       ├── src/
+│       │   ├── client.ts             (exported functions — the real logic)
+│       │   ├── client.test.ts        (vitest)
+│       │   └── cli.ts                (thin subcommand dispatch → calls client.ts)
+│       └── tsconfig.json
+├── scripts/
+│   └── model_offload.py              (untouched — K.1's existing Python tooling)
+└── skills/
+    └── jira-progress-write-back/     (I.1 — migrates, see below)</div>
+  <p>
+    <strong>No build step.</strong> Node 24 runs <code>.ts</code> files
+    directly (native type-stripping) — confirmed on this machine before
+    committing to the design. <code>cli.ts</code> is invoked as
+    <code>node .../cli.ts &lt;subcommand&gt; ...</code>, no
+    <code>tsc</code> compile, no <code>dist/</code> output. This is the
+    first package in a monorepo layout chosen specifically because more
+    TypeScript packages are expected here over time — the workspace
+    tooling is meant to make the second package cheap to add, not just
+    to house this one.
+  </p>
+  <p>
+    <strong>Language and tooling choices</strong> — TypeScript over
+    matching K.1's existing Python precedent, <code>pnpm</code> for
+    workspace management, Vitest for tests — all follow Jack's standing
+    defaults captured in
+    <code>backlog/opinionated-tech-stack-defaults.md</code> (tentative
+    map letter U), surfaced during this same brainstorm.
+  </p>
+</section>
+
+<section id="credentials">
+  <h2>Credentials: Bootstrap-on-First-Use</h2>
+  <div class="diagram">Skill (I.1) needs to call the Jira client
+        │
+        ▼
+Does ~/.digismith/.env exist with all three values?
+        │                                    │
+       yes                                   no
+        │                                    ▼
+        │                     Skill prompts via AskUserQuestion:
+        │                     email, API token (with the
+        │                     id.atlassian.com token-gen URL),
+        │                     site hostname
+        │                                    │
+        │                                    ▼
+        │                     Writes ~/.digismith/.env
+        │                     (creates ~/.digismith/ if needed)
+        │                                    │
+        ◄────────────────────────────────────┘
+        ▼
+Client reads it, makes the real call</div>
+  <ul>
+    <li><code>~/.digismith/.env</code> — home directory, outside every
+    git repo (DigiSmith's own and every consumer's). Structurally cannot
+    land in a git-committed <code>profiles/*.yml</code>, which fully
+    resolves the original security concern that blocked this migration
+    from being scoped in the first place.</li>
+    <li>The client itself never prompts — it's a non-interactive
+    subprocess. It fails fast with a distinct "no credentials found"
+    signal on stderr/exit code; only the skill layer (which has
+    <code>AskUserQuestion</code>) prompts.</li>
+    <li>The token itself never touches argv, the process list, or shell
+    history — only non-secret arguments (issue key, file paths) are ever
+    passed on the command line. The client reads the token directly out
+    of the <code>.env</code> file inside its own process.</li>
+    <li>No <code>dotenv</code> npm dependency — three key-value lines
+    are hand-parsed, matching how <code>profiles/*.yml</code> is already
+    hand-parsed elsewhere in this repo rather than pulling in a YAML
+    library.</li>
+    <li>Once written, no repeat prompting — true for every future
+    session, in every consumer repo, on that machine.</li>
+  </ul>
+</section>
+
+<section id="api-surface">
+  <h2>Client API Surface</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Function</th><th>REST call</th><th>CLI subcommand</th></tr>
+    <tr><td><code>checkCredentials()</code></td>
+      <td>none — reads <code>~/.digismith/.env</code></td>
+      <td><code>check-credentials</code></td></tr>
+    <tr><td><code>getIssue(key, fields)</code></td>
+      <td><code>GET /issue/{key}?fields=...</code></td>
+      <td><code>get-issue --key &lt;K&gt; --fields &lt;csv&gt;</code></td></tr>
+    <tr><td><code>updateDescription(key, adfDoc)</code></td>
+      <td><code>PUT /issue/{key}</code> (<code>fields.description</code>)</td>
+      <td><code>update-description --key &lt;K&gt; --file &lt;adf.json&gt;</code></td></tr>
+    <tr><td><code>addComment(key, adfDoc, commentId?)</code></td>
+      <td><code>POST .../comment</code> or <code>PUT .../comment/{id}</code></td>
+      <td><code>add-comment --key &lt;K&gt; --file &lt;adf.json&gt; [--comment-id &lt;id&gt;]</code></td></tr>
+    <tr><td><code>getAttachmentContent(id, outPath)</code></td>
+      <td><code>GET /attachment/content/{id}</code> (follows redirect)</td>
+      <td><code>get-attachment --id &lt;ID&gt; --out &lt;path&gt;</code></td></tr>
+  </table>
+  </div>
+  <p>
+    Each function lives in <code>client.ts</code> and is independently
+    unit-testable; <code>cli.ts</code> is a thin dispatcher only. ADF
+    payloads for <code>update-description</code>/<code>add-comment</code>
+    are passed as a <code>--file</code> path — the skill writes the
+    composed JSON document to a scratch file first — avoiding
+    CLI-length/quoting issues with large documents, the same pattern
+    K.1's <code>model_offload.py</code> already uses for its
+    <code>--prompt-file</code>. Exit codes stay <code>0</code>/<code>1</code>
+    throughout, status detail to stderr, matching that same precedent.
+  </p>
+</section>
+
+<section id="i1-migration">
+  <h2>I.1 Migration — Step Diff</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Step</th><th>Change</th></tr>
+    <tr><td>Step 2 — "Detect the JIRA Tool"</td>
+      <td><strong>Replaced.</strong> Defensive <code>digismith:depot</code>
+      <code>ensure</code> check (in case <code>bootstrap</code> didn't
+      run this session), then the credential-bootstrap check from
+      <a href="#credentials">above</a>.</td></tr>
+    <tr><td>Step 3 — "Resolve <code>cloudId</code>"</td>
+      <td><strong>Removed entirely.</strong> Pure MCP-connector routing
+      concept — direct REST just targets
+      <code>https://${JIRA_SITE}/rest/api/3/...</code> using the site
+      hostname already in <code>.env</code>. One fewer step, not a
+      swapped implementation of the same one.</td></tr>
+    <tr><td>Step 4 — "Fetch the Current Ticket"</td>
+      <td><strong>Changed.</strong> Calls <code>get-issue</code>. No more
+      <code>responseContentFormat</code> guessing or per-session tool-name
+      mapping. This is the exact step that broke on EMKT-756.</td></tr>
+    <tr><td>Steps 5–13 (ADF business logic, confirmation gate)</td>
+      <td><strong>Unchanged.</strong> Materials &amp; Links delta, Track
+      checklist delta, comment date-matching boundary check, and the
+      mandatory Confirm-Before-Write gate — none of this logic ever lived
+      in the connector.</td></tr>
+    <tr><td>Steps 14–15 — write description / write comment</td>
+      <td><strong>Changed.</strong> Call <code>update-description</code> /
+      <code>add-comment</code> instead of the MCP tool. Same whole-field-replace
+      semantics as before.</td></tr>
+  </table>
+  </div>
+  <p>
+    <code>get-attachment</code> exists on the client but is not wired
+    into any current I.1 step — the EMKT-756 screenshot gap was ad hoc
+    (viewing an attachment referenced in a comment mid-conversation), not
+    part of I.1's structured write-back flow. It's available capability
+    for a future step, not a required part of this migration.
+  </p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Disposition</th></tr>
+    <tr><td><code>~/.digismith/.env</code> missing or incomplete</td>
+      <td>Trigger the bootstrap-prompt flow (<a href="#credentials">above</a>)
+      rather than failing outright — this is an expected first-run state,
+      not an error.</td></tr>
+    <tr><td>Jira returns an HTTP error (auth, permissions, malformed
+      field)</td>
+      <td>Report the failure plainly with whatever detail the response
+      body carries. No silent retry, no fallback write in a different
+      format — same disposition I.1 already documents for its existing
+      MCP-tool failure case.</td></tr>
+    <tr><td>Network/connection error reaching
+      <code>*.atlassian.net</code></td>
+      <td>Report plainly. No retry.</td></tr>
+    <tr><td><code>digismith:depot</code>'s defensive check finds the
+      clone missing and provisioning also fails</td>
+      <td>Stop, report the underlying error (see that skill's own Error
+      Handling) — don't attempt to fetch/run jira-client any other way.</td></tr>
+  </table>
+  </div>
+  <p>
+    Every other case in I.1's existing Error Handling table (unresolved
+    mention name, duplicate comment, Track section absent, unrecognized
+    Materials &amp; Links shape) is untouched by this migration — those
+    are all about the ADF business logic in the skill, not the transport.
+  </p>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>
+    <code>client.ts</code>'s five functions are unit-tested directly with
+    Vitest (mocking <code>fetch</code>) — no subprocess spawning needed
+    to exercise the real logic, which is the point of keeping
+    <code>cli.ts</code> a thin, separately-un-unit-tested dispatcher.
+    I.1's own migrated steps get verified the same way the rest of I.1
+    already is — reasoning-only against fabricated ADF fixtures during
+    implementation, with the real acceptance bar being an actual live
+    run against a real ticket (as EMKT-756 already served for the
+    pre-migration version).
+  </p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>The Track-section Deliverable/Per-Market template</strong> —
+    a separate, larger design already in
+    <code>backlog/track-section-template.md</code>, explicitly noted
+    there as being in tension with I.1's current single-checkmark Step 7
+    and more naturally I.2's concern. Not touched by this migration; I.1's
+    Step 7 (Track checklist) logic is carried over unchanged.</li>
+    <li><strong>I.2, multi-repo distribution</strong> — unaffected scope
+    boundary, unchanged from I.1's existing design.</li>
+    <li><strong>Publishing <code>jira-client</code> as a real npm
+    package</strong> — considered and rejected; see
+    <a href="#architecture">Architecture</a>.</li>
+    <li><strong>Wiring <code>get-attachment</code> into a real I.1
+    step</strong> — the function exists; no current step calls it.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/jira-rest-migration/design.html</footer>
+
+</body>
+</html>

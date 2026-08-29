@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JIRA Progress Write-back (I.1) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>JIRA Progress Write-back (I.1) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-27</span>
+    <span>Map item: <strong>I.1</strong></span>
+    <span>Commit range: <code>f4925f6..5794dab</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>jira-progress-write-back</code> — DigiSmith's map item <strong>I.1</strong> — a
+  skill that posts and updates real JIRA ADF formatting (status lozenges, emoji, a dated
+  progress comment) on the active ticket for a single repo/PR at a time, consuming map item
+  <strong>M</strong>'s captured ephemeral URLs. It's a single new skill, triggered right after
+  <code>digismith:capture-ephemeral-url</code> succeeds or on explicit request: it resolves the
+  ticket key from the branch name, detects whichever JIRA-capable tool is available in the
+  session, fetches the ticket's description and comments as real ADF (never the lossy
+  markdown-rendered pseudo-HTML), drafts a Materials &amp; Links bullet entry and, only if a
+  Track checklist already exists, the Technical Development line's status/checkmark, composes
+  them into a complete replacement description document, drafts a dated Progress Update comment,
+  shows both drafts for explicit confirmation, then writes them via <code>contentFormat: "adf"</code>.
+  Followed the full Superpowers process: brainstorming → spec → writing-plans →
+  <code>superpowers:subagent-driven-development</code> (2 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
+  round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <span class="tag">Task 1</span>
+      <h4><code>jira-progress-write-back</code> Skill — Write, Read Back, Dogfood</h4>
+      <p>Two JIRA API writes (description, comment) on the active ticket — a terminal step in
+      the flow; nothing downstream in this plan consumes this skill's output.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 2</span>
+      <h4>Update <code>.digismith/history.html</code> and <code>MEMORY.md</code> for I.1</h4>
+      <p>An up-to-date living tracker reflecting I.1 shipped and the I → I.1/I.2, R, S map
+      restructuring.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td><code>jira-progress-write-back</code> Skill — Write, Read Back, Dogfood</td>
+      <td>Two JIRA API writes (description, comment) on the active ticket; a terminal step in
+      the flow.</td>
+      <td>Approved after 1 fix round</td>
+      <td>None — the two minors surfaced in review 1 were fixed in the same round, not left
+      deferred.</td>
+    </tr>
+    <tr>
+      <td>Update <code>.digismith/history.html</code> and <code>MEMORY.md</code> for I.1</td>
+      <td>An up-to-date living tracker.</td>
+      <td>Approved after 1 fix round</td>
+      <td>None</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes — 6 Important and 7 Minor findings from the whole-branch review,
+  all resolved in one consolidated fix wave and independently re-verified in a follow-up
+  re-review (no second wave needed).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td>
+      <td>SKILL.md Step 6/Step 8 contradiction: the "unrecognized shape" branch said "treat as
+      not found," but Step 8 had no branch for that case and would fall into the
+      append-fresh-heading path — a real duplicate-heading bug on a live ticket.</td>
+      <td>Fixed — Step 8 given an explicit branch for the unrecognized-shape case; re-verified.</td>
+    </tr>
+    <tr><td>Important</td>
+      <td>SKILL.md's Global Constraints cross-references (~lines 89-91, 331-332) pointed at
+      <code>.digismith/docs/jira-progress-write-back/plan.md</code>, which resolves inside
+      DigiSmith's own repo, not the consumer repo the skill actually runs in, and can be
+      gitignored there.</td>
+      <td>Fixed — rationale inlined instead of cross-referenced, matching sibling skills'
+      convention.</td>
+    </tr>
+    <tr><td>Important</td>
+      <td>SKILL.md Step 14 omitted the "as a JSON string" / fields-map detail that Step 15
+      states for the same write mechanism; Step 14's first real execution was untested
+      (reasoning-only dogfood).</td>
+      <td>Fixed — detail added to Step 14; re-review independently confirmed the
+      fields-map/flat-param distinction against the live Jira MCP tool schemas.</td>
+    </tr>
+    <tr><td>Important</td>
+      <td><code>MEMORY.md</code> still named I.3 (now S) and described I.2 as end-to-end testing
+      (now R); a separate paragraph still said the shared JIRA primitive drives status
+      transitions, contradicting I.1's own no-transitions constraint.</td>
+      <td>Fixed — MEMORY.md corrected; re-review cross-checked against the map table.</td>
+    </tr>
+    <tr><td>Important</td>
+      <td><code>README.md</code>, <code>docs/getting-started.md</code>, and
+      <code>skills/capture-ephemeral-url/SKILL.md</code> still said JIRA write-back doesn't
+      exist / is a later feature, contradicting history.html and MEMORY.md now saying I.1
+      shipped.</td>
+      <td>Fixed — all three updated to reflect I.1 shipping, matching the precedent set by prior
+      features (H/P/Q/K.1).</td>
+    </tr>
+    <tr><td>Important</td>
+      <td>SKILL.md Step 13's confirmation never disclosed whether the comment write would create
+      a new comment or silently replace an existing one, given Step 9's same-day-different-year
+      collision risk — undercutting the design's own confirm-before-write rationale.</td>
+      <td>Fixed — Step 13 now discloses create-vs-update explicitly.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td><code>backlog/jira-write-back-adf-reporting.md</code> and <code>README.md</code>
+      weren't narrowed to I.2-only now that I.1 shipped.</td>
+      <td>Fixed, matching digismith:init's own precedent of retiring resolved backlog items.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>Quick Reference row 6 needed the same fix as the Step 6/Step 8 contradiction above.</td>
+      <td>Fixed as part of that finding's fix.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>history.html's corrected timeline text didn't mention that the live-UAT acceptance bar
+      is still outstanding.</td>
+      <td>Fixed — mentioned explicitly.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>Two copy-paste artifacts from capture-ephemeral-url ("unchanged, existing behavior" /
+      "as today") referenced a prior-behavior world this brand-new file never had.</td>
+      <td>Fixed — reworded.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>Step 7's checkmark-scan boundary only stopped at "the next stage's bold-labeled
+      paragraph," not also at the next heading — risked scanning past the Track section
+      entirely.</td>
+      <td>Fixed — boundary now also stops at the next heading.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>design.html's "mistaken/duplicate comment" error case never made it into the plan's
+      inlined SKILL.md draft.</td>
+      <td>Fixed — added to Error Handling.</td>
+    </tr>
+    <tr><td>Minor</td>
+      <td>No acknowledgment that Steps 4/14/15's exact parameter names are this session's
+      specific connector's, to be mapped to whatever's actually available.</td>
+      <td>Fixed — one-clause acknowledgment added.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">b18f99d</span> feat(jira-progress-write-back): add I.1 skill — real ADF description and comment write-back</li>
+    <li><span class="sha">dcee5f8</span> fix(jira-progress-write-back): correct comment date-match boundary, genericize error handling tool names</li>
+    <li><span class="sha">d36f757</span> docs: update history — jira-progress-write-back (I.1) shipped</li>
+    <li><span class="sha">3f3e625</span> fix(jira-progress-write-back): correct history.html's false claim about Task 1's dogfood method</li>
+    <li><span class="sha">5794dab</span> fix(jira-progress-write-back): resolve final whole-branch review findings</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/jira-progress-write-back/report.html</footer>
+
+</body>
+</html>
