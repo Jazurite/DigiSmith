@@ -79,4 +79,24 @@ describe("print-config CLI", () => {
       }),
     ).toThrow();
   });
+
+  it("supports --runner claude-code, returning {baseUrl, credentialEnv} instead of an opencode block", () => {
+    const stdout = execFileSync(
+      "node",
+      [SCRIPT_PATH, "tokenreply", "--role", "task", "--runner", "claude-code"],
+      { encoding: "utf-8" },
+    );
+    expect(JSON.parse(stdout)).toEqual({
+      baseUrl: "https://api.tokenreply.com/v1",
+      credentialEnv: "TOKENREPLY_API_KEY",
+    });
+  });
+
+  it("defaults --runner to opencode when omitted, output unchanged from before", () => {
+    const stdout = execFileSync("node", [SCRIPT_PATH, "chutes", "--role", "task"], {
+      encoding: "utf-8",
+    });
+    const parsed = JSON.parse(stdout);
+    expect(Object.keys(parsed)).toEqual(["chutes"]);
+  });
 });

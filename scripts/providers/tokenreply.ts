@@ -11,4 +11,5 @@ export const tokenreply: GatewayProvider = {
   model() {
     return "kimi-k2.7";
   },
+  supportsRunner: ["opencode", "claude-code"],
 };
