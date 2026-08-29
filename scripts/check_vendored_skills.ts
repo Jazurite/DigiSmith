@@ -41,7 +41,18 @@ export function resolveUpstreamSkillsDir(baseDir: string = os.homedir()): string
       return { path: fullPath, mtimeMs: fs.statSync(fullPath).mtimeMs };
     });
   const chosen = pickMostRecentDir(entries);
-  return path.join(chosen, "skills");
+  if (entries.length > 1) {
+    console.error(
+      `resolveUpstreamSkillsDir: found ${entries.length} candidate plugin cache directories under ${cacheRoot}; ` +
+        `picked most-recently-modified "${chosen}" (${entries.length - 1} other candidate(s) ignored) — ` +
+        `double check this is the right one if the report below looks off`
+    );
+  }
+  const skillsDir = path.join(chosen, "skills");
+  if (!fs.existsSync(skillsDir)) {
+    throw new Error(`Expected upstream skills directory not found at ${skillsDir}`);
+  }
+  return skillsDir;
 }
 
 export function readGitBlob(sha: string, relPath: string): string | null {

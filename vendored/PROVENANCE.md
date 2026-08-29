@@ -40,8 +40,11 @@ upstream drift and local divergence separately so an activated skill's
 own edits are never confused with genuine upstream changes. Still
 manual-trigger, not automatic-schedule or auto-merge — this is a
 read-only report a human reviews and decides from, not a sync/merge
-system, consistent with DigiSmith staying a personal tool. See DigiSmith
-`MEMORY.md` map item W.
+system, consistent with DigiSmith staying a personal tool. Note: this
+only detects drift in files that existed at the baseline commit — a
+file upstream has added to a skill since then is not detected;
+extending coverage to newly-added upstream files is a possible future
+enhancement, not built here. See DigiSmith `MEMORY.md` map item W.
 
 ## Activation
 

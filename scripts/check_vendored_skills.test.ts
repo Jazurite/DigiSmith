@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -26,7 +26,7 @@ describe("resolveUpstreamSkillsDir", () => {
     const oldHash = path.join(cacheRoot, "oldhash111");
     const newHash = path.join(cacheRoot, "newhash222");
     fs.mkdirSync(oldHash, { recursive: true });
-    fs.mkdirSync(newHash, { recursive: true });
+    fs.mkdirSync(path.join(newHash, "skills"), { recursive: true });
     // Force newHash to have a strictly later mtime than oldHash.
     const past = new Date(Date.now() - 60_000);
     const future = new Date(Date.now() + 60_000);
@@ -43,6 +43,61 @@ describe("resolveUpstreamSkillsDir", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-empty-"));
     expect(() => resolveUpstreamSkillsDir(tmpBase)).toThrow("Superpowers plugin cache not found");
     fs.rmSync(tmpBase, { recursive: true, force: true });
+  });
+
+  it("throws a clear error naming the expected path when the chosen hash dir has no skills/ subfolder", () => {
+    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-noskills-"));
+    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
+    const onlyHash = path.join(cacheRoot, "onlyhash333");
+    fs.mkdirSync(onlyHash, { recursive: true });
+    // Deliberately no `skills` subfolder under onlyHash — mimics a wrong
+    // plugin layout or a hash dir that hasn't been populated yet.
+
+    expect(() => resolveUpstreamSkillsDir(tmpBase)).toThrow(path.join(onlyHash, "skills"));
+    fs.rmSync(tmpBase, { recursive: true, force: true });
+  });
+
+  it("warns to stderr when more than one candidate hash directory exists", () => {
+    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-multi-"));
+    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
+    const oldHash = path.join(cacheRoot, "oldhash444");
+    const newHash = path.join(cacheRoot, "newhash555");
+    fs.mkdirSync(oldHash, { recursive: true });
+    fs.mkdirSync(path.join(newHash, "skills"), { recursive: true });
+    const past = new Date(Date.now() - 60_000);
+    const future = new Date(Date.now() + 60_000);
+    fs.utimesSync(oldHash, past, past);
+    fs.utimesSync(newHash, future, future);
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = resolveUpstreamSkillsDir(tmpBase);
+      expect(result).toBe(path.join(newHash, "skills"));
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const message = errorSpy.mock.calls[0][0] as string;
+      expect(message).toContain(newHash);
+      expect(message).toContain("2 candidate");
+    } finally {
+      errorSpy.mockRestore();
+      fs.rmSync(tmpBase, { recursive: true, force: true });
+    }
+  });
+
+  it("does not warn when only one candidate hash directory exists", () => {
+    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-single-"));
+    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
+    const onlyHash = path.join(cacheRoot, "onlyhash666");
+    fs.mkdirSync(path.join(onlyHash, "skills"), { recursive: true });
+
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = resolveUpstreamSkillsDir(tmpBase);
+      expect(result).toBe(path.join(onlyHash, "skills"));
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      fs.rmSync(tmpBase, { recursive: true, force: true });
+    }
   });
 });
 
