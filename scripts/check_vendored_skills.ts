@@ -175,3 +175,83 @@ export function formatSkillReport(report: SkillReport): string {
 
   return lines.join("\n");
 }
+
+export const BASELINE_SHA = "a6418858b5374c2506d1ff799b2dcb418bff53d1";
+
+export const VENDORED_SKILLS: string[] = [
+  "brainstorming",
+  "dispatching-parallel-agents",
+  "executing-plans",
+  "finishing-a-development-branch",
+  "receiving-code-review",
+  "requesting-code-review",
+  "subagent-driven-development",
+  "systematic-debugging",
+  "test-driven-development",
+  "using-git-worktrees",
+  "using-superpowers",
+  "verification-before-completion",
+  "writing-plans",
+  "writing-skills",
+];
+
+export function checkSkill(name: string, upstreamSkillsDir: string): SkillReport {
+  const skillRelDir = `skills/vendored-${name}`;
+  const relFiles = listBaselineFiles(BASELINE_SHA, skillRelDir);
+  const files = relFiles.map((relFile) => {
+    const baselineContent = readGitBlob(BASELINE_SHA, `${skillRelDir}/${relFile}`);
+    if (baselineContent === null) {
+      throw new Error(
+        `internal error: ${skillRelDir}/${relFile} was listed by listBaselineFiles but readGitBlob returned null`
+      );
+    }
+    const upstreamContent = readFileIfExists(path.join(upstreamSkillsDir, name, relFile));
+    const localContent = readFileIfExists(path.join(skillRelDir, relFile));
+    return compareFile(relFile, baselineContent, upstreamContent, localContent);
+  });
+  return { skillName: name, files };
+}
+
+export function main(): void {
+  let upstreamSkillsDir: string;
+  try {
+    upstreamSkillsDir = resolveUpstreamSkillsDir();
+  } catch (err) {
+    console.error(`Cannot check for upstream drift: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  console.log(`Checking ${VENDORED_SKILLS.length} vendored skills against baseline ${BASELINE_SHA.slice(0, 7)}`);
+  console.log(`Upstream: ${upstreamSkillsDir}\n`);
+
+  let anyDrift = false;
+  for (const name of VENDORED_SKILLS) {
+    let report: SkillReport;
+    try {
+      report = checkSkill(name, upstreamSkillsDir);
+    } catch (err) {
+      console.error(
+        `Cannot read baseline commit ${BASELINE_SHA} for "${name}": ${(err as Error).message}\n` +
+          `This usually means DigiSmith's git history changed since this SHA was recorded. ` +
+          `Fix the baseline SHA in vendored/PROVENANCE.md and BASELINE_SHA in this script.`
+      );
+      process.exit(1);
+    }
+    if (report.files.some((f) => f.upstreamDiff !== "")) {
+      anyDrift = true;
+    }
+    console.log(formatSkillReport(report));
+    console.log("");
+  }
+
+  if (!anyDrift) {
+    console.log("No upstream drift detected across any vendored skill.");
+  }
+}
+
+// import.meta.filename (stable in Node >=21.2) is this file's own absolute
+// path; process.argv[1] is the script Node was invoked with. Equal only
+// when this file is run directly, not when imported (e.g. by the test file).
+if (import.meta.filename === process.argv[1]) {
+  main();
+}
