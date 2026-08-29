@@ -298,7 +298,7 @@ delivered work section, in the same tone as a real example:
 > desktop/mobile ordering next to breadcrumbs.
 
 **Not present** (N hasn't run this session, e.g. this plan used
-`superpowers:executing-plans` instead of `subagent-driven-development`,
+`digismith:executing-plans` instead of `subagent-driven-development`,
 or the skill is invoked standalone) → draft the same style of bullets
 directly from the session's actual work instead — never fabricate
 specifics not actually done this session.

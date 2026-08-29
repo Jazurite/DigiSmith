@@ -1,6 +1,6 @@
 ---
 name: capture-ephemeral-url
-description: Use when a pull request was just created for an Emma Shopify theme repo and its ephemeral-deploy Preview Theme and Theme Editor URLs need to be captured — right after superpowers:finishing-a-development-branch's "push and create PR" option, or when explicitly asked to capture the ephemeral URLs for a given PR.
+description: Use when a pull request was just created for an Emma Shopify theme repo and its ephemeral-deploy Preview Theme and Theme Editor URLs need to be captured — right after digismith:finishing-a-development-branch's "push and create PR" option, or when explicitly asked to capture the ephemeral URLs for a given PR.
 ---
 
 # Capture Ephemeral URL
@@ -11,7 +11,7 @@ DigiSmith's map item **M**. Waits for Emma's ephemeral-deploy GitHub
 Actions check to finish on an open PR, then extracts the Shopify Preview
 Theme URL and Theme Editor URL from the `github-actions` bot's PR comment
 and reports them. Does not create the PR (that's
-`superpowers:finishing-a-development-branch`'s job) and writes nothing to
+`digismith:finishing-a-development-branch`'s job) and writes nothing to
 JIRA itself — `digismith:jira-progress-write-back` (**I.1**) picks up
 these captured URLs from here. This skill's job ends at reporting the two
 URLs.
@@ -19,7 +19,7 @@ URLs.
 ## When to Use
 
 Right after a PR is pushed and created for an Emma theme repo — typically
-immediately following `superpowers:finishing-a-development-branch`'s
+immediately following `digismith:finishing-a-development-branch`'s
 "push and create PR" option — or whenever explicitly asked to capture the
 ephemeral URLs for a given PR.
 

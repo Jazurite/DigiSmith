@@ -17,7 +17,7 @@ CLI directly. Explicit per-task only: nothing here runs automatically.
 ## When to Use
 
 Right when the user asks to offload a specific task while running
-`superpowers:subagent-driven-development` — for the task's first attempt,
+`digismith:subagent-driven-development` — for the task's first attempt,
 or (a second, distinct trigger) for a fix round on a task this skill
 already dispatched. This skill does **not** stop the server — the
 OpenCode server is shared machine-wide by `digismith:depot` now, not

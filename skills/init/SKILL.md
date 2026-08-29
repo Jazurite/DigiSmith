@@ -12,7 +12,7 @@ item **E**, amended. Dispatches to one of two internal-only workers
 depending on state:
 
 - `digismith:bootstrap` — fresh start: profile → ticket → branch → hand off
-  to `superpowers:brainstorming`. The original `using-digismith` process,
+  to `digismith:brainstorming`. The original `using-digismith` process,
   renamed and no longer directly invoked.
 - `digismith:adopt` — mid-stream: a ticket's spec and plan already exist
   outside DigiSmith. Backfills profile/ticket/branch state, relocates the
