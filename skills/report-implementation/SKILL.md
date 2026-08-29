@@ -300,9 +300,13 @@ isn't DigiSmith's repo, or failed — the stderr line names which), render
 it yourself exactly as described below.
 
 Either way, when Step 4 reports the written `report.html`, state plainly
-which path produced it — "generated via Chutes" or "generated in-session,
-offload unavailable/off" — the same way `digismith:enforcer` names its
-rewrap path. Never leave the choice silent.
+which path produced it — "generated via `<provider-name>`" or "generated
+in-session, offload unavailable/off" — the same way `digismith:enforcer`
+names its rewrap path. `<provider-name>` comes from parsing
+`model_offload.ts`'s stderr success line (`offload: success
+(<provider-name>/<model-id>)`) — the same stderr line already being read
+above to tell success from failure, never a new mechanism. Never leave
+the choice silent.
 
 Use this exact template, replacing each `{{PLACEHOLDER}}`. Keep the
 `<style>` block byte-for-byte — it's the same one every DigiSmith

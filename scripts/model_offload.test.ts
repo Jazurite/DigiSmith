@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { main, offload, readProfileProvider } from "./model_offload.ts";
+import { getCredential, main, offload, readProfileProvider } from "./model_offload.ts";
+import { chutes } from "./providers/chutes.ts";
 
 const VALID_HTML = '<!doctype html>\n<html lang="en"><body>ok</body>\n</html>';
 
@@ -97,6 +98,13 @@ describe("offload", () => {
   let profileYml: string;
   let profilePath: string;
   let originalCwd: string;
+  // getCredential falls back to ~/.digismith/.env when the env var is
+  // unset — point HOME/USERPROFILE at an empty temp dir for every test in
+  // this block so that fallback can never pick up a real developer's
+  // actual ~/.digismith/.env and turn a "no credentials" test flaky.
+  let tempHomeDir: string;
+  let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
 
   beforeEach(() => {
     tempRepoDir = mkdtempSync(join(tmpdir(), "digismith-test-"));
@@ -109,11 +117,22 @@ describe("offload", () => {
     writeFileSync(profilePath, "digismith");
     originalCwd = process.cwd();
     process.chdir(tempRepoDir);
+
+    tempHomeDir = mkdtempSync(join(tmpdir(), "digismith-home-"));
+    originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    process.env.HOME = tempHomeDir;
+    process.env.USERPROFILE = tempHomeDir;
   });
 
   afterEach(() => {
     process.chdir(originalCwd);
     rmSync(tempRepoDir, { recursive: true, force: true });
+    rmSync(tempHomeDir, { recursive: true, force: true });
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+    if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = originalUserProfile;
     delete process.env.CHUTES_API_KEY;
     delete process.env.TOKENREPLY_API_KEY;
     vi.unstubAllGlobals();
@@ -291,6 +310,53 @@ describe("offload", () => {
     const [content, status] = await offload("hello", profilePath);
     expect(content).not.toBeNull();
     expect(status).toContain("success");
+  });
+});
+
+describe("getCredential", () => {
+  let tempHomeDir: string;
+  let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
+
+  beforeEach(() => {
+    tempHomeDir = mkdtempSync(join(tmpdir(), "digismith-home-"));
+    originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    process.env.HOME = tempHomeDir;
+    process.env.USERPROFILE = tempHomeDir;
+    delete process.env.CHUTES_API_KEY;
+  });
+
+  afterEach(() => {
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+    if (originalUserProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = originalUserProfile;
+    delete process.env.CHUTES_API_KEY;
+    rmSync(tempHomeDir, { recursive: true, force: true });
+  });
+
+  it("returns null when the env var is unset and no ~/.digismith/.env exists", () => {
+    expect(getCredential(chutes)).toBeNull();
+  });
+
+  it("falls back to ~/.digismith/.env when the env var is unset", () => {
+    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
+    expect(getCredential(chutes)).toBe("cpk_from_file");
+  });
+
+  it("prefers the environment variable over ~/.digismith/.env", () => {
+    process.env.CHUTES_API_KEY = "cpk_from_env";
+    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
+    expect(getCredential(chutes)).toBe("cpk_from_env");
+  });
+
+  it("returns null when the key isn't present in ~/.digismith/.env", () => {
+    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "OTHER_KEY=something\n");
+    expect(getCredential(chutes)).toBeNull();
   });
 });
 

@@ -1,6 +1,6 @@
 ---
 name: offload-implementer
-description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a persistent OpenCode server backed by Chutes (Kimi K3).
+description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a persistent OpenCode server backed by a configured gateway provider (Chutes or TokenReply).
 ---
 
 # Offload Implementer
@@ -8,7 +8,7 @@ description: Use when explicitly asked to offload a specific subagent-driven-dev
 ## Overview
 
 DigiSmith's map item **K.2**. Runs one `subagent-driven-development`
-task on a Chutes-hosted model via [OpenCode](https://opencode.ai) instead
+task on a third-party-hosted model via [OpenCode](https://opencode.ai) instead
 of a normal Claude implementer subagent, when explicitly asked to offload
 that task. The `Agent` tool has no non-Anthropic model routing, so this
 isn't a subagent dispatch — the controller itself drives the `opencode`
@@ -31,7 +31,11 @@ if missing — plain `pnpm add -g opencode-ai` alone installs a broken
 binary, since pnpm skips postinstall scripts by default). Whichever
 credential env var the resolved provider needs (`CHUTES_API_KEY` for
 Chutes, `TOKENREPLY_API_KEY` for TokenReply — see `scripts/providers/`)
-must already be set in the environment `opencode` runs in.
+must already be set in the environment `opencode` runs in. Depot's shared
+server currently exports only `CHUTES_API_KEY` at launch, so dispatching
+with `task_offload_provider: tokenreply` requires the server to have been
+started with `TOKENREPLY_API_KEY` set in its environment too — restart it
+via `digismith:depot` if it's already running without it.
 
 **`--auto` grants real, unattended authority.** Every dispatch below runs
 OpenCode with `--auto` — its own docs describe this as "auto-approve
@@ -61,10 +65,27 @@ Check for `opencode.json` in the worktree root. **Present** → continue.
 `task_offload_provider` from the active profile (`profiles/<name>.yml`,
 same file `digismith:inject-standards` already reads `standards:` from),
 defaulting to `chutes` if the field is absent (matches every existing
-profile — see K.3's design doc). Then run:
+profile — see K.3's design doc).
+
+`print-config.ts` lives in DigiSmith's own repo, not the task worktree
+this dispatch targets — Step 4 dispatches into arbitrary consumer-repo
+worktrees (`--dir "<task-worktree>"`), so invoking the script by a bare
+relative path only works when the controller's cwd already happens to be
+DigiSmith's repo, and fails with `MODULE_NOT_FOUND` everywhere else.
+Locate DigiSmith's own repo the same way `digismith:inject-standards`
+does under "Locating the Standards Library":
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Then run, using that resolved path (absolute, or the cwd-relative path if
+step 1 above applied) — never a bare relative path assumed to work from
+any cwd:
 
 ```bash
-node scripts/providers/print-config.ts <resolved-provider> --role task
+node <digismith-repo>/scripts/providers/print-config.ts <resolved-provider> --role task
 ```
 
 **Exit 0** → its stdout is a single-key JSON object keyed by the provider
@@ -112,9 +133,11 @@ file here that could ride along in a diff. Read `$EXCLUDE_FILE`'s
 current content first (or note its absence), ensure it ends in a
 newline if non-empty, and append a new line `opencode.json` — an append
 operation only, never a whole-file rewrite. `opencode.json` itself
-references your API key only via `{env:CHUTES_API_KEY}`, never a
-literal value, but it's still local machine config that shouldn't be
-committed.
+references your API key only via
+`{env:<credential-env-var-for-the-resolved-provider>}` (e.g.
+`{env:CHUTES_API_KEY}` or `{env:TOKENREPLY_API_KEY}`, depending on which
+provider Step 1 resolved), never a literal value, but it's still local
+machine config that shouldn't be committed.
 
 ### Step 2: Ensure the OpenCode Server Is Running
 

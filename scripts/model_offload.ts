@@ -3,6 +3,7 @@
 // the way a conversational skill can. Run from anywhere else and the caller
 // falls back to in-session generation.
 import { readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, requireArgs } from "./cli-args.ts";
@@ -74,9 +75,52 @@ export function readProfileProvider(profilePath: string): string | null {
   return null;
 }
 
+// Same plain-text parsing semantics as packages/jira-client/src/client.ts's
+// parseEnvFile: split each line on the first "=", strip matching leading/
+// trailing quotes, skip blank lines and "#" comments. Not imported from
+// that package directly — it's a separate package — this is a local
+// equivalent scoped to the one file this script reads.
+function stripQuotes(value: string): string {
+  if (value.length >= 2) {
+    const first = value[0];
+    const last = value[value.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return value.slice(1, -1);
+    }
+  }
+  return value;
+}
+
+function readDigismithEnvFile(): Record<string, string> {
+  const path = join(homedir(), ".digismith", ".env");
+  if (!isFile(path)) return {};
+
+  let content: string;
+  try {
+    content = readUtf8Strict(path);
+  } catch {
+    return {};
+  }
+
+  const result: Record<string, string> = {};
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    const value = stripQuotes(line.slice(eq + 1).trim());
+    result[key] = value;
+  }
+  return result;
+}
+
 export function getCredential(provider: GatewayProvider): string | null {
-  const value = process.env[provider.credentialEnv];
-  return value && value.trim() ? value.trim() : null;
+  const envValue = process.env[provider.credentialEnv];
+  if (envValue && envValue.trim()) return envValue.trim();
+
+  const fileValue = readDigismithEnvFile()[provider.credentialEnv];
+  return fileValue && fileValue.trim() ? fileValue.trim() : null;
 }
 
 export class HttpError extends Error {
@@ -94,9 +138,8 @@ export async function callProvider(
 ): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  let response: Response;
   try {
-    response = await fetch(`${provider.baseUrl}/chat/completions`, {
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -108,21 +151,21 @@ export async function callProvider(
       }),
       signal: controller.signal,
     });
+
+    if (!response.ok) {
+      throw new HttpError(response.status);
+    }
+
+    const payload: unknown = await response.json();
+    const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
+      ?.content;
+    if (typeof content !== "string") {
+      throw new Error("malformed response: content is not a string");
+    }
+    return content;
   } finally {
     clearTimeout(timer);
   }
-
-  if (!response.ok) {
-    throw new HttpError(response.status);
-  }
-
-  const payload: unknown = await response.json();
-  const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
-    ?.content;
-  if (typeof content !== "string") {
-    throw new Error("malformed response: content is not a string");
-  }
-  return content;
 }
 
 export function hasExpectedHtmlShape(content: string): boolean {

@@ -214,8 +214,11 @@ the expected `.digismith/docs/<slug>/design.html`:
   `{{BODY_SECTIONS}}`. Either way, write the result to
   `.digismith/docs/<slug>/design.html`, creating the folder if needed,
   and report what was corrected: "Enforcer: brainstorming wrote to
-  `<old-path>` — moved and reformatted (<via Chutes|in-session>) to
-  `.digismith/docs/<slug>/design.html`."
+  `<old-path>` — moved and reformatted (<via <provider-name>|in-session>) to
+  `.digismith/docs/<slug>/design.html`." `<provider-name>` comes from
+  parsing `model_offload.ts`'s stderr success line (`offload: success
+  (<provider-name>/<model-id>)`) — the same stderr line already being
+  read above to tell success from failure, never a new mechanism.
 - **Nothing found at the reported location** → stop and say so plainly;
   don't guess or silently proceed. This means `brainstorming` produced no
   artifact at all, a different failure than a misplaced one.
