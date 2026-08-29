@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primitive Ownership — W.3: Call-Site Cutover</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Primitive Ownership — W.3: Call-Site Cutover</h1>
+  <div class="meta">
+    <span>Date: 2026-08-29</span>
+    <span>Map item: W (W.3)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; Trigger</a></li>
+    <li><a href="#scope">Scope: W.3 vs. the Rest of the Initiative</a></li>
+    <li><a href="#architecture">Architecture &amp; the Rewrite Rule</a></li>
+    <li><a href="#data-flow">Data Flow: File-by-File Changes</a></li>
+    <li><a href="#error-handling">Error Handling &amp; Known Limitations</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#future-phases">Future Phases (W.4+, Not Designed Here)</a></li>
+    <li><a href="#open-questions">Open Questions</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; Trigger</h2>
+  <p><strong>W.1</strong> (2026-08-20) cloned all 14 Superpowers skills verbatim
+  into <code>skills/vendored-&lt;name&gt;/</code>, dormant, with every existing
+  DigiSmith call site left pointed at the still-live
+  <code>superpowers:&lt;name&gt;</code> originals — deliberately, per W.1's own
+  design: "DigiSmith's existing internal call sites ... are left unchanged in
+  this slice ... dormant until a future brainstorm activates one." <strong>W.2</strong>
+  (2026-08-29) built the general activation mechanism (a fork-provenance tag
+  convention and an upstream-diff script) that any future activation will use.</p>
+  <p>Jack confirmed the next step explicitly: before touching
+  <code>finishing-a-development-branch</code>'s actual content (its
+  confirmed no-push bug, <code>backlog/no-push-after-local-merge.md</code>,
+  the leading candidate for map item <strong>W.4</strong>), make every DigiSmith
+  call site actually invoke <code>digismith:&lt;name&gt;</code> instead of
+  <code>superpowers:&lt;name&gt;</code> first — a broad, content-neutral pass,
+  safe because the vendored copies are still byte-identical to what
+  Superpowers would have run. He additionally confirmed he plans to stop
+  keeping the Superpowers plugin installed at all going forward, once
+  nothing in DigiSmith depends on it directly for these primitives.</p>
+</section>
+
+<section id="scope">
+  <h2>Scope: W.3 vs. the Rest of the Initiative</h2>
+  <p>An inventory of every <code>superpowers:&lt;name&gt;</code> occurrence
+  across DigiSmith's own skills (excluding the 14
+  <code>skills/vendored-&lt;name&gt;/</code> clone folders themselves) found:</p>
+  <ul>
+    <li><strong>10 hand-authored skill files</strong> reference
+    <code>superpowers:</code> names: <code>adopt</code>, <code>bootstrap</code>,
+    <code>capture-ephemeral-url</code>, <code>enforcer</code>, <code>init</code>,
+    <code>jira-progress-write-back</code>, <code>offload-implementer</code>,
+    <code>report-implementation</code>, <code>subagent-driven-always</code>,
+    <code>telemetry</code>.</li>
+    <li><strong>Only 6 of the 14 vendored primitives</strong> currently have
+    any DigiSmith-side reference at all: <code>brainstorming</code>,
+    <code>writing-plans</code>, <code>subagent-driven-development</code>,
+    <code>executing-plans</code>, <code>finishing-a-development-branch</code>,
+    <code>using-git-worktrees</code>. The other 8 are referenced nowhere in
+    DigiSmith's own skills today — nothing to cut over for them.</li>
+    <li><strong><code>MEMORY.md</code></strong> has 6 of its own occurrences,
+    covered separately below (see Architecture) since it's prose, not a
+    skill file, and needs a different rule.</li>
+  </ul>
+  <p>Explicitly <strong>out of scope</strong>:</p>
+  <ul>
+    <li><strong>Anything inside <code>skills/vendored-&lt;name&gt;/</code>.</strong>
+    Those clones' own internal cross-references (e.g.
+    <code>subagent-driven-development</code>'s file telling the reader to
+    "use <code>superpowers:finishing-a-development-branch</code>") stay
+    untouched — W.1's design explicitly deferred that to each skill's own
+    future content-activation, map item <strong>W.4+</strong>, not this pass.</li>
+    <li><strong><code>vendored/PROVENANCE.md</code>.</strong> It's the
+    historical record of the clone operation itself and describes the
+    relationship to upstream Superpowers — inherently about the third-party
+    source, not DigiSmith's own invocation path.</li>
+    <li><strong>Reworking <code>check_vendored_skills.ts</code> to source
+    upstream from GitHub instead of the local plugin cache.</strong> Raised
+    in this same conversation (motivated by Jack's plan to stop installing
+    Superpowers), but it's a change to W.2's already-shipped script, not to
+    DigiSmith's call sites — logged separately as
+    <code>backlog/check-vendored-skills-github-source.md</code>, tentative
+    map sub-item <strong>W.2.1</strong>.</li>
+  </ul>
+</section>
+
+<section id="architecture">
+  <h2>Architecture &amp; the Rewrite Rule</h2>
+  <h3>Skill files: uniform rewrite, no per-line judgment needed</h3>
+  <p>Confirmed by inspection: every <code>superpowers:&lt;name&gt;</code>
+  occurrence across all 10 hand-authored skill files describes DigiSmith's
+  own invocation or reference behavior — none state a fact specifically
+  about the upstream plugin. Both categories present (genuine invocation
+  instructions like <code>bootstrap</code>'s "invoke
+  <code>superpowers:brainstorming</code>", and descriptive prose like
+  <code>report-implementation</code>'s "Right when a
+  <code>superpowers:subagent-driven-development</code> plan's final review
+  has come back clean") get rewritten identically, per Jack's explicit
+  "everything, uniformly" — including inside
+  <code>report-implementation</code>'s <em>generated</em>
+  <code>report.html</code> template text itself (future reports will read
+  "Executed via <code>digismith:subagent-driven-development</code>").</p>
+
+  <h3>MEMORY.md: two categories, classified below</h3>
+  <p><code>MEMORY.md</code> is prose describing DigiSmith's own history and
+  philosophy, not a skill file — a blanket find-replace would occasionally
+  break a sentence's own meaning. Two categories exist, and each of its 6
+  occurrences was individually classified:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Location</th><th>Text (excerpt)</th><th>Category</th><th>Action</th></tr>
+    <tr><td>Philosophy #5 (~line 37)</td><td>"Same stance <code>superpowers:using-superpowers</code> takes"</td><td>DigiSmith's own inherited stance (via its now-owned clone)</td><td>→ <code>digismith:</code></td></tr>
+    <tr><td>Map item B (~line 100)</td><td>"Carry ticket context into <code>superpowers:brainstorming</code>"</td><td>Describes a not-yet-built feature's future target, which will be DigiSmith's own primitive</td><td>→ <code>digismith:</code></td></tr>
+    <tr><td>Map item Q (~line 115)</td><td>"Makes <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's ... convention"</td><td>Describes Enforcer's own already-shipped interception target</td><td>→ <code>digismith:</code></td></tr>
+    <tr><td>Map item W's own row (~line 119), clause 1</td><td>"Triggered by a confirmed gap in upstream <code>superpowers:finishing-a-development-branch</code>"</td><td><strong>Fact about the upstream plugin</strong> — the bug lives in Superpowers' own code, and DigiSmith's vendored copy still has the identical bug until W.4 fixes it</td><td><strong>Unchanged</strong> — stays <code>superpowers:</code></td></tr>
+    <tr><td>Map item W's own row (~line 119), clause 2</td><td>"redirect DigiSmith's internal <code>superpowers:&lt;name&gt;</code> references to <code>digismith:&lt;name&gt;</code>"</td><td>Describes the migration itself (from/to) — the sentence structurally needs both prefixes to make sense</td><td><strong>Unchanged</strong> — already correct as written; only the row's "not yet specced" status line gets updated to reflect W.3 shipping</td></tr>
+    <tr><td>Conventions (~line 226)</td><td>"<code>superpowers:subagent-driven-development</code>'s <code>task-brief</code> script parses task boundaries..."</td><td>Describes behavior of a script DigiSmith now invokes under its own name</td><td>→ <code>digismith:</code></td></tr>
+    <tr><td>Conventions (~line 238)</td><td>"<code>superpowers:subagent-driven-development</code>'s own ledger grammar covers..."</td><td>Same as above</td><td>→ <code>digismith:</code></td></tr>
+  </table>
+  </div>
+  <p>The rule in one sentence: <strong>rewrite wherever the text describes
+  what DigiSmith itself invokes or owns; leave it alone wherever the text
+  states a fact specifically about the third-party Superpowers plugin
+  that remains true independent of which prefix DigiSmith uses.</strong></p>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow: File-by-File Changes</h2>
+  <p>No script — 10 skill files plus <code>MEMORY.md</code> is a small
+  enough corpus for direct, reviewed text edits per file, each verified by
+  a post-edit grep rather than trusted blind. One task per file (or a small
+  number of closely-related files grouped) is a planning decision for
+  <code>writing-plans</code>, not decided here.</p>
+  <p>Frontmatter <code>name:</code> fields inside
+  <code>skills/vendored-&lt;name&gt;/SKILL.md</code> need no changes — they
+  were already left untouched by W.1's clone, so
+  <code>digismith:brainstorming</code> already resolves correctly once the
+  plugin cache picks up this change (see Error Handling).</p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling &amp; Known Limitations</h2>
+  <ul>
+    <li><strong>Plugin-cache lag blocks pre-merge live testing.</strong>
+    Documented in <code>backlog/plugin-cache-lag-self-development.md</code>:
+    a live Claude Code session's installed plugin snapshot is always one
+    version behind an unmerged branch. A <code>Skill(skill:
+    "digismith:brainstorming", ...)</code> call made from inside this same
+    unmerged branch will fail with "Unknown skill" until the branch merges
+    and the plugin reinstalls. This is a hard limitation, not a defect to
+    fix here — verification (below) works around it rather than pretending
+    it doesn't exist.</li>
+    <li><strong>A missed occurrence is silent, not loud.</strong> This is a
+    text-editing task with no build step or type system to catch a stray
+    unrewritten <code>superpowers:</code> reference — it would simply keep
+    invoking the upstream skill unnoticed. Mitigated by the grep-based
+    verification step, not by any runtime check.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <ul>
+    <li>Grep the 10 skill files for remaining <code>superpowers:</code>
+    occurrences of the 6 cut-over names — expect zero.</li>
+    <li>Grep <code>MEMORY.md</code> for the same 6 names — expect exactly
+    one remaining occurrence (map item W's clause 1, the confirmed-upstream-bug
+    fact), and confirm every other occurrence changed.</li>
+    <li>Confirm no file under <code>skills/vendored-&lt;name&gt;/</code> or
+    <code>vendored/PROVENANCE.md</code> was touched — this pass is additive
+    text changes to the 10+1 files only.</li>
+    <li><strong>Cannot verify:</strong> live <code>Skill</code>-tool
+    resolution of any <code>digismith:&lt;name&gt;</code> reference before
+    this branch merges and the plugin reinstalls (see Error Handling).
+    Documented as an accepted limitation, not worked around.</li>
+  </ul>
+</section>
+
+<section id="future-phases">
+  <h2>Future Phases (W.4+, Not Designed Here)</h2>
+  <ul>
+    <li><strong>W.4 — first real content activation.</strong> Now that
+    call sites point at <code>digismith:finishing-a-development-branch</code>,
+    actually diverge its content to add the missing push step in Option 1
+    ("Merge Locally"). Its own future brainstorm.</li>
+    <li><strong>W.2.1 — GitHub-sourced upstream check</strong> (see Scope
+    above) — independent of this item, logged to backlog.</li>
+    <li><strong>Post-merge live confirmation</strong> — once this branch
+    merges and the plugin reinstalls, a quick sanity check that
+    <code>digismith:brainstorming</code> (or any cut-over name) actually
+    resolves in a fresh session is worth doing, though not part of this
+    slice's own verification (see Error Handling).</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open Questions</h2>
+  <ul>
+    <li>None blocking W.3. Whether Jack keeps the Superpowers plugin
+    installed after this ships (so W.2's upstream-diff script keeps
+    working) or uninstalls it (retiring that mechanism until W.2.1 ships)
+    is his own environment decision, not something this design needs to
+    settle.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/call-site-cutover/design.html</footer>
+
+</body>
+</html>
