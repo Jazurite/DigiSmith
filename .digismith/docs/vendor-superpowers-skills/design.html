@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Primitive Ownership — R.1: Vendor Superpowers Skills</title>
+<title>Primitive Ownership — W.1: Vendor Superpowers Skills</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -63,10 +63,10 @@
 
 <header class="doc-head">
   <span class="badge">approved for planning</span>
-  <h1>Primitive Ownership — R.1: Vendor Superpowers Skills</h1>
+  <h1>Primitive Ownership — W.1: Vendor Superpowers Skills</h1>
   <div class="meta">
     <span>Date: 2026-08-20</span>
-    <span>Map item: R (new, first slice R.1)</span>
+    <span>Map item: W (new, first slice W.1)</span>
   </div>
 </header>
 
@@ -74,13 +74,13 @@
   <h2>Contents</h2>
   <ol>
     <li><a href="#background">Background &amp; Trigger</a></li>
-    <li><a href="#scope">Scope: R.1 vs. the Rest of the Initiative</a></li>
+    <li><a href="#scope">Scope: W.1 vs. the Rest of the Initiative</a></li>
     <li><a href="#philosophy">Relationship to Philosophy #2</a></li>
     <li><a href="#architecture">Architecture &amp; Components</a></li>
     <li><a href="#data-flow">Data Flow</a></li>
     <li><a href="#error-handling">Error Handling &amp; Known Limitations</a></li>
     <li><a href="#testing">Testing / Verification</a></li>
-    <li><a href="#future-phases">Future Phases (R.2+, Not Designed Here)</a></li>
+    <li><a href="#future-phases">Future Phases (W.2+, Not Designed Here)</a></li>
     <li><a href="#open-questions">Open Questions</a></li>
   </ol>
 </nav>
@@ -109,7 +109,7 @@
 </section>
 
 <section id="scope">
-  <h2>Scope: R.1 vs. the Rest of the Initiative</h2>
+  <h2>Scope: W.1 vs. the Rest of the Initiative</h2>
   <p>"Replace Superpowers' core primitives outright" is not one project —
   it's at least six (one per primitive DigiSmith currently calls into:
   <code>brainstorming</code>, <code>writing-plans</code>,
@@ -121,7 +121,7 @@
   makes it the default execution path for every plan) — redesigning it
   carelessly would be far more disruptive than redesigning, say,
   <code>finishing-a-development-branch</code>.</p>
-  <p>This document specs only the first slice, designated <strong>R.1</strong>
+  <p>This document specs only the first slice, designated <strong>W.1</strong>
   following the map's existing sub-item convention
   (<strong>I.1/I.2/I.3</strong>, <strong>K.1/K.2+</strong>,
   <strong>L.1/L.2</strong>, <strong>E.1/E.2</strong>): a pure, mechanical,
@@ -129,7 +129,7 @@
   No primitive is redesigned or replaced in this slice — cloning only
   establishes the baseline DigiSmith will own and evolve from.
   Deciding <em>which</em> primitive to actually replace, and how, is
-  deliberately deferred to R.2+ (see <a href="#future-phases">Future
+  deliberately deferred to W.2+ (see <a href="#future-phases">Future
   Phases</a>); <code>finishing-a-development-branch</code> is the leading
   candidate given the confirmed, scoped gap that triggered this whole
   initiative, but that choice is not locked in by this document.</p>
@@ -141,10 +141,10 @@
   replaces... Duplicating a Superpowers capability is a bug, not a
   feature." Map item R is a deliberate, scoped exception to that rule, not
   a quiet violation of it — the principle stays the default for every
-  DigiSmith skill that isn't map item R; R is called out by name as the one
+  DigiSmith skill that isn't map item W; W is called out by name as the one
   place ownership (not augmentation) is the intended relationship. This
   document's own build includes editing philosophy #2 in MEMORY.md to say
-  so explicitly, and adding map item R itself to the map and build-order
+  so explicitly, and adding map item W itself to the map and build-order
   tables.</p>
 </section>
 
@@ -183,7 +183,7 @@
     <code>name: brainstorming</code>) resolves to
     <code>digismith:brainstorming</code>, not
     <code>digismith:vendored-brainstorming</code>. This also means a future
-    R.2+ activation never needs to touch the <code>name:</code> field —
+    W.2+ activation never needs to touch the <code>name:</code> field —
     only content and DigiSmith's own call sites change.</li>
     <li><strong>All 14 Superpowers skills, cloned verbatim:</strong>
     <code>brainstorming</code>, <code>dispatching-parallel-agents</code>,
@@ -239,7 +239,7 @@
   <code>using-digismith</code>, <code>bootstrap</code>, <code>adopt</code>,
   etc.) — are <strong>left unchanged</strong> in this slice. They keep
   calling the live upstream skills exactly as today. The vendored clones sit
-  dormant until a future R.2+ brainstorm activates one.</p>
+  dormant until a future W.2+ brainstorm activates one.</p>
 </section>
 
 <section id="error-handling">
@@ -253,13 +253,13 @@
     silently chain back to a <em>live</em> upstream skill when it calls out
     to another one. Rewriting those references is a content change, and is
     explicitly out of scope for a byte-identical clone — it gets resolved
-    skill-by-skill, at each one's own future activation (R.2+), not here.
-    This is a known, accepted limitation of R.1, not an oversight: until a
+    skill-by-skill, at each one's own future activation (W.2+), not here.
+    This is a known, accepted limitation of W.1, not an oversight: until a
     given vendored skill is activated, it should not be treated as "fully
     owned."</li>
     <li><strong>Clone integrity.</strong> If a file fails to copy or comes
     back non-identical to its source, that's a hard stop for this slice —
-    fix and re-copy before considering R.1 done. There's no partial-success
+    fix and re-copy before considering W.1 done. There's no partial-success
     mode; either all 14 skills are cloned cleanly or the slice isn't
     finished.</li>
   </ul>
@@ -284,9 +284,9 @@
 </section>
 
 <section id="future-phases">
-  <h2>Future Phases (R.2+, Not Designed Here)</h2>
+  <h2>Future Phases (W.2+, Not Designed Here)</h2>
   <p>Deliberately left unscoped, each a candidate for its own future
-  brainstorm once R.1 has landed:</p>
+  brainstorm once W.1 has landed:</p>
   <ul>
     <li><strong>Activate <code>finishing-a-development-branch</code>.</strong>
     The leading candidate, given the confirmed Option-1-no-push gap that
@@ -315,7 +315,7 @@
 <section id="open-questions">
   <h2>Open Questions</h2>
   <ul>
-    <li>None blocking R.1. The order in which R.2+ primitives get activated,
+    <li>None blocking W.1. The order in which W.2+ primitives get activated,
     and how outside methodologies actually get assimilated, are open by
     design — deferred to their own future brainstorms rather than decided
     speculatively here.</li>

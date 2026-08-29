@@ -1,8 +1,8 @@
-# DigiSmith R.1: Vendor Superpowers Skills Implementation Plan
+# DigiSmith W.1: Vendor Superpowers Skills Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Clone all 14 Superpowers skills verbatim into DigiSmith's own repo as flat, name-prefixed `skills/vendored-<name>/` folders, establishing the ownership baseline map item R will evolve from.
+**Goal:** Clone all 14 Superpowers skills verbatim into DigiSmith's own repo as flat, name-prefixed `skills/vendored-<name>/` folders, establishing the ownership baseline map item W will evolve from.
 
 **Architecture:** Byte-for-byte directory copy from the installed Superpowers plugin cache into `skills/vendored-<name>/` (flat — Claude Code's plugin skill discovery requires exactly one level of nesting under `skills/`, confirmed against its own docs during planning), plus a top-level `vendored/` folder (sibling to `skills/`, not inside it) holding `LICENSE` and `PROVENANCE.md`. No content edits anywhere, no changes to any existing DigiSmith skill file's call sites.
 
@@ -12,7 +12,7 @@
 
 - Every copied file must be byte-identical to its source — verified via `diff -r`, zero exceptions.
 - Skill folders must be direct children of `skills/`. A skill's invocable name comes from its `SKILL.md` frontmatter `name:` field, not its folder name — verbatim clones keep the original `name:` value, so `skills/vendored-brainstorming/SKILL.md` (frontmatter `name: brainstorming`) resolves to `digismith:brainstorming`, not `digismith:vendored-brainstorming`.
-- Zero edits to any existing DigiSmith skill file's call sites in this slice — the 14 clones stay dormant until a future R.2+ brainstorm activates one individually.
+- Zero edits to any existing DigiSmith skill file's call sites in this slice — the 14 clones stay dormant until a future W.2+ brainstorm activates one individually.
 - Source directory: `C:\Users\jazurite\.claude\plugins\cache\claude-plugins-official\superpowers\44c9b2d6e889\skills\` — Superpowers plugin version 6.2.0, cache directory `44c9b2d6e889`.
 - License: MIT (Jesse Vincent, 2025) — the notice must travel with the clone (`vendored/LICENSE`).
 - All commands below assume the working directory is the worktree repo root: `D:\Workspace\Jazurite\DigiSmith-worktree-vendor-superpowers-skills`.
@@ -141,11 +141,11 @@ MIT (Jesse Vincent, 2025) — see `LICENSE` in this folder.
 No automated sync or diff-tracking against upstream exists, by design
 (DigiSmith stays a personal tool, not a multi-source merge system). Future
 upstream Superpowers improvements are pulled in manually, skill by skill,
-only if and when actually wanted. See DigiSmith `MEMORY.md` map item R.
+only if and when actually wanted. See DigiSmith `MEMORY.md` map item W.
 
 ## Activation
 
-A vendored skill above is "dormant" until a future map item R.2+ brainstorm
+A vendored skill above is "dormant" until a future map item W.2+ brainstorm
 activates it: edits its `skills/vendored-<name>/` copy, updates DigiSmith's
 own internal call sites that reference `superpowers:<name>` to reference
 `digismith:<name>` instead, and records the switch in `MEMORY.md`. Until
@@ -170,7 +170,7 @@ git commit -m "docs(vendor-superpowers-skills): add license and provenance recor
 
 **Interfaces:**
 - Consumes: the 14 vendored skill folders (Task 1) and `vendored/LICENSE` + `vendored/PROVENANCE.md` (Task 2).
-- Produces: nothing consumed by later work — this is the terminal task for R.1.
+- Produces: nothing consumed by later work — this is the terminal task for W.1.
 
 - [ ] **Step 1: Confirm no pre-existing DigiSmith file was touched**
 

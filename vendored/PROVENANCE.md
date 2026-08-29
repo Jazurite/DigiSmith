@@ -32,11 +32,11 @@ MIT (Jesse Vincent, 2025) — see `LICENSE` in this folder.
 No automated sync or diff-tracking against upstream exists, by design
 (DigiSmith stays a personal tool, not a multi-source merge system). Future
 upstream Superpowers improvements are pulled in manually, skill by skill,
-only if and when actually wanted. See DigiSmith `MEMORY.md` map item R.
+only if and when actually wanted. See DigiSmith `MEMORY.md` map item W.
 
 ## Activation
 
-A vendored skill above is "dormant" until a future map item R.2+ brainstorm
+A vendored skill above is "dormant" until a future map item W.2+ brainstorm
 activates it. Until then, every vendored skill listed above is an inert,
 unused copy — nothing in DigiSmith calls into any of them. Activating one
 means:
