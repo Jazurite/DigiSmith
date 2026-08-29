@@ -8,8 +8,9 @@ description: Use when about to invoke digismith:brainstorming or digismith:writi
 ## Overview
 
 DigiSmith's map item **Q**. `digismith:brainstorming` and
-`digismith:writing-plans` are third-party Superpowers skills with their
-own default output locations (`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`,
+`digismith:writing-plans` are DigiSmith's vendored copies of Superpowers'
+skills, which still carry their upstream default output locations
+(`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`,
 `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`) and, for
 `brainstorming`, its own default format (plain Markdown). DigiSmith's
 unified docs convention requires `.digismith/docs/<slug>/design.html`

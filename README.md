@@ -41,13 +41,13 @@ process, or [`.digismith/history.html`](.digismith/history.html) for its
 status.
 
 **`subagent-driven-always`** (map item **H**). It intercepts
-`superpowers:writing-plans`' Execution Handoff question — "1.
+`digismith:writing-plans`' Execution Handoff question — "1.
 Subagent-Driven (recommended) / 2. Inline Execution" — the moment a plan
 is saved and before any of its tasks are implemented. It skips the live
-question and defaults straight to `superpowers:subagent-driven-development`,
+question and defaults straight to `digismith:subagent-driven-development`,
 since `report-implementation` (N) and standards injection (G) both
 depend on the per-task ledger only that path produces. It falls back to
-`superpowers:executing-plans` only if the user explicitly asked for
+`digismith:executing-plans` only if the user explicitly asked for
 inline execution, or if the environment has no subagent-dispatch
 capability at all. See
 [`skills/subagent-driven-always/SKILL.md`](skills/subagent-driven-always/SKILL.md)
@@ -56,7 +56,7 @@ its status.
 
 **`capture-ephemeral-url`** (map item **M**). Once a PR is open in an Emma
 Shopify theme repo — typically right after
-`superpowers:finishing-a-development-branch`'s "push and create PR"
+`digismith:finishing-a-development-branch`'s "push and create PR"
 option — it waits for the ephemeral-deploy CI check and reports the
 Shopify Preview Theme and Theme Editor URLs from the bot's PR comment. It
 doesn't create the PR, and writes nothing to JIRA itself —
@@ -67,7 +67,7 @@ for the exact process, or [`.digismith/history.html`](.digismith/history.html) f
 its status.
 
 **`report-implementation`** (map item **N**). It triggers the moment a
-`superpowers:subagent-driven-development` plan's final whole-branch review
+`digismith:subagent-driven-development` plan's final whole-branch review
 comes back clean, and generates that feature's HTML implementation report
 — what shipped, the per-task review record, the final-review findings and
 how they were resolved, the commit list. Timing is the whole point: it has
@@ -78,7 +78,7 @@ for the exact process, or [`.digismith/history.html`](.digismith/history.html) f
 its status.
 
 **`telemetry`** (map item **P**). It triggers right after
-`superpowers:finishing-a-development-branch`'s integration decision has
+`digismith:finishing-a-development-branch`'s integration decision has
 been answered — merge, PR, or keep as-is, all three count as "done for
 now." When the active profile has `logging: true`, it copies this
 ticket's slice of the live session transcript back into DigiSmith's own
@@ -105,7 +105,7 @@ for the exact process, or [`.digismith/history.html`](.digismith/history.html) f
 its status.
 
 **`offload-implementer`** (map item **K.2**). Right when explicitly
-asked to offload a specific `superpowers:subagent-driven-development`
+asked to offload a specific `digismith:subagent-driven-development`
 task — its first attempt, or a fix round on a task it already
 dispatched — it runs that one task on a Chutes-hosted model (Kimi K3)
 via a persistent OpenCode server instead of a normal Claude implementer
@@ -138,7 +138,7 @@ Say something like:
 
 That's it. `digismith:init` takes it from there. For a fresh ticket, it
 gets a real ticket, creates an isolated branch/worktree for it, and hands
-off into `superpowers:brainstorming` with the ticket's content already
+off into `digismith:brainstorming` with the ticket's content already
 loaded — no cold start.
 
 Already mid-stream — a ticket ID from your own tooling, a spec and plan
@@ -212,17 +212,17 @@ Once a real ticket exists, `bootstrap`:
      stranger's branch.
 4. Otherwise, creates a fresh isolated worktree on that branch name
    (preferring a native worktree tool if the session has one, falling
-   back to `superpowers:using-git-worktrees`), and double-checks the
+   back to `digismith:using-git-worktrees`), and double-checks the
    resulting branch name is exactly right — some worktree tools quietly
    rename what you asked for.
 
 ### 3. Hand off to brainstorming
 
 From inside that worktree, `bootstrap` invokes `digismith:enforcer`
-— which tells `superpowers:brainstorming`/`superpowers:writing-plans`
+— which tells `digismith:brainstorming`/`digismith:writing-plans`
 where and in what format DigiSmith needs their output, then checks it
 landed there once each finishes — before invoking
-`superpowers:brainstorming` itself with the ticket's title, description,
+`digismith:brainstorming` itself with the ticket's title, description,
 and acceptance criteria already loaded as seed context. From there,
 Superpowers' own chain takes over unmodified — brainstorming →
 `writing-plans` → `subagent-driven-development`/`executing-plans` — with
