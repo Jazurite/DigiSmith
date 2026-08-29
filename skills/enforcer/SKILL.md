@@ -204,7 +204,7 @@ the expected `.digismith/docs/<slug>/design.html`:
   instruction line: "Fill `{{TOC_ITEMS}}` and `{{BODY_SECTIONS}}` from
   the content above, preserving all of its information; return only the
   complete HTML document, nothing else." Run:
-  `python scripts/model_offload.py --prompt-file <prompt-file>
+  `node scripts/model_offload.ts --prompt-file <prompt-file>
   --profile-path .digismith/profile`. On exit 0, use its stdout as the
   file content verbatim — the script already validated it's a complete,
   fully-substituted HTML document and exits non-zero if it isn't. On any
@@ -214,8 +214,11 @@ the expected `.digismith/docs/<slug>/design.html`:
   `{{BODY_SECTIONS}}`. Either way, write the result to
   `.digismith/docs/<slug>/design.html`, creating the folder if needed,
   and report what was corrected: "Enforcer: brainstorming wrote to
-  `<old-path>` — moved and reformatted (<via Chutes|in-session>) to
-  `.digismith/docs/<slug>/design.html`."
+  `<old-path>` — moved and reformatted (<via <provider-name>|in-session>) to
+  `.digismith/docs/<slug>/design.html`." `<provider-name>` comes from
+  parsing `model_offload.ts`'s stderr success line (`offload: success
+  (<provider-name>/<model-id>)`) — the same stderr line already being
+  read above to tell success from failure, never a new mechanism.
 - **Nothing found at the reported location** → stop and say so plainly;
   don't guess or silently proceed. This means `brainstorming` produced no
   artifact at all, a different failure than a misplaced one.

@@ -1,6 +1,6 @@
 ---
 name: offload-implementer
-description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a persistent OpenCode server backed by Chutes (Kimi K3).
+description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a persistent OpenCode server backed by a configured gateway provider (Chutes or TokenReply).
 ---
 
 # Offload Implementer
@@ -8,7 +8,7 @@ description: Use when explicitly asked to offload a specific subagent-driven-dev
 ## Overview
 
 DigiSmith's map item **K.2**. Runs one `subagent-driven-development`
-task on a Chutes-hosted model via [OpenCode](https://opencode.ai) instead
+task on a third-party-hosted model via [OpenCode](https://opencode.ai) instead
 of a normal Claude implementer subagent, when explicitly asked to offload
 that task. The `Agent` tool has no non-Anthropic model routing, so this
 isn't a subagent dispatch — the controller itself drives the `opencode`
@@ -28,9 +28,14 @@ owned per-plan. When the user says offloaded work is done, invoke
 
 `opencode` on PATH (`pnpm add -g --allow-build=opencode-ai opencode-ai`
 if missing — plain `pnpm add -g opencode-ai` alone installs a broken
-binary, since pnpm skips postinstall scripts by default). A Chutes API
-key available via `python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py
-get --field api_key`.
+binary, since pnpm skips postinstall scripts by default). Whichever
+credential env var the resolved provider needs (`CHUTES_API_KEY` for
+Chutes, `TOKENREPLY_API_KEY` for TokenReply — see `scripts/providers/`)
+must already be set in the environment `opencode` runs in. Depot's shared
+server currently exports only `CHUTES_API_KEY` at launch, so dispatching
+with `task_offload_provider: tokenreply` requires the server to have been
+started with `TOKENREPLY_API_KEY` set in its environment too — restart it
+via `digismith:depot` if it's already running without it.
 
 **`--auto` grants real, unattended authority.** Every dispatch below runs
 OpenCode with `--auto` — its own docs describe this as "auto-approve
@@ -56,29 +61,50 @@ Step 1.
 ### Step 1: Ensure `opencode.json` Exists in the Task's Worktree
 
 Check for `opencode.json` in the worktree root. **Present** → continue.
-**Missing** → write it:
+**Missing** → write it. First resolve which provider this dispatch uses: read
+`task_offload_provider` from the active profile (`profiles/<name>.yml`,
+same file `digismith:inject-standards` already reads `standards:` from),
+defaulting to `chutes` if the field is absent (matches every existing
+profile — see K.3's design doc).
+
+`print-config.ts` lives in DigiSmith's own repo, not the task worktree
+this dispatch targets — Step 4 dispatches into arbitrary consumer-repo
+worktrees (`--dir "<task-worktree>"`), so invoking the script by a bare
+relative path only works when the controller's cwd already happens to be
+DigiSmith's repo, and fails with `MODULE_NOT_FOUND` everywhere else.
+Locate DigiSmith's own repo the same way `digismith:inject-standards`
+does under "Locating the Standards Library":
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Then run, using that resolved path (absolute, or the cwd-relative path if
+step 1 above applied) — never a bare relative path assumed to work from
+any cwd:
+
+```bash
+node <digismith-repo>/scripts/providers/print-config.ts <resolved-provider> --role task
+```
+
+**Exit 0** → its stdout is a single-key JSON object keyed by the provider
+name (e.g. `{"chutes": {...}}`). Write `opencode.json` as:
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "chutes": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Chutes",
-      "options": {
-        "baseURL": "https://llm.chutes.ai/v1",
-        "apiKey": "{env:CHUTES_API_KEY}"
-      },
-      "models": {
-        "moonshotai/Kimi-K3-TEE": {
-          "name": "Kimi K3 (Chutes)",
-          "limit": { "context": 1048576, "output": 65535 }
-        }
-      }
-    }
-  }
+  "provider": <that object, verbatim>
 }
 ```
+
+**Non-zero exit** (unrecognized provider name) → stop here and report
+`BLOCKED` — the same disposition as a missing `opencode` binary (see
+Error Handling). Never write a config that can't authenticate.
+
+Record the resolved provider name and the model ID `print-config.ts` chose
+(the single key inside `.models` in its output) — Step 4 needs both to
+build its `opencode run --model` argument.
 
 Then check whether `opencode.json` is already ignored one way or
 another (`git check-ignore -q opencode.json`, exit 0 = already ignored).
@@ -107,9 +133,11 @@ file here that could ride along in a diff. Read `$EXCLUDE_FILE`'s
 current content first (or note its absence), ensure it ends in a
 newline if non-empty, and append a new line `opencode.json` — an append
 operation only, never a whole-file rewrite. `opencode.json` itself
-references your API key only via `{env:CHUTES_API_KEY}`, never a
-literal value, but it's still local machine config that shouldn't be
-committed.
+references your API key only via
+`{env:<credential-env-var-for-the-resolved-provider>}` (e.g.
+`{env:CHUTES_API_KEY}` or `{env:TOKENREPLY_API_KEY}`, depending on which
+provider Step 1 resolved), never a literal value, but it's still local
+machine config that shouldn't be committed.
 
 ### Step 2: Ensure the OpenCode Server Is Running
 
@@ -227,7 +255,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 PROMPT_EOF
 )
 opencode run --attach "http://127.0.0.1:<port>" \
-  --model chutes/moonshotai/Kimi-K3-TEE --auto --format json \
+  --model <resolved-provider>/<resolved-model-id> --auto --format json \
   --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events.jsonl"
 ```
 
@@ -242,7 +270,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 PROMPT_EOF
 )
 opencode run --attach "http://127.0.0.1:<port>" \
-  --model chutes/moonshotai/Kimi-K3-TEE --auto --format json \
+  --model <resolved-provider>/<resolved-model-id> --auto --format json \
   --session "<captured sessionID>" \
   --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events-round<R>.jsonl"
 ```

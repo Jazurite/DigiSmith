@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pluggable AI Gateway Vendors</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Pluggable AI Gateway Vendors</h1>
+  <div class="meta">
+    <span>Date: 2026-08-29</span>
+    <span>Map item: K.3</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview &amp; core idea</a></li>
+    <li><a href="#spike">Spike evidence</a></li>
+    <li><a href="#scope">Scope decisions</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+    <li><a href="#open-questions">Open questions</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview &amp; core idea</h2>
+  <p>
+    K.2 (<code>digismith:offload-implementer</code>) currently offloads one
+    <code>subagent-driven-development</code> task at a time to a single
+    hardcoded provider — Chutes, via a persistent OpenCode server. K.1
+    (<code>scripts/model_offload.py</code>) separately offloads DigiSmith's
+    own mechanical HTML-generation steps (<code>enforcer</code>'s spec
+    rewrap, <code>report-implementation</code>'s report render) to Chutes
+    too, via a direct HTTP call. Both are single-provider today; K
+    ("Model tiering") already reserves "multi-provider routing beyond the
+    single hardcoded Chutes provider" as undesigned scope in
+    <code>MEMORY.md</code>.
+  </p>
+  <p>
+    K.3 generalizes both mechanisms so the user can choose or switch
+    between AI gateway providers (Chutes, TokenReply, future ones)
+    per-mechanism, instead of being locked into whichever provider each
+    skill shipped with.
+  </p>
+</section>
+
+<section id="spike">
+  <h2>Spike evidence</h2>
+  <p>
+    Sparked 2026-08-28 while investigating a Chutes-subscription-expiry
+    concern for K.2. Discovered TokenReply (tokenreply.com), a unified
+    OpenAI/Anthropic-compatible gateway to 40+ providers, and live-tested
+    an entirely different offload path — the Claude Agent SDK's
+    <code>query()</code> pointed at TokenReply via
+    <code>ANTHROPIC_BASE_URL</code> / <code>ANTHROPIC_AUTH_TOKEN</code>,
+    running Kimi K2.7 as the actual coding agent.
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Confirmed working</div>
+      <h4>Real tool-calling loop</h4>
+      <p>Genuine Read/Bash/Edit calls; a full fix→test→commit cycle
+      succeeded for real (commit <code>070cb6b</code>, 3/3 tests passing,
+      independently verified).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Gotcha</div>
+      <h4>Config inheritance</h4>
+      <p><code>query()</code> loads the full user/project Claude config by
+      default. <code>settingSources: []</code> does not stop the
+      <code>Skill</code> tool from loading — only
+      <code>disallowedTools: ["Skill"]</code> does.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Obstacle</div>
+      <h4>Trial-tier rate limiting</h4>
+      <p>HTTP 429 roughly every 5-10 tool calls on TokenReply's free
+      tier, with a 60s auto-retry backoff. Untested whether Plus removes
+      it.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Methodology finding</div>
+      <h4>Don't trust SDK cost estimates</h4>
+      <p>Agent SDK reported <code>total_cost_usd: $1.39</code> for a run
+      TokenReply's own dashboard billed at ~$0.007-0.008/request
+      (<code>costBasis: "unknown"</code> for non-Anthropic models). K.4
+      turns this into a feature — out of scope here.</p>
+    </div>
+  </div>
+  <p>
+    Real TokenReply pricing observed for <code>kimi-k2.7</code> (Trial
+    tier): $0.95 input / $4.00 output / $0.19 cache-read per 1M tokens,
+    capped at 200K context — smaller than the 1M context Chutes
+    advertises for <code>kimi-k3</code> directly. A real capability
+    difference between providers, not just cost.
+  </p>
+</section>
+
+<section id="scope">
+  <h2>Scope decisions</h2>
+  <p>Decided during brainstorming, each with the alternative it beat:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Decision</th><th>Chosen</th><th>Rejected alternative</th></tr>
+    <tr>
+      <td>Which mechanisms generalize</td>
+      <td>K.1 and K.2 together, sharing one pluggable-provider mechanism</td>
+      <td>K.2 only (the backlog item's original framing)</td>
+    </tr>
+    <tr>
+      <td>K.2's harness</td>
+      <td>Keep OpenCode; parameterize its provider config block</td>
+      <td>Adopt the Claude Agent SDK path used in the spike (would blur
+      into K.6's harness-benchmark territory)</td>
+    </tr>
+    <tr>
+      <td>TokenReply credential storage</td>
+      <td>Plain env var (<code>TOKENREPLY_API_KEY</code>), same pattern
+      Chutes already uses via <code>{env:...}</code> substitution</td>
+      <td>A new OS-keychain/encrypted-file credential manager mirroring
+      chutes-ai's <code>manage_credentials.py</code></td>
+    </tr>
+    <tr>
+      <td>Provider selection granularity</td>
+      <td>Two independent profile fields — <code>model_offload_provider</code>
+      (K.1) and <code>task_offload_provider</code> (K.2, new)</td>
+      <td>One shared field forcing both mechanisms onto the same provider</td>
+    </tr>
+    <tr>
+      <td>Provider config shape</td>
+      <td>Config-as-code: one TypeScript module per vendor implementing a
+      shared interface (Strategy pattern)</td>
+      <td>Config-as-data: one YAML file per vendor under a new
+      <code>providers/</code> folder</td>
+    </tr>
+    <tr>
+      <td>Scripting language</td>
+      <td>TypeScript, run via Node 24's native (stable, on-by-default)
+      type stripping — no <code>tsx</code>/<code>ts-node</code> dependency</td>
+      <td>Leave <code>model_offload.py</code> in Python; write only new
+      K.3 code in TypeScript</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    Each gateway vendor is a <strong>service implementing a shared
+    interface</strong> (Strategy pattern) rather than a row in a config
+    file. A factory resolves a provider name — read from a profile field —
+    to the concrete service:
+  </p>
+  <pre><code>// scripts/providers/types.ts
+export interface GatewayProvider {
+  name: string;
+  baseUrl: string;
+  credentialEnv: string;
+  model(role: "mechanical" | "task"): string;
+  contextWindow: number;
+}</code></pre>
+  <pre><code>// scripts/providers/chutes.ts
+export const chutes: GatewayProvider = {
+  name: "chutes",
+  baseUrl: "https://llm.chutes.ai/v1",
+  credentialEnv: "CHUTES_API_KEY",
+  contextWindow: 1_048_576,
+  model(role) {
+    return role === "task"
+      ? "moonshotai/Kimi-K3-TEE"
+      : "google/gemma-4-31B-turbo-TEE";
+  },
+};</code></pre>
+  <pre><code>// scripts/providers/tokenreply.ts
+export const tokenreply: GatewayProvider = {
+  name: "tokenreply",
+  baseUrl: "https://api.tokenreply.com/v1", // verify against TokenReply's own docs
+  credentialEnv: "TOKENREPLY_API_KEY",
+  contextWindow: 200_000,
+  model() {
+    return "kimi-k2.7";
+  },
+};</code></pre>
+  <pre><code>// scripts/providers/registry.ts
+const providers: Record&lt;string, GatewayProvider&gt; = { chutes, tokenreply };
+
+export function resolveProvider(name: string): GatewayProvider | undefined {
+  return providers[name];
+}</code></pre>
+  <p>
+    Adding a vendor later means writing one new file that implements
+    <code>GatewayProvider</code> and adding it to the registry map — never
+    editing a shared branch of if/else logic.
+  </p>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <ul>
+    <li><code>scripts/providers/types.ts</code>, <code>chutes.ts</code>,
+    <code>tokenreply.ts</code>, <code>registry.ts</code> — new.</li>
+    <li><code>scripts/providers/print-config.ts</code> — new. A small CLI
+    (<code>node scripts/providers/print-config.ts &lt;provider&gt; --role
+    task</code>) that resolves a provider and prints its config as JSON,
+    used by K.2's SKILL.md so it never re-implements resolution logic
+    inline.</li>
+    <li><code>scripts/model_offload.py</code> → <strong>ported to
+    <code>scripts/model_offload.ts</code></strong>. Calls
+    <code>resolveProvider(profile.model_offload_provider)</code> and uses
+    <code>.model("mechanical")</code> / <code>.baseUrl</code> /
+    <code>.credentialEnv</code> generically. The <code>provider !==
+    "chutes"</code> gate in today's <code>offload()</code> is removed —
+    any registered provider now works. Run via plain
+    <code>node scripts/model_offload.ts</code> (Node 24 native type
+    stripping).</li>
+    <li><code>skills/offload-implementer/SKILL.md</code> Step 1 — changed.
+    Reads <code>task_offload_provider</code> from the profile, shells out
+    to <code>print-config.ts</code>, and writes <code>opencode.json</code>'s
+    provider block from the returned values instead of the hardcoded
+    <code>chutes</code> block. Steps 2-6 (server management, dispatch,
+    status extraction, verification) are untouched.</li>
+    <li><code>profiles/*.yml</code> — every existing profile gains
+    <code>task_offload_provider</code> alongside the existing
+    <code>model_offload_provider</code>, both defaulting to
+    <code>chutes</code> so existing profiles keep working unchanged.</li>
+    <li><code>skills/digismith:enforcer</code> and
+    <code>digismith:report-implementation</code> SKILL.md docs — one-line
+    invocation update each, from <code>python scripts/model_offload.py
+    ...</code> to <code>node scripts/model_offload.ts ...</code>. The
+    stdout/exit-code contract is unchanged, so this is the only edit
+    needed in either skill.</li>
+  </ul>
+</section>
+
+<section id="data-flow">
+  <h2>Data flow</h2>
+  <h3>K.1 — mechanical generation</h3>
+  <p>
+    Prompt → <code>model_offload.ts</code> reads <code>.digismith/profile</code>
+    → resolves <code>model_offload_provider</code> → <code>resolveProvider(name)</code>
+    → credential from <code>process.env[provider.credentialEnv]</code> →
+    calls <code>provider.baseUrl</code>'s chat-completions endpoint with
+    <code>provider.model("mechanical")</code> → validates HTML shape →
+    stdout content (exit 0) or stderr status (exit 1), same contract as
+    today.
+  </p>
+  <h3>K.2 — task offload</h3>
+  <p>
+    Dispatch request → <code>offload-implementer</code> Step 1 reads
+    profile → resolves <code>task_offload_provider</code> → shells out to
+    <code>print-config.ts</code> → writes <code>opencode.json</code>'s
+    provider block from the returned JSON → Steps 2-6 proceed exactly as
+    today (Depot-managed shared OpenCode server, dispatch, status
+    extraction, independent verification).
+  </p>
+</section>
+
+<section id="error-handling">
+  <h2>Error handling</h2>
+  <p>
+    Each mechanism keeps its own existing failure philosophy — K.3 adds a
+    new failure mode (unresolvable provider) to both, handled consistently
+    with how each already treats a broken prerequisite:
+  </p>
+  <ul>
+    <li><strong>K.1 (falls back by design):</strong> an unknown provider
+    name or missing credential env var is treated exactly like today's
+    <code>provider != "chutes"</code> skip — clear stderr status, exit 1,
+    caller falls back to in-session generation. No silent
+    misattributed output.</li>
+    <li><strong>K.2 (never silently falls back to Claude):</strong> an
+    unknown provider name or missing credential makes
+    <code>print-config.ts</code> exit non-zero with a clear message; Step
+    1 stops and reports <code>BLOCKED</code> before ever dispatching —
+    the same disposition already documented for a missing
+    <code>opencode</code> binary. Fails fast rather than burning a
+    dispatch attempt against a config that can't authenticate.</li>
+    <li>Existing Chutes-specific error handling in
+    <code>model_offload.py</code> (HTTP errors, malformed/empty response,
+    malformed HTML shape) carries over unchanged — these failure modes
+    were already provider-agnostic, not Chutes-specific logic to
+    rewrite.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li><code>scripts/test_model_offload.py</code> → ported to
+    <code>scripts/model_offload.test.ts</code> (Vitest). Covers provider
+    resolution (known name → correct service, unknown → graceful skip),
+    credential lookup, and the generalized HTTP call against mocked
+    fetches for at least two providers; existing HTML-shape validation
+    logic carries over unchanged.</li>
+    <li>Each <code>scripts/providers/*.ts</code> gets a cheap
+    shape-conformance test — satisfies <code>GatewayProvider</code>,
+    round-trips through <code>resolveProvider</code>.</li>
+    <li><code>print-config.ts</code> is small and pure enough to
+    unit-test the same way: asserts correct JSON for a known
+    provider/role, non-zero exit for an unknown one.</li>
+    <li>K.2's own OpenCode dispatch stays live-tested only, matching this
+    project's existing convention — no automated harness for that part
+    changes.</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of scope</h2>
+  <ul>
+    <li><strong>K.4</strong> — gateway-vs-native-Claude-Code cost
+    comparison.</li>
+    <li><strong>K.5</strong> — running multiple gateways in parallel.</li>
+    <li><strong>K.6</strong> — harness benchmark (Claude Code vs.
+    OpenCode); a different layer entirely, which is exactly why K.3 keeps
+    OpenCode fixed as K.2's harness.</li>
+    <li><strong>K.7</strong> — vendor benchmark (Chutes vs. TokenReply vs.
+    future gateways).</li>
+    <li>TokenReply account creation/payment — the user's own action,
+    never DigiSmith's, same standing boundary as Chutes credential
+    handling elsewhere in this project.</li>
+    <li>Automatic provider selection or fallback (e.g. auto-switching on
+    a rate limit) — switching is a manual profile edit for now.</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open questions</h2>
+  <ul>
+    <li>TokenReply's real API base URL needs to be verified against its
+    own docs at implementation time — <code>https://api.tokenreply.com/v1</code>
+    above is a placeholder, not confirmed by the spike (the spike went
+    through the Claude Agent SDK's own base-URL config, not a directly
+    observed REST endpoint).</li>
+    <li>Whether a paid TokenReply tier actually removes the rate-limiting
+    seen on the Trial tier — untested, not a blocker for this design.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/ai-gateway-vendors/design.html</footer>
+
+</body>
+</html>
