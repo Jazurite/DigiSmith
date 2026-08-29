@@ -1,6 +1,6 @@
 ---
 name: depot
-description: Provisions and manages two machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), and a shared OpenCode server backing digismith:offload-implementer's Chutes-hosted dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server").
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
 ---
 
 # Depot
@@ -178,6 +178,30 @@ then delete `~/.digismith/opencode-server.json`. If the file's PID is
 already dead (process gone), still delete the tracking file — nothing
 to kill, but stale state should not survive.
 
+## Resource: Claude Code Readiness
+
+A **stateless readiness check** for `digismith:offload-implementer`'s
+`claude-code` runner branch — unlike the OpenCode server, `claude -p`
+spawns fresh per dispatch and needs no warm server, so there is no
+process, pid, or port to track here, and no `~/.digismith/*.json`
+tracking file at all.
+
+### Which Operation
+
+- **Invoked by `digismith:offload-implementer`**, every time a task is
+  dispatched via the `claude-code` runner (not just the first — there's
+  no persistent state to reuse across dispatches, so this check runs
+  every time).
+
+### Operation: `ensure-claude-code` — stateless readiness check
+
+```bash
+claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
+```
+
+**Exit 0** → `claude` is on PATH and supports `--bare`; return ready.
+**Non-zero exit** → not ready (see Error Handling).
+
 ## Error Handling
 
 | Case | Disposition |
@@ -187,6 +211,7 @@ to kill, but stale state should not survive.
 | `ensure` fails when called from `digismith:bootstrap`/`digismith:adopt` | Fail the whole ticket-start flow — report the error, do not proceed to the next step of whichever skill called it. |
 | `refresh` invoked directly and it fails | Report the error; leave the existing clone exactly as it was — a failed `fetch` never reaches `reset --hard`, so nothing is left half-updated. |
 | `opencode` not on PATH | Stop, tell the caller plainly, point at `pnpm add -g --allow-build=opencode-ai opencode-ai` (plain `pnpm add -g opencode-ai` alone installs a broken binary — pnpm skips postinstall scripts by default). Don't attempt to install it silently. |
+| `claude` not on PATH, or doesn't support `--bare` | Stop, tell the caller plainly, point at `npm install -g @anthropic-ai/claude-code`. Never auto-install. |
 | Server fails to start (no "listening on" line in the log within a few seconds) | Stop, show the log content, don't retry silently. |
 | Tracked PID in `~/.digismith/opencode-server.json` is no longer running | Treat as stale, start fresh per `ensure-opencode-server` above, overwrite the tracking file. |
 | WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
@@ -236,3 +261,4 @@ to kill, but stale state should not survive.
 | packages/ clone | `refresh` | User asks directly, any time | Fetch + hard reset to `origin/main` (runs `ensure` first if the clone doesn't exist yet) |
 | OpenCode server | `ensure-opencode-server` | Called by `digismith:offload-implementer`, first offload in a session | Start if not alive (resolving the real Windows PID), else return the tracked port |
 | OpenCode server | `stop-opencode-server` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
+| Claude Code readiness | `ensure-claude-code` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Stateless PATH + `--bare`-support check, no state written |
