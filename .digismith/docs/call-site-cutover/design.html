@@ -150,13 +150,35 @@
   </ul>
 </section>
 
+<div class="callout">
+  <strong>Correction found during planning (2026-08-29):</strong> a closer,
+  line-by-line read while writing the implementation plan surfaced one
+  exception this section's original inspection missed —
+  <code>subagent-driven-always/SKILL.md</code> contains a sentence that
+  literally quotes <code>writing-plans</code>' own unmodified plan-header
+  boilerplate text in double quotes: <code>"REQUIRED SUB-SKILL: Use
+  superpowers:subagent-driven-development (recommended) or
+  superpowers:executing-plans"</code>. That quoted string is real,
+  currently-accurate content from a file this initiative isn't touching
+  (the vendored <code>writing-plans</code> clone, out of scope until its
+  own W.4+ activation) — rewriting the quote would make
+  <code>subagent-driven-always</code> misdescribe what a real generated
+  plan file actually contains. This is the same category of exception as
+  <code>MEMORY.md</code>'s upstream-bug clause below (a fact about fixed,
+  untouched content), just found in a skill file rather than in
+  <code>MEMORY.md</code> — the "Architecture" text immediately below is
+  corrected to reflect it. Only that one quoted string is affected;
+  everything else in this section's original inspection holds.
+</div>
+
 <section id="architecture">
   <h2>Architecture &amp; the Rewrite Rule</h2>
-  <h3>Skill files: uniform rewrite, no per-line judgment needed</h3>
+  <h3>Skill files: uniform rewrite, with one documented exception</h3>
   <p>Confirmed by inspection: every <code>superpowers:&lt;name&gt;</code>
   occurrence across all 10 hand-authored skill files describes DigiSmith's
   own invocation or reference behavior — none state a fact specifically
-  about the upstream plugin. Both categories present (genuine invocation
+  about the upstream plugin, <strong>except one</strong>: see the callout
+  above. Both categories present (genuine invocation
   instructions like <code>bootstrap</code>'s "invoke
   <code>superpowers:brainstorming</code>", and descriptive prose like
   <code>report-implementation</code>'s "Right when a
