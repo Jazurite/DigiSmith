@@ -130,6 +130,14 @@ describe("compareFile", () => {
     expect(result.status).toBe("no-drift");
     expect(result.localDiff).toContain("missing locally");
   });
+
+  it("reports removed-upstream with local divergence separately", () => {
+    const result = compareFile("SKILL.md", "base\n", null, "local-edit\n");
+    expect(result.status).toBe("removed-upstream");
+    expect(result.upstreamDiff).toContain("no longer exists upstream");
+    expect(result.localDiff).not.toBe("");
+    expect(result.localDiff).toContain("local-edit");
+  });
 });
 
 describe("formatSkillReport", () => {
@@ -150,5 +158,40 @@ describe("formatSkillReport", () => {
     expect(text).toContain("SKILL.md");
     expect(text).toContain("upstream diff:");
     expect(text).toContain("+new line");
+  });
+
+  it("details a skill with only local divergence", () => {
+    const files: FileComparison[] = [
+      { relPath: "SKILL.md", status: "no-drift", upstreamDiff: "", localDiff: "+local edit\n" },
+    ];
+    const text = formatSkillReport({ skillName: "testing-skills", files });
+    expect(text).toContain("testing-skills: 0 file(s) changed upstream, 1 locally diverged");
+    expect(text).toContain("SKILL.md");
+    expect(text).toContain("local divergence:");
+    expect(text).toContain("+local edit");
+  });
+
+  it("details a skill with both upstream and local divergence in the same file", () => {
+    const files: FileComparison[] = [
+      {
+        relPath: "SKILL.md",
+        status: "upstream-changed",
+        upstreamDiff: "+upstream change\n",
+        localDiff: "+local change\n",
+      },
+    ];
+    const text = formatSkillReport({ skillName: "mixed-drift", files });
+    expect(text).toContain("mixed-drift: 1 file(s) changed upstream, 1 locally diverged");
+    expect(text).toContain("SKILL.md");
+    expect(text).toContain("upstream diff:");
+    expect(text).toContain("+upstream change");
+    expect(text).toContain("local divergence:");
+    expect(text).toContain("+local change");
+    // Verify they don't bleed together: check the upstream change appears before the local label
+    const upstreamIndex = text.indexOf("+upstream change");
+    const localLabelIndex = text.indexOf("local divergence:");
+    expect(upstreamIndex).toBeGreaterThan(-1);
+    expect(localLabelIndex).toBeGreaterThan(-1);
+    expect(upstreamIndex).toBeLessThan(localLabelIndex);
   });
 });
