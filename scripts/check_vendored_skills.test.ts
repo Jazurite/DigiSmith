@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { pickMostRecentDir, resolveUpstreamSkillsDir } from "./check_vendored_skills.ts";
+import { pickMostRecentDir, resolveUpstreamSkillsDir, readGitBlob, readFileIfExists, listBaselineFiles } from "./check_vendored_skills.ts";
 
 describe("pickMostRecentDir", () => {
   it("returns the path with the highest mtimeMs", () => {
@@ -43,5 +43,39 @@ describe("resolveUpstreamSkillsDir", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-empty-"));
     expect(() => resolveUpstreamSkillsDir(tmpBase)).toThrow("Superpowers plugin cache not found");
     fs.rmSync(tmpBase, { recursive: true, force: true });
+  });
+});
+
+const BASELINE_SHA = "a6418858b5374c2506d1ff799b2dcb418bff53d1";
+
+describe("readGitBlob", () => {
+  it("returns file content for a path that existed at the given revision", () => {
+    const content = readGitBlob(BASELINE_SHA, "skills/vendored-brainstorming/SKILL.md");
+    expect(content).toContain("name: brainstorming");
+  });
+
+  it("returns null for a path that did not exist at the given revision", () => {
+    const content = readGitBlob(BASELINE_SHA, "skills/vendored-brainstorming/NOPE.md");
+    expect(content).toBeNull();
+  });
+});
+
+describe("readFileIfExists", () => {
+  it("returns null for a nonexistent absolute path", () => {
+    expect(readFileIfExists(path.join(os.tmpdir(), "digismith-definitely-not-here.txt"))).toBeNull();
+  });
+
+  it("returns file content for an existing file", () => {
+    const tmpFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "digismith-readfile-")), "x.txt");
+    fs.writeFileSync(tmpFile, "hello");
+    expect(readFileIfExists(tmpFile)).toBe("hello");
+  });
+});
+
+describe("listBaselineFiles", () => {
+  it("lists files under a skill dir at the baseline commit, stripped of the skill-dir prefix", () => {
+    const files = listBaselineFiles(BASELINE_SHA, "skills/vendored-brainstorming");
+    expect(files).toContain("SKILL.md");
+    expect(files.every((f) => !f.startsWith("skills/"))).toBe(true);
   });
 });

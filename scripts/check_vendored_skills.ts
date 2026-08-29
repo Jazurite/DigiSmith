@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 
 export interface DirEntry {
   path: string;
@@ -41,4 +42,36 @@ export function resolveUpstreamSkillsDir(baseDir: string = os.homedir()): string
     });
   const chosen = pickMostRecentDir(entries);
   return path.join(chosen, "skills");
+}
+
+export function readGitBlob(sha: string, relPath: string): string | null {
+  const result = spawnSync("git", ["show", `${sha}:${relPath}`], { encoding: "utf8" });
+  if (result.status === 0) {
+    return result.stdout;
+  }
+  if (result.status === 128 && result.stderr.includes("does not exist in")) {
+    return null;
+  }
+  throw new Error(`git show failed for ${sha}:${relPath}: ${result.stderr}`);
+}
+
+export function readFileIfExists(absPath: string): string | null {
+  if (!fs.existsSync(absPath)) {
+    return null;
+  }
+  return fs.readFileSync(absPath, "utf8");
+}
+
+export function listBaselineFiles(sha: string, skillRelDir: string): string[] {
+  const result = spawnSync("git", ["ls-tree", "-r", "--name-only", sha, "--", skillRelDir], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(`git ls-tree failed for ${sha} ${skillRelDir}: ${result.stderr}`);
+  }
+  const prefix = `${skillRelDir}/`;
+  return result.stdout
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line));
 }
