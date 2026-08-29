@@ -1,6 +1,6 @@
 ---
 name: report-implementation
-description: Use when a `superpowers:subagent-driven-development` plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace.
+description: Use when a `digismith:subagent-driven-development` plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace.
 ---
 
 # Report Implementation
@@ -11,14 +11,14 @@ DigiSmith's map item **N**. Formalizes what was, until now, a
 manually-written report (see
 `.digismith/docs/standards-injection/report.html`,
 written by hand for map item G) into a required step of every
-`superpowers:subagent-driven-development` plan's completion. Generates an
+`digismith:subagent-driven-development` plan's completion. Generates an
 HTML implementation report — what shipped, the per-task review record,
 the final-review findings and how they were resolved, the commit list —
 and commits it to `.digismith/docs/<feature-slug>/`.
 
 ## When to Use
 
-Right when a `superpowers:subagent-driven-development` plan's final
+Right when a `digismith:subagent-driven-development` plan's final
 whole-branch review has come back clean — every finding fixed, parked
 with a ruling, or the review found nothing to begin with — and **before**
 that skill's own Finish step runs `rm -rf` on the plan's workspace
@@ -26,7 +26,7 @@ that skill's own Finish step runs `rm -rf` on the plan's workspace
 branch merges": the ledger this skill reads only exists until that
 deletion, and this repo's merges are always fast-forward, so the commit
 range recorded here won't change once
-`superpowers:finishing-a-development-branch` actually runs.
+`digismith:finishing-a-development-branch` actually runs.
 
 That last point is an assumption, not a guarantee: it holds because every
 DigiSmith feature so far has merged fast-forward. If a real merge commit
@@ -37,8 +37,8 @@ first time that happens.
 ## Prerequisites
 
 A ledger must exist at `.superpowers/sdd/<plan-basename>/progress.md`. If
-it doesn't (e.g. the plan ran via `superpowers:executing-plans` instead of
-`superpowers:subagent-driven-development`), this skill's trigger condition
+it doesn't (e.g. the plan ran via `digismith:executing-plans` instead of
+`digismith:subagent-driven-development`), this skill's trigger condition
 isn't met — skip it silently and let the other skill's Finish step proceed
 as normal. Don't render a report from nothing.
 
@@ -60,7 +60,7 @@ DigiSmith's own repo, which only hosts this skill).
   - **`reporting: false`** → this skill's trigger condition isn't met.
     Skip it entirely and silently — the same disposition as the no-ledger
     case above — and let
-    `superpowers:subagent-driven-development`'s Finish step proceed as
+    `digismith:subagent-driven-development`'s Finish step proceed as
     normal. Don't write a report, don't commit anything, don't ask.
   - **`reporting: true`, or the field absent** → proceed as today.
     Neither shipped profile turns reporting off, so this is the normal
@@ -71,7 +71,7 @@ forward to Step 4 item 5's `publish_artifact` check — read once here, not
 re-located or re-read there.
 
 This skill runs in the **controller session** — the one driving
-`superpowers:subagent-driven-development` — not as a sub-dispatched agent.
+`digismith:subagent-driven-development` — not as a sub-dispatched agent.
 That's what makes `AskUserQuestion` available, which Step 4's
 ask-before-overwrite rule depends on. Don't delegate this skill wholesale
 to a subagent that can't ask.
@@ -156,7 +156,7 @@ absorbing silently.)
 ### Step 2: Parse the Ledger into Report Content
 
 The ledger follows DigiSmith's standardized line grammar — per-task lines
-from `superpowers:subagent-driven-development` itself, plus the
+from `digismith:subagent-driven-development` itself, plus the
 final-review lines DigiSmith requires on top of it (both documented in
 `MEMORY.md`'s Conventions section). Everything below keys off that
 grammar.
@@ -205,7 +205,7 @@ the plan file, the ledger, and `git` alone:
   2. the plan's own `**Architecture:**` line (how it's shaped),
   3. this fixed closing sentence: *"Followed the full Superpowers process:
      brainstorming → spec → writing-plans →
-     `superpowers:subagent-driven-development` (`<N>` tasks, each
+     `digismith:subagent-driven-development` (`<N>` tasks, each
      dispatched to a fresh implementer subagent and independently
      reviewed) → a final whole-branch review"* — where `<N>` is the number
      of `### Task N:` headings in the plan. Append
@@ -425,7 +425,7 @@ spec/report already uses:
 
 <section id="build">
   <h2>Build Process</h2>
-  <p>Executed via <code>superpowers:subagent-driven-development</code>: fresh implementer
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
   subagent per task, independent spec-compliance + quality review after each.</p>
   <div class="table-wrap">
   <table>
@@ -544,9 +544,9 @@ rendered empty.
 ### Step 5: Hand Back
 
 This skill's job ends here.
-`superpowers:subagent-driven-development`'s own Finish step continues
+`digismith:subagent-driven-development`'s own Finish step continues
 exactly as written: delete the plan's workspace, then invoke
-`superpowers:finishing-a-development-branch`. Do not re-invoke or
+`digismith:finishing-a-development-branch`. Do not re-invoke or
 duplicate any part of that sequencing.
 
 ## Error Handling
@@ -601,4 +601,4 @@ duplicate any part of that sequencing.
 | 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so; then publish `report.html` via the `Artifact` tool regardless of whether it was committed, unless the active profile has `publish_artifact: false` |
-| 5 | Hand back to `superpowers:subagent-driven-development`'s unmodified Finish step |
+| 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |

@@ -1,15 +1,16 @@
 ---
 name: enforcer
-description: Use when about to invoke superpowers:brainstorming or superpowers:writing-plans for DigiSmith-tracked feature work, or immediately after either one finishes writing its output — via digismith:bootstrap's hand-off, or directly for DigiSmith's own self-development with no ticket involved. Also covers: in plan mode, or "spec"/"plan"/"shape" language, or running brainstorming/writing-plans, for DigiSmith-tracked work specifically.
+description: Use when about to invoke digismith:brainstorming or digismith:writing-plans for DigiSmith-tracked feature work, or immediately after either one finishes writing its output — via digismith:bootstrap's hand-off, or directly for DigiSmith's own self-development with no ticket involved. Also covers: in plan mode, or "spec"/"plan"/"shape" language, or running brainstorming/writing-plans, for DigiSmith-tracked work specifically.
 ---
 
 # Enforcer
 
 ## Overview
 
-DigiSmith's map item **Q**. `superpowers:brainstorming` and
-`superpowers:writing-plans` are third-party Superpowers skills with their
-own default output locations (`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`,
+DigiSmith's map item **Q**. `digismith:brainstorming` and
+`digismith:writing-plans` are DigiSmith's vendored copies of Superpowers'
+skills, which still carry their upstream default output locations
+(`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`,
 `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`) and, for
 `brainstorming`, its own default format (plain Markdown). DigiSmith's
 unified docs convention requires `.digismith/docs/<slug>/design.html`
@@ -30,8 +31,8 @@ Markdown — which the upstream hook says nothing about on its own.
 Two moments, for DigiSmith-tracked work only (see Detecting
 DigiSmith-Tracked Work below):
 
-- **Before** invoking `superpowers:brainstorming` or
-  `superpowers:writing-plans` — give it the override instruction
+- **Before** invoking `digismith:brainstorming` or
+  `digismith:writing-plans` — give it the override instruction
   (Advisory).
 - **Immediately after** either one reports it has written its output —
   `brainstorming`'s "Spec written and committed to `<path>`" message, or
@@ -69,7 +70,7 @@ unmodified defaults.
 
 ## Process
 
-### Step 1: Advisory — Before `superpowers:brainstorming`
+### Step 1: Advisory — Before `digismith:brainstorming`
 
 Append this to the invocation, as explicit instructions the agent gives
 itself:
@@ -181,7 +182,7 @@ a consumer repo per `digismith:jira-intake`'s own per-repo choice, and
 **1 = not ignored** → commit normally. Exit code 1 is the normal, expected
 answer, not a failure.
 
-### Step 2: Verified — After `superpowers:brainstorming` Reports Completion
+### Step 2: Verified — After `digismith:brainstorming` Reports Completion
 
 `brainstorming` reports its own output path when it finishes (e.g. "Spec
 written and committed to `<path>`"). Compare that reported path against
@@ -261,7 +262,7 @@ plugin cache path — a stale, version-locked snapshot. Read
   a generic default across unrelated features). Report the returned URL
   back to whoever is running this.
 
-### Step 4: Advisory — Before `superpowers:writing-plans`
+### Step 4: Advisory — Before `digismith:writing-plans`
 
 `writing-plans` runs as `brainstorming`'s own terminal step once the user
 approves the spec — there is no separate `digismith:bootstrap` hook here, so
@@ -273,7 +274,7 @@ Write the plan to `.digismith/docs/<slug>/plan.md`, not the default
 `docs/superpowers/plans/...md` location. Format is unchanged — plans stay
 Markdown.
 
-### Step 5: Verified — After `superpowers:writing-plans` Reports Completion
+### Step 5: Verified — After `digismith:writing-plans` Reports Completion
 
 Same pattern as Step 2, simpler since format never changes (Markdown
 either way):

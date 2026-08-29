@@ -1,6 +1,6 @@
 ---
 name: adopt
-description: Invoked internally by digismith:init when a ticket's spec and plan already exist outside DigiSmith (an external ticket source, vanilla superpowers:brainstorming/superpowers:writing-plans) — never invoke directly.
+description: Invoked internally by digismith:init when a ticket's spec and plan already exist outside DigiSmith (an external ticket source, vanilla digismith:brainstorming/digismith:writing-plans) — never invoke directly.
 ---
 
 # Adopt (Mid-Stream Path)
@@ -12,7 +12,7 @@ Resolves the recurring friction Jack captured as
 see `.digismith/history.html`'s 2026-08-16 entry):
 a ticket ID pulled through an external source (e.g. an Atlassian MCP
 connector) plus a spec and plan already written by vanilla
-`superpowers:brainstorming`/`superpowers:writing-plans`, with none of
+`digismith:brainstorming`/`digismith:writing-plans`, with none of
 DigiSmith's profile-scoped standards injection or docs convention ever having
 kicked in. `digismith:adopt` backfills that state retroactively, then hands
 off to the same build stage a fresh-start ticket would reach.
@@ -201,13 +201,13 @@ targeting the slug resolved in Step 3:
 
 ### Step 7: Hand Off to Build
 
-Invoke `superpowers:subagent-driven-development` directly against
-`.digismith/docs/<slug>/plan.md` — `superpowers:brainstorming` and
-`superpowers:writing-plans` already ran outside DigiSmith for this ticket,
+Invoke `digismith:subagent-driven-development` directly against
+`.digismith/docs/<slug>/plan.md` — `digismith:brainstorming` and
+`digismith:writing-plans` already ran outside DigiSmith for this ticket,
 so they are not invoked here. From this point on,
 `digismith:subagent-driven-always` and `digismith:inject-standards`
 Scenario 4 apply exactly as they would for any other
-`superpowers:subagent-driven-development` dispatch — no special-casing needed, since
+`digismith:subagent-driven-development` dispatch — no special-casing needed, since
 both trigger off the dispatch itself, not off which entry point produced it.
 
 ## Error Handling
@@ -240,4 +240,4 @@ both trigger off the dispatch itself, not off which entry point produced it.
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/profile` and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
 | 6 | Write Step 1's in-hand plan (required) and spec (optional) content into `.digismith/docs/<slug>/` via `digismith:enforcer`'s move-and-correct logic, publishing `design.html` when `publish_artifact` allows |
-| 7 | Invoke `superpowers:subagent-driven-development` directly against the relocated `plan.md` |
+| 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |

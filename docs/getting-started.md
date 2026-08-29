@@ -61,7 +61,7 @@ created until a profile is chosen.
 Ticket exists (Door 1) or gets drafted from a raw need (Door 2) →
 `.digismith/docs/<slug>/ticket.md` → `<Key>__<slug>` (or `<slug>` alone
 under `ticket: false`) branch/worktree → hands off into
-`superpowers:brainstorming` with that ticket content preloaded. From
+`digismith:brainstorming` with that ticket content preloaded. From
 there Superpowers' own chain runs unmodified: `writing-plans` →
 `subagent-driven-development`, with its own gates at each stage.
 

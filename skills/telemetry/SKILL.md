@@ -1,6 +1,6 @@
 ---
 name: telemetry
-description: Use right after superpowers:finishing-a-development-branch's Step 4 integration-decision menu has been answered (any of its three options).
+description: Use right after digismith:finishing-a-development-branch's Step 4 integration-decision menu has been answered (any of its three options).
 ---
 
 # Telemetry
@@ -19,7 +19,7 @@ improvement opportunities.
 
 ## When to Use
 
-Right after `superpowers:finishing-a-development-branch`'s Step 4 menu
+Right after `digismith:finishing-a-development-branch`'s Step 4 menu
 is answered — merge locally, push and create a PR, or keep as-is, all
 three count as "the build is done for now." Check the current working
 directory (the same one `finishing-a-development-branch` just acted in)
@@ -251,7 +251,7 @@ unconditionally clears it at the start of every run.)
 Report one line: what was captured (repo, slug, line count) and where
 it landed in DigiSmith's own repo.
 
-This skill's job ends here. `superpowers:finishing-a-development-branch`'s
+This skill's job ends here. `digismith:finishing-a-development-branch`'s
 own Step 5/6 (execute the chosen integration option, clean up) continues
 exactly as written — do not re-invoke or duplicate any part of it.
 
