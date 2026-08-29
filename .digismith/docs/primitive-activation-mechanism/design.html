@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primitive Ownership — W.2: Activation Mechanism</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Primitive Ownership — W.2: Activation Mechanism</h1>
+  <div class="meta">
+    <span>Date: 2026-08-29</span>
+    <span>Map item: W (W.2)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; Trigger</a></li>
+    <li><a href="#scope">Scope: W.2 vs. the Rest of the Initiative</a></li>
+    <li><a href="#architecture">Architecture &amp; Components</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#error-handling">Error Handling &amp; Known Limitations</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#future-phases">Future Phases (W.3+, Not Designed Here)</a></li>
+    <li><a href="#open-questions">Open Questions</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; Trigger</h2>
+  <p><strong>W.1</strong> (merged 2026-08-29) did a pure, static, byte-identical
+  clone of all 14 Superpowers skills into <code>skills/vendored-&lt;name&gt;/</code>,
+  explicitly declared "a snapshot, not a mirror" with no sync tooling —
+  future upstream improvements were to be pulled in manually, skill by
+  skill, if and when noticed. All 14 clones are dormant: nothing in
+  DigiSmith calls into any of them yet.</p>
+  <p>Two gaps in that plan surfaced immediately, before any primitive had
+  actually been activated:</p>
+  <ul>
+    <li>A vendored skill's frontmatter <code>description:</code> is
+    currently byte-identical to its still-live <code>superpowers:</code>
+    counterpart — nothing marks it as a DigiSmith fork from inside the
+    skill itself. <code>vendored/PROVENANCE.md</code> records provenance
+    for the whole batch, but that file isn't visible from a skill listing
+    or from opening the skill's own <code>SKILL.md</code>.</li>
+    <li>"No sync tooling, pull in manually if and when wanted" has no
+    actual mechanism behind it — there's no way to know <em>what</em>
+    upstream has changed without manually diffing 14 skill folders by
+    hand against whatever Superpowers plugin version happens to be
+    installed.</li>
+  </ul>
+  <p>This document specs the general, reusable mechanism for both gaps —
+  applicable to any of the 14 vendored skills, activated or still
+  dormant — using no specific primitive's content as its subject.</p>
+</section>
+
+<section id="scope">
+  <h2>Scope: W.2 vs. the Rest of the Initiative</h2>
+  <p>This slice is infrastructure only: a naming/description convention
+  plus one diff-check script. It deliberately does <strong>not</strong>
+  include:</p>
+  <ul>
+    <li><strong>Call-site cutover</strong> — redirecting DigiSmith's
+    existing internal references (<code>bootstrap</code>,
+    <code>adopt</code>, <code>subagent-driven-always</code>,
+    <code>enforcer</code>, <code>capture-ephemeral-url</code>, etc.) from
+    <code>superpowers:&lt;name&gt;</code> to <code>digismith:&lt;name&gt;</code>
+    for all 14 skills. Content-neutral (the vendored copies are still
+    byte-identical to upstream today) but broad-touching — deliberately
+    deferred to its own future item, tentatively <strong>W.3</strong>.</li>
+    <li><strong>Any actual primitive content change</strong> — e.g.
+    fixing <code>finishing-a-development-branch</code>'s Option 1 never
+    pushing to <code>origin</code> (<code>backlog/no-push-after-local-merge.md</code>),
+    the leading candidate for the first real activation. That's its own
+    item, sequenced after W.3, once call sites actually point at the
+    vendored copy that would need to diverge.</li>
+  </ul>
+  <p>What W.2 delivers is the pattern both of those later items will
+  reuse: how an activated skill announces its fork provenance, and how
+  anyone (activated skill or not) can check what upstream has changed
+  since the W.1 baseline.</p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture &amp; Components</h2>
+  <h3>1. Fork-provenance tag</h3>
+  <p>At activation, a skill's frontmatter <code>description:</code> gets
+  a short parenthetical appended: <code>(DigiSmith fork of Superpowers'
+  &lt;name&gt;)</code>. This serves two purposes at once: visible
+  provenance from a skill listing or the raw file, and the
+  "deconflict the description from the still-active
+  <code>superpowers:&lt;name&gt;</code> original" step
+  <code>vendored/PROVENANCE.md</code>'s Activation checklist already
+  calls for (today both descriptions are identical and harmless; that
+  stops being true the moment either skill's content diverges). This is
+  documented as an addition to that existing checklist, not a new file.
+  Not applied to any skill by this slice — dormant skills keep their
+  untouched upstream description until they're actually activated.</p>
+
+  <h3>2. <code>scripts/check_vendored_skills.ts</code></h3>
+  <p>TypeScript, run directly via <code>node
+  scripts/check_vendored_skills.ts</code> — the repo's root
+  <code>package.json</code> already requires Node ≥24 and carries
+  <code>typescript</code> as a devDependency, and Node 24's built-in type
+  stripping runs a script this simple with no new runtime dependency
+  (no <code>tsx</code>/<code>ts-node</code> added). On-demand only — no
+  scheduled job, no lifecycle hook; covers all 14 vendored skills every
+  run, dormant or activated alike.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Resolve upstream</div>
+      <p>Globs <code>~/.claude/plugins/cache/claude-plugins-official/superpowers/*/skills/</code>
+      and picks the most-recently-modified hash directory. Never
+      hardcodes a specific hash (W.1's recorded <code>44c9b2d6e889</code>
+      is already just a point-in-time snapshot, not a stable identifier
+      across Superpowers updates).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Three-way diff</div>
+      <p>Per skill: <strong>baseline</strong> (the W.1 clone commit's
+      copy, via <code>git show &lt;sha&gt;:skills/vendored-&lt;name&gt;/...</code>),
+      <strong>upstream-now</strong> (freshly resolved), and
+      <strong>local-now</strong> (working tree). Reports
+      baseline→upstream-now as the headline "what changed upstream"
+      signal, and baseline→local-now separately as "what you've
+      customized" context — never conflated into one diff, which is
+      what would happen with a naive two-way comparison once a skill has
+      actually diverged.</p>
+    </div>
+  </div>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow</h2>
+  <ol>
+    <li>Resolve the installed Superpowers plugin's <code>skills/</code>
+    directory (see Architecture above). Fail loudly if none is found.</li>
+    <li>Read the baseline commit SHA from <code>vendored/PROVENANCE.md</code>
+    (<code>a6418858b5374c2506d1ff799b2dcb418bff53d1</code> — the exact
+    commit that performed W.1's original clone).</li>
+    <li>For each of the 14 vendored skills, for every file that existed
+    in the skill at baseline:
+      <ul>
+        <li>Read baseline content via <code>git show &lt;sha&gt;:&lt;path&gt;</code>.</li>
+        <li>Read upstream-now content from the resolved plugin directory.
+        Missing → note as "removed upstream."</li>
+        <li>Read local-now content from the working tree.</li>
+        <li>Compute and print <code>diff(baseline, upstream-now)</code>
+        and, only if non-empty, <code>diff(baseline, local-now)</code>
+        as a clearly separated second block.</li>
+      </ul>
+    </li>
+    <li>Print a one-line summary per skill (no drift / N files changed
+    upstream / also locally diverged) followed by full diff detail for
+    anything non-empty.</li>
+    <li>Pure stdout report. No files written, no state mutated, nothing
+    auto-applied.</li>
+  </ol>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling &amp; Known Limitations</h2>
+  <ul>
+    <li><strong>Plugin cache not found</strong> (Superpowers not
+    installed, or a different marketplace layout) → fail loudly with a
+    clear message, exit non-zero. No partial report — either the
+    upstream side of the comparison is available for all 14 skills or
+    the script doesn't pretend to have checked any of them.</li>
+    <li><strong>Baseline SHA unresolvable</strong> (e.g. history was
+    rewritten and the commit no longer exists) → fail loudly, point at
+    <code>vendored/PROVENANCE.md</code> for a human to fix the recorded
+    SHA. Never silently fall back to a two-way diff — that's exactly the
+    "your own edits drown the real signal" failure mode this design
+    exists to avoid.</li>
+    <li><strong>File removed upstream</strong> → reported as "removed
+    upstream" for that file, not a crash; the rest of the skill's files
+    still get compared normally.</li>
+    <li><strong>Multiple installed plugin versions on disk.</strong>
+    "Most-recently-modified directory" is a heuristic, not a guarantee —
+    if Claude Code ever leaves stale hash directories behind after an
+    update without cleaning them up, mtime could theoretically point at
+    the wrong one. Not investigated further here; worth a second look if
+    the script ever reports something that doesn't match the actually
+    installed version.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <ul>
+    <li>Run the script for real once built — nine days have passed
+    since the 2026-08-20 baseline, so this is a genuine first check for
+    real upstream drift, not just a dry run against zero expected
+    output.</li>
+    <li>Confirm the baseline→upstream-now and baseline→local-now blocks
+    stay correctly separated for at least one skill by temporarily
+    editing a local vendored copy, re-running, and checking the local
+    edit shows up only in the local-divergence block.</li>
+    <li>Confirm a missing/renamed plugin cache directory produces the
+    loud failure described above rather than a silent empty report.</li>
+  </ul>
+</section>
+
+<section id="future-phases">
+  <h2>Future Phases (W.3+, Not Designed Here)</h2>
+  <ul>
+    <li><strong>W.3 — call-site cutover.</strong> Redirect every DigiSmith
+    internal reference to <code>superpowers:&lt;name&gt;</code> over to
+    <code>digismith:&lt;name&gt;</code>, for all 14 vendored skills, as one
+    content-neutral pass (content is still byte-identical to upstream at
+    that point — this is purely about which skill DigiSmith's own call
+    sites actually invoke).</li>
+    <li><strong>First real activation — <code>finishing-a-development-branch</code>.</strong>
+    After W.3, actually diverge its content to add the missing push step
+    in Option 1 ("Merge Locally"), using this document's fork-provenance
+    tag convention and diff-check script as the supporting mechanism.
+    Its own future brainstorm, undesigned here beyond the trigger already
+    on record in <code>backlog/no-push-after-local-merge.md</code>.</li>
+    <li><strong>Activating other primitives</strong> — one at a time,
+    each its own brainstorm, order dictated by future need.</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open Questions</h2>
+  <ul>
+    <li>None blocking W.2. The "multiple installed plugin versions"
+    limitation noted above is worth revisiting if it ever actually bites,
+    not speculatively hardened against here.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/primitive-activation-mechanism/design.html</footer>
+
+</body>
+</html>
