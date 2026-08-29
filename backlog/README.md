@@ -32,3 +32,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [offload-implementer: timeout floor too low, undocumented progress-read options](offload-implementer-timeout-and-progress-read.md) — found live during V.1's smoke test, out of that task's scope
 - [DigiSmith self-development can't test its own not-yet-merged Skill-tool calls](plugin-cache-lag-self-development.md) — structural gap, will recur for any future cross-skill integration built before merge
 - [`check_vendored_skills.ts` hardening](check-vendored-skills-hardening.md) — 8 deferred minors from W.2's final review (added-upstream files invisible, path-quoting, duplicated baseline SHA, etc.); none reachable today
+- [`check_vendored_skills.ts`: check upstream via GitHub, not the local plugin cache (W.2.1)](check-vendored-skills-github-source.md) — Jack plans to stop keeping Superpowers installed once W.3 lands; drift-checking needs a source that doesn't depend on local plugin install state
