@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pluggable Runners</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Pluggable Runners</h1>
+  <div class="meta">
+    <span>Date: 2026-08-29</span>
+    <span>Map item: K.6</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview &amp; core idea</a></li>
+    <li><a href="#scope">Scope decisions</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+    <li><a href="#open-questions">Open questions</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview &amp; core idea</h2>
+  <p>
+    K.3 made the <strong>gateway vendor</strong> pluggable for K.2's
+    <code>digismith:offload-implementer</code> — Chutes or TokenReply, chosen
+    per-profile, both dispatched the same way: through OpenCode. The
+    <strong>runner</strong> — the coding-agent tool that actually reads
+    files, edits, and runs commands during an offloaded task — has stayed
+    hardcoded to OpenCode this whole time.
+  </p>
+  <p>
+    This design makes the runner pluggable too: OpenCode or Claude Code
+    itself, chosen per-profile, the same shape K.3 already established for
+    vendors. K.6 originally framed this territory as a benchmark study
+    ("compare OpenCode vs. Claude Code head-to-head") — this design promotes
+    it to real, shippable infrastructure. A head-to-head benchmark run is a
+    natural follow-on once both runners actually exist side by side, not
+    something this design does itself (see Out of Scope). No new map letter
+    — same precedent K.3 set when it reused K's own reservation instead of
+    inventing letter W.
+  </p>
+</section>
+
+<section id="scope">
+  <h2>Scope decisions</h2>
+  <p>Decided during brainstorming, each with the alternative it beat:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Decision</th><th>Chosen</th><th>Rejected alternative</th></tr>
+    <tr>
+      <td>Claude Code integration mechanism</td>
+      <td>Headless <code>claude -p</code> CLI, spawned as a subprocess —
+      real, documented, non-interactive dispatch, structurally parallel to
+      <code>opencode run</code></td>
+      <td>Embedding the Claude Agent SDK as a library (the K.3 spike's
+      approach) — no subprocess parity with OpenCode, no port/server;
+      <strong>Remote Control</strong> was also considered and ruled out
+      entirely — it's a cross-device UI continuity feature (syncs a
+      session's UI state to claude.ai/mobile), not a network API; no
+      port, no way for an external dispatcher to attach</td>
+    </tr>
+    <tr>
+      <td>Terminology</td>
+      <td><strong>Runner</strong> — the config field, type, and provider
+      capability field all use this term</td>
+      <td>"Harness" (the standard industry term, but reads as a process
+      rather than an actual executing thing); "rig"/"cab" (continues
+      Depot's transport-theme naming, but adds a metaphor without
+      improving clarity over "runner")</td>
+    </tr>
+    <tr>
+      <td>Where the branching lives</td>
+      <td><strong>Approach A</strong> — one skill
+      (<code>offload-implementer</code>), the 4 of 7 steps that actually
+      differ by runner branch internally</td>
+      <td><strong>Approach B</strong> — a second, parallel
+      <code>claude-code-implementer</code> skill with a routing step. Would
+      duplicate the 3 runner-agnostic steps plus Error Handling across two
+      files that must stay in sync by hand — exactly the "verbatim
+      duplication of a logic block" this project's own review rubric treats
+      as a defect</td>
+    </tr>
+    <tr>
+      <td>Vendor/runner compatibility</td>
+      <td>Each <code>GatewayProvider</code> declares
+      <code>supportsRunner: RunnerName[]</code> — a general mechanism.
+      Confirmed today: TokenReply supports both (the spike proved
+      <code>ANTHROPIC_BASE_URL</code> works against it); Chutes' public docs
+      only show an OpenAI-compatible endpoint, no confirmed Anthropic
+      Messages API compatibility, so it lists <code>["opencode"]</code>
+      only</td>
+      <td>Hardcoding "Claude Code only works with TokenReply" as a special
+      case — same practical effect today, but doesn't generalize if a
+      future vendor (or Chutes itself) adds Anthropic-protocol support</td>
+    </tr>
+    <tr>
+      <td>Depot's role for Claude Code</td>
+      <td><code>ensure-claude-code</code> — a <strong>stateless readiness
+      check</strong> (is <code>claude</code> on PATH?). No process, no pid,
+      no port tracked — there's nothing to track, since <code>claude -p</code>
+      spawns fresh per dispatch and needs no warm server</td>
+      <td>No Depot involvement at all (simpler, but breaks the "everything
+      offload-related goes through Depot" consistency the user wants,
+      including as a future hook point for token/cost analytics); Depot
+      tracking active session IDs machine-wide (real new tracked state,
+      not needed today — session IDs already live in the plan's own SDD
+      workspace, matching how OpenCode session IDs are tracked today)</td>
+    </tr>
+    <tr>
+      <td>Missing <code>claude</code> CLI</td>
+      <td>Report plainly, point at
+      <code>npm install -g @anthropic-ai/claude-code</code>, never
+      auto-install</td>
+      <td>Auto-install on demand — would break symmetry with
+      <code>depot/SKILL.md</code>'s existing, explicit "don't attempt to
+      install <code>opencode</code> silently" rule</td>
+    </tr>
+    <tr>
+      <td>Event/result parsing</td>
+      <td>Real code — <code>scripts/runners/parse-result.ts &lt;runner&gt;
+      &lt;events-file&gt;</code>, called from the skill instead of
+      hand-rolled <code>jq</code>/prose per runner</td>
+      <td>Prose-only, mirroring today's OpenCode Step 5 exactly (bash +
+      manual JSON-field navigation described in the SKILL.md text) — works,
+      but doesn't reduce duplication the way moving logic into a tested
+      module does</td>
+    </tr>
+    <tr>
+      <td>Claude Code auth header</td>
+      <td><code>ANTHROPIC_AUTH_TOKEN</code> (Bearer-style), matching what
+      the K.3 spike actually proved working against TokenReply</td>
+      <td><code>ANTHROPIC_API_KEY</code> (<code>X-Api-Key</code> header) —
+      also documented and supported, but not the form the spike verified
+      live</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    Same shape as K.3's <code>GatewayProvider</code> Strategy pattern, one
+    level over: a <code>Runner</code> interface with one concrete module per
+    runner, resolved by a registry factory. New folder
+    <code>scripts/runners/</code>, mirroring <code>scripts/providers/</code>:
+  </p>
+  <pre><code>// scripts/runners/types.ts
+export type RunnerName = "opencode" | "claude-code";
+
+export interface RunnerConfig {
+  // shape varies by runner; consumers treat it opaquely and pass it
+  // straight through to print-config.ts's JSON output
+  [key: string]: unknown;
+}
+
+export interface ParsedResult {
+  status: "success" | "error" | "interrupted";
+  resultText: string | null;
+  sessionId: string | null;
+  costUsd?: number;
+}
+
+export interface Runner {
+  name: RunnerName;
+  buildConfig(provider: GatewayProvider, role: "mechanical" | "task"): RunnerConfig;
+  parseResult(eventsFile: string): ParsedResult;
+}</code></pre>
+  <pre><code>// scripts/runners/opencode.ts
+// buildConfig: today's buildOpencodeProviderBlock, moved here unchanged.
+// parseResult: reads OpenCode's JSONL events, finds the last
+// type:"text" event, extracts .part.text (not top-level .text) and
+// .sessionID (top-level) — codifies today's Step 5 prose exactly.
+export const opencode: Runner = { name: "opencode", buildConfig, parseResult };</code></pre>
+  <pre><code>// scripts/runners/claude-code.ts
+// buildConfig: returns { baseUrl: provider.baseUrl, credentialEnv:
+// provider.credentialEnv } — the two env vars offload-implementer
+// exports as ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN before spawning
+// `claude -p`.
+// parseResult: reads claude -p --output-format stream-json's last line
+// (type:"result"), maps subtype "success"|"error"|"interrupted" to
+// ParsedResult.status, .result -> resultText, .session_id -> sessionId,
+// .cost.total_cost_usd -> costUsd.
+export const claudeCode: Runner = { name: "claude-code", buildConfig, parseResult };</code></pre>
+  <pre><code>// scripts/runners/registry.ts
+const runners: Record&lt;RunnerName, Runner&gt; = { opencode, "claude-code": claudeCode };
+
+export function resolveRunner(name: string): Runner | undefined {
+  return runners[name as RunnerName];
+}</code></pre>
+  <p>
+    <code>GatewayProvider</code> (in <code>scripts/providers/types.ts</code>)
+    gains one field: <code>supportsRunner: RunnerName[]</code>. Resolution
+    logic (in <code>offload-implementer</code>'s Step 1, or a small shared
+    helper) checks the resolved runner is in the resolved provider's list
+    before proceeding — same "never write a config that can't authenticate"
+    principle K.3 already established for unknown providers.
+  </p>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <ul>
+    <li><code>scripts/runners/types.ts</code>, <code>opencode.ts</code>,
+    <code>claude-code.ts</code>, <code>registry.ts</code> — new, mirrors
+    <code>scripts/providers/</code>'s shape.</li>
+    <li><code>scripts/runners/parse-result.ts</code> — new CLI
+    (<code>node scripts/runners/parse-result.ts &lt;runner&gt;
+    &lt;events-file&gt;</code>), prints a uniform
+    <code>{status, resultText, sessionId, costUsd?}</code> JSON object
+    regardless of which runner produced the raw events.</li>
+    <li><code>scripts/providers/types.ts</code> — adds
+    <code>supportsRunner: RunnerName[]</code> to <code>GatewayProvider</code>.
+    <code>chutes.ts</code>: <code>["opencode"]</code>.
+    <code>tokenreply.ts</code>: <code>["opencode", "claude-code"]</code>.</li>
+    <li><code>scripts/providers/print-config.ts</code> — gains
+    <code>--runner &lt;name&gt;</code>. Delegates config-building to the
+    resolved <code>Runner.buildConfig()</code>; for <code>opencode</code>,
+    output is byte-identical to today (the OpenCode-specific logic simply
+    moves into <code>scripts/runners/opencode.ts</code> rather than living
+    inline in <code>print-config.ts</code>).</li>
+    <li><code>profiles/*.yml</code> — every profile gains
+    <code>task_offload_runner: opencode | claude-code</code>, default
+    <code>opencode</code> — every existing profile keeps behaving
+    identically until someone opts in.</li>
+    <li><code>skills/depot/SKILL.md</code> — new operation
+    <code>ensure-claude-code</code>: validate <code>claude</code> on PATH
+    (and that <code>--bare</code> is supported), return ready/not-ready. No
+    file written, no process tracked — <code>stop-opencode-server</code>
+    has no Claude Code equivalent, since there's no process to stop.</li>
+    <li><code>skills/offload-implementer/SKILL.md</code> — Steps 1
+    (config), 2 (ensure), 4 (dispatch), 5 (parse) become runner-conditional.
+    Steps 0 (intent), 3 (prompt-building), 6 (hand-back), and Error Handling
+    stay untouched — genuinely runner-agnostic already.</li>
+  </ul>
+</section>
+
+<section id="data-flow">
+  <h2>Data flow</h2>
+  <h3>Fresh dispatch, either runner</h3>
+  <ol>
+    <li>Resolve <code>task_offload_runner</code> (default
+    <code>opencode</code>) and <code>task_offload_provider</code> from the
+    active profile — same resolution mechanism K.3 already uses.</li>
+    <li>Validate: does the resolved provider's <code>supportsRunner</code>
+    include the resolved runner? No → stop, report <code>BLOCKED</code>,
+    same disposition as an unrecognized provider name today.</li>
+    <li><strong>Runner-conditional config + readiness:</strong>
+      <ul>
+        <li><strong>opencode:</strong> <code>print-config.ts --runner
+        opencode ...</code> → write <code>opencode.json</code> (unchanged).
+        Depot's <code>ensure-opencode-server</code> → get a port.</li>
+        <li><strong>claude-code:</strong> <code>print-config.ts --runner
+        claude-code ...</code> → <code>{baseUrl, credentialEnv}</code>.
+        Depot's <code>ensure-claude-code</code> → confirm <code>claude</code>
+        is on PATH. No port, no config file — two env vars to export at
+        dispatch time.</li>
+      </ul>
+    </li>
+    <li><strong>Runner-conditional dispatch:</strong>
+      <ul>
+        <li><strong>opencode:</strong> unchanged — <code>opencode run
+        --attach &lt;url&gt; --model &lt;provider&gt;/&lt;model&gt; --auto
+        --format json --dir &lt;worktree&gt; "$PROMPT" &gt;
+        events.jsonl</code></li>
+        <li><strong>claude-code:</strong>
+        <code>ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=... claude -p
+        "$PROMPT" --bare --model &lt;model&gt; --permission-mode auto
+        --output-format stream-json --allowedTools "Read,Edit,Bash" &gt;
+        events.jsonl</code>, subprocess <code>cwd</code> set to the task
+        worktree at spawn time (no <code>--dir</code> flag exists for
+        <code>claude</code>)</li>
+      </ul>
+    </li>
+    <li><code>scripts/runners/parse-result.ts &lt;runner&gt;
+    events.jsonl</code> → uniform
+    <code>{status, resultText, sessionId, costUsd?}</code>.</li>
+    <li>Record <code>sessionId</code> for fix rounds — same
+    <code>opencode-sessions.jsonl</code> file, now runner-agnostic (just an
+    id, not opencode-specific).</li>
+    <li>Hand back to normal flow: report contract, review, fix loop —
+    entirely unchanged.</li>
+  </ol>
+  <h3>Fix round</h3>
+  <p>
+    Same as above, but dispatch adds <code>--session &lt;id&gt;</code>
+    (opencode) or <code>--resume &lt;id&gt;</code> (claude-code) instead of
+    starting fresh.
+  </p>
+  <div class="callout">
+    <strong>Why <code>--bare</code> doesn't break standards injection:</strong>
+    Step 3 already inlines the full <code>inject-standards</code> output as
+    literal prompt text before either runner launches — it's not a live
+    skill invocation. <code>--bare</code> only skips
+    auto-discovery of skills/CLAUDE.md/hooks, not content already pasted
+    into the prompt.
+  </div>
+</section>
+
+<section id="error-handling">
+  <h2>Error handling</h2>
+  <p>Extends <code>offload-implementer</code>'s existing table:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Disposition</th></tr>
+    <tr>
+      <td>Resolved provider doesn't list the resolved runner in
+      <code>supportsRunner</code></td>
+      <td>Stop, report <code>BLOCKED</code> — same as today's
+      unrecognized-provider-name case.</td>
+    </tr>
+    <tr>
+      <td><code>claude</code> not on PATH (<code>ensure-claude-code</code>)</td>
+      <td>Stop, report plainly, point at
+      <code>npm install -g @anthropic-ai/claude-code</code>. Never
+      auto-install.</td>
+    </tr>
+    <tr>
+      <td><code>claude -p</code> run genuinely errors
+      (<code>result.subtype: "error"</code> or <code>"interrupted"</code>)</td>
+      <td>Report as <code>BLOCKED</code>, same disposition a stuck
+      <code>opencode run</code> gets today.</td>
+    </tr>
+    <tr>
+      <td><code>--resume &lt;id&gt;</code> no longer resolves (session
+      pruned, expired, different machine)</td>
+      <td>Same disposition as OpenCode's "captured sessionID no longer
+      resolves" case — report plainly, re-dispatch as a fresh task, not a
+      fix round.</td>
+    </tr>
+    <tr>
+      <td>A status reply can lie</td>
+      <td>Unchanged, runner-agnostic — still independently verify a real
+      commit exists before trusting <code>DONE</code>.</td>
+    </tr>
+    <tr>
+      <td>Fix round hits the cap (3)</td>
+      <td>Unchanged, runner-agnostic — user decides, no auto-escalation to
+      a different runner.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li><code>scripts/runners/opencode.ts</code>:
+    <code>buildConfig</code> — behavior-preserving move of today's
+    <code>buildOpencodeProviderBlock</code> (existing
+    <code>print-config.test.ts</code> cases carry over unchanged).
+    <code>parseResult</code> — new tests against realistic OpenCode JSONL
+    fixtures (nested <code>.part.text</code>).</li>
+    <li><code>scripts/runners/claude-code.ts</code>:
+    <code>buildConfig</code> — tests resolving
+    <code>{baseUrl, credentialEnv}</code> per provider.
+    <code>parseResult</code> — tests against synthetic
+    <code>stream-json</code> fixtures built from the documented schema:
+    success, error, interrupted.</li>
+    <li><code>scripts/runners/registry.ts</code>: known/unknown, same shape
+    as <code>resolveProvider</code>'s tests.</li>
+    <li><code>scripts/providers/registry.test.ts</code>: extend to assert
+    <code>supportsRunner</code> is present and valid for both providers.</li>
+    <li><code>print-config.ts</code>: extend existing CLI tests to cover
+    <code>--runner opencode</code> (unchanged output) and
+    <code>--runner claude-code</code> (new shape).</li>
+    <li><code>scripts/runners/parse-result.ts</code>: CLI contract tests,
+    same <code>execFileSync</code> pattern as <code>print-config.test.ts</code>.</li>
+    <li>No tests for <code>offload-implementer</code>/<code>depot</code>
+    SKILL.md edits — prose files, task-level review only, matching how K.3
+    treated its own skill-file changes.</li>
+  </ul>
+  <div class="callout">
+    <strong>Honest risk:</strong> the <code>stream-json</code> fixtures are
+    built from documented schema, not a captured real run — <code>claude
+    -p</code> hasn't actually been invoked in this project yet. Same
+    category of gap K.3 handled with an explicit "manually confirm the CLI
+    contract end to end" plan step; this plan needs the equivalent for a
+    real <code>claude -p</code> invocation before calling it done.
+  </div>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of scope</h2>
+  <ul>
+    <li><strong>Running an actual head-to-head benchmark</strong> —
+    building the infrastructure both runners need to be comparable is this
+    design's job; running the comparison and publishing results is K.6's
+    remaining piece, a natural follow-on once this ships.</li>
+    <li><strong>K.4</strong> — gateway-vs-native-Claude-Code cost
+    comparison. Noted as a forward-compatible detail: <code>claude -p</code>'s
+    <code>stream-json</code> result already carries real
+    <code>cost.total_cost_usd</code>/token counts natively, which K.4 can
+    consume directly without the SDK-cost-estimate workaround the K.3 spike
+    needed.</li>
+    <li><strong>K.5</strong> — running multiple gateways in parallel.</li>
+    <li><strong>K.7</strong> — vendor benchmark (Chutes vs. TokenReply vs.
+    future gateways).</li>
+    <li><strong>Depot-based token/cost analytics</strong> — raised during
+    brainstorming as a reason to route everything through Depot, but not
+    built here. Documented as a future direction: a candidate third Depot
+    resource, hooking into the <code>cost</code>/<code>usage</code> data
+    both runners' <code>ParsedResult</code> can now surface.</li>
+    <li>Automatic runner selection or fallback (e.g. auto-switching if
+    <code>claude</code> isn't installed) — switching is a manual profile
+    edit, same stance K.3 took for provider switching.</li>
+    <li>Chutes gaining Anthropic Messages API compatibility — if it ever
+    does, enabling it is a one-line change to
+    <code>chutes.ts</code>'s <code>supportsRunner</code>, not a design
+    change. Not chased down further here since it's unconfirmed either
+    way.</li>
+  </ul>
+</section>
+
+<section id="open-questions">
+  <h2>Open questions</h2>
+  <ul>
+    <li>Whether <code>claude -p --output-format stream-json</code>'s real
+    output matches the documented schema exactly — needs a live invocation
+    to confirm before implementation treats the schema as gospel (see
+    Testing's honest-risk callout).</li>
+    <li>Whether TokenReply's Trial-tier rate limiting (429s roughly every
+    5-10 tool calls, noted in K.3's spike) meaningfully affects a real
+    <code>claude -p</code> dispatch the same way it did the SDK spike — not
+    a blocker for this design, but worth watching during the first real
+    test.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/pluggable-runners/design.html</footer>
+
+</body>
+</html>
