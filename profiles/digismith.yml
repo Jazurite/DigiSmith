@@ -7,3 +7,4 @@ publish_artifact: true
 logging: true
 model_offload_provider: chutes
 task_offload_provider: chutes
+task_offload_runner: opencode
