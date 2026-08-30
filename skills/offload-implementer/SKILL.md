@@ -158,9 +158,10 @@ chose (the single key inside `.models` in its output) — Step 4 needs
 both to build its `opencode run --model` argument.
 
 **`claude-code` runner, exit 0:** stdout is `{"baseUrl": "...",
-"credentialEnv": "..."}`. No file is written — Step 4 exports these
-directly as `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` environment
-variables at dispatch time.
+"credentialEnv": "...", "model": "..."}`. No file is written — Step 4
+exports `baseUrl`/`credentialEnv` as `ANTHROPIC_BASE_URL`/
+`ANTHROPIC_AUTH_TOKEN` environment variables and passes `model` as its
+`--model` argument at dispatch time.
 
 ### Step 2: Ensure the Resolved Runner Is Ready
 
@@ -310,9 +311,9 @@ No session flag on a fresh `opencode` task — confirmed live that this
 always starts a new, isolated session on an already-running server,
 never carrying context from an earlier call.
 
-**`claude-code` runner, fresh task:** export the two env vars Step 1
-resolved, set the subprocess `cwd` to the task worktree at spawn time
-(there is no `--dir` flag for `claude`):
+**`claude-code` runner, fresh task:** export the two env vars and the
+`model` Step 1 resolved, set the subprocess `cwd` to the task worktree
+at spawn time (there is no `--dir` flag for `claude`):
 
 ```bash
 PROMPT=$(cat <<'PROMPT_EOF'
@@ -320,7 +321,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 PROMPT_EOF
 )
 ANTHROPIC_BASE_URL="<resolved baseUrl>" \
-ANTHROPIC_AUTH_TOKEN="<resolved credential env var's value>" \
+ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json \
   --allowedTools "Read,Edit,Bash" > "<workspace>/task-<N>-claude-code-events.jsonl"
@@ -338,7 +339,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 PROMPT_EOF
 )
 ANTHROPIC_BASE_URL="<resolved baseUrl>" \
-ANTHROPIC_AUTH_TOKEN="<resolved credential env var's value>" \
+ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json \
   --resume "<captured sessionID>" \
@@ -350,6 +351,12 @@ inlines the full `inject-standards` output as literal prompt text before
 either runner launches — it's not a live skill invocation. `--bare`
 only skips auto-discovery of skills/CLAUDE.md/hooks, not content already
 pasted into the prompt.
+
+**Never write out the credential's literal value.** `ANTHROPIC_AUTH_TOKEN="$<credentialEnv>"` above is a shell expansion of the named
+environment variable, not a placeholder to fill in with the actual
+secret — profiles with `logging: true` capture the session transcript
+into DigiSmith's own repo, so a literal value pasted into the command
+text would leak the credential into it.
 
 ### Step 5: Extract the Session ID and the Status Contract
 
@@ -455,6 +462,6 @@ This skill's own job for this dispatch ends here.
 | 1 | Resolve `task_offload_runner`/`task_offload_provider`, run `print-config.ts --runner <name>` — `opencode` runner writes `opencode.json` (ignored via `.git/info/exclude`, never the tracked `.gitignore`); `claude-code` runner gets `{baseUrl, credentialEnv}`, no file written |
 | 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch) |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
-| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=... claude -p "$PROMPT" --bare --output-format stream-json` — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json` (shell-expanded, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
 | 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |

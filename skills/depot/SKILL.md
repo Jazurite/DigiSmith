@@ -7,23 +7,28 @@ description: Provisions and manages machine-wide runtime resources that any cons
 
 ## Overview
 
-DigiSmith's map item **V**. Manages two independent, machine-wide
-runtime resources, each provisioned once and reused by anything that
-needs it, independent of any single repo, ticket, or plan:
+DigiSmith's map item **V**. Manages three independent, machine-wide
+runtime resources, each available to anything that needs it, independent
+of any single repo, ticket, or plan:
 
 - **The packages/ clone** — a local, minimal, refreshable clone of
   DigiSmith's shared `packages/` code at `~/.digismith/repo`, so any
   consumer repo can run a shared package (e.g. a future `jira-client`)
   without needing to know or maintain a path to one.
 - **The OpenCode server** — a single shared `opencode serve` process
-  backing every `digismith:offload-implementer` dispatch across every
-  concurrent `subagent-driven-development` plan on the machine, so no
-  plan needs to spin up its own.
+  backing every `digismith:offload-implementer` `opencode`-runner
+  dispatch across every concurrent `subagent-driven-development` plan on
+  the machine, so no plan needs to spin up its own.
+- **Claude Code readiness** — a stateless PATH + `--bare`-support check
+  backing offload-implementer's `claude-code`-runner dispatches. Unlike
+  the other two, nothing is provisioned or reused here — there's no
+  process or clone to hold onto, just a check run fresh every dispatch.
 
-These two resources share nothing but the same shape of idea — provision
-once, reuse everywhere — and are managed by entirely separate operations
-below. Depot has no generalized "resource" abstraction between them: a
-git clone and a live process don't share mechanics.
+These resources share nothing but the same shape of idea — available
+without the caller needing to know where they live — and are managed by
+entirely separate operations below. Depot has no generalized "resource"
+abstraction between them: a git clone, a live process, and a stateless
+check don't share mechanics.
 
 ## Resource: packages/ Clone
 
@@ -249,9 +254,10 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 - **Model or provider abstraction** — this skill knows nothing about
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
-- **A generalized multi-resource interface** — two concrete resources,
-  two concrete operation pairs. Not generalized until a third real
-  resource needs the same shape.
+- **A generalized multi-resource interface** — three concrete resources
+  (one of them stateless), three concrete operation sets. Not
+  generalized until a fourth real resource needs the same shape as an
+  existing one.
 
 ## Quick Reference
 
