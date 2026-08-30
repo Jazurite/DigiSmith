@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call-Site Cutover (W.3) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — merged</span>
+  <h1>Call-Site Cutover (W.3) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-08-30</span>
+    <span>Map item: <strong>W.3</strong></span>
+    <span>Commit range: <code>327610c..abb1e50</code></span>
+  </div>
+</header>
+
+<div class="callout">
+  <strong>Note on this report's provenance:</strong> generated after the fact, without
+  the plan's SDD ledger (<code>.superpowers/sdd/&lt;plan&gt;/progress.md</code>), which was
+  gitignored and was deleted along with the <code>worktree-call-site-cutover</code> worktree
+  during post-merge cleanup — before this report was written, rather than after, reversing
+  the order the plan's own <a href="HANDOFF.md">HANDOFF.md</a> called for. Task-level detail
+  below is reconstructed from <code>plan.md</code>, <code>design.html</code>,
+  <code>HANDOFF.md</code>, <code>git log</code>, and the controlling session's own record of
+  the work, rather than parsed mechanically from a ledger.
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Redirected every DigiSmith-internal reference to <code>superpowers:&lt;name&gt;</code>
+  over to <code>digismith:&lt;name&gt;</code>, across the 10 hand-authored skill files and
+  <code>MEMORY.md</code>, for the 6 vendored primitives DigiSmith's own skills actually
+  reference (<code>brainstorming</code>, <code>writing-plans</code>,
+  <code>subagent-driven-development</code>, <code>executing-plans</code>,
+  <code>finishing-a-development-branch</code>, <code>using-git-worktrees</code>) —
+  content-neutral, since the vendored copies are still byte-identical to upstream. No
+  script: 11 files, each edited directly with an exact find/replace per occurrence,
+  verified by grep rather than a build step. Followed the full Superpowers process:
+  brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code>
+  (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) →
+  a final whole-branch review, plus 1 fix round before merge. A mandatory post-merge live
+  check (confirm <code>digismith:brainstorming</code> resolves as an invocable skill) was
+  also required and, after correcting a stale plugin-cache pointer, passed.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Five small skill files</h4>
+      <p>Redirected <code>capture-ephemeral-url</code>, <code>telemetry</code>,
+      <code>init</code>, <code>jira-progress-write-back</code>, and
+      <code>offload-implementer</code> to <code>digismith:&lt;name&gt;</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4><code>adopt/SKILL.md</code></h4>
+      <p>Redirected 7 occurrences across the description, prose, and its own migration
+      table.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4><code>bootstrap/SKILL.md</code></h4>
+      <p>Redirected 13 occurrences; left the "Superpowers' own chain takes over from
+      there" methodology prose untouched.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 4</div>
+      <h4><code>enforcer/SKILL.md</code></h4>
+      <p>Redirected 10 occurrences across the description and every step heading; the
+      "third-party Superpowers skills" phrasing this left behind was caught and fixed in
+      the final-review wave (see below).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 5</div>
+      <h4><code>subagent-driven-always/SKILL.md</code></h4>
+      <p>Redirected 11 of 13 occurrences; preserved the one documented exception — a
+      literal quote of <code>writing-plans</code>' own unmodified boilerplate text.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 6</div>
+      <h4><code>report-implementation/SKILL.md</code></h4>
+      <p>Redirected 14 occurrences, including the skill's own generated
+      <code>report.html</code> template — this very report was rendered from the
+      redirected version.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 7</div>
+      <h4><code>MEMORY.md</code></h4>
+      <p>Redirected 6 occurrences; deliberately left map item W's own row untouched
+      (it describes the migration itself and a genuine upstream-Superpowers bug), and
+      marked W.3 built.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 8</div>
+      <h4>Final cross-file verification</h4>
+      <p>Confirmed exactly the 2 expected residual <code>superpowers:</code> occurrences
+      remained (the Task 5 boilerplate quote) and that nothing under
+      <code>skills/vendored-*/</code> was touched.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1</td><td>5 small skill files redirected</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>2</td><td><code>adopt/SKILL.md</code> redirected</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>3</td><td><code>bootstrap/SKILL.md</code> redirected</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>4</td><td><code>enforcer/SKILL.md</code> redirected</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>5</td><td><code>subagent-driven-always/SKILL.md</code> redirected, exception preserved</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>6</td><td><code>report-implementation/SKILL.md</code> redirected</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>7</td><td><code>MEMORY.md</code> redirected, W.3 marked built</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>8</td><td>Final cross-file verification</td><td>Approved, clean</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Whole-branch final review returned "Ready to merge? With fixes" — 1 Critical and 2
+  Important findings, all fixed in one follow-up wave and confirmed clean on scoped
+  re-review; 3 Minor items parked with rulings.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Critical</td>
+      <td>Installed plugin cache pinned at a stale version predating W.1, W.2, K.2, and
+      V.1, meaning none of the cut-over <code>digismith:&lt;name&gt;</code> primitives
+      would resolve after merge.</td>
+      <td><span class="status-fixed">Fixed.</span> Version bumped in
+      <code>.claude-plugin/plugin.json</code> and <code>marketplace.json</code>. While
+      investigating, discovered 6 total merges (K.2, V, V.1, I.1's REST-migration fix,
+      W.2, K.3) had shipped without ever bumping the version — corrected to
+      <code>0.20.0-beta</code> (one bump per missed shipment) rather than the initial
+      <code>0.14.0-beta</code>. A separate stale pointer in the local
+      <code>installed_plugins.json</code> (pointing at the old cached version despite a
+      correct new checkout already present) was also found and fixed. Confirmed live
+      post-merge: <code>digismith:brainstorming</code> resolves and was invoked
+      successfully.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>skills/enforcer/SKILL.md</code> lines 10-11 called
+      <code>digismith:brainstorming</code>/<code>digismith:writing-plans</code>
+      "third-party Superpowers skills with their own default output locations" —
+      self-contradictory once this branch made them DigiSmith's own redirected
+      references.</td>
+      <td><span class="status-fixed">Fixed.</span> Reworded to "DigiSmith's vendored
+      copies of Superpowers' skills, which still carry their upstream default output
+      locations." The milder related phrasing at line ~298 ("let both Superpowers skills
+      run with their own unmodified defaults") was reviewed and left as-is — accurate,
+      not contradictory.</td>
+    </tr>
+    <tr>
+      <td>Important (scope decision)</td>
+      <td><code>README.md</code> (11 lines) and <code>docs/getting-started.md</code> (1
+      line) still used the old <code>superpowers:</code> prefix for the same 6
+      primitives — outside the plan's originally scoped file set
+      (<code>skills/</code> + <code>MEMORY.md</code> only).</td>
+      <td><span class="status-fixed">Fixed.</span> Decision made to fold into this fix
+      wave rather than fast-follow separately. Mechanical
+      <code>superpowers:</code> → <code>digismith:</code> replacement applied to both
+      files; verified zero remaining <code>superpowers:</code> tokens and that bare
+      prose uses of the word "Superpowers" were left untouched.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td><code>design.html</code>'s Testing/Verification section says "expect zero" /
+      "expect exactly one" for residual <code>superpowers:</code> counts, inconsistent
+      with the doc's own classification table documenting 2 residuals in each exception
+      spot.</td>
+      <td>Parked — doc-only inconsistency in an already-published spec; fix only if
+      touching that file again, not worth a dedicated pass.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td><code>MEMORY.md</code>'s W.3 status text read "specced 2026-08-29 (built
+      2026-08-29)" (same date twice) vs. W.2's more compact "specced and built
+      2026-08-29".</td>
+      <td>Parked — cosmetic.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>Surviving prose uses of the word "Superpowers" (not the
+      <code>superpowers:</code> token) — e.g. <code>bootstrap/SKILL.md</code>'s
+      "Superpowers' own chain takes over from there",
+      <code>report-implementation</code>'s generated-report sentence "Followed the full
+      Superpowers process..."</td>
+      <td>Parked — correctly out of this migration's scope (methodology prose, not
+      skill-invocation tokens); revisit only if it ever feels wrong in practice.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">216f84e</span> docs(backlog): log GitHub-sourced upstream check idea (W.2.1) from W.3 brainstorm</li>
+    <li><span class="sha">e6037a6</span> docs(call-site-cutover): add design spec for map item W.3</li>
+    <li><span class="sha">8ef6794</span> docs: mark map item W.3 as specced 2026-08-29</li>
+    <li><span class="sha">a7a19dd</span> docs(call-site-cutover): note the boilerplate-quote exception found during planning</li>
+    <li><span class="sha">42f4854</span> docs(call-site-cutover): add implementation plan for W.3</li>
+    <li><span class="sha">3353884</span> fix(call-site-cutover): redirect 5 small skill files to digismith: primitives</li>
+    <li><span class="sha">88e19be</span> fix(call-site-cutover): redirect adopt/SKILL.md to digismith: primitives</li>
+    <li><span class="sha">273796c</span> fix(call-site-cutover): redirect bootstrap/SKILL.md to digismith: primitives</li>
+    <li><span class="sha">4c53536</span> fix(call-site-cutover): redirect enforcer/SKILL.md to digismith: primitives</li>
+    <li><span class="sha">269e8f4</span> fix(call-site-cutover): redirect subagent-driven-always/SKILL.md, preserving writing-plans' literal boilerplate quote</li>
+    <li><span class="sha">fc0f2c2</span> fix(call-site-cutover): redirect report-implementation/SKILL.md, including its own report.html template</li>
+    <li><span class="sha">ea33ac0</span> fix(call-site-cutover): redirect MEMORY.md's own references, mark W.3 built</li>
+    <li><span class="sha">e0b8005</span> docs(call-site-cutover): add handoff note before final-review fix wave</li>
+    <li><span class="sha">abb1e50</span> fix(call-site-cutover): bump plugin version, fix enforcer wording, redirect README/getting-started</li>
+  </ul>
+  <p style="color:var(--muted); font-size:.85rem;">Merged to <code>main</code> at
+  <code>4ab26a7</code>. Two follow-up commits landed directly on <code>main</code> after
+  the merge, both part of resolving the Critical finding above:
+  <code>b9447c1</code> (corrected the version bump to <code>0.20.0-beta</code>) and
+  <code>c5a7e82</code> (logged the version-bump-automation gap as a backlog item).</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/call-site-cutover/report.html</footer>
+
+</body>
+</html>
