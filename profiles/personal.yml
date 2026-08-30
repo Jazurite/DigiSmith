@@ -6,3 +6,4 @@ reporting: true
 publish_artifact: true
 logging: false
 task_offload_provider: chutes
+task_offload_runner: opencode

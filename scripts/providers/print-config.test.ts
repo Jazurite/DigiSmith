@@ -79,4 +79,43 @@ describe("print-config CLI", () => {
       }),
     ).toThrow();
   });
+
+  it("supports --runner claude-code, returning {baseUrl, credentialEnv, model} instead of an opencode block", () => {
+    const stdout = execFileSync(
+      "node",
+      [SCRIPT_PATH, "tokenreply", "--role", "task", "--runner", "claude-code"],
+      { encoding: "utf-8" },
+    );
+    expect(JSON.parse(stdout)).toEqual({
+      baseUrl: "https://api.tokenreply.com/v1",
+      credentialEnv: "TOKENREPLY_API_KEY",
+      model: "kimi-k2.7",
+    });
+  });
+
+  it("defaults --runner to opencode when omitted, output unchanged from before", () => {
+    const stdout = execFileSync("node", [SCRIPT_PATH, "chutes", "--role", "task"], {
+      encoding: "utf-8",
+    });
+    const parsed = JSON.parse(stdout);
+    expect(Object.keys(parsed)).toEqual(["chutes"]);
+  });
+
+  it("exits non-zero for an unknown runner", () => {
+    expect(() =>
+      execFileSync("node", [SCRIPT_PATH, "chutes", "--role", "task", "--runner", "does-not-exist"], {
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    ).toThrow();
+  });
+
+  it("exits non-zero when the provider doesn't support the resolved runner", () => {
+    expect(() =>
+      execFileSync("node", [SCRIPT_PATH, "chutes", "--role", "task", "--runner", "claude-code"], {
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    ).toThrow();
+  });
 });

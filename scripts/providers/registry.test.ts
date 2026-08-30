@@ -15,6 +15,8 @@ function assertConforms(provider: GatewayProvider) {
   expect(provider.model("mechanical").length).toBeGreaterThan(0);
   expect(typeof provider.model("task")).toBe("string");
   expect(provider.model("task").length).toBeGreaterThan(0);
+  expect(Array.isArray(provider.supportsRunner)).toBe(true);
+  expect(provider.supportsRunner.length).toBeGreaterThan(0);
 }
 
 describe("chutes", () => {
@@ -24,6 +26,10 @@ describe("chutes", () => {
     expect(chutes.model("mechanical")).toBe("google/gemma-4-31B-turbo-TEE");
     expect(chutes.model("task")).toBe("moonshotai/Kimi-K3-TEE");
   });
+
+  it("supports only opencode", () => {
+    expect(chutes.supportsRunner).toEqual(["opencode"]);
+  });
 });
 
 describe("tokenreply", () => {
@@ -31,6 +37,10 @@ describe("tokenreply", () => {
 
   it("uses the confirmed base URL", () => {
     expect(tokenreply.baseUrl).toBe("https://api.tokenreply.com/v1");
+  });
+
+  it("supports both runners", () => {
+    expect(tokenreply.supportsRunner).toEqual(["opencode", "claude-code"]);
   });
 });
 

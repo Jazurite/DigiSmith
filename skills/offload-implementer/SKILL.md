@@ -1,18 +1,21 @@
 ---
 name: offload-implementer
-description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a persistent OpenCode server backed by a configured gateway provider (Chutes or TokenReply).
+description: Use when explicitly asked to offload a specific subagent-driven-development task to a third-party model instead of a normal Claude implementer — runs the task via a pluggable runner (OpenCode or Claude Code) backed by a configured gateway provider (Chutes or TokenReply).
 ---
 
 # Offload Implementer
 
 ## Overview
 
-DigiSmith's map item **K.2**. Runs one `subagent-driven-development`
-task on a third-party-hosted model via [OpenCode](https://opencode.ai) instead
-of a normal Claude implementer subagent, when explicitly asked to offload
-that task. The `Agent` tool has no non-Anthropic model routing, so this
-isn't a subagent dispatch — the controller itself drives the `opencode`
-CLI directly. Explicit per-task only: nothing here runs automatically.
+DigiSmith's map item **K.2**, extended by **K.6** to make the runner
+pluggable. Runs one `subagent-driven-development` task on a
+third-party-hosted model via a resolved **runner** —
+[OpenCode](https://opencode.ai) or [Claude Code](https://claude.com/product/claude-code)
+itself, chosen per-profile — instead of a normal Claude implementer
+subagent, when explicitly asked to offload that task. The `Agent` tool
+has no non-Anthropic model routing, so this isn't a subagent dispatch —
+the controller itself drives the resolved runner's CLI directly.
+Explicit per-task only: nothing here runs automatically.
 
 ## When to Use
 
@@ -26,25 +29,39 @@ owned per-plan. When the user says offloaded work is done, invoke
 
 ## Prerequisites
 
-`opencode` on PATH (`pnpm add -g --allow-build=opencode-ai opencode-ai`
-if missing — plain `pnpm add -g opencode-ai` alone installs a broken
-binary, since pnpm skips postinstall scripts by default). Whichever
-credential env var the resolved provider needs (`CHUTES_API_KEY` for
-Chutes, `TOKENREPLY_API_KEY` for TokenReply — see `scripts/providers/`)
-must already be set in the environment `opencode` runs in. Depot's shared
-server currently exports only `CHUTES_API_KEY` at launch, so dispatching
-with `task_offload_provider: tokenreply` requires the server to have been
-started with `TOKENREPLY_API_KEY` set in its environment too — restart it
-via `digismith:depot` if it's already running without it.
+Resolve `task_offload_runner` (default `opencode`) from the active
+profile before checking prerequisites — they differ by runner:
 
-**`--auto` grants real, unattended authority.** Every dispatch below runs
-OpenCode with `--auto` — its own docs describe this as "auto-approve
-permissions that are not explicitly denied (dangerous!)", and the
-shipped `opencode.json` here declares no `permission` block limiting it.
-In practice that means unattended file and shell access within the
-target worktree for the life of the dispatch. Only use this skill
-against a disposable/isolated worktree — never a checkout holding
-anything sensitive.
+**`opencode` runner:** `opencode` on PATH (`pnpm add -g
+--allow-build=opencode-ai opencode-ai` if missing — plain `pnpm add -g
+opencode-ai` alone installs a broken binary, since pnpm skips
+postinstall scripts by default). Whichever credential env var the
+resolved provider needs (`CHUTES_API_KEY` for Chutes,
+`TOKENREPLY_API_KEY` for TokenReply — see `scripts/providers/`) must
+already be set in the environment `opencode` runs in. Depot's shared
+server currently exports only `CHUTES_API_KEY` at launch, so dispatching
+with `task_offload_provider: tokenreply` requires the server to have
+been started with `TOKENREPLY_API_KEY` set in its environment too —
+restart it via `digismith:depot` if it's already running without it.
+
+**`claude-code` runner:** `claude` on PATH, supporting `--bare` (`npm
+install -g @anthropic-ai/claude-code` if missing — never auto-install,
+see Error Handling). Whichever credential env var the resolved provider
+needs must be set in the environment `claude` runs in — Claude Code
+reads it directly at spawn time via `ANTHROPIC_BASE_URL`/
+`ANTHROPIC_AUTH_TOKEN`, no shared server to pre-configure. Only
+providers whose `supportsRunner` includes `"claude-code"` may be
+resolved this way (today, TokenReply only — see `scripts/providers/`).
+
+**`--auto` (opencode) / `--permission-mode auto` (claude-code) grant
+real, unattended authority.** Every dispatch below runs its resolved
+runner with unattended permission — OpenCode's own docs describe
+`--auto` as "auto-approve permissions that are not explicitly denied
+(dangerous!)", and Claude Code's `--permission-mode auto` is the
+equivalent grant. In practice that means unattended file and shell
+access within the target worktree for the life of the dispatch. Only
+use this skill against a disposable/isolated worktree — never a
+checkout holding anything sensitive.
 
 ## Process
 
@@ -58,22 +75,21 @@ want it stopped, since another plan may still be relying on it.
 **Otherwise** → this is a dispatch (fresh task or fix round); continue to
 Step 1.
 
-### Step 1: Ensure `opencode.json` Exists in the Task's Worktree
+### Step 1: Resolve Runner + Provider Config
 
-Check for `opencode.json` in the worktree root. **Present** → continue.
-**Missing** → write it. First resolve which provider this dispatch uses: read
-`task_offload_provider` from the active profile (`profiles/<name>.yml`,
-same file `digismith:inject-standards` already reads `standards:` from),
-defaulting to `chutes` if the field is absent (matches every existing
-profile — see K.3's design doc).
+Resolve `task_offload_runner` (default `opencode`) and
+`task_offload_provider` (default `chutes`) from the active profile
+(`profiles/<name>.yml`, same file `digismith:inject-standards` already
+reads `standards:` from — see K.3's design doc for the provider default).
 
-`print-config.ts` lives in DigiSmith's own repo, not the task worktree
-this dispatch targets — Step 4 dispatches into arbitrary consumer-repo
-worktrees (`--dir "<task-worktree>"`), so invoking the script by a bare
-relative path only works when the controller's cwd already happens to be
-DigiSmith's repo, and fails with `MODULE_NOT_FOUND` everywhere else.
-Locate DigiSmith's own repo the same way `digismith:inject-standards`
-does under "Locating the Standards Library":
+`print-config.ts` and `parse-result.ts` live in DigiSmith's own repo, not
+the task worktree this dispatch targets — Step 4 dispatches into
+arbitrary consumer-repo worktrees (`--dir`/`cwd` set to the task
+worktree), so invoking either script by a bare relative path only works
+when the controller's cwd already happens to be DigiSmith's repo, and
+fails with `MODULE_NOT_FOUND` everywhere else. Locate DigiSmith's own
+repo the same way `digismith:inject-standards` does under "Locating the
+Standards Library":
 1. Is the current working directory itself the DigiSmith repo (has
    `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
    directly.
@@ -85,11 +101,18 @@ step 1 above applied) — never a bare relative path assumed to work from
 any cwd:
 
 ```bash
-node <digismith-repo>/scripts/providers/print-config.ts <resolved-provider> --role task
+node <digismith-repo>/scripts/providers/print-config.ts <resolved-provider> --role task --runner <resolved-runner>
 ```
 
-**Exit 0** → its stdout is a single-key JSON object keyed by the provider
-name (e.g. `{"chutes": {...}}`). Write `opencode.json` as:
+**Non-zero exit** → either an unrecognized provider/runner name, or the
+resolved provider's `supportsRunner` doesn't include the resolved
+runner. Stop here and report `BLOCKED` — the same disposition as a
+missing runner binary (see Error Handling). Never write a config that
+can't authenticate.
+
+**`opencode` runner, exit 0:** stdout is a single-key JSON object keyed
+by the provider name (e.g. `{"chutes": {...}}`). Write `opencode.json`
+in the worktree root as:
 
 ```json
 {
@@ -98,15 +121,8 @@ name (e.g. `{"chutes": {...}}`). Write `opencode.json` as:
 }
 ```
 
-**Non-zero exit** (unrecognized provider name) → stop here and report
-`BLOCKED` — the same disposition as a missing `opencode` binary (see
-Error Handling). Never write a config that can't authenticate.
-
-Record the resolved provider name and the model ID `print-config.ts` chose
-(the single key inside `.models` in its output) — Step 4 needs both to
-build its `opencode run --model` argument.
-
-Then check whether `opencode.json` is already ignored one way or
+(Skip the write if `opencode.json` is already present in the worktree
+root.) Then check whether `opencode.json` is already ignored one way or
 another (`git check-ignore -q opencode.json`, exit 0 = already ignored).
 If not, ignore it via `info/exclude` — a local-only, untracked git
 mechanism — **never** the worktree's own tracked `.gitignore`. Resolve
@@ -134,25 +150,41 @@ current content first (or note its absence), ensure it ends in a
 newline if non-empty, and append a new line `opencode.json` — an append
 operation only, never a whole-file rewrite. `opencode.json` itself
 references your API key only via
-`{env:<credential-env-var-for-the-resolved-provider>}` (e.g.
-`{env:CHUTES_API_KEY}` or `{env:TOKENREPLY_API_KEY}`, depending on which
-provider Step 1 resolved), never a literal value, but it's still local
-machine config that shouldn't be committed.
+`{env:<credential-env-var-for-the-resolved-provider>}`, never a literal
+value, but it's still local machine config that shouldn't be committed.
 
-### Step 2: Ensure the OpenCode Server Is Running
+Record the resolved provider name and the model ID `print-config.ts`
+chose (the single key inside `.models` in its output) — Step 4 needs
+both to build its `opencode run --model` argument.
 
-Invoke `digismith:depot`'s `ensure-opencode-server` operation and use
-the port it returns for every dispatch below. This server is shared
-machine-wide across every concurrent `subagent-driven-development` plan
-on this machine, not scoped to this one — Depot owns starting it,
-tracking its PID and port, and all the Windows-specific WINPID
-resolution that requires, entirely on its own. This skill no longer
-tracks a server itself.
+**`claude-code` runner, exit 0:** stdout is `{"baseUrl": "...",
+"credentialEnv": "...", "model": "..."}`. No file is written — Step 4
+exports `baseUrl`/`credentialEnv` as `ANTHROPIC_BASE_URL`/
+`ANTHROPIC_AUTH_TOKEN` environment variables and passes `model` as its
+`--model` argument at dispatch time.
+
+### Step 2: Ensure the Resolved Runner Is Ready
+
+**`opencode` runner:** invoke `digismith:depot`'s
+`ensure-opencode-server` operation and use the port it returns for every
+dispatch below. This server is shared machine-wide across every
+concurrent `subagent-driven-development` plan on this machine, not
+scoped to this one — Depot owns starting it, tracking its PID and port,
+and all the Windows-specific WINPID resolution that requires, entirely
+on its own. This skill no longer tracks a server itself.
 
 If Depot's operation doesn't return a usable port (any of the failure
 cases in its own Error Handling table — `opencode` not on PATH, server
 fails to start, WINPID unresolvable), stop here and report `BLOCKED`
 rather than continuing to Step 3/4 with an undefined port.
+
+**`claude-code` runner:** invoke `digismith:depot`'s `ensure-claude-code`
+operation. There is no port, no process, no state to track — this is a
+stateless PATH + `--bare`-support check, invoked fresh on every
+`claude-code`-runner dispatch, not just the first.
+
+If Depot's operation reports not-ready, stop here and report `BLOCKED`
+rather than continuing to Step 3/4.
 
 ### Step 3: Build the Task Prompt
 
@@ -240,14 +272,14 @@ resulting `"$PROMPT"` reference is then safe to pass double-quoted,
 since a quoted variable reference doesn't re-parse its content.
 
 **Real dispatches routinely take several minutes** — confirmed live:
-some took over 5 minutes today. Issue the `opencode run` call below with
-an explicit `Bash` tool `timeout` of at least 300000ms (5+ minutes), not
+some took over 5 minutes today. Issue either dispatch below with an
+explicit `Bash` tool `timeout` of at least 300000ms (5+ minutes), not
 whatever short default the harness would otherwise use. A default
 timeout cutting the call off partway through a perfectly healthy run
 looks indistinguishable from a real failure otherwise — see Error
 Handling for how to tell the two apart.
 
-**Fresh task:**
+**`opencode` runner, fresh task:**
 
 ```bash
 PROMPT=$(cat <<'PROMPT_EOF'
@@ -259,10 +291,10 @@ opencode run --attach "http://127.0.0.1:<port>" \
   --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events.jsonl"
 ```
 
-**Fix round**, same heredoc-capture-then-dispatch pattern, plus
-`--session "<captured sessionID>"` — and events redirect to a
-`-round<R>` suffixed file, never the original attempt's file, so the fix
-round's transcript doesn't overwrite it:
+**`opencode` runner, fix round**, same heredoc-capture-then-dispatch
+pattern, plus `--session "<captured sessionID>"` — and events redirect
+to a `-round<R>` suffixed file, never the original attempt's file, so
+the fix round's transcript doesn't overwrite it:
 
 ```bash
 PROMPT=$(cat <<'PROMPT_EOF'
@@ -275,42 +307,91 @@ opencode run --attach "http://127.0.0.1:<port>" \
   --dir "<task-worktree>" "$PROMPT" > "<workspace>/task-<N>-opencode-events-round<R>.jsonl"
 ```
 
-No session flag on a fresh task — confirmed live that this always starts
-a new, isolated session on an already-running server, never carrying
-context from an earlier call.
+No session flag on a fresh `opencode` task — confirmed live that this
+always starts a new, isolated session on an already-running server,
+never carrying context from an earlier call.
+
+**`claude-code` runner, fresh task:** export the two env vars and the
+`model` Step 1 resolved, set the subprocess `cwd` to the task worktree
+at spawn time (there is no `--dir` flag for `claude`):
+
+```bash
+PROMPT=$(cat <<'PROMPT_EOF'
+<prompt built in Step 3, verbatim>
+PROMPT_EOF
+)
+ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
+claude -p "$PROMPT" --bare --model <resolved-model-id> \
+  --permission-mode auto --output-format stream-json \
+  --allowedTools "Read,Edit,Bash" > "<workspace>/task-<N>-claude-code-events.jsonl"
+```
+
+(run with the shell's working directory set to `<task-worktree>` first)
+
+**`claude-code` runner, fix round**, same pattern plus `--resume
+"<captured sessionID>"` instead of starting fresh, events to a
+`-round<R>` suffixed file:
+
+```bash
+PROMPT=$(cat <<'PROMPT_EOF'
+<prompt built in Step 3, verbatim>
+PROMPT_EOF
+)
+ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
+claude -p "$PROMPT" --bare --model <resolved-model-id> \
+  --permission-mode auto --output-format stream-json \
+  --resume "<captured sessionID>" \
+  --allowedTools "Read,Edit,Bash" > "<workspace>/task-<N>-claude-code-events-round<R>.jsonl"
+```
+
+**Why `--bare` doesn't break standards injection:** Step 3 already
+inlines the full `inject-standards` output as literal prompt text before
+either runner launches — it's not a live skill invocation. `--bare`
+only skips auto-discovery of skills/CLAUDE.md/hooks, not content already
+pasted into the prompt.
+
+**Never write out the credential's literal value.** `ANTHROPIC_AUTH_TOKEN="$<credentialEnv>"` above is a shell expansion of the named
+environment variable, not a placeholder to fill in with the actual
+secret — profiles with `logging: true` capture the session transcript
+into DigiSmith's own repo, so a literal value pasted into the command
+text would leak the credential into it.
 
 ### Step 5: Extract the Session ID and the Status Contract
 
-Read events from the file Step 4 actually wrote for this dispatch:
-`<workspace>/task-<N>-opencode-events.jsonl` for a fresh task, or
-`<workspace>/task-<N>-opencode-events-round<R>.jsonl` for a fix round.
-Each line is one JSON event.
-
-**Fresh task only:** every event carries a top-level `sessionID` field —
-take it from any line (they're all the same session) and record it:
+Read events from the file Step 4 actually wrote for this dispatch
+(`<workspace>/task-<N>-<runner>-events.jsonl`, or the `-round<R>`
+suffixed variant for a fix round), then run:
 
 ```bash
-echo '{"task": <N>, "sessionID": "<extracted id>"}' >> "<workspace>/opencode-sessions.jsonl"
+node <digismith-repo>/scripts/runners/parse-result.ts <resolved-runner> "<events-file>"
 ```
+
+This prints a uniform `{status, resultText, sessionId, costUsd?}` JSON
+object regardless of which runner produced the raw events — `status` is
+one of `"success" | "error" | "interrupted"`, `resultText` is the
+model's final reply text (or `null`), and `sessionId` is the id to
+capture for fix rounds.
+
+**Fresh task only:** record the returned `sessionId`:
+
+```bash
+echo '{"task": <N>, "sessionID": "<parsed sessionId>"}' >> "<workspace>/opencode-sessions.jsonl"
+```
+
+(File name and JSON key stay `opencode-sessions.jsonl`/`sessionID` for
+backward compatibility with existing workspaces — the value is just an
+opaque session id now, not opencode-specific, whichever runner produced
+it.)
 
 **Fix round:** skip this — the session ID doesn't change on a fix round
-(it's the same `--session <id>` just passed on the command line), so
-don't re-append a duplicate line to `opencode-sessions.jsonl`.
+(it's the same id just passed back to the runner on the command line),
+so don't re-append a duplicate line to `opencode-sessions.jsonl`.
 
-The status contract text is nested inside the **last** event whose
-top-level `"type"` is `"text"` — that's the model's final reply,
-matching what Step 3 asked it to send. The reply text itself is **not**
-a top-level field on that event: it's one level down, inside a nested
-`part` object. A real `type:text` event looks like:
-
-```json
-{"type":"text","timestamp":1234567890,"sessionID":"ses_...","part":{"id":"prt_...","messageID":"msg_...","sessionID":"ses_...","type":"text","text":"the actual reply content here"}}
-```
-
-Note `"type":"text"` appears at *both* levels — the event and its
-nested `part` each carry their own `type` key. Match on the outer
-(event-level) `type` to find the right line; the text you actually want
-is at `.part.text`, not `.text`.
+The status contract text is `resultText` from `parse-result.ts`'s
+output — this is the model's final reply, matching what Step 3 asked it
+to send.
 
 ### Step 6: Hand Back to the Normal Flow
 
@@ -328,11 +409,12 @@ This skill's own job for this dispatch ends here.
 
 ## Error Handling
 
-- **`opencode run` genuinely errors** (a real non-zero exit, an error
-  event in the JSON stream, etc.) → report as `BLOCKED`, same
-  disposition a stuck Claude implementer would get — surfaces to the
-  user via the normal `subagent-driven-development` blocked-handling
-  path. Never retried automatically.
+- **The dispatched runner genuinely errors** (a real non-zero exit,
+  `parse-result.ts` reporting `status: "error"` or `"interrupted"`,
+  etc.) → report as `BLOCKED`, same disposition a stuck Claude
+  implementer would get — surfaces to the user via the normal
+  `subagent-driven-development` blocked-handling path. Never retried
+  automatically.
 - **The `Bash` tool's own call times out** — distinct from `opencode`
   itself erroring, and not a failure by itself: real dispatches routinely
   take several minutes (see Step 4). Either raise the timeout and retry,
@@ -360,24 +442,26 @@ This skill's own job for this dispatch ends here.
   a normal fix loop's rounds 4-5 would — that escalation is deliberately
   not automated here. The user decides: keep trying offloaded, hand the
   task to a Claude implementer, or park it.
-- **A captured `sessionID` no longer resolves on the server** (e.g.
-  someone ran `digismith:depot`'s `stop-opencode-server` — possibly for a
-  different plan entirely, since the server is now shared machine-wide —
-  or the machine itself restarted) → report this plainly rather than
-  silently starting a fresh, context-less session under the same session
-  ID assumption. Re-run Step 2 (`digismith:depot`'s
-  `ensure-opencode-server`) to get a fresh server/port, then re-dispatch
-  as a **fresh task**, not a fix round — the old session's context is
-  genuinely gone, so resuming it would silently lose all prior context.
+- **A captured session id no longer resolves** — `opencode` runner: e.g.
+  someone ran `digismith:depot`'s `stop-opencode-server` (possibly for a
+  different plan entirely, since the server is shared machine-wide) or
+  the machine restarted; `claude-code` runner: the session was pruned,
+  expired, or this is a different machine than the one that created it
+  — → report this plainly rather than silently starting a fresh,
+  context-less session under the same session-id assumption. Re-run Step
+  2 to get a fresh server/port (`opencode`) or confirm readiness
+  (`claude-code`), then re-dispatch as a **fresh task**, not a fix round
+  — the old session's context is genuinely gone, so resuming it would
+  silently lose all prior context.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 0 | Determine intent — a stop request is no longer this skill's concern (tell the user to invoke `digismith:depot`'s `stop-opencode-server` directly), otherwise this is a dispatch (fresh/fix round) |
-| 1 | Ensure `opencode.json` exists in the task worktree, ignored via `.git/info/exclude` (never the tracked `.gitignore`) |
-| 2 | Invoke `digismith:depot`'s `ensure-opencode-server` operation, use the port it returns — Depot owns starting the shared server, tracking its PID/port, and WINPID resolution entirely |
+| 0 | Determine intent — a stop request is no longer this skill's concern (tell the user to invoke `digismith:depot`'s `stop-opencode-server` directly, `opencode` runner only), otherwise this is a dispatch (fresh/fix round) |
+| 1 | Resolve `task_offload_runner`/`task_offload_provider`, run `print-config.ts --runner <name>` — `opencode` runner writes `opencode.json` (ignored via `.git/info/exclude`, never the tracked `.gitignore`); `claude-code` runner gets `{baseUrl, credentialEnv}`, no file written |
+| 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch) |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
-| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch via `opencode run --attach ... --format json "$PROMPT"` with an explicit ≥300000ms `Bash` timeout, `--session <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
-| 5 | Extract the final status-contract text (nested at `.part.text`) from the JSON event stream; capture `sessionID` (event-level) only on a fresh task, never re-appended on a fix round |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json` (shell-expanded, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
+| 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |

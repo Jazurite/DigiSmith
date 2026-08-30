@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { parseArgs, requireArgs } from "../cli-args.ts";
 import { resolveProvider } from "./registry.ts";
+import { resolveRunner } from "../runners/registry.ts";
 import type { GatewayProvider, OffloadRole } from "./types.ts";
 
 const DEFAULT_OUTPUT_LIMIT = 65535;
@@ -58,7 +59,23 @@ function main(): void {
     return;
   }
 
-  console.log(JSON.stringify(buildOpencodeProviderBlock(provider, args.role)));
+  const runnerName = args.runner ?? "opencode";
+  const runner = resolveRunner(runnerName);
+  if (!runner) {
+    console.error(`print-config: no such registered runner ${JSON.stringify(runnerName)}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!provider.supportsRunner.includes(runner.name)) {
+    console.error(
+      `print-config: provider ${JSON.stringify(provider.name)} does not support runner ${JSON.stringify(runner.name)}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(JSON.stringify(runner.buildConfig(provider, args.role)));
   process.exitCode = 0;
 }
 

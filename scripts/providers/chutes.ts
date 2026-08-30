@@ -9,4 +9,5 @@ export const chutes: GatewayProvider = {
   model(role) {
     return role === "task" ? "moonshotai/Kimi-K3-TEE" : "google/gemma-4-31B-turbo-TEE";
   },
+  supportsRunner: ["opencode"],
 };
