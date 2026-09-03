@@ -123,4 +123,23 @@ describe("claudeCode.parseResult", () => {
       costUsd: 0.2,
     });
   });
+
+  it("treats is_error:true as status error even when subtype says success (confirmed live: an auth failure returns exactly this shape)", () => {
+    const path = writeEvents([
+      {
+        type: "result",
+        subtype: "success",
+        is_error: true,
+        result: "Failed to authenticate. API Error: 401 Invalid bearer token",
+        session_id: "sess_6",
+        total_cost_usd: 0,
+      },
+    ]);
+    expect(claudeCode.parseResult(path)).toEqual({
+      status: "error",
+      resultText: "Failed to authenticate. API Error: 401 Invalid bearer token",
+      sessionId: "sess_6",
+      costUsd: 0,
+    });
+  });
 });
