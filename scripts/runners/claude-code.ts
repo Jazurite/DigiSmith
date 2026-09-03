@@ -7,6 +7,7 @@ const KNOWN_STATUSES = new Set(["success", "error", "interrupted"]);
 interface ClaudeResultEvent {
   type: string;
   subtype?: string;
+  is_error?: boolean;
   result?: string | null;
   session_id?: string;
   total_cost_usd?: number;
@@ -24,8 +25,13 @@ function parseResult(eventsFile: string): ParsedResult {
     return { status: "error", resultText: null, sessionId: null };
   }
 
-  const status: ParsedResult["status"] =
-    last.subtype && KNOWN_STATUSES.has(last.subtype) ? (last.subtype as ParsedResult["status"]) : "error";
+  // Confirmed live: a real auth failure can carry subtype:"success" alongside
+  // is_error:true — subtype alone is not a reliable success signal.
+  const status: ParsedResult["status"] = last.is_error
+    ? "error"
+    : last.subtype && KNOWN_STATUSES.has(last.subtype)
+      ? (last.subtype as ParsedResult["status"])
+      : "error";
 
   return {
     status,
