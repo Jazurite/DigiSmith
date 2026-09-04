@@ -141,6 +141,44 @@ self-contained-ness under `src/router/` (i.e. whether it has zero real
 coupling to the swarm/AgentDB parts of the codebase) has not been
 verified — check before assuming it can be lifted out cleanly.
 
+**RouteLLM** (github.com/lm-sys/RouteLLM, cloned for reference to
+`D:/Workspace/Library/RouteLLM`). The most credibly-validated find so
+far — built by the LMSYS/Chatbot Arena team, backed by a published
+paper (arxiv.org/abs/2406.18665) and blog post, not just marketing
+copy. Real, distinct architecture from both finds above:
+
+- **Binary strong/weak routing, not N-way.** RouteLLM routes each query
+  to exactly one of two models — a designated "strong" (expensive) and
+  "weak" (cheap) model — via a trained classifier that scores the query
+  against a calibrated *cost threshold* (`python -m
+  routellm.calibrate_threshold` tunes this against real usage data,
+  e.g. Chatbot Arena preference data). This is narrower than
+  `agentic-flow`'s N-provider `ModelRouter`, but it maps directly onto
+  the "Orchestration & Escalation" tier of the general 3-tier pattern
+  Jack found earlier — it's a working example of *that one tier*
+  specifically, not a full router.
+- **Four real router implementations**, not one heuristic:
+  `MatrixFactorizationRouter` (`mf`, the recommended default),
+  `CausalLLMRouter`, `BERTRouter`, `SWRankingRouter` — plus a
+  `RandomRouter` baseline for comparison. (`routellm/routers/routers.py`)
+- **Published, credible numbers:** up to 85% cost reduction while
+  maintaining ~95% GPT-4-level quality on MT Bench, per their own
+  benchmarks — a real evaluation methodology exists here, unlike
+  `agentic-flow`'s unsubstantiated percentage claims.
+- **Built on LiteLLM** for the actual model calls — ties directly back
+  to LiteLLM being independently identified as the leading gateway
+  candidate in the earlier web research.
+
+**Real constraints against DigiSmith's stack:** it's a **Python**
+package (`pip install routellm`), not TypeScript — a real integration
+mismatch against `scripts/providers/*.ts`'s existing all-TypeScript
+shape. It also **requires an `OPENAI_API_KEY` regardless of which
+strong/weak models are actually used** — the `mf` and `sw_ranking`
+routers need OpenAI's embeddings API to analyze each query, so this
+dependency exists even if neither the strong nor weak model is
+OpenAI's. Worth weighing against a Chutes/TokenReply-only setup with no
+other OpenAI access.
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
