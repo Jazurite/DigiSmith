@@ -6,5 +6,5 @@ reporting: true
 publish_artifact: true
 logging: false
 model_offload_provider: chutes
-task_offload_provider: chutes
-task_offload_runner: opencode
+task_offload_provider: tokenreply
+task_offload_runner: claude-code

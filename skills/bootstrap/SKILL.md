@@ -100,10 +100,13 @@ absent = off), and only takes effect while working inside DigiSmith's
 own repo — no shipped consumer profile sets it. `task_offload_provider`
 names the provider `digismith:offload-implementer` (K.2) uses to run a
 whole `subagent-driven-development` task on a third-party model — it
-defaults to `chutes` on every existing profile. `task_offload_runner`
-(K.6) names which coding-agent tool that offloaded task actually runs
-through — `opencode` or `claude-code` — and defaults to `opencode` on
-every existing profile.
+defaults to `tokenreply` on every existing profile (switched from
+`chutes` 2026-09-04). `task_offload_runner` (K.6) names which
+coding-agent tool that offloaded task actually runs through —
+`opencode` or `claude-code` — and defaults to `claude-code` on every
+existing profile (switched from `opencode` the same day, sidestepping
+Depot's shared-server credential dependency entirely since `claude-code`
+reads credentials per-dispatch).
 
 **Switching profiles mid-session:** if the user's request is "switch
 this repo's profile to X" rather than "start work on a ticket", handle

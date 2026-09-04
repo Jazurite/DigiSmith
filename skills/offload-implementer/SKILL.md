@@ -29,7 +29,7 @@ owned per-plan. When the user says offloaded work is done, invoke
 
 ## Prerequisites
 
-Resolve `task_offload_runner` (default `opencode`) from the active
+Resolve `task_offload_runner` (default `claude-code`) from the active
 profile before checking prerequisites — they differ by runner:
 
 **`opencode` runner:** `opencode` on PATH (`pnpm add -g
@@ -77,8 +77,8 @@ Step 1.
 
 ### Step 1: Resolve Runner + Provider Config
 
-Resolve `task_offload_runner` (default `opencode`) and
-`task_offload_provider` (default `chutes`) from the active profile
+Resolve `task_offload_runner` (default `claude-code`) and
+`task_offload_provider` (default `tokenreply`) from the active profile
 (`profiles/<name>.yml`, same file `digismith:inject-standards` already
 reads `standards:` from — see K.3's design doc for the provider default).
 
