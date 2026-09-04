@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retire subagent-driven-always Into Vendored Primitives (W.6)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Retire subagent-driven-always Into Vendored Primitives (W.6)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-04</span>
+    <span>Map item: W.6 (retires H)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — Classification logic in writing-plans</a></li>
+    <li><a href="#s2">Section 2 — executing-plans' lightweight ledger</a></li>
+    <li><a href="#s3">Section 3 — report-implementation's branching template</a></li>
+    <li><a href="#s4">Section 4 — inject-standards needs no change</a></li>
+    <li><a href="#s5">Section 5 — Call-sites, retirement, letter H freed</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>Map item <strong>H</strong> (Subagent-driven always) is implemented today by a standalone
+native DigiSmith skill, <code>digismith:subagent-driven-always</code>, which intercepts
+<code>digismith:writing-plans</code>' Execution Handoff step from the outside — skipping its
+"1. Subagent-Driven / 2. Inline?" question and defaulting unconditionally to
+<code>digismith:subagent-driven-development</code>. This is the same "H/Q-style interception"
+pattern map item W exists to move away from, and W.5 just proved the fold-in mechanism works for
+real (retiring Q into <code>brainstorming</code>/<code>writing-plans</code> directly).</p>
+<p>Jack's direction, raised immediately after W.5 shipped: retire H the same way, and also change
+the actual policy while doing it — instead of an unconditional "always subagent-driven" default,
+reason autonomously about task complexity (still never asking the user which to use). Reading
+H's own current content surfaced the real constraint this idea has to resolve: H's "always
+subagent-driven" default exists specifically <em>because</em> two other shipped map items depend
+on it — <strong>N</strong> (<code>report-implementation</code>) needs the per-task ledger only
+<code>subagent-driven-development</code> produces, and <strong>G</strong>
+(<code>inject-standards</code>) was assumed to have nothing to inject into otherwise. Jack's
+answer, when asked directly: build the missing lightweight equivalent for the inline path rather
+than accept the gap.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — Classification logic, folded into writing-plans' Execution Handoff</h2>
+<p>Once <code>writing-plans</code> finishes writing the plan (it already knows the task count and
+content — no re-derivation needed), instead of presenting the "1. Subagent-Driven / 2. Inline?"
+question, it reasons autonomously: 1-2 tasks with no unusual risk or isolated-context need →
+inline-eligible (invoke <code>digismith:executing-plans</code> directly); 3+ tasks, or fewer tasks
+that are unusually risky or need isolated context → subagent-driven (invoke
+<code>digismith:subagent-driven-development</code> directly). This absorbs H's other two existing
+branches unchanged: explicit user request for inline execution (still respected, never
+overridden) and no-subagent-capability environments (still an automatic fallback, not a judgment
+call). The user-facing question stays permanently gone — the new branch is autonomous reasoning,
+not a third live question.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — executing-plans gains a lightweight ledger, built from scratch</h2>
+<p><code>executing-plans</code> currently has no persistent tracking at all — just ephemeral
+todos. It gains one, reusing the exact path convention <code>report-implementation</code> already
+checks: <code>.superpowers/sdd/&lt;plan-basename&gt;/progress.md</code>. Since a given plan only
+ever goes one way (inline <em>or</em> subagent-driven, never both), there is no collision risk,
+and <code>report-implementation</code>'s existing "does a ledger exist" check needs no change —
+only what it does once it finds one. The first line distinguishes which mechanism produced it:
+<code># Inline-execution ledger — plan: &lt;plan file path&gt;</code> (vs. SDD's
+<code># SDD ledger — plan: ...</code>).</p>
+<p>Per task, after all its steps complete (implementation, tests, commit — the last bite-sized
+step is always "Commit" per <code>writing-plans</code>' own task structure),
+<code>executing-plans</code>' Step 2 gains a brief self-check pass (completeness, quality,
+discipline — the same spirit as <code>subagent-driven-development</code>'s implementer
+self-review, not the full ceremony) before appending one ledger line:</p>
+<pre><code>Task &lt;N&gt;: complete (commits &lt;base7&gt;..&lt;head7&gt;, self-check: &lt;one-line summary&gt;)</code></pre>
+<p>No review-verdict, no fix-round grammar — there is no independent reviewer to produce one.
+This is <strong>executing-plans' first real activation</strong> — it has been a dormant,
+byte-identical clone since W.1.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — report-implementation branches its template by ledger type</h2>
+<p>The Prerequisites section's existing skip condition ("no ledger exists at all → skip silently")
+stays, but its stale parenthetical example ("e.g. the plan ran via
+<code>digismith:executing-plans</code> instead") is removed, since that path now also produces a
+ledger. Once a ledger is found, <code>report-implementation</code> reads its first line to decide
+which grammar to parse:</p>
+<div class="cards">
+<div class="card">
+<h4>SDD ledger</h4>
+<span class="tag">Unchanged</span>
+<p>Existing behavior: per-task review verdicts, parked/discarded findings, the final
+whole-branch review section.</p>
+</div>
+<div class="card">
+<h4>Inline-execution ledger</h4>
+<span class="tag">New, simpler shape</span>
+<p>Task list with commits and self-check summaries, no review-verdict column (no independent
+reviewer existed), and <strong>no final-review section at all</strong> — inline execution has no
+equivalent whole-branch review step today, so that section is omitted entirely rather than
+rendered empty.</p>
+</div>
+</div>
+<p>This is a real branch in the report template — the two shapes genuinely differ in what they
+claim happened, not a cosmetic tweak. This is a normal edit to a native DigiSmith skill (map item
+N), not a vendored-primitive activation — <code>report-implementation</code> was never one of the
+14 vendored Superpowers skills.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — inject-standards (G): confirmed, no change needed</h2>
+<p>Re-checked Scenario 1's actual formatting ("Conversation — default, regular chat/implementation
+work" → read the standards and announce them inline). That is exactly what already happens when a
+session implements tasks directly rather than dispatching a subagent — inline execution via
+<code>executing-plans</code> does not create a new <em>kind</em> of context, it just means
+Scenario 1 is the active one instead of Scenario 4. G's docstring already covers this; H's old
+claim that G "has nothing to inject into unless a subagent is dispatched" described the old
+assumption that all real implementation went through subagent dispatch, not an actual limitation
+in G itself. Zero changes to <code>inject-standards</code>.</p>
+</section>
+
+<section id="s5">
+<h2>Section 5 — Call-sites, retirement, and letter H freed</h2>
+<p>Checked all references to <code>subagent-driven-always</code> repo-wide (19 files; frozen
+historical docs under <code>.digismith/docs/**</code> excluded per established convention):</p>
+<ul>
+<li><strong>README.md</strong> — same pattern as Enforcer's paragraph: H's descriptive block is
+removed, "Six skills" → "Five skills," and the "one right after a plan is saved, before any task
+code is written" clause drops from the intro sentence (it described H's trigger specifically).</li>
+<li><strong>skills/adopt/SKILL.md</strong> (line 297) — already slightly imprecise even today: H's
+trigger is specifically <code>writing-plans</code>' Execution Handoff, but <code>adopt</code>
+never invokes <code>writing-plans</code> at all (it bypasses straight to
+<code>subagent-driven-development</code>), so H never actually fired in this flow to begin with.
+After retirement, the mention is simply dropped, leaving only the
+<code>inject-standards</code> Scenario 4 reference (which genuinely does apply).</li>
+<li><strong>.digismith/history.html</strong> — same retirement-note treatment as Q's status
+block got in W.5.</li>
+</ul>
+<p><code>skills/subagent-driven-always/</code> (native DigiSmith skill, not one of the 14 vendored
+Superpowers primitives) is deleted entirely. Its logic splits three ways: the complexity-decision
+plus the two unchanged old branches fold into <code>writing-plans</code> (already activated by
+W.5 — this further diverges the same file); the new ledger/self-check need genuinely activates
+<code>executing-plans</code> for the first time; <code>report-implementation</code>'s template
+branch is a normal native-skill edit, no vendoring ceremony. <code>MEMORY.md</code> marks H
+retired (same pattern as Q), letter freed for future reuse. The backlog file
+<code>retire-subagent-driven-always-h-w6.md</code> is deleted once applied, per the backlog's own
+convention.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>These are markdown/prose skill files, not executable code — no unit tests apply directly.
+Verification plan:</p>
+<ul>
+<li><code>check_vendored_skills.ts</code> should report <code>executing-plans</code> as newly
+locally diverged (first-ever activation), <code>writing-plans</code> continuing to show local
+divergence (already diverged since W.5, this adds more), and every other vendored skill still
+no-drift.</li>
+<li>Repo-wide grep for <code>subagent-driven-always</code> should return zero matches outside this
+spec/plan's own files and historical frozen docs under <code>.digismith/docs/</code>.</li>
+<li>No live end-to-end dry run of a real plan going through the new inline path (writing-plans
+deciding inline → executing-plans producing a ledger → report-implementation rendering from it) is
+practical within this session — flagged as a real gap, same class of risk as K.6's runner and
+W.5's own bootstrap→brainstorming chain before their live confirmations.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Deciding what letter H gets reused for next — freed, not reassigned, in this change.</li>
+<li>A real lightweight review step for executing-plans (considered and explicitly declined in
+favor of the simpler self-check-only ledger).</li>
+<li>Any other vendored primitive beyond <code>writing-plans</code>/<code>executing-plans</code>
+diverging further — separate future work.</li>
+<li>The saved merge-vs-PR preference idea for <code>finishing-a-development-branch</code>
+(captured separately in <code>backlog/finishing-branch-saved-preference.md</code>) — unrelated to
+H's retirement, not addressed here.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/retire-h-vendored-primitives/design.html</footer>
+
+</body>
+</html>
