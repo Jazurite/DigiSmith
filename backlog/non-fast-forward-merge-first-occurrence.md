@@ -1,9 +1,9 @@
-# First non-fast-forward merge in this repo — re-examine report-implementation's assumption
+# Non-fast-forward merges in this repo — re-examine report-implementation's assumption
 
-**Status:** Not applied. A flag for a future pass, not a bug to fix now.
+**Status:** Not applied. A flag for a future pass, not a bug to fix now. Now confirmed twice.
 
 **Source:** 2026-08-27, merging map item K.2 (`implementer-offload`) into
-`main`.
+`main`. **Recurred** 2026-09-04, merging map item W.6 (retiring H) into `main`.
 
 ## What happened
 
@@ -35,6 +35,18 @@ range recorded... could differ from what actually lands on `main`" —
 didn't materialize here specifically because the report is written
 against the *feature branch's* history, not `main`'s, and that part
 never changes regardless of how the merge itself resolves.
+
+## Second occurrence (2026-09-04, W.6)
+
+Merging `worktree-retire-h` into `main` produced another real merge commit (`bbcf0ea`, via
+`ort`), not a fast-forward — `backlog/README.md` had diverged on `main` independently (an
+unrelated `docs(backlog):` commit landed there while W.6 was being built in its own worktree).
+Same shape as K.2's occurrence: `report-implementation` had already written and committed
+`report.html` against the feature branch's own linear history (`a1a5a1e..89faa5f`) before the
+merge ran, so nothing was affected here either. Two occurrences in two unrelated merges is enough
+to treat this as the recurring norm the first entry's "still worth examining" bullet already
+anticipated, not an edge case — worth actually updating `report-implementation`'s doc comment
+next time that skill is touched, rather than leaving it phrased as a hypothetical.
 
 ## What's still worth examining
 
