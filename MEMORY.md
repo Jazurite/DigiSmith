@@ -130,8 +130,8 @@ transitions, which stay manual by design).
 | **2** | The override | **H** subagent-driven always (built 2026-08-12) · **Q** convention enforcement (built 2026-08-15) · **K.1** model offload for DigiSmith's own HTML generation (built 2026-08-16) · **W.1** vendor Superpowers primitives (built 2026-08-20) · **K.2** implementer-task offload (built 2026-08-27) · the rest of model tiering · **W.2** activation mechanism (built 2026-08-29) · **W.4+** primitive-by-primitive replacement |
 | **3** | Intake & estimation | **A** intake/creation · **E.2** spine remaining scope (decoupled from Tier 1 2026-08-11) · **J** estimation |
 | **4** | Process expansion | **L** refinement & exploration · **B** spec seam |
-| **5** | Technical expansion | **D** delivery · **F** design review · **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** multi-repo distribution · **R** E2E testing · **S** Figma visual regression |
-| **6** | Last | **C** live work journal |
+| **5** | Technical expansion | **M** ephemeral deploy capture (pulled forward and built 2026-08-08) · **N** implementation reporting (pulled forward and built 2026-08-08) · **I.1** JIRA write-back for the captured URL · **I.2** multi-repo distribution |
+| **6** | Last | **C** live work journal · **D** delivery · **F** design review · **R** E2E testing · **S** Figma visual regression — the latter four demoted from Tier 5 (2026-09-04): still undesigned with zero code, weeks after the rest of Tier 5 shipped, so no reason to keep them ahead of **C** in the build order when none has even a brainstorm started |
 
 The shape of this ordering: Tier 1 establishes *what DigiSmith is* — its
 identity (the spine) and its house rules (standards). Tier 2 overrides
@@ -140,10 +140,10 @@ before mechanics. No lifecycle machinery ships until Tier 3, which means
 DigiSmith's first release is an opinionated execution layer over
 Superpowers, not a ticket tool.
 
-Tier 5 is where the genuinely expensive work lives. **R** and **S** are
-their own projects rather than skills — **S** especially, since it's a
-whole new dependency class (Figma API, image diffing) unlike anything
-else on the map, which otherwise just moves text around.
+**R** and **S**, now in Tier 6, are their own projects rather than skills
+— **S** especially, since it's a whole new dependency class (Figma API,
+image diffing) unlike anything else on the map, which otherwise just
+moves text around.
 
 ## Relationship to `2. Career/`
 
@@ -175,7 +175,7 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 
 - **F's shape is undecided.** Whether design review is (a) present-for-human-
   review only, (b) independent agent critique only, or (c) critique then
-  present, was raised but never settled. Decide when Tier 5 gets specced.
+  present, was raised but never settled. Decide when Tier 6 gets specced.
 - **`{{MAP_ITEM}}` has no derivation rule for a no-map-letter feature.**
   `report-implementation`'s placeholder is defined as "the map-item
   letter/number in `{{FEATURE_TITLE}}`'s own parenthetical" (e.g.
