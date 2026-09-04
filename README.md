@@ -17,28 +17,12 @@ Neither is invoked by name; `init` is the only front door. Everything else
 on the roadmap (standards injection, ticket intake, and what's still to
 come) is wired in behind it or reachable directly.
 
-Seven skills sit outside that front door, because they trigger at
+Six skills sit outside that front door, because they trigger at
 specific points inside the build rather than at the front door itself —
-one right before and after the spec and plan themselves get written,
-another right after a plan is saved, before any task code is written;
-one more during the build itself, standing in for a normal task dispatch
+one right after a plan is saved, before any task code is written; one
+more during the build itself, standing in for a normal task dispatch
 when explicitly asked to offload it; the other four later, once code
 already exists.
-
-**`enforcer`** (map item **Q**). It fires twice around the
-`brainstorming`/`writing-plans` hand-off: right before either one is
-invoked, it tells it explicitly to write its output to DigiSmith's
-unified docs location (`.digismith/docs/<slug>/design.html`, HTML;
-`.digismith/docs/<slug>/plan.md`, Markdown) instead of its own
-third-party default — then right after each one reports it's finished,
-it verifies the file actually landed there in the right format,
-correcting it if not. Once `design.html` is confirmed in place, it also
-publishes it via the `Artifact` tool for readability, unless the active
-profile has `publish_artifact: false` (`report-implementation` does the
-same for `report.html`). See
-[`skills/enforcer/SKILL.md`](skills/enforcer/SKILL.md) for the exact
-process, or [`.digismith/history.html`](.digismith/history.html) for its
-status.
 
 **`subagent-driven-always`** (map item **H**). It intercepts
 `digismith:writing-plans`' Execution Handoff question — "1.
@@ -218,12 +202,16 @@ Once a real ticket exists, `bootstrap`:
 
 ### 3. Hand off to brainstorming
 
-From inside that worktree, `bootstrap` invokes `digismith:enforcer`
-— which tells `digismith:brainstorming`/`digismith:writing-plans`
-where and in what format DigiSmith needs their output, then checks it
-landed there once each finishes — before invoking
-`digismith:brainstorming` itself with the ticket's title, description,
-and acceptance criteria already loaded as seed context. From there,
+From inside that worktree, `bootstrap` invokes `digismith:brainstorming`
+directly, passing the ticket's title, description, and acceptance
+criteria already loaded as seed context, plus the slug it already
+derived — `brainstorming` itself now knows to write its output to
+DigiSmith's unified docs location (`.digismith/docs/<slug>/design.html`,
+HTML) instead of its own third-party default, and `writing-plans` does
+the same for `plan.md` once the spec is approved. Once `brainstorming`
+reports its design doc written, `bootstrap` publishes it via the
+`Artifact` tool for readability, unless the active profile has
+`publish_artifact: false`. From there,
 Superpowers' own chain takes over unmodified — brainstorming →
 `writing-plans` → `subagent-driven-development`/`executing-plans` — with
 its own approval gates at each stage. `bootstrap`'s job ends at

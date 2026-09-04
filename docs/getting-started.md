@@ -87,7 +87,7 @@ trigger point inside the chain above, gated by the active profile:
   back clean, before that plan's ledger gets deleted. Gated by
   `reporting`. Report/spec generation itself isn't gated by
   `publish_artifact` — the separate `Artifact`-publish step inside
-  `report-implementation` and `enforcer` is.
+  `report-implementation`, `bootstrap`, and `adopt` is.
 - **P — telemetry.** At `finishing-a-development-branch`'s integration
   decision (merge, PR, or keep-as-is all count), commits this session's
   transcript slice back into DigiSmith's own repo. Gated by `logging`;
