@@ -11,7 +11,6 @@ Cloned: 2026-08-20
 - brainstorming
 - dispatching-parallel-agents
 - executing-plans
-- finishing-a-development-branch
 - receiving-code-review
 - requesting-code-review
 - subagent-driven-development
@@ -22,6 +21,12 @@ Cloned: 2026-08-20
 - verification-before-completion
 - writing-plans
 - writing-skills
+
+## Skills activated (diverged from source)
+
+- **finishing-a-development-branch** — map item **W.4**, activated 2026-09-04.
+  Option 1 ("Merge Locally") now pushes `<base-branch>` to origin after a
+  successful merge and green tests. See DigiSmith `MEMORY.md` map item W.
 
 ## License
 
@@ -48,10 +53,10 @@ enhancement, not built here. See DigiSmith `MEMORY.md` map item W.
 
 ## Activation
 
-A vendored skill above is "dormant" until a future map item W.4+ brainstorm
-activates it. Until then, every vendored skill listed above is an inert,
-unused copy — nothing in DigiSmith calls into any of them. Activating one
-means:
+A vendored skill above is "dormant" until a future brainstorm activates
+it — **finishing-a-development-branch** is the first to have gone through
+this (W.4, 2026-09-04); every other skill in this file is still an inert,
+unused copy that nothing in DigiSmith calls into. Activating one means:
 
 - Editing its `skills/<name>/` copy with the actual content
   changes wanted. (Folders were renamed 2026-09-04, dropping the

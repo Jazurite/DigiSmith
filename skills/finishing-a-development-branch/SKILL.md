@@ -1,6 +1,6 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work
+description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work (DigiSmith fork of Superpowers' finishing-a-development-branch)
 ---
 
 # Finishing a Development Branch
@@ -103,8 +103,19 @@ If tests fail on the merged result: stop, leave the worktree and branch in
 place, and investigate — nothing has been pushed, so the merge is local
 and recoverable.
 
-Once the merged result is green: clean up the worktree (Step 6), then
-delete the branch:
+Once the merged result is green, push `<base-branch>` to origin:
+
+```bash
+git push origin <base-branch>
+```
+
+If the push is rejected (the remote moved since `git pull` above): stop,
+report the rejection plainly, and investigate — do not force-push
+automatically. Force-push only on your human partner's explicit request
+(see "The push was rejected — force-push will fix it" below).
+
+Once the push succeeds: clean up the worktree (Step 6), then delete the
+branch:
 
 ```bash
 git branch -d <feature-branch>
@@ -181,7 +192,7 @@ place. If your platform provides a workspace-exit tool, use it.
 
 | Option | Merge | Push | Keep Worktree | Cleanup Branch |
 |--------|-------|------|---------------|----------------|
-| 1. Merge locally | yes | - | - | yes |
+| 1. Merge locally | yes | yes | - | yes |
 | 2. Create PR | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | Discard (explicit request only) | - | - | - | yes (force) |
