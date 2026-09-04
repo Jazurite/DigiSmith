@@ -36,3 +36,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Plugin version bump has no automation — CI/CD pipeline, not a skill step](plugin-version-bump-cicd-automation.md) — 7 merges since the last real bump shipped without one; belongs in a future CI/CD pipeline for DigiSmith, not `finishing-a-development-branch`
 - [Persistent concurrent worker pool for offload dispatch (K.8)](persistent-worker-pool-k8.md) — bigger than K.5, depends on K.2/K.3/K.6/V.1; captured as an idea, not yet brainstormed
 - [Persistent VPS-hosted Claude Code session via SSH (new letter, tentatively X)](vps-session-hosting-x.md) — hosting the main session itself, not offload workers; Remote Control and self-hosted environments both ruled out as alternatives
+- [Automatic model/vendor routing (K.9)](model-router-k9.md) — K.3's registry.ts is a static per-profile choice, not a router; distinct from K.5 (comparison), K.7 (benchmark), K.8 (concurrency)
