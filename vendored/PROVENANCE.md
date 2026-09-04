@@ -9,7 +9,6 @@ Cloned: 2026-08-20
 ## Skills vendored (verbatim, byte-identical to source)
 
 - dispatching-parallel-agents
-- executing-plans
 - receiving-code-review
 - requesting-code-review
 - subagent-driven-development
@@ -33,7 +32,14 @@ Cloned: 2026-08-20
 - **writing-plans** — map item **W.5**, activated 2026-09-04 (alongside
   `brainstorming`, above). Now writes to `.digismith/docs/<slug>/plan.md` for
   DigiSmith-tracked work instead of its own upstream default. See DigiSmith
-  `MEMORY.md` map item W.
+  `MEMORY.md` map item W. **Further diverged by W.6** (2026-09-04): its Execution
+  Handoff step now decides inline-vs-subagent-driven by autonomous complexity reasoning instead
+  of presenting Superpowers' original live question.
+- **executing-plans** — map item **W.6**, activated 2026-09-04. Gained a lightweight ledger
+  (`.superpowers/sdd/<plan-basename>/progress.md`, first line `# Inline-execution ledger`) and
+  a per-task self-check step it never had before — DigiSmith's `writing-plans` now dispatches
+  here directly for low-complexity plans instead of defaulting to
+  `subagent-driven-development` unconditionally. See DigiSmith `MEMORY.md` map item W.
 
 ## License
 
@@ -61,8 +67,8 @@ enhancement, not built here. See DigiSmith `MEMORY.md` map item W.
 ## Activation
 
 A vendored skill above is "dormant" until a future brainstorm activates
-it — **finishing-a-development-branch** (W.4) and **brainstorming**/
-**writing-plans** (W.5) have gone through this, all on 2026-09-04; every
+it — **finishing-a-development-branch** (W.4), **brainstorming**/**writing-plans** (W.5), and
+**executing-plans** (W.6) have gone through this, all on 2026-09-04; every
 other skill in this file is still an inert,
 unused copy that nothing in DigiSmith calls into. Activating one means:
 
