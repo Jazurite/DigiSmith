@@ -1,2 +1,15 @@
-skills/vendored-*/** -text
+skills/brainstorming/** -text
+skills/dispatching-parallel-agents/** -text
+skills/executing-plans/** -text
+skills/finishing-a-development-branch/** -text
+skills/receiving-code-review/** -text
+skills/requesting-code-review/** -text
+skills/subagent-driven-development/** -text
+skills/systematic-debugging/** -text
+skills/test-driven-development/** -text
+skills/using-git-worktrees/** -text
+skills/using-superpowers/** -text
+skills/verification-before-completion/** -text
+skills/writing-plans/** -text
+skills/writing-skills/** -text
 vendored/* -text

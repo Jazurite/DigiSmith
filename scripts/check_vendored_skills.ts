@@ -207,17 +207,25 @@ export const VENDORED_SKILLS: string[] = [
 ];
 
 export function checkSkill(name: string, upstreamSkillsDir: string): SkillReport {
-  const skillRelDir = `skills/vendored-${name}`;
-  const relFiles = listBaselineFiles(BASELINE_SHA, skillRelDir);
+  // The baseline lives at BASELINE_SHA, a frozen historical commit where every
+  // vendored skill was still under the `vendored-<name>` folder name — renaming
+  // the current working tree's folders (2026-09-04, dropping the prefix once
+  // the clean frontmatter `name:` override was live-confirmed) does not rewrite
+  // git history, so this path must stay `vendored-${name}` forever regardless
+  // of where the skill lives today.
+  const baselineRelDir = `skills/vendored-${name}`;
+  // The local working tree, by contrast, reflects the current (renamed) layout.
+  const localRelDir = `skills/${name}`;
+  const relFiles = listBaselineFiles(BASELINE_SHA, baselineRelDir);
   const files = relFiles.map((relFile) => {
-    const baselineContent = readGitBlob(BASELINE_SHA, `${skillRelDir}/${relFile}`);
+    const baselineContent = readGitBlob(BASELINE_SHA, `${baselineRelDir}/${relFile}`);
     if (baselineContent === null) {
       throw new Error(
-        `internal error: ${skillRelDir}/${relFile} was listed by listBaselineFiles but readGitBlob returned null`
+        `internal error: ${baselineRelDir}/${relFile} was listed by listBaselineFiles but readGitBlob returned null`
       );
     }
     const upstreamContent = readFileIfExists(path.join(upstreamSkillsDir, name, relFile));
-    const localContent = readFileIfExists(path.join(skillRelDir, relFile));
+    const localContent = readFileIfExists(path.join(localRelDir, relFile));
     return compareFile(relFile, baselineContent, upstreamContent, localContent);
   });
   return { skillName: name, files };

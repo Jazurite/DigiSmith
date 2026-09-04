@@ -53,8 +53,11 @@ activates it. Until then, every vendored skill listed above is an inert,
 unused copy — nothing in DigiSmith calls into any of them. Activating one
 means:
 
-- Editing its `skills/vendored-<name>/` copy with the actual content
-  changes wanted.
+- Editing its `skills/<name>/` copy with the actual content
+  changes wanted. (Folders were renamed 2026-09-04, dropping the
+  `vendored-` prefix, once live-testing confirmed the clean frontmatter
+  `name:` field really does win over the folder name for invocation —
+  see the note below.)
 - Updating DigiSmith's own internal call sites that reference
   `superpowers:<name>` to reference `digismith:<name>` instead.
 - Rewriting any internal `superpowers:<name>` cross-references inside the
@@ -77,9 +80,10 @@ means:
   listing, not just from opening the file.
 - Recording the switch in `MEMORY.md`.
 
-Known stale path to fix during `brainstorming`'s activation specifically:
-`skills/vendored-brainstorming/SKILL.md` (around line 151) references
-`skills/brainstorming/visual-companion.md`, which doesn't exist — the file
-actually vendored to is `skills/vendored-brainstorming/visual-companion.md`.
-Left uncorrected in this slice on purpose (a byte-identical clone makes
-zero content edits); fix it when `brainstorming` is activated.
+**Resolved by the 2026-09-04 rename, not left for `brainstorming`'s
+activation as originally planned:** `skills/brainstorming/SKILL.md`
+(around line 151) references `skills/brainstorming/visual-companion.md`
+— previously stale (the file actually lived at
+`skills/vendored-brainstorming/visual-companion.md`), now correct by
+coincidence since the folder rename moved the real file to exactly the
+path the reference already pointed at.
