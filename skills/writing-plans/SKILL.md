@@ -166,20 +166,32 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving the plan, decide which execution approach to use — never present this as a live
+question to your human partner:
 
-**"Plan complete and saved to `<path>`. Two execution options:**
+1. **User has explicitly requested inline execution for this specific plan** (stated earlier
+   in conversation) → announce that inline execution is being used, per the user's earlier
+   request, then invoke `digismith:executing-plans`. Not a live question — only activates if
+   the user volunteered it.
+2. **No subagent capability in this environment** (no `Agent` tool or equivalent available) →
+   announce that inline execution is being used because this environment has no
+   subagent-dispatch capability, then invoke `digismith:executing-plans` automatically. An
+   environmental constraint, not a choice.
+3. **Otherwise, reason about task complexity:** 1-2 tasks, none unusually risky and none
+   needing isolated context (e.g. touching shared mutable state, a security-sensitive path, or
+   genuinely benefiting from an independent reviewer's fresh eyes) → announce that inline
+   execution is being used, given the plan's small scope, then invoke
+   `digismith:executing-plans`. 3 or more tasks, or fewer tasks where at least one carries that
+   kind of risk → announce that Subagent-Driven Development is being used, then invoke
+   `digismith:subagent-driven-development` directly.
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+Decide the path first, then announce the matching outcome — never announce one approach before
+the decision is made, since the decision can send execution somewhere else entirely.
 
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?"**
-
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use digismith:subagent-driven-development
-- Fresh subagent per task + two-stage review
-
-**If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use digismith:executing-plans
+**If inline execution:**
+- **REQUIRED SUB-SKILL:** Use `digismith:executing-plans`
 - Batch execution with checkpoints for review
+
+**If Subagent-Driven Development:**
+- **REQUIRED SUB-SKILL:** Use `digismith:subagent-driven-development`
+- Fresh subagent per task + two-stage review
