@@ -179,6 +179,27 @@ dependency exists even if neither the strong nor weak model is
 OpenAI's. Worth weighing against a Chutes/TokenReply-only setup with no
 other OpenAI access.
 
+## References
+
+Running collection of external resources found while researching K.9 —
+articles, repos, papers. Add to this list as more surface; don't fold
+new ones into the narrative sections above unless they change the
+actual design direction.
+
+- [chutes-routing skill](file:///C:/Users/jazurite/.claude/skills/chutes-routing) — local, personal, general Chutes tool (no URL); intent → recipe table
+- [agentic-flow](https://github.com/ruvnet/agentic-flow) — cloned to `D:/Workspace/Library/agentic-flow`; router subsystem is real, rest of the framework is overscoped
+- [RouteLLM](https://github.com/lm-sys/RouteLLM) — cloned to `D:/Workspace/Library/RouteLLM`; LMSYS/Chatbot Arena team
+  - [Paper](https://arxiv.org/abs/2406.18665)
+  - [Blog post](http://lmsys.org/blog/2024-07-01-routellm/)
+- [Stop Paying GPT-4 Prices for "Hello World": Build an Intelligent Multi-LLM Router with Agno v2, FastAPI & Docker](https://medium.com/@nomannayeem/stop-paying-gpt-4-prices-for-hello-world-build-an-intelligent-multi-llm-router-with-agno-v2-09ed15a2755b) — Nayeem Islam, Mar 2026. Assigns each query a required "capability score" (0-1: a greeting ≈0.1, complex debugging ≈0.85) and picks the cheapest model clearing that threshold — an ER-triage metaphor (admin staff vs. the specialist) for the same escalation idea RouteLLM's cost-threshold does more rigorously. Built on **Agno** (a Python agent framework) + FastAPI + Docker. Not yet inspected beyond this summary — worth a closer look for the capability-score framing specifically, less for Agno itself.
+- [Best LLM routers and model routing platforms in 2026 — Braintrust](https://www.braintrust.dev/articles/best-llm-routers-2026)
+- [LiteLLM vs OpenRouter (2026) — TrueFoundry](https://www.truefoundry.com/blog/litellm-vs-openrouter)
+- [LLM Gateways Compared 2026 — Wavect](https://wavect.io/blog/llm-gateway-router-comparison-2026/)
+- [Best Open-Source LLM Router 2026 — ClawRouters](https://www.clawrouters.com/blog/best-open-source-llm-router)
+- [Multi-Tier LLM Routing — Emergent Mind](https://www.emergentmind.com/topics/multi-tier-llm-routing)
+- [Intelligent LLM Routing: Cost & Quality-Aware Selection — TrueFoundry](https://www.truefoundry.com/blog/llm-routing-cost-quality-aware-model-selection)
+- [LLM Routing and Model Cascades — TianPan.co](https://tianpan.co/blog/2025-11-03-llm-routing-model-cascades)
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
