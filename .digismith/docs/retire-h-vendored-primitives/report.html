@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retire subagent-driven-always Into Vendored Primitives (W.6) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Retire subagent-driven-always Into Vendored Primitives (W.6) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-04</span>
+    <span>Map item: <strong>W.6</strong></span>
+    <span>Commit range: <code>a1a5a1e..89faa5f</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>This feature folds map item H's (Subagent-driven always) execution-mode logic directly into the
+  vendored <code>writing-plans</code>/<code>executing-plans</code> primitives, replacing the
+  unconditional "always subagent-driven" default with autonomous complexity-based reasoning, and
+  retires the standalone <code>digismith:subagent-driven-always</code> skill. The classification
+  decision (explicit override, no-capability fallback, complexity-based default) moves into
+  <code>writing-plans</code>' own Execution Handoff step; <code>executing-plans</code> gains a
+  lightweight ledger and self-check step it never had before (its first real activation);
+  <code>report-implementation</code> gains a second, simpler report template branch for ledgers that
+  <code>executing-plans</code> produces; <code>inject-standards</code> needed no change. Followed the
+  full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (7 tasks, each dispatched to a fresh implementer
+  subagent and independently reviewed) → a final whole-branch review, plus 3 fix round(s) before
+  merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Fold H's classification logic into writing-plans' Execution Handoff</h4>
+      <p><code>writing-plans</code> now decides inline-vs-subagent-driven itself and invokes the
+      chosen primitive directly.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>Activate executing-plans — lightweight ledger, self-check, fork tag</h4>
+      <p><code>executing-plans</code> writes a ledger at
+      <code>.superpowers/sdd/&lt;plan-basename&gt;/progress.md</code> with per-task self-check lines
+      and a first-line identity marker for its ledger type.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>report-implementation branches its template for inline-execution ledgers</h4>
+      <p><code>report-implementation</code> now renders from either an SDD ledger or the new
+      inline-execution ledger.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 4</div>
+      <h4>Update README.md — remove H's paragraph, adjust skill count</h4>
+      <p>Stale <code>subagent-driven-always</code> documentation removed; skill count corrected from
+      six to five.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 5</div>
+      <h4>Update adopt — drop the moot H reference</h4>
+      <p><code>adopt</code>'s SKILL.md no longer references the retired
+      <code>subagent-driven-always</code> skill.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 6</div>
+      <h4>Delete subagent-driven-always, update MEMORY.md, vendored/PROVENANCE.md, history.html, delete the backlog file</h4>
+      <p>The skill and its backlog file are deleted; MEMORY.md, <code>vendored/PROVENANCE.md</code>,
+      <code>.digismith/history.html</code>, and <code>backlog/README.md</code> updated to record the
+      retirement.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 7</div>
+      <h4>Final verification</h4>
+      <p>Zero dangling references outside frozen history; <code>check_vendored_skills.ts</code>
+      confirms <code>executing-plans</code> newly diverged; full test suite green (125/125).</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Fold H's classification logic into writing-plans' Execution Handoff</td>
+      <td><code>writing-plans</code> now decides inline-vs-subagent-driven itself.</td>
+      <td>Approved, clean</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2. Activate executing-plans — lightweight ledger, self-check, fork tag</td>
+      <td><code>executing-plans</code> writes the new inline-execution ledger.</td>
+      <td>Approved, clean</td>
+      <td>Implementer's report cites the wrong line number for the Step 3 edit — cosmetic only, the diff itself is correct.</td>
+    </tr>
+    <tr>
+      <td>3. report-implementation branches its template for inline-execution ledgers</td>
+      <td><code>report-implementation</code> renders from either ledger type.</td>
+      <td>Approved, clean</td>
+      <td>Plan's Step 9 expects <code>grep -c "BUILD_PROCESS_SECTION"</code> = 3, but the brief's own verbatim Step 6 text correctly yields 2 — a plan-authoring arithmetic error, not an implementation defect.</td>
+    </tr>
+    <tr>
+      <td>4. Update README.md — remove H's paragraph, adjust skill count</td>
+      <td>Stale documentation removed, skill count corrected.</td>
+      <td>Approved, clean</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>5. Update adopt — drop the moot H reference</td>
+      <td>Moot reference removed.</td>
+      <td>Approved after 1 fix round</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>6. Delete subagent-driven-always, update MEMORY.md, vendored/PROVENANCE.md, history.html, delete the backlog file</td>
+      <td>Skill and backlog file deleted; provenance docs updated.</td>
+      <td>Approved after 1 fix round, 1 parked</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>7. Final verification</td>
+      <td>Verification only — no code changes.</td>
+      <td>Approved, clean (verification-only; self-verified by the controller, no independent task review applicable)</td>
+      <td>—</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 2 Important and 2 Minor findings from the final whole-branch
+  review, all fixed and re-review confirmed; 7 additional Minor observations and 4 plan-authoring
+  notes recorded but not blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td><code>report-implementation</code> never wired up for the inline-execution path — Task 3
+      gave it a second content-parsing branch for inline ledgers, but nothing
+      (<code>executing-plans</code>, <code>report-implementation</code>'s own trigger description,
+      MEMORY.md's convention) ever invoked it for an inline-run plan.</td>
+      <td>Fixed — <code>executing-plans</code> Step 3 now explicitly invokes
+      <code>digismith:report-implementation</code> before
+      <code>digismith:finishing-a-development-branch</code>; <code>report-implementation</code>'s
+      description, When-to-Use, Error Handling, and Step 5 broadened to cover both ledger types;
+      MEMORY.md's convention updated. Re-review confirmed (commit 89faa5f).</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>report-implementation</code>'s Error Handling section unconditionally said to ask
+      when a ledger has no <code>Final review (...)</code> line, contradicting Step 1's own
+      SDD/inline-execution branch (which correctly treats a missing Final review line as normal for
+      an inline ledger).</td>
+      <td>Fixed — Error Handling now branches by ledger type, matching Step 1's existing phrasing.
+      Re-review confirmed.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>MEMORY.md's Tier 2 description still claimed execution is unconditionally "always
+      subagents", stale after this plan's own change.</td>
+      <td>Fixed — updated to reflect complexity-based reasoning.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>README.md's <code>report-implementation</code> (map item N) description didn't mention it
+      now also covers <code>executing-plans</code> (inline-execution) plans.</td>
+      <td>Fixed — one clause added.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>7 further Minor observations and 4 plan-authoring notes surfaced during task reviews and
+      the final review (e.g. a stale grep-count expectation in Task 3's own brief, a narrow file-scan
+      in Task 7's own verification gate, a couple of documentation cross-references not fully updated
+      in lockstep) — see this plan's own ledger and final-review record for the complete list.</td>
+      <td>Not fixed in this pass — none load-bearing; recorded as future-work notes rather than
+      blockers.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">b51d008</span> feat(vendored-skills): fold H's classification logic into writing-plans (W.6)</li>
+    <li><span class="sha">1e92f89</span> feat(vendored-skills): activate executing-plans (W.6) — lightweight ledger and self-check</li>
+    <li><span class="sha">6f3ef64</span> feat(report-implementation): branch report template for inline-execution ledgers (W.6)</li>
+    <li><span class="sha">9cdb3b5</span> docs(readme): remove stale subagent-driven-always references (W.6)</li>
+    <li><span class="sha">e4a349b</span> docs(adopt): drop moot subagent-driven-always reference (W.6)</li>
+    <li><span class="sha">ad90608</span> docs(adopt): fix dangling pronoun after subagent-driven-always removal (W.6)</li>
+    <li><span class="sha">733bd4e</span> feat(vendored-skills): retire subagent-driven-always (H), absorbed into writing-plans/executing-plans (W.6)</li>
+    <li><span class="sha">58c5280</span> docs(history): match Q's retired-badge/bold styling for H (W.6)</li>
+    <li><span class="sha">89faa5f</span> fix(vendored-skills): wire report-implementation into the inline-execution path (W.6 final review)</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/retire-h-vendored-primitives/report.html</footer>
+
+</body>
+</html>
