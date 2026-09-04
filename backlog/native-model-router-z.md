@@ -1,13 +1,25 @@
-# Automatic model/vendor routing (K.9)
+# Native multi-provider model router (new letter, tentatively Z)
 
-**Status:** Idea only, not scoped. Depends on K.3 (shipped).
+**Status:** Idea only, not scoped. Promoted out of the K-lineage (was
+**K.9**) on 2026-09-04 — Jack judged K had grown too large/sprawling to
+keep holding this, and this item's actual mechanism (modifying
+`subagent-driven-development` itself) was already sitting awkwardly
+inside a K-numbered file anyway. Renamed and re-filed here verbatim,
+content otherwise unchanged from its K.9 form.
 
-**Map item:** **K.9**, sibling to K.2–K.8 under **K** ("Model tiering").
+**Map item:** **Z**, new top-level letter — not a K sibling anymore.
+(`X` is already tentatively claimed by
+[[vps-session-hosting-x.md]] — `Y` is the actual next-free letter
+alphabetically, but Jack named `Z` explicitly; letters are stable
+identifiers, not a strict sequence, per `MEMORY.md`'s own map
+philosophy, so this is fine as named.)
 
 **Source:** 2026-09-04, same session as K.8, the TokenReply → `kimi-k3`
 model switch, and switching the default provider/runner to
-`tokenreply`/`claude-code`. Surfaced when Jack asked "have we discussed
-the model router?" — the answer was no, only adjacent pieces.
+`tokenreply`/`claude-code`. Originally surfaced as K.9 when Jack asked
+"have we discussed the model router?"; promoted to its own letter later
+the same session once the reference-research thread alone had grown
+into its own small library and Jack said "this is getting out of hand."
 
 ## The idea
 
@@ -21,15 +33,15 @@ which model is actually best/cheapest/fastest for it right then.
 
 A real **model router** would pick the vendor/model per task
 automatically, based on some criteria, instead of a fixed profile
-setting. The map's own **K** entry already names this exact gap —
+setting. Map item **K**'s own entry already names this exact gap —
 "multi-provider routing beyond the single hardcoded Chutes provider" —
-as explicitly left undesigned once K.1/K.2 shipped. It has a home on
-the map; it was just never turned into a real, numbered item until now.
+as explicitly left undesigned once K.1/K.2 shipped; that's this item's
+origin, even though it's no longer filed under K itself.
 
 ## Why this isn't the same as K.5, K.7, or K.8
 
-Easy to conflate with three existing K-lineage ideas — worth being
-explicit about the difference:
+Still worth being explicit about, even filed outside K now — easy to
+conflate with three K-lineage ideas:
 
 - **K.5** (run the same task through two gateways simultaneously) is a
   **comparison** mechanism — both dispatches happen, for A/B evaluation.
@@ -63,15 +75,16 @@ explicit about the difference:
   smart is a real scope change to something else currently depends on
   staying simple.
 
-## Expanded framing (2026-09-04, later same session)
+## The actual vision: native to subagent-driven-development
 
-Jack's actual vision is bigger than routing inside
-`digismith:offload-implementer` alone: he wants per-task model
-selection built into **`subagent-driven-development` itself** — so any
-implementer task in a plan could route to an open-weight model, OpenAI,
-or xAI, not just Claude — rather than that capability living only in a
-separate, explicitly-invoked side-channel the way K.2 does today. "We
-don't need to limit onto just Claude Code models" — his words.
+Jack's real ask is bigger than routing inside
+`digismith:offload-implementer` alone — this is *why* it outgrew K.9.
+He wants per-task model selection built into
+**`subagent-driven-development` itself** — so any implementer task in a
+plan could route to an open-weight model, OpenAI, or xAI, not just
+Claude — rather than that capability living only in a separate,
+explicitly-invoked side-channel the way K.2 does today. "We don't need
+to limit onto just Claude Code models" — his words.
 
 **A real technical wall, already documented in this project's own
 history:** K.1's original design doc found that **Claude Code's `Agent`
@@ -84,22 +97,24 @@ itself would mean the primitive's own dispatch loop needs the same kind
 of bypass, generalized across *every* task in a plan, decided
 automatically rather than opted into per-task by name.
 
-**This sits at a real boundary between two map letters, not just K:**
-the motivation is K (model tiering), but the actual mechanism is
-modifying `subagent-driven-development` — a **vendored Superpowers
-primitive**, squarely map item **W**'s territory (primitive ownership,
-content activation). W.4 (2026-09-04, same day) already activated
-`finishing-a-development-branch` with real content divergence from
-upstream — this would be the same kind of move, applied to a much more
-central primitive. Captured here in K.9 for now per Jack's own choice,
-*not yet raised with whichever session/thread is driving W* — flag this
-explicitly before actually designing the mechanism, so W's own
-activation work and this don't collide or duplicate effort.
+**This still crosses into W's territory, promotion or not:** the
+motivation is model tiering (K's original domain), but the actual
+mechanism is modifying `subagent-driven-development` — a **vendored
+Superpowers primitive**, squarely map item **W**'s territory (primitive
+ownership, content activation). W.4 (2026-09-04, same day) already
+activated `finishing-a-development-branch` with real content divergence
+from upstream — this would be the same kind of move, applied to a much
+more central primitive. Becoming its own letter (Z) doesn't resolve
+this — it just makes the cross-cutting nature explicit instead of
+burying it inside a K file. **Not yet raised with whichever
+session/thread is driving W** — flag this before actually designing the
+mechanism, so W's own activation work and this don't collide or
+duplicate effort.
 
-## Reference implementations found (2026-09-04, later same session)
+## Reference implementations found
 
-Two concrete pieces of prior art surfaced, both outside DigiSmith's own
-repo — worth designing from rather than starting blind:
+Three concrete pieces of prior art surfaced, all outside DigiSmith's
+own repo — worth designing from rather than starting blind:
 
 **`chutes-routing` skill** (`~/.claude/skills/chutes-routing`, a general
 personal Chutes tool, no DigiSmith connection). Its "Intents → recipes"
@@ -181,9 +196,9 @@ other OpenAI access.
 
 ## References
 
-Running collection of external resources found while researching K.9 —
-articles, repos, papers. Add to this list as more surface; don't fold
-new ones into the narrative sections above unless they change the
+Running collection of external resources found while researching this
+item — articles, repos, papers. Add to this list as more surface; don't
+fold new ones into the narrative sections above unless they change the
 actual design direction.
 
 - [chutes-routing skill](file:///C:/Users/jazurite/.claude/skills/chutes-routing) — local, personal, general Chutes tool (no URL); intent → recipe table
@@ -206,8 +221,11 @@ Idea only, captured verbatim per Jack's request rather than
 brainstormed. Depends conceptually on K.3 (shipped) and probably wants
 K.4's real-cost data and K.7's benchmark results to exist before
 routing criteria can be chosen with any confidence — designing the
-mechanism before there's real data to route on risks guessing. The
-expanded framing above additionally depends on W's own activation
-mechanism (W.2) and precedent (W.4) existing first, since the real
-build here is a `subagent-driven-development` content activation, not
-a DigiSmith-only feature.
+mechanism before there's real data to route on risks guessing.
+Additionally depends on W's own activation mechanism (W.2) and
+precedent (W.4) existing first, since the real build here is a
+`subagent-driven-development` content activation, not a
+DigiSmith-only feature. Promoted to its own letter rather than designed
+because the K-lineage thread it lived in had grown too large to keep
+working in — this file exists to stop the bleeding, not because the
+idea itself is any more ready to build than it was as K.9.
