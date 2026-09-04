@@ -294,8 +294,7 @@ Invoke `digismith:subagent-driven-development` directly against
 `.digismith/docs/<slug>/plan.md` — `digismith:brainstorming` and
 `digismith:writing-plans` already ran outside DigiSmith for this ticket,
 so they are not invoked here. From this point on,
-`digismith:subagent-driven-always` and `digismith:inject-standards`
-Scenario 4 apply exactly as they would for any other
+`digismith:inject-standards` Scenario 4 applies exactly as it would for any other
 `digismith:subagent-driven-development` dispatch — no special-casing needed, since
 both trigger off the dispatch itself, not off which entry point produced it.
 
