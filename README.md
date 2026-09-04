@@ -17,26 +17,11 @@ Neither is invoked by name; `init` is the only front door. Everything else
 on the roadmap (standards injection, ticket intake, and what's still to
 come) is wired in behind it or reachable directly.
 
-Six skills sit outside that front door, because they trigger at
+Five skills sit outside that front door, because they trigger at
 specific points inside the build rather than at the front door itself —
-one right after a plan is saved, before any task code is written; one
-more during the build itself, standing in for a normal task dispatch
+one during the build itself, standing in for a normal task dispatch
 when explicitly asked to offload it; the other four later, once code
 already exists.
-
-**`subagent-driven-always`** (map item **H**). It intercepts
-`digismith:writing-plans`' Execution Handoff question — "1.
-Subagent-Driven (recommended) / 2. Inline Execution" — the moment a plan
-is saved and before any of its tasks are implemented. It skips the live
-question and defaults straight to `digismith:subagent-driven-development`,
-since `report-implementation` (N) and standards injection (G) both
-depend on the per-task ledger only that path produces. It falls back to
-`digismith:executing-plans` only if the user explicitly asked for
-inline execution, or if the environment has no subagent-dispatch
-capability at all. See
-[`skills/subagent-driven-always/SKILL.md`](skills/subagent-driven-always/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
-its status.
 
 **`capture-ephemeral-url`** (map item **M**). Once a PR is open in an Emma
 Shopify theme repo — typically right after
