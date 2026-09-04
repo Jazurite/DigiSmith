@@ -72,9 +72,37 @@ works cleanly today. A real implementation would need to solve a genuine attribu
 (e.g. correlating a dispatch's timestamp window against an hourly bucket and hoping nothing else
 ran concurrently — fragile, not rigorous) or find a different data source entirely.
 
+## TokenReply checked, plus a live correction to blocker #1 (2026-09-04, later same day)
+
+**TokenReply's own docs** (tokenreply.com/docs): confirmed they track real per-request usage
+internally — their "Usage Logs" feature shows, per request, model/input-output token
+counts/cost/timestamp/status, better granularity than Chutes' hourly buckets. But no documented
+API endpoint exists to pull it programmatically — every reference points to a **web dashboard
+page only**. Their compatibility page claims full OpenAI response-structure parity, which by
+itself implies their raw completion response should include a real `usage` object.
+
+**Live dispatch test, correcting blocker #1 above:** ran a real `claude -p --output-format
+stream-json --verbose` dispatch through TokenReply to check directly. The final `result` event
+**did** carry a real, non-placeholder `usage` object (`input_tokens: 586, output_tokens: 154`)
+plus a `modelUsage` breakdown with a computed `costUSD` — not the "0 or 1 placeholder, never
+updated" pattern GitHub issue #28197 described. That documented bug may describe a different
+artifact (e.g. saved session-transcript JSONL files under `~/.claude/projects/`) rather than the
+live `--output-format stream-json` event stream itself — **blocker #1 as originally written
+does not hold up against direct evidence** and should not be trusted at face value going forward.
+
+**However, this same test surfaced a much bigger, unrelated problem**, now tracked separately:
+[[tokenreply-kimi-k3-tool-calling-failure]] — the dispatched task silently failed to execute any
+real tool call at all (the model emitted garbled pseudo-tool-call text Claude Code didn't
+recognize), so whether *this specific test's* token counts reflect a "real" successful task is
+unclear — they're the counts for whatever garbage exchange actually happened, not a working
+implementer run. The presence and shape of the `usage` field is now confirmed real; its
+reliability under a genuinely successful task is still unverified.
+
 ## Why not applied yet
 
-Parked, not just undesigned. Depends on K.3 (shipped) but blocked on a real data-source problem
-found during research, not merely absent design work — see "Real blockers found" above. Revisit
-if either Claude Code's token-reporting bug gets fixed, Chutes' per-invocation export resumes
-updating, or TokenReply turns out to expose real per-request usage (unchecked).
+Parked, not just undesigned. Depends on K.3 (shipped). Blocker #2 (Chutes' hourly-only
+granularity) still stands as researched. Blocker #1 (Claude Code's token counts) turned out to be
+overstated — live evidence shows real counts in the `stream-json` final result — but the dispatch
+that proved this also failed to actually execute anything, so K.4 is still not safely buildable
+right now: fix [[tokenreply-kimi-k3-tool-calling-failure]] first, get a genuinely successful
+dispatch's real token counts to confirm they hold up under real work, then revisit.
