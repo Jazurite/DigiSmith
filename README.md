@@ -41,7 +41,9 @@ comes back clean, and generates that feature's HTML implementation report
 — what shipped, the per-task review record, the final-review findings and
 how they were resolved, the commit list. Timing is the whole point: it has
 to run before that plan's ledger gets deleted, since the ledger is where
-all of that detail lives. See
+all of that detail lives. It also covers a `digismith:executing-plans`
+(inline-execution) plan, firing right before that skill hands off to
+`finishing-a-development-branch`. See
 [`skills/report-implementation/SKILL.md`](skills/report-implementation/SKILL.md)
 for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
 its status.

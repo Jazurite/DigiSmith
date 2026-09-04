@@ -135,8 +135,9 @@ transitions, which stay manual by design).
 
 The shape of this ordering: Tier 1 establishes *what DigiSmith is* — its
 identity (the spine) and its house rules (standards). Tier 2 overrides
-*how execution runs* — always subagents, on a wider model pool. Structure
-before mechanics. No lifecycle machinery ships until Tier 3, which means
+*how execution runs* — complexity-based (inline for small/low-risk plans,
+subagent-driven otherwise), on a wider model pool. Structure before
+mechanics. No lifecycle machinery ships until Tier 3, which means
 DigiSmith's first release is an opinionated execution layer over
 Superpowers, not a ticket tool.
 
@@ -270,4 +271,5 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
   default.
 - **Every `subagent-driven-development` plan invokes `digismith:report-implementation`** once its
   final review passes, before the plan's workspace gets deleted (see N's own design/skill for why
-  the ordering matters).
+  the ordering matters). An `executing-plans`-run (inline-execution) plan invokes it too, right
+  before `executing-plans` hands off to `finishing-a-development-branch` (see W.6).

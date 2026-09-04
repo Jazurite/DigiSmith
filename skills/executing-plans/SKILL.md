@@ -47,6 +47,8 @@ For each task:
 ### Step 3: Complete Development
 
 After all tasks complete and verified:
+- Announce: "I'm using the report-implementation skill to generate this feature's implementation report."
+- **REQUIRED SUB-SKILL:** Use digismith:report-implementation, once, right here — after the last task's self-check and before the hand-off below
 - Announce: "I'm using the finishing-a-development-branch skill to complete this work."
 - **REQUIRED SUB-SKILL:** Use digismith:finishing-a-development-branch
 - Follow that skill to verify tests, present options, execute choice

@@ -1,6 +1,6 @@
 ---
 name: report-implementation
-description: Use when a `digismith:subagent-driven-development` plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace.
+description: Use when a `digismith:subagent-driven-development` plan's final whole-branch review has just come back clean (all findings fixed, parked, or none found) — right before that skill's own Finish step deletes the plan's workspace. Also use right after `digismith:executing-plans` finishes its last task's self-check, before it hands off to `digismith:finishing-a-development-branch`.
 ---
 
 # Report Implementation
@@ -33,6 +33,14 @@ DigiSmith feature so far has merged fast-forward. If a real merge commit
 is ever created instead, the commit range recorded at trigger-time could
 differ from what actually lands on `main` — re-examine this design the
 first time that happens.
+
+Or, right when a `digismith:executing-plans` run completes its last
+task — self-check done, the ledger's last line appended — and **before**
+it invokes `digismith:finishing-a-development-branch`. Unlike the SDD
+case, `executing-plans` never deletes its ledger or workspace afterward
+(no equivalent `rm -rf` step exists for the inline path), so there's no
+"earlier than deletion" timing constraint here — just "before the
+hand-off to `finishing-a-development-branch`," full stop.
 
 ## Prerequisites
 
@@ -590,11 +598,18 @@ rendered empty.
 
 ### Step 5: Hand Back
 
-This skill's job ends here.
-`digismith:subagent-driven-development`'s own Finish step continues
-exactly as written: delete the plan's workspace, then invoke
-`digismith:finishing-a-development-branch`. Do not re-invoke or
-duplicate any part of that sequencing.
+This skill's job ends here either way.
+
+**For an SDD ledger:** `digismith:subagent-driven-development`'s own
+Finish step continues exactly as written: delete the plan's workspace,
+then invoke `digismith:finishing-a-development-branch`. Do not re-invoke
+or duplicate any part of that sequencing.
+
+**For an inline-execution ledger:** `digismith:executing-plans` has no
+workspace-deletion step at all — it invokes
+`digismith:finishing-a-development-branch` itself right after this skill
+returns. Don't describe a deletion step that doesn't exist for this
+ledger type; this skill's job still just ends here.
 
 ## Error Handling
 
@@ -604,13 +619,17 @@ duplicate any part of that sequencing.
   and silently, same as the no-ledger case; not applicable to this run.
   (No `.digismith/profile`, a stale one, `reporting: true`, or the field
   absent → proceed as normal.)
-- **Ledger missing a `Final review (...)` line** → say so plainly and ask
-  before proceeding (Step 1). This is unexpected at this skill's trigger
-  point, so never absorb it silently. If the answer is to proceed anyway
-  (e.g. a deliberate fixture that simulates firing before any final review
-  ran), generate what's derivable from the per-task lines alone, omit the
-  Final Review & Fix section and its TOC entry, and note in the Summary
-  that final-review detail isn't available yet.
+- **Ledger missing a `Final review (...)` line** → branches by ledger type
+  (Step 1). **For an SDD ledger:** say so plainly and ask before
+  proceeding. This is unexpected at this skill's trigger point, so never
+  absorb it silently. If the answer is to proceed anyway (e.g. a
+  deliberate fixture that simulates firing before any final review ran),
+  generate what's derivable from the per-task lines alone, omit the Final
+  Review & Fix section and its TOC entry, and note in the Summary that
+  final-review detail isn't available yet. **For an inline-execution
+  ledger:** this is expected, not a gap — an inline ledger never has a
+  `Final review (...)` line — so it never triggers an ask; proceed
+  straight to Step 2 as normal.
 - **Ledger's final-review line reports zero findings** → omit the Final
   Review & Fix section and its TOC entry. Not an error; never render an
   empty table.
