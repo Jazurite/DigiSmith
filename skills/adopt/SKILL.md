@@ -84,9 +84,9 @@ Continue to Step 4.
    derived, the branch's slug wins — it's already committed to the branch
    name, and `digismith:adopt` never renames a branch. Move
    `.digismith/docs/<its-own-derived-slug>/` to
-   `.digismith/docs/<branch's-slug>/` in its entirety (same move-and-correct
-   idiom `digismith:enforcer` already uses for a misplaced `design.html`/
-   `plan.md` — applied here to a misplaced `ticket.md` folder).
+   `.digismith/docs/<branch's-slug>/` in its entirety (a move-and-correct
+   idiom for handling misplaced files — applied here to correct a misplaced
+   `ticket.md` folder).
 3. If the branch doesn't match `<Key>__<slug>` at all (an off-convention
    name), there's nothing to compare against — use `digismith:jira-intake`'s
    derived slug directly, no correction needed.
@@ -178,26 +178,115 @@ it in the same way the profile file is copied above — mirrors
 
 ### Step 6: Relocate the Docs
 
-Run `digismith:enforcer`'s Step 2/5 "Verified" move-and-correct logic
-directly, against the plan (and spec, if one was supplied) from Step 1,
+Write the plan (and spec, if one was supplied) from Step 1 directly into `.digismith/docs/`,
 targeting the slug resolved in Step 3:
 
 - **Plan:** write the content you read into context in Step 1 to
-  `.digismith/docs/<slug>/plan.md`, creating the folder if needed. Format
-  doesn't change — plans are already Markdown.
-- **Spec, if supplied:** rewrap the content you read into context in Step 1
-  into `digismith:enforcer`'s HTML shell at
-  `.digismith/docs/<slug>/design.html` (reuse the shell byte-for-byte from
-  `digismith:enforcer`'s Step 1), respecting the same gitignore check
-  (`git check-ignore -q .digismith/docs/<slug>/design.html`) and
-  `publish_artifact` gate `digismith:enforcer` Step 3 already defines —
-  publishing `design.html` via the `Artifact` tool when that gate allows it,
-  exactly as `digismith:enforcer` Step 3 does. No spec supplied → skip
-  `design.html` entirely, not an error.
-- **Relocation target already exists with different content** (e.g. a
-  previous partial `digismith:adopt` run, or a genuine naming collision) →
-  ask before overwriting, same "never silently overwrite" posture used
-  everywhere else in this project.
+  `.digismith/docs/<slug>/plan.md`, creating the folder if needed. Format doesn't change — plans
+  are already Markdown. No gitignore check for `plan.md`.
+- **Spec, if supplied:** rewrap the content you read into context in Step 1 into the HTML shell
+  below at `.digismith/docs/<slug>/design.html` (reuse the `<style>` block byte-for-byte, filling
+  in `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s from the supplied spec's
+  own content):
+
+  ```html
+  <!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+      --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+        --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--fg);
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+    }
+    header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+    h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+    .meta { color: var(--muted); font-size: .9rem; }
+    .meta span { margin-right: 1.2rem; }
+    .badge {
+      display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+      border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+    }
+    nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+    nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--muted); margin: 0 0 .6rem; }
+    nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+    nav.toc a { color: var(--fg); text-decoration: none; }
+    nav.toc a:hover { color: var(--accent); }
+    section { margin-bottom: 2.6rem; }
+    h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+    h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+    code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1rem; overflow-x: auto; }
+    pre code { background: none; padding: 0; }
+    ul, ol { padding-left: 1.4rem; }
+    li { margin-bottom: .3rem; }
+    .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+    @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+    .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+    .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+    .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+    .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+    .table-wrap { overflow-x: auto; }
+    th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+    th { background: var(--card-bg); }
+    .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+      padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+    footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+      padding-top: 1rem; margin-top: 3rem; }
+  </style>
+  </head>
+  <body>
+
+  <header class="doc-head">
+    <span class="badge">approved for planning</span>
+    <h1>{{TITLE}}</h1>
+    <div class="meta">
+      <span>Date: {{DATE}}</span>
+      <span>Map item: {{MAP_ITEM}}</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      {{TOC_ITEMS}}
+    </ol>
+  </nav>
+
+  {{BODY_SECTIONS}}
+
+  <footer>DigiSmith · .digismith/docs/<slug>/design.html</footer>
+
+  </body>
+  </html>
+  ```
+
+  Respect the gitignore check before committing: `git check-ignore -q
+  .digismith/docs/<slug>/design.html` — exit 0 (ignored) → write the file, skip `git
+  add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. Then publish via
+  `Artifact` unless the active profile has `publish_artifact: false` — `title` from the doc's
+  own `<title>` tag, `description` one sentence summarizing the feature, `favicon` one or two
+  emoji fitting the topic. `publish_artifact: false` → skip the `Artifact` call, state plainly
+  why. No spec supplied → skip `design.html` entirely, not an error.
+- **Relocation target already exists with different content** (e.g. a previous partial
+  `digismith:adopt` run, or a genuine naming collision) → ask before overwriting, same "never
+  silently overwrite" posture used everywhere else in this project.
 
 ### Step 7: Hand Off to Build
 
@@ -239,5 +328,5 @@ both trigger off the dispatch itself, not off which entry point produced it.
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/profile` and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
-| 6 | Write Step 1's in-hand plan (required) and spec (optional) content into `.digismith/docs/<slug>/` via `digismith:enforcer`'s move-and-correct logic, publishing `design.html` when `publish_artifact` allows |
+| 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/`, publishing `design.html` when `publish_artifact` allows |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |

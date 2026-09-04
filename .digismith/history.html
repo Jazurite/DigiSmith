@@ -151,7 +151,7 @@
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>K</strong></td><td>Model tiering</td>
-      <td><strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>enforcer</code>'s spec rewrap, <code>report-implementation</code>'s report render) to a cheap Chutes-hosted model, falling back to in-session generation whenever it's off, unavailable, or returns something malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a Chutes-hosted model (Kimi K3) via a persistent OpenCode server — <code>offload-implementer</code> skill <span class="status done">Done</span></td>
+      <td><strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>report-implementation</code>'s report render — formerly also <code>enforcer</code>'s spec rewrap, until Enforcer's retirement dropped that specific consumer) to a cheap Chutes-hosted model, falling back to in-session generation whenever it's off, unavailable, or returns something malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a Chutes-hosted model (Kimi K3) via a persistent OpenCode server — <code>offload-implementer</code> skill <span class="status done">Done</span></td>
       <td><span class="status next">In progress (multi-provider routing beyond Chutes still undesigned)</span></td></tr>
     <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
       <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
@@ -169,8 +169,8 @@
       <td>Captures the full session transcript for a DigiSmith-driven ticket build and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis</td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>Q</strong></td><td>Convention enforcement</td>
-      <td>Makes <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carries the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability</td>
-      <td><span class="status done">Done</span></td></tr>
+      <td>Made <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carried the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability. <strong>Retired 2026-09-04, absorbed into W.5</strong> — see MEMORY.md map item W.</td>
+      <td><span class="status done">Done (retired — see W.5)</span></td></tr>
     <tr><td><strong>R</strong></td><td>End-to-end testing</td>
       <td>Split out of <strong>I</strong> (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -239,7 +239,8 @@
     <strong>Q — Convention enforcement:</strong> <code>enforcer</code> skill —
     <a href="docs/enforcer/design.html">design spec</a> ·
     <a href="docs/enforcer/plan.md">implementation plan</a> ·
-    <a href="docs/enforcer/report.html">implementation report</a>
+    <a href="docs/enforcer/report.html">implementation report</a> ·
+    <strong>Retired 2026-09-04, absorbed into W.5</strong> — see MEMORY.md map item W.
   </p>
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>I.1 — JIRA progress write-back:</strong> <code>jira-progress-write-back</code> skill —

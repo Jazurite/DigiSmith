@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Use when you have a spec or requirements for a multi-step task, before touching code (DigiSmith fork of Superpowers' writing-plans)
 ---
 
 # Writing Plans
@@ -13,10 +13,27 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
+**Context:** If working in an isolated worktree, it should have been created via the `digismith:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to:**
+
+- **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
+  `"name": "digismith"`, or `.digismith/profile` is present) — `.digismith/docs/<slug>/plan.md`
+  instead of this skill's own default location. Format is unchanged — plans stay Markdown.
+
+  **Slug:** reuse the slug already established earlier in this same session (this skill runs as
+  `brainstorming`'s own terminal step once the user approves the spec, so a slug is normally
+  already in context from that earlier work). No slug in context (a fully standalone
+  invocation) → derive it yourself, same rule as `brainstorming`'s own ad-hoc case: lowercase
+  the feature description, drop filler words (a, an, the, on, to, of, for, in), replace
+  remaining non-alphanumeric runs with a single hyphen, truncate to ~40 characters at a word
+  boundary.
+
+  There is no gitignore check for `plan.md` — only `design.html` gets one.
+
+- **Not DigiSmith-tracked work** — `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (this
+  skill's own unmodified default)
+  - (User preferences for plan location override this default)
 
 ## Scope Check
 
@@ -58,7 +75,7 @@ independently testable deliverable.
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -151,7 +168,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `<path>`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
@@ -160,9 +177,9 @@ After saving the plan, offer execution choice:
 **Which approach?"**
 
 **If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- **REQUIRED SUB-SKILL:** Use digismith:subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
+- **REQUIRED SUB-SKILL:** Use digismith:executing-plans
 - Batch execution with checkpoints for review

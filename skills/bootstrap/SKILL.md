@@ -374,22 +374,30 @@ what Step 2's new sub-step 7 below makes possible.
 
 ### Step 3: Hand Off to Brainstorming
 
-From inside that worktree, invoke `digismith:enforcer` — it needs the
-slug already derived (the `ticket.md` folder name Step 2 reused under
-`ticket: true`, or the slug Step 1 derived directly under `ticket:
-false` — never re-derived a third way), so pass that along rather than
-letting `enforcer` re-derive it. Then invoke `digismith:brainstorming`, passing
-the ticket content **you already read in Step 1** — title, description,
-acceptance criteria — as seed context so it doesn't start
-cold. Pass the content you're carrying; do not try to re-read
-`ticket.md` from inside the worktree, it isn't there (see Step 1). Once
-invoked, `bootstrap`'s own job is done.
-`digismith:brainstorming`'s own process (including its own
-user-approval gates) and its terminal-step chain into
-`digismith:writing-plans` and
-`digismith:subagent-driven-development`/`digismith:executing-plans`
-take over unmodified — do not re-invoke or duplicate any part of that
-chain yourself.
+From inside that worktree, invoke `digismith:brainstorming`, passing both the slug already
+derived (the `ticket.md` folder name Step 2 reused under `ticket: true`, or the slug Step 1
+derived directly under `ticket: false` — never re-derived a third way; `brainstorming` reuses
+it verbatim rather than re-deriving) and the ticket content **you already read in Step 1** —
+title, description, acceptance criteria — as seed context so it doesn't start cold. Pass the
+content you're carrying; do not try to re-read `ticket.md` from inside the worktree, it isn't
+there (see Step 1).
+
+Once `brainstorming` reports it has written its design doc (its own "Spec written and
+committed to `<path>`" message), publish it: read the active profile the same way `bootstrap`
+already resolves one elsewhere in this file, and unless it has `publish_artifact: false`, call
+the `Artifact` tool on the reported `design.html` path — `title` from the doc's own `<title>`
+tag, `description` one sentence summarizing the feature, `favicon` one or two emoji fitting the
+feature's topic (pick contextually, never reuse a generic default across unrelated features).
+Report the returned URL. `publish_artifact: false` → skip the `Artifact` call, state plainly:
+"Not published — `publish_artifact: false` in this repo's profile." Not DigiSmith-tracked work
+(`brainstorming` used its own upstream default location, not `.digismith/docs/`) → skip this
+publish step entirely, nothing to publish under this convention.
+
+`bootstrap`'s own job is done once the publish step above completes (or is skipped).
+`digismith:brainstorming`'s own process (including its own user-approval gates) and its
+terminal-step chain into `digismith:writing-plans` and
+`digismith:subagent-driven-development`/`digismith:executing-plans` take over unmodified — do
+not re-invoke or duplicate any part of that chain yourself.
 
 ## Error Handling
 
@@ -443,4 +451,4 @@ chain yourself.
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` into the worktree, only if Step 1.5 just wrote one this run — both plain file copies, never `git add -f` |
-| 3 | Invoke `digismith:enforcer` (passing the already-derived slug) before `digismith:brainstorming`, then invoke `digismith:brainstorming` with the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there |
+| 3 | Invoke `digismith:brainstorming` directly, passing the already-derived slug plus the Step 1 ticket content as seed context (when there is any); once it reports its design doc written, publish via `Artifact` unless `publish_artifact: false`; Superpowers' own chain takes over from there |
