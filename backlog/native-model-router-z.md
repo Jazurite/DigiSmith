@@ -215,6 +215,30 @@ actual design direction.
 - [Intelligent LLM Routing: Cost & Quality-Aware Selection — TrueFoundry](https://www.truefoundry.com/blog/llm-routing-cost-quality-aware-model-selection)
 - [LLM Routing and Model Cascades — TianPan.co](https://tianpan.co/blog/2025-11-03-llm-routing-model-cascades)
 
+## K.4's data-source blockers apply here too (2026-09-04)
+
+K.4 (gateway-cost-comparison-k4.md, "report-only" cost/token comparison) was scoped as a
+prerequisite/input Z could eventually consume, then parked after real research found the two
+obvious data sources both broken for isolating one task's real cost:
+
+1. **Claude Code's own `stream-json` token counts are confirmed wrong**, not just imprecise —
+   documented bug (Anthropic SDK GitHub issue #28197): `usage.input_tokens` in Claude Code's own
+   JSONL/stream-json logs are streaming placeholders (0 or 1) that never update to the real final
+   count, a 100-174x undercount observed. Any router (Z) that wanted to make decisions based on
+   Claude Code's self-reported usage would be reasoning from wrong numbers.
+2. **Chutes' own usage API is time-bucketed by hour**, not per-request — `GET
+   /users/{user_id}/usage` can't attribute cost to one specific dispatch. A per-invocation
+   endpoint exists (`/invocations/exports/...`) but is platform-wide and, as of last check,
+   appeared to have stopped updating. **TokenReply's own usage API was never checked** — genuinely
+   open, not a confirmed dead end.
+
+**Why this matters for Z specifically:** any router design that scores/ranks providers by
+real-time cost (one of K.9's original candidate criteria) inherits this same data-source problem.
+Z's eventual design needs to either solve the attribution problem properly, use a different
+signal than live per-request cost (e.g. pre-computed static pricing tables per model, accepting
+they won't reflect real-time promotional pricing or usage-based discounts), or treat cost-based
+routing as lower-confidence than other criteria until a real data source is found.
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
