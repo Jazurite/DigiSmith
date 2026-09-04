@@ -4,7 +4,7 @@ ticket: false
 ephemeral: false
 reporting: true
 publish_artifact: true
-logging: true
+logging: false
 model_offload_provider: chutes
 task_offload_provider: chutes
 task_offload_runner: opencode
