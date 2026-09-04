@@ -296,7 +296,7 @@ Invoke `digismith:subagent-driven-development` directly against
 so they are not invoked here. From this point on,
 `digismith:inject-standards` Scenario 4 applies exactly as it would for any other
 `digismith:subagent-driven-development` dispatch — no special-casing needed, since
-both trigger off the dispatch itself, not off which entry point produced it.
+it triggers off the dispatch itself, not off which entry point produced it.
 
 ## Error Handling
 
