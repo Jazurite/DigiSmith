@@ -36,11 +36,12 @@ first time that happens.
 
 ## Prerequisites
 
-A ledger must exist at `.superpowers/sdd/<plan-basename>/progress.md`. If
-it doesn't (e.g. the plan ran via `digismith:executing-plans` instead of
-`digismith:subagent-driven-development`), this skill's trigger condition
-isn't met — skip it silently and let the other skill's Finish step proceed
-as normal. Don't render a report from nothing.
+A ledger must exist at `.superpowers/sdd/<plan-basename>/progress.md`. If it doesn't (no
+execution has happened yet for this plan), this skill's trigger condition isn't met — skip it
+silently and let the other skill's Finish step proceed as normal. Don't render a report from
+nothing. If a ledger does exist, its first line names which mechanism produced it — `# SDD
+ledger — plan: ...` or `# Inline-execution ledger — plan: ...` — determining which grammar
+Step 2 parses.
 
 The active profile must also have reporting turned on. Check for
 `.digismith/profile` in the repo currently being worked in (never
@@ -141,7 +142,7 @@ apply to this run.
    `false`, discard the derived key entirely for Step 2a regardless of
    whether `ticket.md` had one — the ticket-key meta span is omitted.
 
-**If the ledger has no `Final review (...)` line**, don't quietly proceed.
+**For an SDD ledger:** if it has no `Final review (...)` line, don't quietly proceed.
 This skill's trigger condition *is* "the final review just passed," so a
 missing final-review line means either the ledger doesn't follow
 DigiSmith's required grammar (see `MEMORY.md`'s Conventions section) or
@@ -153,13 +154,23 @@ simulates firing before any final review ran at all; that's covered in
 Error Handling, and it's still worth stating out loud rather than
 absorbing silently.)
 
+**For an inline-execution ledger:** there is never a `Final review (...)` line — that's the
+expected, normal shape, not a gap to flag. Proceed straight to Step 2.
+
 ### Step 2: Parse the Ledger into Report Content
 
-The ledger follows DigiSmith's standardized line grammar — per-task lines
+**For an SDD ledger:** it follows DigiSmith's standardized line grammar — per-task lines
 from `digismith:subagent-driven-development` itself, plus the
 final-review lines DigiSmith requires on top of it (both documented in
-`MEMORY.md`'s Conventions section). Everything below keys off that
-grammar.
+`MEMORY.md`'s Conventions section). Everything below (2a-2f) keys off that
+grammar, except 2a's summary-sentence closing clause and 2b's per-task row shape — see the
+inline-ledger variants of each, called out inline below.
+
+**For an inline-execution ledger:** simpler grammar, no review/fix-round/final-review lines at
+all — just `Task <N>: complete (commits <base7>..<head7>, self-check: <summary>)` lines. Steps
+2a (except the summary's closing clause), 2d, 2e, and 2f apply unchanged; 2b uses its
+inline-ledger variant below; 2c never applies (skip it — no final review ever exists for this
+ledger type).
 
 #### 2a. Header-level placeholders
 
@@ -203,20 +214,23 @@ the plan file, the ledger, and `git` alone:
   sources:
   1. the plan's own `**Goal:**` line (what was built and why),
   2. the plan's own `**Architecture:**` line (how it's shaped),
-  3. this fixed closing sentence: *"Followed the full Superpowers process:
-     brainstorming → spec → writing-plans →
+  3. this fixed closing sentence — **for an SDD ledger:** *"Followed the full Superpowers
+     process: brainstorming → spec → writing-plans →
      `digismith:subagent-driven-development` (`<N>` tasks, each
      dispatched to a fresh implementer subagent and independently
      reviewed) → a final whole-branch review"* — where `<N>` is the number
      of `### Task N:` headings in the plan. Append
      *", plus `<R>` fix round(s) before merge"* if any task line or the
      final review itself recorded a fix round (`<R>` = total fix rounds
-     across the whole run). Trim/rewrap 1-3 for prose flow, but don't add
-     facts that aren't in those sources.
+     across the whole run). **For an inline-execution ledger:** *"Followed the full Superpowers
+     process: brainstorming → spec → writing-plans → `digismith:executing-plans` (`<N>` tasks,
+     executed directly in this session, each with a self-check before moving on)"* — no
+     fix-round or final-review clause, since neither exists for this ledger type. Trim/rewrap
+     1-3 for prose flow, but don't add facts that aren't in those sources.
 
 #### 2b. Build Process rows
 
-One per task. For each `Task <N>: complete (...)` line:
+**For an SDD ledger.** One per task. For each `Task <N>: complete (...)` line:
 
 - **Task title** — the plan's `### Task N: ...` heading.
 - **Review verdict** — scan **all** `Task <N>: ...` lines for that same
@@ -235,6 +249,15 @@ One per task. For each `Task <N>: complete (...)` line:
   "BLOCKED — `<reason>`"). Never silently omit a blocked task.
 - **Deferred minors** — every `Task <N>: minor (deferred): ...` line for
   that same task number, verbatim.
+
+**For an inline-execution ledger.** One per task. For each `Task <N>: complete (commits
+<base7>..<head7>, self-check: <summary>)` line:
+
+- **Task title** — the plan's `### Task N: ...` heading, same as the SDD case.
+- **Self-check** — the `self-check: <summary>` text from that task's ledger line, verbatim.
+- No review-verdict column, no deferred-minors column — neither concept exists for this ledger
+  type (no independent reviewer, no fix loop). The rendered table has only three columns for
+  this ledger type: Task / Delivered / Self-check (see Step 3's inline template variant below).
 
 #### 2c. Final Review & Fix rows
 
@@ -422,17 +445,7 @@ spec/report already uses:
   </div>
 </section>
 
-<section id="build">
-  <h2>Build Process</h2>
-  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
-  subagent per task, independent spec-compliance + quality review after each.</p>
-  <div class="table-wrap">
-  <table>
-    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
-    {{BUILD_PROCESS_ROWS}}
-  </table>
-  </div>
-</section>
+{{BUILD_PROCESS_SECTION}}
 
 {{FINAL_REVIEW_SECTION}}
 
@@ -468,6 +481,40 @@ section exists, or an empty string when it's omitted.
 </section>
 ```
 
+`{{BUILD_PROCESS_SECTION}}` is one of two literal blocks, chosen by ledger type (Step 2's
+determination). **For an SDD ledger:**
+
+```html
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    {{BUILD_PROCESS_ROWS}}
+  </table>
+  </div>
+</section>
+```
+
+**For an inline-execution ledger** (note: three columns, not four — no review-verdict or
+deferred-minors cells, per 2b's inline variant):
+
+```html
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:executing-plans</code>: implemented directly in this
+  session, task by task, with a self-check after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Self-check</th></tr>
+    {{BUILD_PROCESS_ROWS}}
+  </table>
+  </div>
+</section>
+```
+
 - `{{FINAL_REVIEW_ROWS}}` — one
   `<tr><td>...</td><td>...</td><td>...</td></tr>` per finding from Step
   2c: severity / finding text / resolution text, each escaped per Step 2f.
@@ -475,7 +522,8 @@ section exists, or an empty string when it's omitted.
   review's overall verdict, e.g. *"Ready to merge: With fixes — 4
   Important findings, all resolved."*
 
-When the ledger's final-review line reports **zero** findings, both
+When the ledger's final-review line reports **zero** findings (SDD ledger only — see 2c), or
+when the ledger is an inline-execution ledger (which never has a final review at all), both
 `{{FINAL_REVIEW_SECTION}}` and `{{TOC_FINALREVIEW_ITEM}}` are the empty
 string — the section and its TOC entry are omitted entirely rather than
 rendered empty.
@@ -596,8 +644,8 @@ duplicate any part of that sequencing.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites), ask if no final-review line |
-| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a), per-task rows (2b), final-review findings (2c), delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
-| 3 | Render using the standard report HTML template, including the literal Final Review & Fix block (or omit it, with its TOC entry, when there are no findings); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
+| 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
+| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a); per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so; then publish `report.html` via the `Artifact` tool regardless of whether it was committed, unless the active profile has `publish_artifact: false` |
 | 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |
