@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retire Enforcer into Vendored Primitives (W.5)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Retire Enforcer into Vendored Primitives (W.5)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-04</span>
+    <span>Map item: W.5 (retires Q)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — Detection &amp; slug resolution</a></li>
+    <li><a href="#s2">Section 2 — brainstorming's path/format override</a></li>
+    <li><a href="#s3">Section 3 — writing-plans' equivalent</a></li>
+    <li><a href="#s4">Section 4 — Call-site updates</a></li>
+    <li><a href="#s5">Section 5 — Enforcer retirement &amp; letter Q</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>Map item <strong>Q</strong> (Convention enforcement) is implemented today by a standalone
+skill, <code>digismith:enforcer</code>, which wraps <code>digismith:brainstorming</code> and
+<code>digismith:writing-plans</code> from the outside: an "Advisory" step injects override
+instructions before each call, and a "Verified" step checks the output landed correctly
+afterward, correcting it if not. This is exactly the kind of "H/Q-style interception" that
+map item <strong>W</strong>'s own philosophy note says DigiSmith would rather avoid — W exists
+specifically to vendor and directly edit Superpowers' primitives instead of wrapping them.</p>
+<p>This session proved W's actual mechanism works end-to-end for the first time (W.4,
+<code>finishing-a-development-branch</code>'s push-after-merge fix, activated 2026-09-04). Given
+that, Jack's direction: fold Enforcer's real logic directly into the vendored primitives it
+wraps, retire the standalone skill, and free letter Q for future reuse.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — Detection &amp; slug resolution</h2>
+<p>Moves into <code>brainstorming</code>'s own vendored content. Self-detects DigiSmith-tracked
+work via the same two signals Enforcer already uses: current working directory has
+<code>.claude-plugin/plugin.json</code> with <code>"name": "digismith"</code> (this repo), or
+<code>.digismith/profile</code> is present (a consumer repo). Neither signal → behave exactly as
+upstream, unmodified.</p>
+<p>Slug resolution: when invoked from <code>bootstrap</code>/<code>adopt</code>, they've already
+derived one before calling <code>brainstorming</code> — passed along explicitly in the invocation
+context, reused verbatim rather than re-derived. A fully ad-hoc call (no <code>bootstrap</code> in
+the loop) derives it itself using the same deterministic rule <code>jira-intake</code> Step 3.1
+already defines (lowercase, drop filler words, hyphenate, truncate ~40 chars at a word boundary) —
+inlined into <code>brainstorming</code>'s own vendored copy rather than referenced by pointer.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — brainstorming's path/format override</h2>
+<p>When DigiSmith-tracked work is detected, <code>brainstorming</code>'s own "Write design doc"
+step targets <code>.digismith/docs/&lt;slug&gt;/design.html</code> instead of
+<code>docs/superpowers/specs/YYYY-MM-DD-&lt;topic&gt;-design.md</code>, using the exact HTML shell
+(style block byte-for-byte) currently defined in Enforcer's Step 1, inlined directly. The
+gitignore check moves in as part of the same step: <code>git check-ignore -q
+.digismith/docs/&lt;slug&gt;/design.html</code> — exit 0 (ignored) → write but skip
+<code>git add</code>/commit; exit 1 (not ignored) → commit normally.</p>
+<p>Not DigiSmith-tracked → unchanged upstream behavior (plain Markdown, default location) — the
+fallback must stay intact since not every repo Jack touches is DigiSmith-tracked.</p>
+<p><code>{{MAP_ITEM}}</code> keeps its existing rule: "no map letter — &lt;one-line reason&gt;" for
+a structural change with none, never left blank or invented.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — writing-plans' equivalent</h2>
+<p>Same detection logic as Section 1. When DigiSmith-tracked, <code>writing-plans</code>' save
+step targets <code>.digismith/docs/&lt;slug&gt;/plan.md</code> instead of
+<code>docs/superpowers/plans/YYYY-MM-DD-&lt;feature-name&gt;.md</code>. Format is unchanged either
+way (Markdown) — a pure location override. Faithfully matching Enforcer's actual current
+behavior, there is no gitignore-check step here (Enforcer never had one for <code>plan.md</code>,
+only for <code>design.html</code> — not inventing new scope).</p>
+<p>Slug: reuses whatever <code>brainstorming</code> already established in the same session
+(<code>writing-plans</code> runs as its terminal step, not a separate dispatch). A fully
+standalone invocation with no prior <code>brainstorming</code> in the same session falls back to
+the same ad-hoc derivation rule from Section 1.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — Call-site updates</h2>
+<div class="cards">
+<div class="card">
+<h4>bootstrap</h4>
+<span class="tag">Step 3</span>
+<p>Remove the <code>digismith:enforcer</code> invocation entirely. Slug resolution is unchanged —
+<code>bootstrap</code> still derives it, now passes it directly into <code>brainstorming</code>'s
+invocation as context. After <code>brainstorming</code> reports completion, a new small step:
+publish <code>design.html</code> via <code>Artifact</code> respecting <code>publish_artifact</code>
+— Enforcer's old Step 3, inlined directly since it stays a separate concern and
+<code>bootstrap</code> is the natural owner as orchestrator.</p>
+</div>
+<div class="card">
+<h4>adopt</h4>
+<span class="tag">Step 6</span>
+<p>Different case: wraps and places <em>externally-sourced</em> spec/plan content that never
+touched DigiSmith's primitives at all — this need doesn't disappear with Enforcer's retirement.
+Enforcer's exact wrap-into-HTML-shell / gitignore-check / publish-gate mechanics get copied
+directly into <code>adopt</code>'s own Step 6 content — <code>adopt</code> becomes the sole
+remaining owner of this mechanism.</p>
+</div>
+<div class="card">
+<h4>report-implementation</h4>
+<span class="tag">Line 304</span>
+<p>Purely a stylistic wording cross-reference ("the same way <code>digismith:enforcer</code> names
+its rewrap path") — no functional dependency. Drop the cross-reference; the convention already
+stands on its own.</p>
+</div>
+</div>
+</section>
+
+<section id="s5">
+<h2>Section 5 — Enforcer retirement &amp; letter Q</h2>
+<p><code>skills/enforcer/</code> is deleted entirely. Every piece of its responsibility now has a
+home: detection/slug/path-format logic lives inside <code>brainstorming</code>'s and
+<code>writing-plans</code>' own vendored content (Sections 1–3), the publish step moved into
+<code>bootstrap</code>, and the wrap-and-place mechanics for externally-sourced content moved into
+<code>adopt</code> (Section 4).</p>
+<p><code>brainstorming</code>'s and <code>writing-plans</code>' Enforcer-absorption is treated as
+<strong>one combined activation, W.5</strong> — not two separate ones — since they are not
+independently meaningful (<code>writing-plans</code>' change only matters in the same
+session/slug context <code>brainstorming</code> already established). This supersedes the earlier
+"add a no-op fork-provenance tag to brainstorming" idea floated before Enforcer came up — real
+content is diverging now, so a tag-only activation is moot.</p>
+<p><code>MEMORY.md</code>'s map: Q's row marked <strong>retired</strong> ("absorbed into W.5 once
+the vendoring mechanism was proven live — letter freed for future reuse"), same precedent as
+letter R being freed and later reused for W's own predecessor numbering. The Build order table's
+Tier 2 entry for Q gets an annotation noting the retirement date, not a silent removal —
+preserving the historical record of when it was built and later retired, consistent with how W's
+own entry already documents its R→W renumbering history.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>These are markdown/prose skill files, not executable code — no unit tests apply directly.
+Verification plan:</p>
+<ul>
+<li><code>check_vendored_skills.ts</code> should report both <code>brainstorming</code> and
+<code>writing-plans</code> as locally diverged (not upstream drift) once activated, the same way
+it already correctly reported <code>finishing-a-development-branch</code>'s W.4 activation.</li>
+<li>Manual read-through of the edited <code>bootstrap</code>/<code>adopt</code> flows for
+internal consistency — no dangling reference to <code>digismith:enforcer</code> anywhere in the
+repo after the change (a repo-wide grep for <code>enforcer</code> should return zero matches
+outside this spec and historical frozen docs under <code>.digismith/docs/</code>).</li>
+<li>No live end-to-end dry run of the full <code>bootstrap</code> → <code>brainstorming</code> →
+<code>writing-plans</code> chain is practical within this session — flagged as a real gap, same
+class of risk K.6's runner had before its live confirmation this session.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Deciding what letter Q gets reused for next — freed, not reassigned, in this change.</li>
+<li>Any other vendored primitive beyond <code>brainstorming</code>/<code>writing-plans</code>
+diverging further (W.6+) — separate future work.</li>
+<li>Fixing the fact that <code>writing-plans</code>' location override never had a gitignore
+check historically (Section 3) — carried over faithfully as-is, not treated as a bug to fix here.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/retire-enforcer-vendored-primitives/design.html</footer>
+
+</body>
+</html>
