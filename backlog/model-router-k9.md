@@ -63,10 +63,47 @@ explicit about the difference:
   smart is a real scope change to something else currently depends on
   staying simple.
 
+## Expanded framing (2026-09-04, later same session)
+
+Jack's actual vision is bigger than routing inside
+`digismith:offload-implementer` alone: he wants per-task model
+selection built into **`subagent-driven-development` itself** — so any
+implementer task in a plan could route to an open-weight model, OpenAI,
+or xAI, not just Claude — rather than that capability living only in a
+separate, explicitly-invoked side-channel the way K.2 does today. "We
+don't need to limit onto just Claude Code models" — his words.
+
+**A real technical wall, already documented in this project's own
+history:** K.1's original design doc found that **Claude Code's `Agent`
+tool has no per-subagent non-Anthropic routing at all**. That finding is
+*why* K.2 was built as a side-channel in the first place — the
+controller drives an external CLI (`opencode`/`claude -p`) directly,
+bypassing the `Agent` tool entirely, for exactly one explicitly-offloaded
+task at a time. Making this native to `subagent-driven-development`
+itself would mean the primitive's own dispatch loop needs the same kind
+of bypass, generalized across *every* task in a plan, decided
+automatically rather than opted into per-task by name.
+
+**This sits at a real boundary between two map letters, not just K:**
+the motivation is K (model tiering), but the actual mechanism is
+modifying `subagent-driven-development` — a **vendored Superpowers
+primitive**, squarely map item **W**'s territory (primitive ownership,
+content activation). W.4 (2026-09-04, same day) already activated
+`finishing-a-development-branch` with real content divergence from
+upstream — this would be the same kind of move, applied to a much more
+central primitive. Captured here in K.9 for now per Jack's own choice,
+*not yet raised with whichever session/thread is driving W* — flag this
+explicitly before actually designing the mechanism, so W's own
+activation work and this don't collide or duplicate effort.
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
 brainstormed. Depends conceptually on K.3 (shipped) and probably wants
 K.4's real-cost data and K.7's benchmark results to exist before
 routing criteria can be chosen with any confidence — designing the
-mechanism before there's real data to route on risks guessing.
+mechanism before there's real data to route on risks guessing. The
+expanded framing above additionally depends on W's own activation
+mechanism (W.2) and precedent (W.4) existing first, since the real
+build here is a `subagent-driven-development` content activation, not
+a DigiSmith-only feature.
