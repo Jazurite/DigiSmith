@@ -96,6 +96,51 @@ central primitive. Captured here in K.9 for now per Jack's own choice,
 explicitly before actually designing the mechanism, so W's own
 activation work and this don't collide or duplicate effort.
 
+## Reference implementations found (2026-09-04, later same session)
+
+Two concrete pieces of prior art surfaced, both outside DigiSmith's own
+repo — worth designing from rather than starting blind:
+
+**`chutes-routing` skill** (`~/.claude/skills/chutes-routing`, a general
+personal Chutes tool, no DigiSmith connection). Its "Intents → recipes"
+table maps a named intent (`interactive-fast`, `cheap-background`,
+`agent-coder`, etc.) to a filter + ranking + routing-strategy suffix
+against Chutes' live `/v1/models`, with a `build_pool.py` script that
+turns an intent into an inline routing string or a pinned alias. A
+real, working example of intent-based selection — scoped to one
+vendor's own routing feature, not cross-vendor.
+
+**`agentic-flow`** (github.com/ruvnet/agentic-flow, cloned for reference
+to `D:/Workspace/Library/agentic-flow`). The top-level project is a much
+larger, heavily-marketed multi-agent swarm framework (self-learning
+hooks, a custom vector DB, custom attention kernels) that DigiSmith has
+no use for — but its router subsystem specifically
+(`agentic-flow/src/router/`) is real, working code, not just marketing:
+
+- **`ModelRouter`** (`src/router/router.ts`) — pluggable providers
+  (Anthropic, OpenRouter, Ollama, Gemini, ONNX-local), config loaded
+  from file or env vars with a documented fallback-path chain, metrics
+  tracking built in.
+- **`CostOptimalRouter`** (`src/router/cost-optimal-router.ts`) —
+  embedding-based k-NN provider selection with a bounded LRU embedding
+  cache, not just a static lookup — genuinely closer to the "Request
+  Analyzer" tier of the general multi-tier routing pattern than
+  anything DigiSmith has today.
+- **`LLMProvider` interface** (`src/router/types.ts`) — `chat()`,
+  `stream()`, `validateCapabilities()`, capability flags
+  (`supportsStreaming`/`supportsTools`/`supportsMCP`) — structurally
+  close to K.3's own `GatewayProvider` interface, just more developed.
+- Design rationale written up in
+  `agentic-flow/docs/architecture/MULTI_MODEL_ROUTER_PLAN.md`.
+
+**Real gaps against what Jack actually wants:** no Chutes or TokenReply
+provider exists in it (would need to be added, following its own
+`LLMProvider` shape); no xAI provider either, though OpenRouter itself
+can proxy to many models including some open-weight ones. Its
+self-contained-ness under `src/router/` (i.e. whether it has zero real
+coupling to the swarm/AgentDB parts of the codebase) has not been
+verified — check before assuming it can be lifted out cleanly.
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
