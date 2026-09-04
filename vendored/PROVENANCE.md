@@ -8,7 +8,6 @@ Cloned: 2026-08-20
 
 ## Skills vendored (verbatim, byte-identical to source)
 
-- brainstorming
 - dispatching-parallel-agents
 - executing-plans
 - receiving-code-review
@@ -19,7 +18,6 @@ Cloned: 2026-08-20
 - using-git-worktrees
 - using-superpowers
 - verification-before-completion
-- writing-plans
 - writing-skills
 
 ## Skills activated (diverged from source)
@@ -27,6 +25,15 @@ Cloned: 2026-08-20
 - **finishing-a-development-branch** — map item **W.4**, activated 2026-09-04.
   Option 1 ("Merge Locally") now pushes `<base-branch>` to origin after a
   successful merge and green tests. See DigiSmith `MEMORY.md` map item W.
+- **brainstorming** — map item **W.5**, activated 2026-09-04 (alongside
+  `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
+  to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream
+  Markdown default — absorbing map item Q's logic, which is now retired. See
+  DigiSmith `MEMORY.md` map item W.
+- **writing-plans** — map item **W.5**, activated 2026-09-04 (alongside
+  `brainstorming`, above). Now writes to `.digismith/docs/<slug>/plan.md` for
+  DigiSmith-tracked work instead of its own upstream default. See DigiSmith
+  `MEMORY.md` map item W.
 
 ## License
 
@@ -54,8 +61,9 @@ enhancement, not built here. See DigiSmith `MEMORY.md` map item W.
 ## Activation
 
 A vendored skill above is "dormant" until a future brainstorm activates
-it — **finishing-a-development-branch** is the first to have gone through
-this (W.4, 2026-09-04); every other skill in this file is still an inert,
+it — **finishing-a-development-branch** (W.4) and **brainstorming**/
+**writing-plans** (W.5) have gone through this, all on 2026-09-04; every
+other skill in this file is still an inert,
 unused copy that nothing in DigiSmith calls into. Activating one means:
 
 - Editing its `skills/<name>/` copy with the actual content
