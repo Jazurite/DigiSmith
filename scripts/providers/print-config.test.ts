@@ -43,7 +43,7 @@ describe("buildOpencodeProviderBlock", () => {
           apiKey: "{env:TOKENREPLY_API_KEY}",
         },
         models: {
-          "kimi-k2.7": {
+          "kimi-k3": {
             name: "TokenReply",
             limit: { context: 200_000, output: 65535 },
           },
@@ -89,7 +89,7 @@ describe("print-config CLI", () => {
     expect(JSON.parse(stdout)).toEqual({
       baseUrl: "https://api.tokenreply.com/v1",
       credentialEnv: "TOKENREPLY_API_KEY",
-      model: "kimi-k2.7",
+      model: "kimi-k3",
     });
   });
 

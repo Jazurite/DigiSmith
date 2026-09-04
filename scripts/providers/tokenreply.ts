@@ -9,7 +9,7 @@ export const tokenreply: GatewayProvider = {
   credentialEnv: "TOKENREPLY_API_KEY",
   contextWindow: 200_000,
   model() {
-    return "kimi-k2.7";
+    return "kimi-k3";
   },
   supportsRunner: ["opencode", "claude-code"],
 };

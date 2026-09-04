@@ -83,6 +83,13 @@ order of a few cents per real task once the Skill-tool overhead is excluded.
 "Weekly Featured") caps at 200K context — smaller than the 1M context Chutes advertises for
 `kimi-k3` directly. A real capability difference between providers/tiers, not just cost.
 
+**Update (2026-09-04):** TokenReply now also offers `kimi-k3` — `scripts/providers/tokenreply.ts`'s
+`model()` was switched from `kimi-k2.7` to `kimi-k3` accordingly. The pricing/context figures
+above describe the `kimi-k2.7` route as it existed at K.3's original build; they have not been
+re-verified against `kimi-k3` on TokenReply specifically (only against Chutes' own `kimi-k3`
+figures, which may differ by vendor). Re-confirm real cost/context via TokenReply's own dashboard
+before relying on either number for `kimi-k3` through this route.
+
 ## Out of scope / open questions, not yet decided
 
 - Whether this generalizes K.2's existing `offload-implementer` skill in place, or becomes a
