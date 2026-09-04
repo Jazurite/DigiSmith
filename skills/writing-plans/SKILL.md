@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: Use when you have a spec or requirements for a multi-step task, before touching code (DigiSmith fork of Superpowers' writing-plans)
 ---
 
 # Writing Plans
@@ -15,8 +15,25 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to:**
+
+- **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
+  `"name": "digismith"`, or `.digismith/profile` is present) — `.digismith/docs/<slug>/plan.md`
+  instead of this skill's own default location. Format is unchanged — plans stay Markdown.
+
+  **Slug:** reuse the slug already established earlier in this same session (this skill runs as
+  `brainstorming`'s own terminal step once the user approves the spec, so a slug is normally
+  already in context from that earlier work). No slug in context (a fully standalone
+  invocation) → derive it yourself, same rule as `brainstorming`'s own ad-hoc case: lowercase
+  the feature description, drop filler words (a, an, the, on, to, of, for, in), replace
+  remaining non-alphanumeric runs with a single hyphen, truncate to ~40 characters at a word
+  boundary.
+
+  There is no gitignore check for `plan.md` — only `design.html` gets one.
+
+- **Not DigiSmith-tracked work** — `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (this
+  skill's own unmodified default)
+  - (User preferences for plan location override this default)
 
 ## Scope Check
 
