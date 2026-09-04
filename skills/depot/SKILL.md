@@ -1,6 +1,6 @@
 ---
 name: depot
-description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
 ---
 
 # Depot
@@ -12,7 +12,7 @@ runtime resources, each available to anything that needs it, independent
 of any single repo, ticket, or plan:
 
 - **The packages/ clone** — a local, minimal, refreshable clone of
-  DigiSmith's shared `packages/` code at `~/.digismith/repo`, so any
+  DigiSmith's shared `packages/` code at `~/.digismith-depot/repo`, so any
   consumer repo can run a shared package (e.g. a future `jira-client`)
   without needing to know or maintain a path to one.
 - **The OpenCode server** — a single shared `opencode serve` process
@@ -52,22 +52,22 @@ later needs no change here.
 ### Operation: `ensure` — idempotent, clone-if-missing
 
 ```bash
-if [ ! -d ~/.digismith/repo/.git ]; then
-  mkdir -p ~/.digismith && \
+if [ ! -d ~/.digismith-depot/repo/.git ]; then
+  mkdir -p ~/.digismith-depot && \
   git clone --filter=blob:none --no-checkout --sparse \
-    git@github.com:Jazurite/DigiSmith.git ~/.digismith/repo && \
-  git -C ~/.digismith/repo sparse-checkout set packages && \
-  git -C ~/.digismith/repo checkout main
+    git@github.com:Jazurite/DigiSmith.git ~/.digismith-depot/repo && \
+  git -C ~/.digismith-depot/repo sparse-checkout set packages && \
+  git -C ~/.digismith-depot/repo checkout main
 fi
 ```
 
-`~/.digismith/repo/.git` already present → this is a no-op. Nothing
+`~/.digismith-depot/repo/.git` already present → this is a no-op. Nothing
 below the existence check runs; no fetch, no reset, no network call at
 all.
 
 ### Operation: `refresh` — explicit, on demand
 
-If `~/.digismith/repo` doesn't exist yet when `refresh` is invoked
+If `~/.digismith-depot/repo` doesn't exist yet when `refresh` is invoked
 directly, run `ensure`'s sequence above instead of failing — refreshing
 something that was never provisioned isn't a real error case, just an
 ordering one.
@@ -75,9 +75,9 @@ ordering one.
 Otherwise:
 
 ```bash
-git -C ~/.digismith/repo fetch --all --prune --tags -q && \
-git -C ~/.digismith/repo checkout main && \
-git -C ~/.digismith/repo reset --hard origin/main
+git -C ~/.digismith-depot/repo fetch --all --prune --tags -q && \
+git -C ~/.digismith-depot/repo checkout main && \
+git -C ~/.digismith-depot/repo reset --hard origin/main
 ```
 
 The sparse-checkout pattern set during `ensure`'s initial clone persists
@@ -93,8 +93,8 @@ repeatedly): a fresh dispatch with no `--session` flag always starts a
 new, context-free session no matter what else is running on the server,
 and `--dir` is a per-dispatch flag, not a per-server one — so one shared
 process correctly serves dispatches against any number of different
-worktrees. Tracked at `~/.digismith/opencode-server.json`
-(`{"pid": ..., "port": ...}`), sibling to `~/.digismith/repo`.
+worktrees. Tracked at `~/.digismith-depot/opencode-server.json`
+(`{"pid": ..., "port": ...}`), sibling to `~/.digismith-depot/repo`.
 
 This skill knows nothing about models, prompts, or Chutes routing beyond
 the one credential needed to launch the process (see below) —
@@ -119,7 +119,7 @@ dispatch remain entirely `digismith:offload-implementer`'s concern.
 
 ### Operation: `ensure-opencode-server` — start if not alive
 
-Check `~/.digismith/opencode-server.json` for a tracked
+Check `~/.digismith-depot/opencode-server.json` for a tracked
 `{"pid": ..., "port": ...}`.
 
 **Present** → confirm the process is still alive (Windows:
@@ -132,18 +132,18 @@ alive** → treat as stale, continue as if the file were absent.
 server, letting the OS pick a free port rather than guessing one:
 
 ```bash
-mkdir -p ~/.digismith
-CHUTES_API_KEY=$(python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key) opencode serve --port 0 --hostname 127.0.0.1 > ~/.digismith/opencode-server.log 2>&1 &
+mkdir -p ~/.digismith-depot
+CHUTES_API_KEY=$(python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key) opencode serve --port 0 --hostname 127.0.0.1 > ~/.digismith-depot/opencode-server.log 2>&1 &
 SERVER_PID=$!
 sleep 2
 ```
 
 `ensure-opencode-server` isn't auto-invoked by `bootstrap`/`adopt` (unlike
-the clone's `ensure`), so `~/.digismith` may not exist yet the first time
+the clone's `ensure`), so `~/.digismith-depot` may not exist yet the first time
 this runs on a machine — the `mkdir -p` above is required, not
 defensive.
 
-Read `~/.digismith/opencode-server.log` for the line `opencode server
+Read `~/.digismith-depot/opencode-server.log` for the line `opencode server
 listening on http://127.0.0.1:<port>` and extract `<port>` from it —
 this is the real assigned port, not something to guess. If that line
 isn't present after a few seconds, this is a startup failure (see Error
@@ -166,20 +166,20 @@ tracking file with an unusable pid means nothing could ever stop that
 server later. On other platforms `$!` is already the right PID — skip
 this lookup there.
 
-On success, write `~/.digismith/opencode-server.json` as
+On success, write `~/.digismith-depot/opencode-server.json` as
 `{"pid": <WINPID on Windows, else SERVER_PID>, "port": <port>}`. Return
 the port.
 
 ### Operation: `stop-opencode-server` — explicit only
 
-Read `~/.digismith/opencode-server.json`. **Absent** → nothing to stop,
+Read `~/.digismith-depot/opencode-server.json`. **Absent** → nothing to stop,
 report that plainly. **Present** →
 
 ```bash
 taskkill //PID <pid> //F
 ```
 
-then delete `~/.digismith/opencode-server.json`. If the file's PID is
+then delete `~/.digismith-depot/opencode-server.json`. If the file's PID is
 already dead (process gone), still delete the tracking file — nothing
 to kill, but stale state should not survive.
 
@@ -188,7 +188,7 @@ to kill, but stale state should not survive.
 A **stateless readiness check** for `digismith:offload-implementer`'s
 `claude-code` runner branch — unlike the OpenCode server, `claude -p`
 spawns fresh per dispatch and needs no warm server, so there is no
-process, pid, or port to track here, and no `~/.digismith/*.json`
+process, pid, or port to track here, and no `~/.digismith-depot/*.json`
 tracking file at all.
 
 ### Which Operation
@@ -218,13 +218,13 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | `opencode` not on PATH | Stop, tell the caller plainly, point at `pnpm add -g --allow-build=opencode-ai opencode-ai` (plain `pnpm add -g opencode-ai` alone installs a broken binary — pnpm skips postinstall scripts by default). Don't attempt to install it silently. |
 | `claude` not on PATH, or doesn't support `--bare` | Stop, tell the caller plainly, point at `npm install -g @anthropic-ai/claude-code`. Never auto-install. |
 | Server fails to start (no "listening on" line in the log within a few seconds) | Stop, show the log content, don't retry silently. |
-| Tracked PID in `~/.digismith/opencode-server.json` is no longer running | Treat as stale, start fresh per `ensure-opencode-server` above, overwrite the tracking file. |
+| Tracked PID in `~/.digismith-depot/opencode-server.json` is no longer running | Treat as stale, start fresh per `ensure-opencode-server` above, overwrite the tracking file. |
 | WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
 
 ## Out of Scope
 
 - **Credential management** — entirely outside this skill for the
-  packages/ clone side. `~/.digismith/.env` may live in the same parent
+  packages/ clone side. `~/.digismith-depot/.env` may live in the same parent
   folder, but this skill never creates, reads, or references it — that
   belongs only to Jira-specific skills. The OpenCode server side is a
   narrow, deliberate exception: `ensure-opencode-server` fetches the
@@ -240,7 +240,7 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
   concurrent caller** — two sessions calling it within the same few
   seconds, both finding no tracked server, can each start their own
   `opencode serve` process; whichever writes
-  `~/.digismith/opencode-server.json` last wins the tracking slot, and
+  `~/.digismith-depot/opencode-server.json` last wins the tracking slot, and
   the other's process leaks untracked. Accepted for the same reason as
   the shared-stop risk above — a personal, single-operator tool doesn't
   warrant a lockfile/mutex for a window this narrow — but disclosed

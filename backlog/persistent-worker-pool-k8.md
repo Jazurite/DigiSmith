@@ -43,7 +43,7 @@ of this pool, not be replaced by it.
   `ensure-opencode-server` / `ensure-claude-code`) once there's more than one
   live server to route to?
 - Does this replace or extend V.1 Depot's single-server lifecycle model? Depot
-  currently tracks exactly one `{pid, port}` at `~/.digismith/opencode-server.json`;
+  currently tracks exactly one `{pid, port}` at `~/.digismith-depot/opencode-server.json`;
   Depot's own "Out of Scope" section explicitly declines a "generalized
   multi-resource interface" until "a fourth real resource needs the same shape" —
   a worker pool is a different shape (N processes, not one), so this may need new

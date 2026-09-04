@@ -98,10 +98,10 @@ describe("offload", () => {
   let profileYml: string;
   let profilePath: string;
   let originalCwd: string;
-  // getCredential falls back to ~/.digismith/.env when the env var is
+  // getCredential falls back to ~/.digismith-depot/.env when the env var is
   // unset — point HOME/USERPROFILE at an empty temp dir for every test in
   // this block so that fallback can never pick up a real developer's
-  // actual ~/.digismith/.env and turn a "no credentials" test flaky.
+  // actual ~/.digismith-depot/.env and turn a "no credentials" test flaky.
   let tempHomeDir: string;
   let originalHome: string | undefined;
   let originalUserProfile: string | undefined;
@@ -336,24 +336,24 @@ describe("getCredential", () => {
     rmSync(tempHomeDir, { recursive: true, force: true });
   });
 
-  it("returns null when the env var is unset and no ~/.digismith/.env exists", () => {
+  it("returns null when the env var is unset and no ~/.digismith-depot/.env exists", () => {
     expect(getCredential(chutes)).toBeNull();
   });
 
-  it("falls back to ~/.digismith/.env when the env var is unset", () => {
+  it("falls back to ~/.digismith-depot/.env when the env var is unset", () => {
     mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
     writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
     expect(getCredential(chutes)).toBe("cpk_from_file");
   });
 
-  it("prefers the environment variable over ~/.digismith/.env", () => {
+  it("prefers the environment variable over ~/.digismith-depot/.env", () => {
     process.env.CHUTES_API_KEY = "cpk_from_env";
     mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
     writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
     expect(getCredential(chutes)).toBe("cpk_from_env");
   });
 
-  it("returns null when the key isn't present in ~/.digismith/.env", () => {
+  it("returns null when the key isn't present in ~/.digismith-depot/.env", () => {
     mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
     writeFileSync(join(tempHomeDir, ".digismith", ".env"), "OTHER_KEY=something\n");
     expect(getCredential(chutes)).toBeNull();

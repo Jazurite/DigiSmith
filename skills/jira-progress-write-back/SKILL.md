@@ -25,8 +25,8 @@ current ticket.
 ## Prerequisites
 
 A working `digismith:depot`-provisioned Jira client at
-`~/.digismith/repo/packages/jira-client/src/cli.ts`, and complete
-credentials at `~/.digismith/.env` (see Step 2, which provisions both if
+`~/.digismith-depot/repo/packages/jira-client/src/cli.ts`, and complete
+credentials at `~/.digismith-depot/.env` (see Step 2, which provisions both if
 missing). The active profile's `ticket` field must be `true` (see Step
 0) — if it's `false`, there's no ticket key to write to and this skill
 has nothing to do.
@@ -76,12 +76,12 @@ report the error plainly, don't fabricate a write.
 Then check credentials:
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts check-credentials
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts check-credentials
 ```
 
 **Exit 0** → credentials are present and complete, continue to Step 3.
 
-**Exit 1** → `~/.digismith/.env` is missing or incomplete. Ask via
+**Exit 1** → `~/.digismith-depot/.env` is missing or incomplete. Ask via
 `AskUserQuestion` for the three values, mentioning where to generate a
 token (`id.atlassian.com/manage-profile/security/api-tokens`):
 
@@ -89,7 +89,7 @@ token (`id.atlassian.com/manage-profile/security/api-tokens`):
 - Jira API token
 - Jira site hostname (e.g. `your-org.atlassian.net`)
 
-Write them to `~/.digismith/.env` (create `~/.digismith/` first if it
+Write them to `~/.digismith-depot/.env` (create `~/.digismith-depot/` first if it
 doesn't exist):
 
 ```
@@ -105,7 +105,7 @@ file already there.
 ### Step 3: Fetch the Current Ticket
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description
 ```
 
 This isn't a display fetch: whatever comes back gets spliced and written
@@ -252,7 +252,7 @@ Fetch every comment on the ticket, paginated to completion (not just the
 first page):
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts get-comments --key <Key>
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts get-comments --key <Key>
 ```
 
 Compute today's date in `D/M` form (day and month, no leading zeros, no
@@ -380,7 +380,7 @@ Write Step 7's composed document to a scratch file (e.g.
 `/tmp/jira-description-<Key>.json`), then:
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts update-description --key <Key> --file /tmp/jira-description-<Key>.json
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts update-description --key <Key> --file /tmp/jira-description-<Key>.json
 ```
 
 ### Step 14: Write the Comment
@@ -389,7 +389,7 @@ Write Step 11's composed document to a scratch file (e.g.
 `/tmp/jira-comment-<Key>.json`), then:
 
 ```bash
-node ~/.digismith/repo/packages/jira-client/src/cli.ts add-comment --key <Key> --file /tmp/jira-comment-<Key>.json
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts add-comment --key <Key> --file /tmp/jira-comment-<Key>.json
 ```
 
 Only if Step 8 found an existing comment, add `--comment-id <id>` to the
