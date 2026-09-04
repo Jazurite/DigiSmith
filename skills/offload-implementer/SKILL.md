@@ -323,11 +323,17 @@ PROMPT_EOF
 ANTHROPIC_BASE_URL="<resolved baseUrl>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
-  --permission-mode auto --output-format stream-json \
+  --permission-mode auto --output-format stream-json --verbose \
   --allowedTools "Read,Edit,Bash" > "<workspace>/task-<N>-claude-code-events.jsonl"
 ```
 
 (run with the shell's working directory set to `<task-worktree>` first)
+
+**`--verbose` is required, not optional** — confirmed live: `claude -p` errors
+outright ("Error: When using --print, --output-format=stream-json requires
+--verbose") without it, before producing any events at all. A dispatch
+missing this flag isn't a `parse-result.ts` failure to debug — the events
+file comes back empty and `claude` itself never ran.
 
 **`claude-code` runner, fix round**, same pattern plus `--resume
 "<captured sessionID>"` instead of starting fresh, events to a
@@ -341,7 +347,7 @@ PROMPT_EOF
 ANTHROPIC_BASE_URL="<resolved baseUrl>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
-  --permission-mode auto --output-format stream-json \
+  --permission-mode auto --output-format stream-json --verbose \
   --resume "<captured sessionID>" \
   --allowedTools "Read,Edit,Bash" > "<workspace>/task-<N>-claude-code-events-round<R>.jsonl"
 ```
@@ -462,6 +468,6 @@ This skill's own job for this dispatch ends here.
 | 1 | Resolve `task_offload_runner`/`task_offload_provider`, run `print-config.ts --runner <name>` — `opencode` runner writes `opencode.json` (ignored via `.git/info/exclude`, never the tracked `.gitignore`); `claude-code` runner gets `{baseUrl, credentialEnv}`, no file written |
 | 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch) |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
-| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json` (shell-expanded, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json --verbose` (`--verbose` is required alongside `--print`/`--output-format=stream-json` — `claude` errors before producing any output without it; shell-expanded credential, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
 | 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
