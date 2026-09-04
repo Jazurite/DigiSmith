@@ -29,7 +29,7 @@ You MUST create a task for each of these items and complete them in order:
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+9. **Transition to implementation** — invoke digismith:writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -58,7 +58,7 @@ digraph brainstorming {
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking digismith:writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is digismith:writing-plans.
 
 ## The Process
 
@@ -203,8 +203,8 @@ digraph brainstorming {
   invent a letter.
 
   **Slug:** reuse whatever slug the caller already resolved and passed into this invocation
-  (e.g. `digismith:bootstrap`/`digismith:adopt` derive one before calling this skill, and pass
-  it along) — never re-derive independently when one was already given. No slug was passed (a
+  (e.g. `digismith:bootstrap` derives one before calling this skill, and passes it along) —
+  never re-derive independently when one was already given. No slug was passed (a
   fully ad-hoc call — DigiSmith's own self-development or any other untracked-by-a-ticket case,
   no `digismith:bootstrap` in the loop) → derive it yourself: lowercase the feature description,
   drop filler words (a, an, the, on, to, of, for, in), replace remaining non-alphanumeric runs
@@ -215,11 +215,23 @@ digraph brainstorming {
   skip `git add`/commit, never force with `-f`; exit 1 (not ignored, the normal case for
   DigiSmith's own repo) → commit normally.
 
+  **Publish the design doc.** If this invocation came from `digismith:bootstrap` or
+  `digismith:adopt`, skip this publish step — they already handle it after this skill reports
+  completion. Otherwise (a fully ad-hoc invocation), publish here directly: once the design doc
+  is written (and committed, if not gitignored per the check above), read the active profile the
+  same way `digismith:bootstrap` resolves one, and unless it has `publish_artifact: false`, call
+  the `Artifact` tool on the written `design.html` — `title` from the doc's own `<title>` tag,
+  `description` one sentence summarizing the feature, `favicon` one or two emoji fitting the
+  topic (pick contextually, never reuse a generic default across unrelated features).
+  `publish_artifact: false` → skip the `Artifact` call, state plainly why.
+
 - **Not DigiSmith-tracked work** — write the validated design (spec) to
   `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (this skill's own unmodified default)
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Commit the design document to git (unless the gitignore check above already determined this
+  repo's `.digismith/docs/` is gitignored, in which case it was already written but intentionally
+  not committed)
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -240,8 +252,8 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+- Invoke the digismith:writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. digismith:writing-plans is the next step.
 
 ## Visual Companion
 
