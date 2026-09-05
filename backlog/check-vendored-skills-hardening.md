@@ -21,6 +21,17 @@ re-review of that review's own fix wave.
   ever wanted: union the baseline file list with a fresh `readdirSync`
   of the upstream skill directory so added files show up as a new
   `"added-upstream"` status.
+- **Added-local files are equally invisible — same blind spot, opposite
+  direction.** The mirror case of the item above: a *new* file DigiSmith
+  itself adds directly into a vendored skill folder (not present at the
+  original baseline commit) is just as absent from `listBaselineFiles`,
+  so it never appears in any drift report either. `fire-lifecycle-hook.md`
+  (added to `skills/finishing-a-development-branch/` by map item **Y**,
+  2026-09-05) is the first real-world instance of this — a genuinely new
+  local file living inside a vendored skill folder, permanently invisible
+  to drift detection today. Same fix shape as the added-upstream item:
+  union the baseline file list with a fresh `readdirSync` of the local
+  skill directory too, not just upstream's.
 - **A skill absent at baseline reports a false clean.** `git ls-tree`
   exits 0 with empty output for a path that didn't exist at the given
   revision, so `listBaselineFiles` returns `[]` and the report prints
