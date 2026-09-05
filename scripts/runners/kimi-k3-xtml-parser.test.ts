@@ -79,10 +79,10 @@ describe("extractXtmlToolCalls", () => {
   });
 
   it("reverse-decodes HTML-entity-escaped attribute values (&quot; before &amp;)", () => {
-    const text = `<|open|>tools<|sep|><|open|>call tool="Bash" index="1"<|sep|><|open|>argument key="command" type="string"<|sep|>echo &quot;a &amp; b&quot;<|close|>argument<|sep|><|close|>call<|sep|><|close|>tools<|sep|>`;
+    const text = `<|open|>tools<|sep|><|open|>call tool="Bash" index="1"<|sep|><|open|>argument key="cmd&quot;arg" type="string"<|sep|>echo &quot;a &amp; b&quot;<|close|>argument<|sep|><|close|>call<|sep|><|close|>tools<|sep|>`;
     const result = extractXtmlToolCalls(text);
     expect(result.toolCalls).toEqual([
-      { name: "Bash", arguments: { command: 'echo "a & b"' } },
+      { name: "Bash", arguments: { "cmd\"arg": "echo &quot;a &amp; b&quot;" } },
     ]);
   });
 

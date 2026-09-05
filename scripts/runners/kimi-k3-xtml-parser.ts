@@ -60,7 +60,7 @@ function decodeCall(attrsText: string, body: string): DecodedToolCall | null {
     const argType = argAttrs.type ?? "string";
     const rawValue = m.groups!.val;
     if (argType === "string") {
-      args[key] = rawValue.replaceAll("&quot;", '"').replaceAll("&amp;", "&");
+      args[key] = rawValue;
     } else {
       try {
         args[key] = JSON.parse(rawValue);
@@ -78,7 +78,8 @@ function stripResponseContent(text: string): string | null {
   let result: string;
   if (mOpen) {
     const start = mOpen.index + mOpen[0].length;
-    const mClose = RESPONSE_CLOSE_RE.exec(text.slice(start));
+    const closeRe = new RegExp(`${C}\\s*response\\s*${S}`);
+    const mClose = closeRe.exec(text.slice(start));
     result = mClose ? text.slice(start, start + mClose.index) : text.slice(start);
   } else {
     result = text.replace(RESPONSE_CLOSE_RE, "");
