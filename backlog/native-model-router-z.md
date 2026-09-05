@@ -256,6 +256,40 @@ inference engine's own model zoo. This is exactly the pattern
 already aim at (see References above) — now with concrete, first-party
 evidence for *why* it's necessary, not just "other projects do this."
 
+## Architecture decision: OpenAI's format is the canonical hub, not Anthropic's (2026-09-05)
+
+Confirmed independently in vLLM's own source — not a TokenReply quirk, an
+industry-wide pattern worth designing Z around directly:
+
+- **vLLM's tool-parsers target OpenAI's format as the native, canonical
+  representation.** `KimiK3ToolParser`'s own docstring: "turns the
+  generated XTML ... back into **OpenAI-compatible** `content` and
+  `tool_calls`." Every parser in `vllm/tool_parsers/` (Kimi, DeepSeek,
+  Llama, Mistral, Granite, Hermes, GLM, etc. — 40+ model families) decodes
+  into this same OpenAI-shaped `ToolCall`/`FunctionCall` structure.
+- **Anthropic/Claude compatibility is a separate adapter layered on top,
+  not a first-class target.** `vllm/entrypoints/anthropic/serving.py`
+  converts an incoming Claude-format request *into* OpenAI format
+  (`_convert_messages`, `_convert_tools`, `_convert_tool_use_block`),
+  routes it through vLLM's real OpenAI-native core + tool-parser
+  pipeline, then converts the OpenAI-format response back — including a
+  literal field-mapping table, `"tool_calls": "tool_use"`.
+- TokenReply's own architecture (per this session's live evidence) looks
+  like the same shape: OpenAI-compatible is the primary, best-supported
+  surface; the Claude-compatible `/v1/messages` endpoint is the secondary,
+  apparently weaker translation layer.
+
+**Decision for Z's eventual design:** build the router's internal
+representation around **OpenAI's tool-calling shape as the hub**, the
+same way vLLM's own architecture does — not Anthropic's. Any
+Claude-format input/output Z needs to support should be its own explicit
+conversion step at the edge (mirroring `vllm/entrypoints/anthropic/
+serving.py`'s pattern), not the router's native internal format. This
+also reinforces the practical runner guidance above: prefer `opencode`
+(OpenAI-format transport) over `claude-code` (Anthropic-format) when
+going through a third-party gateway in general, not just for TokenReply —
+it's the format every serving stack actually treats as first-class.
+
 ## K.4's data-source blockers apply here too (2026-09-04)
 
 K.4 (gateway-cost-comparison-k4.md, "report-only" cost/token comparison) was scoped as a
