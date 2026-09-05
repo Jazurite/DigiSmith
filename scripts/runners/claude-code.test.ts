@@ -11,7 +11,7 @@ describe("claudeCode.buildConfig", () => {
     expect(claudeCode.buildConfig(tokenreply, "task")).toEqual({
       baseUrl: "https://api.tokenreply.com/v1",
       credentialEnv: "TOKENREPLY_API_KEY",
-      model: "kimi-k3",
+      model: "kimi-k2.7",
     });
   });
 });

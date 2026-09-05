@@ -1,8 +1,12 @@
 # TokenReply's kimi-k3 fails tool-calling via claude-code runner (regression)
 
-**Status:** Confirmed live, unfixed. Affects the current shipped default
-(`task_offload_provider: tokenreply` + `task_offload_runner:
-claude-code`, model `kimi-k3`) on every profile.
+**Status:** Root-caused and worked around. `scripts/providers/tokenreply.ts`
+reverted to `kimi-k2.7` (confirmed working, 2/2 real dispatches) — the
+default provider/runner (`tokenreply`/`claude-code`) themselves were
+never the problem, only the specific model. TokenReply's or the
+model's own underlying bug is unfixed (outside DigiSmith's control);
+this file now tracks "don't use kimi-k3 here until that's fixed
+upstream," not "investigate further."
 
 **Source:** 2026-09-04, same session that switched TokenReply's model
 to `kimi-k3` and the default provider/runner to `tokenreply`/
