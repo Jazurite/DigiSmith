@@ -124,7 +124,7 @@ git branch -d <feature-branch>
 Finally, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
 DigiSmith's own included — a repo with no `.digismith/hooks/post-finish/`
-folder simply has nothing fire.
+folder simply has nothing to fire.
 
 ### Option 2: Push and Create PR
 

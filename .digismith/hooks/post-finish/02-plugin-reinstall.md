@@ -25,6 +25,8 @@ Otherwise, refresh the installed plugin cache from the just-pushed `main` (fires
 claude plugin marketplace update jazurite && claude plugin install digismith@jazurite --scope user
 ```
 
+If either command in that chain fails, say so plainly — the plugin cache was not refreshed.
+
 Then print this reminder plainly:
 
 > "DigiSmith's plugin cache has been refreshed to the latest merge. Any other Claude Code

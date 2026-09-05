@@ -21,19 +21,24 @@ If `IS_DIGISMITH` is not `true`, stop here — this hook does nothing in any oth
 Otherwise, bump the plugin version:
 
 ```bash
+cd "$(git rev-parse --show-toplevel)"
 BASE_SHA=$(git rev-parse ORIG_HEAD)
 BUMP_OUTPUT=$(node --experimental-strip-types .digismith/hooks/post-finish/scripts/bump-plugin-version.ts --base "$BASE_SHA")
 BUMP_STATUS=$?
 echo "$BUMP_OUTPUT"
 if [ "$BUMP_STATUS" -ne 0 ]; then
-  echo "Version bump script failed — stop here, do not push, and investigate." >&2
+  echo "Version bump script failed — stop here, do not push, and do not continue to any further post-finish hook. Investigate." >&2
 fi
 if [[ "$BUMP_OUTPUT" == BUMPED* ]]; then
-  git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
-  git commit -m "chore: bump plugin version" -- .claude-plugin/plugin.json .claude-plugin/marketplace.json
-  git push origin "$(git rev-parse --abbrev-ref HEAD)"
+  git add .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
+  git commit -m "chore: bump plugin version" -- .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
+  git push origin <base-branch>
 fi
 ```
+
+If that push is rejected (the remote moved since Option 1's own push above): stop, report the
+rejection plainly, and investigate — do not force-push automatically, the same as every other
+push in this skill.
 
 `ORIG_HEAD` is git's own record of the branch tip immediately before the merge that triggered
 this `post-finish` firing — set correctly whether that merge was a fast-forward or a true merge
@@ -43,5 +48,7 @@ A `BUMPED` result commits both version files in their own commit — separate fr
 commit — and pushes it: this hook fires after Option 1's own push already happened, so the bump
 needs its own, second push rather than riding along in the first one. A `SKIPPED` result means
 the incoming branch's own commits already changed the version — do nothing further. A non-zero
-exit means the bump script itself failed: stop, do not push, and investigate — the bump is the
-point of this hook, so a failure here must not be silently skipped.
+exit means the bump script itself failed: stop, do not push, and do not continue to any further
+`post-finish` hook — investigate instead. The bump is the point of this hook, so a failure here
+must not be silently skipped, nor followed by a plugin-cache reinstall that still doesn't reflect
+it.
