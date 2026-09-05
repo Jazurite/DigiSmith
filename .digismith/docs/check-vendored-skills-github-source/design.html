@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check Vendored Skills via GitHub (W.2.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Check Vendored Skills via GitHub (W.2.1)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-04</span>
+    <span>Map item: W.2.1 (revises W.2's script)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — Shallow-clone replacement for resolveUpstreamSkillsDir</a></li>
+    <li><a href="#s2">Section 2 — Testing without hitting real GitHub</a></li>
+    <li><a href="#s3">Section 3 — Wiring into main(), and cleanup</a></li>
+    <li><a href="#s4">Section 4 — Doc updates</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>Map item <strong>W.2</strong>'s <code>scripts/check_vendored_skills.ts</code> resolves
+"upstream" by reading whatever Superpowers plugin version is installed locally
+(<code>resolveUpstreamSkillsDir</code>, scanning
+<code>~/.claude/plugins/cache/claude-plugins-official/superpowers/*/skills/</code> for the
+most-recently-modified hash directory). Jack has said he plans to stop keeping Superpowers
+installed going forward ("I'm not gonna install Superpower from now on. Everything is Digi
+Smith") — once that happens, this resolution fails outright ("Superpowers plugin cache not
+found") and the entire upstream-drift mechanism goes permanently dark, even though the real
+upstream repository keeps evolving on GitHub regardless of what is or isn't installed locally.</p>
+<p>Fix: resolve upstream directly from
+<a href="https://github.com/obra/superpowers">https://github.com/obra/superpowers</a> (per
+<code>vendored/PROVENANCE.md</code>) instead of local install state. Confirmed during this
+session's brainstorm: a shallow git clone (not the GitHub REST API), replacing local-cache
+resolution entirely (no fallback), against the default branch's current tip (not a pinned
+release), failing loudly with no partial report when GitHub is unreachable.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — Shallow-clone replacement for resolveUpstreamSkillsDir</h2>
+<p>A new function replaces both <code>resolveUpstreamSkillsDir</code> and
+<code>pickMostRecentDir</code> (both deleted entirely — no more "pick the most recent hash dir"
+logic is needed once there's only one source of truth). It creates a temp directory via
+<code>fs.mkdtempSync</code>, runs <code>git clone --depth 1 &lt;repo-url&gt; &lt;tmpdir&gt;</code>
+via <code>spawnSync</code> — matching every other git operation already in this file, which all
+use <code>spawnSync</code> rather than a new HTTP/API dependency — checks out the default branch
+tip (the clone's own default, nothing extra needed), and returns
+<code>path.join(tmpdir, "skills")</code>. On clone failure (offline, GitHub unreachable, bad
+URL), it throws a clear <code>Error</code> naming what failed. The repository URL becomes a
+parameter (defaulting to <code>https://github.com/obra/superpowers.git</code> in production),
+which Section 2's tests depend on.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — Testing without hitting real GitHub</h2>
+<p>Every existing test in this file already runs real git commands (<code>readGitBlob</code>/
+<code>listBaselineFiles</code> tests run actual <code>git show</code>/<code>git ls-tree</code>
+against this repo's own history) — no mocking anywhere. The new clone function's tests keep that
+same style: since the repository URL is now a parameter, tests create a small local git repo
+fixture in a temp dir (<code>git init</code> + a <code>skills/&lt;fake-name&gt;/SKILL.md</code>
+file + one commit), then call the clone function with that local path in place of the real
+GitHub URL — <code>git clone</code> works identically against a local path, no network involved,
+no mocking needed.</p>
+<p>The 5 existing tests for <code>resolveUpstreamSkillsDir</code>'s hash-dir-picking logic (picks
+most-recent, throws if cache not found, throws if no <code>skills/</code> subfolder, warns/
+doesn't warn on multiple candidates) are deleted entirely — that logic no longer exists. New
+tests for the clone function cover the equivalent real scenarios: clones successfully and finds
+<code>skills/</code>; throws a clear error when the clone fails (point it at a nonexistent local
+path to simulate this without needing a real network failure); confirms the returned path is
+correct.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — Wiring into main(), and cleanup</h2>
+<p><code>checkSkill()</code>, <code>compareFile()</code>, <code>readGitBlob()</code>,
+<code>listBaselineFiles()</code>, <code>diffContent()</code>, <code>readFileIfExists()</code>,
+<code>formatSkillReport()</code>, the <code>VENDORED_SKILLS</code> array, and
+<code>BASELINE_SHA</code> all stay <strong>completely untouched</strong> — they only ever
+consumed a <code>skills/</code> directory path, never cared how it was resolved. <code>main()</code>
+changes minimally: swap the call from <code>resolveUpstreamSkillsDir()</code> to the new clone
+function, keep the existing <code>try { ... } catch (err) { console.error(...); process.exit(1); }</code>
+shape unchanged around it (the new function's thrown errors flow through the same path), and add
+a <code>finally</code> block that removes the temp clone directory
+(<code>fs.rmSync(tmpDir, { recursive: true, force: true })</code>) after the skill-checking loop
+completes — matching the same cleanup pattern <code>diffContent()</code> already uses for its own
+temp dirs elsewhere in this file.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — Doc updates to match the new mechanism</h2>
+<p>Two places currently describe the old local-cache-based resolution and would become
+inaccurate:</p>
+<div class="cards">
+<div class="card">
+<h4>vendored/PROVENANCE.md</h4>
+<span class="tag">Sync policy section</span>
+<p>Currently says the script diffs "vs. whatever Superpowers plugin version is currently
+installed." Updates to say it now clones the upstream GitHub repository's default-branch tip
+directly, no local Superpowers install required — closing the exact gap this backlog item was
+raised to fix.</p>
+</div>
+<div class="card">
+<h4>MEMORY.md</h4>
+<span class="tag">W.2 map entry</span>
+<p>Same phrase, "vs. currently-installed upstream," gets the same correction.</p>
+</div>
+</div>
+<p>Both are small, single-clause edits — no restructuring of either doc, consistent with how
+W.5/W.6 handled their own doc touch-ups.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li>New unit tests for the clone function, using a local git-repo fixture (Section 2) — real git
+behavior, no network, no mocking, consistent with the file's existing style.</li>
+<li>The 5 existing <code>resolveUpstreamSkillsDir</code> tests are deleted, not adapted — the
+function itself is gone.</li>
+<li>All other existing tests in this file (for <code>readGitBlob</code>,
+<code>listBaselineFiles</code>, <code>diffContent</code>, <code>compareFile</code>,
+<code>formatSkillReport</code>) require zero changes — none of them touch upstream resolution.</li>
+<li>Manual verification after implementation: run the script for real once, confirm it actually
+clones from the real <code>https://github.com/obra/superpowers.git</code> URL and produces the
+same kind of report as before (this is the one thing unit tests with a local fixture can't
+prove — a live confirmation against the real remote, same category of gap flagged for W.5/W.6's
+own live end-to-end paths).</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>A fallback to the local plugin cache when GitHub is unreachable — explicitly declined
+(Section 1's "replace entirely" decision).</li>
+<li>Configurable ref/tag pinning — explicitly declined in favor of always comparing against the
+default branch's current tip.</li>
+<li>An offline bypass flag — this is a manually-triggered, on-demand tool per W.2's own design
+("still manual-trigger, not automatic-schedule"); if you're running it, you need network access,
+full stop.</li>
+<li>Extending drift coverage to files upstream has added since the baseline commit — a
+pre-existing, separately-noted limitation of <code>check_vendored_skills.ts</code>
+(<code>backlog/check-vendored-skills-hardening.md</code>), unrelated to this change.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/check-vendored-skills-github-source/design.html</footer>
+
+</body>
+</html>
