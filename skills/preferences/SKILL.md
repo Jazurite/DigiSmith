@@ -46,13 +46,32 @@ entirely to whatever flow eventually commits the surrounding work.
 
 ## Operations
 
-All three run `scripts/preferences.ts` from the repo root of whichever repo
-is currently being worked in:
+`scripts/preferences.ts` lives in DigiSmith's own repo, not the repo this
+invocation is about — a bare relative path only happens to work when the
+caller's cwd is already DigiSmith's own repo, and fails with
+`MODULE_NOT_FOUND` in every consumer repo (a client theme repo, etc.), which
+is the common case. Locate DigiSmith's own repo the same way
+`digismith:inject-standards` does under "Locating the Standards Library" and
+`digismith:offload-implementer` does under its `MODULE_NOT_FOUND` handling:
+
+1. Is the current working directory itself the DigiSmith repo (has
+   `.claude-plugin/plugin.json` with `"name": "digismith"`)? Use it
+   directly.
+2. Otherwise, ask the user for DigiSmith's repo path this session and
+   remember it for the rest of the conversation.
+
+Then invoke all three operations using that resolved path (absolute, or the
+cwd-relative path if step 1 above applied) — never a bare relative path
+assumed to work from any cwd. The `.digismith/preferences.yml` file itself
+is unaffected by this: it still lives relative to whichever repo the
+preference belongs to (the repo currently being worked in), via `--path` or
+the script's cwd-relative default when the caller's own cwd is already that
+repo — only the script's own invocation path needs to be absolute.
 
 ### `get`
 
 ```bash
-node --experimental-strip-types scripts/preferences.ts --key <key> --action get
+node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action get
 ```
 
 Prints the value on stdout, or the literal `unset` if the key was never set,
@@ -62,7 +81,7 @@ missing or malformed file.
 ### `set`
 
 ```bash
-node --experimental-strip-types scripts/preferences.ts --key <key> --action set --value <value>
+node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action set --value <value>
 ```
 
 Writes `<key>: <value>` into `.digismith/preferences.yml`, creating the file
@@ -73,16 +92,17 @@ yet, and preserving every other key already set. Prints
 ### `clear`
 
 ```bash
-node --experimental-strip-types scripts/preferences.ts --key <key> --action clear
+node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action clear
 ```
 
 Removes `<key>` if present; a no-op (not an error) if the key was never set
 or the file doesn't exist. Prints `preferences: cleared <key>` either way.
 
 `--path <path>` overrides the default `.digismith/preferences.yml` on any of
-the three operations — only needed by this skill's own test suite and by
-callers working outside the current directory; a normal invocation from
-inside the repo being worked in never needs it.
+the three operations — the general way to point at a specific repo's
+preferences file whenever the caller's own cwd doesn't already resolve to
+that repo; a normal invocation from inside the repo being worked in never
+needs it.
 
 ## Worktree Propagation
 
@@ -98,7 +118,8 @@ copy.
 |---|---|
 | `.digismith/preferences.yml` missing | Every key reads as `unset`; not an error. |
 | File present but malformed/unparseable (e.g. non-UTF-8) | Treated as `unset`, same as missing. Never crashes the caller. |
-| `get`/`clear` on a key that was never set | Returns/reports `unset`, not an error. |
+| `get` on a key that was never set | Returns `unset`, not an error. |
+| `clear` on a key that was never set | Silent no-op; still reports `preferences: cleared <key>` (never `unset`, never an error). |
 | `set` invoked without `--value` | Fails clearly (`preferences: failed (missing required flag: --value)`), exit 1. Never silently sets an empty string. |
 | Target path gitignored in this repo | Write still succeeds; committing is simply skipped by whatever flow would otherwise commit it. Never force-added. |
 
@@ -119,6 +140,9 @@ copy.
 
 | Operation | Command | Effect |
 |---|---|---|
-| `get` | `node --experimental-strip-types scripts/preferences.ts --key <key> --action get` | Prints the value, or `unset` |
-| `set` | `node --experimental-strip-types scripts/preferences.ts --key <key> --action set --value <value>` | Writes the key, creating the file/parent dir if needed; prints confirmation |
-| `clear` | `node --experimental-strip-types scripts/preferences.ts --key <key> --action clear` | Removes the key if present (no-op otherwise); prints confirmation |
+| `get` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action get` | Prints the value, or `unset` |
+| `set` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action set --value <value>` | Writes the key, creating the file/parent dir if needed; prints confirmation |
+| `clear` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action clear` | Removes the key if present (no-op otherwise); prints confirmation |
+
+`<digismith-repo>` is the path resolved under Operations above — never a
+bare relative path.
