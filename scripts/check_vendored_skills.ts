@@ -3,56 +3,28 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 
-export interface DirEntry {
-  path: string;
-  mtimeMs: number;
-}
-
-export function pickMostRecentDir(dirs: DirEntry[]): string {
-  if (dirs.length === 0) {
-    throw new Error("no directories found");
-  }
-  let best = dirs[0];
-  for (const d of dirs.slice(1)) {
-    if (d.mtimeMs > best.mtimeMs) {
-      best = d;
-    }
-  }
-  return best.path;
-}
-
-export function resolveUpstreamSkillsDir(baseDir: string = os.homedir()): string {
-  const cacheRoot = path.join(
-    baseDir,
-    ".claude",
-    "plugins",
-    "cache",
-    "claude-plugins-official",
-    "superpowers"
-  );
-  if (!fs.existsSync(cacheRoot)) {
-    throw new Error(`Superpowers plugin cache not found at ${cacheRoot}`);
-  }
-  const entries = fs
-    .readdirSync(cacheRoot, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e): DirEntry => {
-      const fullPath = path.join(cacheRoot, e.name);
-      return { path: fullPath, mtimeMs: fs.statSync(fullPath).mtimeMs };
-    });
-  const chosen = pickMostRecentDir(entries);
-  if (entries.length > 1) {
-    console.error(
-      `resolveUpstreamSkillsDir: found ${entries.length} candidate plugin cache directories under ${cacheRoot}; ` +
-        `picked most-recently-modified "${chosen}" (${entries.length - 1} other candidate(s) ignored) — ` +
-        `double check this is the right one if the report below looks off`
+export function cloneUpstreamSkillsDir(
+  repoUrl: string = "https://github.com/obra/superpowers.git"
+): string {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-upstream-"));
+  try {
+    const result = spawnSync(
+      "git",
+      ["-c", "core.autocrlf=false", "clone", "--depth", "1", repoUrl, tmpDir],
+      { encoding: "utf8" }
     );
+    if (result.status !== 0) {
+      throw new Error(`Cannot clone upstream repository ${repoUrl}: ${result.stderr}`);
+    }
+    const skillsDir = path.join(tmpDir, "skills");
+    if (!fs.existsSync(skillsDir)) {
+      throw new Error(`Expected upstream skills directory not found at ${skillsDir}`);
+    }
+    return skillsDir;
+  } catch (err) {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    throw err;
   }
-  const skillsDir = path.join(chosen, "skills");
-  if (!fs.existsSync(skillsDir)) {
-    throw new Error(`Expected upstream skills directory not found at ${skillsDir}`);
-  }
-  return skillsDir;
 }
 
 export function readGitBlob(sha: string, relPath: string): string | null {
@@ -234,7 +206,7 @@ export function checkSkill(name: string, upstreamSkillsDir: string): SkillReport
 export function main(): void {
   let upstreamSkillsDir: string;
   try {
-    upstreamSkillsDir = resolveUpstreamSkillsDir();
+    upstreamSkillsDir = cloneUpstreamSkillsDir();
   } catch (err) {
     console.error(`Cannot check for upstream drift: ${(err as Error).message}`);
     process.exit(1);
@@ -243,28 +215,32 @@ export function main(): void {
   console.log(`Checking ${VENDORED_SKILLS.length} vendored skills against baseline ${BASELINE_SHA.slice(0, 7)}`);
   console.log(`Upstream: ${upstreamSkillsDir}\n`);
 
-  let anyDrift = false;
-  for (const name of VENDORED_SKILLS) {
-    let report: SkillReport;
-    try {
-      report = checkSkill(name, upstreamSkillsDir);
-    } catch (err) {
-      console.error(
-        `Cannot read baseline commit ${BASELINE_SHA} for "${name}": ${(err as Error).message}\n` +
-          `This usually means DigiSmith's git history changed since this SHA was recorded. ` +
-          `Fix the baseline SHA in vendored/PROVENANCE.md and BASELINE_SHA in this script.`
-      );
-      process.exit(1);
+  try {
+    let anyDrift = false;
+    for (const name of VENDORED_SKILLS) {
+      let report: SkillReport;
+      try {
+        report = checkSkill(name, upstreamSkillsDir);
+      } catch (err) {
+        console.error(
+          `Cannot read baseline commit ${BASELINE_SHA} for "${name}": ${(err as Error).message}\n` +
+            `This usually means DigiSmith's git history changed since this SHA was recorded. ` +
+            `Fix the baseline SHA in vendored/PROVENANCE.md and BASELINE_SHA in this script.`
+        );
+        process.exit(1);
+      }
+      if (report.files.some((f) => f.upstreamDiff !== "")) {
+        anyDrift = true;
+      }
+      console.log(formatSkillReport(report));
+      console.log("");
     }
-    if (report.files.some((f) => f.upstreamDiff !== "")) {
-      anyDrift = true;
-    }
-    console.log(formatSkillReport(report));
-    console.log("");
-  }
 
-  if (!anyDrift) {
-    console.log("No upstream drift detected across any vendored skill.");
+    if (!anyDrift) {
+      console.log("No upstream drift detected across any vendored skill.");
+    }
+  } finally {
+    fs.rmSync(path.dirname(upstreamSkillsDir), { recursive: true, force: true });
   }
 }
 

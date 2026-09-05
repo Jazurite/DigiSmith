@@ -66,17 +66,6 @@ re-review of that review's own fix wave.
   rather than a loud failure, since `git show` still resolves
   repo-root-relative paths but `readFileIfExists` does not. Worth a
   one-line note in the doc.
-- **Test-hygiene nit: an unmocked `console.error` side effect.** The
-  fix wave for the existence-check finding added a multi-candidate
-  warning (`console.error` when more than one plugin-cache version
-  directory is found). The pre-existing "picks the most-recently-modified
-  directory" test (`check_vendored_skills.test.ts`, the original Task 1
-  test) happens to use two candidate directories in its fixture, so it
-  now incidentally triggers that warning, unmocked, as unasserted stderr
-  noise on every run. Doesn't affect pass/fail — just noisy test output.
-  Fix: either spy/suppress `console.error` in that test, or reduce its
-  fixture to a single candidate directory (it doesn't need two to prove
-  its own point).
 - **Task 4-era minors, carried forward:** an import statement in
   `check_vendored_skills.test.ts` for `compareFile`/`formatSkillReport`
   is placed mid-file instead of at the top alongside the module's other
@@ -90,8 +79,7 @@ re-review of that review's own fix wave.
 None of these are reachable under today's real conditions (verified
 live during the branch's own build — all 14 skills' baseline file
 counts matched their upstream counts exactly, so the "added-upstream"
-gap is currently inert; the multi-candidate plugin-cache warning was
-exercised live and works correctly). This is a report-only, human-in-
-the-loop personal tool, not an automated gate — worth fixing
-opportunistically the next time this file is touched (e.g. during
-W.3's call-site cutover or W.4's first real activation), not on its own.
+gap is currently inert). This is a report-only, human-in-the-loop
+personal tool, not an automated gate — worth fixing opportunistically
+the next time this file is touched (e.g. during W.3's call-site
+cutover or W.4's first real activation), not on its own.
