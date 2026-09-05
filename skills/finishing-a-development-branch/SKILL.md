@@ -93,7 +93,6 @@ cd "$MAIN_ROOT"
 # Merge first — verify success before removing anything
 git checkout <base-branch>
 git pull
-BASE_SHA=$(git rev-parse HEAD)
 git merge <feature-branch>
 
 # Verify tests on merged result
@@ -106,34 +105,51 @@ and recoverable.
 
 **DigiSmith's own repo only:** once the merged result is green, before
 pushing, check whether this is DigiSmith's own repo (never any other
-project using this same forked skill):
+project using this same forked skill). This check is self-contained —
+it re-derives everything from durable git state rather than relying on
+shell variables from the block above, which may not persist if each block
+runs as a separate command:
 
 ```bash
+MAIN_ROOT=$(git rev-parse --show-toplevel)
 IS_DIGISMITH=false
 if [ -f "$MAIN_ROOT/.claude-plugin/plugin.json" ] && grep -q '"name": "digismith"' "$MAIN_ROOT/.claude-plugin/plugin.json"; then
   IS_DIGISMITH=true
 fi
+echo "$IS_DIGISMITH"
 ```
 
 If `IS_DIGISMITH` is `true`, bump the plugin version:
 
 ```bash
+BASE_SHA=$(git rev-parse ORIG_HEAD)
 BUMP_OUTPUT=$(node --experimental-strip-types scripts/bump-plugin-version.ts --base "$BASE_SHA")
+BUMP_STATUS=$?
 echo "$BUMP_OUTPUT"
+if [ "$BUMP_STATUS" -ne 0 ]; then
+  echo "Version bump script failed — stop here, do not push, and investigate." >&2
+fi
 if [[ "$BUMP_OUTPUT" == BUMPED* ]]; then
   git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
-  git commit -m "chore: bump plugin version"
+  git commit -m "chore: bump plugin version" -- .claude-plugin/plugin.json .claude-plugin/marketplace.json
 fi
 ```
 
+`ORIG_HEAD` is git's own record of the branch tip immediately before the
+merge above — set correctly whether that merge was a fast-forward or a
+true merge commit — so it reproduces the pre-merge base SHA without
+depending on a shell variable surviving across blocks.
+
 A `BUMPED` result commits both version files in their own commit, never
 amended into the merge commit. A `SKIPPED` result means the incoming
-branch's own commits already changed the version — do nothing further. If
-this isn't DigiSmith's own repo, both steps above are skipped entirely and
-Option 1 proceeds exactly as it always has.
+branch's own commits already changed the version — do nothing further. A
+non-zero exit means the bump script itself failed: stop, do not push, and
+investigate — the bump is the point of this step, so a failure here must
+not be silently skipped. If this isn't DigiSmith's own repo, both steps
+above are skipped entirely and Option 1 proceeds exactly as it always has.
 
 Once the merged result is green (and, for DigiSmith's own repo, the bump
-above has run), push `<base-branch>` to origin:
+above has run cleanly), push `<base-branch>` to origin:
 
 ```bash
 git push origin <base-branch>
