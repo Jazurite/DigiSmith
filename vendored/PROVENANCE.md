@@ -52,8 +52,9 @@ Baseline commit (the original clone, before any divergence):
 "feat(vendor-superpowers-skills): clone all 14 Superpowers skills verbatim".
 
 An on-demand check exists: `node scripts/check_vendored_skills.ts` (map
-item **W.2**) 3-way-diffs every vendored skill against this baseline and
-whatever Superpowers plugin version is currently installed, reporting
+item **W.2**, revised by **W.2.1** 2026-09-04) 3-way-diffs every vendored skill against this
+baseline and a shallow clone of the upstream GitHub repository's current default-branch tip
+(no local Superpowers installation required), reporting
 upstream drift and local divergence separately so an activated skill's
 own edits are never confused with genuine upstream changes. Still
 manual-trigger, not automatic-schedule or auto-merge — this is a
