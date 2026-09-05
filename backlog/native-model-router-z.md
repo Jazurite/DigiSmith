@@ -215,6 +215,40 @@ actual design direction.
 - [Intelligent LLM Routing: Cost & Quality-Aware Selection — TrueFoundry](https://www.truefoundry.com/blog/llm-routing-cost-quality-aware-model-selection)
 - [LLM Routing and Model Cascades — TianPan.co](https://tianpan.co/blog/2025-11-03-llm-routing-model-cascades)
 
+## A gateway can't be assumed to normalize tool-calling for you (2026-09-05)
+
+Two independent live bugs this session, both on TokenReply, both
+consistent with the same root cause — raised as a hypothesis by Jack and
+corroborated by checking vLLM's own tool-parser catalog:
+
+- `kimi-k3` leaks its own exact, documented native "XTML" tool-call
+  format verbatim (`backlog/tokenreply-kimi-k3-tool-calling-failure.md`)
+  — byte-for-byte confirmed against vLLM's real `KimiK3ToolParser`.
+- `gpt-5.6-luna` leaks what looks like a raw, incompletely-reassembled
+  fragment (`backlog/tokenreply-gpt-5-6-luna-tool-calling-failure.md`) —
+  consistent with OpenAI's own "Harmony" format, whose vLLM tool-parser
+  entry is literally a stub (`NotImplementedError`) pointing at a
+  separate `HarmonyParser` for real decoding.
+
+**Working hypothesis:** TokenReply (and plausibly gateways like it in
+general) may not perform any real tool-call transformation for every
+route — some models' raw native output passes straight through
+undecoded. `kimi-k2.7` (the one confirmed-working model on this gateway)
+either happens to emit something naturally close to what Claude Code
+expects, or is one of the few routes actually wired up correctly — not
+evidence the gateway normalizes broadly.
+
+**Why this matters for Z specifically:** any real multi-model router
+can't assume the gateway does format normalization. It needs its **own**
+transformation layer, one per model family's native tool-calling format
+(Kimi's XTML, GPT's Harmony, whatever else turns up), converting to
+whatever the calling client expects — the same shape of thing vLLM's own
+`tool_parsers/` catalog is, generalized across vendors rather than one
+inference engine's own model zoo. This is exactly the pattern
+`agentic-flow`'s `ModelRouter`/`LLMProvider` interface and `LiteLLM`
+already aim at (see References above) — now with concrete, first-party
+evidence for *why* it's necessary, not just "other projects do this."
+
 ## K.4's data-source blockers apply here too (2026-09-04)
 
 K.4 (gateway-cost-comparison-k4.md, "report-only" cost/token comparison) was scoped as a

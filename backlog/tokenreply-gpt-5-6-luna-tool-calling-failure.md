@@ -42,6 +42,33 @@ producing an empty stub instead), not the same root cause as the Kimi
 bug, even though the end-user-visible category (broken tool-calling
 through this gateway) is the same.
 
+## Likely root cause, same shape as Kimi's (2026-09-05)
+
+Checked vLLM's own tool-parser catalog (same reference clone used for the
+Kimi K3 investigation, `D:/Workspace/Library/vllm/vllm/tool_parsers/`) for
+a GPT-family entry: `gptoss_tool_parser.py` exists, but `GptOssToolParser`
+is a **stub that raises `NotImplementedError`** if actually invoked — its
+own docstring says real parsing for OpenAI's `gpt-oss` family is handled
+by a separate `HarmonyParser`, not the generic tool-parser mechanism at
+all. "Harmony" is OpenAI's own structured response format (distinct
+channels, not a simple tool_use block) — a second, independent
+confirmation of the same general pattern found with Kimi: **a GPT-family
+model has its own non-trivial native output format requiring a dedicated
+decoder, and the malformed stub captured live is consistent with
+TokenReply passing raw, undecoded Harmony-formatted content straight
+through**, the same "no transformation happening" failure shape as the
+Kimi bug, just a different native format underneath. Not proven (no raw
+Harmony sample was captured to compare byte-for-byte, unlike Kimi's exact
+XTML match), but a strong, evidence-backed hypothesis.
+
+**Broader implication, raised directly by Jack:** if TokenReply's actual
+architecture is "thin proxy, no real transformation" rather than a real
+gateway, this isn't a per-model bug to individually root-cause and
+fix — it's a structural property of the vendor. Any future multi-model
+routing work (see `native-model-router-z.md`) needs its own
+transformation layer per model family (Kimi's XTML, GPT's Harmony,
+whatever else), not an assumption that the gateway normalizes anything.
+
 ## Why this matters
 
 `gpt-5.6-luna` was noted as an available, cheap, coding-agent-suitable
