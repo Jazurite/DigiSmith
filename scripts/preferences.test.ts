@@ -11,6 +11,12 @@ import {
   main,
 } from "./preferences.ts";
 
+describe("DEFAULT_PREFERENCES_PATH", () => {
+  it("locks the documented default path", () => {
+    expect(DEFAULT_PREFERENCES_PATH).toBe(".digismith/preferences.yml");
+  });
+});
+
 describe("readPreferences / getPreference", () => {
   let tmpDir: string;
   let prefsPath: string;
