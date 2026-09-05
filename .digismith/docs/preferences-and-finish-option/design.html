@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preferences Store &amp; Saved Finish Option</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Preferences Store &amp; Saved Finish Option</h1>
+  <div class="meta">
+    <span>Date: 2026-09-05</span>
+    <span>Map items: <strong>H</strong> (Preferences, reusing the letter H freed by W.6's retirement of subagent-driven-always) + <strong>W.8</strong> (Saved Finish Option, depends on H)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview &amp; Relationship</a></li>
+    <li><a href="#h-problem">H: Problem</a></li>
+    <li><a href="#h-storage">H: Storage</a></li>
+    <li><a href="#h-skill">H: The digismith:preferences skill</a></li>
+    <li><a href="#h-propagation">H: Worktree propagation</a></li>
+    <li><a href="#h-errors">H: Error handling</a></li>
+    <li><a href="#w8-problem">W.8: Problem</a></li>
+    <li><a href="#w8-behavior">W.8: Behavior</a></li>
+    <li><a href="#w8-scope">W.8: Scope</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview &amp; Relationship</h2>
+<p>
+Two related map items, designed together. <strong>H (Preferences)</strong> is new,
+general-purpose infrastructure: a per-repo settings store any DigiSmith skill can read from or
+write to, wrapped in a skill (<code>digismith:preferences</code>) the same way
+<code>digismith:depot</code> wraps shared runtime-resource management. <strong>W.8 (Saved Finish
+Option)</strong> is the first consumer of it: <code>finishing-a-development-branch</code>'s Step 4
+menu (Merge locally / Push+PR / Keep as-is) stops asking fresh every time once a repo's answer is
+known, using H for storage.
+</p>
+<p>
+H is being built now, not backlogged, because — unlike the deliberately-deferred lifecycle-hooks
+idea (map item Y, same session, same "one concrete use case isn't enough" reasoning that applied
+there) — this generalization was explicitly requested: build the general mechanism now rather than
+a one-off file for <code>finish_option</code> alone.
+</p>
+</section>
+
+<section id="h-problem">
+<h2>H: Problem</h2>
+<p>
+No general mechanism exists today for a skill to persist a small per-repo setting decided through
+live interaction. <code>profiles/&lt;name&gt;.yml</code> (inside DigiSmith's own repo) is the closest
+existing thing, but it's a hand-authored template applied to a <em>class</em> of repos (e.g. every
+Shopify theme repo uses the <code>emma</code> profile) — not a place for one specific repo's own,
+dynamically-set answer to something. <code>.digismith/profile</code> (inside each consumer repo) is
+the closest per-repo file, but it holds exactly one thing (which profile name applies) and isn't
+structured for arbitrary key/value settings.
+</p>
+</section>
+
+<section id="h-storage">
+<h2>H: Storage</h2>
+<p>
+A new file, <code>.digismith/preferences.yml</code>, sibling to the existing
+<code>.digismith/profile</code>, one per consumer repo (DigiSmith's own repo included — no
+special-casing). Flat key/value pairs, no nesting until a real need for it shows up:
+</p>
+<pre><code># DigiSmith-managed. Settings decided through live interaction, not hand-authored.
+finish_option: merge_locally</code></pre>
+<p>
+Scope is per-repo only (not per-profile, not a separate global-to-you tier) — matches the grain
+already settled on for <code>finish_option</code> itself, and keeps the read/write logic to one
+tier instead of two with a precedence rule between them. Same commit disposition as
+<code>.digismith/profile</code>: where a consumer repo's <code>.digismith/</code> isn't gitignored,
+committing this file is fine and makes it durable; where it is gitignored, it's written but never
+force-added — matching a choice the repo already made.
+</p>
+</section>
+
+<section id="h-skill">
+<h2>H: The <code>digismith:preferences</code> skill</h2>
+<p>
+Wraps read/write access to <code>.digismith/preferences.yml</code>, invoked two ways, same
+pattern as <code>digismith:depot</code>:
+</p>
+<ul>
+<li><strong>Automatically</strong>, by any consuming skill that needs to read or write a
+preference — starting with <code>finishing-a-development-branch</code> (W.8). A consuming skill
+never parses the YAML itself; it goes through this skill's read/write operations.</li>
+<li><strong>Directly</strong>, on explicit user request — "what's my preference for X in this
+repo", "set my preference for X to Y", "clear my preference for X". This is the only path that
+changes a preference outside of a consuming skill's own first-time "remember this?" flow (W.8's
+own mechanism, not a new one H needs to invent).</li>
+</ul>
+<p>
+Interface (exact operation names and signatures are for the implementation plan, not this design):
+<strong>get</strong>(key) → value or unset; <strong>set</strong>(key, value); <strong>clear</strong>(key).
+No enumeration/listing of arbitrary keys is required by either known use case yet — add it only
+if a real need shows up (YAGNI).
+</p>
+</section>
+
+<section id="h-propagation">
+<h2>H: Worktree propagation</h2>
+<p>
+<code>.digismith/profile</code> already needs explicit copy-forward into a freshly-created
+worktree (<code>bootstrap</code> Step 2.6) because a gitignored <code>.digismith/</code> won't
+carry it automatically. <code>.digismith/preferences.yml</code> needs the exact same treatment,
+added alongside that existing copy step in both <code>digismith:bootstrap</code> and
+<code>digismith:adopt</code> — skipping it would silently make every fresh worktree look like "no
+preferences set," defeating the entire point of persisting them across many worktrees over time.
+</p>
+</section>
+
+<section id="h-errors">
+<h2>H: Error handling</h2>
+<ul>
+<li><strong>File missing</strong> — every key reads as unset; not an error. A consuming skill
+falls back to its own default behavior (W.8: ask the menu as normal).</li>
+<li><strong>File present but malformed/unparseable</strong> — treat as unset, same as missing.
+Never crash a caller over a corrupt preferences file.</li>
+<li><strong>Key requested that was never set</strong> — returns unset, not an error.</li>
+<li><strong>Target path gitignored in this repo</strong> — write succeeds, commit is skipped,
+same disposition already established for <code>.digismith/profile</code> and this pipeline's
+generated docs. Never force with <code>-f</code>.</li>
+</ul>
+</section>
+
+<section id="w8-problem">
+<h2>W.8: Problem</h2>
+<p>
+<code>finishing-a-development-branch</code>'s Step 4 menu asks the same three-option question
+every single time a branch finishes, even though the answer is usually predictable per repo —
+DigiSmith's own self-work and most personal repos want Option 1 (merge locally); ticket work
+against a client repo almost always wants Option 2 (PR).
+</p>
+</section>
+
+<section id="w8-behavior">
+<h2>W.8: Behavior</h2>
+<h3>First run in a repo (no <code>finish_option</code> set)</h3>
+<p>
+Step 4's menu is presented exactly as it is today, unchanged — this preserves the skill's
+existing "wait for their answer, the integration decision is theirs" rule untouched. Once the
+user answers with Option 1 or Option 2, one lightweight follow-up: <em>"Remember [option] as this
+repo's default, so I stop asking?"</em> Yes → write <code>finish_option</code> via
+<code>digismith:preferences</code>. No → proceed normally this run; ask again next time. Option 3
+(keep as-is) never gets this follow-up — it's a one-off deferral, never a repeatable default, and
+is never itself a stored value.
+</p>
+<h3>Subsequent runs (<code>finish_option</code> already set)</h3>
+<p>
+Skip the menu. Announce the saved default plainly (e.g. <em>"Using saved default for this repo:
+merge locally. Say 'show the menu' to override once."</em>) and proceed straight to executing that
+option — <strong>unless</strong> the user's own message for this specific run already stated an
+explicit override ("push this as a PR instead"), mirroring the same "explicit user request for
+this specific run" pattern <code>writing-plans</code>' Execution Handoff already uses for inline
+vs. subagent-driven. An override changes only this run; the saved value is untouched.
+</p>
+<h3>Changing the saved default permanently</h3>
+<p>
+Only in response to the user explicitly saying so for this repo going forward (e.g. "always PR
+this repo from now on") — never inferred from context or from a single override. This overwrites
+<code>finish_option</code> via <code>digismith:preferences</code>, the same write path the
+first-run "remember this?" flow uses.
+</p>
+<h3>Applies uniformly</h3>
+<p>
+DigiSmith's own repo goes through the exact same mechanism as any consumer repo — no
+<code>IS_DIGISMITH</code>-based hardcoding. Every DigiSmith self-finish so far (W.4.1, W.7) has
+picked Option 1 anyway, so it will settle there naturally on first use and stay consistent with
+everything else built this way.
+</p>
+</section>
+
+<section id="w8-scope">
+<h2>W.8: Scope</h2>
+<p>
+In scope: the normal-repo / named-branch-worktree three-option menu only. Out of scope: the
+detached-HEAD reduced two-option menu (Push+PR / Keep as-is) — only one option there is ever
+repeatable (Push+PR), so there is nothing meaningful to remember or skip.
+</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>
+H's read/get/set/clear operations against <code>.digismith/preferences.yml</code> are ordinary,
+independently-testable logic (parsing, writing, missing-file and malformed-file fallback) and
+should get real unit tests, following this repo's existing pattern (real file fixtures in a temp
+directory, no mocking — same shape as <code>scripts/bump-plugin-version.test.ts</code>). W.8's
+own behavior (menu-skip decision, override detection, the first-run follow-up prompt) is skill
+prose with no automated test harness, same as every other <code>finishing-a-development-branch</code>
+divergence so far (W.4, W.4.1) — verification there is a careful manual read-through plus a real
+end-to-end run.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li>A global-to-you preference tier spanning all repos (considered, explicitly declined in favor
+of per-repo-only for now).</li>
+<li>Enumerating/listing all preferences set for a repo (no concrete need yet).</li>
+<li>Migrating any existing <code>profiles/*.yml</code> field into this store — those remain
+DigiSmith-repo-side, hand-authored, per-profile-class config; this store is per-individual-repo,
+dynamically written through live interaction. Different mechanisms for different jobs.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/preferences-and-finish-option/design.html</footer>
+
+</body>
+</html>
