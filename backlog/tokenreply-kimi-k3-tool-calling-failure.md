@@ -79,6 +79,35 @@ per-model capability tags (whether `kimi-k3` is flagged as tool-calling-capable 
 create an account to check this. If revisited, check there first, logged in as an actual
 TokenReply user, before any further live dispatch testing.
 
+## Precise root cause identified (2026-09-04, later still)
+
+The garbled text is not garbage — it's **Kimi K3's real, documented native tool-calling format**.
+vLLM's own docs (`docs.vllm.ai/en/latest/api/vllm/tool_parsers/kimi_k3_tool_parser/`) describe a
+custom "XTML" syntax using exactly the delimiters observed live: `<|open|>`, `<|sep|>`, `<|close|>`,
+e.g. `<|open|>tools<|sep|> <|open|>call tool="python" index="1"<|sep|>...` — an exact match to both
+this investigation's captured events. vLLM ships a dedicated `KimiK3ToolParser` specifically to
+convert this raw format into standard OpenAI-compatible tool calls before returning a response to
+the client.
+
+**This means TokenReply's serving of `kimi-k3` is not running the model's raw output through that
+conversion step.** If they're using vLLM underneath (the parser's existence as a named, maintained
+vLLM component suggests this is a real, non-obscure serving path), they most likely haven't
+enabled `--tool-call-parser kimi_k3` for this specific route. This is a concrete, nameable,
+almost-certainly-fixable configuration gap on TokenReply's side — not a model failure, not
+something wrong with DigiSmith's dispatch construction, and not an unexplainable mystery.
+
+**Two real paths forward, neither pursued yet:**
+1. **Report to TokenReply support** with this exact finding — cite the vLLM parser, note the raw
+   output matches its documented input format exactly, ask them to enable it for the `kimi-k3`
+   route. Likely the fastest real fix if they're responsive, since it names their exact
+   misconfiguration rather than just "tool calls don't work."
+2. **Build a local translation shim** — DigiSmith could implement the same XTML→tool-call
+   conversion vLLM's parser does (the format is simple and regex-parseable per vLLM's own docs) as
+   a proxy sitting between Claude Code/OpenCode and TokenReply. Real engineering work: needs a new
+   local HTTP proxy layer, since neither `claude -p` nor `opencode` expose a hook to intercept and
+   re-parse a response mid-dispatch — this isn't a small patch to `parse-result.ts`, it's new
+   infrastructure. Not scoped or estimated.
+
 ## Fix applied
 
 `scripts/providers/tokenreply.ts`'s `model()` reverted to `kimi-k2.7` (confirmed working, 2/2).
