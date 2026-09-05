@@ -1,4 +1,4 @@
-# Conflict-Scan Rationalization Guard Implementation Plan
+# Conflict-Scan Rationalization Guard (W.7) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
