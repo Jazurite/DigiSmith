@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
-import { parseArgs } from "./cli-args.ts";
+import { parseArgs } from "../../../../scripts/cli-args.ts";
 
 export function computeNextVersion(current: string): string {
   const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(current);
