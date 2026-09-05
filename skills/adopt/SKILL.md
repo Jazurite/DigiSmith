@@ -117,6 +117,13 @@ worktree), copy the file in now: a plain file copy, never `git add`, never
 `git add -f`, never a commit — mirrors `digismith:bootstrap` Step 2.6
 exactly, same reasoning (a worktree checks out only committed files).
 
+**Preferences.** If the original checkout (wherever Step 2 ran) has a
+`.digismith/preferences.yml` and Step 4 attached a worktree other than that
+checkout, copy it in now the same way: a plain file copy, never `git add`,
+never `git add -f`, never a commit. Absent in the original checkout →
+nothing to copy, not an error — no preferences have been set for this repo
+yet.
+
 **Ticket docs.** If Step 3 wrote (or moved) `.digismith/docs/<slug>/ticket.md`
 somewhere other than the worktree Step 4 left you in — i.e. Step 4 attached a
 brand-new worktree rather than you already being inside an isolated one — copy
@@ -326,6 +333,6 @@ it triggers off the dispatch itself, not off which entry point produced it.
 | 2 | Resolve profile and ensure the DigiSmith runtime clone — run `digismith:bootstrap` Step 0, then Step 0.5, exactly |
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
-| 5 | Copy `.digismith/profile` and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
+| 5 | Copy `.digismith/profile`, `.digismith/preferences.yml` (if the original checkout has one), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
 | 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/`, publishing `design.html` when `publish_artifact` allows |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |
