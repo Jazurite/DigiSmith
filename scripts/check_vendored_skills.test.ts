@@ -1,103 +1,59 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { pickMostRecentDir, resolveUpstreamSkillsDir, readGitBlob, readFileIfExists, listBaselineFiles, diffContent } from "./check_vendored_skills.ts";
+import { spawnSync } from "node:child_process";
+import { cloneUpstreamSkillsDir, readGitBlob, readFileIfExists, listBaselineFiles, diffContent } from "./check_vendored_skills.ts";
 
-describe("pickMostRecentDir", () => {
-  it("returns the path with the highest mtimeMs", () => {
-    const result = pickMostRecentDir([
-      { path: "/a/old", mtimeMs: 100 },
-      { path: "/a/new", mtimeMs: 300 },
-      { path: "/a/mid", mtimeMs: 200 },
-    ]);
-    expect(result).toBe("/a/new");
-  });
+function initFixtureRepo(dir: string, withSkillsFolder: boolean): void {
+  fs.mkdirSync(dir, { recursive: true });
+  spawnSync("git", ["init", "-q"], { cwd: dir });
+  spawnSync("git", ["config", "user.email", "test@example.com"], { cwd: dir });
+  spawnSync("git", ["config", "user.name", "Test"], { cwd: dir });
+  if (withSkillsFolder) {
+    fs.mkdirSync(path.join(dir, "skills", "some-skill"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "skills", "some-skill", "SKILL.md"), "fixture content\n");
+  } else {
+    fs.writeFileSync(path.join(dir, "README.md"), "no skills here\n");
+  }
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  spawnSync("git", ["commit", "-q", "-m", "fixture commit"], { cwd: dir });
+}
 
-  it("throws on an empty list", () => {
-    expect(() => pickMostRecentDir([])).toThrow("no directories found");
-  });
-});
-
-describe("resolveUpstreamSkillsDir", () => {
-  it("picks the most-recently-modified hash directory under superpowers/ and appends skills/", () => {
+describe("cloneUpstreamSkillsDir", () => {
+  it("clones the repository and returns its skills/ directory", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-"));
-    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
-    const oldHash = path.join(cacheRoot, "oldhash111");
-    const newHash = path.join(cacheRoot, "newhash222");
-    fs.mkdirSync(oldHash, { recursive: true });
-    fs.mkdirSync(path.join(newHash, "skills"), { recursive: true });
-    // Force newHash to have a strictly later mtime than oldHash.
-    const past = new Date(Date.now() - 60_000);
-    const future = new Date(Date.now() + 60_000);
-    fs.utimesSync(oldHash, past, past);
-    fs.utimesSync(newHash, future, future);
+    const fixtureRepo = path.join(tmpBase, "fixture-repo");
+    initFixtureRepo(fixtureRepo, true);
 
-    const result = resolveUpstreamSkillsDir(tmpBase);
+    const result = cloneUpstreamSkillsDir(fixtureRepo);
 
-    expect(result).toBe(path.join(newHash, "skills"));
+    expect(result.endsWith(path.join("skills"))).toBe(true);
+    expect(fs.existsSync(result)).toBe(true);
+    const cloned = fs.readFileSync(path.join(result, "some-skill", "SKILL.md"), "utf8");
+    expect(cloned).toBe("fixture content\n");
+
+    fs.rmSync(path.dirname(result), { recursive: true, force: true });
     fs.rmSync(tmpBase, { recursive: true, force: true });
   });
 
-  it("throws a clear error when the superpowers cache directory doesn't exist", () => {
-    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-empty-"));
-    expect(() => resolveUpstreamSkillsDir(tmpBase)).toThrow("Superpowers plugin cache not found");
+  it("throws a clear error when the clone fails", () => {
+    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-noclone-"));
+    const doesNotExist = path.join(tmpBase, "does-not-exist");
+
+    expect(() => cloneUpstreamSkillsDir(doesNotExist)).toThrow("Cannot clone upstream repository");
+
     fs.rmSync(tmpBase, { recursive: true, force: true });
   });
 
-  it("throws a clear error naming the expected path when the chosen hash dir has no skills/ subfolder", () => {
+  it("throws a clear error naming the expected path when the clone has no skills/ subfolder", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-noskills-"));
-    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
-    const onlyHash = path.join(cacheRoot, "onlyhash333");
-    fs.mkdirSync(onlyHash, { recursive: true });
-    // Deliberately no `skills` subfolder under onlyHash — mimics a wrong
-    // plugin layout or a hash dir that hasn't been populated yet.
+    const fixtureRepo = path.join(tmpBase, "fixture-repo");
+    initFixtureRepo(fixtureRepo, false);
 
-    expect(() => resolveUpstreamSkillsDir(tmpBase)).toThrow(path.join(onlyHash, "skills"));
+    expect(() => cloneUpstreamSkillsDir(fixtureRepo)).toThrow("Expected upstream skills directory not found");
+
     fs.rmSync(tmpBase, { recursive: true, force: true });
-  });
-
-  it("warns to stderr when more than one candidate hash directory exists", () => {
-    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-multi-"));
-    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
-    const oldHash = path.join(cacheRoot, "oldhash444");
-    const newHash = path.join(cacheRoot, "newhash555");
-    fs.mkdirSync(oldHash, { recursive: true });
-    fs.mkdirSync(path.join(newHash, "skills"), { recursive: true });
-    const past = new Date(Date.now() - 60_000);
-    const future = new Date(Date.now() + 60_000);
-    fs.utimesSync(oldHash, past, past);
-    fs.utimesSync(newHash, future, future);
-
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const result = resolveUpstreamSkillsDir(tmpBase);
-      expect(result).toBe(path.join(newHash, "skills"));
-      expect(errorSpy).toHaveBeenCalledTimes(1);
-      const message = errorSpy.mock.calls[0][0] as string;
-      expect(message).toContain(newHash);
-      expect(message).toContain("2 candidate");
-    } finally {
-      errorSpy.mockRestore();
-      fs.rmSync(tmpBase, { recursive: true, force: true });
-    }
-  });
-
-  it("does not warn when only one candidate hash directory exists", () => {
-    const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-single-"));
-    const cacheRoot = path.join(tmpBase, ".claude", "plugins", "cache", "claude-plugins-official", "superpowers");
-    const onlyHash = path.join(cacheRoot, "onlyhash666");
-    fs.mkdirSync(path.join(onlyHash, "skills"), { recursive: true });
-
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const result = resolveUpstreamSkillsDir(tmpBase);
-      expect(result).toBe(path.join(onlyHash, "skills"));
-      expect(errorSpy).not.toHaveBeenCalled();
-    } finally {
-      errorSpy.mockRestore();
-      fs.rmSync(tmpBase, { recursive: true, force: true });
-    }
   });
 });
 
