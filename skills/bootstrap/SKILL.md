@@ -371,6 +371,18 @@ what Step 2's new sub-step 7 below makes possible.
    `digismith:telemetry` — which reads it later, from inside this same
    worktree, once the build finishes — would silently find nothing to
    capture.
+8. **Make `.digismith/preferences.yml` visible inside the worktree, if one
+   exists.** Whichever of 2.3 or 2.5 produced the worktree you're now in,
+   check whether the original checkout (the directory Step 0 ran in) has a
+   `.digismith/preferences.yml`. **Present** → copy it into
+   `<worktree-path>/.digismith/preferences.yml` if it isn't already there: a
+   plain file copy, **not** `git add`, **not** `git add -f`, **not** a
+   commit — same reasoning as sub-step 6's profile copy, a worktree checks
+   out only committed files. **Absent** → nothing to copy; no preferences
+   have been set for this repo yet, which is not an error (see
+   `digismith:preferences`'s own Error Handling — a missing file simply
+   reads as every key being unset). Do this before Step 3 hands off, same as
+   sub-steps 6 and 7.
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -441,6 +453,10 @@ not re-invoke or duplicate any part of that chain yourself.
   didn't happen, `digismith:telemetry` will simply find nothing to
   capture later — same non-blocking disposition as the missing-transcript
   case above.
+- **`.digismith/preferences.yml` absent inside the worktree Step 2
+  produced** → expected when no preference has ever been set for this repo;
+  not an error. Copy it in from the original checkout (sub-step 8) when
+  present there. Never resolve this with `git add -f`.
 
 ## Quick Reference
 
@@ -450,5 +466,5 @@ not re-invoke or duplicate any part of that chain yourself.
 | 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
-| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile` and **2.7** copy `.digismith/telemetry-marker` into the worktree, only if Step 1.5 just wrote one this run — both plain file copies, never `git add -f` |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile`, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run), and **2.8** copy `.digismith/preferences.yml` if the original checkout has one — all three plain file copies, never `git add -f` |
 | 3 | Invoke `digismith:brainstorming` directly, passing the already-derived slug plus the Step 1 ticket content as seed context (when there is any); once it reports its design doc written, publish via `Artifact` unless `publish_artifact: false`; Superpowers' own chain takes over from there |
