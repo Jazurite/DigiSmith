@@ -11,7 +11,7 @@ call by hand, and then **resuming the model's own session
 (`--resume "<sessionID>"`) with a result summary** so it can continue
 reasoning and, if needed, attempt further steps itself.
 
-Two rounds of live verification exist. **Round 1** (2026-09-04) covered
+Two rounds of live verification exist. **Round 1** (2026-09-05) covered
 decode-and-execute only — it never actually invoked `--resume`, so the
 one thing this task exists to prove (that the documented resume loop
 itself functions) went unverified; a task-7 fix round was dispatched
@@ -54,13 +54,29 @@ TokenReply/`kimi-k3` serving bug (missing XTML-to-tool-call conversion,
 see "Precise root cause identified" below) is unfixed and recurs on every
 real tool-call attempt observed across both rounds — resuming does not
 work around it, it only lets the documented recovery loop keep making
-progress one manually-executed step at a time until the task's remaining
-actions are exhausted. `kimi-k2.7` remains the shipped default in
+progress one manually-executed step at a time, **bounded by the shared
+fix-round cap (3)** — every recovery cycle burns one of those 3 rounds,
+so this mechanism is only viable for tasks needing roughly 3 or fewer
+tool calls total; a live test creating just one file and one commit
+already consumed 2 of 3, and a real task with ~10 tool calls would
+exhaust the budget before completing and could never even reach a
+review fix round. `kimi-k2.7` remains the shipped default in
 `scripts/providers/tokenreply.ts` (`kimi-k3` still isn't safe to use
 unattended) — this recovery mechanism is for when `kimi-k3` is
 deliberately selected and the leak is hit, not a reason to switch the
 default back yet. TokenReply's or the model's own underlying serving bug
 is still unfixed upstream (outside DigiSmith's control).
+
+**Still unverified:** multi-call-per-turn recovery remains unverified —
+all four real dispatches across this whole investigation (the original
+investigation's two failing trials plus both Task 7 live-test rounds)
+made exactly one tool call per leaked turn, so recovery of a turn
+leaking more than one call has never been exercised against a real
+dispatch. Argument-shape risk (the decoded call's arguments needing
+renaming to match Claude Code's own tool schema) has 4 clean real-world
+data points so far — 2 `Bash`, 2 `Write`, across the original
+investigation and both Task 7 live-test rounds — all clean with no
+renaming needed; `Edit`/`Read`/`Grep`/`Glob` shapes remain untested.
 
 **Source:** 2026-09-04, same session that switched TokenReply's model
 to `kimi-k3` and the default provider/runner to `tokenreply`/
