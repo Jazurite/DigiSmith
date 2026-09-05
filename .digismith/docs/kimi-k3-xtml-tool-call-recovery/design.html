@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kimi K3 XTML Tool-Call Recovery</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Kimi K3 XTML Tool-Call Recovery</h1>
+  <div class="meta">
+    <span>Date: 2026-09-05</span>
+    <span>Map item: no map letter — recovery mechanism for the existing K.2 (offload-implementer) + K.3 (TokenReply provider) integration, not a new map-level capability</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#root-cause">Root cause recap</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#open-risks">Open risks</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>TokenReply's <code>kimi-k3</code> route returns raw, unconverted tool-call text instead of a
+real tool-use response. Confirmed live, reproducing identically across both the
+<code>claude-code</code> and <code>opencode</code> runners — ruling out a client-protocol-specific
+cause. Today this silently reports as a successful dispatch (<code>is_error: false</code>,
+<code>subtype: "success"</code>) while nothing was actually executed — exactly the "a status reply
+can lie" failure mode <code>offload-implementer</code>'s own docs already warn about, just from a
+new source. Full investigation trail: <code>backlog/tokenreply-kimi-k3-tool-calling-failure.md</code>.</p>
+</section>
+
+<section id="root-cause">
+<h2>Root cause recap</h2>
+<p>Kimi K3 emits tool calls in its own documented "XTML" format
+(<code>&lt;|open|&gt;tools&lt;|sep|&gt; &lt;|open|&gt;call tool="..." index="1"&lt;|sep|&gt;...</code>),
+not a hallucination or garbage output. vLLM ships a dedicated
+<code>KimiK3ToolParser</code> specifically to convert this into standard tool calls
+(<code>vllm/tool_parsers/kimi_k3_tool_parser.py</code>, cloned for reference to
+<code>D:/Workspace/Library/vllm</code>). TokenReply is almost certainly not running this
+conversion step for this route. <code>kimi-k2.7</code> through the identical pipeline works
+correctly and remains the shipped default; this feature exists to make <code>kimi-k3</code> usable
+too, without waiting on TokenReply to fix their own server config.</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>No standing proxy server, no new orchestrator loop, no LLM-based guessing at the decode step.
+The existing controller (<code>digismith:offload-implementer</code>, driven by whichever Claude
+Code session is running a <code>subagent-driven-development</code> plan) gains one new
+conditional step in its existing dispatch flow:</p>
+<ol>
+<li>Dispatch normally via <code>claude -p</code>/<code>opencode run</code> through TokenReply —
+unchanged from today.</li>
+<li><code>parse-result.ts</code> runs as today; a new shared check flags the XTML pattern if
+present in the raw result text.</li>
+<li>If flagged: the controller runs a new deterministic parser script directly (a plain Node
+invocation, no subagent dispatch) — a TypeScript port of
+<code>KimiK3ToolParser.extract_tool_calls</code>'s non-streaming logic — to decode the tool
+name(s) and argument(s) from the raw XTML text.</li>
+<li>The controller executes each decoded tool call itself, in order, using its own Read/Edit/Bash
+tools — the same tools <code>offload-implementer</code> already grants via
+<code>--allowedTools</code>. No new trust surface beyond "execute a specific, fully-decoded
+action with tools already permitted" — bounded per-action, not an open-ended loop.</li>
+<li>The controller resumes the same Claude Code session (<code>claude -p --resume
+&lt;sessionID&gt;</code> — the same mechanism <code>offload-implementer</code>'s fix-rounds
+already use) with a message describing what was executed and its result, so the model continues
+its own turn normally from there.</li>
+<li>If a later turn in the same session hits the same XTML leak again, repeat steps 2-5 for that
+turn. No cap is enforced by this mechanism itself — the existing fix-round round cap (3) already
+bounds the overall task.</li>
+</ol>
+</section>
+
+<section id="components">
+<h2>Components</h2>
+<div class="cards">
+<div class="card">
+<span class="tag">New</span>
+<h4><code>scripts/runners/kimi-k3-xtml-parser.ts</code></h4>
+<p>Ported extraction logic: locates the <code>tools</code> channel, extracts each <code>call</code>
+block's tool name and <code>argument</code> blocks, reverses HTML-entity escaping on attribute
+values, JSON-decodes non-string-typed arguments (falling back to raw text on malformed JSON,
+matching the source's own tolerance). Exposes one function returning the decoded tool calls plus
+any unwrapped plain-text content. Non-streaming only — <code>offload-implementer</code> never
+consumes a live stream, so the source's streaming/buffering variant and its
+<code>adjust_request</code> step (a vLLM server-side concern) are both out of scope.</p>
+</div>
+<div class="card">
+<span class="tag">Modified</span>
+<h4><code>scripts/runners/claude-code.ts</code> / <code>opencode.ts</code></h4>
+<p>Each runner's <code>parseResult</code> gains a check against the new parser module. If the XTML
+channel marker is present, the returned <code>ParsedResult</code> flags it (exact field shape —
+new optional field vs. reusing existing status values — is an implementation-plan-level decision,
+not fixed here) so <code>offload-implementer</code>'s controller logic knows to run the recovery
+step rather than trusting the runner's own <code>is_error</code>/<code>subtype</code>.</p>
+</div>
+<div class="card">
+<span class="tag">Modified</span>
+<h4><code>skills/offload-implementer/SKILL.md</code></h4>
+<p>New conditional step inserted between the existing Step 5 (extract session ID/status) and Step
+6 (hand back to the normal flow): when the XTML flag is set, run the new parser, execute the
+decoded call(s), then re-dispatch via <code>--resume</code> with a result-description message,
+looping back to Step 5 for that turn's fresh result.</p>
+</div>
+<div class="card">
+<span class="tag">Reference only</span>
+<h4><code>D:/Workspace/Library/vllm/vllm/tool_parsers/kimi_k3_tool_parser.py</code></h4>
+<p>Not imported or depended on — Python, part of a project DigiSmith doesn't install. Read
+completely for the exact regex/decoding behavior to port faithfully into TypeScript, nothing more.</p>
+</div>
+</div>
+</section>
+
+<section id="data-flow">
+<h2>Data flow</h2>
+<p>Raw dispatch text (already captured in the existing events file, no new capture mechanism
+needed) &rarr; XTML-leak check (existing runner <code>parseResult</code>) &rarr; ported extractor
+(new module) &rarr; <code>{tool, arguments}[]</code> &rarr; controller executes each via its own
+Read/Edit/Bash &rarr; controller builds a plain-text result summary &rarr; fed back into the same
+Claude Code session via <code>--resume</code>, exactly like an existing fix-round dispatch.</p>
+</section>
+
+<section id="error-handling">
+<h2>Error handling</h2>
+<ul>
+<li><strong>XTML channel marker present but the extractor decodes zero real calls</strong> (badly
+malformed beyond the ported parser's own tolerance) — treat as a genuine, non-recoverable error;
+fall back to today's plain BLOCKED disposition rather than looping or guessing.</li>
+<li><strong>Executing a decoded call itself fails</strong> (e.g. a Bash command errors) — report
+that failure back to the model via the same <code>--resume</code> message (describe the error,
+not just silence), letting the model's own next turn decide how to react, same as a normal tool
+error would surface in an unmodified dispatch.</li>
+<li><strong>This mechanism does not change the existing round cap.</strong> Repeated recovery
+across multiple turns of the same task still counts toward <code>offload-implementer</code>'s
+existing fix-round cap (3) — no separate, uncapped retry budget introduced.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<p>Explicitly ruled out during brainstorming, recorded so it isn't re-litigated:</p>
+<ul>
+<li><strong>A standing local HTTP proxy server</strong> sitting between Claude Code/OpenCode and
+TokenReply — considered, would need new persistent-process infrastructure (start/track/stop,
+Depot-style); the resume-based approach above needs none of that.</li>
+<li><strong>LLM-based decoding</strong> (dispatching a subagent to interpret the garbled text) —
+unnecessary once the format is confirmed deterministic and fully documented by vLLM's own parser;
+a plain ported function is cheaper, faster, and more reliable than a model call.</li>
+<li><strong>A full custom agentic loop/runner</strong> replacing <code>claude -p</code>/
+<code>opencode run</code> entirely for this model+provider combination — the resume mechanism
+already gives Claude Code's own conversation and safety harness back control after each
+recovered turn; no need to reimplement conversation management from scratch.</li>
+<li><strong>Chutes</strong> as an alternative route to <code>kimi-k3</code> — considered, not
+tested (Jack declined, "no chutes"). Not part of this design.</li>
+<li><strong>The streaming variant</strong> of vLLM's parser (partial-tag-overlap buffering,
+incremental content emission) — <code>offload-implementer</code> always consumes a completed
+dispatch's full captured output, never a live stream, so none of that logic is needed.</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li>Unit tests for the new parser module against the real garbled text captured live during this
+session's investigation (both the <code>Bash</code>-call and <code>Write</code>-call examples) —
+must decode the correct tool name and arguments from each.</li>
+<li>Entity-decoding edge cases (a value containing an escaped <code>&amp;quot;</code> or
+<code>&amp;amp;</code>) and typed-argument edge cases (a non-string argument that is valid JSON,
+and one that is malformed JSON and must fall back to raw text) — ported directly from the
+source's own documented behavior, not invented fresh.</li>
+<li>Runner-level tests confirming <code>claude-code.ts</code>/<code>opencode.ts</code> correctly
+flag a fixture event containing the XTML marker.</li>
+<li>A real live dispatch re-test once implemented, following this session's own established
+pattern (disposable scratch worktree, independent verification via <code>git log</code>/file
+existence — never trusting the dispatch's own self-reported status) — confirming a task that
+previously failed silently now actually completes.</li>
+</ul>
+</section>
+
+<section id="open-risks">
+<h2>Open risks</h2>
+<ul>
+<li><strong>Argument-shape mismatch risk, not yet verified:</strong> the design assumes a decoded
+call's argument names (e.g. <code>content</code>/<code>file_path</code> for a Write call,
+<code>command</code> for a Bash call) map directly onto the controller's own tool parameter names.
+Only two real examples have been observed live so far (one <code>Bash</code> call, one
+<code>Write</code> call) — this should be verified against a few more real dispatches during
+implementation, not assumed to generalize perfectly.</li>
+<li><strong>Multi-call turns are unverified live</strong> — the format supports multiple
+<code>call</code> blocks in one <code>tools</code> channel, but every real example captured this
+session contained exactly one. The design executes all decoded calls in order per turn; this
+path has no live confirmation yet.</li>
+<li><strong>This is fully dependent on TokenReply's current (broken) behavior remaining stable.</strong>
+If TokenReply changes their <code>kimi-k3</code> serving (fixes it properly, or breaks it
+differently), this recovery mechanism may need rework or could become dead code. Not a reason to
+avoid building it, but worth remembering it's scaffolding around a third-party bug, not a
+permanent architectural fixture.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/kimi-k3-xtml-tool-call-recovery/design.html</footer>
+
+</body>
+</html>
