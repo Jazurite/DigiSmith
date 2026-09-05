@@ -14,6 +14,16 @@ export const tokenreply: GatewayProvider = {
   // backlog/tokenreply-kimi-k3-tool-calling-failure.md). kimi-k2.7 confirmed
   // working (2/2) on the identical pipeline — reverted until root-caused on
   // TokenReply's or the model's side.
+  //
+  // Available but not default: `gpt-5.6-luna` — per TokenReply's own live
+  // model catalog (2026-09-05), 100% availability, cheapest of the gpt-5.6
+  // family ($0.02/$0.12 per 1M in/out) and carries TokenReply's "cursor"
+  // (coding-agent-suitable) tag. `sol`/`terra` are the same underlying
+  // GPT-5.6 generation routed differently — lower availability, higher cost,
+  // no capability difference expected. Not wired into `model()` since
+  // offload-implementer has no per-task model-override mechanism today; use
+  // manually via a raw `--model gpt-5.6-luna` override on the dispatch
+  // command, same as this session's live TokenReply tests.
   model() {
     return "kimi-k2.7";
   },
