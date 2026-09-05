@@ -154,6 +154,14 @@ before execution begins, not one interrupt per discovery mid-plan. If the
 scan is clean, proceed without comment. The review loop remains the net for
 conflicts that only emerge from implementation.
 
+Don't adjudicate a finding yourself because you're confident it's your own
+mistake rather than a real conflict — "this is just a wording bug in my
+constraint, not a real conflict between tasks" is the same silent-discard
+pattern the fix loop's breaker forbids, one step earlier. A Global
+Constraint contradicting the actual codebase IS a finding under the first
+bullet above; present it and let your human partner decide which text
+governs, even when you're sure you already know the answer.
+
 ## Model Selection
 
 Use the least powerful model that can handle each role to conserve cost and increase speed.
