@@ -23,7 +23,11 @@ Cloned: 2026-08-20
 
 - **finishing-a-development-branch** — map item **W.4**, activated 2026-09-04.
   Option 1 ("Merge Locally") now pushes `<base-branch>` to origin after a
-  successful merge and green tests. See DigiSmith `MEMORY.md` map item W.
+  successful merge and green tests. **Further diverged by W.4.1** (2026-09-05):
+  Option 1 now also bumps `.claude-plugin/plugin.json` and
+  `.claude-plugin/marketplace.json`'s version (via `scripts/bump-plugin-version.ts`)
+  after a successful merge, gated strictly to DigiSmith's own repo. See DigiSmith
+  `MEMORY.md` map item W.
 - **brainstorming** — map item **W.5**, activated 2026-09-04 (alongside
   `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
   to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream
