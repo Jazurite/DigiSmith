@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preferences Store (H) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Preferences Store (H) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-05</span>
+    <span>Map item: <strong>H</strong></span>
+    <span>Commit range: <code>a31d6fc..2fd1432</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Adds a general, per-repo settings store to DigiSmith — <code>.digismith/preferences.yml</code> — plus a <code>digismith:preferences</code> skill wrapping get/set/clear, so a live-interaction decision (starting with W.8's saved finish option) can persist across runs and worktrees without a one-off file format per consumer. A small TypeScript module (<code>scripts/preferences.ts</code>) does plain-line read/write against that file — no YAML library, the same parsing convention already used for <code>.digismith/profile</code>'s own fields — wrapped in a thin CLI (<code>--key</code>/<code>--action</code>/<code>--value</code>, reusing <code>scripts/cli-args.ts</code>). <code>skills/preferences/SKILL.md</code> is the only thing any consuming skill or Jack ever calls; <code>digismith:bootstrap</code> and <code>digismith:adopt</code> each gained one new worktree-copy sub-step mirroring the existing <code>.digismith/profile</code> copy, so a freshly created worktree doesn't silently look like "no preferences set." Followed the full Superpowers process: brainstorming &rarr; spec &rarr; writing-plans &rarr; <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="../preferences-and-finish-option/design.html">design spec</a> (shared with W.8's future plan — see its own H sections) and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>scripts/preferences.ts</h4><p>Core get/set/clear logic and CLI (<code>node --experimental-strip-types &lt;digismith-repo&gt;/scripts/preferences.ts --key &lt;key&gt; --action get|set|clear</code>) against <code>.digismith/preferences.yml</code>, with real-fixture unit tests.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>skills/preferences/SKILL.md</h4><p>The only documented entry point any consuming skill (or Jack directly) uses to read or write <code>.digismith/preferences.yml</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Worktree propagation</h4><p><code>digismith:bootstrap</code> and <code>digismith:adopt</code> now copy <code>.digismith/preferences.yml</code> into freshly created worktrees, mirroring the existing <code>.digismith/profile</code> copy.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. scripts/preferences.ts — core read/write logic and CLI</td><td>Core get/set/clear + CLI</td><td>Approved, clean</td><td>Redundant <code>colonIndex</code> computation in <code>parseFieldValue</code>/<code>readPreferences</code> (as specified by the brief); no CLI test exercised <code>--path</code> omission (later fixed as part of the final-review fix wave)</td></tr>
+    <tr><td>2. skills/preferences/SKILL.md</td><td>The digismith:preferences skill</td><td>Approved, clean</td><td>None</td></tr>
+    <tr><td>3. Worktree propagation (bootstrap/adopt)</td><td>preferences.yml copy-forward</td><td>Approved, clean</td><td>Sub-step 8 uses a "Present &rarr;/Absent &rarr;" construct not used by sub-steps 6/7 (stylistic); "same as sub-steps 6 and 7" phrasing slightly overstates textual parallelism; sub-step 8 drops sub-step 6's parenthetical aside on worktree origin (meaning unaffected)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Critical, 1 Important, and 2 Minor findings, all fixed in one round with a clean scoped re-review.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td>SKILL.md's documented invocation was a bare relative path (<code>node --experimental-strip-types scripts/preferences.ts ...</code>) that only works when cwd is DigiSmith's own repo, breaking in every consumer repo</td><td>Fixed — resolved DigiSmith's own repo path using the same two-step procedure as <code>inject-standards</code>/<code>offload-implementer</code>, now invoked as <code>node --experimental-strip-types &lt;digismith-repo&gt;/scripts/preferences.ts ...</code></td></tr>
+    <tr><td>Important</td><td>Error Handling table implied <code>clear</code> on an unset key prints <code>unset</code>, but <code>clear</code> always prints <code>preferences: cleared &lt;key&gt;</code> regardless of prior existence</td><td>Fixed — split into two accurate rows for <code>get</code> vs. <code>clear</code></td></tr>
+    <tr><td>Minor</td><td><code>--path</code> flag was described as only needed for "this skill's own test suite"</td><td>Fixed — reworded as the general way to point at a specific repo's file when cwd doesn't already resolve to it</td></tr>
+    <tr><td>Minor</td><td>Unused <code>DEFAULT_PREFERENCES_PATH</code> import in <code>scripts/preferences.test.ts</code></td><td>Fixed — added an assertion consuming it</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">c5abb1a</span> feat(preferences): read/get against .digismith/preferences.yml</li>
+    <li><span class="sha">1a33ecf</span> feat(preferences): set, creating the file and parent dir as needed</li>
+    <li><span class="sha">ecb4496</span> feat(preferences): clear, a no-op when the key or file is absent</li>
+    <li><span class="sha">c5a63b2</span> feat(preferences): add get/set/clear CLI wrapping scripts/preferences.ts</li>
+    <li><span class="sha">d37766d</span> feat(preferences): add digismith:preferences skill wrapping get/set/clear</li>
+    <li><span class="sha">29c8be0</span> feat(preferences): propagate .digismith/preferences.yml into fresh worktrees</li>
+    <li><span class="sha">2d297cb</span> fix(preferences): resolve DigiSmith's repo path for cross-repo invocation</li>
+    <li><span class="sha">2fd1432</span> test(preferences): cover DEFAULT_PREFERENCES_PATH</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/preferences-store/report.html</footer>
+
+</body>
+</html>
