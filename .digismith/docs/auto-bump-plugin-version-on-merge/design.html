@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto Version-Bump on Finish (W.4.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Auto Version-Bump on Finish (W.4.1)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-05</span>
+    <span>Map item: W.4.1 (revises W.4's activation of finishing-a-development-branch)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — bump-plugin-version.ts</a></li>
+    <li><a href="#s2">Section 2 — Wiring into finishing-a-development-branch</a></li>
+    <li><a href="#s3">Section 3 — Doc and backlog updates</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>DigiSmith's installed plugin cache is version-keyed
+(<code>~/.claude/plugins/cache/jazurite/digismith/&lt;version&gt;/</code>) and only refreshes when
+<code>.claude-plugin/plugin.json</code>'s <code>"version"</code> actually changes. Nothing today
+makes bumping that version part of merging a DigiSmith feature — it's a manual step, and it has
+already been missed seven times in a row (<code>backlog/plugin-version-bump-cicd-automation.md</code>),
+each miss requiring a hand correction once finally caught. A second, related drift was found
+while designing this: <code>.claude-plugin/marketplace.json</code> embeds its own copy of the
+version and is <em>already</em> stale (<code>0.20.0-beta</code> against <code>plugin.json</code>'s
+<code>0.23.0-beta</code>) — the same unmaintained-by-hand problem, in a second file.</p>
+<p>Fix: <code>finishing-a-development-branch</code> — already activated for DigiSmith in
+<strong>W.4</strong> (its Option 1 now pushes to origin after a local merge) — gains one more
+step: after a successful Option 1 merge, if the repo being finished is DigiSmith's own, bump both
+version files automatically as part of the same flow. A general lifecycle-hook mechanism (stock
+vs. custom hooks at various SDLC points, of which this would be one) was raised and explicitly
+deferred to its own future brainstorm — see <code>backlog/digismith-lifecycle-hooks-y.md</code>
+(map item <strong>Y</strong>). This spec covers only the narrow, direct fix.</p>
+<p><strong>Gating:</strong> the new step must never fire for any other project that installs and
+uses this same forked skill — only for DigiSmith's own repo. It reuses the exact
+DigiSmith-tracked-work check <code>brainstorming</code> already established in <strong>W.5</strong>:
+the target repo's <code>.claude-plugin/plugin.json</code> has <code>"name": "digismith"</code>.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — bump-plugin-version.ts</h2>
+<p>A new script, <code>scripts/bump-plugin-version.ts</code>, in the same style as
+<code>scripts/check_vendored_skills.ts</code> — exported, independently testable functions plus a
+thin <code>main()</code> for CLI use:</p>
+<ul>
+<li><code>computeNextVersion(current: string): string</code> — parses
+<code>major.minor.patch[-prerelease]</code> via a strict regex, throws if it doesn't match.
+Returns <code>major.(minor + 1).0[-prerelease]</code> as a plain integer increment on the minor
+field (never decimal arithmetic on the string) — e.g. <code>"0.23.0-beta"</code> →
+<code>"0.24.0-beta"</code>. The prerelease suffix (<code>-beta</code>) is preserved verbatim,
+including its absence.</li>
+<li><code>readPluginVersion(pluginJsonPath: string): string</code> — reads and
+<code>JSON.parse</code>s the file, returns its <code>"version"</code> field, throws a clear error
+if the field is missing.</li>
+<li><code>bumpVersionInFile(filePath: string, nextVersion: string): void</code> — reads the file as
+text and replaces the first <code>"version": "..."</code> occurrence via a targeted regex
+substitution (<em>not</em> a full <code>JSON.parse</code>/<code>stringify</code> round-trip, so
+neither file's key order, indentation, or trailing newline drifts). Throws if no
+<code>"version"</code> field was found to replace.</li>
+<li><code>versionChangedSince(repoRoot: string, baseSha: string, pluginJsonRelPath: string): boolean</code>
+— runs <code>git show &lt;baseSha&gt;:&lt;pluginJsonRelPath&gt;</code>, parses its
+<code>"version"</code>, and compares it against the current working-tree value. Used for the
+idempotency guard (Section 2).</li>
+</ul>
+<p><code>main()</code> (invoked as <code>node --experimental-strip-types
+scripts/bump-plugin-version.ts [--base &lt;sha&gt;]</code>, run from the repo root — matching how
+<code>check_vendored_skills.ts</code> is already invoked):</p>
+<ol>
+<li>Reads the current version from <code>.claude-plugin/plugin.json</code>.</li>
+<li>If <code>--base &lt;sha&gt;</code> was given and <code>versionChangedSince(...)</code> returns
+true (the incoming branch's own commits already changed the version), prints
+<code>SKIPPED already changed by incoming branch (&lt;old&gt; -&gt; &lt;current&gt;)</code> to
+stdout and exits 0 without writing anything.</li>
+<li>Otherwise, computes the next version, writes it into both
+<code>.claude-plugin/plugin.json</code> and <code>.claude-plugin/marketplace.json</code>
+(<code>marketplace.json</code>'s own drifted value is overwritten with the same next version,
+not incremented from its own stale number — <code>plugin.json</code> is the single source of
+truth), and prints <code>BUMPED &lt;old&gt; -&gt; &lt;next&gt;</code> to stdout, then exits 0.</li>
+<li>Any parse/read/write failure exits 1 with a clear stderr message — same fail-loud convention
+as <code>check_vendored_skills.ts</code>.</li>
+</ol>
+</section>
+
+<section id="s2">
+<h2>Section 2 — Wiring into finishing-a-development-branch</h2>
+<p><code>finishing-a-development-branch</code>'s Option 1 (Merge Locally) section gains two small
+additions, both DigiSmith-repo-only:</p>
+<ol>
+<li>Immediately after <code>git pull</code> and before <code>git merge &lt;feature-branch&gt;</code>,
+capture <code>BASE_SHA=$(git rev-parse HEAD)</code> — the base branch's pre-merge tip.</li>
+<li>After the merged result's tests pass (the skill's existing "once the merged result is green"
+point, immediately before its existing <code>git push origin &lt;base-branch&gt;</code> step):
+check whether <code>&lt;MAIN_ROOT&gt;/.claude-plugin/plugin.json</code> exists and has
+<code>"name": "digismith"</code>. If so, run
+<code>node --experimental-strip-types scripts/bump-plugin-version.ts --base "$BASE_SHA"</code>. If
+its output starts with <code>BUMPED</code>, stage and commit both version files in their own
+small commit (<code>git add .claude-plugin/plugin.json .claude-plugin/marketplace.json &amp;&amp;
+git commit -m "chore: bump plugin version"</code>) — never amended into the merge commit. If the
+output starts with <code>SKIPPED</code>, do nothing further (log it, move on). Either way,
+proceed to the existing push step immediately after, so origin receives the merge and (when it
+happened) the bump together in the same push.</li>
+</ol>
+<p>If the plugin.json check fails (any other repo, or DigiSmith's own repo missing that file for
+some reason), skip both new steps entirely — Option 1 continues exactly as it does today. No
+change to Option 2, Option 3, the detached-HEAD 2-option menu, or Step 6's cleanup.</p>
+<p>No test re-run is needed after the bump commit: a grep across every <code>*.test.ts</code> file
+in this repo (done during brainstorming) found zero tests asserting a literal version-string value
+from either JSON file — the version bump cannot regress anything the suite checks.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — Doc and backlog updates</h2>
+<div class="cards">
+<div class="card">
+<h4>MEMORY.md</h4>
+<span class="tag">W map row</span>
+<p>Add a <strong>W.4.1</strong> entry alongside W.4's existing one, describing the auto-bump and
+noting it supersedes the manual-bump gap W.4 didn't close.</p>
+</div>
+<div class="card">
+<h4>vendored/PROVENANCE.md</h4>
+<span class="tag">Activated skills list</span>
+<p><code>finishing-a-development-branch</code>'s existing entry gets a one-line addition noting
+the further divergence (auto version-bump, DigiSmith-repo-gated) — same shape as W.2.1's own
+PROVENANCE.md touch-up.</p>
+</div>
+</div>
+<p><code>backlog/plugin-version-bump-cicd-automation.md</code> is deleted — this closes the exact
+gap it described, by the mechanism it explicitly left undecided ("whether the automation lives in
+a GitHub Actions workflow, a git hook, or something else"), and its corresponding line in
+<code>backlog/README.md</code> is removed. Both edits happen as the plan's final task, matching
+how W.2.1 retired its own originating backlog file.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><code>scripts/bump-plugin-version.test.ts</code>, matching <code>check_vendored_skills.test.ts</code>'s
+own style (real file I/O and real git commands against small fixtures, no mocking):
+<code>computeNextVersion</code> covers a normal bump, a suffix-less version, and a malformed
+string (throws); <code>bumpVersionInFile</code> covers a successful replace and a missing-field
+throw, using a temp JSON fixture file; <code>versionChangedSince</code> uses a small local git
+fixture repo (<code>git init</code> + a commit with one version, then a working-tree edit to a
+different version) to prove both the "changed" and "unchanged" cases for real, the same style
+<code>check_vendored_skills.test.ts</code>'s own clone tests already established.</li>
+<li>Manual verification after implementation: run <code>finishing-a-development-branch</code>'s
+Option 1 for real once (this plan's own merge, finishing itself) and confirm both
+<code>plugin.json</code> and <code>marketplace.json</code> land on the same next version in one
+extra commit, pushed alongside the merge.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>The general lifecycle-hook mechanism (stock/custom hooks across multiple SDLC points) —
+explicitly deferred to its own future brainstorm; see <code>backlog/digismith-lifecycle-hooks-y.md</code>
+(map item <strong>Y</strong>).</li>
+<li>Any change to Option 2 (push + PR) or Option 3 (keep as-is) — the version-bump only makes
+sense at the moment a change actually lands on <code>main</code> via a local merge; a PR's
+eventual merge happens outside this skill's control.</li>
+<li>CI/CD infrastructure (GitHub Actions or similar) — the original backlog item's suggested
+shape, superseded by this simpler, skill-level fix per Jack's own re-confirmed reasoning this
+session.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/auto-bump-plugin-version-on-merge/design.html</footer>
+
+</body>
+</html>
