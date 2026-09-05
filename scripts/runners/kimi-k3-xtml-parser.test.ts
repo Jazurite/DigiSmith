@@ -99,3 +99,37 @@ describe("extractXtmlToolCalls", () => {
     expect(result.content).toBe("Hello there");
   });
 });
+
+import { execFileSync } from "node:child_process";
+import { writeFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const SCRIPT_PATH = fileURLToPath(new URL("./kimi-k3-xtml-parser.ts", import.meta.url));
+
+describe("kimi-k3-xtml-parser CLI", () => {
+  it("prints extracted tool calls as JSON given a text file argument", () => {
+    const dir = mkdtempSync(join(tmpdir(), "xtml-cli-test-"));
+    const textFile = join(dir, "raw.txt");
+    writeFileSync(textFile, BASH_CALL_FIXTURE);
+
+    const stdout = execFileSync("node", [SCRIPT_PATH, textFile], { encoding: "utf-8" });
+    const parsed = JSON.parse(stdout);
+    expect(parsed.toolCalls).toEqual([
+      {
+        name: "Bash",
+        arguments: {
+          command: 'printf \'# Usage test\' > USAGE_TEST.md && git add USAGE_TEST.md && git commit -m "test: usage verification file"',
+          description: "Create USAGE_TEST.md and commit it",
+        },
+      },
+    ]);
+  });
+
+  it("exits non-zero when the file argument is missing", () => {
+    expect(() =>
+      execFileSync("node", [SCRIPT_PATH], { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }),
+    ).toThrow();
+  });
+});

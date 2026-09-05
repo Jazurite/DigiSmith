@@ -112,3 +112,28 @@ export function extractXtmlToolCalls(text: string): XtmlExtractionResult {
   }
   return { toolCalls, content: extractContent(text, before) };
 }
+
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
+function main(): void {
+  const [textFile] = process.argv.slice(2);
+  if (!textFile) {
+    console.error("kimi-k3-xtml-parser: missing required positional argument <text-file>");
+    process.exitCode = 1;
+    return;
+  }
+  try {
+    const text = readFileSync(textFile, "utf-8");
+    const result = extractXtmlToolCalls(text);
+    console.log(JSON.stringify(result));
+    process.exitCode = 0;
+  } catch (err) {
+    console.error(`kimi-k3-xtml-parser: ${err instanceof Error ? err.message : String(err)}`);
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  main();
+}
