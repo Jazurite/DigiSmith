@@ -31,7 +31,7 @@ describe("cloneUpstreamSkillsDir", () => {
     expect(result.endsWith(path.join("skills"))).toBe(true);
     expect(fs.existsSync(result)).toBe(true);
     const cloned = fs.readFileSync(path.join(result, "some-skill", "SKILL.md"), "utf8");
-    expect(cloned).toBe("fixture content\n");
+    expect(cloned.replace(/\r\n/g, "\n")).toBe("fixture content\n");
 
     fs.rmSync(path.dirname(result), { recursive: true, force: true });
     fs.rmSync(tmpBase, { recursive: true, force: true });
