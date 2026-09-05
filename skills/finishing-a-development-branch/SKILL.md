@@ -93,6 +93,7 @@ cd "$MAIN_ROOT"
 # Merge first — verify success before removing anything
 git checkout <base-branch>
 git pull
+BASE_SHA=$(git rev-parse HEAD)
 git merge <feature-branch>
 
 # Verify tests on merged result
@@ -103,7 +104,36 @@ If tests fail on the merged result: stop, leave the worktree and branch in
 place, and investigate — nothing has been pushed, so the merge is local
 and recoverable.
 
-Once the merged result is green, push `<base-branch>` to origin:
+**DigiSmith's own repo only:** once the merged result is green, before
+pushing, check whether this is DigiSmith's own repo (never any other
+project using this same forked skill):
+
+```bash
+IS_DIGISMITH=false
+if [ -f "$MAIN_ROOT/.claude-plugin/plugin.json" ] && grep -q '"name": "digismith"' "$MAIN_ROOT/.claude-plugin/plugin.json"; then
+  IS_DIGISMITH=true
+fi
+```
+
+If `IS_DIGISMITH` is `true`, bump the plugin version:
+
+```bash
+BUMP_OUTPUT=$(node --experimental-strip-types scripts/bump-plugin-version.ts --base "$BASE_SHA")
+echo "$BUMP_OUTPUT"
+if [[ "$BUMP_OUTPUT" == BUMPED* ]]; then
+  git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
+  git commit -m "chore: bump plugin version"
+fi
+```
+
+A `BUMPED` result commits both version files in their own commit, never
+amended into the merge commit. A `SKIPPED` result means the incoming
+branch's own commits already changed the version — do nothing further. If
+this isn't DigiSmith's own repo, both steps above are skipped entirely and
+Option 1 proceeds exactly as it always has.
+
+Once the merged result is green (and, for DigiSmith's own repo, the bump
+above has run), push `<base-branch>` to origin:
 
 ```bash
 git push origin <base-branch>
