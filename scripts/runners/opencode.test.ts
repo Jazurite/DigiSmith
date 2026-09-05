@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { opencode } from "./opencode.ts";
 import { chutes } from "../providers/chutes.ts";
 import { buildOpencodeProviderBlock } from "../providers/print-config.ts";
+import { WRITE_CALL_FIXTURE } from "./kimi-k3-xtml-parser.fixtures.ts";
 
 describe("opencode.buildConfig", () => {
   it("delegates to buildOpencodeProviderBlock unchanged", () => {
@@ -52,6 +53,18 @@ describe("opencode.parseResult", () => {
       resultText: null,
       sessionId: "ses_xyz",
       costUsd: undefined,
+    });
+  });
+
+  it("flags xtmlLeakDetected when the text part contains a leaked tools channel", () => {
+    const path = writeEvents([
+      { type: "text", sessionID: "ses_leak", part: { type: "text", text: WRITE_CALL_FIXTURE } },
+    ]);
+    expect(opencode.parseResult(path)).toEqual({
+      status: "success",
+      resultText: WRITE_CALL_FIXTURE,
+      sessionId: "ses_leak",
+      xtmlLeakDetected: true,
     });
   });
 });
