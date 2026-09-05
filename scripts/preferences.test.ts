@@ -94,3 +94,41 @@ describe("setPreference", () => {
     expect(getPreference("some_other_key", prefsPath)).toBe("abc");
   });
 });
+
+describe("clearPreference", () => {
+  let tmpDir: string;
+  let prefsPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
+    prefsPath = path.join(tmpDir, "preferences.yml");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("removes a set key", () => {
+    setPreference("finish_option", "merge_locally", prefsPath);
+    clearPreference("finish_option", prefsPath);
+    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
+  });
+
+  it("leaves other keys untouched", () => {
+    setPreference("finish_option", "merge_locally", prefsPath);
+    setPreference("some_other_key", "abc", prefsPath);
+    clearPreference("finish_option", prefsPath);
+    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
+  });
+
+  it("is a no-op when the key was never set", () => {
+    setPreference("some_other_key", "abc", prefsPath);
+    clearPreference("finish_option", prefsPath);
+    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
+  });
+
+  it("is a no-op when the file doesn't exist", () => {
+    expect(() => clearPreference("finish_option", prefsPath)).not.toThrow();
+    expect(fs.existsSync(prefsPath)).toBe(false);
+  });
+});

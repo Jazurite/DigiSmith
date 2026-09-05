@@ -69,3 +69,10 @@ export function setPreference(key: string, value: string, filePath: string): voi
   prefs.set(key, value);
   writePreferences(filePath, prefs);
 }
+
+export function clearPreference(key: string, filePath: string): void {
+  const prefs = readPreferences(filePath);
+  if (!prefs.has(key)) return;
+  prefs.delete(key);
+  writePreferences(filePath, prefs);
+}
