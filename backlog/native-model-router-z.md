@@ -230,13 +230,20 @@ corroborated by checking vLLM's own tool-parser catalog:
   entry is literally a stub (`NotImplementedError`) pointing at a
   separate `HarmonyParser` for real decoding.
 
-**Working hypothesis:** TokenReply (and plausibly gateways like it in
-general) may not perform any real tool-call transformation for every
-route — some models' raw native output passes straight through
-undecoded. `kimi-k2.7` (the one confirmed-working model on this gateway)
-either happens to emit something naturally close to what Claude Code
-expects, or is one of the few routes actually wired up correctly — not
-evidence the gateway normalizes broadly.
+**Working hypothesis, refined after an `opencode`-runner isolation test on
+`gpt-5.6-luna`:** not a single uniform "never transforms" story — `kimi-k3`
+leaks its raw format via *both* the `claude-code` and `opencode` runners
+(a transport failure regardless of client protocol, suggesting that
+route's tool-calling just isn't wired up at all on TokenReply's end), but
+`gpt-5.6-luna` only breaks at the protocol level via `claude-code`
+(Anthropic-format, TokenReply's secondary `/v1/messages` compatibility
+layer) — via `opencode` (OpenAI-format, TokenReply's primary advertised
+interface) the tool call is assembled and executed correctly, and the
+model's own output quality becomes the limiting factor instead. So: at
+minimum, TokenReply's Claude-compatible translation layer looks like a
+real weak point; whether *no* route gets real transformation, or only
+some do, is still open. `kimi-k2.7` (the one fully-confirmed-working
+model+runner combination) remains the safest baseline either way.
 
 **Why this matters for Z specifically:** any real multi-model router
 can't assume the gateway does format normalization. It needs its **own**

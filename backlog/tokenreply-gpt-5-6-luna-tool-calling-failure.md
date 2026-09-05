@@ -69,6 +69,45 @@ routing work (see `native-model-router-z.md`) needs its own
 transformation layer per model family (Kimi's XTML, GPT's Harmony,
 whatever else), not an assumption that the gateway normalizes anything.
 
+## Refinement: the `opencode` runner isolation test (2026-09-05)
+
+Ran the same cross-protocol isolation test done for `kimi-k3` — `gpt-5.6-luna`
+via the `opencode` runner (OpenAI-format function-calling, no Anthropic-format
+translation involved) instead of `claude-code`. **Result was different from
+Kimi's isolation test, and it refines the hypothesis above:**
+
+- **A real tool call was correctly assembled and executed** — `apply_patch`
+  with a well-formed `input.patchText` field, then a real `bash` call that
+  produced a real commit (`f3e9f41`). No leaked raw format, no malformed
+  stub — the transport/protocol layer worked correctly this time.
+- **But the file ended up wrong** — a single blank line, not the requested
+  content. Inspecting the raw `patchText` argument: the model generated a
+  syntactically malformed "Add File" patch (only the first line correctly
+  `+`-prefixed; the two real content lines were left unprefixed, which
+  `apply_patch` then didn't treat as file content). This is a **content
+  quality issue with what the model generated**, not a transport-format
+  translation failure.
+
+**This means the `gpt-5.6-luna` picture is more nuanced than "TokenReply
+doesn't transform anything":** via `claude-code` (Anthropic-format,
+TokenReply's `/v1/messages` compatibility layer), tool-calling breaks at
+the protocol level. Via `opencode` (OpenAI-format, TokenReply's *primary*
+advertised interface — see `backlog/ai-gateway-vendors-k3.md`'s own
+compatibility notes), tool-calling works correctly at the protocol level;
+the model's own output quality is the limiting factor instead.
+
+**Refined hypothesis:** TokenReply's core OpenAI-compatible serving may be
+solid (that's their primary product surface), while their secondary
+Claude-compatible `/v1/messages` translation layer is the actual weak
+point — at least for `gpt-5.6-luna`. This does **not** hold for `kimi-k3`,
+which leaked the same raw XTML via *both* runners (a transport failure
+regardless of client protocol) — so this isn't one universal explanation,
+it's model/route-dependent. **Practical implication: prefer `opencode`
+over `claude-code` as the runner when tool-calling reliability through
+TokenReply matters**, at least until each model/route is checked
+individually — though `opencode` isn't a free pass either, since model
+output quality (as seen here) is a separate, real failure mode of its own.
+
 ## Why this matters
 
 `gpt-5.6-luna` was noted as an available, cheap, coding-agent-suitable
@@ -83,9 +122,11 @@ GPT-5.6 generation routed differently").
 
 ## Open questions, not yet investigated
 
-- Does this reproduce via the `opencode` runner too (OpenAI-format
-  function-calling, no Anthropic-format translation involved), the same
-  isolation test that was done for kimi-k3? Not yet tried for this model.
+- ~~Does this reproduce via the `opencode` runner too?~~ **Answered** — see
+  "Refinement" section above: no, it does not reproduce the same way;
+  `opencode` gets a working tool call, just with model-generated content
+  quality issues (bad patch syntax). Real failure mode either way, but a
+  different one.
 - Does `sol` or `terra` (same GPT-5.6 generation, different route per
   TokenReply) fail the same way, or is this `luna`-route-specific?
 - Is there a working non-GPT, non-Kimi model on TokenReply confirmed
