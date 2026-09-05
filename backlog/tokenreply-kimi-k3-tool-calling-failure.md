@@ -48,29 +48,50 @@ data point on each model), but it's the obvious first suspect: either
 Claude Code's `--bare` mode via TokenReply, or this was a one-off flake
 — **not yet distinguished, only one trial run so far on either model.**
 
-## Open questions, not yet investigated
+## Root cause investigation (2026-09-04, later same session)
 
-- Does this reproduce consistently on `kimi-k3`, or was it a one-off?
-  Needs repeat trials.
-- Does `kimi-k2.7` still work reliably now, or would a repeat trial
-  against it also fail (i.e. is this a TokenReply-side or Claude-Code-
-  side regression unrelated to which model is named)?
-- Does the same failure happen via the `opencode` runner instead of
-  `claude-code`, or is this specific to how `claude -p --bare` sends
-  its tool schema?
-- Is this a known TokenReply issue (e.g. their proxy not translating
-  tool-call format correctly for this specific upstream model), or a
-  Claude Code / kimi-k3 native incompatibility that would reproduce
-  even hitting Moonshot's own API directly?
+Ran a controlled series of live dispatches to isolate the failing variable:
 
-## Why not fixed yet
+| Dispatch | Model | Runner | Result |
+|---|---|---|---|
+| Original session trial | `kimi-k2.7` | `claude-code` | ✅ Real commit, verified |
+| This investigation, trial 1 | `kimi-k3` | `claude-code` | ❌ Garbled `<\|open\|>tools...` text, no execution |
+| This investigation, trial 2 (repeat) | `kimi-k3` | `claude-code` | ❌ Same garbled pattern, different tool (`Write`) |
+| This investigation, trial 3 (control) | `kimi-k2.7` | `claude-code` | ✅ Real commit `6ca0a3d`, verified |
+| This investigation, trial 4 | `kimi-k3` | **`opencode`** | ❌ **Same garbled pattern**, via a completely different client protocol |
 
-Found during an unrelated K.4 investigation, at the end of a long
-session. Jack's call: document it and move on rather than debug now —
-"we'll come back and fix whatever problem with TokenReply." **Until
-this is resolved, treat the current shipped default
-(`tokenreply`/`claude-code`/`kimi-k3`) as unverified for real work** —
-the one real dispatch made against it failed silently. Revisit
-`profiles/*.yml` and `scripts/providers/tokenreply.ts` once root-caused;
-reverting to `kimi-k2.7` (last confirmed-working combination) is the
-obvious first fallback if repeat trials confirm this is model-specific.
+**Conclusion: this is not a Claude-Code-specific or Anthropic-format-translation bug.** Trial 4 used
+`opencode`, which talks OpenAI-format function-calling directly via `@ai-sdk/openai-compatible` —
+no Anthropic Messages-format translation involved at all — and produced the *identical* garbled
+pseudo-tool-call text (`<\|open\|>tools<\|sep\|>...`) as the `claude-code` trials. Since two
+fundamentally different calling conventions produce the same broken output, the fault sits
+upstream of any client protocol: either TokenReply's specific hosting/config of the `kimi-k3`
+route doesn't have tool/function-calling wired up correctly, or the underlying model itself isn't
+reliably doing real function calls in this serving setup. `kimi-k2.7` through the identical
+`claude-code` pipeline continues to work correctly (2/2 across both sessions).
+
+**Chutes was considered and explicitly ruled out as a workaround** — Chutes also serves `kimi-k3`
+(`moonshotai/Kimi-K3-TEE`, its own long-standing `task`-role model) via a completely different
+backend, which might not share this bug, but Jack declined that path ("no chutes"). Not tested.
+
+**Dead end, not pursued:** TokenReply's public Models page requires a logged-in account to show
+per-model capability tags (whether `kimi-k3` is flagged as tool-calling-capable at all) — didn't
+create an account to check this. If revisited, check there first, logged in as an actual
+TokenReply user, before any further live dispatch testing.
+
+## Fix applied
+
+`scripts/providers/tokenreply.ts`'s `model()` reverted to `kimi-k2.7` (confirmed working, 2/2).
+The default provider/runner choice (`tokenreply`/`claude-code`) was never the problem — only the
+specific model — so those defaults stand unchanged. This is a config revert, not a code fix: the
+actual bug is external (TokenReply's or the model's own serving setup), outside DigiSmith's
+control to fix directly.
+
+## Why not root-caused further
+
+Investigation stopped after four controlled live dispatches gave a confident, consistent signal
+(same failure across two different client protocols) — going further (e.g. testing via Chutes, or
+logging into TokenReply's dashboard to check model capability flags) needs either Jack's explicit
+opt-in on cost/scope (Chutes) or an account he'd need to create himself (TokenReply login). Revisit
+by trying `kimi-k3` again after some time (TokenReply may fix their `kimi-k3` route), or by
+checking TokenReply's own Models page while logged in for an explicit tool-calling capability flag.
