@@ -76,3 +76,48 @@ export function clearPreference(key: string, filePath: string): void {
   prefs.delete(key);
   writePreferences(filePath, prefs);
 }
+
+export function main(): void {
+  const args = parseArgs(process.argv.slice(2));
+
+  try {
+    requireArgs(args, ["key", "action"]);
+  } catch (err) {
+    console.error(`preferences: failed (${(err as Error).message})`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const filePath = args.path ?? DEFAULT_PREFERENCES_PATH;
+  const key = args.key;
+
+  switch (args.action) {
+    case "get": {
+      const value = getPreference(key, filePath);
+      console.log(value === undefined ? "unset" : value);
+      return;
+    }
+    case "set": {
+      if (args.value === undefined) {
+        console.error("preferences: failed (missing required flag: --value)");
+        process.exitCode = 1;
+        return;
+      }
+      setPreference(key, args.value, filePath);
+      console.log(`preferences: set ${key}=${args.value}`);
+      return;
+    }
+    case "clear": {
+      clearPreference(key, filePath);
+      console.log(`preferences: cleared ${key}`);
+      return;
+    }
+    default:
+      console.error(`preferences: failed (unknown action: ${args.action})`);
+      process.exitCode = 1;
+  }
+}
+
+if (import.meta.filename === process.argv[1]) {
+  main();
+}

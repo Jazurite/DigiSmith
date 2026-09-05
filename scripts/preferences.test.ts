@@ -132,3 +132,103 @@ describe("clearPreference", () => {
     expect(fs.existsSync(prefsPath)).toBe(false);
   });
 });
+
+describe("main (CLI)", () => {
+  let tmpDir: string;
+  let prefsPath: string;
+  let originalArgv: string[];
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
+    prefsPath = path.join(tmpDir, "preferences.yml");
+    originalArgv = process.argv;
+  });
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('prints "unset" for a get on a key that was never set', () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "get", "--path", prefsPath];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("unset");
+  });
+
+  it("writes the value and prints a confirmation for set", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = [
+      "node",
+      "preferences.ts",
+      "--key",
+      "finish_option",
+      "--action",
+      "set",
+      "--value",
+      "merge_locally",
+      "--path",
+      prefsPath,
+    ];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("preferences: set finish_option=merge_locally");
+    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
+  });
+
+  it("prints the set value back on a subsequent get", () => {
+    setPreference("finish_option", "pr", prefsPath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "get", "--path", prefsPath];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("pr");
+  });
+
+  it("clears a key and prints a confirmation", () => {
+    setPreference("finish_option", "pr", prefsPath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "clear", "--path", prefsPath];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("preferences: cleared finish_option");
+    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
+  });
+
+  it("fails clearly when --value is missing for a set action", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "set", "--path", prefsPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("preferences: failed (missing required flag: --value)");
+  });
+
+  it("fails clearly when a required flag is missing", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--action", "get", "--path", prefsPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("preferences: failed (missing required flag: --key)");
+  });
+
+  it("fails clearly on an unknown action", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "list", "--path", prefsPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("preferences: failed (unknown action: list)");
+  });
+});
