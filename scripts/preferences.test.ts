@@ -63,3 +63,34 @@ describe("readPreferences / getPreference", () => {
     expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
   });
 });
+
+describe("setPreference", () => {
+  let tmpDir: string;
+  let prefsPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
+    prefsPath = path.join(tmpDir, "nested", "preferences.yml");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("creates the file (and parent directory) with the header comment when none existed", () => {
+    setPreference("finish_option", "merge_locally", prefsPath);
+    const content = fs.readFileSync(prefsPath, "utf8");
+    expect(content).toBe(
+      "# DigiSmith-managed. Settings decided through live interaction, not hand-authored.\nfinish_option: merge_locally\n",
+    );
+  });
+
+  it("updates an existing key in place, preserving other keys", () => {
+    setPreference("finish_option", "merge_locally", prefsPath);
+    setPreference("some_other_key", "abc", prefsPath);
+    setPreference("finish_option", "pr", prefsPath);
+
+    expect(getPreference("finish_option", prefsPath)).toBe("pr");
+    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
+  });
+});

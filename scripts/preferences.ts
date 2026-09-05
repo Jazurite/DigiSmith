@@ -57,3 +57,15 @@ export function readPreferences(filePath: string): Map<string, string> {
 export function getPreference(key: string, filePath: string): string | undefined {
   return readPreferences(filePath).get(key);
 }
+
+function writePreferences(filePath: string, prefs: Map<string, string>): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const lines = [HEADER, ...Array.from(prefs, ([key, value]) => `${key}: ${value}`)];
+  fs.writeFileSync(filePath, lines.join("\n") + "\n");
+}
+
+export function setPreference(key: string, value: string, filePath: string): void {
+  const prefs = readPreferences(filePath);
+  prefs.set(key, value);
+  writePreferences(filePath, prefs);
+}
