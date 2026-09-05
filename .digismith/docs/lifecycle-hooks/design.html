@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DigiSmith Lifecycle Hooks</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>DigiSmith Lifecycle Hooks</h1>
+  <div class="meta">
+    <span>Date: 2026-09-05</span>
+    <span>Map item: Y</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal &amp; motivation</a></li>
+    <li><a href="#architecture">Architecture overview</a></li>
+    <li><a href="#format">Hook file format</a></li>
+    <li><a href="#firing">Firing mechanism</a></li>
+    <li><a href="#stock">The two stock hooks</a></li>
+    <li><a href="#flow">Revised Option 1 flow</a></li>
+    <li><a href="#testing">Testing &amp; verification</a></li>
+    <li><a href="#scope">Explicitly out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>Goal &amp; Motivation</h2>
+<p>A general lifecycle-hook mechanism for DigiSmith itself, modeled on the same shape as
+WordPress actions/filters, git hooks, and npm lifecycle scripts (<code>postinstall</code>,
+<code>prepublish</code>): specific points in DigiSmith's own SDLC pipeline can fire a hook,
+which can be a <strong>stock</strong> hook (a behavior DigiSmith ships built-in) or a
+<strong>custom</strong> hook (a consumer's own registered instructions for that point,
+local to their own repo).</p>
+<p>This design was triggered by two real, same-day use cases surfacing during and right after
+<strong>W.4.1</strong>'s (auto version-bump on finish) own brainstorm and execution:</p>
+<div class="cards">
+  <div class="card">
+    <div class="tag">Use case 1</div>
+    <h4>Version bump on merge</h4>
+    <p>W.4.1 already shipped this wired directly into <code>finishing-a-development-branch</code>'s
+    Option 1 body. This design retrofits it to be the first stock hook instead.</p>
+  </div>
+  <div class="card">
+    <div class="tag">Use case 2</div>
+    <h4>Stale plugin cache</h4>
+    <p>A separate Claude Code session, on a different project, ran on an installed DigiSmith
+    plugin cache built before W.6 retired <code>subagent-driven-always</code> — the old,
+    retired skill was still physically present and got invoked, running logic that no longer
+    reflects DigiSmith's real design. The source repo was never wrong; a consumer installation
+    just never got told to refresh.</p>
+  </div>
+</div>
+<p>Both are now real <code>post-finish</code> stock hooks under this mechanism.</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture Overview</h2>
+<p>A lifecycle hook is a markdown instructions file, executed the same way a skill is — the
+agent reads it and follows it live — but triggered automatically at a fixed point in another
+skill's own flow, rather than matched by a <code>description:</code>. There is exactly one
+lifecycle point today: <code>post-finish</code>, fired from
+<code>finishing-a-development-branch</code>'s Option 1 (Merge Locally) after it fully
+completes — merge, tests, push, worktree cleanup, and branch deletion have all already
+happened.</p>
+<p><code>post-finish</code> is a general point, not "post-Option-1" specifically — it means
+"after <code>finishing-a-development-branch</code> completes whichever integration decision
+was taken." Only Option 1 actually fires it today, since that's the only path with a real
+merge to main and the only one either stock hook has anything to do. If a future hook needs to
+fire after Option 2 (push + PR) or Option 3 (keep as-is), it's the same <code>post-finish</code>
+point wired into that option's own flow — not a new point name.</p>
+<p>Hook files live in <code>.digismith/hooks/post-finish/</code> in whatever repo is currently
+being worked in. DigiSmith's own two stock hooks are committed there in this repo (confirmed not
+gitignored here). A consumer repo's own custom hooks live in their own copy of that same folder,
+committed or not at their own discretion. There is no separate registry file or config — the
+folder's contents <em>are</em> the registry.</p>
+</section>
+
+<section id="format">
+<h2>Hook File Format</h2>
+<p>Each hook file uses the exact same template as a <code>SKILL.md</code> — YAML frontmatter
+(<code>name:</code>, <code>description:</code>) followed by an instructions body. Anyone who
+already knows how to write a DigiSmith skill already knows how to write a hook. The
+<code>description:</code> field stops driving discovery (nothing matches against it — a hook
+fires because it's present in the right folder, not because its description matched intent),
+but it stays useful documentation for anyone reading the folder.</p>
+<p>One flat <code>.md</code> file per hook — no sibling prompt files needed, since neither of
+today's two hooks requires one. Multiple hook files sharing a point fire in filename sort
+order, hence the <code>01-</code>/<code>02-</code> prefixes below (today's two happen to have a
+real ordering dependency — see "The two stock hooks").</p>
+</section>
+
+<section id="firing">
+<h2>Firing Mechanism</h2>
+<p>A single small reference doc spells out the "fire hooks for point X" procedure once: given a
+point name, list <code>.md</code> files in <code>.digismith/hooks/&lt;point&gt;/</code> (skip
+entirely if the folder doesn't exist — most repos won't have one), sorted by filename, and for
+each one, read it and follow its instructions exactly as if invoking that skill directly
+(frontmatter and all). Any skill wanting to fire a hook at some point just references this doc
+with the point's name — no duplicated procedure.</p>
+<p>Location: <code>skills/finishing-a-development-branch/fire-lifecycle-hook.md</code> — a
+sibling file inside that skill's own folder, following the same convention already used for
+<code>task-reviewer-prompt.md</code> inside <code>subagent-driven-development</code>'s folder,
+rather than inventing a new shared top-level convention for what is (for now) a single
+consumer. If a second lifecycle point in a different skill shows up later, that's the trigger to
+promote this doc to a real shared location — a small extension then, not a rewrite now.</p>
+<p>Firing itself is <strong>unconditional</strong>: <code>finishing-a-development-branch</code>'s
+own prose just checks whether <code>.digismith/hooks/post-finish/</code> has any files in
+whatever repo is currently being worked in — no <code>IS_DIGISMITH</code> check at the firing
+level. Each hook file's own gate (if it needs one) lives inside that file.</p>
+</section>
+
+<section id="stock">
+<h2>The Two Stock Hooks</h2>
+<p>Both stock hook <code>.md</code> files gate on <code>IS_DIGISMITH</code>
+(<code>plugin.json</code> has <code>"name": "digismith"</code>) internally — they only ever
+exist as real files inside DigiSmith's own repo anyway, but the explicit gate is cheap,
+self-documenting insurance and matches the "every hook names its own gate" rule above.</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Path</th><th>Role</th></tr></thead>
+<tbody>
+<tr>
+  <td><code>.digismith/hooks/post-finish/01-version-bump.md</code></td>
+  <td>Retrofit of W.4.1's already-shipped behavior. <code>IS_DIGISMITH</code> gate &rarr;
+  <code>node --experimental-strip-types .digismith/hooks/post-finish/scripts/bump-plugin-version.ts
+  --base "$(git rev-parse ORIG_HEAD)"</code> &rarr; on <code>BUMPED</code>, commit both version
+  files with a pathspec and <strong>push this hook's own commit</strong> — a small second push,
+  moments after the merge's own push, since this hook fires after Option 1's push already
+  happened. <code>ORIG_HEAD</code> is still valid at firing time — nothing between the merge
+  and hook-firing changes it.</td>
+</tr>
+<tr>
+  <td><code>.digismith/hooks/post-finish/02-plugin-reinstall.md</code></td>
+  <td>New. <code>IS_DIGISMITH</code> gate &rarr;
+  <code>claude plugin marketplace update jazurite &amp;&amp; claude plugin install
+  digismith@jazurite --scope user</code> &rarr; print an explicit reminder that other
+  already-running Claude Code sessions on the same machine need a manual restart to pick up the
+  refreshed cache (a hard CLI limitation, not something this hook can fix).</td>
+</tr>
+<tr>
+  <td><code>.digismith/hooks/post-finish/scripts/bump-plugin-version.ts</code><br>+
+  <code>bump-plugin-version.test.ts</code></td>
+  <td>Relocated from top-level <code>scripts/</code>, unchanged otherwise — same 9-test Vitest
+  suite, same reuse of <code>scripts/cli-args.ts</code> (relative import path adjusted), same
+  repo-root CWD assumption. Mirrors the existing <code>skills/subagent-driven-development/scripts/</code>
+  convention: a hook's backing scripts live in a <code>scripts/</code> subfolder next to the
+  <code>.md</code> file(s), scoped per lifecycle point.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ordering matters here, not just cosmetically: <code>01</code> must fire before
+<code>02</code>, so the reinstalled plugin cache reflects the freshly-bumped version too.</p>
+</section>
+
+<section id="flow">
+<h2>Revised Option 1 Flow</h2>
+<p><code>finishing-a-development-branch</code>'s Option 1 (Merge Locally) becomes: merge &rarr;
+test &rarr; push &rarr; clean up worktree + delete branch &rarr; <strong>fire
+<code>post-finish</code> hooks</strong> (new, final step, via the shared firing-mechanism doc).</p>
+<p>This is a real simplification of that skill's own body: the <code>IS_DIGISMITH</code> gate
+check and the version-bump invocation both move out of Option 1's own prose entirely, replaced
+by one generic "fire post-finish hooks" step that's identical for every consumer repo, DigiSmith
+included.</p>
+</section>
+
+<section id="testing">
+<h2>Testing &amp; Verification</h2>
+<ul>
+  <li><code>bump-plugin-version.ts</code> + its test: unchanged logic, unchanged suite — just
+  discovered from its new path (default Vitest config has no custom test-file pattern, so
+  anything named <code>*.test.ts</code> anywhere in the repo is picked up already).</li>
+  <li>The three markdown files (<code>01-version-bump.md</code>, <code>02-plugin-reinstall.md</code>,
+  and the shared <code>fire-lifecycle-hook.md</code>) are prose, like any <code>SKILL.md</code> —
+  no automated harness. Verified by careful read-through plus a real end-to-end run, the same
+  pattern W.4.1's own Task 2 used.</li>
+  <li>Same chicken-and-egg as W.4.1: this plan's own finish step will need to execute the
+  corrected, updated <code>finishing-a-development-branch</code> by hand (reading it from this
+  branch, not the stale installed plugin) — which is itself the first real proof the mechanism
+  works, including both stock hooks firing in the right order.</li>
+</ul>
+</section>
+
+<section id="scope">
+<h2>Explicitly Out of Scope</h2>
+<ul>
+  <li>Any lifecycle point besides <code>post-finish</code> (post-brainstorm-approval,
+  post-plan-approval, pre-merge, etc.) — deferred until a second point has a real use case,
+  per this item's own original YAGNI reasoning.</li>
+  <li>Cross-repo hook sharing (the same custom hook active in multiple consumer repos) —
+  deferred as its own future idea, tentatively map letter <strong>Y2</strong> or whichever
+  letter is next unclaimed when it's actually brainstormed.</li>
+  <li>Wiring <code>post-finish</code> into Option 2 (push + PR) or Option 3 (keep as-is) — the
+  point exists conceptually for them, but nothing wires it in yet since no hook needs it there
+  today.</li>
+</ul>
+<div class="callout">
+Documentation follow-up for the eventual plan: <code>MEMORY.md</code>'s <strong>W</strong> row
+needs a note that W.4.1's version-bump is now implemented as Y's first stock hook (not wired
+directly into <code>finishing-a-development-branch</code> anymore), and a new <strong>Y</strong>
+row needs to describe the general mechanism plus both stock hooks.
+</div>
+</section>
+
+<footer>DigiSmith · .digismith/docs/lifecycle-hooks/design.html</footer>
+
+</body>
+</html>
