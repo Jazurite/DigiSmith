@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { GatewayProvider, OffloadRole } from "../providers/types.ts";
 import { buildOpencodeProviderBlock } from "../providers/print-config.ts";
 import type { ParsedResult, Runner } from "./types.ts";
+import { hasXtmlToolCallChannel } from "./kimi-k3-xtml-parser.ts";
 
 interface OpencodeEvent {
   type: string;
@@ -22,7 +23,13 @@ function parseResult(eventsFile: string): ParsedResult {
     return { status: "error", resultText: null, sessionId };
   }
 
-  return { status: "success", resultText: lastText.part.text, sessionId };
+  const text = lastText.part.text;
+  return {
+    status: "success",
+    resultText: text,
+    sessionId,
+    ...(hasXtmlToolCallChannel(text) ? { xtmlLeakDetected: true } : {}),
+  };
 }
 
 export const opencode: Runner = {

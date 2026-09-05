@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { claudeCode } from "./claude-code.ts";
 import { tokenreply } from "../providers/tokenreply.ts";
+import { BASH_CALL_FIXTURE } from "./kimi-k3-xtml-parser.fixtures.ts";
 
 describe("claudeCode.buildConfig", () => {
   it("returns the base URL, credential env var, and resolved model — not an opencode.json block", () => {
@@ -141,5 +142,39 @@ describe("claudeCode.parseResult", () => {
       sessionId: "sess_6",
       costUsd: 0,
     });
+  });
+
+  it("flags xtmlLeakDetected when the result text contains a leaked tools channel", () => {
+    const path = writeEvents([
+      {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        result: BASH_CALL_FIXTURE,
+        session_id: "sess_7",
+        total_cost_usd: 0.01,
+      },
+    ]);
+    expect(claudeCode.parseResult(path)).toEqual({
+      status: "success",
+      resultText: BASH_CALL_FIXTURE,
+      sessionId: "sess_7",
+      costUsd: 0.01,
+      xtmlLeakDetected: true,
+    });
+  });
+
+  it("does not set xtmlLeakDetected on a normal successful result", () => {
+    const path = writeEvents([
+      {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        result: "All good, no changes needed.",
+        session_id: "sess_8",
+        total_cost_usd: 0.01,
+      },
+    ]);
+    expect(claudeCode.parseResult(path).xtmlLeakDetected).toBeUndefined();
   });
 });

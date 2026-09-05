@@ -399,6 +399,75 @@ The status contract text is `resultText` from `parse-result.ts`'s
 output — this is the model's final reply, matching what Step 3 asked it
 to send.
 
+### Step 5.5: Recover from a Detected XTML Tool-Call Leak
+
+**Only runs when Step 5's `parse-result.ts` output has `xtmlLeakDetected: true`** — TokenReply's
+`kimi-k3` route returned raw, unconverted tool-call text instead of executing anything (see
+`backlog/tokenreply-kimi-k3-tool-calling-failure.md`). Skip this step entirely otherwise.
+
+1. Extract `resultText` to a temp file **byte-exact** — no intermediate print/stdout
+   round-trip, since a shell's own text-mode translation can silently corrupt it (real evidence:
+   extracting via `python3 -c "print(json.load(...)['resultText'])"` silently converted the
+   model's `\n` line endings to `\r\n` on Windows). Write it directly with `fs.writeFileSync`:
+
+   ```bash
+   node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync('<parse-result-output-file>','utf-8')); fs.writeFileSync('<temp-text-file>', r.resultText)"
+   ```
+
+   Then decode it:
+
+   ```bash
+   node <digismith-repo>/scripts/runners/kimi-k3-xtml-parser.ts <temp-text-file>
+   ```
+
+   Prints `{toolCalls: [{name, arguments}, ...], content}` as JSON.
+
+2. **No tool calls decoded** (`toolCalls` is empty despite the leak flag) → the raw text was
+   malformed beyond what the parser tolerates. Treat as a genuine BLOCKED failure — do not loop,
+   do not guess; fall through to Step 6 reporting `BLOCKED` same as any other unrecoverable
+   failure. **Known limitation:** because `hasXtmlToolCallChannel` scans all of `resultText`, a
+   task whose own output happens to discuss or quote the XTML marker string (plausible in this
+   repo specifically, which contains it in fixtures/docs) could trip this same BLOCKED path with
+   zero real tool calls — a documented false-positive risk, not a reason to change this
+   deliberate fail-safe.
+
+3. **One or more tool calls decoded** → execute each, **in order**, using your own Read/Edit/Bash
+   tools. (This is not literally reusing this dispatch's `--allowedTools` grant — that governs the
+   dispatched `claude`/`opencode` subprocess, not the controller session executing this step; the
+   controller is the outer session with its own full tool set. What justifies it: the controller is
+   performing one fully-decoded, bounded action inside the same disposable/isolated worktree the
+   dispatch already had unattended file and shell access to via `--permission-mode auto`/`--auto` —
+   a scoped, human-equivalent replay in the same workspace, not an expansion of access.) Map the
+   decoded `name` directly to the matching tool (`Bash` → `Bash`, `Write` → `Write`, `Edit` →
+   `Edit`, `Read` → `Read`) and its `arguments` directly to that tool's own parameters. Record each
+   call's real outcome (success + output, or the real error) — do not fabricate a result. **After
+   replaying a decoded `Write` or `Edit` call, read the target file back and diff/compare it
+   against the decoded call's arguments (e.g. `content` for a `Write` call) before proceeding** —
+   don't just trust that the tool call succeeded; a decoded multi-line `Write` replay has already
+   been caught truncating to its first line on the first attempt, caught only because the
+   implementer happened to read the file back afterward.
+
+4. Build a plain-text summary of what was executed and each result, then re-dispatch via the
+   **same resume mechanism a fix round already uses** — `--resume "<sessionID>"`
+   (`claude-code` runner) or `--session "<sessionID>"` (`opencode` runner) — with that summary as
+   the new prompt, e.g.: `"I executed your attempted tool call(s) directly since the gateway
+   didn't return them in a usable format. Results: <summary>. Please continue."` Events go to a
+   new file (same `-round<R>`-suffixed convention Step 4 already uses for fix rounds — increment
+   the round number for this recovery re-dispatch).
+
+5. Loop back to Step 5 against this new events file. If the fresh result *also* has
+   `xtmlLeakDetected: true`, repeat this step again for that turn's newly-decoded call(s). Once a
+   fresh result comes back **without** the leak flag, that is this loop's exit condition — proceed
+   to Step 6 treating that result as the status contract, same as any other dispatch. This does not
+   introduce a separate retry budget — it still counts toward the plan's existing fix-round cap
+   (3); if recovery is still looping when that cap is hit, stop and report per the existing "Fix
+   round hits the round cap" disposition in Error Handling below, unmodified. A recovery
+   re-dispatch also counts as a fix round for Step 5's own "skip session-recording on a fix round"
+   rule — do not append a new line to `opencode-sessions.jsonl` for a recovery loop-back. **Practical
+   ceiling:** because every recovery cycle burns one of the cap's 3 rounds, this mechanism is only
+   viable for tasks needing roughly 3 or fewer tool calls total — a task needing more will exhaust
+   the fix-round cap before it can complete, and could never even reach a review fix round.
+
 ### Step 6: Hand Back to the Normal Flow
 
 Before trusting a `DONE`/`DONE_WITH_CONCERNS` reply, independently verify
@@ -469,5 +538,6 @@ This skill's own job for this dispatch ends here.
 | 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch) |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
 | 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json --verbose` (`--verbose` is required alongside `--print`/`--output-format=stream-json` — `claude` errors before producing any output without it; shell-expanded credential, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
-| 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
+| 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?, xtmlLeakDetected?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
+| 5.5 | Only if `xtmlLeakDetected: true` — decode via `kimi-k3-xtml-parser.ts`, execute each decoded call with the controller's own tools, resume the session with a result summary, loop back to Step 5. Counts toward the existing fix-round cap — viable only for tasks needing roughly 3 or fewer tool calls total. |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |

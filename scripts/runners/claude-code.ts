@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { GatewayProvider, OffloadRole } from "../providers/types.ts";
 import type { ParsedResult, Runner } from "./types.ts";
+import { hasXtmlToolCallChannel } from "./kimi-k3-xtml-parser.ts";
 
 const KNOWN_STATUSES = new Set(["success", "error", "interrupted"]);
 
@@ -33,11 +34,13 @@ function parseResult(eventsFile: string): ParsedResult {
       ? (last.subtype as ParsedResult["status"])
       : "error";
 
+  const resultText = last.result ?? null;
   return {
     status,
-    resultText: last.result ?? null,
+    resultText,
     sessionId: last.session_id ?? null,
     costUsd: last.total_cost_usd ?? last.cost?.total_cost_usd,
+    ...(resultText && hasXtmlToolCallChannel(resultText) ? { xtmlLeakDetected: true } : {}),
   };
 }
 
