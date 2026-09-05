@@ -1,12 +1,34 @@
 # TokenReply's kimi-k3 fails tool-calling via claude-code runner (regression)
 
-**Status:** Root-caused and worked around. `scripts/providers/tokenreply.ts`
-reverted to `kimi-k2.7` (confirmed working, 2/2 real dispatches) — the
-default provider/runner (`tokenreply`/`claude-code`) themselves were
-never the problem, only the specific model. TokenReply's or the
-model's own underlying bug is unfixed (outside DigiSmith's control);
-this file now tracks "don't use kimi-k3 here until that's fixed
-upstream," not "investigate further."
+**Status:** Root-caused, and a working recovery mechanism now exists and
+has been live-verified end-to-end for `kimi-k3` — distinct from the
+earlier "reverted to `kimi-k2.7`, unfixed" status below. A parser
+(`scripts/runners/kimi-k3-xtml-parser.ts`) detects and decodes the raw
+XTML leak, detection is wired into both runners' `parseResult`, and a
+documented manual-recovery procedure (`skills/offload-implementer/SKILL.md`
+Step 5.5) walks decoding the leaked text and re-executing the intended
+call by hand. Live end-to-end verification (2026-09-05, disposable
+scratch worktree, real `kimi-k3` dispatch via TokenReply): the leak
+reproduced cleanly (`xtmlLeakDetected:true`), the parser decoded a
+single `Write` call (`{content, file_path}`) whose argument names mapped
+**directly and cleanly** onto Claude Code's own `Write` tool parameters
+— no interpretation or renaming needed, adding a third clean data point
+to the design doc's "Open risks" argument-shape-mismatch concern (still
+only `Write`/`Bash` shapes observed so far, not yet every tool type).
+One real wrinkle: the decoded XTML omitted the task's second half (the
+`git commit`) entirely — the model's turn apparently ended after the
+single leaked tool call, so committing had to be done manually to
+complete the deliverable (this matches Step 5.5's documented recovery
+flow, which already expects a human/controller to finish the job, not a
+gap in the mechanism). Independently verified: real commit `6606b10`
+in the scratch worktree with the exact requested file content, before
+the scratch worktree was deleted. `kimi-k2.7` remains the shipped
+default in `scripts/providers/tokenreply.ts` (`kimi-k3` still isn't
+safe to use unattended) — this recovery mechanism is for when
+`kimi-k3` is deliberately selected and the leak is hit, not a reason to
+switch the default back yet. TokenReply's or the model's own
+underlying serving bug is still unfixed upstream (outside DigiSmith's
+control).
 
 **Source:** 2026-09-04, same session that switched TokenReply's model
 to `kimi-k3` and the default provider/runner to `tokenreply`/
