@@ -7,17 +7,24 @@ export function cloneUpstreamSkillsDir(
   repoUrl: string = "https://github.com/obra/superpowers.git"
 ): string {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-upstream-"));
-  const result = spawnSync("git", ["clone", "--depth", "1", repoUrl, tmpDir], {
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    throw new Error(`Cannot clone upstream repository ${repoUrl}: ${result.stderr}`);
+  try {
+    const result = spawnSync(
+      "git",
+      ["-c", "core.autocrlf=false", "clone", "--depth", "1", repoUrl, tmpDir],
+      { encoding: "utf8" }
+    );
+    if (result.status !== 0) {
+      throw new Error(`Cannot clone upstream repository ${repoUrl}: ${result.stderr}`);
+    }
+    const skillsDir = path.join(tmpDir, "skills");
+    if (!fs.existsSync(skillsDir)) {
+      throw new Error(`Expected upstream skills directory not found at ${skillsDir}`);
+    }
+    return skillsDir;
+  } catch (err) {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    throw err;
   }
-  const skillsDir = path.join(tmpDir, "skills");
-  if (!fs.existsSync(skillsDir)) {
-    throw new Error(`Expected upstream skills directory not found at ${skillsDir}`);
-  }
-  return skillsDir;
 }
 
 export function readGitBlob(sha: string, relPath: string): string | null {

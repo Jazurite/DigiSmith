@@ -23,37 +23,44 @@ function initFixtureRepo(dir: string, withSkillsFolder: boolean): void {
 describe("cloneUpstreamSkillsDir", () => {
   it("clones the repository and returns its skills/ directory", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-"));
-    const fixtureRepo = path.join(tmpBase, "fixture-repo");
-    initFixtureRepo(fixtureRepo, true);
+    let result: string | undefined;
+    try {
+      const fixtureRepo = path.join(tmpBase, "fixture-repo");
+      initFixtureRepo(fixtureRepo, true);
 
-    const result = cloneUpstreamSkillsDir(fixtureRepo);
+      result = cloneUpstreamSkillsDir(fixtureRepo);
 
-    expect(result.endsWith(path.join("skills"))).toBe(true);
-    expect(fs.existsSync(result)).toBe(true);
-    const cloned = fs.readFileSync(path.join(result, "some-skill", "SKILL.md"), "utf8");
-    expect(cloned.replace(/\r\n/g, "\n")).toBe("fixture content\n");
-
-    fs.rmSync(path.dirname(result), { recursive: true, force: true });
-    fs.rmSync(tmpBase, { recursive: true, force: true });
+      expect(path.basename(result)).toBe("skills");
+      expect(fs.existsSync(result)).toBe(true);
+      const cloned = fs.readFileSync(path.join(result, "some-skill", "SKILL.md"), "utf8");
+      expect(cloned).toBe("fixture content\n");
+    } finally {
+      if (result !== undefined) {
+        fs.rmSync(path.dirname(result), { recursive: true, force: true });
+      }
+      fs.rmSync(tmpBase, { recursive: true, force: true });
+    }
   });
 
   it("throws a clear error when the clone fails", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-noclone-"));
-    const doesNotExist = path.join(tmpBase, "does-not-exist");
-
-    expect(() => cloneUpstreamSkillsDir(doesNotExist)).toThrow("Cannot clone upstream repository");
-
-    fs.rmSync(tmpBase, { recursive: true, force: true });
+    try {
+      const doesNotExist = path.join(tmpBase, "does-not-exist");
+      expect(() => cloneUpstreamSkillsDir(doesNotExist)).toThrow("Cannot clone upstream repository");
+    } finally {
+      fs.rmSync(tmpBase, { recursive: true, force: true });
+    }
   });
 
   it("throws a clear error naming the expected path when the clone has no skills/ subfolder", () => {
     const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-vendor-test-noskills-"));
-    const fixtureRepo = path.join(tmpBase, "fixture-repo");
-    initFixtureRepo(fixtureRepo, false);
-
-    expect(() => cloneUpstreamSkillsDir(fixtureRepo)).toThrow("Expected upstream skills directory not found");
-
-    fs.rmSync(tmpBase, { recursive: true, force: true });
+    try {
+      const fixtureRepo = path.join(tmpBase, "fixture-repo");
+      initFixtureRepo(fixtureRepo, false);
+      expect(() => cloneUpstreamSkillsDir(fixtureRepo)).toThrow("Expected upstream skills directory not found");
+    } finally {
+      fs.rmSync(tmpBase, { recursive: true, force: true });
+    }
   });
 });
 
