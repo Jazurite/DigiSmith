@@ -6,6 +6,11 @@ import {
   MULTI_CALL_FIXTURE,
   NORMAL_TEXT_FIXTURE,
 } from "./kimi-k3-xtml-parser.fixtures.ts";
+import { execFileSync } from "node:child_process";
+import { writeFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 describe("hasXtmlToolCallChannel", () => {
   it("detects a real leaked tools channel", () => {
@@ -99,12 +104,6 @@ describe("extractXtmlToolCalls", () => {
     expect(result.content).toBe("Hello there");
   });
 });
-
-import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const SCRIPT_PATH = fileURLToPath(new URL("./kimi-k3-xtml-parser.ts", import.meta.url));
 

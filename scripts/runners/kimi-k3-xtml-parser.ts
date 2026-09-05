@@ -4,6 +4,9 @@
 // vLLM server-side concerns; offload-implementer only ever reads a completed
 // dispatch's captured text.
 
+import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+
 export interface DecodedToolCall {
   name: string;
   arguments: Record<string, unknown>;
@@ -35,7 +38,13 @@ const ARG_RE = new RegExp(
 );
 const ATTR_RE = /(?<k>\w+)="(?<v>[^"]*)"/g;
 
-/** Detects the leaked-XTML tool-call channel marker, without decoding anything. */
+/**
+ * Detects the leaked-XTML tool-call channel marker, without decoding anything.
+ * Only checks for the `tools` channel — a response-channel-only wrapper with no
+ * tool calls (see `extractXtmlToolCalls`'s handling of that shape) is not flagged
+ * here even though it still contains raw XTML markers; not observed live, but a
+ * known asymmetry between this detector and the decoder below.
+ */
 export function hasXtmlToolCallChannel(text: string): boolean {
   return TOOLS_OPEN_RE.test(text);
 }
@@ -112,9 +121,6 @@ export function extractXtmlToolCalls(text: string): XtmlExtractionResult {
   }
   return { toolCalls, content: extractContent(text, before) };
 }
-
-import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 
 function main(): void {
   const [textFile] = process.argv.slice(2);
