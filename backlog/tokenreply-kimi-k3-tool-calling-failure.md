@@ -6,29 +6,61 @@ earlier "reverted to `kimi-k2.7`, unfixed" status below. A parser
 (`scripts/runners/kimi-k3-xtml-parser.ts`) detects and decodes the raw
 XTML leak, detection is wired into both runners' `parseResult`, and a
 documented manual-recovery procedure (`skills/offload-implementer/SKILL.md`
-Step 5.5) walks decoding the leaked text and re-executing the intended
-call by hand. Live end-to-end verification (2026-09-05, disposable
-scratch worktree, real `kimi-k3` dispatch via TokenReply): the leak
-reproduced cleanly (`xtmlLeakDetected:true`), the parser decoded a
-single `Write` call (`{content, file_path}`) whose argument names mapped
-**directly and cleanly** onto Claude Code's own `Write` tool parameters
-— no interpretation or renaming needed, adding a third clean data point
-to the design doc's "Open risks" argument-shape-mismatch concern (still
-only `Write`/`Bash` shapes observed so far, not yet every tool type).
-One real wrinkle: the decoded XTML omitted the task's second half (the
-`git commit`) entirely — the model's turn apparently ended after the
-single leaked tool call, so committing had to be done manually to
-complete the deliverable (this matches Step 5.5's documented recovery
-flow, which already expects a human/controller to finish the job, not a
-gap in the mechanism). Independently verified: real commit `6606b10`
-in the scratch worktree with the exact requested file content, before
-the scratch worktree was deleted. `kimi-k2.7` remains the shipped
-default in `scripts/providers/tokenreply.ts` (`kimi-k3` still isn't
-safe to use unattended) — this recovery mechanism is for when
-`kimi-k3` is deliberately selected and the leak is hit, not a reason to
-switch the default back yet. TokenReply's or the model's own
-underlying serving bug is still unfixed upstream (outside DigiSmith's
-control).
+Step 5.5) walks decoding the leaked text, re-executing the intended
+call by hand, and then **resuming the model's own session
+(`--resume "<sessionID>"`) with a result summary** so it can continue
+reasoning and, if needed, attempt further steps itself.
+
+Two rounds of live verification exist. **Round 1** (2026-09-04) covered
+decode-and-execute only — it never actually invoked `--resume`, so the
+one thing this task exists to prove (that the documented resume loop
+itself functions) went unverified; a task-7 fix round was dispatched
+specifically to close that gap. **Round 2** (2026-09-05, fresh disposable
+scratch worktree, real `kimi-k3` dispatch via TokenReply) did invoke
+`--resume` for real, twice, and observed:
+- The leak reproduced cleanly on the fresh dispatch (`xtmlLeakDetected:true`,
+  a `Bash` heredoc call this time — a second tool shape after Round 1's
+  `Write`, still a clean, no-renaming argument mapping).
+- Decoded and executed that call by hand (created the file), then
+  **resumed the same session** with a plain-text summary of what was
+  done. `--resume` genuinely continued the original session (confirmed
+  by an identical `sessionId` across all three dispatches) and the model
+  correctly tracked task state, asking for exactly the one remaining step
+  (`git add && git commit`) without needing to be re-told the original
+  task.
+- That next tool-call attempt **also leaked** (`xtmlLeakDetected:true`
+  again, same session) — i.e. resuming does **not** make the underlying
+  gateway tool-calling bug go away; it recurs on the next real tool-call
+  attempt within the same resumed session, exactly as Step 5.5's
+  recurrence-handling clause anticipates. Decoded and executed that
+  leaked call by hand too (the real `git commit`), then resumed a second
+  time (2 resume attempts total, within the documented cap).
+- With no further action left to attempt, that second resume produced a
+  clean, non-leaked final `DONE` reply — the loop terminated correctly.
+- Independently verified: real commit `5316f78`
+  (`5316f786699fd8a68645d872d31c8024bb9625da`) exists in the (now-deleted)
+  scratch worktree, matching the exact requested file content and commit
+  message.
+
+**Important nuance, stated plainly:** every actual file/git mutation in
+Round 2 was performed by the controller (Claude) manually replaying the
+decoded tool call, per Step 5.5's own documented step — not by the
+resumed `kimi-k3` session successfully executing a real tool call through
+TokenReply's gateway. `--resume` never caused the gateway's tool-calling
+to start working; its verified value is strictly session
+continuity/context-tracking across the decode-execute-resume loop, and
+correctly recognizing when nothing further remains to do. The underlying
+TokenReply/`kimi-k3` serving bug (missing XTML-to-tool-call conversion,
+see "Precise root cause identified" below) is unfixed and recurs on every
+real tool-call attempt observed across both rounds — resuming does not
+work around it, it only lets the documented recovery loop keep making
+progress one manually-executed step at a time until the task's remaining
+actions are exhausted. `kimi-k2.7` remains the shipped default in
+`scripts/providers/tokenreply.ts` (`kimi-k3` still isn't safe to use
+unattended) — this recovery mechanism is for when `kimi-k3` is
+deliberately selected and the leak is hit, not a reason to switch the
+default back yet. TokenReply's or the model's own underlying serving bug
+is still unfixed upstream (outside DigiSmith's control).
 
 **Source:** 2026-09-04, same session that switched TokenReply's model
 to `kimi-k3` and the default provider/runner to `tokenreply`/
