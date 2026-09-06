@@ -66,7 +66,7 @@
   <h1>Preferences Store &amp; Saved Finish Option</h1>
   <div class="meta">
     <span>Date: 2026-09-05</span>
-    <span>Map items: <strong>H</strong> (Preferences, reusing the letter H freed by W.6's retirement of subagent-driven-always) + <strong>W.8</strong> (Saved Finish Option, depends on H)</span>
+    <span>Map items: <strong>H</strong> (Preferences, reusing the letter H freed by W.6's retirement of subagent-driven-always) + <strong>H.1</strong> (Saved Finish Option, depends on H)</span>
   </div>
 </header>
 
@@ -79,9 +79,9 @@
     <li><a href="#h-skill">H: The digismith:preferences skill</a></li>
     <li><a href="#h-propagation">H: Worktree propagation</a></li>
     <li><a href="#h-errors">H: Error handling</a></li>
-    <li><a href="#w8-problem">W.8: Problem</a></li>
-    <li><a href="#w8-behavior">W.8: Behavior</a></li>
-    <li><a href="#w8-scope">W.8: Scope</a></li>
+    <li><a href="#h1-problem">H.1: Problem</a></li>
+    <li><a href="#h1-behavior">H.1: Behavior</a></li>
+    <li><a href="#h1-scope">H.1: Scope</a></li>
     <li><a href="#testing">Testing</a></li>
     <li><a href="#out-of-scope">Out of Scope</a></li>
   </ol>
@@ -93,7 +93,7 @@
 Two related map items, designed together. <strong>H (Preferences)</strong> is new,
 general-purpose infrastructure: a per-repo settings store any DigiSmith skill can read from or
 write to, wrapped in a skill (<code>digismith:preferences</code>) the same way
-<code>digismith:depot</code> wraps shared runtime-resource management. <strong>W.8 (Saved Finish
+<code>digismith:depot</code> wraps shared runtime-resource management. <strong>H.1 (Saved Finish
 Option)</strong> is the first consumer of it: <code>finishing-a-development-branch</code>'s Step 4
 menu (Merge locally / Push+PR / Keep as-is) stops asking fresh every time once a repo's answer is
 known, using H for storage.
@@ -146,11 +146,11 @@ pattern as <code>digismith:depot</code>:
 </p>
 <ul>
 <li><strong>Automatically</strong>, by any consuming skill that needs to read or write a
-preference — starting with <code>finishing-a-development-branch</code> (W.8). A consuming skill
+preference — starting with <code>finishing-a-development-branch</code> (H.1). A consuming skill
 never parses the YAML itself; it goes through this skill's read/write operations.</li>
 <li><strong>Directly</strong>, on explicit user request — "what's my preference for X in this
 repo", "set my preference for X to Y", "clear my preference for X". This is the only path that
-changes a preference outside of a consuming skill's own first-time "remember this?" flow (W.8's
+changes a preference outside of a consuming skill's own first-time "remember this?" flow (H.1's
 own mechanism, not a new one H needs to invent).</li>
 </ul>
 <p>
@@ -177,7 +177,7 @@ preferences set," defeating the entire point of persisting them across many work
 <h2>H: Error handling</h2>
 <ul>
 <li><strong>File missing</strong> — every key reads as unset; not an error. A consuming skill
-falls back to its own default behavior (W.8: ask the menu as normal).</li>
+falls back to its own default behavior (H.1: ask the menu as normal).</li>
 <li><strong>File present but malformed/unparseable</strong> — treat as unset, same as missing.
 Never crash a caller over a corrupt preferences file.</li>
 <li><strong>Key requested that was never set</strong> — returns unset, not an error.</li>
@@ -187,8 +187,8 @@ generated docs. Never force with <code>-f</code>.</li>
 </ul>
 </section>
 
-<section id="w8-problem">
-<h2>W.8: Problem</h2>
+<section id="h1-problem">
+<h2>H.1: Problem</h2>
 <p>
 <code>finishing-a-development-branch</code>'s Step 4 menu asks the same three-option question
 every single time a branch finishes, even though the answer is usually predictable per repo —
@@ -197,8 +197,8 @@ against a client repo almost always wants Option 2 (PR).
 </p>
 </section>
 
-<section id="w8-behavior">
-<h2>W.8: Behavior</h2>
+<section id="h1-behavior">
+<h2>H.1: Behavior</h2>
 <h3>First run in a repo (no <code>finish_option</code> set)</h3>
 <p>
 Step 4's menu is presented exactly as it is today, unchanged — this preserves the skill's
@@ -234,8 +234,8 @@ everything else built this way.
 </p>
 </section>
 
-<section id="w8-scope">
-<h2>W.8: Scope</h2>
+<section id="h1-scope">
+<h2>H.1: Scope</h2>
 <p>
 In scope: the normal-repo / named-branch-worktree three-option menu only. Out of scope: the
 detached-HEAD reduced two-option menu (Push+PR / Keep as-is) — only one option there is ever
@@ -249,7 +249,7 @@ repeatable (Push+PR), so there is nothing meaningful to remember or skip.
 H's read/get/set/clear operations against <code>.digismith/preferences.yml</code> are ordinary,
 independently-testable logic (parsing, writing, missing-file and malformed-file fallback) and
 should get real unit tests, following this repo's existing pattern (real file fixtures in a temp
-directory, no mocking — same shape as <code>scripts/bump-plugin-version.test.ts</code>). W.8's
+directory, no mocking — same shape as <code>scripts/bump-plugin-version.test.ts</code>). H.1's
 own behavior (menu-skip decision, override detection, the first-run follow-up prompt) is skill
 prose with no automated test harness, same as every other <code>finishing-a-development-branch</code>
 divergence so far (W.4, W.4.1) — verification there is a careful manual read-through plus a real
