@@ -188,6 +188,12 @@ question to your human partner:
 Decide the path first, then announce the matching outcome — never announce one approach before
 the decision is made, since the decision can send execution somewhere else entirely.
 
+State the one-to-two-sentence reasoning behind the choice in that same announcement — task count,
+risk assessment, or relevant precedent — not just which path was chosen. The human partner cannot
+see this section's own internal decision logic; a bare "using inline execution" with no reasoning
+attached leaves them unable to tell whether the choice fit the plan or was a default applied
+without thought.
+
 **If inline execution:**
 - **REQUIRED SUB-SKILL:** Use `digismith:executing-plans`
 - Batch execution with checkpoints for review
