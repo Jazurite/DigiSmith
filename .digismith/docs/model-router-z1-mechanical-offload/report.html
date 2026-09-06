@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Router Z.1 — Auto-Offload Mechanical Tasks to Kimi K3 — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Model Router Z.1 — Auto-Offload Mechanical Tasks to Kimi K3 — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-06</span>
+    <span>Map item: <strong>Z.1</strong></span>
+    <span>Commit range: <code>7c03f8c..dfbbc51</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>
+  When <code>subagent-driven-development</code>'s Task Loop classifies an implementer task as
+  mechanical-tier, it now automatically dispatches it to <code>kimi-k3</code> via the existing
+  <code>offload-implementer</code> mechanism instead of a Claude <code>Agent</code>-tool subagent —
+  no explicit per-task ask required. <code>scripts/providers/tokenreply.ts</code>'s
+  <code>model(role)</code> previously ignored its argument and always returned
+  <code>"kimi-k2.7"</code>; it now branches — <code>"kimi-k3"</code> for
+  <code>role === "mechanical"</code>, <code>"kimi-k2.7"</code> unchanged for
+  <code>role === "task"</code> — mirroring the pattern <code>chutes.ts</code> already used.
+  Separately, <code>subagent-driven-development</code>'s Task Loop Step 1 gained a paragraph:
+  on a mechanical-tier task, follow <code>offload-implementer</code>'s existing Steps 1-6
+  dispatch procedure but pass <code>--role mechanical</code> to <code>print-config.ts</code>
+  instead of the <code>--role task</code> every existing caller hardcodes. No new script, no new
+  decision engine — the <code>OffloadRole</code> hook these two changes connect already existed in
+  <code>scripts/providers/types.ts</code> and was simply never wired to <code>mechanical</code> by
+  anything until now. Followed the full Superpowers process: brainstorming → spec → writing-plans
+  → <code>digismith:executing-plans</code> (2 tasks, executed directly in this session, each with
+  a self-check before moving on).
+  </p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <span class="tag">Task 1</span>
+      <h4>TokenReply provider — role-based model selection</h4>
+      <p><code>tokenreply.model(role)</code> now returns <code>kimi-k3</code> for the mechanical
+      role and the unchanged <code>kimi-k2.7</code> for the task role, mirroring
+      <code>chutes.ts</code>'s existing branching pattern.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 2</span>
+      <h4>Auto-offload mechanical-tier tasks in subagent-driven-development</h4>
+      <p>Adds the fork-provenance tag and a new Task Loop paragraph that auto-offloads a
+      mechanical-tier task's first attempt to <code>kimi-k3</code>, routing any fix round to
+      Claude instead of resuming the offloaded session.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:executing-plans</code>: implemented directly in this
+  session, task by task, with a self-check after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Self-check</th></tr>
+    <tr>
+      <td>1. TokenReply provider — role-based model selection</td>
+      <td><code>tokenreply.model(role)</code> branches on <code>OffloadRole</code>; regression
+      test added.</td>
+      <td>Role branch mirrors <code>chutes.ts</code> style (ternary keyed on role); both role
+      values covered by the new regression test; full suite 169/169; follows existing pattern;
+      no overbuild.</td>
+    </tr>
+    <tr>
+      <td>2. Auto-offload mechanical-tier tasks in subagent-driven-development</td>
+      <td>Fork-provenance tag added; new Task Loop paragraph auto-offloads mechanical-tier
+      first attempts to <code>kimi-k3</code>.</td>
+      <td>Fork-provenance tag added; new paragraph placed correctly between the BASE line and
+      the existing bullet list; no other section touched; frontmatter valid YAML; full suite
+      169/169. <strong>Amended</strong> after a live correction (commit <code>dfbbc51</code>):
+      fix rounds now route to Claude instead of resuming <code>kimi-k3</code>, bounding the
+      model's known tool-calling-bug exposure to a single clean first attempt; <code>plan.md</code>
+      updated to match the shipped behavior; a K-lineage backlog item was filed separately for
+      whether <code>offload-implementer</code>'s own unrelated <code>task</code>-role default
+      should also move off <code>kimi-k2.7</code> (deliberately out of this task's scope). Full
+      suite still 169/169 after the amendment.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">d153a96</span> feat(providers): branch TokenReply's model selection on OffloadRole</li>
+    <li><span class="sha">f82d358</span> feat(subagent-driven-development): auto-offload mechanical tasks to kimi-k3 (Z.1)</li>
+    <li><span class="sha">dfbbc51</span> fix(subagent-driven-development): route Z.1 fix rounds to Claude, never resume kimi-k3</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/model-router-z1-mechanical-offload/report.html</footer>
+
+</body>
+</html>
