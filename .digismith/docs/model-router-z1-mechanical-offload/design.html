@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Router Z.1 — Auto-Offload Mechanical Tasks to Kimi K3</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Model Router Z.1 — Auto-Offload Mechanical Tasks to Kimi K3</h1>
+  <div class="meta">
+    <span>Date: 2026-09-06</span>
+    <span>Map item: Z.1 (first slice of "Model Router" — new letter Z, not yet its own <code>MEMORY.md</code> row)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem &amp; motivation</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components changed</a></li>
+    <li><a href="#errors">Error handling</a></li>
+    <li><a href="#out-of-scope">Out of scope for Z.1</a></li>
+    <li><a href="#w-relationship">Relationship to W</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem &amp; motivation</h2>
+<p>
+<code>digismith:offload-implementer</code> (map items K.2/K.3/K.6) already routes one explicitly-requested
+<code>subagent-driven-development</code> task to a third-party model via a pluggable gateway/runner —
+but only when the human asks for it, task by task. <code>subagent-driven-development</code>'s own Model
+Selection section already classifies every implementer task into a complexity tier (mechanical /
+integration / architecture) purely to pick which <em>Claude</em> model handles it — that tier signal
+exists today but has never been used to make a vendor decision.
+</p>
+<p>
+This item was originally K.9 inside the K-lineage ("model tiering"), then promoted to its own
+letter, <strong>Z</strong>, once its real scope — native, automatic per-task model selection inside
+<code>subagent-driven-development</code> itself, not a side-channel skill — outgrew K. The full vision
+(<code>backlog/native-model-router-z.md</code>) is a multi-criteria, multi-vendor router: cost, latency,
+context-window fit, human override, and more, still largely unscoped. <strong>Z.1 is deliberately
+the smallest possible first slice</strong> of that vision: one fixed rule, reusing infrastructure
+that already ships, applied to one of the two dispatch roles <code>subagent-driven-development</code> has
+(the implementer; the task/final reviewer role is <strong>Z.2</strong>, a separate, later design).
+</p>
+</section>
+
+<section id="scope">
+<h2>Scope</h2>
+<p>
+When <code>subagent-driven-development</code>'s Task Loop Step 1 classifies an implementer task's
+complexity signal as <strong>mechanical</strong> (1-2 files, complete spec — today's "use a fast, cheap
+model" tier), the controller automatically follows <code>offload-implementer</code>'s existing dispatch
+procedure instead of an <code>Agent</code>-tool Claude subagent dispatch — no explicit per-task ask
+required. Provider and runner still resolve from the active profile exactly as they do for
+<code>offload-implementer</code>'s explicit-ask path (today: <code>tokenreply</code>/<code>claude-code</code>, per
+K.6's defaults) — the one thing Z.1 changes is passing <code>--role mechanical</code> to
+<code>print-config.ts</code> instead of the <code>--role task</code> every existing caller hardcodes today.
+<code>kimi-k3</code> becomes the practical model in play only because Z.1 also teaches
+<code>tokenreply.ts</code>'s <code>model(role)</code> to return it for the mechanical role (see
+Components below) — the routing rule itself is role-based, not a special-cased vendor/model
+bypass. Integration and architecture tier tasks are entirely unaffected — they continue to
+dispatch to Claude exactly as they do today.
+</p>
+<p>
+Fix rounds 1-3 for an auto-offloaded task continue on the same offloaded session, the same way a
+fix round already works for an explicitly-requested offload today.
+</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>
+No new decision engine, scoring system, or "Model Router" script exists in Z.1 — the routing
+"decision" is a single fixed conditional, not a computation. Concretely:
+</p>
+<ol>
+<li><code>subagent-driven-development</code>'s Task Loop Step 1 ("Dispatch the implementer") computes the
+task's complexity signal as it already does today (unchanged: 1-2 files + complete spec →
+mechanical; multi-file/integration → standard; design judgment → most capable).</li>
+<li><strong>New branch:</strong> if the signal is <em>mechanical</em>, the controller does not dispatch an
+<code>Agent</code>-tool subagent. Instead it follows <code>offload-implementer</code>'s Steps 1 through 6
+directly (resolve config, ensure runner ready, build the task prompt via
+<code>digismith:inject-standards</code> Scenario 4, dispatch, extract session/status, hand back to the
+normal review flow) — resolving <code>task_offload_runner</code>/<code>task_offload_provider</code> from the
+active profile exactly as the explicit-ask path does, with one change: Step 1's
+<code>print-config.ts</code> invocation passes <code>--role mechanical</code> instead of the
+<code>--role task</code> every existing caller hardcodes. <code>OffloadRole</code>
+(<code>scripts/providers/types.ts</code>) already models this exact distinction and
+<code>chutes.ts</code>'s <code>model(role)</code> already branches on it (<code>task</code> →
+Kimi-K3-TEE, <code>mechanical</code> → a cheap Gemma model) — the scaffolding predates Z.1, it was
+simply never invoked with <code>mechanical</code> by anything until now.</li>
+<li>Everything downstream of the dispatch — review package generation, task review, the fix loop,
+ledger entries — is unmodified <code>subagent-driven-development</code>, exactly as it already treats an
+offloaded task today.</li>
+<li>The XTML tool-call leak recovery mechanism (<code>offload-implementer</code>'s Step 5.5) is inherited
+automatically, since Z.1 reuses that same dispatch procedure verbatim. Its existing ceiling
+(viable for tasks needing roughly 3 or fewer tool calls total, bounded by the shared fix-round cap
+of 3) is accepted as a known limitation for this first slice — mitigated, not eliminated, by the
+fact that mechanical-tier tasks by definition need few tool calls in the first place.</li>
+</ol>
+<p>
+<code>kimi-k3</code> is the deliberate choice for the mechanical role over <code>kimi-k2.7</code> (which
+stays the <code>task</code>-role default, unchanged), even though K.3 reverted TokenReply's own default
+away from <code>kimi-k3</code> after confirming its tool-calling bug live. The reasoning: that revert
+was about protecting the <em>task-role, general-purpose</em> path (still <code>kimi-k2.7</code> after
+Z.1); the new mechanical-role path only ever sees mechanical-tier tasks specifically, which are
+the shape of task least likely to hit the bug's practical ceiling.
+</p>
+</section>
+
+<section id="components">
+<h2>Components changed</h2>
+<div class="cards">
+<div class="card">
+<span class="tag">skills/subagent-driven-development/SKILL.md</span>
+<h4>Task Loop Step 1</h4>
+<p>Add the mechanical-tier auto-offload branch described above. Fork-provenance tag applied per
+W.2's convention (this is the skill's second activation, after W.7).</p>
+</div>
+<div class="card">
+<span class="tag">scripts/providers/tokenreply.ts</span>
+<h4><code>model(role)</code> now branches</h4>
+<p>Returns <code>"kimi-k3"</code> when <code>role === "mechanical"</code>, <code>"kimi-k2.7"</code>
+otherwise (unchanged default) — mirrors <code>chutes.ts</code>'s existing role-branching pattern.
+The stale tool-calling-bug comment block gets a note that the bug is specifically about the
+<code>task</code> role's prior default; the mechanical-role branch is a new, separate exposure
+accepted per this design's reasoning below.</p>
+</div>
+<div class="card">
+<span class="tag">skills/offload-implementer/SKILL.md</span>
+<h4>No changes</h4>
+<p>Z.1 reuses its Steps 1-6 procedure by reference/invocation, not by copying or modifying its
+content. Its own "explicit ask only" framing in Overview/When to Use stays accurate for its own
+direct-invocation path (which keeps hardcoding <code>--role task</code>, unaffected); Z.1
+documents its own trigger condition entirely within <code>subagent-driven-development</code>.</p>
+</div>
+</div>
+</section>
+
+<section id="errors">
+<h2>Error handling</h2>
+<ul>
+<li><strong>Runner/provider prerequisite missing</strong> (any failure case in <code>offload-implementer</code>'s
+own Prerequisites/Error Handling — binary not on PATH, credential env var unset,
+<code>print-config.ts</code> non-zero exit, Depot's <code>ensure-claude-code</code> reporting not-ready) →
+fall back to a normal Claude cheap-tier <code>Agent</code>-tool implementer dispatch, silently and
+without blocking the task. This mirrors K.1's own established fallback philosophy ("falling back
+to in-session generation whenever it's off, unavailable, or returns something malformed"). Note
+the fallback in the task's ledger entry as a one-liner so it's visible after the fact why a
+mechanical task didn't auto-offload.</li>
+<li><strong>The dispatched runner genuinely errors, or the fix-round cap is hit with open findings</strong>
+→ unchanged from <code>offload-implementer</code>'s own disposition: report <code>BLOCKED</code>/surface the
+open findings to the human partner. Z.1 does <em>not</em> add a new escalation path (e.g., silently
+falling back to a Claude implementer mid-task after a failed offload attempt) — a stuck
+auto-offloaded mechanical task surfaces exactly the same way a stuck explicitly-offloaded task
+does today.</li>
+<li><strong>XTML leak detected</strong> → unchanged, handled entirely by the inherited Step 5.5.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope for Z.1</h2>
+<ul>
+<li><strong>Z.2</strong> (routing for the task-reviewer/final-reviewer role) — a separate sub-item, separate
+design, not touched here.</li>
+<li>Any routing criteria beyond the single fixed mechanical→kimi-k3 rule: no cost or latency
+scoring, no context-window fit check, no per-profile opt-out flag, no other vendor/model choice.
+This is deliberately the narrowest possible slice of the "Model Router" vision in
+<code>backlog/native-model-router-z.md</code>, not an attempt at the full router.</li>
+<li>Mid-task fallback from <code>kimi-k3</code> to Claude after a failed offload attempt.</li>
+<li>Any change to <code>offload-implementer</code>'s own explicit-ask path or its profile-driven
+provider/runner resolution.</li>
+</ul>
+</section>
+
+<section id="w-relationship">
+<h2>Relationship to W</h2>
+<p>
+This modifies <code>subagent-driven-development</code> — a vendored Superpowers primitive, squarely map
+item <strong>W</strong>'s territory (primitive content activation, per W.2's fork-provenance tagging
+convention). <code>backlog/native-model-router-z.md</code> flagged this exact collision as
+"not yet raised with whichever session/thread is driving W" before Z was ever designed for real.
+Rather than blocking on a separate W-focused conversation, this design applies W.2's existing
+activation convention directly — the same pattern W.4, W.6, and W.7 already established for their
+own first activations of other primitives (this is <code>subagent-driven-development</code>'s
+<strong>second</strong> activation, after W.7's conflict-scan guard). Worth a one-line note in
+<code>MEMORY.md</code>'s W row once this ships, so a future W-focused session isn't surprised by it.
+</p>
+</section>
+
+<section id="verification">
+<h2>Verification</h2>
+<p>
+<code>scripts/providers/tokenreply.ts</code>'s change is genuinely unit-testable, following the pattern
+<code>registry.test.ts</code> already uses for <code>chutes.ts</code> (lines 26-27: explicit
+<code>expect(chutes.model("mechanical")).toBe(...)</code> assertions) — add the equivalent pair for
+<code>tokenreply.model("mechanical")</code> → <code>"kimi-k3"</code> and
+<code>tokenreply.model("task")</code> → <code>"kimi-k2.7"</code> (regression-guarding the unchanged
+default). The existing generic <code>assertConforms</code> check already exercises both role values
+for every provider, so it won't itself catch a wrong return value — the new explicit assertions are
+required, not optional.
+</p>
+<p>
+<code>SKILL.md</code> prose has no automated test harness (same precedent as W.4.1 and W.7).
+Verification there is a careful read-through confirming: the new branch is inserted at the right
+point in Step 1, reads clearly alongside the existing complexity-tier logic, correctly references
+<code>offload-implementer</code>'s procedure and the <code>--role mechanical</code> flag without
+duplicating its content, and the rest of the file (fix loop, final review, Finish) is unchanged. A
+live smoke test — running one real plan containing a mechanical-tier task through
+<code>subagent-driven-development</code> and confirming it actually auto-offloads to <code>kimi-k3</code>
+without an explicit ask — is the practical implementation-plan-level verification; not performed as
+part of this design.
+</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/model-router-z1-mechanical-offload/design.html</footer>
+
+</body>
+</html>
