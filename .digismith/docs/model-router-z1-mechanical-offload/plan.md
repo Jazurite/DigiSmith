@@ -181,15 +181,24 @@ two changes connect already exists in `scripts/providers/types.ts` and was simpl
 
   ```markdown
   **Mechanical-tier auto-offload:** if this task's complexity signal (see Model Selection above)
-  is **mechanical**, do not dispatch an `Agent`-tool subagent for it. Instead, follow
-  `digismith:offload-implementer`'s Steps 1 through 6 directly, resolving
+  is **mechanical**, dispatch its **first attempt** by following `digismith:offload-implementer`'s
+  Steps 1 through 6 directly instead of an `Agent`-tool subagent — resolving
   `task_offload_runner`/`task_offload_provider` from the active profile exactly as its own
-  explicit-ask path does — with one difference: pass `--role mechanical` to `print-config.ts` in
+  explicit-ask path does, with one difference: pass `--role mechanical` to `print-config.ts` in
   its Step 1, not the `--role task` its own explicit-ask callers use. No user request is needed for
-  this path; it applies automatically to every mechanical-tier task. Everything downstream —
-  review package, task review, fix loop, ledger — proceeds unmodified once `offload-implementer`'s
-  Step 6 hands back the status contract, exactly as it already does for an explicitly-requested
-  offload today.
+  this path; it applies automatically to every mechanical-tier task's first attempt. Task review
+  proceeds unmodified once `offload-implementer`'s Step 6 hands back the status contract, exactly
+  as it already does for an explicitly-requested offload today.
+
+  **Fix rounds never resume the offloaded session.** If the task reviewer finds something and a
+  fix round triggers, dispatch the fix to a normal Claude `Agent`-tool implementer (mechanical
+  tier's own cheap-model default) — never back to `kimi-k3`. Brief the fix-round implementer with
+  the open findings and a pointer to the original attempt's report file, the same way rounds 4-5's
+  escalation already hands a fresh implementer the prior report to read; the only difference here
+  is that this substitution happens on round 1, not round 4. This bounds `kimi-k3`'s exposure to
+  its known tool-calling bug (see `backlog/tokenreply-kimi-k3-tool-calling-failure.md`) to a single
+  clean attempt, and puts every correction in the reliable model's hands regardless of how many
+  rounds it takes.
 
   If any of `offload-implementer`'s own prerequisites aren't met (runner not on PATH, credential
   env var unset, `print-config.ts` exits non-zero, Depot's readiness check fails) — fall back to a
@@ -201,6 +210,12 @@ two changes connect already exists in `scripts/providers/types.ts` and was simpl
   Integration and architecture tier tasks are unaffected by this paragraph — dispatch them via the
   bullet list below exactly as before.
   ```
+
+  **Amended during execution (2026-09-06):** the original plan text (and the design doc) had fix
+  rounds resume the same offloaded `kimi-k3` session, matching `offload-implementer`'s own
+  explicit-ask behavior. Jack corrected this live: fix rounds for an auto-offloaded mechanical
+  task route to Claude instead, never back to `kimi-k3` — the text above reflects the corrected,
+  as-shipped behavior, not the original plan draft.
 
   So the section reads, in order: the "Record BASE" paragraph → these three new paragraphs → the
   existing "Template: [implementer-prompt.md]" bullet list, unchanged.
