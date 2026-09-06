@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing implementation plans with independent tasks in the current session (DigiSmith fork of Superpowers' subagent-driven-development)
 ---
 
 # Subagent-Driven Development
@@ -209,6 +209,27 @@ and is re-read on every later turn. Hand artifacts over as files.
 
 Record BASE (`git rev-parse HEAD`) before dispatching — the review package
 and fix-round diffs need it.
+
+**Mechanical-tier auto-offload:** if this task's complexity signal (see Model Selection above)
+is **mechanical**, do not dispatch an `Agent`-tool subagent for it. Instead, follow
+`digismith:offload-implementer`'s Steps 1 through 6 directly, resolving
+`task_offload_runner`/`task_offload_provider` from the active profile exactly as its own
+explicit-ask path does — with one difference: pass `--role mechanical` to `print-config.ts` in
+its Step 1, not the `--role task` its own explicit-ask callers use. No user request is needed for
+this path; it applies automatically to every mechanical-tier task. Everything downstream —
+review package, task review, fix loop, ledger — proceeds unmodified once `offload-implementer`'s
+Step 6 hands back the status contract, exactly as it already does for an explicitly-requested
+offload today.
+
+If any of `offload-implementer`'s own prerequisites aren't met (runner not on PATH, credential
+env var unset, `print-config.ts` exits non-zero, Depot's readiness check fails) — fall back to a
+normal Claude cheap-tier `Agent`-tool dispatch instead, the same dispatch this task would have
+gotten before this paragraph existed. Note the fallback in this task's ledger entry as a
+one-liner (`Task <N>: mechanical-tier offload unavailable (<reason>), dispatched to Claude
+instead`) so it's visible after the fact. Never block a task on this path being unavailable.
+
+Integration and architecture tier tasks are unaffected by this paragraph — dispatch them via the
+bullet list below exactly as before.
 
 - **Task brief:** before dispatching an implementer, run this skill's
   `scripts/task-brief PLAN_FILE N` — it extracts the task's full text to a
