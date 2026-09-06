@@ -33,6 +33,11 @@ describe("chutes", () => {
 });
 
 describe("tokenreply", () => {
+  it("uses distinct models for mechanical vs. task roles", () => {
+    expect(tokenreply.model("mechanical")).toBe("kimi-k3");
+    expect(tokenreply.model("task")).toBe("kimi-k2.7");
+  });
+
   it("conforms to GatewayProvider", () => assertConforms(tokenreply));
 
   it("uses the confirmed base URL", () => {

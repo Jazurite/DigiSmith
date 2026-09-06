@@ -24,8 +24,14 @@ export const tokenreply: GatewayProvider = {
   // offload-implementer has no per-task model-override mechanism today; use
   // manually via a raw `--model gpt-5.6-luna` override on the dispatch
   // command, same as this session's live TokenReply tests.
-  model() {
-    return "kimi-k2.7";
+  //
+  // The mechanical role is a separate exposure, accepted deliberately for
+  // Z.1 (see .digismith/docs/model-router-z1-mechanical-offload/design.html) — mechanical-tier
+  // tasks need few enough tool calls that offload-implementer's existing XTML-leak recovery
+  // mechanism (bounded to ~3 tool calls) is expected to cover them, unlike the general task role
+  // this revert was protecting.
+  model(role) {
+    return role === "mechanical" ? "kimi-k3" : "kimi-k2.7";
   },
   supportsRunner: ["opencode", "claude-code"],
 };
