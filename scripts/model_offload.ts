@@ -92,7 +92,7 @@ function stripQuotes(value: string): string {
 }
 
 function readDigismithEnvFile(): Record<string, string> {
-  const path = join(homedir(), ".digismith", ".env");
+  const path = join(homedir(), ".digismith-depot", ".env");
   if (!isFile(path)) return {};
 
   let content: string;

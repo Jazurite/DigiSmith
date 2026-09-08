@@ -341,21 +341,21 @@ describe("getCredential", () => {
   });
 
   it("falls back to ~/.digismith-depot/.env when the env var is unset", () => {
-    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
-    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
+    mkdirSync(join(tempHomeDir, ".digismith-depot"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith-depot", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
     expect(getCredential(chutes)).toBe("cpk_from_file");
   });
 
   it("prefers the environment variable over ~/.digismith-depot/.env", () => {
     process.env.CHUTES_API_KEY = "cpk_from_env";
-    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
-    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
+    mkdirSync(join(tempHomeDir, ".digismith-depot"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith-depot", ".env"), "CHUTES_API_KEY=cpk_from_file\n");
     expect(getCredential(chutes)).toBe("cpk_from_env");
   });
 
   it("returns null when the key isn't present in ~/.digismith-depot/.env", () => {
-    mkdirSync(join(tempHomeDir, ".digismith"), { recursive: true });
-    writeFileSync(join(tempHomeDir, ".digismith", ".env"), "OTHER_KEY=something\n");
+    mkdirSync(join(tempHomeDir, ".digismith-depot"), { recursive: true });
+    writeFileSync(join(tempHomeDir, ".digismith-depot", ".env"), "OTHER_KEY=something\n");
     expect(getCredential(chutes)).toBeNull();
   });
 });

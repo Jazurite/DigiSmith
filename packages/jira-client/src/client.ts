@@ -16,7 +16,7 @@ export interface JiraComment {
 export class CredentialsError extends Error {}
 
 function defaultEnvPath(): string {
-  return join(homedir(), ".digismith", ".env");
+  return join(homedir(), ".digismith-depot", ".env");
 }
 
 function stripQuotes(value: string): string {
