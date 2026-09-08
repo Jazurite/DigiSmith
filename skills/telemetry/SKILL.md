@@ -1,6 +1,6 @@
 ---
 name: telemetry
-description: Use right after digismith:finishing-a-development-branch's Step 4 integration-decision menu has been answered (any of its three options).
+description: Use once digismith:finishing-a-development-branch's integration decision is settled — a fresh Step 4 menu answer (any of its three options) or Step 3.5 skipping straight to an already-saved default (merge locally or push+PR).
 ---
 
 # Telemetry
@@ -19,11 +19,13 @@ improvement opportunities.
 
 ## When to Use
 
-Right after `digismith:finishing-a-development-branch`'s Step 4 menu
-is answered — merge locally, push and create a PR, or keep as-is, all
-three count as "the build is done for now." Check the current working
-directory (the same one `finishing-a-development-branch` just acted in)
-for `.digismith/telemetry-marker`.
+Once `digismith:finishing-a-development-branch`'s integration decision is
+settled — either a fresh Step 4 menu answer (merge locally, push and
+create a PR, or keep as-is, all three count as "the build is done for
+now"), or Step 3.5 skipping the menu entirely and proceeding straight to
+an already-saved default (merge locally or push+PR). Check the current
+working directory (the same one `finishing-a-development-branch` just
+acted in) for `.digismith/telemetry-marker`.
 
 ## Process
 
