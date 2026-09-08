@@ -50,9 +50,9 @@ never pushing) — this is about work that never merges at all.
 - Whether `01-version-bump.md`/`02-plugin-reinstall.md` should at least name this failure mode
   explicitly ("invoking by hand outside the merge flow? don't trust `ORIG_HEAD`") so a future
   session doesn't have to rediscover it the way this one did.
-- Also surfaced same session: [[version-bump-always-minor]] — a related but separate gap in the
-  same script (no patch/minor distinction at all, independent of the `--base`/`ORIG_HEAD`
-  problem here).
+- Also surfaced same session: [[check-vendored-skills-hardening]] (`bump-plugin-version.ts`,
+  W.4.1 section) — a related but separate gap in the same script (no patch/minor distinction at
+  all, independent of the `--base`/`ORIG_HEAD` problem here).
 
 ## Why not applied yet
 
