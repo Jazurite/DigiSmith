@@ -3,12 +3,15 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "../../../../scripts/cli-args.ts";
 
-export function computeNextVersion(current: string): string {
+export function computeNextVersion(current: string, bumpType: "patch" | "minor" = "minor"): string {
   const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(current);
   if (!match) {
     throw new Error(`Cannot parse version: ${current}`);
   }
-  const [, major, minor, , prerelease] = match;
+  const [, major, minor, patch, prerelease] = match;
+  if (bumpType === "patch") {
+    return `${major}.${minor}.${Number(patch) + 1}${prerelease ?? ""}`;
+  }
   return `${major}.${Number(minor) + 1}.0${prerelease ?? ""}`;
 }
 
@@ -47,6 +50,20 @@ export function versionChangedSince(
   return parsed.version !== currentVersion;
 }
 
+export function bumpTypeSince(baseSha: string, cwd: string = process.cwd()): "patch" | "minor" {
+  const result = spawnSync("git", ["log", `${baseSha}..HEAD`, "--format=%s"], { cwd, encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(`git log failed for ${baseSha}..HEAD: ${result.stderr}`);
+  }
+  const subjects = result.stdout.split("\n").filter((line) => line.length > 0);
+  if (subjects.length === 0) {
+    return "minor";
+  }
+  const fixPattern = /^fix(\([^)]*\))?:/;
+  const allFix = subjects.every((subject) => fixPattern.test(subject));
+  return allFix ? "patch" : "minor";
+}
+
 const PLUGIN_JSON_PATH = ".claude-plugin/plugin.json";
 const MARKETPLACE_JSON_PATH = ".claude-plugin/marketplace.json";
 
@@ -61,7 +78,8 @@ export function main(): void {
       return;
     }
 
-    const nextVersion = computeNextVersion(currentVersion);
+    const bumpType = args.base !== undefined ? bumpTypeSince(args.base) : "minor";
+    const nextVersion = computeNextVersion(currentVersion, bumpType);
     bumpVersionInFile(PLUGIN_JSON_PATH, nextVersion);
     bumpVersionInFile(MARKETPLACE_JSON_PATH, nextVersion);
     console.log(`BUMPED ${currentVersion} -> ${nextVersion}`);
