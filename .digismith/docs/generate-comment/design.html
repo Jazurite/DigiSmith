@@ -165,8 +165,12 @@ work), ask which roles need pinging for &ldquo;Next Steps,&rdquo; resolve each n
 what's been found, what's needed (and from whom) &mdash; same accountId resolution for the &ldquo;needed
 from&rdquo; mentions.</li>
 <li>Fills the <code>&lt;placeholder&gt;</code> tokens in the loaded Markdown.</li>
-<li>Returns: filled Markdown text + a heading-prefix string (e.g. <code>&ldquo;&#128227; Progress
-Update&rdquo;</code>) for the caller's dedup-search.</li>
+<li>Returns: filled Markdown text + a heading-prefix string for the caller's dedup-search.
+The prefix is derived from the template file itself &mdash; the text of its first heading line up
+to (not including) the date placeholder, e.g. <code>&ldquo;&#128227; Progress Update&rdquo;</code> from a
+first line reading <code>### &#128227; Progress Update &ndash; &lt;D/M&gt;</code>. Never hardcoded
+separately, so a hand-edited template's heading can't silently drift out of sync with what Step 8's
+dedup-search actually matches against.</li>
 </ul>
 
 <h3>packages/jira-client/src/markdown-to-adf.ts (new)</h3>
