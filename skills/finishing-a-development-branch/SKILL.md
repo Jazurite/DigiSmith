@@ -50,6 +50,57 @@ plan, the conversation, or the branch's upstream. If it is not already
 known, ask: "This branch split from <your best guess> - is that correct?"
 Confirm before merging: merging into the wrong base is expensive to undo.
 
+## Step 3.5: Check for a Saved Finish Option
+
+Before presenting Step 4's menu, check whether this repo already has a saved
+default: invoke `digismith:preferences`' `get` operation for key
+`finish_option` (that skill owns its own repo-resolution and invocation
+details — this step never duplicates them).
+
+**Only applies to the normal-repo / named-branch-worktree menu** (Step 2's
+"Standard 3 options" row). The detached-HEAD 2-option menu never has a saved
+default to check — skip this step entirely in that case and go straight to
+Step 4's detached-HEAD menu.
+
+**Returns `unset`** → no saved default. Continue to Step 4 exactly as
+written, unchanged.
+
+**Returns `merge_locally` or `pr`** → a saved default exists for this repo.
+Check the human partner's own message for *this specific run* for either of
+two distinct signals before doing anything else:
+
+- **An explicit one-off override** — e.g. "push this as a PR instead," "merge
+  this one locally this time." Changes only this run; the saved value is
+  never touched.
+- **An explicit permanent-change instruction** — e.g. "always PR this repo
+  from now on," "stop merging locally here, always PR." Different from a
+  one-off override: it applies this run's choice **and** overwrites the
+  saved value, via `digismith:preferences`' `set` operation for key
+  `finish_option` with the new value. Never infer this from a single
+  override alone — it requires an explicit "from now on"/"always" framing,
+  the same restraint `writing-plans`' Execution Handoff already applies to
+  reading "the user's original request was also to start work" rather than
+  guessing at intent.
+
+Then:
+
+- **User explicitly asks to see the menu** ("show the menu", "ask me
+  again") → proceed to Step 4 exactly as written, as if no saved default
+  existed. This does not clear the saved value — only a "remember
+  this?"/"always" answer does that (Step 4.5, or the permanent-change branch
+  above).
+- **No override, no permanent-change instruction, no request to see the
+  menu** → skip Step 4's menu entirely. Announce the saved default plainly:
+  *"Using saved default for this repo: `<merge locally|Push+PR>`. Say 'show
+  the menu' to override once."* Then act exactly as if that option had just
+  been chosen at Step 4 — proceed straight to Step 5's matching option. Step
+  4.5's follow-up never fires here — it exists only for a fresh answer at
+  Step 4, not a reused saved one.
+- **A one-off override present** → skip Step 4's menu, proceed straight to
+  Step 5 for the overriding option this run, saved value untouched.
+- **A permanent-change instruction present** → write the new value (above),
+  then proceed straight to Step 5 for that option this run.
+
 ## Step 4: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 3 options:**
@@ -80,6 +131,30 @@ from the list above. Discarding the work happens only in response to your
 human partner explicitly asking for it (see "If your human partner asks to
 discard the work" below). Wait for their answer; the integration decision
 is theirs.
+
+## Step 4.5: Offer to Remember the Choice
+
+**Only after a fresh Step 4 answer** — never after Step 3.5 skipped the menu
+using an already-saved default (that path has its own disposition above,
+with no follow-up).
+
+After the human partner answers Step 4's menu with Option 1 or Option 2
+(never Option 3 — see below), ask one lightweight follow-up before Step 5
+executes:
+
+> "Remember `<merge locally|Push+PR>` as this repo's default, so I stop
+> asking?"
+
+**Yes** → write `finish_option` (`merge_locally` for Option 1, `pr` for
+Option 2) via `digismith:preferences`' `set` operation.
+**No** → proceed normally this run; nothing is written, so Step 3.5 asks
+again next time.
+
+**Option 3 (Keep as-is) never gets this follow-up** — it's a one-off
+deferral, never a repeatable default, and is never itself a stored value.
+Skip straight to Step 5 for Option 3.
+
+Then continue to Step 5 exactly as written.
 
 ## Step 5: Execute Choice
 
@@ -201,6 +276,8 @@ place. If your platform provides a workspace-exit tool, use it.
 | 2. Create PR | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | Discard (explicit request only) | - | - | - | yes (force) |
+| 3.5 | Check `digismith:preferences` for a saved `finish_option` (normal-repo/named-branch menu only) — skip straight to Step 5 on a reused saved default (or an override/permanent-change for this run), otherwise fall through to Step 4 unchanged |
+| 4.5 | After a *fresh* Step 4 answer of Option 1 or 2 (never 3, never after a Step 3.5 skip), offer to remember it as this repo's default via `digismith:preferences` |
 
 ## Common Rationalizations
 
@@ -215,3 +292,4 @@ place. If your platform provides a workspace-exit tool, use it.
 | "The merged-result failure is probably flaky" | A failing merged result stops everything. Branch and worktree stay put while you investigate. |
 | "The base branch is obviously main" | Confirm the fork point or ask. Merging into the wrong base is expensive to undo. |
 | "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request. |
+| "A saved preference means I can skip the follow-up ask" | The first-run "remember this?" question (Step 4.5) is still required on every fresh menu answer — a saved preference is written only by explicit consent or an explicit "always" instruction, never inferred silently. |
