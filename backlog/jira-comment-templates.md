@@ -1,6 +1,8 @@
-# Reusable Jira comment templates beyond the single fixed Progress Update shape (I-lineage)
+# Reusable Jira comment templates beyond the single fixed Progress Update shape (map item I.3)
 
-**Status:** Not applied. Feature idea, not yet scoped.
+**Status:** Not applied. Feature idea, not yet scoped. Numbered **I.3** — that slot has been
+free since 2026-08-26, when the original I.3 (Figma visual regression) was split out into its
+own independent letter, **S**; see `MEMORY.md`'s **S** row. Never reused since.
 
 **Source:** Surfaced live in a separate session while working `EMKT-799` (Make.com IN
 fulfillment webhook incident) in `shopify-hub` — progress-update and investigation-update
@@ -36,9 +38,8 @@ Tickets like incident/bug investigations repeatedly need the same kind of status
 A standard template keeps formatting consistent across engineers and saves re-drafting time
 each occurrence.
 
-## Where this would land, not yet decided
+## Where this would land
 
-Likely an **I**-lineage extension — either inside `jira-progress-write-back` itself (a
-second template branch, selected by ticket type/context) or a new sibling sub-item under
-**I** for investigation-style tickets specifically, parallel to how **I.2** (multi-repo
-distribution) split off from **I.1**. No design done yet.
+**I.3**, parallel to how **I.2** (multi-repo distribution) split off from **I.1**. Not yet
+decided whether it lives inside `jira-progress-write-back` itself (a second template branch,
+selected by ticket type/context) or as its own skill. No design done yet.
