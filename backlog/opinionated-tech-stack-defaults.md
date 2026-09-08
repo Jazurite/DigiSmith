@@ -39,6 +39,19 @@ rather than assuming these generalize:
   for K.2's OpenCode install; carried into this session's monorepo
   decision without objection).
 
+**Two more confirmed 2026-09-08, during live VPS setup for the X (VPS-hosted session)
+backlog item** — a fresh Hetzner box, no existing repo/precedent to match, so these are
+clean signal rather than "matched what was already there":
+- **pnpm over npm for global CLI installs**, not just workspace/monorepo management as
+  captured above — corrected mid-flow after `npm install -g @anthropic-ai/claude-code` was
+  the first instinct offered; Jack's actual correction was "wait I'm using pnpm."
+- **nvm over a distro-packaged Node** (apt/NodeSource) on a server — corrected mid-flow a
+  second time after Node had already been installed via `apt`/NodeSource; Jack's correction
+  was "I'm using Node with nvm." Both corrections happened live, unprompted, on a task that
+  had nothing to do with brainstorming or DigiSmith itself — reinforces this isn't
+  brainstorming-specific, it's a general standing preference that should apply any time a
+  session is making a tooling choice, self-development or otherwise.
+
 ## Why this doesn't obviously fold into an existing map item
 
 Map item **G** (Standards injection) already carries "Jack's coding
