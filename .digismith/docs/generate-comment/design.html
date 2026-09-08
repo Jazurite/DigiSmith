@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generate Comment (I.3)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Generate Comment (I.3)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-08</span>
+    <span>Map item: I.3</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+<code>jira-progress-write-back</code> (map item <strong>I.1</strong>) ships exactly one hardcoded
+comment template today &mdash; the &ldquo;&#128227; Progress Update&rdquo; shape, tightly coupled to the
+PR/ephemeral-deploy flow (Materials &amp; Links, Track checklist). Incident/investigation tickets
+(surfaced live on <code>EMKT-799</code>, a Make.com IN fulfillment webhook incident) don't fit that
+shape at all &mdash; there's no ephemeral URL, no Materials &amp; Links, no Track checklist to touch, and
+the content itself is a different kind of update (what's been checked / found / needed, not
+done / next).
+</p>
+<p>
+This splits template concerns out of I.1 into a new skill, <strong>generate-comment</strong>, and adds a
+second template (Investigation Update) alongside the existing Progress Update &mdash; both stored as
+human-editable Markdown files rather than embedded inline in a skill's own steps.
+</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>Two skills, splitting &ldquo;what to say&rdquo; from &ldquo;how to post it&rdquo;:</p>
+<div class="cards">
+  <div class="card">
+    <div class="tag">New &middot; I.3</div>
+    <h4>generate-comment</h4>
+    <p>Owns template selection, content-gathering questions, and filling a Markdown template.
+    Returns filled Markdown text plus a heading-prefix string for dedup-matching.</p>
+  </div>
+  <div class="card">
+    <div class="tag">Existing &middot; I.1</div>
+    <h4>jira-progress-write-back</h4>
+    <p>Unchanged role otherwise &mdash; credentials, ticket fetch, dedup-search, description editing,
+    confirm, post. Now calls <code>generate-comment</code> instead of drafting inline, and converts
+    the returned Markdown to ADF right before posting.</p>
+  </div>
+</div>
+<p>
+Templates live at <code>skills/generate-comment/templates/progress-update.md</code> and
+<code>investigation-update.md</code> &mdash; plain Markdown with <code>&lt;placeholder&gt;</code> tokens,
+directly reviewable and editable.
+</p>
+<div class="callout">
+Emoji in the templates are literal Unicode characters in the Markdown text, not Jira's ADF
+<code>emoji</code> shortName nodes &mdash; this keeps the converter simpler, since a Unicode emoji
+character just passes through as plain text content.
+</div>
+<h3>Markdown&rarr;ADF conversion</h3>
+<p>
+Lives inside I.1 (not <code>generate-comment</code>), right before posting. <code>generate-comment</code>
+stays channel-agnostic &mdash; it only ever produces Markdown. This keeps the door open for future
+non-Jira reporting channels (map item <strong>I</strong> was broadened 2026-09-08 from
+&ldquo;QA handoff&rdquo;/Jira-only to reporting in general) to reuse the same templates and content-gathering
+logic, each owning its own conversion from the same Markdown source, without <code>generate-comment</code>
+needing to know anything about any specific channel's native format.
+</p>
+<p>
+The converter supports a deliberately narrow Markdown subset &mdash; only what the two templates
+actually use: <code>##</code>/<code>###</code> headings, <code>---</code> rule, <code>**bold**</code>,
+<code>[text](url)</code> links, <code>- </code> bullet lists, plain text with literal Unicode emoji,
+and one custom token for Jira mentions (<code>@[Name](accountId)</code>, since Markdown has no native
+mention syntax). No markdown-parser dependency &mdash; a small hand-rolled converter, matching the
+zero-dependency pattern already used elsewhere in this repo (e.g. <code>preferences.ts</code>'s
+hand-rolled <code>key: value</code> parsing instead of a YAML library).
+</p>
+</section>
+
+<section id="components">
+<h2>Components</h2>
+
+<h3>skills/generate-comment/SKILL.md (new)</h3>
+<ul>
+<li>Input: template type. If not already known from context, ask (Progress Update or Investigation
+Update) via <code>AskUserQuestion</code>.</li>
+<li>Loads <code>templates/&lt;type&gt;.md</code>.</li>
+<li><strong>Progress content:</strong> same as I.1's current Steps 9-10 &mdash; check for map item
+<strong>N</strong>'s <code>report.html</code> for &ldquo;What's done&rdquo; bullets (else draft from session
+work), ask which roles need pinging for &ldquo;Next Steps,&rdquo; resolve each name to a Jira
+<code>accountId</code> via search.</li>
+<li><strong>Investigation content:</strong> ask three bullet groups instead &mdash; what's been checked,
+what's been found, what's needed (and from whom) &mdash; same accountId resolution for the &ldquo;needed
+from&rdquo; mentions.</li>
+<li>Fills the <code>&lt;placeholder&gt;</code> tokens in the loaded Markdown.</li>
+<li>Returns: filled Markdown text + a heading-prefix string (e.g. <code>&ldquo;&#128227; Progress
+Update&rdquo;</code>) for the caller's dedup-search.</li>
+</ul>
+
+<h3>packages/jira-client/src/markdown-to-adf.ts (new)</h3>
+<p>
+The converter, living next to <code>client.ts</code> since it's ADF-domain logic the shared package
+already owns, with its own <code>markdown-to-adf.test.ts</code> alongside <code>client.test.ts</code>'s
+existing pattern. Exports one function: Markdown string &rarr; ADF <code>doc</code> JSON, over the
+narrow supported subset above. Throws a descriptive error on any construct outside that subset
+(nested lists, tables, code blocks, etc.) rather than silently dropping or mangling it.
+</p>
+
+<h3>skills/jira-progress-write-back/SKILL.md (modified)</h3>
+<ul>
+<li>New early step: determine template type &mdash; always Progress when invoked right after
+<code>capture-ephemeral-url</code> (today's only real path), otherwise ask if invoked
+standalone/explicitly.</li>
+<li>Calls <code>generate-comment</code> in place of today's Steps 9-11.</li>
+<li>Steps 4-7 (Materials &amp; Links / Track checklist description edits) now run only for Progress
+Update &mdash; skipped entirely for Investigation Update.</li>
+<li>Step 8's dedup-search now matches against the heading-prefix <code>generate-comment</code>
+returned, instead of the hardcoded <code>&ldquo;&#128227; Progress Update &ndash;&rdquo;</code> string &mdash; same
+date-boundary matching logic, just parameterized.</li>
+<li>New step right before posting: run the filled Markdown through <code>markdown-to-adf.ts</code>.</li>
+<li>Step 12's confirm-with-user preview now shows the readable Markdown instead of raw ADF JSON.</li>
+<li>Credentials, confirm/revise/cancel, write, report: unchanged.</li>
+</ul>
+</section>
+
+<section id="data-flow">
+<h2>Data Flow</h2>
+<ol>
+<li>Invoked as today &mdash; right after <code>capture-ephemeral-url</code> succeeds, or explicitly
+asked for.</li>
+<li>I.1 Steps 0-3 unchanged (profile check, ticket key resolution, credentials, fetch ticket).</li>
+<li>I.1 determines template type (auto = Progress if from the capture-URL path; otherwise ask).</li>
+<li>I.1 hands off to <code>generate-comment</code> with that type; gets back
+<code>{filledMarkdown, headingPrefix}</code>.</li>
+<li>I.1 runs Steps 4-7 (description delta) only if template = Progress.</li>
+<li>I.1 Step 8 dedup-searches comments using <code>headingPrefix</code> (same D/M boundary-check
+algorithm, now parameterized).</li>
+<li>I.1 converts <code>filledMarkdown</code> &rarr; ADF via <code>markdown-to-adf.ts</code>.</li>
+<li>I.1 Step 12: confirm (showing the Markdown, not raw ADF) &mdash; post / revise / cancel.</li>
+<li>I.1 Steps 13-15: write description (if applicable), write comment, report. Unchanged.</li>
+</ol>
+</section>
+
+<section id="error-handling">
+<h2>Error Handling</h2>
+<p>New or changed cases on top of I.1's existing table (no credentials, ensure-fails, branch
+mismatch, unresolved mentions, cancel-at-confirm, CLI failure &mdash; all unchanged):</p>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td>Template file missing/unreadable</td><td><code>generate-comment</code> stops, reports plainly,
+no fabricated draft</td></tr>
+<tr><td>Markdown outside the supported subset (hand-edited template uses something the converter
+doesn't handle)</td><td>Conversion throws before I.1 reaches Step 12; report the unsupported
+construct plainly &mdash; never silently drop or mangle it</td></tr>
+<tr><td>Malformed mention token (missing/invalid accountId)</td><td>Same as today: stop, ask, never
+guess an ID</td></tr>
+<tr><td>Unrecognized template type requested</td><td><code>generate-comment</code> errors and lists
+the valid types</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><strong>markdown-to-adf.ts</strong> is the highest-value target &mdash; real unit tests (Vitest) per
+construct: heading levels, rule, bold, links, bullet lists, plain text with Unicode emoji, and the
+mention token &mdash; plus one full round-trip test per template (filled with sample data, compared
+against a hand-written expected ADF document), and a negative test confirming an unsupported
+construct throws rather than silently mis-converting.</li>
+<li><strong>generate-comment</strong>: template-loading and placeholder-filling is a pure function once
+content answers are gathered &mdash; testable without any live Jira calls.</li>
+<li>I.1's own SKILL.md has no existing automated test suite (it's an agentic instruction file, not
+code) &mdash; verification stays manual/live, same as today; only the new <code>markdown-to-adf.ts</code>
+module gets real automated tests.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li>A third template type (only Progress Update and Investigation Update are designed here; the
+mechanism supports adding more later without redesign).</li>
+<li>Full CommonMark support &mdash; the converter only handles the specific subset the two templates
+use.</li>
+<li>Any non-Jira reporting channel (Slack, email) &mdash; the architecture leaves room for it (map item
+<strong>I</strong>'s broadened scope), but no such channel is built here. This is the backlog item
+previously captured loosely as a future <strong>I.4</strong>.</li>
+<li>Auto-detecting template type from Jira issue metadata, or a profile-level default &mdash; explicit
+ask only, per this design's own decision.</li>
+</ul>
+</section>
+
+<footer>DigiSmith &middot; .digismith/docs/generate-comment/design.html</footer>
+
+</body>
+</html>
