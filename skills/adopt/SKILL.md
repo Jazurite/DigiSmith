@@ -58,8 +58,12 @@ name. The resolved profile's `ticket`, `ephemeral`, `standards`,
 the rest of this process, exactly as they would be for `digismith:bootstrap`.
 
 Then run `digismith:bootstrap`'s Step 0.5 exactly — invoke
-`digismith:depot`'s `ensure` operation. Same failure disposition: if it
+`digismith:depot`'s `ensure` operation, then, if `ticket: true`, check
+Jira credentials the same way. Same failure disposition: if `ensure`
 fails, stop here entirely, report the error, do not proceed to Step 3.
+A declined credential prompt does not stop the flow — same non-blocking
+disposition `digismith:bootstrap` Step 0.5 documents — continue to Step
+3 regardless.
 
 ### Step 3: Get the Ticket and Resolve the Slug
 
@@ -330,7 +334,7 @@ it triggers off the dispatch itself, not off which entry point produced it.
 | Step | Action |
 |---|---|
 | 1 | Confirm ticket key, plan path (required), spec path (optional); read the plan's (and spec's) full content into context now, before any worktree switch |
-| 2 | Resolve profile and ensure the DigiSmith runtime clone — run `digismith:bootstrap` Step 0, then Step 0.5, exactly |
+| 2 | Resolve profile and ensure the DigiSmith runtime clone — run `digismith:bootstrap` Step 0, then Step 0.5, exactly (including its `ticket: true` Jira credential check) |
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/profile`, `.digismith/preferences.yml` (if the original checkout has one), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |

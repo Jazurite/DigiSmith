@@ -136,7 +136,7 @@ being worked in — `depot` always targets the same fixed, machine-wide
 running in.
 
 **Succeeds** (clone already present, or freshly provisioned) → continue
-to Step 1.
+to the Jira credential check below.
 
 **Fails** (see `digismith:depot`'s own Error Handling — no SSH access,
 network unreachable, or any other git failure) → stop here. Report the
@@ -152,6 +152,29 @@ lives outside every repo and worktree entirely, shared machine-wide — once
 `ensure` has run successfully anywhere on this machine, every later
 worktree (for this ticket or any other) already sees it at the same
 fixed path.
+
+**Then, if the active profile's `ticket` field is `true`, check Jira
+credentials too** — the same check `jira-progress-write-back` Step 2
+performs, just moved up here so a missing `.env` surfaces at ticket
+start instead of as a mid-build surprise the first time write-back
+actually runs:
+
+```bash
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts check-credentials
+```
+
+**Exit 0** → continue to Step 1.
+
+**Exit 1** → prompt for and write the three credential values exactly as
+`jira-progress-write-back` Step 2 does on its own Exit 1 (same
+`AskUserQuestion`, same `~/.digismith-depot/.env` target), then re-run
+`check-credentials` to confirm. If the user declines to provide them,
+don't block ticket creation over it — note plainly that Jira write-back
+will fail later until credentials are set up, and continue to Step 1
+regardless.
+
+If the active profile's `ticket` field is `false`, skip this credential
+check entirely — continue straight to Step 1.
 
 ### Step 1: Get a Real Ticket
 
@@ -434,6 +457,12 @@ not re-invoke or duplicate any part of that chain yourself.
 - **`.digismith/profile` names a profile with no matching
   `profiles/<name>.yml`** → treat as stale, re-run the first-use picker
   rather than guessing.
+- **`ticket: true` but Jira credentials are missing/incomplete, and the
+  user declines to provide them at Step 0.5** → don't block ticket
+  creation. Note plainly that Jira write-back will fail until
+  `~/.digismith-depot/.env` is set up, and continue to Step 1 regardless — the
+  same eventual failure `jira-progress-write-back` Step 2 documents, just
+  surfaced earlier without becoming a new hard stop.
 - **`.digismith/profile` absent inside the worktree Step 2 produced** →
   expected, not an error: a worktree checks out only committed files.
   Copy it in from the original checkout (Step 2.6). Never resolve this
@@ -463,7 +492,7 @@ not re-invoke or duplicate any part of that chain yourself.
 | Step | Action |
 |---|---|
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
-| 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails |
+| 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails. Then, if `ticket: true`, `check-credentials` — bootstrap via `AskUserQuestion` if incomplete; declining doesn't block, just defers the failure to write-back time |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile`, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run), and **2.8** copy `.digismith/preferences.yml` if the original checkout has one — all three plain file copies, never `git add -f` |
