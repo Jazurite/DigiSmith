@@ -1,6 +1,8 @@
-# Post-finish hooks assume the Option-1 merge flow — a direct-to-main push leaves them stranded
+# Post-finish hooks assume the Option-1 merge flow — a direct-to-main push leaves them stranded (map item Y)
 
-**Status:** Not applied. Observational — surfaced by a real occurrence, not yet patched.
+**Status:** Not applied. Observational — surfaced by a real occurrence, not yet patched. A gap
+in **Y.1**'s shipped `post-finish` hooks (`.digismith/hooks/post-finish/`), not a new letter —
+see `MEMORY.md`'s **Y** row and `.digismith/docs/lifecycle-hooks/design.html`.
 
 **Source:** 2026-09-08, DigiSmith self-development session applying jira-progress-write-back
 credential-path fixes found via a live feedback report. Work was committed directly on `main`
