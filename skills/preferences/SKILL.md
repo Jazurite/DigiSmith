@@ -1,6 +1,6 @@
 ---
 name: preferences
-description: Read, write, or clear a small per-repo setting persisted in `.digismith/preferences.yml` — general infrastructure any DigiSmith skill can call into (starting with `finishing-a-development-branch`'s saved finish-option check, map item W.8) or that Jack can invoke directly ("what's my preference for X in this repo", "set my preference for X to Y", "clear my preference for X in this repo"). Not for enumerating/listing every preference set for a repo — no known use case yet.
+description: Read, write, or clear a small per-repo setting persisted in `.digismith/preferences.yml` — general infrastructure any DigiSmith skill can call into (starting with `finishing-a-development-branch`'s saved finish-option check, map item H.1) or that Jack can invoke directly ("what's my preference for X in this repo", "set my preference for X to Y", "clear my preference for X in this repo"). Not for enumerating/listing every preference set for a repo — no known use case yet.
 ---
 
 # Preferences
@@ -11,7 +11,7 @@ DigiSmith's map item **H** (reusing the letter freed when W.6 retired the old
 `digismith:subagent-driven-always`). A general per-repo settings store for any
 small setting decided through live interaction rather than hand-authored —
 first consumer: `finishing-a-development-branch`'s saved finish-option check
-(map item W.8, not yet built).
+(map item H.1).
 
 ## Invoked By
 
