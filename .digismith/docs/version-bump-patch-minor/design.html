@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Version-Bump Patch/Minor Distinction (W.4.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Version-Bump Patch/Minor Distinction (W.4.1)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-08</span>
+    <span>Map item: W.4.1 (further hardening of the already-shipped version-bump mechanism)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — bumpTypeSince</a></li>
+    <li><a href="#s2">Section 2 — computeNextVersion's new parameter</a></li>
+    <li><a href="#s3">Section 3 — Wiring into main()</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p><code>.digismith/hooks/post-finish/scripts/bump-plugin-version.ts</code>'s
+<code>computeNextVersion</code> always increments the minor version field and resets patch to
+<code>0</code>, with no distinction between a patch-worthy change and a minor-worthy one. This
+was caught live on 2026-09-08 by a separate Claude Code session (<code>digismith-64</code>)
+applying three <code>fix(...)</code> commits (jira-progress-write-back credential-path fixes)
+directly to <code>main</code>: the script bumped <code>0.29.0-beta</code> straight to
+<code>0.30.0-beta</code> instead of the patch-level <code>0.29.1-beta</code> those commits
+actually warranted. Caught before pushing further and corrected by hand. Full incident writeup:
+<code>backlog/check-vendored-skills-hardening.md</code>, under its
+<code>## bump-plugin-version.ts (map item W.4.1)</code> section (now superseded by this spec —
+see Section 4 of the plan for its retirement).</p>
+<p>Checked the full history of <code>.claude-plugin/plugin.json</code>'s version field: every
+bump on record, back to <code>0.1.0</code>, has been <code>X.Y.0</code> → <code>X.(Y+1).0</code>.
+There has never been a patch-level bump. DigiSmith's own commits already follow conventional
+prefixes (<code>fix:</code>, <code>feat:</code>, <code>chore:</code>, <code>docs:</code>) fairly
+consistently — the raw material for a real patch-vs-minor decision already exists in commit
+history; the script simply never looks at it.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — bumpTypeSince</h2>
+<p>A new exported function, <code>bumpTypeSince(baseSha: string, cwd: string =
+process.cwd()): "patch" | "minor"</code>, added to <code>bump-plugin-version.ts</code> alongside
+the existing <code>versionChangedSince</code> (same file, same real-git-fixture testing style —
+no mocking). It runs <code>git log &lt;baseSha&gt;..HEAD --format=%s</code> via
+<code>spawnSync</code> in <code>cwd</code> (throws on a non-zero exit, matching the file's
+existing fail-loud convention), splits stdout into non-empty lines, and returns
+<code>"patch"</code> only when that list is non-empty <strong>and</strong> every line matches
+<code>/^fix(\([^)]*\))?:/</code> — anchored at the start, so <code>fix:</code> and
+<code>fix(bootstrap):</code> and <code>fix(bootstrap,adopt):</code> all match, while git's own
+<code>fixup!: ...</code> marker commits correctly do not (the anchor requires <code>fix</code> to
+be immediately followed by either <code>(</code> or <code>:</code>, and <code>fixup!</code> is
+neither). Every other case — an empty commit range, any <code>feat</code>/<code>docs</code>/
+<code>chore</code>/unrecognized-prefix commit anywhere in the range, or any mix of <code>fix</code>
+with anything else — returns <code>"minor"</code>. This conservative default is deliberate: a
+single <code>docs(...)</code> commit in this repo can change load-bearing
+<code>SKILL.md</code> content that genuinely needs the plugin cache invalidated, so a mixed batch
+is never assumed to be patch-safe.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — computeNextVersion's new parameter</h2>
+<p><code>computeNextVersion(current: string, bumpType: "patch" | "minor" = "minor"): string</code>
+gains a second, defaulted parameter. <code>"minor"</code> (the default) is byte-for-byte today's
+existing behavior — increments the minor field, resets patch to <code>0</code>, keeps the
+prerelease suffix — so every existing call site and every existing test keeps passing completely
+unchanged. <code>"patch"</code> increments only the patch slot (major and minor untouched,
+prerelease suffix still preserved). Major-version bumps are explicitly out of scope — DigiSmith
+stays at major <code>0</code> throughout its beta lifetime per standing convention, and nothing
+here changes that.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — Wiring into main()</h2>
+<p><code>main()</code> changes minimally: today, when <code>args.base</code> is provided, it
+already calls <code>versionChangedSince(args.base, PLUGIN_JSON_PATH)</code> to decide whether to
+skip. Now, immediately after that check passes (i.e., a bump is actually going to happen), and
+only when <code>args.base</code> is provided (there's no commit range to inspect without a base
+to compare against), it also calls <code>bumpTypeSince(args.base)</code> and passes the result
+into <code>computeNextVersion</code>. The no-<code>--base</code> manual-invocation path — the
+exact path used during the incident that found this bug — keeps defaulting to
+<code>"minor"</code>, unchanged, since there's no commit range available to inspect.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li>New <code>describe("bumpTypeSince", ...)</code> block in
+<code>bump-plugin-version.test.ts</code>, reusing the existing <code>initVersionFixtureRepo</code>
+real-git-repo fixture helper (extended to accept a list of commit messages instead of just one
+fixture commit, or built up via sequential real commits in each test — no mocking, consistent
+with every other test in this file). Cases: a range of pure <code>fix(...)</code> commits →
+<code>"patch"</code>; a range with one <code>feat(...)</code> mixed in → <code>"minor"</code>; a
+range with one <code>docs(...)</code> or <code>chore(...)</code> mixed in → <code>"minor"</code>;
+a range containing a <code>fixup!: ...</code> commit → <code>"minor"</code> (proves the anchored
+regex correctly rejects git's own fixup marker); an empty range (base equals HEAD, no new
+commits) → <code>"minor"</code>.</li>
+<li>New case in the existing <code>describe("computeNextVersion", ...)</code> block: the
+<code>"patch"</code> argument bumps only the patch slot (e.g. <code>"0.29.0-beta"</code> +
+<code>"patch"</code> → <code>"0.29.1-beta"</code> — the exact transition the real incident
+needed), and confirm the existing minor-bump tests still pass unchanged with no second argument
+supplied (proving the default preserves current behavior exactly).</li>
+<li>Manual verification after implementation: none required beyond the automated suite — this
+change has no user-facing CLI surface beyond what's already tested, and the next real DigiSmith
+merge through <code>finishing-a-development-branch</code>'s <code>post-finish</code> hook will
+exercise it live regardless.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Major-version bumps — DigiSmith stays at major <code>0</code> through beta; nothing in this
+change introduces a path to major <code>1</code>.</li>
+<li>A diff-content-based heuristic (classifying by which files/lines actually changed rather than
+by commit-message prefix) — considered and rejected: more accurate in principle, meaningfully
+more complex, and this repo's commit-message discipline has been reliable enough in practice that
+the added complexity isn't justified (YAGNI).</li>
+<li>Retiring the now-superseded <code>backlog/check-vendored-skills-hardening.md</code>
+<code>## bump-plugin-version.ts (map item W.4.1)</code> section — handled as the implementation
+plan's own final task, same pattern every other W sub-item this session has used for its
+originating backlog item.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/version-bump-patch-minor/design.html</footer>
+
+</body>
+</html>
