@@ -8,6 +8,7 @@ import {
   readPluginVersion,
   bumpVersionInFile,
   versionChangedSince,
+  bumpTypeSince,
 } from "./bump-plugin-version.ts";
 
 function initVersionFixtureRepo(dir: string, version: string): void {
@@ -17,6 +18,10 @@ function initVersionFixtureRepo(dir: string, version: string): void {
   spawnSync("git", ["config", "user.name", "Test"], { cwd: dir });
   spawnSync("git", ["add", "-A"], { cwd: dir });
   spawnSync("git", ["commit", "-q", "-m", "fixture commit"], { cwd: dir });
+}
+
+function commitMessage(dir: string, message: string): void {
+  spawnSync("git", ["commit", "--allow-empty", "-q", "-m", message], { cwd: dir });
 }
 
 describe("computeNextVersion", () => {
@@ -30,6 +35,10 @@ describe("computeNextVersion", () => {
 
   it("throws a clear error for a malformed version string", () => {
     expect(() => computeNextVersion("not-a-version")).toThrow("Cannot parse version");
+  });
+
+  it("bumps only the patch field when bumpType is \"patch\"", () => {
+    expect(computeNextVersion("0.29.0-beta", "patch")).toBe("0.29.1-beta");
   });
 });
 
@@ -103,6 +112,75 @@ describe("versionChangedSince", () => {
       fs.writeFileSync(path.join(repoDir, "plugin.json"), JSON.stringify({ name: "digismith", version: "0.24.0-beta" }));
 
       expect(versionChangedSince(baseSha, "plugin.json", repoDir)).toBe(true);
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("bumpTypeSince", () => {
+  it("returns patch when every commit since base is a conventional fix", () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-type-"));
+    try {
+      initVersionFixtureRepo(repoDir, "0.29.0-beta");
+      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).stdout.trim();
+      commitMessage(repoDir, "fix(hooks): flush superseded plugin cache versions on reinstall");
+      commitMessage(repoDir, "fix(bootstrap,adopt): check Jira credentials at ticket start");
+
+      expect(bumpTypeSince(baseSha, repoDir)).toBe("patch");
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns minor when a feat commit is mixed in", () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-type-"));
+    try {
+      initVersionFixtureRepo(repoDir, "0.29.0-beta");
+      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).stdout.trim();
+      commitMessage(repoDir, "fix(hooks): flush superseded plugin cache versions");
+      commitMessage(repoDir, "feat(preferences): add get/set/clear CLI");
+
+      expect(bumpTypeSince(baseSha, repoDir)).toBe("minor");
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns minor when a docs or chore commit is mixed in", () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-type-"));
+    try {
+      initVersionFixtureRepo(repoDir, "0.29.0-beta");
+      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).stdout.trim();
+      commitMessage(repoDir, "fix(hooks): flush superseded plugin cache versions");
+      commitMessage(repoDir, "docs(backlog): record a finding");
+
+      expect(bumpTypeSince(baseSha, repoDir)).toBe("minor");
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns minor for a fixup! commit, not patch", () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-type-"));
+    try {
+      initVersionFixtureRepo(repoDir, "0.29.0-beta");
+      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).stdout.trim();
+      commitMessage(repoDir, "fixup! fix(hooks): flush superseded plugin cache versions");
+
+      expect(bumpTypeSince(baseSha, repoDir)).toBe("minor");
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns minor for an empty commit range", () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-type-"));
+    try {
+      initVersionFixtureRepo(repoDir, "0.29.0-beta");
+      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: repoDir, encoding: "utf8" }).stdout.trim();
+
+      expect(bumpTypeSince(baseSha, repoDir)).toBe("minor");
     } finally {
       fs.rmSync(repoDir, { recursive: true, force: true });
     }
