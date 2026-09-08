@@ -276,8 +276,6 @@ place. If your platform provides a workspace-exit tool, use it.
 | 2. Create PR | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | Discard (explicit request only) | - | - | - | yes (force) |
-| 3.5 | Check `digismith:preferences` for a saved `finish_option` (normal-repo/named-branch menu only) — skip straight to Step 5 on a reused saved default (or an override/permanent-change for this run), otherwise fall through to Step 4 unchanged |
-| 4.5 | After a *fresh* Step 4 answer of Option 1 or 2 (never 3, never after a Step 3.5 skip), offer to remember it as this repo's default via `digismith:preferences` |
 
 ## Common Rationalizations
 
