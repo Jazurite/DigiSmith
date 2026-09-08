@@ -62,8 +62,8 @@ details — this step never duplicates them).
 default to check — skip this step entirely in that case and go straight to
 Step 4's detached-HEAD menu.
 
-**Returns `unset`** → no saved default. Continue to Step 4 exactly as
-written, unchanged.
+**Returns `unset` — or any value other than `merge_locally`/`pr`** → no
+saved default. Continue to Step 4 exactly as written, unchanged.
 
 **Returns `merge_locally` or `pr`** → a saved default exists for this repo.
 Check the human partner's own message for *this specific run* for either of
@@ -144,6 +144,12 @@ executes:
 
 > "Remember `<merge locally|Push+PR>` as this repo's default, so I stop
 > asking?"
+
+**If this fresh answer follows a "show the menu" request while a saved
+default already existed** (Step 3.5's last bullet) → phrase the follow-up
+as *"Change this repo's saved default to `<merge locally|Push+PR>`?"*
+instead — a saved default already exists, so "so I stop asking" doesn't
+fit; everything else about the Yes/No handling below stays identical.
 
 **Yes** → write `finish_option` (`merge_locally` for Option 1, `pr` for
 Option 2) via `digismith:preferences`' `set` operation.
@@ -276,6 +282,10 @@ place. If your platform provides a workspace-exit tool, use it.
 | 2. Create PR | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | Discard (explicit request only) | - | - | - | yes (force) |
+
+Steps 3.5/4.5 can skip this menu entirely when a `finish_option`
+preference is already saved for the repo — see those steps for the full
+logic.
 
 ## Common Rationalizations
 
