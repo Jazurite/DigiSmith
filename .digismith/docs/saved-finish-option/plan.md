@@ -132,6 +132,14 @@ unchanged, add these two in step order):
 | 4.5 | After a *fresh* Step 4 answer of Option 1 or 2 (never 3, never after a Step 3.5 skip), offer to remember it as this repo's default via `digismith:preferences` |
 ```
 
+> **Reverted during this task's fix round.** The existing Quick Reference
+> table's schema (Option/Merge/Push/Keep Worktree/Cleanup Branch) doesn't
+> fit Step 3.5/4.5 — they aren't menu options, they're checks that run
+> around the menu. Rather than force-fit two rows into columns that don't
+> describe them, the rows were removed; the shipped file instead adds one
+> short pointer sentence directly under the table (see the final-review
+> fix report for this branch).
+
 - [ ] **Step 4: Add a Common Rationalizations row**
 
 Insert into the existing Common Rationalizations table:
