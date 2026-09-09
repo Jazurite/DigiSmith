@@ -38,6 +38,52 @@ function forwardableHeaders(req: IncomingMessage): Record<string, string> {
   return headers;
 }
 
+/**
+ * Emits one complete Anthropic Messages SSE event sequence for a fully
+ * buffered response — not true incremental streaming (nothing consumes
+ * this live), just the same event shapes a real streaming response uses,
+ * so a client that requested `stream: true` gets a response its own
+ * parser recognizes.
+ */
+function writeAsSse(res: ServerResponse, message: AnthropicMessagesResponse): void {
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+  });
+  const send = (event: string, data: unknown): void => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  send("message_start", { type: "message_start", message: { ...message, content: [], stop_reason: null } });
+
+  message.content.forEach((block, index) => {
+    send("content_block_start", { type: "content_block_start", index, content_block: block });
+    if (block.type === "text") {
+      send("content_block_delta", {
+        type: "content_block_delta",
+        index,
+        delta: { type: "text_delta", text: block.text ?? "" },
+      });
+    } else if (block.type === "tool_use") {
+      send("content_block_delta", {
+        type: "content_block_delta",
+        index,
+        delta: { type: "input_json_delta", partial_json: JSON.stringify(block.input ?? {}) },
+      });
+    }
+    send("content_block_stop", { type: "content_block_stop", index });
+  });
+
+  send("message_delta", {
+    type: "message_delta",
+    delta: { stop_reason: message.stop_reason, stop_sequence: message.stop_sequence },
+    usage: message.usage,
+  });
+  send("message_stop", { type: "message_stop" });
+  res.end();
+}
+
 /** Builds the proxy's request handler against a given TokenReply-compatible base URL. */
 export function createRequestHandler(upstreamBaseUrl: string) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -73,8 +119,12 @@ export function createRequestHandler(upstreamBaseUrl: string) {
         }
       }
 
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(finalResponse));
+      if (requestJson.stream === true) {
+        writeAsSse(res, finalResponse);
+      } else {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(finalResponse));
+      }
     } catch (err) {
       if (!res.headersSent) {
         res.writeHead(502, { "content-type": "application/json" });

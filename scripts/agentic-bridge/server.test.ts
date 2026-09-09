@@ -107,7 +107,20 @@ describe("createRequestHandler — non-streaming", () => {
       content: [{ type: "text", text: "ok" }], model: "kimi-k2.7",
       stop_reason: "end_turn", stop_sequence: null,
     };
-    await postToProxy({ model: "kimi-k2.7", stream: true, messages: [] });
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port } = proxy.address() as AddressInfo;
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": "test-key" },
+        body: JSON.stringify({ model: "kimi-k2.7", stream: true, messages: [] }),
+      });
+      await res.text();
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
     expect(JSON.parse(lastUpstreamRequestBody).stream).toBe(false);
   });
 
@@ -260,6 +273,62 @@ describe("createRequestHandler — non-streaming", () => {
     } catch (err) {
       // Acceptable if fetch errors, as long as proxy doesn't crash
       expect(err).toBeDefined();
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
+  });
+});
+
+describe("createRequestHandler — streaming", () => {
+  it("wraps the buffered result in a full Anthropic SSE event sequence when the client requests stream:true", async () => {
+    fakeUpstreamResponse = {
+      id: "msg_4",
+      type: "message",
+      role: "assistant",
+      content: [{
+        type: "text",
+        text: '<|open|>tools<|sep|><|open|>call tool="Read" index="1"<|sep|><|open|>argument key="file_path" type="string"<|sep|>README.md<|close|>argument<|sep|><|close|>call<|sep|><|close|>tools<|sep|>',
+      }],
+      model: "kimi-k3",
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage: { input_tokens: 15, output_tokens: 6 },
+    };
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port } = proxy.address() as AddressInfo;
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "kimi-k3", stream: true, messages: [] }),
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("text/event-stream");
+      const raw = await res.text();
+
+      const events = raw
+        .trim()
+        .split("\n\n")
+        .map((chunk) => {
+          const [eventLine, dataLine] = chunk.split("\n");
+          return { event: eventLine.replace("event: ", ""), data: JSON.parse(dataLine.replace("data: ", "")) };
+        });
+
+      expect(events.map((e) => e.event)).toEqual([
+        "message_start",
+        "content_block_start",
+        "content_block_delta",
+        "content_block_stop",
+        "message_delta",
+        "message_stop",
+      ]);
+      expect(events[1].data.content_block.type).toBe("tool_use");
+      expect(events[1].data.content_block.name).toBe("Read");
+      expect(events[2].data.delta.type).toBe("input_json_delta");
+      expect(JSON.parse(events[2].data.delta.partial_json)).toEqual({ file_path: "README.md" });
+      expect(events[4].data.delta.stop_reason).toBe("tool_use");
     } finally {
       await new Promise<void>((resolve) => proxy.close(() => resolve()));
     }
