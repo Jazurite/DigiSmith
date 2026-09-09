@@ -1,6 +1,6 @@
 ---
 name: teams-pr-review-notification
-description: Use right after finishing-a-development-branch's Option 2 (Push and Create PR) reports a new PR's URL, or when explicitly asked to draft a Teams review-request message — generates ready-to-paste text only, matching Jack's own real message style; never connects to Teams itself.
+description: Use right after finishing-a-development-branch's Option 2 (Push and Create PR) reports a new PR's URL and Jack accepts the offer to draft one, or when explicitly asked to draft a Teams review-request message — generates ready-to-paste text only, matching Jack's own real message style; never connects to Teams itself.
 ---
 
 # Teams PR-Review Notification
@@ -71,8 +71,10 @@ for the reviewer name(s) to tag this time (a single free-text answer,
 comma-separated if more than one). Then ask a lightweight follow-up:
 "Remember this as the default reviewer list for this repo?" **Yes** →
 write it via `digismith:preferences`' `set` operation for key
-`teams_reviewers`. **No** → proceed with just this run's answer; ask
-again next time, never treat a decline as "stop asking."
+`teams_reviewers`, passing the value quoted (`--value "<names>"`) since it
+contains spaces and commas that an unquoted CLI arg would silently
+truncate after the first token. **No** → proceed with just this run's
+answer; ask again next time, never treat a decline as "stop asking."
 
 ## Step 4: Determine the Ask Line
 
@@ -93,10 +95,14 @@ Hello 500 ae (<reviewer names from Step 3>) -- <ask line from Step 4>
 
 - `Hello 500 ae` is fixed, literal text — reused verbatim every time, never
   derived or computed.
+- When `<Key>` is known but no ticket title is available, ask for it
+  directly rather than fabricating one (same rule as Step 4's ask line).
 - The ticket line (`<Key>: <Ticket title>`) is omitted entirely when there
-  is no real ticket key — never write a placeholder in its place.
-- One `🔗 <market> PR: <link>` line per PR gathered in Step 2, in the same
-  order they were gathered. `<market>` is derived the same way
+  is no real ticket key, or a key with no title available and none
+  obtained by asking — never write a placeholder in its place.
+- One `🔗 <market> PR: <link>` line per PR known from Step 1's caller
+  context or gathered in Step 2, in the same order they were gathered.
+  `<market>` is derived the same way
   `jira-progress-write-back` Step 4 already does: if the repo's directory
   name matches `shopify-template-<code>`, the label is `<code>` uppercased
   (e.g. `shopify-template-jp` → `JP`); otherwise the repo directory name
