@@ -65,7 +65,9 @@ function isSpecialLine(line: string): boolean {
     /^>/.test(line) ||
     /^\d+\.\s+/.test(line) ||
     /^\s+[-*]\s+/.test(line) ||
-    /^\|/.test(line)
+    /^\|/.test(line) ||
+    /!\[[^\]]*\]\([^)]*\)/.test(line) ||
+    /`[^`]*`/.test(line)
   );
 }
 
@@ -87,6 +89,8 @@ export function markdownToAdf(markdown: string): AdfDoc {
     if (/^\d+\.\s+/.test(line)) unsupported("numbered list", line);
     if (/^\s+[-*]\s+/.test(line)) unsupported("nested list", line);
     if (/^\|/.test(line)) unsupported("table", line);
+    if (/!\[[^\]]*\]\([^)]*\)/.test(line)) unsupported("image", line);
+    if (/`[^`]*`/.test(line)) unsupported("inline code span", line);
 
     const headingMatch = /^(#{1,6})\s+(.*)$/.exec(line);
     if (headingMatch) {

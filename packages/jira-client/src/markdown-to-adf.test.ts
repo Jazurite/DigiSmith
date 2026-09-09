@@ -108,6 +108,18 @@ describe("markdownToAdf", () => {
     expect(() => markdownToAdf("##### Too small")).toThrow(/heading level 5/);
   });
 
+  it("throws on an unsupported heading level (2)", () => {
+    expect(() => markdownToAdf("## Too big")).toThrow(/heading level 2/);
+  });
+
+  it("throws on image syntax", () => {
+    expect(() => markdownToAdf("![alt](https://x.com/img.png)")).toThrow(/image/);
+  });
+
+  it("throws on an inline code span", () => {
+    expect(() => markdownToAdf("run `npm test` now")).toThrow(/inline code/);
+  });
+
   it("round-trips the filled progress-update.md content into the expected ADF document", () => {
     const filled = [
       "### 📣 Progress Update – 26/8",
