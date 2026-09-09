@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teams PR-Review Notification (I.4) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Teams PR-Review Notification (I.4) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-09</span>
+    <span>Map item: <strong>I.4</strong></span>
+    <span>Commit range: <code>12c989d..e9d4aa6</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Generates a ready-to-paste Microsoft Teams review-request message — matching Jack's own real message style exactly — either automatically offered right after a PR is created, or on direct request, covering both a single PR and a multi-repo epic (several PRs across market repos sharing one ticket). A new skill, <code>skills/teams-pr-review-notification/SKILL.md</code>, does all the templating and asking; it's wired into exactly one existing file, where <code>finishing-a-development-branch</code>'s Option 2 gains a one-line offer to invoke it right after reporting a new PR's URL. No new packages, no live Teams connection of any kind — pure text templating plus <code>AskUserQuestion</code> prompts, reusing the existing <code>digismith:preferences</code> skill for a saved-default reviewer list. Followed the full Superpowers process: brainstorming &rarr; spec &rarr; writing-plans &rarr; <code>digismith:subagent-driven-development</code> (2 tasks, each dispatched to a fresh implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Teams PR-review notification skill</h4><p>A new skill, <code>digismith:teams-pr-review-notification</code>, taking optional pre-known PR title/URL/ticket-key context from a caller (used by Task 2's auto-offer) or resolving everything itself when invoked directly with no context.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Auto-offer wiring and backlog retirement</h4><p>Wires an auto-offer into <code>finishing-a-development-branch</code>'s Option 2 to invoke the new skill after PR creation, and retires the now-applied <code>backlog/teams-pr-review-notification.md</code> item.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Create the Teams PR-review notification skill</td><td>New skill file, complete templating/asking logic</td><td>Approved, clean</td><td>None</td></tr>
+    <tr><td>2. Wire the auto-offer, retire the backlog item</td><td>Auto-offer paragraph + rationalization row in <code>finishing-a-development-branch</code>; backlog cleanup</td><td>Approved, clean</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes &mdash; 3 Important and 6 Minor findings; 5 fixed in one round, 5 parked as non-blocking (including one new Minor found during the fix-wave re-review).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Neither single-PR path (auto-offered or on-demand) ever obtains a ticket <em>title</em>, only the ticket key, yet the template renders both &mdash; risking fabrication</td><td>Fixed: Step 5 now asks directly for the title when a key is known but no title is available, and the omission rule covers that case too</td></tr>
+    <tr><td>Important</td><td><code>MEMORY.md</code>'s I.4 row was stale, describing the feature as not yet built and pointing at the backlog file this branch deletes</td><td>Fixed: updated to shipped status, pointing at <code>design.html</code> instead, matching I.1's own style</td></tr>
+    <tr><td>Important</td><td>An unquoted multi-word/comma-containing <code>--value</code> passed to <code>scripts/preferences.ts</code> would be silently truncated to its first token</td><td>Fixed: Step 3 now instructs passing the value quoted</td></tr>
+    <tr><td>Minor</td><td>A line said PR links are "gathered in Step 2," wrong for the auto-offered path where Step 2 is skipped</td><td>Fixed: reworded to cover both the caller-context and Step-2 sources</td></tr>
+    <tr><td>Minor</td><td>The market-label convention (reused from <code>jira-progress-write-back</code>) derives from the repo directory name, which breaks inside a kept worktree &mdash; the auto-offer's normal habitat</td><td>Parked &mdash; a shared-convention issue affecting both skills; recommended as its own backlog item rather than a unilateral fix on this branch</td></tr>
+    <tr><td>Minor</td><td>The frontmatter <code>description</code> read as an unconditional trigger, omitting the confirmation gate the body enforces</td><td>Fixed: reworded to state the offer must be accepted first</td></tr>
+    <tr><td>Minor</td><td>The skill's design-doc pointer is DigiSmith-repo-relative and won't resolve from a consumer repo</td><td>Parked &mdash; low impact, a prose pointer the skill never acts on</td></tr>
+    <tr><td>Minor</td><td>Reviewer full names now persist to <code>.digismith/preferences.yml</code>, which is committable in repos where <code>.digismith/</code> isn't gitignored</td><td>Parked &mdash; a conscious tradeoff (internal names in an internal repo), not a bug</td></tr>
+    <tr><td>Minor</td><td>The new auto-offer is the only explicitly wired follow-up in Option 2, occupying the same moment the (unwired-by-convention) ephemeral-capture/JIRA-write-back chain normally fires</td><td>Parked &mdash; no actual conflict, just an ordering ambiguity worth a half-sentence note later</td></tr>
+    <tr><td>Minor</td><td>Found during fix-wave re-review: the Quick Reference and Error Handling summary tables weren't updated to mirror Step 5's fuller ticket-title-omission rule</td><td>Parked &mdash; non-blocking documentation nit; Step 5 remains the authoritative, correct instruction</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">f8320f1</span> feat(teams-pr-review-notification): add I.4 skill for Teams review-request messages</li>
+    <li><span class="sha">174d527</span> feat(finishing-a-development-branch): offer a Teams review-request draft after PR creation (I.4)</li>
+    <li><span class="sha">e9d4aa6</span> fix(I.4): address final-review findings — ticket-title sourcing, MEMORY.md staleness, preferences quoting</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/teams-pr-review-notification/report.html</footer>
+
+</body>
+</html>
