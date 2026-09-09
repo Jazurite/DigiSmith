@@ -222,6 +222,15 @@ present, and report the URL to your human partner.
 
 Keep the worktree — your human partner iterates on PR feedback there.
 
+Once the PR is created and its URL reported, offer one lightweight
+follow-up: *"Draft a Teams review-request message for this PR?"*
+**Yes** → invoke `digismith:teams-pr-review-notification`, passing this
+PR's title, URL, and the current ticket key if the branch name matched
+`<Key>__<slug>`. **No** → say nothing further, proceed normally. Never
+invoke it unasked — this is an offer, not an automatic action, the same
+disposition Step 4.5's "remember this?" follow-up already has for a
+different case.
+
 ### Option 3: Keep As-Is
 
 Report: "Keeping branch <name>. Worktree preserved at <path>."
@@ -301,3 +310,4 @@ logic.
 | "The base branch is obviously main" | Confirm the fork point or ask. Merging into the wrong base is expensive to undo. |
 | "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request. |
 | "A saved preference means I can skip the follow-up ask" | The first-run "remember this?" question (Step 4.5) is still required on every fresh menu answer — a saved preference is written only by explicit consent or an explicit "always" instruction, never inferred silently. |
+| "The PR was just created, they'd obviously want a Teams message too" | Always ask first — this is an offer, never an automatic action. Declining is a normal outcome, not something to talk them out of. |
