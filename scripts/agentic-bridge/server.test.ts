@@ -27,12 +27,15 @@ afterEach(async () => {
   await new Promise<void>((resolve) => fakeUpstream.close(() => resolve()));
 });
 
-async function postToProxy(body: Record<string, unknown>): Promise<{ status: number; json: unknown }> {
+async function postToProxy(
+  body: Record<string, unknown>,
+  path: string = "/messages"
+): Promise<{ status: number; json: unknown }> {
   const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
   await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
   const { port } = proxy.address() as AddressInfo;
   try {
-    const res = await fetch(`http://127.0.0.1:${port}/messages`, {
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": "test-key" },
       body: JSON.stringify(body),
@@ -106,5 +109,89 @@ describe("createRequestHandler — non-streaming", () => {
     };
     await postToProxy({ model: "kimi-k2.7", stream: true, messages: [] });
     expect(JSON.parse(lastUpstreamRequestBody).stream).toBe(false);
+  });
+
+  it("correctly resolves URLs with path prefixes in both base and request", async () => {
+    // Track the actual path the fake upstream received
+    let upstreamReceivedPath = "";
+    fakeUpstream.close();
+    fakeUpstream = createServer((req, res) => {
+      upstreamReceivedPath = req.url ?? "";
+      const chunks: Buffer[] = [];
+      req.on("data", (c) => chunks.push(c));
+      req.on("end", () => {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          id: "msg_4", type: "message", role: "assistant",
+          content: [{ type: "text", text: "ok" }], model: "kimi-k2.7",
+          stop_reason: "end_turn", stop_sequence: null,
+        }));
+      });
+    });
+    await new Promise<void>((resolve) => fakeUpstream.listen(0, "127.0.0.1", resolve));
+    const { port } = fakeUpstream.address() as AddressInfo;
+    // Upstream base URL includes /v1
+    fakeUpstreamUrl = `http://127.0.0.1:${port}/v1`;
+
+    // Client requests /v1/messages to the proxy
+    await postToProxy({ model: "kimi-k2.7", stream: false, messages: [] }, "/v1/messages");
+
+    // The upstream should receive /v1/messages (not /v1/v1/messages)
+    expect(upstreamReceivedPath).toBe("/v1/messages");
+  });
+
+  it("returns a 502 error when upstream fetch fails", async () => {
+    // Point to an unreachable port to simulate network failure
+    fakeUpstreamUrl = "http://127.0.0.1:1";
+
+    const { status, json } = await postToProxy({ model: "kimi-k2.7", stream: false, messages: [] });
+
+    expect(status).toBe(502);
+    const errorBody = json as { error?: string };
+    expect(errorBody.error).toBeDefined();
+    expect(typeof errorBody.error).toBe("string");
+  });
+
+  it("returns a 502 error when the upstream response has malformed JSON", async () => {
+    fakeUpstream.close();
+    fakeUpstream = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end("not valid json");
+    });
+    await new Promise<void>((resolve) => fakeUpstream.listen(0, "127.0.0.1", resolve));
+    const { port } = fakeUpstream.address() as AddressInfo;
+    fakeUpstreamUrl = `http://127.0.0.1:${port}`;
+
+    const { status, json } = await postToProxy({ model: "kimi-k2.7", stream: false, messages: [] });
+
+    expect(status).toBe(502);
+    const errorBody = json as { error?: string };
+    expect(errorBody.error).toBeDefined();
+  });
+
+  it("returns a 502 error when the client request body has malformed JSON", async () => {
+    fakeUpstreamResponse = {
+      id: "msg_5", type: "message", role: "assistant",
+      content: [{ type: "text", text: "ok" }], model: "kimi-k2.7",
+      stop_reason: "end_turn", stop_sequence: null,
+    };
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port } = proxy.address() as AddressInfo;
+
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "not valid json",
+      });
+      const json = await res.json();
+      expect(res.status).toBe(502);
+      const errorBody = json as { error?: string };
+      expect(errorBody.error).toBeDefined();
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
   });
 });

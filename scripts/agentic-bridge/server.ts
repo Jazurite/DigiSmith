@@ -41,38 +41,48 @@ function forwardableHeaders(req: IncomingMessage): Record<string, string> {
 /** Builds the proxy's request handler against a given TokenReply-compatible base URL. */
 export function createRequestHandler(upstreamBaseUrl: string) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const rawBody = await readBody(req);
-    const requestJson = rawBody ? JSON.parse(rawBody) : {};
+    try {
+      const rawBody = await readBody(req);
+      const requestJson = rawBody ? JSON.parse(rawBody) : {};
 
-    const upstreamResponse = await fetch(`${upstreamBaseUrl}${req.url ?? "/messages"}`, {
-      method: req.method,
-      headers: forwardableHeaders(req),
-      body: JSON.stringify({ ...requestJson, stream: false }),
-    });
+      const upstreamUrl = new URL(req.url ?? "/messages", upstreamBaseUrl).href;
+      const upstreamResponse = await fetch(upstreamUrl, {
+        method: req.method,
+        headers: forwardableHeaders(req),
+        body: JSON.stringify({ ...requestJson, stream: false }),
+      });
 
-    if (!upstreamResponse.ok) {
-      res.writeHead(upstreamResponse.status, { "content-type": "application/json" });
-      res.end(await upstreamResponse.text());
-      return;
-    }
-
-    const original = (await upstreamResponse.json()) as AnthropicMessagesResponse;
-    const leakedText = textOf(original);
-    let finalResponse = original;
-
-    if (hasXtmlToolCallChannel(leakedText)) {
-      const decoded = extractXtmlToolCalls(leakedText);
-      // Empty toolCalls despite the leak marker means the text was
-      // malformed beyond what the parser tolerates — relay the original
-      // leaked text unchanged so the existing xtmlLeakDetected fallback
-      // (Step 5.5) still catches it downstream.
-      if (decoded.toolCalls.length > 0) {
-        finalResponse = applyToolCallFix(original, decoded);
+      if (!upstreamResponse.ok) {
+        res.writeHead(upstreamResponse.status, { "content-type": "application/json" });
+        res.end(await upstreamResponse.text());
+        return;
       }
-    }
 
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(finalResponse));
+      const original = (await upstreamResponse.json()) as AnthropicMessagesResponse;
+      const leakedText = textOf(original);
+      let finalResponse = original;
+
+      if (hasXtmlToolCallChannel(leakedText)) {
+        const decoded = extractXtmlToolCalls(leakedText);
+        // Empty toolCalls despite the leak marker means the text was
+        // malformed beyond what the parser tolerates — relay the original
+        // leaked text unchanged so the existing xtmlLeakDetected fallback
+        // (Step 5.5) still catches it downstream.
+        if (decoded.toolCalls.length > 0) {
+          finalResponse = applyToolCallFix(original, decoded);
+        }
+      }
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(finalResponse));
+    } catch (err) {
+      res.writeHead(502, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: err instanceof Error ? err.message : String(err),
+        })
+      );
+    }
   };
 }
 
