@@ -169,7 +169,7 @@ without touching <code>generate-comment</code> itself.
 </p>
 <p>
 The converter supports a deliberately narrow Markdown subset &mdash; only what the two Jira templates
-actually use (Teams needs no conversion, so it doesn't constrain this subset): <code>##</code>/<code>###</code> headings, <code>---</code> rule, <code>**bold**</code>,
+actually use (Teams needs no conversion, so it doesn't constrain this subset): <code>###</code>/<code>####</code> headings (matching I.1's original ADF, which uses level 3 for the date heading and level 4 for its "What's done"/"Next Steps" subheadings &mdash; not level 2, corrected during planning), <code>---</code> rule, <code>**bold**</code>,
 <code>[text](url)</code> links, <code>- </code> bullet lists, plain text with literal Unicode emoji,
 and one custom token for Jira mentions (<code>@[Name](accountId)</code>, since Markdown has no native
 mention syntax). No markdown-parser dependency &mdash; a small hand-rolled converter, matching the
