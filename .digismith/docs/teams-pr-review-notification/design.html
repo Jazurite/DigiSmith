@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teams PR-Review Notification</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Teams PR-Review Notification</h1>
+  <div class="meta">
+    <span>Date: 2026-09-09</span>
+    <span>Map item: I.4</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#why-i-not-y">Why I.4, Not Y</a></li>
+    <li><a href="#mechanism">Mechanism: Text Generation Only</a></li>
+    <li><a href="#trigger">Trigger Points</a></li>
+    <li><a href="#reviewer">Reviewer Resolution</a></li>
+    <li><a href="#template">Message Template</a></li>
+    <li><a href="#dataflow">Data Flow</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    A new skill, <code>digismith:teams-pr-review-notification</code>, that generates a
+    ready-to-paste Microsoft Teams message asking reviewers to look at one or more open pull
+    requests — replacing the ad-hoc manual drafting Jack currently does for this every time.
+    DigiSmith never connects to Teams itself: it only produces the message text, in Jack's own
+    established voice and format, for him to paste in himself.
+  </p>
+</section>
+
+<section id="why-i-not-y">
+  <h2>Why I.4, Not Y</h2>
+  <p>
+    This was initially considered as a new Y-lineage lifecycle hook (parallel to Y.1's
+    <code>post-finish</code>), since it could fire right after a PR opens. That's wrong: Y's
+    hooks so far are internal DigiSmith self-development mechanics (version bump, plugin cache
+    reinstall) — genuinely technical, gated to DigiSmith's own repo. This is a
+    reporting/communication concern instead, which is exactly what map item <strong>I</strong>
+    was broadened to cover on 2026-09-08 (renamed from "QA handoff" to plain "Reporting",
+    explicitly naming other reporting channels as plausible future sub-items). The
+    <em>trigger timing</em> can still mirror Y.1's shape conceptually, but the capability itself
+    belongs to I.
+  </p>
+</section>
+
+<section id="mechanism">
+  <h2>Mechanism: Text Generation Only</h2>
+  <p>
+    Two real delivery mechanisms were considered and ruled out during brainstorming:
+  </p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Ruled out</div>
+      <h4>Microsoft Graph API (REST client)</h4>
+      <p>
+        Would mirror <code>packages/jira-client</code>'s real-API precedent, but sending a
+        channel message via application permissions requires the
+        <code>ChannelMessage.Send</code> application permission, which needs
+        <strong>tenant admin consent</strong> — Jack's Teams tenant is his organization's, not
+        one he administers. Blocked regardless of preference.
+      </p>
+    </div>
+    <div class="card">
+      <div class="tag">Ruled out</div>
+      <h4>Browser automation (Claude in Chrome)</h4>
+      <p>
+        Would use Jack's own logged-in session with no admin approval needed, but requires
+        several fragile UI steps (compose box, <code>@</code>-mention autocomplete dropdown,
+        send) that break when Teams' UI changes, and only works attended with the browser pane
+        open. Made moot once text-generation-only was chosen — there is no send step to
+        automate at all.
+      </p>
+    </div>
+  </div>
+  <p>
+    <strong>Decision:</strong> DigiSmith generates the message text only. Nothing is sent,
+    posted, or connected to Teams by DigiSmith at any point — Jack copies the generated text
+    and pastes it into Teams himself, doing the real <code>@</code>-mention selection in
+    Teams' own UI at that point. This eliminates every failure mode above: no credentials, no
+    admin approval, no live API, no browser dependency.
+  </p>
+</section>
+
+<section id="trigger">
+  <h2>Trigger Points</h2>
+  <p>Two invocation paths, covering both a single PR and a multi-repo epic:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Path</th><th>When</th><th>How PR links are gathered</th></tr>
+    <tr>
+      <td><strong>Auto-offered</strong></td>
+      <td>Right after <code>finishing-a-development-branch</code>'s Option 2 (Push and Create
+        PR) reports the new PR's URL — a lightweight yes/no ask ("Draft a Teams review-request
+        message for this PR?"), same low-friction pattern as Option 1's existing "remember as
+        default?" follow-up.</td>
+      <td>Already known from the just-created PR: title, URL, current ticket key if any.</td>
+    </tr>
+    <tr>
+      <td><strong>On-demand</strong></td>
+      <td>Jack asks directly ("draft a Teams review request for these PRs"), independent of
+        just having created a PR — covers both a single PR and the multi-repo epic case (e.g.
+        the real EMKT-756 example: one ticket, four market-repo PRs).</td>
+      <td>Resolve the current branch's open PR via the forge CLI (e.g. <code>gh pr view</code>)
+        when only one is meant; for multiple repos/markets, ask Jack directly for the ticket
+        key/title and each PR link — I.2 (multi-repo distribution) doesn't exist yet to
+        automate this gathering, so it's a direct ask for now, revisited once I.2 ships.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="reviewer">
+  <h2>Reviewer Resolution</h2>
+  <p>
+    Reviewer names are resolved via <code>digismith:preferences</code> (H.1's saved-default
+    mechanism), not a new profile field as the original backlog note guessed (map item O) — a
+    per-repo <em>saved default that changes over time and gets overridden in the moment</em> is
+    exactly the shape H already established ("saved choice, asked once, reusable"), not a
+    structural on/off toggle like <code>ticket</code>/<code>ephemeral</code>.
+  </p>
+  <ul>
+    <li>First invocation in a repo with nothing saved yet: prompt via <code>AskUserQuestion</code>
+      for the reviewer name(s) to tag, offer to save as the default via <code>digismith:preferences</code>'
+      <code>set</code> operation — proceed with just this run's answer if declined, never nag
+      again on a decline.</li>
+    <li>A saved default can always be overridden in the moment for a specific message.</li>
+  </ul>
+</section>
+
+<section id="template">
+  <h2>Message Template</h2>
+  <p>
+    One unified template for both the single-PR and multi-repo-epic cases — the only
+    difference is how many link lines it has. Matches Jack's own real, existing style exactly
+    (verified against a real message he shared), deliberately plain rather than the
+    emoji-heavy convention <code>jira-progress-write-back</code> (I.1) uses for JIRA — Teams
+    and JIRA warrant different voices, and matching Jack's actual voice here is the point, not
+    a generic DigiSmith-authored tone (same lesson already flagged in the backlog's tentative
+    map item <strong>T</strong>, content-voice).
+  </p>
+  <pre><code>Hello 500 ae (&lt;Reviewer1&gt;, &lt;Reviewer2&gt;, ...) -- &lt;ask, e.g. "Phụ review dùm các PRs này cho &lt;feature/epic&gt;"&gt;
+
+&lt;TICKET-KEY&gt;: &lt;Ticket title&gt;
+
+🔗 &lt;market1&gt; PR: &lt;link&gt;
+🔗 &lt;market2&gt; PR: &lt;link&gt;</code></pre>
+  <ul>
+    <li><code>Hello 500 ae</code> is a fixed, literal greeting phrase — reused verbatim every
+      time, not derived or computed.</li>
+    <li>The reviewer list is comma-separated inside parentheses, resolved per
+      <a href="#reviewer">Reviewer Resolution</a> above.</li>
+    <li>The ask line after <code>--</code> is short, free-text, and may be in Vietnamese
+      (as in Jack's real usage) or English — generated to match whatever Jack says when asked,
+      never auto-translated.</li>
+    <li>Ticket key/title line is omitted entirely when there's no real ticket context (e.g. an
+      ad-hoc PR with no tracked key).</li>
+    <li>Each link line is <code>🔗 &lt;market&gt; PR: &lt;link&gt;</code> — the market label
+      (e.g. the repo's directory-name-derived label, same convention I.1 already uses:
+      <code>shopify-template-&lt;code&gt;</code> → <code>&lt;code&gt;</code> uppercased,
+      otherwise the repo directory name as-is) makes each link scannable without needing to
+      read the raw URL.</li>
+  </ul>
+</section>
+
+<section id="dataflow">
+  <h2>Data Flow</h2>
+  <ol>
+    <li>Determine invocation path (auto-offered vs. on-demand) per <a href="#trigger">Trigger
+      Points</a>.</li>
+    <li>Gather PR link(s), ticket key/title if any, per the path's own resolution above.</li>
+    <li>Resolve reviewer name(s) via <code>digismith:preferences</code>, prompting on first use
+      per repo.</li>
+    <li>Ask Jack for the short free-text "ask" line (what to say after <code>--</code>) —
+      never fabricate one.</li>
+    <li>Render the template, present it as plain text ready to copy.</li>
+    <li>Done. No write, no send, no state persisted beyond the reviewer default.</li>
+  </ol>
+</section>
+
+<section id="errors">
+  <h2>Error Handling</h2>
+  <ul>
+    <li><strong>On-demand, no PR found for the current branch</strong> (forge CLI returns
+      nothing) → ask directly for the PR link(s) rather than guessing.</li>
+    <li><strong>No reviewer default saved, and Jack declines to save one at first use</strong>
+      → proceed with just this run's typed-in answer; ask again next time rather than treating
+      the decline as "never ask."</li>
+    <li><strong>No ticket key/context available</strong> → omit the ticket line entirely rather
+      than inventing a placeholder.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>
+    Nothing here calls a live API, drives a browser, or writes to any external system — the
+    entire skill is deterministic text templating plus a couple of `AskUserQuestion` prompts.
+    Testing is manual verification that generated messages match the template exactly across
+    both invocation paths (single PR, multi-repo epic, missing-ticket case), the same
+    verification approach as any other DigiSmith <code>SKILL.md</code> — no automated test
+    suite is warranted for markdown-instruction content with no executable logic of its own.
+  </p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>Any live Teams connection</strong> — Graph API and browser automation were both
+      considered and explicitly ruled out; see <a href="#mechanism">Mechanism</a>.</li>
+    <li><strong>Automating multi-repo PR discovery</strong> — on-demand multi-repo gathering is
+      a direct ask to Jack for now; automatic gathering across market repos belongs to I.2
+      (multi-repo distribution) once that ships, not duplicated here.</li>
+    <li><strong>Message templates for channels other than Teams</strong> (Slack, email) — named
+      as plausible future I-lineage sub-items when map item I was broadened, not built here.</li>
+    <li><strong>Editing or updating a previously-sent message</strong> — unlike I.1's JIRA
+      comment update logic, there is nothing to update: DigiSmith never sends anything, so
+      there is no message to find and edit later.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/teams-pr-review-notification/design.html</footer>
+
+</body>
+</html>
