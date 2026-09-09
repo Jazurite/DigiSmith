@@ -19,6 +19,7 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Telemetry: automatic session lifecycle](telemetry-auto-lifecycle.md) — start/stop tied to session start/close/delete instead of manual trigger; deferred until real telemetry data exists
 - [`inject-standards` has no scenario for review-time dispatch](review-time-standards-injection-gap.md) — diff-hygiene standards shape what implementers write but never reach the whole-branch final review
 - [Multi-repo distribution (I.2)](jira-write-back-adf-reporting.md) — profile-gated worktree fan-out across market repos, learned from EMKT-784; I.1 (real ADF formatting) shipped 2026-08-26
+- [Microsoft Teams PR-review notification (I.4)](teams-pr-review-notification.md) — notify a Teams channel to request code review right after a PR opens; a reporting/communication channel, not a Y-lineage self-development hook
 - [Technical writing / content-voice skill (new letter, tentatively T)](technical-writing-content-voice.md) — I.1's first progress-comment draft leaked git/PR mechanics at a PO/PM audience; no map letter reserved yet
 - [Ticket description Track-section template (Deliverable / Per Market)](track-section-template.md) — live-tested on EMKT-756, tension with `I.1`'s current single-checkmark Step 7 noted; natural output for I.2
 - [Opinionated default tech stack (new letter, tentatively U)](opinionated-tech-stack-defaults.md) — Jack has standing defaults (Vitest, SCSS, Playwright, more not yet captured) that brainstorming currently has no way to know about and re-asks fresh each time
