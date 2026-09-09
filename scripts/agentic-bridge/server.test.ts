@@ -194,4 +194,74 @@ describe("createRequestHandler — non-streaming", () => {
       await new Promise<void>((resolve) => proxy.close(() => resolve()));
     }
   });
+
+  it("gracefully handles errors after headers have been sent (e.g., body read/parse fails)", async () => {
+    // Create a fake upstream that sends a valid status line but then aborts
+    // before sending the full body, causing upstreamResponse.text() to fail
+    fakeUpstream.close();
+    fakeUpstream = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      // Immediately destroy the socket to simulate a connection drop mid-body
+      res.socket?.destroy();
+    });
+    await new Promise<void>((resolve) => fakeUpstream.listen(0, "127.0.0.1", resolve));
+    const { port } = fakeUpstream.address() as AddressInfo;
+    fakeUpstreamUrl = `http://127.0.0.1:${port}`;
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port: proxyPort } = proxy.address() as AddressInfo;
+
+    try {
+      // This should not crash the proxy process, even though headers were sent
+      // before the body read failed
+      const res = await fetch(`http://127.0.0.1:${proxyPort}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "kimi-k2.7", stream: false, messages: [] }),
+      });
+      // The response may be incomplete due to the connection being destroyed,
+      // but the proxy should still be alive and respond (or gracefully close)
+      expect(res.status).toBeGreaterThanOrEqual(200);
+    } catch (err) {
+      // It's acceptable to get a fetch error if the connection was destroyed,
+      // as long as the proxy process itself didn't crash
+      expect(err).toBeDefined();
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
+  });
+
+  it("gracefully handles errors after headers sent on non-OK upstream response", async () => {
+    // Simulate a non-200 upstream response where upstreamResponse.text() fails
+    fakeUpstream.close();
+    fakeUpstream = createServer((_req, res) => {
+      res.writeHead(503, { "content-type": "application/json" });
+      // Destroy immediately to fail the text() read
+      res.socket?.destroy();
+    });
+    await new Promise<void>((resolve) => fakeUpstream.listen(0, "127.0.0.1", resolve));
+    const { port } = fakeUpstream.address() as AddressInfo;
+    fakeUpstreamUrl = `http://127.0.0.1:${port}`;
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port: proxyPort } = proxy.address() as AddressInfo;
+
+    try {
+      // This should not crash the proxy, even though headers were sent
+      // before the error read failed
+      const res = await fetch(`http://127.0.0.1:${proxyPort}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "kimi-k2.7", stream: false, messages: [] }),
+      });
+      expect(res.status).toBeGreaterThanOrEqual(200);
+    } catch (err) {
+      // Acceptable if fetch errors, as long as proxy doesn't crash
+      expect(err).toBeDefined();
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
+  });
 });

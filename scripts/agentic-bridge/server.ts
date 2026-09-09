@@ -76,12 +76,18 @@ export function createRequestHandler(upstreamBaseUrl: string) {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify(finalResponse));
     } catch (err) {
-      res.writeHead(502, { "content-type": "application/json" });
-      res.end(
-        JSON.stringify({
-          error: err instanceof Error ? err.message : String(err),
-        })
-      );
+      if (!res.headersSent) {
+        res.writeHead(502, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            error: err instanceof Error ? err.message : String(err),
+          })
+        );
+      } else {
+        // Headers were already sent to the client, so we can't write a new status.
+        // Destroy the connection to prevent the client from hanging.
+        res.destroy();
+      }
     }
   };
 }
