@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Bridge</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Agentic Bridge</h1>
+  <div class="meta">
+    <span>Date: 2026-09-09</span>
+    <span>Map item: K.9</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#ruled-out">Approaches ruled out</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+    <li><a href="#open-risks">Open risks</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>
+TokenReply's <code>kimi-k3</code> route emits Kimi K3's raw, undecoded "XTML" tool-call format
+(<code>&lt;|open|&gt;tools&lt;|sep|&gt;...</code>) instead of executing a real tool call — a
+server-side misconfiguration (TokenReply hasn't wired up vLLM's <code>KimiK3ToolParser</code> for
+this route), root-caused and documented in
+<code>backlog/tokenreply-kimi-k3-tool-calling-failure.md</code>. The prior investigation
+confirmed this is not a client-protocol issue: dispatching via <code>opencode</code> (pure
+OpenAI-format function-calling, zero Anthropic translation) produced the identical leak as
+<code>claude-code</code>'s Anthropic-format traffic. Independently verified against the real
+vLLM source (<code>D:/Workspace/Library/vllm</code>): OpenAI's <code>tool_calls</code> shape is
+vLLM's actual canonical/native tool-calling target (<code>kimi_k3_tool_parser.py</code>'s own
+docstring says so explicitly), and Anthropic-format support is a translation adapter
+(<code>vllm/entrypoints/anthropic/serving.py</code>) layered on top of that same native
+pipeline. Since both client protocols bottom out in the same unconfigured pipeline, no
+client-side format choice fixes this — the fault is entirely on TokenReply's deployment.
+</p>
+<p>
+A recovery mechanism already exists (<code>kimi-k3-xtml-tool-call-recovery</code>, shipped
+2026-09-05, map item K.3): the controller manually decodes a leaked call, executes it with its
+own tools, and resumes the dispatched session. Live-verified twice, it works, but it is
+<strong>bounded and visible</strong> — every recovery cycle burns one of the shared fix-round
+cap's 3 rounds, making it viable only for tasks needing roughly 3 or fewer tool calls total,
+and it requires a human/AI controller to drive the loop by hand each time.
+</p>
+<p>
+Since TokenReply is not expected to fix their server-side configuration on any predictable
+timeline, this design takes the fix into DigiSmith's own hands: rather than recovering after a
+leak reaches the controller, intercept and repair it before it ever reaches the dispatched
+Claude Code session at all.
+</p>
+</section>
+
+<section id="ruled-out">
+<h2>Approaches ruled out</h2>
+<div class="cards">
+  <div class="card">
+    <div class="tag">Ruled out</div>
+    <h4>Switch client wire format to OpenAI's</h4>
+    <p>The original instinct — since TokenReply/vLLM is OpenAI-native, request tool calls in
+    OpenAI's format instead of Anthropic's. Disproven: the <code>opencode</code> trial already
+    used pure OpenAI-format function-calling and produced the identical leak. The bug is
+    server-side, upstream of any client protocol choice.</p>
+  </div>
+  <div class="card">
+    <div class="tag">Ruled out</div>
+    <h4>Automated CLI-level orchestrator</h4>
+    <p>Considered first: a script that drives the existing decode/execute/resume loop
+    programmatically instead of a human/AI controller doing it by hand. Set aside because it
+    would need to reimplement Claude Code's own Read/Edit/Write/Bash tool semantics from
+    scratch in plain Node.js (e.g. matching <code>Edit</code>'s exact "old_string must be
+    unique" check) — real risk of subtly diverging from Claude Code's actual, already-correct
+    tool behavior, for no benefit over letting Claude Code do what it already does well.</p>
+  </div>
+</div>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>
+A small local HTTP proxy, managed by <code>digismith:depot</code> as a shared, persistent
+resource (mirroring V.1's shared OpenCode server — one instance, started on first use, reused
+across every concurrent dispatch). <code>offload-implementer</code>'s <code>claude-code</code>
+runner points <code>ANTHROPIC_BASE_URL</code> at this local proxy instead of TokenReply
+directly. The proxy buffers each response (no true streaming — nothing consumes this live, it
+all gets captured to a file either way) and, if it detects the XTML leak, decodes and converts
+it into a genuine Anthropic <code>tool_use</code> block before relaying it. If there's no leak,
+the response passes through untouched — the proxy is a safe no-op for any other model.
+</p>
+<p>
+Internally, this replicates vLLM's own intended architecture: OpenAI's <code>tool_calls</code>
+shape is the canonical decode target (exactly what <code>kimi-k3-xtml-parser.ts</code> already
+produces, unchanged from the existing recovery mechanism), and one new conversion step —
+OpenAI-shaped call → Anthropic <code>tool_use</code> block — mirrors vLLM's own
+<code>_convert_tool_use_block</code> in reverse. The proxy is, in effect, doing on the client
+side exactly what TokenReply's server should already be doing.
+</p>
+<div class="callout">
+<strong>The result this surfaces:</strong> because the fix happens inside the single
+<code>claude -p</code> HTTP round-trip, Claude Code's own agentic loop just continues normally
+— it sees a corrected tool call, executes it with its own real tool engine, and keeps going,
+all within the same dispatch process. <code>offload-implementer</code> doesn't need Step 5.5's
+separate <code>--resume</code> dance for <code>kimi-k3</code> through this path at all anymore —
+a single <code>claude -p</code> call just works, the same as any healthy model today. This is a
+bigger simplification than "recovery without a human in the loop" — it's "no recovery step
+exists from the caller's perspective."
+</div>
+</section>
+
+<section id="components">
+<h2>Components</h2>
+<ol>
+<li><strong><code>scripts/agentic-bridge/server.ts</code></strong> (new) — the proxy itself.
+Forwards requests to TokenReply's real endpoint using whatever auth header the client already
+sent (no separate credential-reading needed), buffers the full response, and either passes it
+through or converts it.</li>
+<li><strong>New converter, <code>toAnthropicToolUse(decoded: DecodedToolCall[])</code></strong>
+(added alongside <code>kimi-k3-xtml-parser.ts</code>) — the one genuinely new piece of decode
+logic: decoded tool calls → real Anthropic <code>tool_use</code> content blocks +
+<code>stop_reason: "tool_use"</code>.</li>
+<li><strong>Depot gains two capabilities</strong>: <code>ensure-agentic-bridge</code> (start if
+not running, return its local URL — same shape as V.1's <code>ensure-opencode-server</code>)
+and <code>stop-agentic-bridge</code>.</li>
+<li><strong><code>skills/offload-implementer/SKILL.md</code> change</strong>: the
+<code>claude-code</code> runner's dispatch step calls <code>ensure-agentic-bridge</code> first
+and points <code>ANTHROPIC_BASE_URL</code> at its local URL instead of
+<code>provider.baseUrl</code> directly — same pattern already used for the existing
+<code>ensure-claude-code</code> readiness check.</li>
+<li><strong>Step 5.5 docs</strong>: narrowed to explicitly note <code>claude-code</code>
+shouldn't need it anymore in practice, but left intact for <code>opencode</code> (out of scope
+for this proxy — see below) and as the fallback path for an undecodable leak (see Error
+Handling).</li>
+</ol>
+</section>
+
+<section id="data-flow">
+<h2>Data flow</h2>
+<ol>
+<li>Controller calls <code>ensure-agentic-bridge</code> → gets <code>http://localhost:&lt;port&gt;</code>.</li>
+<li>Dispatches <code>claude -p ... --model kimi-k3</code> with <code>ANTHROPIC_BASE_URL</code>
+pointed at that local URL (auth token unchanged — still the real TokenReply key, now relayed
+through the proxy).</li>
+<li>Proxy forwards to TokenReply, buffers the response.</li>
+<li><strong>No leak</strong> → relay untouched.</li>
+<li><strong>Leak</strong> → decode, convert, relay the corrected response. Claude Code's own
+agentic loop executes the tool call and continues within the same dispatch — no second
+<code>claude -p --resume</code> call needed.</li>
+<li>Task completes (or genuinely fails) through the dispatch's normal single invocation, same
+as any healthy model.</li>
+</ol>
+</section>
+
+<section id="error-handling">
+<h2>Error handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Behavior</th></tr>
+<tr><td>Leak detected but undecodable (<code>toolCalls</code> empty despite the leak flag —
+malformed beyond what the parser tolerates)</td><td>Relay the original leaked text through
+unchanged. This is exactly the case where the existing <code>xtmlLeakDetected</code> flag
+downstream and Step 5.5's documented BLOCKED path still matter, even for
+<code>claude-code</code> — the proxy fixes the common case, not every conceivable malformed
+one.</td></tr>
+<tr><td>TokenReply itself errors (5xx, timeout)</td><td>Relay the error through unchanged —
+never mask or swallow it.</td></tr>
+<tr><td>Proxy fails to start</td><td>Dispatch fails loudly, consistent with K.2's existing
+"failures surface, never silently fall back" philosophy.</td></tr>
+<tr><td>Multiple tool calls in one leaked turn (never observed live yet, per the backlog's
+"still unverified" note)</td><td>The converter naturally handles an array of decoded calls →
+an array of <code>tool_use</code> blocks, so this should work the first time it's actually
+seen, even though it's untested today.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li>Unit tests for <code>toAnthropicToolUse</code>, using Task 1's existing real fixtures
+(<code>BASH_CALL_FIXTURE</code>, <code>WRITE_CALL_FIXTURE</code>, <code>MULTI_CALL_FIXTURE</code>)
+as inputs.</li>
+<li>Unit tests for the proxy's passthrough vs. conversion branching, against a mocked upstream
+— no real TokenReply calls in the automated test suite.</li>
+<li><strong>The real test</strong>: a live dispatch through the proxy with <code>kimi-k3</code>,
+checking that a single, ordinary <code>claude -p</code> call (no manual recovery, no
+<code>--resume</code>) produces a genuinely completed task — same discipline as every other
+live test in this investigation, independently verified via <code>git log</code>, never the
+dispatch's own self-report.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li><strong><code>opencode</code> runner support.</strong> Confidence in Claude Code's
+<code>--resume</code> session behavior comes from this whole investigation's own live testing;
+the same confidence doesn't yet exist for <code>opencode</code>'s <code>--session</code>
+behavior. <code>opencode</code> dispatches to TokenReply remain unprotected by this proxy —
+Step 5.5 stays the documented (manual) path for that runner.</li>
+<li><strong>True streaming.</strong> The proxy buffers the full response before deciding
+anything; it does not forward partial chunks live. Nothing today consumes a dispatch's output
+in real time (everything is captured to a file for offline parsing), so this is a deliberate
+simplification, not a limitation anyone has hit yet.</li>
+<li><strong>Reimplementing tool execution.</strong> The proxy never executes anything itself —
+it only repairs the response format and lets Claude Code's own tool engine do the work. See
+"Approaches ruled out" above.</li>
+<li><strong>Flipping the default model back to <code>kimi-k3</code>.</strong> A deliberate
+follow-up decision, made only after live-verifying this proxy actually works end-to-end — not
+an automatic side effect of merging this design. <code>kimi-k2.7</code> remains the shipped
+default in <code>scripts/providers/tokenreply.ts</code> until that verification happens.</li>
+</ul>
+</section>
+
+<section id="open-risks">
+<h2>Open risks</h2>
+<ul>
+<li><strong>Streaming/SSE framing at the wire level, unverified.</strong> <code>claude -p</code>
+likely requests <code>stream: true</code> from its base URL even though nothing consumes it
+live. Whether Claude Code's own HTTP client tolerates a non-streaming JSON response when it
+requested a stream, or whether the proxy needs to wrap its single buffered result in minimal
+SSE event framing to satisfy the client, is a real technical unknown — worth an early spike
+before building the rest of the proxy around an assumption here.</li>
+<li><strong>Multi-call-per-turn recovery, still unverified.</strong> Carried over from the
+existing recovery mechanism's own open risk: all real dispatches across this whole
+investigation have made exactly one tool call per leaked turn. The converter is written to
+handle an array, but that path has never been exercised against a real dispatch.</li>
+<li><strong>Argument-shape coverage.</strong> 4 clean real-world data points exist so far (2
+<code>Bash</code>, 2 <code>Write</code>), all clean with no renaming needed;
+<code>Edit</code>/<code>Read</code>/<code>Grep</code>/<code>Glob</code> shapes remain untested
+against a real leak.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/agentic-bridge/design.html</footer>
+
+</body>
+</html>
