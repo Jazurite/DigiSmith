@@ -1,0 +1,188 @@
+import { describe, it, expect } from "vitest";
+import { markdownToAdf } from "./markdown-to-adf.ts";
+
+describe("markdownToAdf", () => {
+  it("converts a level-3 heading", () => {
+    const doc = markdownToAdf("### Title");
+    expect(doc).toEqual({
+      type: "doc",
+      version: 1,
+      content: [{ type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Title" }] }],
+    });
+  });
+
+  it("converts a level-4 heading", () => {
+    const doc = markdownToAdf("#### Sub");
+    expect(doc.content[0]).toEqual({
+      type: "heading",
+      attrs: { level: 4 },
+      content: [{ type: "text", text: "Sub" }],
+    });
+  });
+
+  it("converts a rule", () => {
+    const doc = markdownToAdf("---");
+    expect(doc.content).toEqual([{ type: "rule" }]);
+  });
+
+  it("converts bold text", () => {
+    const doc = markdownToAdf("plain **bold** plain");
+    expect(doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "plain " },
+        { type: "text", text: "bold", marks: [{ type: "strong" }] },
+        { type: "text", text: " plain" },
+      ],
+    });
+  });
+
+  it("converts a link", () => {
+    const doc = markdownToAdf("[click here](https://example.com)");
+    expect(doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "click here", marks: [{ type: "link", attrs: { href: "https://example.com" } }] },
+      ],
+    });
+  });
+
+  it("converts a bullet list", () => {
+    const doc = markdownToAdf("- first\n- second");
+    expect(doc.content).toEqual([
+      {
+        type: "bulletList",
+        content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "first" }] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "second" }] }] },
+        ],
+      },
+    ]);
+  });
+
+  it("passes literal Unicode emoji through as plain text", () => {
+    const doc = markdownToAdf("✅ done");
+    expect(doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [{ type: "text", text: "✅ done" }],
+    });
+  });
+
+  it("converts a mention token to an ADF mention node", () => {
+    const doc = markdownToAdf("(@[Jane Doe](5f8a2bc1))");
+    expect(doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "(" },
+        { type: "mention", attrs: { id: "5f8a2bc1", text: "@Jane Doe" } },
+        { type: "text", text: ")" },
+      ],
+    });
+  });
+
+  it("throws on a code block", () => {
+    expect(() => markdownToAdf("```\ncode\n```")).toThrow(/code block/);
+  });
+
+  it("throws on a blockquote", () => {
+    expect(() => markdownToAdf("> quoted")).toThrow(/blockquote/);
+  });
+
+  it("throws on a numbered list", () => {
+    expect(() => markdownToAdf("1. first")).toThrow(/numbered list/);
+  });
+
+  it("throws on a nested list", () => {
+    expect(() => markdownToAdf("- top\n  - nested")).toThrow(/nested list/);
+  });
+
+  it("throws on a table", () => {
+    expect(() => markdownToAdf("| a | b |")).toThrow(/table/);
+  });
+
+  it("throws on an unsupported heading level (1)", () => {
+    expect(() => markdownToAdf("# Too big")).toThrow(/heading level 1/);
+  });
+
+  it("throws on an unsupported heading level (5)", () => {
+    expect(() => markdownToAdf("##### Too small")).toThrow(/heading level 5/);
+  });
+
+  it("round-trips the filled progress-update.md content into the expected ADF document", () => {
+    const filled = [
+      "### 📣 Progress Update – 26/8",
+      "",
+      "---",
+      "",
+      "#### ✅ What's done",
+      "",
+      "- Trial/Returns banner implemented and verified live on JP, PH, and KR — icon + editable text, shown only on product pages, correct desktop/mobile ordering next to breadcrumbs.",
+      "",
+      "👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.",
+      "",
+      "#### 🎯 Next Steps:",
+      "",
+      "- **🔍 Code Review Needed >** (@[Jane Doe](5f8a2bc1)) — please review the banner styling changes",
+    ].join("\n");
+
+    const doc = markdownToAdf(filled);
+
+    expect(doc).toEqual({
+      type: "doc",
+      version: 1,
+      content: [
+        { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "📣 Progress Update – 26/8" }] },
+        { type: "rule" },
+        { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "✅ What's done" }] },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Trial/Returns banner implemented and verified live on JP, PH, and KR — icon + editable text, shown only on product pages, correct desktop/mobile ordering next to breadcrumbs.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.",
+            },
+          ],
+        },
+        { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "🎯 Next Steps:" }] },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    { type: "text", text: "🔍 Code Review Needed >", marks: [{ type: "strong" }] },
+                    { type: "text", text: " (" },
+                    { type: "mention", attrs: { id: "5f8a2bc1", text: "@Jane Doe" } },
+                    { type: "text", text: ") — please review the banner styling changes" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+});
