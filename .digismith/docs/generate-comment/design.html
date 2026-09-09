@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generate Comment (I.3)</title>
+<title>Templating (Q)</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -63,10 +63,10 @@
 
 <header class="doc-head">
   <span class="badge">approved for planning</span>
-  <h1>Generate Comment (I.3)</h1>
+  <h1>Templating (Q)</h1>
   <div class="meta">
-    <span>Date: 2026-09-08</span>
-    <span>Map item: I.3</span>
+    <span>Date: 2026-09-08, revised 2026-09-09</span>
+    <span>Map item: Q.1, Q.2</span>
   </div>
 </header>
 
@@ -86,43 +86,71 @@
 <section id="overview">
 <h2>Overview</h2>
 <p>
-<code>jira-progress-write-back</code> (map item <strong>I.1</strong>) ships exactly one hardcoded
-comment template today &mdash; the &ldquo;&#128227; Progress Update&rdquo; shape, tightly coupled to the
-PR/ephemeral-deploy flow (Materials &amp; Links, Track checklist). Incident/investigation tickets
-(surfaced live on <code>EMKT-799</code>, a Make.com IN fulfillment webhook incident) don't fit that
-shape at all &mdash; there's no ephemeral URL, no Materials &amp; Links, no Track checklist to touch, and
-the content itself is a different kind of update (what's been checked / found / needed, not
-done / next).
+Two reporting skills each hardcode their own message template inline. <code>jira-progress-write-back</code>
+(<strong>I.1</strong>) has one Progress Update ADF shape, tightly coupled to the PR/ephemeral-deploy
+flow (Materials &amp; Links, Track checklist) &mdash; it doesn't fit incident/investigation tickets at all
+(surfaced live on <code>EMKT-799</code>, a Make.com IN fulfillment webhook incident): no ephemeral
+URL, no Materials &amp; Links, no Track checklist to touch, and the content itself is a different kind
+of update (what's been checked / found / needed, not done / next). Separately,
+<code>teams-pr-review-notification</code> (<strong>I.4</strong>, shipped 2026-09-09 by a concurrent
+session) has its own unrelated hardcoded plain-text Teams message template &mdash; same pattern, third
+copy.
 </p>
 <p>
-This splits template concerns out of I.1 into a new skill, <strong>generate-comment</strong>, and adds a
-second template (Investigation Update) alongside the existing Progress Update &mdash; both stored as
-human-editable Markdown files rather than embedded inline in a skill's own steps.
+Rather than I.1 growing a second inline template and I.4 staying a disconnected third instance of the
+same shape, this design decouples templating into its own map letter, <strong>Q</strong> &mdash; freed
+2026-09-04 when &ldquo;Convention enforcement&rdquo; retired (absorbed into <strong>W.5</strong>), never
+reused since. It's a shared mechanism serving multiple consumers, not a sub-item of <strong>I</strong>
+(&ldquo;Reporting&rdquo;).
 </p>
+<div class="cards">
+  <div class="card">
+    <div class="tag">Q.1</div>
+    <h4>The templating mechanism</h4>
+    <p>A new skill, <code>generate-comment</code>, owning template selection, content-gathering
+    questions, and filling a Markdown template. Ships with three templates: Progress Update,
+    Investigation Update, and Teams Review Request.</p>
+  </div>
+  <div class="card">
+    <div class="tag">Q.2</div>
+    <h4>Consumer refactor</h4>
+    <p>Refactor the two already-shipped skills, I.1 and I.4, to both call <code>generate-comment</code>
+    instead of rendering their own inline templates &mdash; no duplicated template logic.</p>
+  </div>
+</div>
 </section>
 
 <section id="architecture">
 <h2>Architecture</h2>
-<p>Two skills, splitting &ldquo;what to say&rdquo; from &ldquo;how to post it&rdquo;:</p>
+<p>Three skills, splitting &ldquo;what to say&rdquo; from &ldquo;how to deliver it&rdquo;:</p>
 <div class="cards">
   <div class="card">
-    <div class="tag">New &middot; I.3</div>
+    <div class="tag">New &middot; Q.1</div>
     <h4>generate-comment</h4>
     <p>Owns template selection, content-gathering questions, and filling a Markdown template.
-    Returns filled Markdown text plus a heading-prefix string for dedup-matching.</p>
+    Returns filled Markdown text plus a heading-prefix string for dedup-matching (meaningful to I.1
+    only &mdash; I.4 never searches for or edits a previous message, so it ignores this return value).</p>
   </div>
   <div class="card">
-    <div class="tag">Existing &middot; I.1</div>
+    <div class="tag">Existing &middot; I.1, refactored under Q.2</div>
     <h4>jira-progress-write-back</h4>
     <p>Unchanged role otherwise &mdash; credentials, ticket fetch, dedup-search, description editing,
     confirm, post. Now calls <code>generate-comment</code> instead of drafting inline, and converts
     the returned Markdown to ADF right before posting.</p>
   </div>
+  <div class="card">
+    <div class="tag">Existing &middot; I.4, refactored under Q.2</div>
+    <h4>teams-pr-review-notification</h4>
+    <p>Its content-gathering (scope, PR info, reviewer names, ask line) moves into
+    <code>generate-comment</code>'s Teams template handling. Its own Steps become just: call
+    <code>generate-comment</code>, then present the returned text as-is &mdash; no conversion step,
+    since Teams consumes plain text directly.</p>
+  </div>
 </div>
 <p>
-Templates live at <code>skills/generate-comment/templates/progress-update.md</code> and
-<code>investigation-update.md</code> &mdash; plain Markdown with <code>&lt;placeholder&gt;</code> tokens,
-directly reviewable and editable.
+Templates live at <code>skills/generate-comment/templates/progress-update.md</code>,
+<code>investigation-update.md</code>, and <code>teams-review-request.md</code> &mdash; plain Markdown
+with <code>&lt;placeholder&gt;</code> tokens, directly reviewable and editable.
 </p>
 <div class="callout">
 Emoji in the templates are literal Unicode characters in the Markdown text, not Jira's ADF
@@ -132,15 +160,16 @@ character just passes through as plain text content.
 <h3>Markdown&rarr;ADF conversion</h3>
 <p>
 Lives inside I.1 (not <code>generate-comment</code>), right before posting. <code>generate-comment</code>
-stays channel-agnostic &mdash; it only ever produces Markdown. This keeps the door open for future
-non-Jira reporting channels (map item <strong>I</strong> was broadened 2026-09-08 from
-&ldquo;QA handoff&rdquo;/Jira-only to reporting in general) to reuse the same templates and content-gathering
-logic, each owning its own conversion from the same Markdown source, without <code>generate-comment</code>
-needing to know anything about any specific channel's native format.
+stays channel-agnostic &mdash; it only ever produces Markdown, and never knows anything about any specific
+consumer's native format. This is exactly what makes I.4 a clean second consumer: Teams needs no
+conversion at all (the filled Markdown <em>is</em> the final pasteable text), so I.4 simply skips the
+conversion step I.1 has. A future third consumer (map item <strong>I</strong> was broadened 2026-09-08 to
+reporting in general, not just Jira) would follow the same pattern &mdash; own its own conversion, or none,
+without touching <code>generate-comment</code> itself.
 </p>
 <p>
-The converter supports a deliberately narrow Markdown subset &mdash; only what the two templates
-actually use: <code>##</code>/<code>###</code> headings, <code>---</code> rule, <code>**bold**</code>,
+The converter supports a deliberately narrow Markdown subset &mdash; only what the two Jira templates
+actually use (Teams needs no conversion, so it doesn't constrain this subset): <code>##</code>/<code>###</code> headings, <code>---</code> rule, <code>**bold**</code>,
 <code>[text](url)</code> links, <code>- </code> bullet lists, plain text with literal Unicode emoji,
 and one custom token for Jira mentions (<code>@[Name](accountId)</code>, since Markdown has no native
 mention syntax). No markdown-parser dependency &mdash; a small hand-rolled converter, matching the
@@ -152,10 +181,10 @@ hand-rolled <code>key: value</code> parsing instead of a YAML library).
 <section id="components">
 <h2>Components</h2>
 
-<h3>skills/generate-comment/SKILL.md (new)</h3>
+<h3>skills/generate-comment/SKILL.md (new, Q.1)</h3>
 <ul>
-<li>Input: template type. If not already known from context, ask (Progress Update or Investigation
-Update) via <code>AskUserQuestion</code>.</li>
+<li>Input: template type. If not already known from context, ask (Progress Update, Investigation
+Update, or Teams Review Request) via <code>AskUserQuestion</code>.</li>
 <li>Loads <code>templates/&lt;type&gt;.md</code>.</li>
 <li><strong>Progress content:</strong> same as I.1's current Steps 9-10 &mdash; check for map item
 <strong>N</strong>'s <code>report.html</code> for &ldquo;What's done&rdquo; bullets (else draft from session
@@ -164,13 +193,21 @@ work), ask which roles need pinging for &ldquo;Next Steps,&rdquo; resolve each n
 <li><strong>Investigation content:</strong> ask three bullet groups instead &mdash; what's been checked,
 what's been found, what's needed (and from whom) &mdash; same accountId resolution for the &ldquo;needed
 from&rdquo; mentions.</li>
+<li><strong>Teams Review Request content:</strong> absorbed from I.4's current Steps 1-4 &mdash;
+determine single-PR vs. multi-repo-epic scope; gather PR title/URL/ticket key (<code>gh pr view</code>
+for the on-demand single-PR case, direct ask for multi-repo epics, or whatever the caller already has
+when auto-offered by <code>finishing-a-development-branch</code>); resolve reviewer name(s) via
+<code>digismith:preferences</code> get/set on key <code>teams_reviewers</code>, prompting on first use
+per repo; ask directly for the free-text ask line. No Jira <code>accountId</code> lookup here &mdash;
+Teams reviewer names are plain text, not resolved mentions.</li>
 <li>Fills the <code>&lt;placeholder&gt;</code> tokens in the loaded Markdown.</li>
 <li>Returns: filled Markdown text + a heading-prefix string for the caller's dedup-search.
 The prefix is derived from the template file itself &mdash; the text of its first heading line up
 to (not including) the date placeholder, e.g. <code>&ldquo;&#128227; Progress Update&rdquo;</code> from a
 first line reading <code>### &#128227; Progress Update &ndash; &lt;D/M&gt;</code>. Never hardcoded
-separately, so a hand-edited template's heading can't silently drift out of sync with what Step 8's
-dedup-search actually matches against.</li>
+separately, so a hand-edited template's heading can't silently drift out of sync with what I.1's Step 8
+dedup-search actually matches against. I.4 ignores this return value entirely &mdash; it never searches
+for or edits a previously-sent message, since nothing it produces is ever actually sent by DigiSmith.</li>
 </ul>
 
 <h3>packages/jira-client/src/markdown-to-adf.ts (new)</h3>
@@ -182,7 +219,7 @@ narrow supported subset above. Throws a descriptive error on any construct outsi
 (nested lists, tables, code blocks, etc.) rather than silently dropping or mangling it.
 </p>
 
-<h3>skills/jira-progress-write-back/SKILL.md (modified)</h3>
+<h3>skills/jira-progress-write-back/SKILL.md (modified, Q.2)</h3>
 <ul>
 <li>New early step: determine template type &mdash; always Progress when invoked right after
 <code>capture-ephemeral-url</code> (today's only real path), otherwise ask if invoked
@@ -197,10 +234,27 @@ date-boundary matching logic, just parameterized.</li>
 <li>Step 12's confirm-with-user preview now shows the readable Markdown instead of raw ADF JSON.</li>
 <li>Credentials, confirm/revise/cancel, write, report: unchanged.</li>
 </ul>
+
+<h3>skills/teams-pr-review-notification/SKILL.md (modified, Q.2)</h3>
+<ul>
+<li>Steps 1-4 (scope determination, PR info gathering, reviewer-name resolution, ask-line prompt)
+removed entirely &mdash; absorbed into <code>generate-comment</code>'s Teams Review Request content-gathering
+above.</li>
+<li>Step 5 (render the message) replaced by a single call to <code>generate-comment</code> with template
+type Teams Review Request, passing through whatever context it already has (single-PR auto-offer case
+supplies PR title/URL/ticket key directly, same as today).</li>
+<li>Step 6 (present as plain text, nothing sent) unchanged &mdash; the returned Markdown <em>is</em> the
+final text, no conversion.</li>
+<li>Everything in its Error Handling table maps onto the equivalent <code>generate-comment</code>
+content-gathering step instead (e.g. &ldquo;no PR found for the current branch&rdquo; is now
+<code>generate-comment</code>'s problem to surface, not I.4's own).</li>
+</ul>
 </section>
 
 <section id="data-flow">
 <h2>Data Flow</h2>
+
+<h3>I.1 (Jira)</h3>
 <ol>
 <li>Invoked as today &mdash; right after <code>capture-ephemeral-url</code> succeeds, or explicitly
 asked for.</li>
@@ -215,22 +269,39 @@ algorithm, now parameterized).</li>
 <li>I.1 Step 12: confirm (showing the Markdown, not raw ADF) &mdash; post / revise / cancel.</li>
 <li>I.1 Steps 13-15: write description (if applicable), write comment, report. Unchanged.</li>
 </ol>
+
+<h3>I.4 (Teams)</h3>
+<ol>
+<li>Invoked as today &mdash; auto-offered by <code>finishing-a-development-branch</code>'s Option 2
+right after a new PR's URL is reported, or explicitly asked for.</li>
+<li>I.4 hands off to <code>generate-comment</code> with template type Teams Review Request, passing
+through whatever PR context it already has from the caller (auto-offer case) or nothing (direct-ask
+case, <code>generate-comment</code> gathers everything itself).</li>
+<li><code>generate-comment</code> runs its Teams content-gathering (scope, PR info, reviewer names,
+ask line) and returns <code>{filledMarkdown, headingPrefix}</code>.</li>
+<li>I.4 ignores <code>headingPrefix</code> and presents <code>filledMarkdown</code> as-is &mdash; no
+conversion, no confirm-before-post step (nothing is ever posted; this was already true today).</li>
+</ol>
 </section>
 
 <section id="error-handling">
 <h2>Error Handling</h2>
-<p>New or changed cases on top of I.1's existing table (no credentials, ensure-fails, branch
-mismatch, unresolved mentions, cancel-at-confirm, CLI failure &mdash; all unchanged):</p>
+<p>New or changed cases on top of I.1's and I.4's existing tables (I.1: no credentials, ensure-fails,
+branch mismatch, unresolved mentions, cancel-at-confirm, CLI failure; I.4: no PR found for current
+branch, no <code>teams_reviewers</code> preference and Jack declines to save one, no ticket
+key/context available &mdash; all unchanged, just relocated into <code>generate-comment</code>'s own
+content-gathering steps):</p>
 <div class="table-wrap">
 <table>
 <tr><th>Case</th><th>Disposition</th></tr>
 <tr><td>Template file missing/unreadable</td><td><code>generate-comment</code> stops, reports plainly,
 no fabricated draft</td></tr>
-<tr><td>Markdown outside the supported subset (hand-edited template uses something the converter
+<tr><td>Markdown outside the supported subset (hand-edited Jira template uses something the converter
 doesn't handle)</td><td>Conversion throws before I.1 reaches Step 12; report the unsupported
-construct plainly &mdash; never silently drop or mangle it</td></tr>
-<tr><td>Malformed mention token (missing/invalid accountId)</td><td>Same as today: stop, ask, never
-guess an ID</td></tr>
+construct plainly &mdash; never silently drop or mangle it. Doesn't apply to the Teams template, which
+is never converted.</td></tr>
+<tr><td>Malformed mention token (missing/invalid accountId, Jira templates only)</td><td>Same as today:
+stop, ask, never guess an ID</td></tr>
 <tr><td>Unrecognized template type requested</td><td><code>generate-comment</code> errors and lists
 the valid types</td></tr>
 </table>
@@ -242,29 +313,34 @@ the valid types</td></tr>
 <ul>
 <li><strong>markdown-to-adf.ts</strong> is the highest-value target &mdash; real unit tests (Vitest) per
 construct: heading levels, rule, bold, links, bullet lists, plain text with Unicode emoji, and the
-mention token &mdash; plus one full round-trip test per template (filled with sample data, compared
-against a hand-written expected ADF document), and a negative test confirming an unsupported
-construct throws rather than silently mis-converting.</li>
+mention token &mdash; plus one full round-trip test per Jira template (Progress Update and Investigation
+Update, each filled with sample data, compared against a hand-written expected ADF document), and a
+negative test confirming an unsupported construct throws rather than silently mis-converting. The Teams
+template needs no round-trip ADF test since it's never converted &mdash; just a fill-and-compare-text
+test.</li>
 <li><strong>generate-comment</strong>: template-loading and placeholder-filling is a pure function once
-content answers are gathered &mdash; testable without any live Jira calls.</li>
-<li>I.1's own SKILL.md has no existing automated test suite (it's an agentic instruction file, not
-code) &mdash; verification stays manual/live, same as today; only the new <code>markdown-to-adf.ts</code>
-module gets real automated tests.</li>
+content answers are gathered &mdash; testable without any live Jira calls, for all three templates.</li>
+<li>I.1's and I.4's own SKILL.md files have no existing automated test suite (they're agentic
+instruction files, not code) &mdash; verification stays manual/live, same as today; only the new
+<code>markdown-to-adf.ts</code> module and <code>generate-comment</code>'s own template-filling logic
+get real automated tests.</li>
 </ul>
 </section>
 
 <section id="out-of-scope">
 <h2>Out of Scope</h2>
 <ul>
-<li>A third template type (only Progress Update and Investigation Update are designed here; the
-mechanism supports adding more later without redesign).</li>
-<li>Full CommonMark support &mdash; the converter only handles the specific subset the two templates
+<li>A fourth template type &mdash; only Progress Update, Investigation Update, and Teams Review Request
+are designed here; the mechanism supports adding more later without redesign.</li>
+<li>Full CommonMark support &mdash; the converter only handles the specific subset the two Jira templates
 use.</li>
-<li>Any non-Jira reporting channel (Slack, email) &mdash; the architecture leaves room for it (map item
-<strong>I</strong>'s broadened scope), but no such channel is built here. This is the backlog item
-previously captured loosely as a future <strong>I.4</strong>.</li>
+<li>Any reporting channel beyond Jira and Teams (e.g. Slack, email) &mdash; the architecture leaves room
+for it, but no such channel is built here.</li>
 <li>Auto-detecting template type from Jira issue metadata, or a profile-level default &mdash; explicit
 ask only, per this design's own decision.</li>
+<li>Live Teams integration (Graph API, browser automation) &mdash; already ruled out by I.4's own design
+doc (<code>.digismith/docs/teams-pr-review-notification/design.html</code>) and unchanged here; I.4
+still only ever produces pasteable text.</li>
 </ul>
 </section>
 
