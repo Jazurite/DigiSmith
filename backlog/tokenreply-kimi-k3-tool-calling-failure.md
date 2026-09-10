@@ -11,6 +11,40 @@ call by hand, and then **resuming the model's own session
 (`--resume "<sessionID>"`) with a result summary** so it can continue
 reasoning and, if needed, attempt further steps itself.
 
+**Agentic Bridge (K.9), live-verified 2026-09-10, with an important caveat:**
+a local HTTP proxy (`scripts/agentic-bridge/server.ts`) that repairs a leaked
+XTML response into a real `tool_use` block before Claude Code's own agentic
+loop sees it — the goal being a single ordinary `claude -p --model kimi-k3`
+dispatch that just works, no `--resume`, no manual recovery. A real dispatch
+through the proxy (disposable scratch worktree, single-file-create-and-commit
+task, exact pattern from this file's own live tests) completed in **one
+dispatch, no `--resume`**, with two genuine `tool_use` blocks executed
+(`Bash` create, `Bash` commit) and a real verified commit
+(`13939fa`). `parse-result.ts` showed no `xtmlLeakDetected` field at all.
+
+**The caveat: the leak did not reproduce today, at all, in 4 separate real
+`kimi-k3` dispatches** — the proxy-routed dispatch above, two control
+dispatches sent directly to TokenReply bypassing the proxy entirely (same
+task pattern, both completed clean with zero XTML markers anywhere in the
+raw event stream), and one more proxy-routed dispatch using a heredoc-style
+Bash prompt (the same tool shape that leaked in this file's own Round 2)
+which also came back clean. So this is the "OR the model happened not to
+leak this particular time" branch, not confirmed evidence of the proxy
+silently repairing a real live leak — TokenReply's `kimi-k3` route may have
+been fixed upstream since this file's 2026-09-04/05 trials (5-6 days prior),
+or the leak is intermittent and today's 4 trials simply didn't hit it. The
+repair path itself (`hasXtmlToolCallChannel` → `extractXtmlToolCalls` →
+`applyToolCallFix`) remains verified only at the unit/integration-test level
+(`scripts/agentic-bridge/server.test.ts`'s "repairs a leaked XTML response
+into a real tool_use block" test, part of 31 passing tests across the
+proxy's three test files, all unmodified/already-reviewed) — never observed
+firing against a genuine live leak. If `kimi-k3` is used unattended at
+scale and leaks resurface, the Agentic Bridge should repair them per that
+tested code path, but this remains inferred from unit tests plus the
+design's own correctness, not from a live-fire observation. No regressions
+found: nothing about routing through the proxy broke anything relative to
+going direct to TokenReply.
+
 Two rounds of live verification exist. **Round 1** (2026-09-05) covered
 decode-and-execute only — it never actually invoked `--resume`, so the
 one thing this task exists to prove (that the documented resume loop
