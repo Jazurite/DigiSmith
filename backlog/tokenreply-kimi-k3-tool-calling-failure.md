@@ -23,16 +23,24 @@ dispatch, no `--resume`**, with two genuine `tool_use` blocks executed
 (`13939fa`). `parse-result.ts` showed no `xtmlLeakDetected` field at all.
 
 **The caveat: the leak did not reproduce today, at all, in 4 separate real
-`kimi-k3` dispatches** — the proxy-routed dispatch above, two control
-dispatches sent directly to TokenReply bypassing the proxy entirely (same
-task pattern, both completed clean with zero XTML markers anywhere in the
-raw event stream), and one more proxy-routed dispatch using a heredoc-style
-Bash prompt (the same tool shape that leaked in this file's own Round 2)
-which also came back clean. So this is the "OR the model happened not to
-leak this particular time" branch, not confirmed evidence of the proxy
-silently repairing a real live leak — TokenReply's `kimi-k3` route may have
-been fixed upstream since this file's 2026-09-04/05 trials (5-6 days prior),
-or the leak is intermittent and today's 4 trials simply didn't hit it. The
+`kimi-k3` dispatches** — though the four carry unequal evidentiary weight.
+Two have full captured evidence (raw command, `parse-result.ts` JSON output,
+and a `grep -c` marker-count, independently verified): the proxy-routed
+dispatch above, and one control dispatch sent directly to TokenReply
+bypassing the proxy entirely (same task pattern, zero XTML markers anywhere
+in the raw event stream). The other two are narrative-only in the source
+report — a commit SHA confirmed to exist but no separately pasted
+`parse-result.ts` output or raw event-stream grep: a second
+direct-to-TokenReply control (same task pattern, commit `2c17588`,
+described as clean) and a second proxy-routed dispatch using a
+heredoc-style Bash prompt (the same tool shape that leaked in this file's
+own Round 2, commit `beec20b`, also described as clean). So this is the
+"OR the model happened not to leak this particular time" branch, not
+confirmed evidence of the proxy silently repairing a real live leak —
+TokenReply's `kimi-k3` route may have been fixed upstream since this
+file's 2026-09-04/05 trials (5-6 days prior), or the leak is intermittent
+and today's 4 trials (2 fully evidenced, 2 narrative-only) simply didn't
+hit it. The
 repair path itself (`hasXtmlToolCallChannel` → `extractXtmlToolCalls` →
 `applyToolCallFix`) remains verified only at the unit/integration-test level
 (`scripts/agentic-bridge/server.test.ts`'s "repairs a leaked XTML response
@@ -44,6 +52,23 @@ tested code path, but this remains inferred from unit tests plus the
 design's own correctness, not from a live-fire observation. No regressions
 found: nothing about routing through the proxy broke anything relative to
 going direct to TokenReply.
+
+**Also still unverified: which response mode the proxy actually exercised.**
+Task 3's SSE-wrapping path (the proxy mirrors whatever `stream` value the
+client's own request specifies, wrapping a buffered response in a full
+Anthropic SSE event sequence when the client asked for one) was flagged in
+the design doc's "Open risks" section as a genuine unknown until a live
+test: does `claude -p`'s own HTTP client actually request `stream: true`,
+and does the SSE-wrapping path get exercised at all in a real dispatch, or
+is it dead code in practice? Today's live dispatch went through the proxy
+successfully, but this question remains open —
+`scripts/agentic-bridge/server.ts` has no per-request logging (its only
+`console.log` is the startup line), so nothing records which branch a
+given request took, and
+none was captured at dispatch time. So we know a dispatch succeeded through
+the proxy, but not whether it took the streaming (SSE) branch or the
+plain-JSON branch. A future live test could add a temporary `console.log`
+noting which branch fired to settle this.
 
 Two rounds of live verification exist. **Round 1** (2026-09-05) covered
 decode-and-execute only — it never actually invoked `--resume`, so the
