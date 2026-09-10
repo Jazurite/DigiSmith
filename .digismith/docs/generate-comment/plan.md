@@ -165,7 +165,7 @@ describe("fillTemplate", () => {
       "whats-checked":
         "- Reviewed Make.com scenario history for the last 48 hours\n- Checked Shopify webhook delivery logs for failed IN fulfillment events",
       "whats-found":
-        "- Webhook payload schema changed upstream without notice, dropping the `market` field Make.com's scenario depends on",
+        "- Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
       needs:
         "- **🔧 Backend Fix Needed >** (@[Linh Van Vu](7ac31de2)) — please confirm whether the schema change was intentional",
     });
@@ -182,7 +182,7 @@ describe("fillTemplate", () => {
         "",
         "#### 🔎 What's been found",
         "",
-        "- Webhook payload schema changed upstream without notice, dropping the `market` field Make.com's scenario depends on",
+        "- Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
         "",
         "#### ❓ Needs",
         "",

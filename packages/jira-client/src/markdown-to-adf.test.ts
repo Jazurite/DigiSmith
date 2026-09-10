@@ -205,4 +205,102 @@ describe("markdownToAdf", () => {
       ],
     });
   });
+
+  it("round-trips the filled investigation-update.md content into the expected ADF document", () => {
+    const filled = [
+      "### 🔍 Investigation Update – 9/9",
+      "",
+      "---",
+      "",
+      "#### 🕵️ What's been checked",
+      "",
+      "- Reviewed Make.com scenario history for the last 48 hours",
+      "- Checked Shopify webhook delivery logs for failed IN fulfillment events",
+      "",
+      "#### 🔎 What's been found",
+      "",
+      "- Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
+      "",
+      "#### ❓ Needs",
+      "",
+      "- **🔧 Backend Fix Needed >** (@[Linh Van Vu](7ac31de2)) — please confirm whether the schema change was intentional",
+    ].join("\n");
+
+    const doc = markdownToAdf(filled);
+
+    expect(doc).toEqual({
+      type: "doc",
+      version: 1,
+      content: [
+        { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "🔍 Investigation Update – 9/9" }] },
+        { type: "rule" },
+        { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "🕵️ What's been checked" }] },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Reviewed Make.com scenario history for the last 48 hours" }],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    { type: "text", text: "Checked Shopify webhook delivery logs for failed IN fulfillment events" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "🔎 What's been found" }] },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      text: "Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "❓ Needs" }] },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    { type: "text", text: "🔧 Backend Fix Needed >", marks: [{ type: "strong" }] },
+                    { type: "text", text: " (" },
+                    { type: "mention", attrs: { id: "7ac31de2", text: "@Linh Van Vu" } },
+                    { type: "text", text: ") — please confirm whether the schema change was intentional" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
 });
