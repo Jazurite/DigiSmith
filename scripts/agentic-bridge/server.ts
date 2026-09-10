@@ -58,7 +58,17 @@ function writeAsSse(res: ServerResponse, message: AnthropicMessagesResponse): vo
   send("message_start", { type: "message_start", message: { ...message, content: [], stop_reason: null } });
 
   message.content.forEach((block, index) => {
-    send("content_block_start", { type: "content_block_start", index, content_block: block });
+    // Send empty placeholder in content_block_start, not the full content
+    let emptyPlaceholder: unknown;
+    if (block.type === "text") {
+      emptyPlaceholder = { type: "text", text: "" };
+    } else if (block.type === "tool_use") {
+      emptyPlaceholder = { type: "tool_use", id: block.id, name: block.name, input: {} };
+    } else {
+      emptyPlaceholder = block;
+    }
+
+    send("content_block_start", { type: "content_block_start", index, content_block: emptyPlaceholder });
     if (block.type === "text") {
       send("content_block_delta", {
         type: "content_block_delta",

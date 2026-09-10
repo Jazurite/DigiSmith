@@ -280,6 +280,61 @@ describe("createRequestHandler — non-streaming", () => {
 });
 
 describe("createRequestHandler — streaming", () => {
+  it("sends content_block_start with empty text placeholder and fills content in delta", async () => {
+    fakeUpstreamResponse = {
+      id: "msg_6",
+      type: "message",
+      role: "assistant",
+      content: [{
+        type: "text",
+        text: "Hello, this is a plain text response.",
+      }],
+      model: "kimi-k3",
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage: { input_tokens: 10, output_tokens: 8 },
+    };
+
+    const proxy = createServer(createRequestHandler(fakeUpstreamUrl));
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port } = proxy.address() as AddressInfo;
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "kimi-k3", stream: true, messages: [] }),
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("text/event-stream");
+      const raw = await res.text();
+
+      const events = raw
+        .trim()
+        .split("\n\n")
+        .map((chunk) => {
+          const [eventLine, dataLine] = chunk.split("\n");
+          return { event: eventLine.replace("event: ", ""), data: JSON.parse(dataLine.replace("data: ", "")) };
+        });
+
+      expect(events.map((e) => e.event)).toEqual([
+        "message_start",
+        "content_block_start",
+        "content_block_delta",
+        "content_block_stop",
+        "message_delta",
+        "message_stop",
+      ]);
+      // Verify content_block_start has empty placeholder
+      expect(events[1].data.content_block).toEqual({ type: "text", text: "" });
+      // Verify delta carries the full text
+      expect(events[2].data.delta.type).toBe("text_delta");
+      expect(events[2].data.delta.text).toBe("Hello, this is a plain text response.");
+      expect(events[4].data.delta.stop_reason).toBe("end_turn");
+    } finally {
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
+  });
+
   it("wraps the buffered result in a full Anthropic SSE event sequence when the client requests stream:true", async () => {
     fakeUpstreamResponse = {
       id: "msg_4",
@@ -324,8 +379,12 @@ describe("createRequestHandler — streaming", () => {
         "message_delta",
         "message_stop",
       ]);
+      // Verify content_block_start has empty placeholder with id and name but empty input
       expect(events[1].data.content_block.type).toBe("tool_use");
       expect(events[1].data.content_block.name).toBe("Read");
+      expect(events[1].data.content_block.id).toBeDefined();
+      expect(events[1].data.content_block.input).toEqual({});
+      // Verify delta carries the full input
       expect(events[2].data.delta.type).toBe("input_json_delta");
       expect(JSON.parse(events[2].data.delta.partial_json)).toEqual({ file_path: "README.md" });
       expect(events[4].data.delta.stop_reason).toBe("tool_use");
