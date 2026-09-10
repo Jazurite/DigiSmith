@@ -8,6 +8,7 @@ import {
   getComments,
   getAttachmentContent,
 } from "./client.ts";
+import { markdownToAdf } from "./markdown-to-adf.ts";
 
 export function parseArgs(argv: string[]): Record<string, string> {
   const args: Record<string, string> = {};
@@ -78,6 +79,13 @@ async function main() {
         const creds = checkCredentials();
         const savedPath = await getAttachmentContent(args.id, args.out, creds);
         console.log(savedPath);
+        break;
+      }
+      case "markdown-to-adf": {
+        requireArgs(args, ["file"]);
+        const markdown = readFileSync(args.file, "utf-8").replace(/^﻿/, "");
+        const doc = markdownToAdf(markdown);
+        console.log(JSON.stringify(doc));
         break;
       }
       default:

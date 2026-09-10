@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Templating (Q) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Templating (Q) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-10</span>
+    <span>Map item: <strong>Q</strong></span>
+    <span>Commit range: <code>81c0efc..7bc3bd6</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Decoupled comment/message templating into a shared skill (<code>generate-comment</code>, map item <strong>Q.1</strong>) with three Markdown templates, then refactored the two already-shipped consumers &mdash; <code>jira-progress-write-back</code> (<strong>I.1</strong>) and <code>teams-pr-review-notification</code> (<strong>I.4</strong>) &mdash; to both call it instead of each rendering its own inline template (<strong>Q.2</strong>). <code>generate-comment</code> owns template selection, content-gathering questions, and filling a Markdown template, returning <code>{markdown, headingPrefix}</code>; a new <code>scripts/fill-template.ts</code> does the mechanical load-and-substitute work, and a new <code>packages/jira-client/src/markdown-to-adf.ts</code> converts the Jira-bound templates' filled Markdown to ADF right before I.1 posts &mdash; Teams needs no conversion at all. Followed the full Superpowers process: brainstorming &rarr; spec &rarr; writing-plans &rarr; <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 4 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Templates + fill-template.ts</h4>
+      <p>Three Markdown templates plus <code>fillTemplate</code>/<code>fillTemplateFile</code> (template loading, placeholder substitution, heading-prefix extraction) and a CLI entry point, consumed by Task 3's <code>generate-comment</code> skill.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>markdown-to-adf.ts + cli.ts subcommand</h4>
+      <p><code>markdownToAdf(markdown): AdfDoc</code> and a new <code>markdown-to-adf --file &lt;path&gt;</code> CLI subcommand, consumed by Task 4's (I.1's) new conversion step.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>skills/generate-comment/SKILL.md</h4>
+      <p>The Q.1 skill itself &mdash; a <code>{markdown, headingPrefix}</code> result reported back to whichever skill invoked it, consumed by Task 4 (I.1) and Task 5 (I.4).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 4</div>
+      <h4>Refactor jira-progress-write-back (I.1)</h4>
+      <p>A leaf skill &mdash; nothing new for other consumers. Now calls <code>generate-comment</code>, gained an Investigation Update path, and converts to ADF before confirming with the user.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 5</div>
+      <h4>Refactor teams-pr-review-notification (I.4)</h4>
+      <p>A leaf skill &mdash; nothing new for other consumers. Collapsed from 6 steps to 2: call <code>generate-comment</code>, present the result as-is.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Templates + fill-template.ts</td>
+      <td>3 templates, fill-template.ts/.test.ts</td>
+      <td class="status-ok">Approved, clean</td>
+      <td>
+        <code>fill-template.ts:52</code> <code>JSON.parse</code> of <code>--data</code> has no runtime shape validation;
+        <code>fillTemplateFile</code>'s BOM-stripping has no dedicated test;
+        substitution loop has no guard against a placeholder value containing another placeholder's literal tag text
+      </td>
+    </tr>
+    <tr>
+      <td>2. markdown-to-adf.ts + cli.ts subcommand</td>
+      <td>markdownToAdf converter, CLI subcommand</td>
+      <td class="status-fixed">Approved after 2 fix rounds</td>
+      <td><code>isSpecialLine()</code> still keeps its own independent copy of the unsupported-construct regexes, parallel to <code>checkNotUnsupported</code>'s</td>
+    </tr>
+    <tr>
+      <td>3. skills/generate-comment/SKILL.md</td>
+      <td>The Q.1 skill</td>
+      <td class="status-ok">Approved, clean</td>
+      <td>&mdash;</td>
+    </tr>
+    <tr>
+      <td>4. Refactor jira-progress-write-back (I.1)</td>
+      <td>Consumes generate-comment, Investigation Update path</td>
+      <td class="status-fixed">Approved after 1 fix round</td>
+      <td>
+        Step 3's stale &ldquo;Step 8/9&rdquo; cross-reference, and &ldquo;When to Use&rdquo; missing Investigation Update &mdash;
+        both escalated during the final review's triage and resolved there (see Final Review &amp; Fix below)
+      </td>
+    </tr>
+    <tr>
+      <td>5. Refactor teams-pr-review-notification (I.4)</td>
+      <td>Consumes generate-comment</td>
+      <td class="status-ok">Approved, clean</td>
+      <td>&mdash;</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes &mdash; 3 Important findings plus 2 escalated task-level minors and 2 documentation-sync items, all resolved in one fix wave and independently re-reviewed clean; 4 residual Minor/out-of-scope observations parked with rulings, none load-bearing.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Depot clone freshness gap &mdash; a pre-existing <code>~/.digismith-depot/repo</code> clone has no <code>markdown-to-adf</code> subcommand, so I.1's conversion step would fail on any machine that hadn't refreshed its depot clone since this build</td><td>Fixed &mdash; added a capability probe + <code>digismith:depot</code> <code>refresh</code>-and-retry to I.1's Step 2</td></tr>
+    <tr><td>Important</td><td><code>generate-comment</code>'s drafted content had no constraint keeping it within <code>markdown-to-adf</code>'s supported Markdown subset, and I.1 converted to ADF <em>after</em> the user's confirmation instead of before (contradicting the design)</td><td>Fixed &mdash; added the subset constraint to <code>generate-comment</code>'s content-gathering steps, reordered I.1's convert/confirm steps (convert now precedes confirm), and corrected an illegal fixture that used an inline code span</td></tr>
+    <tr><td>Important</td><td>Missing round-trip test for <code>investigation-update.md</code> in <code>markdown-to-adf.test.ts</code> &mdash; only <code>progress-update.md</code> had one, despite the design calling for one per Jira template</td><td>Fixed &mdash; added, mirroring the existing progress-update round-trip test</td></tr>
+    <tr><td>Minor (escalated to fix-before-merge)</td><td>I.1 Step 3's stale &ldquo;spliced and written straight back in Step 8/9&rdquo; cross-reference, left over from the Q refactor</td><td>Fixed &mdash; corrected to name only the steps that actually splice/write the description</td></tr>
+    <tr><td>Minor (escalated to fix-before-merge)</td><td>I.1's &ldquo;When to Use&rdquo; section still only mentioned Progress Update, inconsistent with its own Overview/frontmatter</td><td>Fixed &mdash; added a clause for the Investigation Update path</td></tr>
+    <tr><td>Minor (doc sync)</td><td><code>design.html</code> had drifted from the shipped implementation: stale step-number references, <code>{filledMarkdown, headingPrefix}</code> naming instead of the real <code>{markdown, headingPrefix}</code>, and a stale convert/confirm ordering</td><td>Fixed &mdash; corrected all three to match what actually shipped</td></tr>
+    <tr><td>Minor (doc sync)</td><td><code>MEMORY.md</code>'s Q and I rows still said &ldquo;Not yet built&rdquo; and carried a stale step-number reference</td><td>Fixed &mdash; both rows updated to reflect this build is shipped</td></tr>
+    <tr><td>Minor</td><td>The fix wave's own depot-freshness-probe rationale sentence became self-contradictory after the convert/confirm reorder (it still described conversion as happening after confirmation)</td><td>Parked &mdash; real inconsistency, but the actual probe/refresh/retry instructions are correct and unaffected; a wording-only fix, non-blocking</td></tr>
+    <tr><td>Minor</td><td>Cosmetic line-wrap artifacts at two edit seams from the fix wave</td><td>Parked &mdash; real but purely cosmetic, no meaning/rendering impact</td></tr>
+    <tr><td>Minor (out of scope)</td><td><code>plan.md</code> still has two lines describing pre-reorder step numbering, not covered by any finding</td><td>Parked &mdash; non-blocking; <code>design.html</code> is the doc-of-record that was required to stay synced, not the plan</td></tr>
+    <tr><td>Minor (out of scope, pre-existing)</td><td>Both <code>markdown-to-adf</code> round-trip tests hardcode filled Markdown rather than piping <code>fillTemplate</code>'s real output through <code>markdownToAdf</code>, so a future template edit could silently drift the two suites apart</td><td>Parked &mdash; pre-existing design choice from Tasks 1/2, not introduced by this build, real but non-blocking</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">a813079</span> feat(generate-comment): add three Markdown templates and fill-template.ts (Q.1)</li>
+    <li><span class="sha">1b49b95</span> feat(jira-client): add markdown-to-adf converter and CLI subcommand (Q.1)</li>
+    <li><span class="sha">5d86356</span> fix: add missing image and inline code span validation to markdown-to-adf</li>
+    <li><span class="sha">abeff54</span> docs(backlog): capture standardized session handoff format idea</li>
+    <li><span class="sha">8014a09</span> fix(markdown-to-adf): check unsupported constructs in all bullet-list items</li>
+    <li><span class="sha">161546a</span> feat(generate-comment): add the Q.1 skill</li>
+    <li><span class="sha">45ed7b0</span> refactor(jira-progress-write-back): consume generate-comment, add Investigation Update path (Q.2)</li>
+    <li><span class="sha">33922ea</span> docs(generate-comment): fix three stale step-number cross-references in the plan</li>
+    <li><span class="sha">279cbbb</span> fix(jira-progress-write-back): map template type to kebab-case at generate-comment call</li>
+    <li><span class="sha">150761e</span> refactor(teams-pr-review-notification): consume generate-comment (Q.2)</li>
+    <li><span class="sha">a3a2c04</span> fix(generate-comment): use legal Markdown subset in test fixtures, add investigation-update round-trip test</li>
+    <li><span class="sha">9124e53</span> fix(generate-comment): constrain drafted bullets to the ADF-convertible Markdown subset</li>
+    <li><span class="sha">5c081d9</span> fix(jira-progress-write-back): probe depot freshness, convert-before-confirm, fix stale cross-refs</li>
+    <li><span class="sha">7bc3bd6</span> docs(generate-comment): sync design.html and MEMORY.md with what actually shipped</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/generate-comment/report.html</footer>
+
+</body>
+</html>
