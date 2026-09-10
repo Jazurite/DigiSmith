@@ -1173,7 +1173,7 @@ the existing rows.
 heading already exists, so do not append a second one. Produce no delta
 at all — the existing Materials & Links section (heading and whatever
 follows it) is left exactly as fetched, completely untouched. Report why
-in Step 16. Never guess at a risky edit against an unfamiliar structure.
+in Step 15. Never guess at a risky edit against an unfamiliar structure.
 
 ### Step 7: Draft the Track Checklist Delta
 
@@ -1241,7 +1241,7 @@ every other node untouched:
   into their exact positions within the existing node sequence. If Step
   7 found nothing, the document is unchanged from Step 3 in this regard.
 
-This composed document is the exact value Step 14 sends back — hold it
+This composed document is the exact value Step 13 sends back — hold it
 in memory, don't write yet.
 
 ### Step 9: Generate the Comment
@@ -1286,8 +1286,8 @@ legitimate trailing content, e.g. "`<headingPrefix>` – 26/8 (week 2)"
 against a search for `26/8` (the next character is a space, a non-digit)
 — do not require full-string equality on the whole heading instead,
 since that would break matching those legitimately-suffixed headings.
-**Found** → remember its `id` as `commentId` for Step 13. **Not found**
-→ Step 13 creates a new comment instead.
+**Found** → remember its `id` as `commentId` for Step 14. **Not found**
+→ Step 14 creates a new comment instead.
 
 ### Step 11: Confirm With the User
 
