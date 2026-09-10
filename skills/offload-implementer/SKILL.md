@@ -186,6 +186,15 @@ stateless PATH + `--bare`-support check, invoked fresh on every
 If Depot's operation reports not-ready, stop here and report `BLOCKED`
 rather than continuing to Step 3/4.
 
+Then, also for the `claude-code` runner, invoke `digismith:depot`'s
+`ensure-agentic-bridge` operation and record the port it returns — every
+`claude-code`-runner dispatch (TokenReply is currently the only provider this
+runner supports) routes through this local proxy instead of TokenReply
+directly, so a leaked `kimi-k3` tool call is repaired before Claude Code
+ever sees it (map item **K.9**, `.digismith/docs/agentic-bridge/design.html`).
+If this operation doesn't return a usable port, stop here and report
+`BLOCKED`, same as an unready `ensure-claude-code` check above.
+
 ### Step 3: Build the Task Prompt
 
 Before building either prompt below, invoke `digismith:inject-standards`
@@ -320,7 +329,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 <prompt built in Step 3, verbatim>
 PROMPT_EOF
 )
-ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_BASE_URL="http://127.0.0.1:<port from Step 2's ensure-agentic-bridge call>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json --verbose \
@@ -344,7 +353,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 <prompt built in Step 3, verbatim>
 PROMPT_EOF
 )
-ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_BASE_URL="http://127.0.0.1:<port from Step 2's ensure-agentic-bridge call>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json --verbose \
@@ -404,6 +413,17 @@ to send.
 **Only runs when Step 5's `parse-result.ts` output has `xtmlLeakDetected: true`** — TokenReply's
 `kimi-k3` route returned raw, unconverted tool-call text instead of executing anything (see
 `backlog/tokenreply-kimi-k3-tool-calling-failure.md`). Skip this step entirely otherwise.
+
+**For the `claude-code` runner, this step should no longer trigger in practice** — the
+Agentic Bridge proxy (map item K.9, wired in at Step 2/4 above) repairs the leak before
+Claude Code's own agentic loop ever sees it, so a single ordinary dispatch completes
+without needing this recovery procedure at all. This step remains the real, necessary
+path for two cases: the `opencode` runner (out of scope for the proxy — see the design
+doc's Out of Scope section) and an undecodable leak even the proxy couldn't fix (the
+proxy relays those unchanged rather than guessing). If `xtmlLeakDetected: true` shows up
+for a `claude-code`/TokenReply dispatch despite the proxy being in the path, treat that as
+a signal something is wrong with the proxy itself, not a routine recovery case — worth
+investigating rather than just working around.
 
 1. Extract `resultText` to a temp file **byte-exact** — no intermediate print/stdout
    round-trip, since a shell's own text-mode translation can silently corrupt it (real evidence:
