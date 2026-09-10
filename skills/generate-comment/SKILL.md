@@ -80,7 +80,18 @@ this skill's):
 ```
 
 Compose all such bullets as one Markdown bullet-list block — the
-`next-steps` placeholder value. Compute today's date in `D/M` form (day
+`next-steps` placeholder value.
+
+**Stay within the supported Markdown subset** when drafting any of this
+step's bullets, since they get converted to ADF later (Progress Update
+only, not Teams): plain text, `**bold**`, `[text](url)` links,
+`@[Name](accountId)` mentions, and literal Unicode emoji only. No inline
+code spans (backticks), no numbered or nested lists, no images, no code
+blocks, no blockquotes — any of these will cause the later conversion
+step to fail. If you need to refer to a code identifier or technical
+term, write it as plain text without backticks.
+
+Compute today's date in `D/M` form (day
 and month, no leading zeros, no year):
 
 ```bash
@@ -102,6 +113,14 @@ own Markdown bullet-list block (1-4 bullets each, never fabricated):
   role/person ask-and-resolve pattern as Step 2's Next Steps (ask who,
   resolve to a JIRA `accountId`, use the `@[Name](accountId)` mention
   token, stop and ask directly on no-match or ambiguous match)
+
+**Stay within the supported Markdown subset** when drafting all three
+bullet groups, the same constraint as Step 2: plain text, `**bold**`,
+`[text](url)` links, `@[Name](accountId)` mentions, and literal Unicode
+emoji only. No inline code spans (backticks), no numbered or nested
+lists, no images, no code blocks, no blockquotes — any of these will
+cause the later conversion step to fail. If you need to refer to a code
+identifier or technical term, write it as plain text without backticks.
 
 Compute the `date` placeholder the same way as Step 2.
 
