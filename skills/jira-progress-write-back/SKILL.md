@@ -22,8 +22,8 @@ dedup-matching, converting to ADF, and posting.
 ## When to Use
 
 Right after `digismith:capture-ephemeral-url` reports its two URLs, or
-whenever explicitly asked to post/update the JIRA progress update for the
-current ticket.
+whenever explicitly asked to post/update the JIRA progress update or
+investigation update for the current ticket.
 
 ## Prerequisites
 
@@ -106,14 +106,39 @@ Then re-run `check-credentials` to confirm before continuing to Step 3.
 This only ever happens once per machine — every future session finds the
 file already there.
 
+Then probe whether the depot clone actually has the `markdown-to-adf`
+subcommand this skill needs at Step 11 — `ensure` above is a pure
+existence check with no fetch/refresh, so a depot clone that predates the
+Q build would otherwise only fail much later, right after Step 12's
+confirmation. The probe needs no credentials, so it's safe to run here:
+
+```bash
+echo 'probe' > /tmp/digismith-adf-probe.md
+node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts markdown-to-adf --file /tmp/digismith-adf-probe.md
+```
+
+**Succeeds** (prints ADF JSON, exit 0) → continue to Step 3. **Fails with
+`unknown subcommand: markdown-to-adf`** (or any other failure indicating
+the subcommand doesn't exist) → invoke `digismith:depot`'s `refresh`
+operation:
+
+```bash
+git -C ~/.digismith-depot/repo fetch --all --prune --tags -q && \
+git -C ~/.digismith-depot/repo checkout main && \
+git -C ~/.digismith-depot/repo reset --hard origin/main
+```
+
+then retry the probe once. Still fails → stop here, report the error
+plainly (see Error Handling), don't fabricate a conversion.
+
 ### Step 3: Fetch the Current Ticket
 
 ```bash
 node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts get-issue --key <Key> --fields summary,description
 ```
 
-This isn't a display fetch: whatever comes back gets spliced and written
-straight back in Step 8/9, and the response is real, structured ADF for
+This isn't a display fetch: whatever comes back gets spliced (Step 8)
+and written straight back (Step 13), and the response is real, structured ADF for
 every field by construction — no `responseContentFormat` parameter to
 get wrong, no lossy rendered-markdown hybrid to guard against. Keep the
 raw `description` ADF document in memory for the rest of this process.
@@ -276,7 +301,7 @@ I.4's template type, not this skill's) and hard-stops on anything else,
 so pass the mapped form, not the human-readable `<template>` value used
 elsewhere in this document. Receive back `{markdown, headingPrefix}`.
 Hold both in memory — `headingPrefix` feeds Step 10's dedup-search,
-`markdown` feeds Step 11's confirmation and Step 12's conversion.
+`markdown` feeds Step 11's conversion and Step 12's confirmation.
 
 ### Step 10: Find Today's Existing Comment
 
@@ -316,27 +341,7 @@ since that would break matching those legitimately-suffixed headings.
 **Found** → remember its `id` as `commentId` for Step 14. **Not found**
 → Step 14 creates a new comment instead.
 
-### Step 11: Confirm With the User
-
-Render the description delta (in human-readable terms of what's
-changing — "adding a Materials & Links entry with these three links" /
-"marking Technical Development done with a JP checkmark" / "Track
-section not found, skipping" as applicable — **only when `<template>` =
-Progress Update**; for Investigation Update, state plainly that no
-description changes are made at all) and the full comment text — the
-`markdown` from Step 9, readable as Markdown, not raw ADF JSON.
-Alongside the comment text, state plainly whether this write will
-**create a new comment** or **replace the existing comment Step 10
-found** (name its `commentId` when replacing), so the user can catch and
-cancel a wrong match before it lands. Then ask via `AskUserQuestion`:
-post as drafted, let the user revise first, or cancel. **Revise** →
-incorporate the requested change and re-present before proceeding.
-**Cancel** → stop here, nothing is written. Only **post as drafted**
-continues to Step 12. This applies every time this skill runs, not just
-the first — both writes are team-visible external side effects, and
-JIRA's own edit history is visible to the whole team.
-
-### Step 12: Convert the Comment to ADF
+### Step 11: Convert the Comment to ADF
 
 Write Step 9's `markdown` to a scratch file (e.g.
 `/tmp/jira-comment-<Key>.md`), then:
@@ -346,7 +351,31 @@ node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts markdown-to-adf --f
 ```
 
 Capture the printed ADF `doc` JSON — this is the exact value Step 14
-sends back.
+sends back. Doing this conversion before Step 12's confirmation means an
+unsupported-construct failure surfaces here, before the user has
+confirmed anything to post — not after, which would otherwise leave the
+user having already signed off on a draft that then turns out unpostable.
+
+### Step 12: Confirm With the User
+
+Render the description delta (in human-readable terms of what's
+changing — "adding a Materials & Links entry with these three links" /
+"marking Technical Development done with a JP checkmark" / "Track
+section not found, skipping" as applicable — **only when `<template>` =
+Progress Update**; for Investigation Update, state plainly that no
+description changes are made at all) and the full comment text — the
+`markdown` from Step 9, readable as Markdown, not raw ADF JSON (already
+validated by Step 11's conversion). Alongside the comment text, state
+plainly whether this write will **create a new comment** or **replace
+the existing comment Step 10 found** (name its `commentId` when
+replacing), so the user can catch and cancel a wrong match before it
+lands. Then ask via `AskUserQuestion`: post as drafted, let the user
+revise first, or cancel. **Revise** → incorporate the requested change,
+re-run Step 11's conversion on the revised markdown, and re-present
+before proceeding. **Cancel** → stop here, nothing is written. Only
+**post as drafted** continues to Step 13. This applies every time this
+skill runs, not just the first — both writes are team-visible external
+side effects, and JIRA's own edit history is visible to the whole team.
 
 ### Step 13: Write the Description
 
@@ -360,7 +389,7 @@ node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts update-description 
 
 ### Step 14: Write the Comment
 
-Write Step 12's converted ADF document to a scratch file (e.g.
+Write Step 11's converted ADF document to a scratch file (e.g.
 `/tmp/jira-comment-<Key>.json`), then:
 
 ```bash
@@ -386,6 +415,9 @@ Progress Update only), and whether the comment was created or updated
 - **`digismith:depot`'s `ensure` operation fails at Step 2** → stop, say
   so plainly (see that skill's own Error Handling for the exact
   disposition). Don't fabricate a write.
+- **`markdown-to-adf` subcommand not found even after `digismith:depot`
+  refresh** (Step 2's capability probe) → stop here, report the error
+  plainly, don't fabricate a conversion.
 - **Branch doesn't match `<Key>__<slug>`** → ask directly for the ticket
   key rather than guessing.
 - **`generate-comment` fails or is cancelled at Step 9** (unrecognized
@@ -400,7 +432,7 @@ Progress Update only), and whether the comment was created or updated
   as the Track case: skip that part of the delta, report why, don't
   force an edit.
 - **The Markdown from `generate-comment` uses a construct
-  `markdown-to-adf.ts` doesn't support** (Step 12 throws) → stop here,
+  `markdown-to-adf.ts` doesn't support** (Step 11 throws) → stop here,
   report the unsupported construct plainly. Never post a mangled
   conversion.
 - **Custom, site-uploaded emoji needed with no resolvable `id`** → not
@@ -409,7 +441,7 @@ Progress Update only), and whether the comment was created or updated
 - **Mistaken or duplicate comment already posted** → no delete
   capability exists — edit it via `--comment-id` instead of creating a
   corrective second comment.
-- **User cancels at Step 11** → stop, nothing written, no partial write
+- **User cancels at Step 12** → stop, nothing written, no partial write
   of just the description or just the comment.
 - **The `update-description` or `add-comment` CLI call fails** (HTTP
   error, network error) → report the failure plainly with whatever
@@ -422,7 +454,7 @@ Progress Update only), and whether the comment was created or updated
 |---|---|
 | 0 | Profile pre-check — skip entirely if `ticket: false` |
 | 1 | Resolve `<Key>` from branch name |
-| 2 | Ensure the Jira client is available: defensive `digismith:depot` `ensure` check, then `check-credentials` — bootstrap via `AskUserQuestion` if incomplete |
+| 2 | Ensure the Jira client is available: defensive `digismith:depot` `ensure` check, then `check-credentials` (bootstrap via `AskUserQuestion` if incomplete), then a `markdown-to-adf` capability probe (`digismith:depot` `refresh` + retry on failure) |
 | 3 | Fetch the description via `get-issue` |
 | 4 | Determine template type — auto Progress after `capture-ephemeral-url`, else ask |
 | 5 | Derive this repo's row label (Progress Update only) |
@@ -431,8 +463,8 @@ Progress Update only), and whether the comment was created or updated
 | 8 | Compose the full new description document (Progress Update only; no-op otherwise) |
 | 9 | Generate the comment via `generate-comment` — get `{markdown, headingPrefix}` |
 | 10 | Find today's existing comment via `headingPrefix` + date-boundary match |
-| 11 | Confirm full draft with the user — post / revise / cancel |
-| 12 | Convert the comment Markdown to ADF via `markdown-to-adf` |
+| 11 | Convert the comment Markdown to ADF via `markdown-to-adf` |
+| 12 | Confirm full draft with the user — post / revise / cancel |
 | 13 | Write the description (Progress Update only) |
 | 14 | Write the comment (create, or update via `--comment-id`) |
 | 15 | Report what was written |
