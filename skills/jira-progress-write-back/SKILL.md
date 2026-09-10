@@ -267,10 +267,16 @@ in memory, don't write yet.
 
 ### Step 9: Generate the Comment
 
-Invoke `generate-comment` (**Q.1**) with template type `<template>`
-(Step 4). Receive back `{markdown, headingPrefix}`. Hold both in memory —
-`headingPrefix` feeds Step 10's dedup-search, `markdown` feeds Step 11's
-confirmation and Step 12's conversion.
+Invoke `generate-comment` (**Q.1**) with the template type argument set
+to the kebab-case form of `<template>` — `<template>` = Progress Update
+→ pass `progress-update`; `<template>` = Investigation Update → pass
+`investigation-update`. `generate-comment`'s Step 1 expects exactly one
+of these kebab-case strings (never `teams-review-request` — that's
+I.4's template type, not this skill's) and hard-stops on anything else,
+so pass the mapped form, not the human-readable `<template>` value used
+elsewhere in this document. Receive back `{markdown, headingPrefix}`.
+Hold both in memory — `headingPrefix` feeds Step 10's dedup-search,
+`markdown` feeds Step 11's confirmation and Step 12's conversion.
 
 ### Step 10: Find Today's Existing Comment
 
