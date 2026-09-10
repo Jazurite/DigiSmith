@@ -205,7 +205,7 @@ Teams reviewer names are plain text, not resolved mentions.</li>
 The prefix is derived from the template file itself &mdash; the text of its first heading line up
 to (not including) the date placeholder, e.g. <code>&ldquo;&#128227; Progress Update&rdquo;</code> from a
 first line reading <code>### &#128227; Progress Update &ndash; &lt;D/M&gt;</code>. Never hardcoded
-separately, so a hand-edited template's heading can't silently drift out of sync with what I.1's Step 8
+separately, so a hand-edited template's heading can't silently drift out of sync with what I.1's Step 10
 dedup-search actually matches against. I.4 ignores this return value entirely &mdash; it never searches
 for or edits a previously-sent message, since nothing it produces is ever actually sent by DigiSmith.</li>
 </ul>
@@ -227,10 +227,10 @@ standalone/explicitly.</li>
 <li>Calls <code>generate-comment</code> in place of today's Steps 9-11.</li>
 <li>Steps 4-7 (Materials &amp; Links / Track checklist description edits) now run only for Progress
 Update &mdash; skipped entirely for Investigation Update.</li>
-<li>Step 8's dedup-search now matches against the heading-prefix <code>generate-comment</code>
+<li>Step 10's dedup-search now matches against the heading-prefix <code>generate-comment</code>
 returned, instead of the hardcoded <code>&ldquo;&#128227; Progress Update &ndash;&rdquo;</code> string &mdash; same
 date-boundary matching logic, just parameterized.</li>
-<li>New step right before posting: run the filled Markdown through <code>markdown-to-adf.ts</code>.</li>
+<li>New step right before confirming: run the filled Markdown through <code>markdown-to-adf.ts</code>.</li>
 <li>Step 12's confirm-with-user preview now shows the readable Markdown instead of raw ADF JSON.</li>
 <li>Credentials, confirm/revise/cancel, write, report: unchanged.</li>
 </ul>
@@ -261,12 +261,13 @@ asked for.</li>
 <li>I.1 Steps 0-3 unchanged (profile check, ticket key resolution, credentials, fetch ticket).</li>
 <li>I.1 determines template type (auto = Progress if from the capture-URL path; otherwise ask).</li>
 <li>I.1 hands off to <code>generate-comment</code> with that type; gets back
-<code>{filledMarkdown, headingPrefix}</code>.</li>
+<code>{markdown, headingPrefix}</code>.</li>
 <li>I.1 runs Steps 4-7 (description delta) only if template = Progress.</li>
-<li>I.1 Step 8 dedup-searches comments using <code>headingPrefix</code> (same D/M boundary-check
+<li>I.1 Step 10 dedup-searches comments using <code>headingPrefix</code> (same D/M boundary-check
 algorithm, now parameterized).</li>
-<li>I.1 converts <code>filledMarkdown</code> &rarr; ADF via <code>markdown-to-adf.ts</code>.</li>
-<li>I.1 Step 12: confirm (showing the Markdown, not raw ADF) &mdash; post / revise / cancel.</li>
+<li>I.1 Step 11 converts <code>markdown</code> &rarr; ADF via <code>markdown-to-adf.ts</code>.</li>
+<li>I.1 Step 12: confirm (showing the Markdown, not raw ADF, already validated by Step 11's
+conversion) &mdash; post / revise / cancel.</li>
 <li>I.1 Steps 13-15: write description (if applicable), write comment, report. Unchanged.</li>
 </ol>
 
@@ -278,8 +279,8 @@ right after a new PR's URL is reported, or explicitly asked for.</li>
 through whatever PR context it already has from the caller (auto-offer case) or nothing (direct-ask
 case, <code>generate-comment</code> gathers everything itself).</li>
 <li><code>generate-comment</code> runs its Teams content-gathering (scope, PR info, reviewer names,
-ask line) and returns <code>{filledMarkdown, headingPrefix}</code>.</li>
-<li>I.4 ignores <code>headingPrefix</code> and presents <code>filledMarkdown</code> as-is &mdash; no
+ask line) and returns <code>{markdown, headingPrefix}</code>.</li>
+<li>I.4 ignores <code>headingPrefix</code> and presents <code>markdown</code> as-is &mdash; no
 conversion, no confirm-before-post step (nothing is ever posted; this was already true today).</li>
 </ol>
 </section>
