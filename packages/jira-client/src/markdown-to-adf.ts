@@ -56,6 +56,16 @@ function unsupported(construct: string, line: string): never {
   throw new Error(`markdown-to-adf: unsupported construct (${construct}): ${JSON.stringify(line)}`);
 }
 
+function checkNotUnsupported(line: string): void {
+  if (/^```/.test(line)) unsupported("code block", line);
+  if (/^>/.test(line)) unsupported("blockquote", line);
+  if (/^\d+\.\s+/.test(line)) unsupported("numbered list", line);
+  if (/^\s+[-*]\s+/.test(line)) unsupported("nested list", line);
+  if (/^\|/.test(line)) unsupported("table", line);
+  if (/!\[[^\]]*\]\([^)]*\)/.test(line)) unsupported("image", line);
+  if (/`[^`]*`/.test(line)) unsupported("inline code span", line);
+}
+
 function isSpecialLine(line: string): boolean {
   return (
     /^#{1,6}\s+/.test(line) ||
@@ -84,13 +94,7 @@ export function markdownToAdf(markdown: string): AdfDoc {
       continue;
     }
 
-    if (/^```/.test(line)) unsupported("code block", line);
-    if (/^>/.test(line)) unsupported("blockquote", line);
-    if (/^\d+\.\s+/.test(line)) unsupported("numbered list", line);
-    if (/^\s+[-*]\s+/.test(line)) unsupported("nested list", line);
-    if (/^\|/.test(line)) unsupported("table", line);
-    if (/!\[[^\]]*\]\([^)]*\)/.test(line)) unsupported("image", line);
-    if (/`[^`]*`/.test(line)) unsupported("inline code span", line);
+    checkNotUnsupported(line);
 
     const headingMatch = /^(#{1,6})\s+(.*)$/.exec(line);
     if (headingMatch) {
@@ -112,6 +116,7 @@ export function markdownToAdf(markdown: string): AdfDoc {
     if (/^-\s+/.test(line)) {
       const items: AdfNode[] = [];
       while (i < lines.length && /^-\s+/.test(lines[i])) {
+        checkNotUnsupported(lines[i]);
         const itemText = lines[i].replace(/^-\s+/, "");
         items.push({
           type: "listItem",

@@ -120,6 +120,14 @@ describe("markdownToAdf", () => {
     expect(() => markdownToAdf("run `npm test` now")).toThrow(/inline code/);
   });
 
+  it("throws on an image inside a non-first bullet-list item", () => {
+    expect(() => markdownToAdf("- first\n- second with ![alt](url)")).toThrow(/image/);
+  });
+
+  it("throws on an inline code span inside a non-first bullet-list item", () => {
+    expect(() => markdownToAdf("- first\n- second with `code`")).toThrow(/inline code/);
+  });
+
   it("round-trips the filled progress-update.md content into the expected ADF document", () => {
     const filled = [
       "### 📣 Progress Update – 26/8",
