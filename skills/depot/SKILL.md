@@ -1,13 +1,13 @@
 ---
 name: depot
-description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
 ---
 
 # Depot
 
 ## Overview
 
-DigiSmith's map item **V**. Manages three independent, machine-wide
+DigiSmith's map item **V**. Manages four independent, machine-wide
 runtime resources, each available to anything that needs it, independent
 of any single repo, ticket, or plan:
 
@@ -19,15 +19,19 @@ of any single repo, ticket, or plan:
   backing every `digismith:offload-implementer` `opencode`-runner
   dispatch across every concurrent `subagent-driven-development` plan on
   the machine, so no plan needs to spin up its own.
+- **The Agentic Bridge proxy** — a single shared local HTTP proxy backing
+  every `digismith:offload-implementer` `claude-code`-runner dispatch to
+  TokenReply, repairing `kimi-k3`'s XTML tool-call format into a real
+  `tool_use` block before Claude Code sees it, so a dispatch just works.
 - **Claude Code readiness** — a stateless PATH + `--bare`-support check
   backing offload-implementer's `claude-code`-runner dispatches. Unlike
-  the other two, nothing is provisioned or reused here — there's no
+  the other three, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
 
 These resources share nothing but the same shape of idea — available
 without the caller needing to know where they live — and are managed by
 entirely separate operations below. Depot has no generalized "resource"
-abstraction between them: a git clone, a live process, and a stateless
+abstraction between them: a git clone, two live processes, and a stateless
 check don't share mechanics.
 
 ## Resource: packages/ Clone
@@ -340,10 +344,12 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 - **Model or provider abstraction** — this skill knows nothing about
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
-- **A generalized multi-resource interface** — three concrete resources
-  (one of them stateless), three concrete operation sets. Not
-  generalized until a fourth real resource needs the same shape as an
-  existing one.
+- **A generalized multi-resource interface** — four concrete resources
+  (one of them stateless), four concrete operation sets. Two of them
+  (OpenCode server, Agentic Bridge proxy) share the identical ensure/stop +
+  PID/port-tracking lifecycle shape, but duplicating this well-understood
+  ~80-line pattern twice is still cheaper and clearer than a premature
+  abstraction — reconsider only if a third resource needs the same shape.
 
 ## Quick Reference
 
