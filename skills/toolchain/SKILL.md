@@ -7,7 +7,7 @@ description: Read or dictate Jack's standing toolchain defaults (test runner, st
 
 ## Overview
 
-DigiSmith's map item **G.2**, part of map item **G** ("Structure") — formerly its
+DigiSmith's map item **G.2**, part of map item **G** ("Methodology") — formerly its
 own letter, **U**, until the 2026-09-11 merge. A standing, dictatable list of
 Jack's tool/technology defaults for common greenfield decisions — test runner,
 styling approach, E2E framework, script language, package manager, Node install
