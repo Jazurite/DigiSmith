@@ -231,11 +231,35 @@ clean attempt, and puts every correction in the reliable model's hands regardles
 rounds it takes.
 
 If any of `offload-implementer`'s own prerequisites aren't met (runner not on PATH, credential
-env var unset, `print-config.ts` exits non-zero, Depot's readiness check fails) — fall back to a
-normal Claude cheap-tier `Agent`-tool dispatch instead, the same dispatch this task would have
-gotten before this paragraph existed. Note the fallback in this task's ledger entry as a
-one-liner (`Task <N>: mechanical-tier offload unavailable (<reason>), dispatched to Claude
-instead`) so it's visible after the fact. Never block a task on this path being unavailable.
+env var unset, `print-config.ts` exits non-zero, Depot's readiness check fails), **or the
+dispatch attempt itself is refused by a live Claude Code permission-classifier block** — fall
+back to a normal Claude cheap-tier `Agent`-tool dispatch instead, the same dispatch this task
+would have gotten before this paragraph existed. A classifier refusal is recognizable by two
+things together: no events file is produced at all (the resolved runner's process never
+started), and the tool result carries an explicit harness permission-refusal notice rather than
+any real command output, exit code, or stderr text from `claude`/`opencode` — distinct from a
+genuine runner error (which always produces *some* real output) or a `Bash` tool timeout
+(already handled separately, not a failure by itself). Note the fallback in this task's ledger
+entry as a one-liner (`Task <N>: mechanical-tier offload unavailable (<reason>), dispatched to
+Claude instead`) so it's visible after the fact. Never block a task on this path being
+unavailable.
+
+**Cache a classifier refusal for the rest of this plan.** On the *first* live classifier
+refusal detected during this plan run, record it as its own ledger line — not just
+in-session/controller memory, since the ledger is this skill's own designed-for-compaction-
+survival mechanism, the same reason task-completion lines already live there:
+`Task <N>: mechanical-tier offload environment blocked (classifier refusal) — falling back to
+Claude for the rest of this plan`. Before attempting its own first dispatch, every later
+mechanical-tier task in this plan scans the ledger for that line first. If present, skip the
+offload attempt entirely and dispatch straight to a normal Claude cheap-tier `Agent`-tool
+implementer — no wasted attempt, no re-discovery. This applies plan-wide regardless of which
+runner (`claude-code` or `opencode`) triggered the original discovery or which runner a later
+task would have used — both runners have been independently confirmed blocked by the identical
+action shape (credential-fetch-then-spawn), not by anything specific to one binary. This cache
+never persists beyond this plan's own ledger: the next plan — in this session or a different
+one, with possibly-different permission settings — starts with a clean slate and gets a fair,
+fresh attempt at real offload, since the underlying block is believed to be
+session/harness-specific rather than a confirmed permanent condition.
 
 Integration and architecture tier tasks are unaffected by this paragraph — dispatch them via the
 bullet list below exactly as before.
