@@ -108,9 +108,9 @@
 <section id="overview">
   <h2>Progress Overview</h2>
   <div class="stats">
-    <div class="stat"><div class="n">9 / 20</div><div class="l">map items shipped</div></div>
-    <div class="stat"><div class="n">Tier 1</div><div class="l">of 6 — "the frame"</div></div>
-    <div class="stat"><div class="n">E</div><div class="l">in progress (the spine)</div></div>
+    <div class="stat"><div class="n">9 / 22</div><div class="l">map letters fully shipped — E, I, K, W, Y in progress</div></div>
+    <div class="stat"><div class="n">Tier 2</div><div class="l">of 6 — "the override", in progress</div></div>
+    <div class="stat"><div class="n">W</div><div class="l">primitive ownership — 7 activations shipped, W.8+ open</div></div>
   </div>
 </section>
 
@@ -138,21 +138,21 @@
     <tr><td><strong>F</strong></td><td>Design review</td>
       <td>Independent critique of a design, then the jade-and-ink artifact rendering for human approval</td>
       <td><span class="status todo">Not started</span></td></tr>
-    <tr><td><strong>G</strong></td><td>Standards injection</td>
-      <td>Jack's coding standards + style guide carried into every implementer subagent's brief</td>
+    <tr><td><strong>G</strong></td><td>Methodology</td>
+      <td><strong>G.1</strong> Standards injection — Jack's coding standards + style guide carried into every implementer subagent's brief <span class="status done">Done</span> · <strong>G.2</strong> Toolchain — a dictatable list of standing tool defaults (test runner, styling, E2E, package manager, Node install method) in <code>toolchain.yml</code>, consulted by <code>digismith:brainstorming</code> so it stops re-asking decided questions; built 2026-09-11 as standalone letter <strong>U</strong>, merged into G the same day (G renamed from "Standards injection", U freed) <span class="status done">Done</span></td>
       <td><span class="status done">Done</span></td></tr>
-    <tr><td><strong>H</strong></td><td>Subagent-driven always</td>
-      <td>Killed Superpowers' "1. Subagent-Driven or 2. Inline?" question — <strong>retired 2026-09-04, absorbed into W.6</strong> (now autonomous complexity-based reasoning instead of an unconditional default)</td>
-      <td><span class="status done">Done (retired — see W.6)</span></td></tr>
-    <tr><td><strong>I</strong></td><td>QA handoff</td>
-      <td><strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output), including real ADF formatting — no status transition, that stays manual by design <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution, gated behind a profile field (map item O) <span class="status todo">Not started</span></td>
-      <td><span class="status next">In progress (1/2)</span></td></tr>
+    <tr><td><strong>H</strong></td><td>Preferences store</td>
+      <td><em>Original meaning</em> (2026-08-12 – 2026-09-04): Subagent-driven always — killed Superpowers' "1. Subagent-Driven or 2. Inline?" question; <strong>retired 2026-09-04, absorbed into W.6</strong> (autonomous complexity-based reasoning instead of an unconditional default). <em>Letter reused 2026-09-05</em>: a general per-repo settings store, <code>.digismith/preferences.yml</code> behind <code>digismith:preferences</code> (<code>get</code>/<code>set</code>/<code>clear</code>) <span class="status done">Done</span> · <strong>H.1</strong> Saved Finish Option — <code>finishing-a-development-branch</code> reuses a repo's saved <code>finish_option</code> instead of re-asking its menu (2026-09-08) <span class="status done">Done</span></td>
+      <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>I</strong></td><td>Reporting</td>
+      <td>Renamed from "QA handoff" 2026-09-08 and broadened beyond Jira. <strong>I.1</strong> JIRA comment write-back for a captured ephemeral URL (consumes <strong>M</strong>'s output), real ADF formatting, direct REST v3 — no status transition, that stays manual by design <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution, gated behind a profile field (map item O) <span class="status todo">Not started</span> · <strong>I.3</strong> reusable comment templates — grew into a shared mechanism and became letter <strong>Q</strong> (Templating) · <strong>I.4</strong> Microsoft Teams review-request message generated right after a PR opens (paste-ready text only, DigiSmith never connects to Teams), 2026-09-09; reworked onto Q.1's templating 2026-09-10 <span class="status done">Done</span></td>
+      <td><span class="status next">In progress (I.2 open)</span></td></tr>
     <tr><td><strong>J</strong></td><td>Estimation</td>
       <td>Dual-track: the internal number (real) and the client-facing number (committed)</td>
       <td><span class="status todo">Not started</span></td></tr>
-    <tr><td><strong>K</strong></td><td>Model tiering</td>
-      <td><strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>report-implementation</code>'s report render — formerly also <code>enforcer</code>'s spec rewrap, until Enforcer's retirement dropped that specific consumer) to a cheap Chutes-hosted model, falling back to in-session generation whenever it's off, unavailable, or returns something malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a Chutes-hosted model (Kimi K3) via a persistent OpenCode server — <code>offload-implementer</code> skill <span class="status done">Done</span></td>
-      <td><span class="status next">In progress (multi-provider routing beyond Chutes still undesigned)</span></td></tr>
+    <tr><td><strong>K</strong></td><td>Maestro</td>
+      <td>Renamed from "Model tiering" 2026-09-09. <strong>K.1</strong> offload DigiSmith's own mechanical HTML-generation steps (<code>report-implementation</code>'s report render) to a cheap gateway-hosted model, falling back to in-session generation whenever it's off, unavailable, or malformed <span class="status done">Done</span> · <strong>K.2</strong> offload a single <code>subagent-driven-development</code> task, explicitly requested per-task, to a third-party model via a pluggable gateway/runner — <code>offload-implementer</code> skill <span class="status done">Done</span> · <strong>K.3</strong> pluggable gateway provider (<code>GatewayProvider</code> strategy, Chutes + TokenReply), 2026-08-29 <span class="status done">Done</span> · <strong>K.6</strong> pluggable coding-agent runner (OpenCode or Claude Code; every profile now defaults to <code>claude-code</code>/<code>tokenreply</code>), 2026-08-30 <span class="status done">Done</span> · <strong>K.9</strong> Agentic Bridge — a local HTTP proxy repairing TokenReply's <code>kimi-k3</code> XTML tool-call leak into a real <code>tool_use</code> block before Claude Code sees it, managed by Depot as <strong>V.2</strong>, 2026-09-11 <span class="status done">Done</span> · <strong>K.4</strong> generic token/cost counter (<code>scripts/token-counter/</code>), 2026-09-11 <span class="status done">Done</span> · <strong>K.5</strong> parallel gateways · <strong>K.7</strong> vendor benchmark · <strong>K.8</strong> persistent worker pool — backlog, undesigned <span class="status todo">Not started</span></td>
+      <td><span class="status next">In progress (K.5/K.7/K.8 open; a native model router promoted out to tentative letter Z)</span></td></tr>
     <tr><td><strong>L</strong></td><td>Refinement & exploration</td>
       <td><strong>L.1</strong> connect a new ticket to the established feature network · <strong>L.2</strong> source the codebase and return the actual code list</td>
       <td><span class="status todo">Not started</span></td></tr>
@@ -163,23 +163,29 @@
       <td>Formalizes G's hand-written report into a required step: once a <code>subagent-driven-development</code> plan's final review passes, generate the HTML implementation report before the plan's ledger gets deleted</td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>O</strong></td><td>Profiling</td>
-      <td>A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point</td>
+      <td>A per-repo behavior profile (standards subset, ticket/ephemeral/reporting/logging on-off, offload provider and runner) that existing stages consult independently at their own trigger point. Its <code>publish_artifact</code> toggle (added 2026-08-16) was retired outright 2026-09-11 — reviewing a design/report's HTML file directly was judged sufficient, and the Artifact publish step was pure token spend on top</td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>P</strong></td><td>Telemetry</td>
       <td>Captures the full session transcript for a DigiSmith-driven ticket build and commits it back into DigiSmith's own repo, building a corpus for future process-improvement analysis</td>
       <td><span class="status done">Done</span></td></tr>
-    <tr><td><strong>Q</strong></td><td>Convention enforcement</td>
-      <td>Made <code>superpowers:brainstorming</code>/<code>superpowers:writing-plans</code> honor DigiSmith's unified docs convention (correct folder, HTML format) instead of falling back to their own defaults; also carried the amendment that the per-feature HTML docs (<code>design.html</code>, <code>report.html</code>) get published via the <code>Artifact</code> tool for readability. <strong>Retired 2026-09-04, absorbed into W.5</strong> — see MEMORY.md map item W.</td>
-      <td><span class="status done">Done (retired — see W.5)</span></td></tr>
+    <tr><td><strong>Q</strong></td><td>Templating</td>
+      <td><em>Original meaning</em> (2026-08-08 – 2026-09-04): Convention enforcement — made <code>brainstorming</code>/<code>writing-plans</code> honor DigiSmith's unified docs convention via a standalone <code>enforcer</code> wrapper; <strong>retired 2026-09-04, absorbed into W.5</strong>. <em>Letter reused 2026-09-09</em>, decoupled out of I.3 once I.4's Teams template turned out to be the same pattern as I.1's two Jira templates: <strong>Q.1</strong> a <code>generate-comment</code> skill owning template selection, content-gathering, and filling a Markdown template (three shipped: <code>progress-update</code>, <code>investigation-update</code>, <code>teams-review-request</code>), with Markdown→ADF conversion owned by the Jira consumer via a hand-rolled converter in <code>packages/jira-client</code>, 2026-09-10 <span class="status done">Done</span> · <strong>Q.2</strong> I.1 and I.4 refactored to consume it instead of their own inline templates, 2026-09-10 <span class="status done">Done</span></td>
+      <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>R</strong></td><td>End-to-end testing</td>
       <td>Split out of <strong>I</strong> (2026-08-26) into its own letter — it isn't a JIRA-write-back or distribution concern, just filed under the same "QA handoff" gap by coincidence. Scope otherwise undesigned</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>S</strong></td><td>Figma visual regression</td>
       <td>Visual regression vs Figma designs via a custom Figma skill. Split out of <strong>I</strong> (2026-08-26) for the same reason as <strong>R</strong></td>
       <td><span class="status todo">Not started</span></td></tr>
-    <tr><td><strong>V</strong></td><td>Runtime clone provisioning</td>
-      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith/repo</code>) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh</td>
+    <tr><td><strong>V</strong></td><td>Runtime clone provisioning (Depot)</td>
+      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith-depot/repo</code>, renamed from <code>~/.digismith/</code> 2026-09-04) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh <span class="status done">Done</span> · <strong>V.1</strong> a single shared OpenCode server backing every <code>offload-implementer</code> dispatch, one per machine instead of one per plan, 2026-08-28 <span class="status done">Done</span> · <strong>V.2</strong> the Agentic Bridge proxy (K.9) as a third managed resource, 2026-09-11 <span class="status done">Done</span> · <strong>V.3</strong> VPS Session CLI — <code>status</code>/<code>connect</code> against a hand-provisioned Hetzner VPS's persistent <code>claude</code> tmux session over SSH; nothing spawned locally, the resource is remote; not yet live-verified against the real box, 2026-09-11 <span class="status done">Done</span></td>
       <td><span class="status done">Done</span></td></tr>
+    <tr><td><strong>W</strong></td><td>Primitive ownership</td>
+      <td>DigiSmith vendors Superpowers' 14 primitives and replaces specific ones outright — a deliberate, bounded exception to philosophy #2, triggered by upstream <code>finishing-a-development-branch</code> never pushing after a local merge. <strong>W.1</strong> verbatim vendor of all 14 skills, 2026-08-20 <span class="status done">Done</span> · <strong>W.2</strong> activation mechanism: fork-provenance tag + <code>check_vendored_skills.ts</code> 3-way drift check, 2026-08-29 (<strong>W.2.1</strong> baseline against upstream GitHub instead of a local plugin cache, 2026-09-05) <span class="status done">Done</span> · <strong>W.3</strong> internal <code>superpowers:</code> → <code>digismith:</code> call-site cutover, 2026-08-29 <span class="status done">Done</span> · <strong>W.4</strong> first activation: Option 1 "Merge Locally" pushes to origin, 2026-09-04 <span class="status done">Done</span> · <strong>W.4.1</strong> automatic plugin version bump on self-merge, 2026-09-05; hardened for patch-vs-minor 2026-09-08 after a live miss; later retrofitted as Y's first stock hook <span class="status done">Done</span> · <strong>W.5</strong> Q (convention enforcement) folded into the vendored primitives, 2026-09-04 <span class="status done">Done</span> · <strong>W.6</strong> H (subagent-driven always) folded into <code>writing-plans</code>' handoff as autonomous complexity-based reasoning; <code>executing-plans</code> gains a ledger and feeds <code>report-implementation</code>, 2026-09-04 <span class="status done">Done</span> · <strong>W.7</strong> <code>subagent-driven-development</code>'s conflict-scan rationalization guard, 2026-09-05 <span class="status done">Done</span> · <strong>W.8+</strong> further activations (<code>requesting-code-review</code> with standards injection is brainstormed and in backlog) <span class="status todo">Not started</span></td>
+      <td><span class="status next">In progress (7 activations shipped)</span></td></tr>
+    <tr><td><strong>Y</strong></td><td>Lifecycle hooks</td>
+      <td>Specific points in DigiSmith's own pipeline fire a hook — a markdown instructions file followed like a skill, triggered automatically. <strong>Y.1</strong> the <code>post-finish</code> point, fired from Option 1 after merge, push, and cleanup, with two stock hooks under <code>.digismith/hooks/post-finish/</code>: <code>01-version-bump</code> (W.4.1 retrofit) and <code>02-plugin-reinstall</code> (refreshes the plugin cache after a self-merge), 2026-09-05 <span class="status done">Done</span> · <strong>Y.1.3</strong> a third stock hook that logs the shipped feature into this page — backlog, raised 2026-09-11 <span class="status todo">Not started</span> · cross-repo hook sharing deferred to tentative letter <strong>Y2</strong></td>
+      <td><span class="status next">In progress (Y.1 shipped)</span></td></tr>
   </table>
   </div>
   <p style="font-size:.88rem; color:var(--muted);">
@@ -259,7 +265,108 @@
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>V — Runtime clone provisioning:</strong> <code>depot</code> skill —
     <a href="docs/depot/design.html">design spec</a> ·
-    <a href="docs/depot/plan.md">implementation plan</a>
+    <a href="docs/depot/plan.md">implementation plan</a> ·
+    <a href="docs/depot/report.html">implementation report</a> ·
+    V.1 <a href="docs/depot-opencode-server/design.html">design</a> ·
+    <a href="docs/depot-opencode-server/plan.md">plan</a> ·
+    <a href="docs/depot-opencode-server/report.html">report</a> ·
+    V.3 <a href="docs/vps-session/design.html">design</a> ·
+    <a href="docs/vps-session/plan.md">plan</a> ·
+    <a href="docs/vps-session/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>W — Primitive ownership:</strong>
+    W.1 <a href="docs/vendor-superpowers-skills/design.html">design</a> ·
+    <a href="docs/vendor-superpowers-skills/plan.md">plan</a> ·
+    W.2 <a href="docs/primitive-activation-mechanism/design.html">design</a> ·
+    <a href="docs/primitive-activation-mechanism/plan.md">plan</a> ·
+    <a href="docs/primitive-activation-mechanism/report.html">report</a> ·
+    W.2.1 <a href="docs/check-vendored-skills-github-source/design.html">design</a> ·
+    <a href="docs/check-vendored-skills-github-source/plan.md">plan</a> ·
+    W.3 <a href="docs/call-site-cutover/design.html">design</a> ·
+    <a href="docs/call-site-cutover/plan.md">plan</a> ·
+    <a href="docs/call-site-cutover/report.html">report</a> ·
+    W.4.1 <a href="docs/auto-bump-plugin-version-on-merge/design.html">design</a> ·
+    <a href="docs/auto-bump-plugin-version-on-merge/plan.md">plan</a> ·
+    hardening <a href="docs/version-bump-patch-minor/design.html">design</a> ·
+    <a href="docs/version-bump-patch-minor/plan.md">plan</a> ·
+    <a href="docs/version-bump-patch-minor/report.html">report</a> ·
+    W.5 <a href="docs/retire-enforcer-vendored-primitives/design.html">design</a> ·
+    <a href="docs/retire-enforcer-vendored-primitives/plan.md">plan</a> ·
+    W.6 <a href="docs/retire-h-vendored-primitives/design.html">design</a> ·
+    <a href="docs/retire-h-vendored-primitives/plan.md">plan</a> ·
+    <a href="docs/retire-h-vendored-primitives/report.html">report</a> ·
+    W.7 <a href="docs/conflict-scan-rationalization-guard/design.html">design</a> ·
+    <a href="docs/conflict-scan-rationalization-guard/plan.md">plan</a> ·
+    <a href="docs/conflict-scan-rationalization-guard/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>Y — Lifecycle hooks:</strong>
+    <a href="docs/lifecycle-hooks/design.html">design spec</a> ·
+    <a href="docs/lifecycle-hooks/plan.md">implementation plan</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>H — Preferences store (reused letter):</strong> <code>preferences</code> skill —
+    <a href="docs/preferences-and-finish-option/design.html">shared design spec</a> ·
+    <a href="docs/preferences-store/plan.md">implementation plan</a> ·
+    <a href="docs/preferences-store/report.html">implementation report</a> ·
+    H.1 <a href="docs/saved-finish-option/plan.md">plan</a> ·
+    <a href="docs/saved-finish-option/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>Q — Templating (reused letter):</strong> <code>generate-comment</code> skill —
+    <a href="docs/generate-comment/design.html">design spec</a> ·
+    <a href="docs/generate-comment/plan.md">implementation plan</a> ·
+    <a href="docs/generate-comment/report.html">implementation report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>I.4 — Teams PR-review notification:</strong> <code>teams-pr-review-notification</code> skill —
+    <a href="docs/teams-pr-review-notification/design.html">design spec</a> ·
+    <a href="docs/teams-pr-review-notification/plan.md">implementation plan</a> ·
+    <a href="docs/teams-pr-review-notification/report.html">implementation report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>G.2 — Toolchain:</strong> <code>toolchain</code> skill —
+    <a href="docs/toolchain/design.html">design spec</a> ·
+    <a href="docs/toolchain/plan.md">implementation plan</a> ·
+    <a href="docs/toolchain/report.html">implementation report</a> ·
+    G/U merge <a href="docs/structure-merge-g-and-u/design.html">design</a> ·
+    <a href="docs/structure-merge-g-and-u/report.html">report</a> ·
+    G rename <a href="docs/rename-g-methodology/design.html">design</a> ·
+    <a href="docs/rename-g-methodology/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>K — Maestro (later sub-items):</strong>
+    K.1 <a href="docs/model-tiering/design.html">design</a> ·
+    <a href="docs/model-tiering/plan.md">plan</a> ·
+    <a href="docs/model-tiering/report.html">report</a> ·
+    K.3 <a href="docs/ai-gateway-vendors/design.html">design</a> ·
+    <a href="docs/ai-gateway-vendors/plan.md">plan</a> ·
+    K.3 kimi-k3 recovery <a href="docs/kimi-k3-xtml-tool-call-recovery/design.html">design</a> ·
+    <a href="docs/kimi-k3-xtml-tool-call-recovery/plan.md">plan</a> ·
+    K.6 <a href="docs/pluggable-runners/design.html">design</a> ·
+    <a href="docs/pluggable-runners/plan.md">plan</a> ·
+    K.9 <a href="docs/agentic-bridge/design.html">design</a> ·
+    <a href="docs/agentic-bridge/plan.md">plan</a> ·
+    <a href="docs/agentic-bridge/report.html">report</a> ·
+    K.4 <a href="docs/token-counter/design.html">design</a> ·
+    <a href="docs/token-counter/plan.md">plan</a> ·
+    <a href="docs/token-counter/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>Z — Native model router (tentative letter, not yet a map row):</strong>
+    Z.1 <a href="docs/model-router-z1-mechanical-offload/design.html">design</a> ·
+    <a href="docs/model-router-z1-mechanical-offload/plan.md">plan</a> ·
+    <a href="docs/model-router-z1-mechanical-offload/report.html">report</a> ·
+    Z.2 <a href="docs/offload-classifier-block-caching/design.html">design</a> ·
+    <a href="docs/offload-classifier-block-caching/plan.md">plan</a> ·
+    <a href="docs/offload-classifier-block-caching/report.html">report</a>
+  </p>
+  <p style="font-size:.88rem; color:var(--muted);">
+    <strong>O — <code>publish_artifact</code> toggle (retired 2026-09-11):</strong>
+    <a href="docs/publish-artifact-toggle/design.html">design spec</a> ·
+    <a href="docs/publish-artifact-toggle/plan.md">implementation plan</a> ·
+    <a href="docs/publish-artifact-toggle/report.html">implementation report</a> — kept as historical record
   </p>
 </section>
 
@@ -272,8 +379,8 @@
       <td><strong>G</strong> standards injection <span class="status done">Done</span> · <strong>E.1</strong> spine first slice <span class="status done">Done</span> · <strong>O</strong> profiling <span class="status done">Done</span></td>
       <td><span class="status done">Done — considered satisfied 2026-08-11; E.2 decoupled to Tier 3</span></td></tr>
     <tr><td><strong>2</strong></td><td>The override</td>
-      <td><strong>H</strong> subagent-driven always <span class="status done">Done</span> · <strong>Q</strong> convention enforcement <span class="status done">Done</span> · <strong>K</strong> open-weight model extension</td>
-      <td><span class="status next">In progress (2/3)</span></td></tr>
+      <td><strong>H</strong> subagent-driven always <span class="status done">Done (retired into W.6)</span> · <strong>Q</strong> convention enforcement <span class="status done">Done (retired into W.5)</span> · <strong>K.1</strong> model offload for DigiSmith's own HTML generation <span class="status done">Done</span> · <strong>W.1</strong> vendor Superpowers primitives <span class="status done">Done</span> · <strong>K.2</strong> implementer-task offload <span class="status done">Done</span> · <strong>W.2</strong> activation mechanism <span class="status done">Done</span> · <strong>W.4</strong>/<strong>W.5</strong>/<strong>W.6</strong>/<strong>W.7</strong> primitive-by-primitive replacement <span class="status done">Done</span> · the rest of model tiering (K.5/K.7/K.8) · <strong>W.8+</strong> further replacement</td>
+      <td><span class="status next">In progress — structure and mechanics shipped, remainder open</span></td></tr>
     <tr><td><strong>3</strong></td><td>Intake & estimation</td>
       <td><strong>A</strong> intake/creation <span class="status done">Done</span> · <strong>E.2</strong> spine remaining scope · <strong>J</strong> estimation</td>
       <td><span class="status next">In progress (1/3)</span></td></tr>
@@ -281,10 +388,10 @@
       <td><strong>L</strong> refinement & exploration · <strong>B</strong> spec seam</td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>5</strong></td><td>Technical expansion</td>
-      <td><strong>D</strong> delivery · <strong>F</strong> design review · <strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1</strong> JIRA write-back <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution · <strong>R</strong> E2E testing · <strong>S</strong> Figma visual regression</td>
-      <td><span class="status next">In progress (3/8 — M, N, and I.1 shipped, pulled forward out of tier order)</span></td></tr>
+      <td><strong>M</strong> ephemeral deploy capture <span class="status done">Done</span> · <strong>N</strong> implementation reporting <span class="status done">Done</span> · <strong>I.1</strong> JIRA write-back <span class="status done">Done</span> · <strong>I.2</strong> multi-repo distribution</td>
+      <td><span class="status next">In progress (3/4 — M, N, and I.1 shipped, pulled forward out of tier order)</span></td></tr>
     <tr><td><strong>6</strong></td><td>Last</td>
-      <td><strong>C</strong> live work journal</td>
+      <td><strong>C</strong> live work journal · <strong>D</strong> delivery · <strong>F</strong> design review · <strong>R</strong> E2E testing · <strong>S</strong> Figma visual regression — the latter four demoted from Tier 5 on 2026-09-04, still undesigned with zero code weeks after the rest of Tier 5 shipped</td>
       <td><span class="status todo">Not started</span></td></tr>
   </table>
   </div>
@@ -296,7 +403,17 @@
   <p style="font-size:.85rem; color:var(--muted); margin-top:.2rem;">
     <strong>V — Runtime clone provisioning</strong> <span class="status done">Done</span> —
     pulled forward and built 2026-08-27, outside any tier, same as
-    <strong>O</strong>/<strong>P</strong>.
+    <strong>O</strong>/<strong>P</strong>; V.1 (2026-08-28), V.2 and V.3 (2026-09-11) followed.
+  </p>
+  <p style="font-size:.85rem; color:var(--muted); margin-top:.2rem;">
+    <strong>Also built outside tier order:</strong>
+    <strong>Y</strong> lifecycle hooks <span class="status done">Y.1 Done</span> (2026-09-05) ·
+    <strong>H</strong> preferences store + H.1 <span class="status done">Done</span> (2026-09-05 / 09-08) ·
+    <strong>I.4</strong> Teams notification <span class="status done">Done</span> (2026-09-09) ·
+    <strong>Q</strong> templating <span class="status done">Done</span> (2026-09-10) ·
+    <strong>K.3</strong>/<strong>K.6</strong>/<strong>K.9</strong>/<strong>K.4</strong> <span class="status done">Done</span> ·
+    <strong>G.2</strong> toolchain <span class="status done">Done</span> (2026-09-11) —
+    each a direct request or a gap surfaced live, none waiting on its tier.
   </p>
 </section>
 
@@ -740,6 +857,162 @@
       <code>history.html</code> and <code>MEMORY.md</code> update, and
       retires <code>backlog/jira-rest-graphql-direct-api.md</code> now that
       its proposal is actually built.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-20</div>
+      <h4>W.1 — all 14 Superpowers primitives vendored verbatim</h4>
+      <p>Triggered by a confirmed upstream gap: <code>superpowers:finishing-a-development-branch</code>'s
+      Option 1 "Merge Locally" never pushes to origin. Rather than another H/Q-style wrapper from
+      the outside, DigiSmith vendors Superpowers' primitives and replaces specific ones outright —
+      a deliberate, bounded exception to philosophy #2. This first slice cloned all 14 skills into
+      flat <code>skills/</code> folders (plugin discovery needs exactly one level), dormant until
+      individually activated. Originally specced under letter R; renumbered to <strong>W</strong>
+      on merge (2026-08-29) because <code>main</code> had independently claimed R for E2E testing —
+      the collision that later became a standing check before merging any long-lived worktree.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-28</div>
+      <h4>V.1 — one shared OpenCode server per machine</h4>
+      <p>K.2 had been starting an OpenCode server per plan. Depot now owns a single machine-wide
+      one (<code>ensure-opencode-server</code>/<code>stop-opencode-server</code>, tracked by PID
+      and port), verified live that sessions genuinely isolate on a shared server so concurrent
+      plans against different worktrees can share it. Its smoke test also surfaced
+      <code>offload-implementer</code>'s too-low timeout floor and undocumented progress-read
+      options, captured to backlog rather than fixed in scope.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-29</div>
+      <h4>W.2 activation mechanism, W.3 call-site cutover, K.3 pluggable gateway providers</h4>
+      <p>W.2 defines how a vendored skill goes live: a fork-provenance tag in its frontmatter plus
+      <code>scripts/check_vendored_skills.ts</code>, a 3-way diff (W.1's clone commit as baseline,
+      vs. upstream, vs. the local tree) so upstream drift and deliberate local divergence are never
+      conflated. W.3 redirected DigiSmith's own <code>superpowers:</code> references to
+      <code>digismith:</code> for the six primitives it actually invokes, content-neutral. The same
+      day, K.3's spike material was promoted straight to shipped infrastructure — a
+      <code>GatewayProvider</code> strategy under <code>scripts/providers/</code>, adding TokenReply
+      alongside Chutes.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-08-30</div>
+      <h4>K.6 — pluggable coding-agent runner</h4>
+      <p>The offloaded task no longer has to run through OpenCode: <code>scripts/runners/</code>
+      makes the harness a choice (OpenCode or Claude Code's own <code>claude -p</code>), promoted
+      the same way K.3 was. Every profile's <code>task_offload_runner</code> later defaulted to
+      <code>claude-code</code> and <code>task_offload_provider</code> to <code>tokenreply</code>
+      (2026-09-04), sidestepping Depot's shared-server credential dependency since Claude Code
+      reads credentials per dispatch.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-04</div>
+      <h4>W.4, W.5, W.6 — first real activations; H and Q retired into the vendored primitives</h4>
+      <p>The day W's mechanism proved itself three times over. <strong>W.4</strong> gave
+      <code>finishing-a-development-branch</code>'s Option 1 the push it always lacked — closing the
+      exact gap that created W. <strong>W.5</strong> folded Q (convention enforcement) directly into
+      <code>brainstorming</code>, <code>writing-plans</code>, <code>bootstrap</code>, and
+      <code>adopt</code>, retiring the external <code>enforcer</code> wrapper. <strong>W.6</strong> did
+      the same to H: the unconditional "always subagent-driven" default became autonomous
+      complexity-based reasoning inside <code>writing-plans</code>' handoff, and
+      <code>executing-plans</code> gained a lightweight ledger so <code>report-implementation</code>
+      could cover inline-executed plans too. Same day: the <code>vendored-</code> folder prefix was
+      dropped once the clean <code>digismith:&lt;name&gt;</code> resolution was live-confirmed; K.6's
+      <code>claude-code</code> runner got its blocking <code>--verbose</code> fix; K.3 switched
+      TokenReply to <code>kimi-k3</code> and reverted after live-confirming it breaks tool-calling
+      (a gateway-side XTML leak, root-caused but not fixable from DigiSmith); <code>~/.digismith</code>
+      became <code>~/.digismith-depot</code>; and W.6's merge was the second real non-fast-forward
+      merge, so <code>report-implementation</code>'s fast-forward assumption is now formally on
+      watch.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-05</div>
+      <h4>W.4.1 auto version bump, Y lifecycle hooks, W.7, W.2.1, H reused as Preferences store, K.3 kimi-k3 recovery</h4>
+      <p>A seven-miss manual chore ended: <strong>W.4.1</strong> computes and writes DigiSmith's next
+      plugin version (integer minor increment) on every self-merge, into both
+      <code>plugin.json</code> and the independently-stale <code>marketplace.json</code>. Mid-brainstorm
+      it raised a general lifecycle-hook mechanism, deferred to its own session and built the same day
+      as <strong>Y</strong> once a second use case arrived (a stale plugin cache still running H's
+      retired skill): <strong>Y.1</strong> is the <code>post-finish</code> point, with the version bump
+      retrofitted as stock hook <code>01</code> and a plugin-cache reinstall as <code>02</code>.
+      <strong>W.7</strong> added a one-paragraph guard to <code>subagent-driven-development</code>'s
+      conflict scan after a live session rationalized a real plan-vs-codebase contradiction away
+      instead of asking — its first activation, executed inline via <code>executing-plans</code>.
+      <strong>W.2.1</strong> moved the drift check's baseline to a shallow clone of upstream GitHub so
+      it survives Superpowers no longer being installed locally. Letter <strong>H</strong> was reused
+      for an unrelated feature, a per-repo <code>.digismith/preferences.yml</code> behind
+      <code>digismith:preferences</code>, shipped as a 3-task plan whose final review caught a
+      cross-repo invocation bug the plan's own convention had introduced. And K.3 gained a recovery
+      path for <code>kimi-k3</code>'s leaked XTML tool calls — decode, execute with the controller's
+      own tools, <code>--resume</code> the same session — live-verified twice: continuity holds, but
+      the leak recurs, so it only stretches to tasks needing roughly three tool calls.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-06</div>
+      <h4>Z.1 — model router's mechanical-tier offload (tentative letter Z)</h4>
+      <p>The native multi-provider model router idea, promoted out of K-lineage once its scope grew
+      into modifying <code>subagent-driven-development</code> itself, shipped its first slice as
+      <strong>Z.1</strong> with its own implementation report. Z remains a tentative letter tracked in
+      backlog rather than a map row.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-08</div>
+      <h4>W.4.1 hardened, H.1 Saved Finish Option, I renamed "Reporting"</h4>
+      <p>A live miss — three <code>fix(...)</code> commits bumped as minor instead of patch, corrected
+      by hand to <code>0.29.1-beta</code> — became W.4.1's <code>bumpTypeSince</code>: an all-fix range
+      is patch-worthy, anything else minor. <strong>H.1</strong> made
+      <code>finishing-a-development-branch</code> stop re-asking its Step 4 menu once a repo's answer
+      is saved (Step 3.5 reads <code>finish_option</code>; Step 4.5 offers to remember a fresh answer);
+      DigiSmith's own repo saved <code>merge_locally</code> the same day. <strong>I</strong> was renamed
+      from "QA handoff" to "Reporting" and broadened beyond Jira, the label having gone stale when R
+      split out.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-09</div>
+      <h4>I.4 Teams review-request notification; K renamed "Maestro"; I.3 becomes letter Q</h4>
+      <p><strong>I.4</strong> — raised directly by Jack — generates a paste-ready Microsoft Teams
+      review-request message right after <code>finishing-a-development-branch</code>'s Option 2
+      reports a new PR's URL; DigiSmith never connects to Teams, no API, no browser automation.
+      Initially misfiled as a Y hook, corrected since Y's hooks are internal mechanics and this is a
+      reporting concern. Its template turned out to be the same pattern as I.1's two Jira templates, so
+      I.3 ("reusable comment templates") was decoupled into its own letter, <strong>Q</strong>
+      (Templating), reusing the letter Q's retirement had freed. K was renamed "Maestro".</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-10</div>
+      <h4>Q.1 generate-comment and Q.2 consumer rework — shipped together</h4>
+      <p><strong>Q.1</strong> is a <code>generate-comment</code> skill owning template selection,
+      content-gathering questions, and filling a Markdown template (human-reviewable, not raw ADF),
+      shipping <code>progress-update</code>, <code>investigation-update</code>, and
+      <code>teams-review-request</code>. Markdown→ADF conversion stays with the Jira consumer via a
+      hand-rolled converter in <code>packages/jira-client</code> over a deliberately narrow subset, so
+      the skill itself is channel-agnostic. <strong>Q.2</strong> refactored I.1 and I.4 onto it — I.1
+      also gained the Investigation Update path, I.4 lost its own content-gathering steps.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-11</div>
+      <h4>K.9 Agentic Bridge (V.2), U Toolchain merged into G.2, publish_artifact retired, K.4 token counter, Z.2</h4>
+      <p>A dense day before V.3. <strong>K.9</strong> replaced K.3's manual decode/execute/resume
+      recovery for the <code>claude-code</code> runner with a local HTTP proxy that repairs
+      <code>kimi-k3</code>'s XTML leak into a genuine <code>tool_use</code> block before Claude Code's
+      own loop sees it — Depot manages it as <strong>V.2</strong>; live-verified end-to-end, though the
+      leak itself didn't reproduce that day, so the repair logic is unit-test-verified only.
+      <strong>U</strong> (Toolchain) shipped — <code>toolchain.yml</code> plus a
+      <code>digismith:brainstorming</code> hook that states a standing default instead of re-asking —
+      and was merged into <strong>G</strong> as <strong>G.2</strong> the same day, G renamed
+      "Methodology". <strong>O</strong>'s <code>publish_artifact</code> field and every Artifact-publish
+      step it gated were removed outright as pure token spend. <strong>K.4</strong> shipped as a generic
+      token/cost counter (<code>scripts/token-counter/</code>) with no real usage producer yet.
+      <strong>Z.2</strong> (offload classifier-block fallback caching) shipped its report — the auto-mode
+      permission classifier blocking mechanical-tier offload was by now confirmed on both runners.</p>
     </div>
 
     <div class="event">
