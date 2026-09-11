@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { BASH_CALL_FIXTURE } from "../runners/kimi-k3-xtml-parser.fixtures.ts";
 import { createRequestHandler } from "./server.ts";
 
 let fakeUpstream: ReturnType<typeof createServer>;
@@ -85,6 +86,26 @@ describe("createRequestHandler — non-streaming", () => {
     expect(body.content[0].type).toBe("tool_use");
     expect(body.content[0].name).toBe("Bash");
     expect(body.content[0].input).toEqual({ command: "ls" });
+  });
+
+  it("passes a non-kimi-k3 response through unchanged even when its text quotes an XTML fixture", async () => {
+    // A safe, never-observed-to-leak model (kimi-k2.7) whose narrative text merely
+    // *quotes* well-formed XTML marker text (e.g. summarizing this repo's own
+    // fixtures) must NOT be rewritten into an executable tool_use block — the
+    // leak-repair path is only real for the model that actually leaks it.
+    fakeUpstreamResponse = {
+      id: "msg_guard",
+      type: "message",
+      role: "assistant",
+      content: [{ type: "text", text: `Here's the fixture text I found: ${BASH_CALL_FIXTURE}` }],
+      model: "kimi-k2.7",
+      stop_reason: "end_turn",
+      stop_sequence: null,
+      usage: { input_tokens: 12, output_tokens: 6 },
+    };
+    const { status, json } = await postToProxy({ model: "kimi-k2.7", stream: false, messages: [] });
+    expect(status).toBe(200);
+    expect(json).toEqual(fakeUpstreamResponse);
   });
 
   it("relays an upstream error response unchanged", async () => {
@@ -208,7 +229,7 @@ describe("createRequestHandler — non-streaming", () => {
     }
   });
 
-  it("gracefully handles errors after headers have been sent (e.g., body read/parse fails)", async () => {
+  it("returns 502 when the upstream body read fails", async () => {
     // Create a fake upstream that sends a valid status line but then aborts
     // before sending the full body, causing upstreamResponse.text() to fail
     fakeUpstream.close();

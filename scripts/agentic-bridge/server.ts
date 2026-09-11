@@ -101,15 +101,24 @@ export function createRequestHandler(upstreamBaseUrl: string) {
       const rawBody = await readBody(req);
       const requestJson = rawBody ? JSON.parse(rawBody) : {};
 
-      const upstreamUrl = new URL(req.url ?? "/messages", upstreamBaseUrl).href;
-      const upstreamResponse = await fetch(upstreamUrl, {
+      const upstreamUrl = new URL(req.url ?? "/v1/messages", upstreamBaseUrl).href;
+      const fetchOptions: Parameters<typeof fetch>[1] = {
         method: req.method,
         headers: forwardableHeaders(req),
-        body: JSON.stringify({ ...requestJson, stream: false }),
-      });
+        signal: AbortSignal.timeout(300_000),
+      };
+      // A GET/HEAD (or otherwise bodyless) request can't carry a fetch body —
+      // Node's fetch rejects that combination outright. Claude Code only ever
+      // POSTs here in practice, but pass through cleanly instead of 502ing.
+      if (rawBody) {
+        fetchOptions.body = JSON.stringify({ ...requestJson, stream: false });
+      }
+      const upstreamResponse = await fetch(upstreamUrl, fetchOptions);
 
       if (!upstreamResponse.ok) {
-        res.writeHead(upstreamResponse.status, { "content-type": "application/json" });
+        res.writeHead(upstreamResponse.status, {
+          "content-type": upstreamResponse.headers.get("content-type") ?? "application/json",
+        });
         res.end(await upstreamResponse.text());
         return;
       }
@@ -118,7 +127,8 @@ export function createRequestHandler(upstreamBaseUrl: string) {
       const leakedText = textOf(original);
       let finalResponse = original;
 
-      if (hasXtmlToolCallChannel(leakedText)) {
+      const isKimiK3 = typeof requestJson.model === "string" && requestJson.model.includes("kimi-k3");
+      if (isKimiK3 && hasXtmlToolCallChannel(leakedText)) {
         const decoded = extractXtmlToolCalls(leakedText);
         // Empty toolCalls despite the leak marker means the text was
         // malformed beyond what the parser tolerates — relay the original
@@ -126,6 +136,9 @@ export function createRequestHandler(upstreamBaseUrl: string) {
         // (Step 5.5) still catches it downstream.
         if (decoded.toolCalls.length > 0) {
           finalResponse = applyToolCallFix(original, decoded);
+          console.log(
+            `agentic-bridge: repaired ${decoded.toolCalls.length} leaked tool call(s) for model ${requestJson.model}, stream=${requestJson.stream === true}`
+          );
         }
       }
 
@@ -137,12 +150,17 @@ export function createRequestHandler(upstreamBaseUrl: string) {
       }
     } catch (err) {
       if (!res.headersSent) {
+        // AbortSignal.timeout()'s own error message ("The operation was
+        // aborted due to timeout") doesn't say what timed out or for how
+        // long — surface a clearer, specific message for that case.
+        const isTimeout = err instanceof Error && err.name === "TimeoutError";
+        const message = isTimeout
+          ? "upstream request timed out after 300000ms"
+          : err instanceof Error
+            ? err.message
+            : String(err);
         res.writeHead(502, { "content-type": "application/json" });
-        res.end(
-          JSON.stringify({
-            error: err instanceof Error ? err.message : String(err),
-          })
-        );
+        res.end(JSON.stringify({ error: message }));
       } else {
         // Headers were already sent to the client, so we can't write a new status.
         // Destroy the connection to prevent the client from hanging.

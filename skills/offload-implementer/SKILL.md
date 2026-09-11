@@ -49,8 +49,10 @@ install -g @anthropic-ai/claude-code` if missing — never auto-install,
 see Error Handling). Whichever credential env var the resolved provider
 needs must be set in the environment `claude` runs in — Claude Code
 reads it directly at spawn time via `ANTHROPIC_BASE_URL`/
-`ANTHROPIC_AUTH_TOKEN`, no shared server to pre-configure. Only
-providers whose `supportsRunner` includes `"claude-code"` may be
+`ANTHROPIC_AUTH_TOKEN`. There is a shared server to pre-configure now:
+Step 2 also invokes `ensure-agentic-bridge`, and `ANTHROPIC_BASE_URL`
+ends up pointing at that local proxy rather than the provider directly.
+Only providers whose `supportsRunner` includes `"claude-code"` may be
 resolved this way (today, TokenReply only — see `scripts/providers/`).
 
 **`--auto` (opencode) / `--permission-mode auto` (claude-code) grant
@@ -158,10 +160,12 @@ chose (the single key inside `.models` in its output) — Step 4 needs
 both to build its `opencode run --model` argument.
 
 **`claude-code` runner, exit 0:** stdout is `{"baseUrl": "...",
-"credentialEnv": "...", "model": "..."}`. No file is written — Step 4
-exports `baseUrl`/`credentialEnv` as `ANTHROPIC_BASE_URL`/
-`ANTHROPIC_AUTH_TOKEN` environment variables and passes `model` as its
-`--model` argument at dispatch time.
+"credentialEnv": "...", "model": "..."}`. No file is written. `baseUrl`
+is resolved here but only used informationally now — Step 4 sets
+`ANTHROPIC_BASE_URL` to the Agentic Bridge's local port instead (per
+Step 2's `ensure-agentic-bridge` call), exports `credentialEnv` as
+`ANTHROPIC_AUTH_TOKEN`, and passes `model` as its `--model` argument at
+dispatch time.
 
 ### Step 2: Ensure the Resolved Runner Is Ready
 
