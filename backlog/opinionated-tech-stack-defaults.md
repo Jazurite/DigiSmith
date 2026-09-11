@@ -1,10 +1,11 @@
 # Opinionated default tech stack (new letter, tentatively U)
 
-**Status:** Not applied. Raw idea only — no map letter formally added
-yet, no design spec, needs `superpowers:brainstorming` before becoming
-a skill/mechanism. (`T` is already tentatively claimed by
-[[technical-writing-content-voice.md]] — this would be the next free
-letter, not committed in `MEMORY.md`'s map table yet.)
+**Status:** Designed 2026-09-11 as map item **U**, renamed **Toolchain** during the brainstorm
+(the "tech stack" framing oversold the scope — it's specific tool/technology choices, not
+architecture). See `.digismith/docs/toolchain/design.html` for the shipped design and
+`MEMORY.md`'s **U** row. Not yet built. The "any session, any tooling choice" broadening this
+file's live-VPS addendum below argued for was deliberately deferred rather than folded in — see
+`backlog/toolchain-general-trigger-scope.md`.
 
 **Source:** Surfaced mid-brainstorm on the Jira REST-migration spec
 (2026-08-27). The brainstorming flow asked "which test runner?" as a

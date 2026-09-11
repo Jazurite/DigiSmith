@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolchain (U)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Toolchain (U)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: U</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#storage">Storage</a></li>
+    <li><a href="#skill">Skill: digismith:toolchain</a></li>
+    <li><a href="#brainstorming-integration">Brainstorming Integration</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+Jack has standing tool/technology defaults for common greenfield decisions &mdash; test runner, styling
+approach, E2E framework, script language, package manager, Node install method &mdash; that currently
+exist only in his head. Every <code>digismith:brainstorming</code> session that hits one of these either
+burns a fresh <code>AskUserQuestion</code> round re-deciding something already decided, or risks picking
+differently and needing a correction after the fact (higher cost than just asking).
+</p>
+<p>
+<strong>Source:</strong> surfaced mid-brainstorm on the Jira REST-migration spec (2026-08-27) &mdash;
+asked &ldquo;which test runner?&rdquo; fresh, Jack answered Vitest, then immediately volunteered SCSS and
+Playwright as also being standing defaults, unprompted. Two more confirmed 2026-09-08/09 during live
+Hetzner VPS setup for map item <strong>X</strong> (persistent VPS-hosted session): pnpm over npm for
+global CLI installs, and nvm over a distro-packaged Node install &mdash; both corrected mid-flow on a task
+with no connection to <code>digismith:brainstorming</code> or DigiSmith self-development at all. That
+observation shaped this design's own scope decision (see <a href="#out-of-scope">Out of Scope</a>).
+</p>
+<p>
+This becomes map item <strong>U</strong>, <strong>Toolchain</strong> &mdash; the next free letter (T is
+already tentatively claimed by a separate technical-writing-content-voice backlog idea).
+</p>
+</section>
+
+<section id="storage">
+<h2>Storage</h2>
+<p>
+<code>toolchain.yml</code> at DigiSmith's own repo root &mdash; global to Jack, the same way
+<code>standards/</code> is, not per-consuming-repo the way <code>.digismith/preferences.yml</code>
+(map item <strong>H</strong>) is. These are Jack's own standing tool choices, not project-specific
+config. Flat <code>domain: choice</code> pairs, plain text, no YAML library &mdash; same hand-rolled
+parsing precedent as <code>preferences.ts</code>:
+</p>
+<pre><code># DigiSmith-managed. Standing toolchain defaults, dictated by Jack.
+test_runner: Vitest
+styling: SCSS
+e2e_framework: Playwright
+script_language: TypeScript (over Python, absent existing precedent to match)
+package_manager: pnpm (workspace/monorepo management and global CLI installs)
+node_installation: nvm (over distro-packaged Node &mdash; apt/NodeSource &mdash; on a server)</code></pre>
+</section>
+
+<section id="skill">
+<h2>Skill: digismith:toolchain</h2>
+<p>
+<code>scripts/toolchain.ts</code>, mirroring <code>digismith:preferences</code>' shape but simpler &mdash;
+no <code>--path</code> override (this file has exactly one location, not one per consuming repo) and no
+single-key <code>get</code> (the store stays small and is always read as a unit, not looked up key-by-key
+mid-flow).
+</p>
+<div class="cards">
+  <div class="card">
+    <div class="tag">list</div>
+    <p>Prints every domain/choice pair. Empty or missing file &rarr; prints nothing, not an error.</p>
+  </div>
+  <div class="card">
+    <div class="tag">set --domain &lt;d&gt; --value &lt;v&gt;</div>
+    <p>Writes/overwrites one entry, creating the file (with header comment) if it doesn't exist yet.
+    Preserves every other entry already set.</p>
+  </div>
+  <div class="card">
+    <div class="tag">clear --domain &lt;d&gt;</div>
+    <p>Removes one entry if present; no-op (not an error) if it was never set.</p>
+  </div>
+</div>
+<p>
+Locates DigiSmith's own repo the same way <code>digismith:preferences</code> and
+<code>digismith:inject-standards</code> already do: current working directory is the DigiSmith repo
+(<code>.claude-plugin/plugin.json</code> with <code>"name": "digismith"</code>) &rarr; use directly;
+otherwise ask once for DigiSmith's repo path and remember it for the session.
+</p>
+<p>
+Invoked automatically by <code>digismith:brainstorming</code> (below), or directly on request &mdash;
+&ldquo;what are my toolchain defaults,&rdquo; &ldquo;set my default styling to X,&rdquo; &ldquo;clear my
+default for Y.&rdquo;
+</p>
+</section>
+
+<section id="brainstorming-integration">
+<h2>Brainstorming Integration</h2>
+<p>
+One new paragraph at the top of <code>digismith:brainstorming</code>'s existing &ldquo;Ask clarifying
+questions&rdquo; step &mdash; not a map item <strong>W</strong> primitive-replacement activation (W tracks
+closing gaps against upstream Superpowers or folding in retired DigiSmith mechanisms like H/Q); this is
+an ordinary cross-cutting hook into the vendored skill, the same way map item <strong>G</strong>'s
+standards already get surfaced during brainstorming without needing a W entry of their own.
+</p>
+<p>
+Before posing a clarifying question about a tooling/stack choice, run <code>list</code> and check for a
+matching domain. Match by meaning, not rigid key names &mdash; the same fuzzy-relevance spirit
+<code>inject-standards</code> already uses, just against a handful of domain labels instead of standard
+descriptions. A match found &rarr; state the assumption plainly (&ldquo;Test runner: defaulting to Vitest
+per your standing default &mdash; say the word if you want something else this time&rdquo;) instead of an
+<code>AskUserQuestion</code>, but still honor an immediate override in the same turn. No match &rarr; ask
+as normal, and if Jack volunteers a standing preference in his answer (the way this whole mechanism was
+born), offer to <code>set</code> it via <code>digismith:toolchain</code> before moving on.
+</p>
+</section>
+
+<section id="data-flow">
+<h2>Data Flow</h2>
+<ol>
+<li><code>digismith:brainstorming</code> reaches its &ldquo;Ask clarifying questions&rdquo; step and has
+a tooling/stack question queued up (e.g. &ldquo;which test runner?&rdquo;).</li>
+<li>Runs <code>digismith:toolchain</code>'s <code>list</code> once (cheap, small file) and holds the
+result for the rest of this step.</li>
+<li>For each queued tooling question, checks the list for a matching domain by meaning.</li>
+<li>Match &rarr; states the assumption inline, skips the <code>AskUserQuestion</code>, continues to the
+next question. Jack can still override in his next message; the overridden value is not written back
+automatically (see <a href="#out-of-scope">Out of Scope</a>).</li>
+<li>No match &rarr; asks via <code>AskUserQuestion</code> as today. If Jack's answer reads as a standing
+preference rather than a one-off choice, offers to record it via <code>digismith:toolchain set</code>.</li>
+</ol>
+</section>
+
+<section id="error-handling">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td><code>toolchain.yml</code> missing</td><td><code>list</code> prints nothing; brainstorming asks
+every tooling question fresh, same as before this mechanism existed &mdash; not an error.</td></tr>
+<tr><td>File present but malformed/unparseable</td><td>Treated as empty, same as missing. Never blocks
+the brainstorming flow.</td></tr>
+<tr><td><code>set</code> invoked without <code>--value</code></td><td>Fails clearly (exit 1), same
+convention as <code>preferences.ts</code>. Never silently sets an empty string.</td></tr>
+<tr><td><code>clear</code> on a domain that was never set</td><td>Silent no-op, still reports
+success.</td></tr>
+<tr><td>Ambiguous match (a queued question could plausibly map to more than one stored domain)</td>
+<td>Ask as normal rather than guess &mdash; a wrong silent assumption is worse than one extra
+question.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><code>scripts/toolchain.ts</code>'s <code>list</code>/<code>set</code>/<code>clear</code> are pure
+file-parsing logic, same shape as <code>preferences.ts</code>'s existing tests &mdash; unit-tested with
+Vitest: round-trip a value through <code>set</code> then <code>list</code>, overwrite an existing domain,
+<code>clear</code> a present and an absent domain, missing/malformed file reads as empty.</li>
+<li>The brainstorming-side consult paragraph is agentic instruction text, not code &mdash; verified live
+(ask a tooling question with and without a matching stored default, confirm the assumption-and-skip
+behavior and the override path both work) rather than by an automated suite.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>Any trigger point beyond <code>digismith:brainstorming</code>.</strong> The VPS session's
+pnpm/nvm corrections happened completely outside brainstorming, which argues for a broader &ldquo;any
+session, any tooling choice&rdquo; version &mdash; deliberately deferred to its own backlog item
+(<code>backlog/toolchain-general-trigger-scope.md</code>) rather than folded in here, per Jack's own
+scope call. This design's mechanism only ever fires inside brainstorming's clarifying-questions step.</li>
+<li><strong>Auto-writing an override back to the file.</strong> If Jack overrides a stated assumption
+in the same turn, that turn's choice is used as-is; it is not automatically persisted as the new
+standing default &mdash; that would need its own explicit confirmation, out of scope here.</li>
+<li><strong>Enumeration/inspection UI beyond <code>list</code>.</strong> No search, no per-domain
+history, no categorization &mdash; the file stays small and flat.</li>
+<li><strong>A per-repo override tier.</strong> These are Jack's own defaults, not project config;
+unlike map item H, there is no per-repo layer.</li>
+</ul>
+</section>
+
+<footer>DigiSmith &middot; .digismith/docs/toolchain/design.html</footer>
+
+</body>
+</html>
