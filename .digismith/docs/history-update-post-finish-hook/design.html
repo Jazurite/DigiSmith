@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-Finish History Update Hook</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Post-Finish History Update Hook</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: Y.1.3</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components &amp; Interfaces</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#scope">Explicitly Out of Scope</a></li>
+    <li><a href="#decisions">Design Decisions</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>A third stock <code>post-finish</code> hook, <code>.digismith/hooks/post-finish/03-history-update.md</code>,
+  that keeps <code>.digismith/history.html</code>'s Timeline section current after every DigiSmith
+  self-merge. In the numbering this handoff introduced, the two shipped stock hooks read as
+  <strong>Y.1.1</strong> (version bump) and <strong>Y.1.2</strong> (plugin reinstall); this is
+  <strong>Y.1.3</strong>, a third child of <strong>Y.1</strong> (the <code>post-finish</code> point
+  itself), not a new Y sub-item.</p>
+  <p><strong>Why:</strong> <code>history.html</code>'s own callout says to update it whenever a map
+  item ships, but nothing enforces that — it went untouched from 2026-08-27 through V.3, while every
+  one of those builds updated <code>MEMORY.md</code>. Same failure shape as the manual plugin-version
+  bump that <strong>W.4.1</strong> → <strong>Y.1</strong> already fixed: a required-but-unenforced
+  finishing chore that gets missed the moment attention is elsewhere. The page was hand-backfilled
+  once (commit <code>4071e4c</code>) as a prerequisite; this hook only has to keep it current from
+  here on, never catch it up again.</p>
+  <p>Full backlog write-up (source material for this design): <code>backlog/history-update-post-finish-hook-y13.md</code>.</p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p><code>03-history-update.md</code> is gated on DigiSmith's own repo exactly like
+  <code>01-version-bump.md</code> and <code>02-plugin-reinstall.md</code> (same
+  <code>IS_DIGISMITH</code> check, verbatim — an explicit, human-confirmed precedent from Y.1 keeps
+  each hook file self-contained rather than sharing the gate logic). It fires last in filename-sort
+  order, independent of <code>02</code>'s outcome; if <code>01</code> fails, <code>fire-lifecycle-hook.md</code>'s
+  existing "stop, don't continue to any further post-finish hook" contract already prevents this
+  hook from running at all — no change needed there.</p>
+  <ol>
+    <li><code>cd</code> to repo root, run the gate check.</li>
+    <li>Invoke <code>node --experimental-strip-types .digismith/hooks/post-finish/scripts/update-history.ts --base "$(git rev-parse ORIG_HEAD)"</code>.</li>
+    <li>The script finds every <code>.digismith/docs/*/report.html</code> that changed in
+      <code>ORIG_HEAD..HEAD</code>. Zero found → prints <code>NOTHING (no report in range)</code> and
+      exits 0 — the expected outcome for a docs-only commit or a merge that didn't go through
+      <code>report-implementation</code> (N).</li>
+    <li>For each report found, it parses the fixed markers N's own template guarantees
+      (<code>{{FEATURE_TITLE}}</code>, <code>{{MAP_ITEM}}</code>, <code>{{DATE}}</code>, the
+      <code>#summary</code> paragraph), checks for sibling <code>design.html</code>/<code>plan.md</code>
+      to build the same three-link "design / plan / report" sentence every existing timeline entry
+      already ends with, and derives the feature's slug from the report's own path.</li>
+    <li>Builds one <code>&lt;div class="event"&gt;</code> block per report and inserts it as the
+      last child of <code>.timeline</code>, before its closing tag.</li>
+    <li>Bumps the header's <code>Last updated:</code> span to today.</li>
+    <li>Writes <code>history.html</code>, prints <code>APPENDED &lt;n&gt;: &lt;titles&gt;</code>.</li>
+    <li>Hook's bash: on <code>APPENDED</code>, chains
+      <code>git add .digismith/history.html &amp;&amp; git commit -m "docs(history): record shipped features" &amp;&amp; git push origin &lt;base-branch&gt;</code>
+      — same chained-commands-plus-rejection-handling pattern <code>01</code> uses (stop, report, no
+      force-push, if rejected).</li>
+    <li>Always ends with a plain reminder: the Map table, Build Order, and Progress Overview sections
+      were <strong>not</strong> touched — review them by hand if this merge closes a letter or
+      sub-item.</li>
+  </ol>
+  <p><strong>Source of truth and slug derivation collapse into one decision:</strong> since
+  <code>report-implementation</code> (N) already runs for essentially every DigiSmith self-dev
+  feature (its <code>reporting</code> gate only applies via a consumer repo's
+  <code>.digismith/profile</code>, which DigiSmith's own repo never has), a changed
+  <code>report.html</code> in the merge range is both the trigger signal <em>and</em> the complete
+  data source — no new sidecar file, no separate slug-derivation heuristic.</p>
+</section>
+
+<section id="components">
+  <h2>Components &amp; Interfaces</h2>
+  <p><code>.digismith/hooks/post-finish/scripts/update-history.ts</code> — mirrors
+  <code>bump-plugin-version.ts</code>'s shape: small exported pure functions plus a thin CLI.</p>
+  <div class="cards">
+    <div class="card"><span class="tag">function</span>
+      <h4><code>findChangedReports(baseSha, cwd?)</code></h4>
+      <p><code>git diff --name-only --diff-filter=AM baseSha..HEAD -- '.digismith/docs/*/report.html'</code>
+      via <code>spawnSync</code> (same pattern as <code>versionChangedSince</code>). Returns a list of
+      relative paths, possibly empty.</p></div>
+    <div class="card"><span class="tag">function</span>
+      <h4><code>parseReport(reportPath)</code></h4>
+      <p>Reads one <code>report.html</code>, regex-extracts <code>FEATURE_TITLE</code>,
+      <code>MAP_ITEM</code>, <code>DATE</code>, and the <code>#summary</code> paragraph; derives
+      <code>slug</code> from the path. Throws a clear error naming the file and the missing marker —
+      a malformed report is a real failure, not a silent skip.</p></div>
+    <div class="card"><span class="tag">function</span>
+      <h4><code>buildReferenceLinks(slug)</code></h4>
+      <p>Checks whether <code>design.html</code>/<code>plan.md</code> exist next to that
+      <code>report.html</code>; returns the standard "design / plan / report" sentence, omitting a
+      clause for whichever file is missing — mirrors N's own omit-if-absent rule.</p></div>
+    <div class="card"><span class="tag">function</span>
+      <h4><code>buildEventHtml(entry)</code></h4>
+      <p>Returns one <code>&lt;div class="event"&gt;…&lt;/div&gt;</code> block, indentation matching
+      existing entries. Does <strong>not</strong> re-escape content — N's own Step 2f already escaped
+      it; double-escaping would corrupt entities.</p></div>
+    <div class="card"><span class="tag">function</span>
+      <h4><code>insertTimelineEntries(historyHtml, eventsHtml[])</code></h4>
+      <p>Pure string transform. Locates <code>&lt;section id="timeline"&gt;…&lt;/section&gt;</code> by
+      id first, then inserts the new block(s) as the last child of the nested <code>.timeline</code>
+      div. Throws if that section can't be found, surfacing a future template change immediately.</p></div>
+    <div class="card"><span class="tag">function</span>
+      <h4><code>bumpLastUpdated(historyHtml, todayIso)</code></h4>
+      <p>Replaces the header's <code>Last updated: &lt;date&gt;</code> span content.</p></div>
+  </div>
+  <p><code>main()</code> — CLI glue via the shared <code>scripts/cli-args.ts</code> parser (same as
+  <code>bump-plugin-version.ts</code>): orchestrates the functions above, reads/writes
+  <code>.digismith/history.html</code>, prints <code>APPENDED &lt;n&gt;: &lt;titles&gt;</code> or
+  <code>NOTHING (no report in range)</code>, <code>process.exit(1)</code> with a stderr message on
+  any parse/insert failure. Not separately unit-tested, same scope boundary
+  <code>bump-plugin-version.ts</code> already draws around its own <code>main()</code>.</p>
+</section>
+
+<section id="errors">
+  <h2>Error Handling</h2>
+  <ul>
+    <li>Gate false → hook no-ops, identical to <code>01</code>/<code>02</code>.</li>
+    <li>No changed reports → <code>NOTHING</code>, exit 0, hook does nothing further (no commit, no
+      push). Not an error — the expected outcome whenever a merge didn't go through
+      <code>report-implementation</code>.</li>
+    <li>A found report fails to parse, or the timeline anchor can't be located → exit 1 with a
+      specific stderr message; hook's bash stops and reports plainly, does not commit or push a
+      partial result.</li>
+    <li>Push rejected (the remote moved) → stop, report the rejection plainly, do not force-push —
+      identical handling to every other push in this skill and its hooks.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>Vitest, same fixture-per-case style as <code>bump-plugin-version.test.ts</code>:</p>
+  <ul>
+    <li><code>parseReport</code>: correct extraction from a valid fixture; throws on each kind of
+      missing marker.</li>
+    <li><code>buildReferenceLinks</code>: all three links present; <code>design.html</code> missing;
+      <code>plan.md</code> missing.</li>
+    <li><code>buildEventHtml</code>: correct shape, and confirms it does not double-escape
+      already-escaped content.</li>
+    <li><code>insertTimelineEntries</code>: single insert; multiple inserts preserve order; throws
+      when the timeline section is absent from the fixture.</li>
+    <li><code>bumpLastUpdated</code>: replaces the date correctly.</li>
+    <li><code>findChangedReports</code>: temp-git-repo integration test, same
+      <code>spawnSync git init</code> fixture pattern as <code>versionChangedSince</code>'s tests.</li>
+  </ul>
+</section>
+
+<section id="scope">
+  <h2>Explicitly Out of Scope</h2>
+  <ul>
+    <li><strong>Badge/stats auto-updates.</strong> Whether a merge closes a map letter or sub-item is
+      judgment, not mechanics — the hook only appends the timeline entry and reminds the agent to
+      check the Map/Build Order/Progress Overview sections by hand.</li>
+    <li><strong>The direct-to-main gap.</strong> Same stranding already documented in
+      <code>backlog/post-finish-hooks-direct-push-gap.md</code>: a commit pushed straight to
+      <code>main</code> never fires <code>post-finish</code>, so it gets no timeline entry either.
+      Acceptable — bookkeeping-only commits aren't map items — and not re-solved here.</li>
+    <li><strong>Dedup checking.</strong> No check for an existing link to a given
+      <code>report.html</code> before appending. <code>ORIG_HEAD..HEAD</code> is a fresh range per
+      merge, so the same report reappearing is very unlikely in practice; not worth the defensive
+      code for a scenario that hasn't happened.</li>
+    <li><strong>Draft-and-pause review.</strong> The hook commits and pushes immediately, matching
+      <code>01</code>/<code>02</code>'s fire-and-forget pattern, even though a mechanically-generated
+      entry will read tersely next to hand-written ones already in the timeline. Consistently current
+      but terser beats accurate-but-often-missing.</li>
+  </ul>
+</section>
+
+<section id="decisions">
+  <h2>Design Decisions</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Question</th><th>Decision</th><th>Why</th></tr>
+    <tr><td>Source of truth</td><td>Parse <code>report.html</code> directly</td>
+      <td>No changes to N needed; reuses existing infrastructure; N already runs for nearly every
+      DigiSmith self-dev feature.</td></tr>
+    <tr><td>Which slug just merged</td><td>Whichever <code>report.html</code> changed in the merge
+      range</td><td>Same signal as source-of-truth above — collapses two open questions into one.</td></tr>
+    <tr><td>Badge flipping</td><td>Timeline only; suggest, never auto-apply</td>
+      <td>Not mechanically derivable from a diff; a wrong auto-flip silently corrupts the map's
+      accuracy.</td></tr>
+    <tr><td>Multiple reports in range</td><td>One entry per report found</td>
+      <td>Same mechanism handles the common (one) and rare (several) cases without special-casing.</td></tr>
+    <tr><td>Dedup check</td><td>Skip it</td><td>YAGNI — the range is fresh per merge, the collision
+      scenario hasn't occurred.</td></tr>
+    <tr><td>Commit timing</td><td>Immediate, fire-and-forget</td>
+      <td>Matches <code>01</code>/<code>02</code>'s established pattern; a paused/drafted flow
+      reintroduces the "required-but-skippable" risk this hook exists to close.</td></tr>
+    <tr><td>Implementation approach</td><td>Backing TypeScript script, not inline bash</td>
+      <td>Matches <code>01</code>'s own precedent; parsing HTML and looping over multiple reports is
+      too complex for reliable, testable <code>sed</code>/<code>awk</code>.</td></tr>
+  </table>
+  </div>
+</section>
+
+<footer>DigiSmith · .digismith/docs/history-update-post-finish-hook/design.html</footer>
+
+</body>
+</html>
