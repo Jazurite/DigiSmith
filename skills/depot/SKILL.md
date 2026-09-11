@@ -1,13 +1,13 @@
 ---
 name: depot
-description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it — e.g. "stop the agentic bridge"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it — e.g. "stop the agentic bridge"), a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch), and a VPS Session CLI reconnecting to an already-provisioned persistent claude tmux session on a Hetzner VPS over SSH (invoked directly by the user only — e.g. "connect me to my VPS", "check my VPS status" — never auto-invoked by bootstrap/adopt).
 ---
 
 # Depot
 
 ## Overview
 
-DigiSmith's map item **V**. Manages four independent, machine-wide
+DigiSmith's map item **V**. Manages five independent, machine-wide
 runtime resources, each available to anything that needs it, independent
 of any single repo, ticket, or plan:
 
@@ -27,12 +27,18 @@ of any single repo, ticket, or plan:
   backing offload-implementer's `claude-code`-runner dispatches. Unlike
   the other three, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
+- **VPS Session** — reconnects to an already-provisioned, persistent `claude`
+  tmux session on a Hetzner VPS over SSH (`scripts/vps-session/cli.ts`,
+  map item **V.3**). Unlike the OpenCode server and Agentic Bridge proxy,
+  there is nothing for Depot to spawn or own the lifecycle of — the resource
+  being "ensured" is a remote, already-running `tmux` session, not a local
+  process tracked by PID.
 
 These resources share nothing but the same shape of idea — available
 without the caller needing to know where they live — and are managed by
 entirely separate operations below. Depot has no generalized "resource"
-abstraction between them: a git clone, two live processes, and a stateless
-check don't share mechanics.
+abstraction between them: a git clone, two live processes, a stateless
+check, and a remote tmux session don't share mechanics.
 
 ## Resource: packages/ Clone
 
@@ -290,6 +296,50 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 **Exit 0** → `claude` is on PATH and supports `--bare`; return ready.
 **Non-zero exit** → not ready (see Error Handling).
 
+## Resource: VPS Session
+
+A standalone CLI (`scripts/vps-session/cli.ts`, map item **V.3**) that reconnects to an
+already-provisioned, persistent `claude` tmux session on a Hetzner VPS over SSH. See
+`.digismith/docs/vps-session/design.html`. Config lives at `~/.digismith-depot/vps.json`
+(`{"host", "user", "identity_file", "tmux_session"}`), sibling to Depot's other state files —
+written by hand, no creation/edit tooling.
+
+Unlike the OpenCode server and Agentic Bridge proxy, there is nothing for this skill to spawn
+or track by PID: the resource being "ensured" is a remote, already-running `tmux` session, not
+a local process.
+
+### Which Operation
+
+- **Invoked directly by the user, by name or by asking a Claude Code session** ("connect me to
+  my VPS", "check my VPS status") → `status` (a pure read, never modifies anything) or
+  `connect` (auto-fixes what's safely fixable, then attaches) depending on intent.
+- **Never auto-invoked by `digismith:bootstrap`/`digismith:adopt`** — unlike the packages/
+  clone, this is not a per-ticket dependency most tickets need.
+
+### Operation: `status`
+
+```bash
+node --experimental-strip-types scripts/vps-session/cli.ts status
+```
+
+Reports each check plainly: SSH reachability, systemd lingering, toolchain-on-PATH, tmux
+session liveness, whether `claude` itself is running inside that session (an alive session
+whose `claude` has exited to the fallback shell is reported as its own distinct, non-healthy
+state), and whether the one-time interactive login has been completed. Never modifies anything
+on the VPS.
+
+### Operation: `connect`
+
+```bash
+node --experimental-strip-types scripts/vps-session/cli.ts connect
+```
+
+Runs the same checks as `status`, auto-fixing what's safely fixable (enabling lingering,
+recreating the tmux session), then attaches interactively. Missing credentials is a warning,
+not a blocker — the user completes the one-time browser OAuth login themselves once attached.
+Never auto-installs a missing toolchain piece (nvm/node/pnpm/claude) — same disposition Depot
+already takes for a missing local `opencode`/`claude`.
+
 ## Error Handling
 
 | Case | Disposition |
@@ -362,3 +412,5 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | Agentic Bridge proxy | `ensure-agentic-bridge` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Start if not alive (resolving the real Windows PID), else return the tracked port |
 | Agentic Bridge proxy | `stop-agentic-bridge` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
 | Claude Code readiness | `ensure-claude-code` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Stateless PATH + `--bare`-support check, no state written |
+| VPS Session | `status` | User asks directly, any time | Read-only report of every check above |
+| VPS Session | `connect` | User asks directly, any time | Auto-fixes what's safely fixable, then attaches interactively |
