@@ -50,8 +50,8 @@ Cloned: 2026-08-20
   asking). See DigiSmith `MEMORY.md` map item W. **Further diverged by W.8** (2026-09-11): a new
   `scripts/check-attribution` is now called by `scripts/review-package` before any review
   package is written, blocking on any AI/assistant attribution found in the commit range's
-  messages. The same day, `task-reviewer-prompt.md` gained an explicit no-attribution policy
-  line and the Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
+  messages; `task-reviewer-prompt.md` gained an explicit no-attribution policy line, and the
+  Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
   `MEMORY.md` map item W.
 - **requesting-code-review** — map item **W.8**, activated 2026-09-11. Its shared
   `code-reviewer.md` template (used both as `subagent-driven-development`'s own final
