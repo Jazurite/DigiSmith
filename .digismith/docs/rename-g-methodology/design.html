@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rename G to Methodology</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Rename G to Methodology</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: no map letter — renames existing map item G's title only, not a new feature</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#left-alone">Left Alone</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+Jack's read, raised live 2026-09-11 right after the G/U merge shipped: map item <strong>G</strong>'s
+title, "Structure," has it backwards — Standards (G.1) and Toolchain (G.2) are both about Jack's
+established <em>methodology</em> for doing work; "structure" is better understood as one facet
+<em>within</em> a methodology, not the umbrella term for it. Renaming G's title to
+<strong>"Methodology"</strong> fixes the direction of that relationship.
+</p>
+<p>
+Title-only change. G.1 and G.2's own numbering, content, and mechanisms are untouched.
+</p>
+</section>
+
+<section id="scope">
+<h2>Scope</h2>
+<p>Exactly three edits, all replacing the word "Structure" with "Methodology" where it names map item G:</p>
+<div class="table-wrap">
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>MEMORY.md</code></td><td>G's row: <code>| **G** | Structure | ...</code> → <code>| **G** | Methodology | ...</code></td></tr>
+<tr><td><code>skills/toolchain/SKILL.md</code></td><td>Overview line: <code>part of map item **G** ("Structure")</code> → <code>("Methodology")</code></td></tr>
+<tr><td><code>backlog/toolchain-general-trigger-scope.md</code></td><td>Status line: <code>part of **G** "Structure"</code> → <code>"Methodology"</code></td></tr>
+</table>
+</div>
+<p>
+Checked and excluded: <code>backlog/standard-handoff-format.md</code> mentions <code>MEMORY.md</code>'s
+own "Structure" — that's the document's unrelated, pre-existing <code>## Structure</code> section
+(repo/plugin layout notes), not map item G. Left untouched.
+</p>
+</section>
+
+<section id="left-alone">
+<h2>Left Alone</h2>
+<p>
+Frozen historical build record, same convention as every prior map relabeling in this repo:
+<code>.digismith/docs/toolchain/{design.html,plan.md,report.html}</code> and
+<code>.digismith/docs/structure-merge-g-and-u/{design.html,plan.md,report.html}</code> — the latter
+set literally documents the merge that produced the name "Structure" in the first place, and stays
+titled that way as the dated record of what was decided then, not rewritten to match the new name.
+</p>
+</section>
+
+<footer>DigiSmith &middot; .digismith/docs/rename-g-methodology/design.html</footer>
+
+</body>
+</html>
