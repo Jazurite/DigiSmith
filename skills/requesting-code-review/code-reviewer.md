@@ -28,7 +28,13 @@ Subagent (general-purpose):
     ```bash
     git diff --stat [BASE_SHA]..[HEAD_SHA]
     git diff [BASE_SHA]..[HEAD_SHA]
+    [CHECK_ATTRIBUTION_PATH] [BASE_SHA] [HEAD_SHA]
     ```
+
+    Run the `check-attribution` command shown above as part of this step, not as an
+    afterthought. If it reports a hit, that is an automatic Critical finding — full stop,
+    regardless of anything else found in this diff. This project forbids AI/assistant
+    attribution anywhere in a commit message or PR description, no exceptions.
 
     ## Read-Only Review
 
@@ -130,6 +136,10 @@ Subagent (general-purpose):
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
+- `[CHECK_ATTRIBUTION_PATH]` — REQUIRED: absolute path to
+  `skills/subagent-driven-development/scripts/check-attribution`, resolved by the controller
+  before dispatching — the reviewer's own working directory is not guaranteed to be any
+  particular skill folder, so this must not be a relative path
 
 **Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 
