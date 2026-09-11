@@ -1,14 +1,22 @@
-# Activate `requesting-code-review` with DigiSmith standards injection (new letter/number, tentatively W.8)
+# Activate `requesting-code-review` with DigiSmith standards injection (new letter/number, tentatively W.9)
 
 **Status:** Not applied. Idea only, brainstormed 2026-09-11 up through a proposed design, then
 explicitly deferred — captured here rather than decided in the moment.
 
 **Source:** Raised live by Jack while reviewing what's next on the map: `digismith:requesting-code-review`
 is one of the 14 Superpowers primitives vendored under map item **W** (Primitive ownership) — cloned
-verbatim by W.1, no fork-provenance tag, still dormant — and it uses Superpowers' own generic review
-rubric rather than DigiSmith's own `standards/` library. Jack's framing: this should land as a
-**W-lineage primitive activation** (activating `requesting-code-review` the way W.5/W.6/W.7 each
-activated a different dormant primitive before it), not primarily as a G.1 change.
+verbatim by W.1 — and it uses Superpowers' own generic review rubric rather than DigiSmith's own
+`standards/` library. Jack's framing: this should land as a **W-lineage primitive activation**
+(activating `requesting-code-review` the way W.5/W.6/W.7 each activated a different dormant primitive
+before it), not primarily as a G.1 change.
+
+**Update 2026-09-11 (same day, different session):** `requesting-code-review` is no longer dormant —
+a different, unrelated activation (**W.8**, the AI Attribution Guard for Reviews) landed first, adding
+the fork-provenance tag and a `[CHECK_ATTRIBUTION_PATH]` mandatory-check placeholder to
+`code-reviewer.md`. This item's own `{{STANDARDS_BLOCK}}` placeholder would now be a *second*,
+complementary placeholder on an already-activated skill, not a from-scratch activation — the letter
+this item should land under moved to **W.9** accordingly. See DigiSmith `MEMORY.md` map item W and
+`.digismith/docs/review-template-ai-attribution-guard/design.html`.
 
 ## Relationship to the existing G.1 gap
 
@@ -27,8 +35,10 @@ Two review dispatch paths in DigiSmith currently use Superpowers' own generic re
 DigiSmith house-standards awareness at all:
 
 1. **`digismith:requesting-code-review`** — the standalone skill, invoked when Jack explicitly asks
-   for a review or a major feature just completed. Still fully dormant (no fork-provenance tag),
-   using its cloned-verbatim `code-reviewer.md` template unchanged.
+   for a review or a major feature just completed. As of W.8 (2026-09-11), no longer dormant and no
+   longer using its template unchanged — `code-reviewer.md` already carries the fork-provenance tag
+   and a `[CHECK_ATTRIBUTION_PATH]` placeholder. This item's own `{{STANDARDS_BLOCK}}` addition needs
+   to coexist with that, not assume a clean slate.
 2. **`digismith:subagent-driven-development`'s own review dispatches** — the per-task reviewer
    (`task-reviewer-prompt.md`) and the whole-branch final reviewer, which (per its own SKILL.md)
    already dispatches using `requesting-code-review`'s `code-reviewer.md` template directly — so
@@ -89,9 +99,10 @@ session doesn't have to re-derive them) and revisit later as its own W-lineage b
 
 ## Open questions
 
-- Final letter/number: tentatively **W.8** (the next available activation slot — the original W.8
-  working name for Saved Finish Option was renumbered to **H.1** on 2026-09-06, freeing W.8 for
-  reuse the same way retired map letters get freed). Not confirmed — could land differently once
+- Final letter/number: tentatively **W.9** (the original W.8 working name for Saved Finish Option
+  was renumbered to **H.1** on 2026-09-06, freeing W.8 for reuse — but W.8 itself was then consumed
+  the same day by a different, unrelated `requesting-code-review` activation, the AI Attribution
+  Guard for Reviews; see the Update note above). Not confirmed — could land differently once
   actually brainstormed.
 - Whether activating `requesting-code-review` this way also warrants updating
   `skills/subagent-driven-development`'s own row/activation history (it's already been activated
