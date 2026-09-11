@@ -22,6 +22,11 @@ head=$3
 git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
 git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
 
+if ! "$(cd "$(dirname "$0")" && pwd)/check-attribution" "$base" "$head"; then
+  echo "Review package not written." >&2
+  exit 1
+fi
+
 if [ $# -eq 4 ]; then
   out=$4
 else
