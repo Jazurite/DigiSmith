@@ -82,7 +82,8 @@ function isSpecialLine(line: string): boolean {
 }
 
 export function markdownToAdf(markdown: string): AdfDoc {
-  const lines = markdown.split("\n");
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
   const content: AdfNode[] = [];
   let i = 0;
 

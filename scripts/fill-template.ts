@@ -20,8 +20,9 @@ export function fillTemplate(
   templateContent: string,
   placeholders: Record<string, string>,
 ): FillResult {
-  const headingPrefix = extractHeadingPrefix(templateContent);
-  let markdown = templateContent;
+  const normalized = templateContent.replace(/\r\n/g, "\n");
+  const headingPrefix = extractHeadingPrefix(normalized);
+  let markdown = normalized;
   for (const [key, value] of Object.entries(placeholders)) {
     markdown = markdown.split(`<${key}>`).join(value);
   }

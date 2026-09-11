@@ -11,6 +11,14 @@ describe("markdownToAdf", () => {
     });
   });
 
+  it("converts a level-3 heading followed by a paragraph when the input has CRLF line endings", () => {
+    const doc = markdownToAdf("### Title\r\n\r\nbody");
+    expect(doc.content).toEqual([
+      { type: "heading", attrs: { level: 3 }, content: [{ type: "text", text: "Title" }] },
+      { type: "paragraph", content: [{ type: "text", text: "body" }] },
+    ]);
+  });
+
   it("converts a level-4 heading", () => {
     const doc = markdownToAdf("#### Sub");
     expect(doc.content[0]).toEqual({

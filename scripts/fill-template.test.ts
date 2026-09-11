@@ -31,6 +31,11 @@ describe("fillTemplate", () => {
     expect(result.markdown).toBe("line1\n\nline2");
   });
 
+  it("collapses 3+ consecutive newlines when the template has CRLF line endings", () => {
+    const result = fillTemplate("line1\r\n\r\n<empty>\r\n\r\nline2", { empty: "" });
+    expect(result.markdown).toBe("line1\n\nline2");
+  });
+
   it("extracts the heading prefix from a level-3 heading, stopping before the placeholder", () => {
     const result = fillTemplate("### 📣 Progress Update – <date>\n\nbody", { date: "26/8" });
     expect(result.headingPrefix).toBe("📣 Progress Update");
