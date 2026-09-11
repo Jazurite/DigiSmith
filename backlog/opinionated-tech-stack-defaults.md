@@ -1,11 +1,14 @@
-# Opinionated default tech stack (new letter, tentatively U)
+# Opinionated default tech stack (shipped as map item G.2, Toolchain)
 
 **Status:** Designed 2026-09-11 as map item **U**, renamed **Toolchain** during the brainstorm
 (the "tech stack" framing oversold the scope — it's specific tool/technology choices, not
-architecture). See `.digismith/docs/toolchain/design.html` for the shipped design and
-`MEMORY.md`'s **U** row. Not yet built. The "any session, any tooling choice" broadening this
-file's live-VPS addendum below argued for was deliberately deferred rather than folded in — see
-`backlog/toolchain-general-trigger-scope.md`.
+architecture). Shipped 2026-09-11; merged into map item **G** as **G.2** the same day once G/U's
+overlap was noticed mid-build — see `backlog/structure-merge-g-and-u.md`'s own resolution note
+(that file deleted once applied). See `.digismith/docs/toolchain/design.html` for the shipped
+design (still filed under the old name/letter — frozen historical record) and `MEMORY.md`'s
+**G** row (**G.2** specifically) for the current map entry. The "any session, any tooling choice"
+broadening this file's live-VPS addendum below argued for was deliberately deferred rather than
+folded in — see `backlog/toolchain-general-trigger-scope.md`.
 
 **Source:** Surfaced mid-brainstorm on the Jira REST-migration spec
 (2026-08-27). The brainstorming flow asked "which test runner?" as a
@@ -74,6 +77,13 @@ conformance. Genuinely unclear whether the right shape is:
   question answered at different moments.
 
 Needs `superpowers:brainstorming` to actually decide, not guessed here.
+
+**Resolved 2026-09-11:** shipped as its own standalone letter first (neither option above —
+see `.digismith/docs/toolchain/design.html`'s own Architecture reasoning for why extending G's
+`standards/` mechanism was rejected), then folded in as a sibling sub-item (**G.2**) alongside
+G's original content (now **G.1**) once the two were noticed to serve the same underlying
+purpose — a relabeling, not the `standards/`-extension option this section considered and
+declined.
 
 ## Suggested shape (unrefined)
 
