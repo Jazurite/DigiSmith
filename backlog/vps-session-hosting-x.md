@@ -1,11 +1,13 @@
-# Persistent VPS-hosted Claude Code session via SSH (new letter, tentatively X)
+# Persistent VPS-hosted Claude Code session via SSH (folding into V.3, not its own letter)
 
-**Status:** Not applied. Raw idea only — no map letter formally added
-yet, no design spec, needs `superpowers:brainstorming` before becoming
-a skill/mechanism. (`T` and `U` are already tentatively claimed by
-[[technical-writing-content-voice.md]] and
-[[opinionated-tech-stack-defaults.md]] — this would be the next free
-letter, not committed in `MEMORY.md`'s map table yet.)
+**Status:** In design, 2026-09-11 — mid-`superpowers:brainstorming`. Resolved to fold into
+map item **V** (Depot) as **V.3** rather than becoming its own letter: Depot's existing
+ensure-/status-style pattern (V.1's OpenCode server, V.2's Agentic Bridge) fits "make sure
+the VPS session is reachable and healthy" directly. The tentative letter `X` this file
+originally reserved is freed as a result — reused for a different, explicitly-separate idea
+that surfaced in the same brainstorm, see `backlog/practice-devprod-infra-x.md`.
+(`T` remains tentatively claimed by [[technical-writing-content-voice.md]].) See
+`.digismith/docs/vps-session/design.html` once written.
 
 **Source:** 2026-09-04, same session as K.8's worker-pool idea and the
 `~/.digismith` → `~/.digismith-depot` rename. Surfaced while exploring
