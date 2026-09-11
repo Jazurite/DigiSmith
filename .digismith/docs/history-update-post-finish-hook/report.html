@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-Finish History Update Hook (Y.1.3) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Post-Finish History Update Hook (Y.1.3) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: <strong>Y.1.3</strong></span>
+    <span>Commit range: <code>8cdaed8..6e3d618</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Builds a third stock <code>post-finish</code> hook,
+  <code>.digismith/hooks/post-finish/03-history-update.md</code>, that appends a Timeline entry
+  to <code>.digismith/history.html</code> for each just-shipped feature after a DigiSmith
+  self-merge, closing the gap where the page went stale from 2026-08-27 through V.3. A backing
+  TypeScript script (<code>update-history.ts</code>, mirroring <code>bump-plugin-version.ts</code>'s
+  shape) finds every <code>.digismith/docs/*/report.html</code> that changed in the merge range,
+  parses each report's fixed placeholders (already produced by <code>report-implementation</code>/N),
+  and appends one Timeline entry per report — no new sidecar file, <code>report.html</code> is
+  both the trigger signal and the data source; the hook file itself is a thin wrapper invoking
+  the script and committing/pushing on a real result. Followed the full Superpowers process:
+  brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code>
+  (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final
+  whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span>
+      <h4>Write <code>update-history.ts</code> and its tests</h4>
+      <p>Exports <code>findChangedReports</code>, <code>parseReport</code>,
+      <code>buildReferenceLinks</code>, <code>buildEventHtml</code>,
+      <code>insertTimelineEntries</code>, <code>bumpLastUpdated</code>, and <code>main</code> —
+      the CLI Task 2's hook invokes directly.</p></div>
+    <div class="card"><span class="tag">Task 2</span>
+      <h4>Write the <code>03-history-update.md</code> hook file</h4>
+      <p>Creates <code>.digismith/hooks/post-finish/03-history-update.md</code>, picked up
+      automatically by <code>fire-lifecycle-hook.md</code>'s existing enumerate-and-follow
+      procedure — unchanged by this plan.</p></div>
+    <div class="card"><span class="tag">Task 3</span>
+      <h4>Doc updates and backlog retirement</h4>
+      <p>Updates <code>MEMORY.md</code>'s Y row and <code>.digismith/history.html</code>'s own
+      Map table Y row, removes the superseded backlog line, and deletes
+      <code>backlog/history-update-post-finish-hook-y13.md</code>.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Write <code>update-history.ts</code> and its tests</td>
+      <td>Exports <code>findChangedReports</code>, <code>parseReport</code>,
+        <code>buildReferenceLinks</code>, <code>buildEventHtml</code>,
+        <code>insertTimelineEntries</code>, <code>bumpLastUpdated</code>, <code>main</code></td>
+      <td>Approved, clean</td>
+      <td>
+        <ul>
+          <li>task-1-report.md cites stale commit d0708d5 instead of the amended dff9a94</li>
+          <li>task-1-report.md's self-review checklist claims "includes attribution" as a pass
+            condition, self-contradicting the no-AI-attribution convention (report text only,
+            not a code defect)</li>
+          <li>task-1-report.md dismissed CRLF git-warning noise in test output as harmless;
+            reviewer flagged per policy but confirmed non-functional (likely
+            <code>core.autocrlf</code> chatter)</li>
+          <li>Report's stated test command didn't match its pasted full-suite output (narrative
+            imprecision only, pass count still correct)</li>
+          <li><code>parseReport</code>'s em-dash regex and <code>insertTimelineEntries</code>'
+            exact-whitespace anchor are brittle to future template drift — inherited from the
+            plan's own design, not an implementer deviation</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>2. Write the <code>03-history-update.md</code> hook file</td>
+      <td>Creates the third stock <code>post-finish</code> hook</td>
+      <td>Approved, clean</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>3. Doc updates and backlog retirement</td>
+      <td><code>MEMORY.md</code> + <code>history.html</code> Map row updates, backlog cleanup</td>
+      <td>Approved, clean</td>
+      <td>None</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Important finding, fixed and re-reviewed clean; 5 Minor
+  findings and 3 Recommendations, all explicitly deferrable per the reviewer and left
+  unaddressed in this plan.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td><code>03-history-update.md</code>'s <code>git commit</code> lacked a
+        <code>-- .digismith/history.html</code> pathspec guard, unlike sibling
+        <code>01-version-bump.md</code> — an unguarded commit could sweep in unrelated staged
+        changes from the shared main checkout under a misleading subject. Spec-level defect
+        inherited from <code>design.html</code>.</td>
+      <td>Fixed in both <code>03-history-update.md</code> and <code>design.html</code> (commit
+        6e3d618); scoped re-review verdict: all findings addressed, no new Critical/Important
+        breakage.</td>
+    </tr>
+    <tr>
+      <td>Minor + Recommendations (grouped)</td>
+      <td>5 Minor: parsed <code>mapItem</code> never threaded into the generated title;
+        failure-handling phrasing asymmetry with <code>01</code> about continuing to later hooks;
+        <code>requireArgs</code> sits outside the <code>try</code> block; the git pathspec glob
+        is broader than the slug regex accepts; generated <code>&lt;p&gt;</code> bodies are one
+        very long line unlike hand-written entries. 3 Recommendations: add a template-contract
+        test bounding the blast radius of a future <code>report.html</code> template drift; note
+        that <code>--diff-filter=AM</code> makes the no-dedup decision slightly more reachable
+        than assumed (an <code>M</code>-only edit could re-append); the <code>ORIG_HEAD</code>
+        dependency inherits the already-tracked direct-push gap.</td>
+      <td>Deferred — explicitly non-blocking per the reviewer, not addressed in this fix wave.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">dff9a94</span> feat(history-update): add update-history.ts script</li>
+    <li><span class="sha">3b6e168</span> feat(history-update): add 03-history-update.md stock hook (Y.1.3)</li>
+    <li><span class="sha">7e43824</span> docs(Y.1.3): record history-update hook in MEMORY.md and history.html, retire superseded backlog item</li>
+    <li><span class="sha">6e3d618</span> fix(history-update): guard the history commit with a file pathspec, matching 01</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/history-update-post-finish-hook/report.html</footer>
+
+</body>
+</html>
