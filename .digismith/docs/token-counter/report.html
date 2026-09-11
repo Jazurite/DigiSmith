@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Counter (K.4) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Token Counter (K.4) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: <strong>K.4</strong></span>
+    <span>Commit range: <code>ea9f507..b86405d</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Builds a generic, local, hardcoded-pricing token/cost calculator (<code>scripts/token-counter/</code>) that works for any provider — including native Claude Code — with a fire-and-forget webhook hook point for a future, not-yet-built consumer. It mirrors <code>scripts/providers/</code>'s existing shape: one pricing-data file per provider (<code>chutes</code>, <code>tokenreply</code>, <code>anthropic</code>), a shared <code>types.ts</code>, a <code>registry.ts</code> doing a plain object lookup, and a pure <code>compute.ts</code> that turns real token usage into a <code>CostRecord</code>, with a separate <code>webhook.ts</code> handling the optional fire-and-forget POST as a side effect of computing. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Types &amp; pricing registry</h4><p>Exports <code>TokenUsage</code>, <code>PricingEntry</code>, <code>CostRecord</code> (in <code>types.ts</code>) and <code>resolvePricing(provider, model): PricingEntry | undefined</code> (in <code>registry.ts</code>), backed by one hardcoded pricing-data file per provider.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Webhook dispatch</h4><p>Exports <code>dispatchWebhook(record: CostRecord): Promise&lt;void&gt;</code> — a no-op unless <code>DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL</code> is set, otherwise a fire-and-forget POST with a timeout, logging on failure without throwing.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Cost computation (public entry point)</h4><p>Exports <code>computeTokenCost(provider, model, usage): CostRecord</code> — the module's public entry point, composing the registry and the webhook dispatch, never throwing on an unknown provider/model.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Types &amp; pricing registry</td><td><code>types.ts</code>, three pricing-data files, <code>registry.ts</code></td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 2: Webhook dispatch</td><td><code>webhook.ts</code></td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>Task 3: Cost computation (public entry point)</td><td><code>compute.ts</code></td><td>Approved, clean</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes — of 5 Important findings, 4 were fixed and 1 was recorded as a backlog prerequisite rather than a code change; of 7 Minor findings (including one surfaced during the fix wave's own re-review), 1 was fixed for safety and 6 were parked as deferred.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>TokenUsage</code>'s <code>inputTokens</code>/<code>cacheReadTokens</code> relationship was undocumented — a double-count hazard</td><td>Fixed — doc comment on <code>TokenUsage</code> stating <code>inputTokens</code> excludes cache-read tokens</td></tr>
+    <tr><td>Important</td><td>Unpriced cache-read tokens were silently costed at $0 with no marker</td><td>Fixed — <code>compute.ts</code> now attaches a <code>note</code> when cache-read tokens are present but unpriced, while still pricing input+output</td></tr>
+    <tr><td>Important</td><td><code>CostRecord.costUsd</code> means something different from <code>ParsedResult.costUsd</code> in <code>scripts/runners/types.ts</code></td><td>Fixed — doc comment on <code>CostRecord.costUsd</code> disambiguating the two</td></tr>
+    <tr><td>Important</td><td>No runner currently parses real token counts, so <code>computeTokenCost</code> has no producer of a real <code>TokenUsage</code> yet</td><td>Parked — recorded as <code>backlog/token-counter-usage-producer-gap.md</code>, not a code change on this branch</td></tr>
+    <tr><td>Important</td><td><code>dispatchWebhook</code> treated HTTP 4xx/5xx responses as success</td><td>Fixed — now checks <code>response.ok</code> and logs the status on failure</td></tr>
+    <tr><td>Minor</td><td>Chutes' mechanical-role model (<code>google/gemma-4-31B-turbo-TEE</code>) has no pricing entry</td><td>Parked — deferred, one-line fix once a rate is known</td></tr>
+    <tr><td>Minor</td><td>Anthropic model IDs mix undated aliases and a dated API ID, so lookups can miss</td><td>Parked — deferred, needs a naming-convention decision</td></tr>
+    <tr><td>Minor (treated as must-fix)</td><td>Tests could fire real network POSTs if the webhook env var happened to be set on a dev machine</td><td>Fixed — both test files now clear the env var in a <code>beforeEach</code>, not just <code>afterEach</code></td></tr>
+    <tr><td>Minor</td><td>Webhook's 3-second timeout/<code>AbortController</code> path is untested</td><td>Parked — deferred</td></tr>
+    <tr><td>Minor</td><td>Cross-file pricing comments reference "above"/"below" instead of naming the file</td><td>Parked — deferred, plan-specified verbatim</td></tr>
+    <tr><td>Minor</td><td>Registry lookup can return inherited <code>Object</code> prototype members for exotic input</td><td>Parked — deferred, consistency note shared with <code>scripts/providers/registry.ts</code></td></tr>
+    <tr><td>Minor (found during the fix wave's own re-review)</td><td>Unawaited <code>response.body?.cancel()</code> could reject silently</td><td>Parked — real but trivial, ruled not worth a second fix wave</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">ea22042</span> feat(token-counter): add pricing types and provider registry</li>
+    <li><span class="sha">aedec4e</span> feat(token-counter): add fire-and-forget webhook dispatch Co-Authored-By: Claude Haiku 4.5 &lt;noreply@anthropic.com&gt;</li>
+    <li><span class="sha">cfc383d</span> feat(token-counter): add computeTokenCost, wire in webhook dispatch</li>
+    <li><span class="sha">456e365</span> docs(backlog): note token-counter's missing TokenUsage producer</li>
+    <li><span class="sha">b86405d</span> fix(token-counter): address final-review findings on cache pricing, webhook errors, docs</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/token-counter/report.html</footer>
+
+</body>
+</html>
