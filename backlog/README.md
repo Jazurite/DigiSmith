@@ -10,6 +10,7 @@ Delete an item's file once it's been applied (or explicitly dropped).
 
 ## Items
 
+- [Merge G (Standards) and U (Toolchain) into a new umbrella letter, "Structure"](structure-merge-g-and-u.md) — raised live mid-U-implementation; map-labeling change only, deferred until U ships
 - [capture-ephemeral-url: fetch PR comments via REST, not `gh pr view`](capture-ephemeral-url-rest-comment-fetch.md) — Step 4's comment fetch has two independent bugs that can silently return "not found"
 - [PR creation: existing-PR check, fork-aware remotes, injection-safe args](pr-creation-fork-and-existing-check.md) — gaps found against upstream `superpowers:finishing-a-development-branch`'s bare-bones "push and create PR" option
 - [Worktree creation: support arbitrary per-project setup](worktree-custom-setup-script.md) — `.env` provisioning (and similar) isn't covered by `using-git-worktrees`'s fixed package-manager install list
