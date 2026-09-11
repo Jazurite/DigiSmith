@@ -31,7 +31,7 @@ if [ "$UPDATE_STATUS" -ne 0 ]; then
 fi
 if [[ "$UPDATE_OUTPUT" == APPENDED* ]]; then
   git add .digismith/history.html && \
-  git commit -m "docs(history): record shipped features" && \
+  git commit -m "docs(history): record shipped features" -- .digismith/history.html && \
   git push origin <base-branch>
 fi
 ```
