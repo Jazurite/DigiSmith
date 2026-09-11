@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-08-07</span>
+    <span>Last updated: 2026-09-11</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -740,6 +740,45 @@
       <code>history.html</code> and <code>MEMORY.md</code> update, and
       retires <code>backlog/jira-rest-graphql-direct-api.md</code> now that
       its proposal is actually built.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-11</div>
+      <h4>V.3 (VPS Session CLI) planned and built — 6 tasks, subagent-driven-development</h4>
+      <p>A separate session had hand-provisioned a real Hetzner VPS and got a
+      persistent <code>claude</code> session running in <code>tmux</code>,
+      reachable over SSH — hitting nine live gotchas along the way (systemd
+      killing the detached tmux server on disconnect, nvm's PATH invisible to
+      non-interactive shells, nested shell-quoting, an <code>exec claude</code>
+      last line that could kill the whole session). That work was brainstormed
+      into <code>backlog/vps-session-hosting-x.md</code>, then folded into
+      <strong>V</strong> as <strong>V.3</strong> rather than becoming letter X
+      (X was reused for <code>backlog/practice-devprod-infra-x.md</code>, a
+      deliberately separate idea). This session took the approved design through
+      <code>writing-plans</code> and a 6-task build:
+      <code>scripts/vps-session/cli.ts</code> with <code>status</code> (a
+      read-only health report over one-shot SSH: reachability, linger, toolchain,
+      tmux alive, whether <code>claude</code> is actually running inside it,
+      credentials present) and <code>connect</code> (auto-fixes what's safe,
+      warns-but-proceeds on missing credentials, then hands the terminal to
+      <code>ssh -t … tmux attach</code>), config at
+      <code>~/.digismith-depot/vps.json</code>, and a fourth "Resource" section
+      in <code>skills/depot/SKILL.md</code>. Two task-level fix rounds — one a
+      Jack-ruled <code>nvm use default</code> safeguard added on top of the
+      design's hand-verified snippet — and one final-review fix wave, which
+      caught a swallowed <code>spawnSync</code> error (a missing local
+      <code>ssh</code> would have read as "connection failed") and a design-text
+      defect: <code>connect</code>'s attach needs a real console, so it can't run
+      from an agent's Bash tool despite the design saying both entry points could.
+      Pure builders/parsers are Vitest-tested; the real SSH/tmux orchestration is
+      live-verify-only by design and was <em>not</em> live-verified this build —
+      no VPS was reachable from the build machine — so the first real
+      <code>status</code>/<code>connect</code> run is still the acceptance bar.
+      Merged non-fast-forward (the third such merge), bumped to
+      <code>0.40.0-beta</code> by the <code>post-finish</code> hook. See
+      <a href="docs/vps-session/design.html">design</a>,
+      <a href="docs/vps-session/plan.md">plan</a>, and
+      <a href="docs/vps-session/report.html">report</a>.</p>
     </div>
 
   </div>
