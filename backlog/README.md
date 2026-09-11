@@ -26,7 +26,6 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Toolchain defaults: trigger scope beyond brainstorming](toolchain-general-trigger-scope.md) — deferred out of G.2's initial design; brainstorming-only for now, per Jack's own scope call
 - [First non-fast-forward merge — re-examine report-implementation's assumption](non-fast-forward-merge-first-occurrence.md) — happened for real merging K.2; didn't break anything since the report is written pre-merge, but the original design note asked to be revisited when this occurred
 - [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; core item for the four below
-- [Gateway-vs-native-Claude-Code cost comparison (K.4)](gateway-cost-comparison-k4.md) — depends on K.3
 - [Run multiple gateways in parallel (K.5)](gateway-parallel-execution-k5.md) — depends on K.3
 - [Harness benchmark: Claude Code vs. OpenCode (K.6)](harness-benchmark-claude-code-vs-opencode-k6.md) — independent axis, shares K.3's spike evidence
 - [Vendor benchmark: Chutes vs. TokenReply vs. future gateways (K.7)](gateway-vendor-benchmark-k7.md) — depends on K.3
@@ -45,3 +44,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Post-finish hooks assume the Option-1 merge flow — direct-to-main push leaves them stranded (Y)](post-finish-hooks-direct-push-gap.md) — gap in Y.1's shipped hooks; `ORIG_HEAD` stale/misleading when invoked by hand outside a real merge; distinct from `no-push-after-local-merge`
 - [`subagent-driven-development`'s mechanical-tier offload prerequisite check needs a real check, not a shell env-var echo](mechanical-tier-offload-prereq-check-shallow.md) — a bare `echo $TOKENREPLY_API_KEY` missed the real file-fallback credential, wrongly triggering a Claude-only fallback for all of H.1's tasks
 - [Standardized session handoff document format](standard-handoff-format.md) — 4 differently-structured handoffs from one short window; Jack noted one session's didn't match another's and should have
+- [Token counter (K.4) has no producer of real TokenUsage yet](token-counter-usage-producer-gap.md) — found during K.4's final review; no runner parses real token counts from its own event stream, so `computeTokenCost` is only reachable by hand-assembling usage today
