@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Bridge — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Agentic Bridge — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: <strong>K.9</strong></span>
+    <span>Commit range: <code>41d9e84..5e431aa</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A transparent local HTTP proxy that repairs TokenReply's <code>kimi-k3</code> XTML tool-call
+  leak before Claude Code ever sees it, so a single ordinary <code>claude -p</code> dispatch just
+  works — superseding the manual decode/execute/resume recovery mechanism for the
+  <code>claude-code</code> runner. A Depot-managed, shared, persistent local server
+  (<code>scripts/agentic-bridge/server.ts</code>) that <code>offload-implementer</code>'s
+  <code>claude-code</code> runner points <code>ANTHROPIC_BASE_URL</code> at instead of TokenReply
+  directly: it forwards every request, buffers the full response, and — only if it detects the
+  leaked XTML — decodes it (reusing the existing <code>kimi-k3-xtml-parser.ts</code>) and converts
+  the decoded calls into a genuine Anthropic <code>tool_use</code> response before relaying it,
+  everything else passing through untouched. Followed the full Superpowers process: brainstorming
+  → spec → writing-plans → <code>digismith:subagent-driven-development</code> (6 tasks, each
+  dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch
+  review, plus 7 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+  <div class="callout">
+  <strong>Real finding worth flagging:</strong> the infrastructure is proven to work end-to-end —
+  a live dispatch through the proxy completed in one ordinary call, no <code>--resume</code>
+  needed, a real commit resulted — but the XTML leak itself did not reproduce in any real
+  dispatch attempted during live verification, so the actual repair logic (decode → convert →
+  relay) remains verified only via unit tests against synthetic leaked input, not a live
+  leak-firing observation. See <code>backlog/tokenreply-kimi-k3-tool-calling-failure.md</code>.
+  </div>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>Anthropic tool_use converter</h4>
+      <p>Converts decoded XTML tool calls into genuine Anthropic <code>tool_use</code> content
+      blocks (<code>applyToolCallFix</code>), preserving <code>id</code>/<code>model</code>/<code>usage</code>
+      verbatim from the original, already-billed response.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>Proxy core (non-streaming)</h4>
+      <p>The proxy's request handler (<code>createRequestHandler</code>/<code>startServer</code>)
+      forwards to TokenReply, buffers the response, and repairs a detected leak — non-streaming
+      response path.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>SSE response wrapping</h4>
+      <p>Extends the same handler to emit a genuine Anthropic SSE event sequence when the client
+      requests streaming, mirroring whatever mode the client asked for.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 4</div>
+      <h4>Depot managed resource</h4>
+      <p><code>digismith:depot</code> gains <code>ensure-agentic-bridge</code>/<code>stop-agentic-bridge</code>
+      to start, track, and stop the shared proxy process, mirroring its existing OpenCode Server
+      resource.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 5</div>
+      <h4>offload-implementer wiring</h4>
+      <p>Routes every <code>claude-code</code>-runner dispatch through the Agentic Bridge instead
+      of TokenReply directly (documentation-only change to <code>offload-implementer</code>'s
+      Steps 2, 4, and 5.5, plus its Quick Reference table).</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 6</div>
+      <h4>Live end-to-end verification</h4>
+      <p>Proved the proxy pathway works end-to-end in one real, live dispatch — and honestly
+      recorded that the leak itself didn't reproduce that day, so repair-logic firing remains
+      unit-test-verified only.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent
+  per task, independent spec-compliance + quality review after each. Most tasks auto-offloaded
+  their first attempt to <code>kimi-k3</code> via the mechanical-tier auto-offload policy shipped
+  by a different concurrent session's work (map item Z.1) — fix rounds never resumed the offloaded
+  session, routing instead to a normal Claude implementer, bounding <code>kimi-k3</code>'s exposure
+  to one clean attempt per task.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Anthropic tool_use converter</td>
+      <td>Pure converter + 5 tests against real fixtures</td>
+      <td class="status-ok">Approved, clean</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2. Proxy core (non-streaming)</td>
+      <td>Forward/buffer/detect/repair logic + tests</td>
+      <td class="status-fixed">Approved after 2 fix rounds</td>
+      <td>A test named for the <code>headersSent</code> guard didn't actually exercise that
+      branch (a different test legitimately covers the real fix) — mislabeled, not a coverage
+      gap</td>
+    </tr>
+    <tr>
+      <td>3. SSE response wrapping</td>
+      <td><code>writeAsSse</code> + streaming tests</td>
+      <td class="status-fixed">Approved after 1 fix round</td>
+      <td>No test for the plain-text <code>text_delta</code> branch; <code>message_delta</code>'s
+      usage field includes both token counts where real Anthropic protocol carries only cumulative
+      output; <code>message_start</code> doesn't zero its usage numbers; an unreachable
+      <code>else</code> fallback branch for exotic block types could silently reintroduce the
+      duplication bug this task's own fix round closed, for that one block type</td>
+    </tr>
+    <tr>
+      <td>4. Depot managed resource</td>
+      <td>New <code>Resource: Agentic Bridge Proxy</code> section in Depot's SKILL.md</td>
+      <td class="status-fixed">Approved after 1 fix round</td>
+      <td>A wording nit ("duplicating...twice") reads ambiguously; frontmatter description's
+      Agentic Bridge clause lacks the quoted usage example the OpenCode Server clause has</td>
+    </tr>
+    <tr>
+      <td>5. offload-implementer wiring</td>
+      <td>Steps 2/4/5.5 + Quick Reference table updated to route through the proxy</td>
+      <td class="status-fixed">Approved after 1 fix round</td>
+      <td>A Quick Reference shorthand's wording drifted slightly from the prose it summarizes;
+      Step 1's prose and the Prerequisites paragraph still described the pre-proxy flow (promoted
+      to an Important finding at the final whole-branch review, since fixed)</td>
+    </tr>
+    <tr>
+      <td>6. Live end-to-end verification</td>
+      <td>Real live dispatch through the proxy, independently verified, backlog doc updated</td>
+      <td class="status-fixed">Approved after 1 fix round</td>
+      <td>A backlog-doc parenthetical implied identical evidence formats for two dispatches that
+      actually used different formats; two cosmetic mid-sentence line wraps</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 5 Important findings (including a real safety-relevant gap: no
+  model guard on the leak-repair path) and 4 Minor findings, all fixed in one wave and
+  independently re-verified live against the running proxy; 5 further Minor residuals parked as
+  accepted, non-blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>No model guard on the leak-repair path — a response from
+    <em>any</em> model whose text merely quoted well-formed XTML marker text (e.g. from this
+    repo's own fixture files) was rewritten into a real, executable <code>tool_use</code> block,
+    including for the safe shipped default <code>kimi-k2.7</code></td><td>Fixed: gated the repair
+    on <code>requestJson.model</code> containing <code>"kimi-k3"</code>; verified live to fail
+    safe on missing/null/non-string model, and to still repair genuine <code>kimi-k3</code> leaks</td></tr>
+    <tr><td>Important</td><td>Bodyless requests (GET/HEAD) 502'd with a confusing error, since the
+    outbound fetch unconditionally attached a JSON body</td><td>Fixed: body and the
+    <code>stream: false</code> override are only attached when <code>rawBody</code> is
+    non-empty</td></tr>
+    <tr><td>Important</td><td>No timeout on the buffered outbound fetch to TokenReply</td>
+    <td>Fixed: added <code>AbortSignal.timeout(300_000)</code> with a specific, clear timeout
+    error message rather than a generic one</td></tr>
+    <tr><td>Important</td><td>Zero per-request observability in a process that can silently
+    rewrite responses</td><td>Fixed: one log line on the actual repair path (model, call count,
+    stream mode) — no request/response bodies logged</td></tr>
+    <tr><td>Important</td><td><code>offload-implementer</code>'s Step 1 prose and Prerequisites
+    paragraph still described the pre-proxy flow, contradicting the already-correct Step 4</td>
+    <td>Fixed: both passages surgically amended to reflect the proxy routing</td></tr>
+    <tr><td>Minor</td><td>A test named for the <code>headersSent</code> guard didn't actually
+    exercise it</td><td>Fixed: renamed to describe what it actually tests, no behavior change</td></tr>
+    <tr><td>Minor</td><td>Depot's frontmatter description missing a quoted usage example for the
+    Agentic Bridge clause</td><td>Fixed: added, matching the OpenCode Server clause's pattern</td></tr>
+    <tr><td>Minor</td><td>Non-OK relay hardcoded <code>content-type: application/json</code> even
+    for non-JSON upstream error bodies</td><td>Fixed: echoes the upstream's real content-type</td></tr>
+    <tr><td>Minor</td><td>An unreachable URL fallback would have 404'd if ever hit</td>
+    <td>Fixed: corrected to the real API path</td></tr>
+    <tr><td>Minor</td><td><code>HEAD</code> requests still 502 (response-parse side assumes a
+    body exists)</td><td>Parked: pre-existing behavior unchanged by this fix wave; Claude Code
+    never sends <code>HEAD</code> to <code>/v1/messages</code> in practice</td></tr>
+    <tr><td>Minor</td><td>The 300000ms timeout value is duplicated as an unlinked literal and a
+    hardcoded string</td><td>Parked: cosmetic drift risk, not a correctness issue today</td></tr>
+    <tr><td>Minor</td><td>A genuine <code>kimi-k3</code> response that merely quotes XTML marker
+    text (not an actual tool-call attempt) is still repaired into a real <code>tool_use</code>
+    block — a model guard alone can't distinguish this from a true leak</td><td>Parked: inherent
+    to text-content-based detection, same class of accepted risk as Step 5.5's own documented
+    false-positive caveat; revisit only if it causes a real incident</td></tr>
+    <tr><td>Minor</td><td><code>MEMORY.md</code>'s new V.2 bullet says "third machine-wide
+    resource" while Depot's own overview says "four" (the fourth being the stateless Claude Code
+    readiness check)</td><td>Parked: pre-existing counting-convention ambiguity, not introduced
+    by this work</td></tr>
+    <tr><td>Minor</td><td><code>offload-implementer</code>'s Prerequisites paragraph reads
+    slightly self-contradicting on first read</td><td>Parked: not factually wrong, just abrupt
+    phrasing</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">84e9b51</span> feat(agentic-bridge): convert decoded XTML tool calls into real Anthropic tool_use blocks</li>
+    <li><span class="sha">47abf5d</span> feat(agentic-bridge): proxy core forwards, buffers, and repairs a leaked kimi-k3 response</li>
+    <li><span class="sha">40a6a90</span> fix(agentic-bridge): resolve URL double-prefix and unhandled upstream errors</li>
+    <li><span class="sha">3ccb8f7</span> fix(agentic-bridge): guard catch handler against headers already sent</li>
+    <li><span class="sha">792cc66</span> feat(agentic-bridge): emit a real Anthropic SSE sequence for streaming clients</li>
+    <li><span class="sha">de247d7</span> fix(agentic-bridge): send empty placeholder blocks in content_block_start</li>
+    <li><span class="sha">3771095</span> docs(depot): add Agentic Bridge as a third managed shared resource (K.9)</li>
+    <li><span class="sha">f8b498b</span> docs(depot): reconcile resource count after adding Agentic Bridge Proxy</li>
+    <li><span class="sha">db2905b</span> feat(offload-implementer): route claude-code dispatches through the Agentic Bridge (K.9)</li>
+    <li><span class="sha">7b7105c</span> docs(offload-implementer): reconcile Quick Reference table with Agentic Bridge routing</li>
+    <li><span class="sha">842378b</span> docs(backlog): record Agentic Bridge (K.9) live-verification result</li>
+    <li><span class="sha">716eeb9</span> docs(backlog): soften dispatch-count claim, record SSE open risk still unverified</li>
+    <li><span class="sha">19ee443</span> fix(agentic-bridge): gate leak repair on kimi-k3, add timeout and observability</li>
+    <li><span class="sha">53791ca</span> docs(memory): record K.9 Agentic Bridge and V.2 in the map</li>
+    <li><span class="sha">5e431aa</span> chore: bump plugin version</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/agentic-bridge/report.html</footer>
+
+</body>
+</html>
