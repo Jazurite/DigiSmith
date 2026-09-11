@@ -3,7 +3,6 @@ standards: [global]
 ticket: false
 ephemeral: false
 reporting: true
-publish_artifact: false
 logging: false
 model_offload_provider: chutes
 task_offload_provider: tokenreply

@@ -54,7 +54,7 @@ being worked in the same way `digismith:bootstrap` would. This resolves
 (or, on first use in this repo, picks via the same `AskUserQuestion` flow)
 the active profile and ensures `.digismith/profile` exists with the chosen
 name. The resolved profile's `ticket`, `ephemeral`, `standards`,
-`publish_artifact`, `reporting`, and `logging` fields are now available for
+`reporting`, and `logging` fields are now available for
 the rest of this process, exactly as they would be for `digismith:bootstrap`.
 
 Then run `digismith:bootstrap`'s Step 0.5 exactly — invoke
@@ -290,11 +290,8 @@ targeting the slug resolved in Step 3:
 
   Respect the gitignore check before committing: `git check-ignore -q
   .digismith/docs/<slug>/design.html` — exit 0 (ignored) → write the file, skip `git
-  add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. Then publish via
-  `Artifact` unless the active profile has `publish_artifact: false` — `title` from the doc's
-  own `<title>` tag, `description` one sentence summarizing the feature, `favicon` one or two
-  emoji fitting the topic. `publish_artifact: false` → skip the `Artifact` call, state plainly
-  why. No spec supplied → skip `design.html` entirely, not an error.
+  add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. No spec supplied
+  → skip `design.html` entirely, not an error.
 - **Relocation target already exists with different content** (e.g. a previous partial
   `digismith:adopt` run, or a genuine naming collision) → ask before overwriting, same "never
   silently overwrite" posture used everywhere else in this project.
@@ -338,5 +335,5 @@ it triggers off the dispatch itself, not off which entry point produced it.
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/profile`, `.digismith/preferences.yml` (if the original checkout has one), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
-| 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/`, publishing `design.html` when `publish_artifact` allows |
+| 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/` |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |

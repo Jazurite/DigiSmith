@@ -225,16 +225,6 @@ digraph brainstorming {
   skip `git add`/commit, never force with `-f`; exit 1 (not ignored, the normal case for
   DigiSmith's own repo) → commit normally.
 
-  **Publish the design doc.** If this invocation came from `digismith:bootstrap` or
-  `digismith:adopt`, skip this publish step — they already handle it after this skill reports
-  completion. Otherwise (a fully ad-hoc invocation), publish here directly: once the design doc
-  is written (and committed, if not gitignored per the check above), read the active profile the
-  same way `digismith:bootstrap` resolves one, and unless it has `publish_artifact: false`, call
-  the `Artifact` tool on the written `design.html` — `title` from the doc's own `<title>` tag,
-  `description` one sentence summarizing the feature, `favicon` one or two emoji fitting the
-  topic (pick contextually, never reuse a generic default across unrelated features).
-  `publish_artifact: false` → skip the `Artifact` call, state plainly why.
-
 - **Not DigiSmith-tracked work** — write the validated design (spec) to
   `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (this skill's own unmodified default)
   - (User preferences for spec location override this default)
