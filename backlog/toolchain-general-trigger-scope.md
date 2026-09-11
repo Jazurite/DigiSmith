@@ -1,6 +1,6 @@
 # Toolchain defaults: trigger scope beyond brainstorming
 
-**Status:** Deferred. Map item **G.2** (Toolchain, part of **G** "Structure" — formerly its own
+**Status:** Deferred. Map item **G.2** (Toolchain, part of **G** "Methodology" — formerly its own
 letter, **U**, until the 2026-09-11 merge) ships with its consult mechanism scoped
 to `digismith:brainstorming`'s "Ask clarifying questions" step only. This file captures the
 broader version, deliberately not folded into G.2's initial design.
