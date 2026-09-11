@@ -106,3 +106,17 @@ overstated — live evidence shows real counts in the `stream-json` final result
 that proved this also failed to actually execute anything, so K.4 is still not safely buildable
 right now: fix [[tokenreply-kimi-k3-tool-calling-failure]] first, get a genuinely successful
 dispatch's real token counts to confirm they hold up under real work, then revisit.
+
+**Update 2026-09-11:** K.9 (Agentic Bridge) shipped and was live-verified 2026-09-10 with one
+ordinary `claude-code`-runner dispatch that worked end-to-end and produced a real commit, no
+`--resume` recovery needed — the "genuinely successful dispatch" Blocker #1's remaining half was
+waiting on. Nobody has gone back to pull that dispatch's actual token counts yet, though, so
+Blocker #1 isn't formally closed — just very likely clearable with an already-available data
+point (or one fresh equivalent dispatch) rather than needing new infrastructure. Blocker #2
+(Chutes' hourly granularity) is untouched by this and still stands.
+
+Also raised live in this same session: build this as (or alongside) a standalone token/cost
+**counter** — surfaced from a vague recollection of "we planned a token counter or something,"
+confirmed as this item. Worth a proper `digismith:brainstorming` pass on shape (per-task display
+vs. running tally — see the open question above, already deferred to Z) before treating this as
+just "K.3's spike output, formalized."
