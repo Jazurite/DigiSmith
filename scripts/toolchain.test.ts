@@ -85,3 +85,35 @@ describe("readToolchain", () => {
     );
   });
 });
+
+describe("setToolchainDefault", () => {
+  let tmpDir: string;
+  let toolchainPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-toolchain-test-"));
+    toolchainPath = path.join(tmpDir, "nested", "toolchain.yml");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("creates the file (and parent directory) with the header comment when none existed", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    const content = fs.readFileSync(toolchainPath, "utf8");
+    expect(content).toBe(
+      "# DigiSmith-managed. Standing toolchain defaults, dictated by Jack.\ntest_runner: Vitest\n",
+    );
+  });
+
+  it("updates an existing domain in place, preserving other domains", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    setToolchainDefault("styling", "SCSS", toolchainPath);
+    setToolchainDefault("test_runner", "Jest", toolchainPath);
+
+    const entries = readToolchain(toolchainPath);
+    expect(entries.get("test_runner")).toBe("Jest");
+    expect(entries.get("styling")).toBe("SCSS");
+  });
+});

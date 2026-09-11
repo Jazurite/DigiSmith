@@ -53,3 +53,15 @@ export function readToolchain(filePath: string): Map<string, string> {
   }
   return result;
 }
+
+function writeToolchain(filePath: string, entries: Map<string, string>): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const lines = [HEADER, ...Array.from(entries, ([domain, value]) => `${domain}: ${value}`)];
+  fs.writeFileSync(filePath, lines.join("\n") + "\n");
+}
+
+export function setToolchainDefault(domain: string, value: string, filePath: string): void {
+  const entries = readToolchain(filePath);
+  entries.set(domain, value);
+  writeToolchain(filePath, entries);
+}
