@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Mechanical check for AI/assistant attribution in a commit range's messages.
+# Deliberately narrow patterns, not a bare "claude"/"anthropic" keyword match —
+# this repo's own commit messages legitimately mention "Claude Code" in ordinary
+# descriptive ways, and a bare-keyword check would false-positive on those.
+#
+# Usage: check-attribution BASE HEAD
+set -euo pipefail
+
+if [ $# -ne 2 ]; then
+  echo "usage: check-attribution BASE HEAD" >&2
+  exit 2
+fi
+
+base=$1
+head=$2
+
+git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+
+pattern='co-authored-by:.*claude|co-authored-by:.*anthropic|generated with.*claude|generated with.*anthropic|🤖'
+
+found=0
+for sha in $(git log "${base}..${head}" --format=%H); do
+  body=$(git show -s --format=%B "$sha")
+  match=$(printf '%s\n' "$body" | grep -iE "$pattern" || true)
+  if [ -n "$match" ]; then
+    echo "AI attribution found in commit $sha:" >&2
+    echo "$match" >&2
+    found=1
+  fi
+done
+
+if [ "$found" -eq 1 ]; then
+  echo "This repo forbids AI/assistant attribution anywhere — no exceptions." >&2
+  exit 1
+fi
