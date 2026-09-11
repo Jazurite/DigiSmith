@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Session CLI (V.3)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>VPS Session CLI (V.3)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: V.3 (Depot)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#config">Config File</a></li>
+    <li><a href="#status">Command: status</a></li>
+    <li><a href="#connect">Command: connect</a></li>
+    <li><a href="#depot">Depot Integration</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#outofscope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>A previous session hand-provisioned a real Hetzner VPS and got a persistent, interactive
+<code>claude</code> session running on it inside <code>tmux</code>, reachable over SSH from
+anywhere — the thing <code>backlog/vps-session-hosting-x.md</code> originally proposed as a
+new letter. Every step of that setup was done by hand, one SSH command at a time, and hit nine
+distinct real gotchas along the way (broken local SSH config, pnpm's global-bin-dir path,
+pnpm's build-script approval gate, systemd killing the detached tmux server on disconnect,
+broken nested shell-quoting, an <code>exec claude</code> trap that could kill the whole
+session, and the CLAUDE_CODE_OAUTH_TOKEN / interactive-login distinction — full list in the
+backlog file).</p>
+<p>V.3 turns that hard-won manual sequence into a real, repeatable script: <strong>reconnect to
+an already-provisioned VPS session in one command</strong>, and <strong>verify its health
+without attaching</strong>. It does not provision new infrastructure — the VPS itself is
+assumed to already exist, set up by hand once, the same way it was this first time.</p>
+<p>This slots into <strong>Depot (map item V)</strong> as a fourth machine-wide resource,
+alongside the packages/ clone, the OpenCode server (V.1), and the Agentic Bridge proxy (V.2).
+Unlike those three, there is nothing for Depot to spawn or own the lifecycle of here — the
+resource being "ensured" is a remote, already-running <code>tmux</code> session, not a local
+process Depot starts and tracks by PID.</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>A standalone TypeScript script, <code>scripts/vps-session/cli.ts</code>, run via
+<code>node --experimental-strip-types</code> — same convention as
+<code>scripts/agentic-bridge/server.ts</code>. Two subcommands, <code>status</code> and
+<code>connect</code>, sharing one internal health-check routine:</p>
+<pre><code>node --experimental-strip-types scripts/vps-session/cli.ts status
+node --experimental-strip-types scripts/vps-session/cli.ts connect</code></pre>
+<p>Both entry points work identically whether invoked directly from a raw terminal (no Claude
+Code session involved at all) or by a Claude Code session acting on <code>digismith:depot</code>'s
+instructions when asked ("connect me to my VPS," "check my VPS status") — one script, no
+duplicated logic between the human path and the agent path.</p>
+<div class="callout">Every remote command in this design is issued as a single non-interactive
+<code>ssh</code> invocation per check (<code>ssh ... "&lt;command&gt;"</code>), except the
+final step of <code>connect</code>, which <code>exec</code>s into an interactive
+<code>ssh -t ... tmux attach</code> and hands the terminal over directly. Nothing about this
+script itself is long-running — it is a short-lived controller for a long-lived remote
+resource, the same relationship this session already proved out driving the VPS by hand over
+many separate SSH connections.</div>
+</section>
+
+<section id="config">
+<h2>Config File</h2>
+<p><code>~/.digismith-depot/vps.json</code> — sibling to
+<code>~/.digismith-depot/opencode-server.json</code> and
+<code>~/.digismith-depot/agentic-bridge.json</code>, machine-wide like the rest of Depot's
+state, not per-repo:</p>
+<pre><code>{
+  "host": "46.225.49.140",
+  "user": "root",
+  "identity_file": "~/.ssh/jazurite",
+  "tmux_session": "claude-main"
+}</code></pre>
+<p>No creation or edit tooling — this file is written by hand once, matching V.3's
+software-state-only scope (no automated VPS provisioning). <strong>Absent file</strong> → both
+commands stop immediately with a plain "no VPS configured, create
+<code>~/.digismith-depot/vps.json</code>" message; neither command guesses a host.</p>
+</section>
+
+<section id="status">
+<h2>Command: <code>status</code></h2>
+<p>Runs every check below over one-shot, non-interactive SSH calls and reports each result
+plainly. Never modifies anything on the VPS — a pure read.</p>
+<div class="table-wrap">
+<table>
+<tr><th>Check</th><th>How</th><th>Why it matters</th></tr>
+<tr><td>SSH reachable</td><td><code>ssh -o BatchMode=yes -o ConnectTimeout=10 -i &lt;identity_file&gt; &lt;user&gt;@&lt;host&gt; true</code></td><td>Everything else depends on this succeeding first.</td></tr>
+<tr><td>Lingering enabled</td><td><code>loginctl show-user &lt;user&gt; -p Linger</code>, expect <code>Linger=yes</code></td><td>Without this, systemd kills every process tied to the SSH login session — including a detached <code>tmux</code> server — the moment that SSH connection closes. Hand-confirmed as the actual root cause of the session vanishing mid-setup.</td></tr>
+<tr><td>Toolchain on PATH</td><td>Explicitly source nvm and pnpm before checking — see callout below — then <code>claude --version</code></td><td>A plain non-login, non-interactive SSH command does not source <code>~/.bashrc</code>, so nvm/pnpm's PATH additions are invisible unless sourced explicitly.</td></tr>
+<tr><td>tmux session alive</td><td><code>tmux list-sessions</code>, look for the configured session name</td><td>The actual persistent resource this whole design exists to keep available.</td></tr>
+<tr><td>Credentials persisted</td><td><code>test -f ~/.claude/.credentials.json</code></td><td>Confirms the one-time interactive OAuth login has actually been completed on this machine — without it, the tmux session will be sitting at a login prompt, not a working session.</td></tr>
+</table>
+</div>
+<div class="callout">The toolchain check cannot just run <code>ssh host "claude --version"</code> — that gotcha
+was hit directly: nvm's install script appends its init lines to <code>~/.bashrc</code>, which
+bash only sources for genuinely interactive shells. Every remote command in this design
+explicitly sources nvm and sets <code>PNPM_HOME</code> first, mirroring exactly what worked by
+hand:
+<pre><code>export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] &amp;&amp; . "$NVM_DIR/nvm.sh"
+export PNPM_HOME="$HOME/.local/share/pnpm"; export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"</code></pre>
+</div>
+</section>
+
+<section id="connect">
+<h2>Command: <code>connect</code></h2>
+<p>Runs every <code>status</code> check, auto-fixing what's safely fixable, then attaches:</p>
+<ol>
+<li><strong>SSH unreachable</strong> → stop, report (see Error Handling). Nothing past this point is attempted.</li>
+<li><strong>Lingering not enabled</strong> → auto-fix: <code>loginctl enable-linger &lt;user&gt;</code>, then re-check.</li>
+<li><strong>Toolchain missing</strong> → stop, report which piece (nvm/node/pnpm/claude) is missing and point at the manual install steps. <strong>Never auto-installs</strong> — same disposition Depot already takes for a missing <code>opencode</code>/<code>claude</code> locally (see its own Error Handling table).</li>
+<li><strong>tmux session dead or absent</strong> → auto-fix: write <code>~/start-claude.sh</code> fresh via a heredoc with a quoted delimiter (never a nested-inline-escaped command — that's the exact bug hand-hit and fixed this way), <code>chmod +x</code> it, then:
+<pre><code>#!/bin/bash
+source ~/.config/claude-code.env 2>/dev/null
+cd ~
+claude
+echo "=== claude exited with code $? ==="
+exec bash</code></pre>
+Deliberately <strong>not</strong> <code>exec claude</code> as the last line — if <code>claude</code> exits for any reason, <code>exec bash</code> keeps the pane (and therefore the tmux session, and therefore the server) alive instead of the whole session vanishing. Then:
+<pre><code>tmux new-session -d -s &lt;tmux_session&gt; "/root/start-claude.sh"
+tmux pipe-pane -o -t &lt;tmux_session&gt; "cat >> /root/claude-session.log"</code></pre>
+The <code>pipe-pane</code> logging is included by default — losing all diagnostic output when a session unexpectedly dies was a real, costly gap hit hand-debugging this the first time.</li>
+<li><strong>Credentials missing</strong> → not auto-fixed (can't be — it's an interactive browser OAuth flow by design). Reported as a warning, but <code>connect</code> still proceeds to attach; the user completes login themselves, exactly as done by hand the first time.</li>
+<li><strong>Attach</strong> — the final step, replacing the script's own process:
+<pre><code>exec ssh -i &lt;identity_file&gt; -o IdentitiesOnly=yes -t &lt;user&gt;@&lt;host&gt; "tmux attach -t &lt;tmux_session&gt;"</code></pre>
+</li>
+</ol>
+</section>
+
+<section id="depot">
+<h2>Depot Integration</h2>
+<p><code>skills/depot/SKILL.md</code> gains a new "Resource: VPS Session" section, documenting
+this as a fourth resource alongside the existing three. Its "Which Operation" table entry:
+invoked directly by the user (by name or by asking a Claude Code session to do it) →
+<code>status</code> or <code>connect</code> depending on intent; <strong>never auto-invoked by
+<code>bootstrap</code>/<code>adopt</code></strong> — unlike the packages/ clone, this is not a
+per-ticket dependency most tickets need, matching the same opt-in disposition V.1/V.2 already
+use for their own resources.</p>
+</section>
+
+<section id="errors">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td><code>~/.digismith-depot/vps.json</code> absent</td><td>Stop immediately, plain message: no VPS configured, create the file. Neither command guesses a host.</td></tr>
+<tr><td>SSH unreachable (timeout, refused, key rejected)</td><td>Report the actual SSH error plainly. No retry.</td></tr>
+<tr><td>Lingering can't be enabled (permission issue)</td><td>Report the actual <code>loginctl</code> error; don't silently continue as if it succeeded.</td></tr>
+<tr><td>nvm/node/pnpm/claude missing on the VPS</td><td>Stop, report exactly which piece is missing, point at the manual install steps (nvm install script, <code>corepack enable</code>, <code>pnpm add -g @anthropic-ai/claude-code</code> then <code>pnpm approve-builds --global @anthropic-ai/claude-code</code>). Never auto-install — same stance Depot already takes for local <code>opencode</code>/<code>claude</code>.</td></tr>
+<tr><td>tmux session recreated but <code>claude</code> immediately crash-loops</td><td><code>connect</code> still attaches — the fallback <code>exec bash</code> means the user lands in a live shell with the crash visible instead of losing the session; <code>status</code> reports "tmux alive, but no live claude process" as a distinct state from "healthy."</td></tr>
+<tr><td>Credentials file absent</td><td>Warn, but proceed to attach regardless — this is an expected first-time state, not a failure.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>Per map item U's standing default, Vitest for anything genuinely unit-testable: config-file
+parsing/validation, the ssh/tmux command strings the script constructs, and the health-check
+result aggregation logic (what combination of checks maps to what reported status) are all
+pure functions, tested directly. The actual SSH/tmux interaction itself is not meaningfully
+unit-testable — mocking an SSH session would test the mock, not the behavior that actually
+matters — so, matching Depot's own existing V.1/V.2 practice, that part is live-verified
+against the real VPS as part of implementation, not covered by automated tests.</p>
+</section>
+
+<section id="outofscope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>Provisioning a new VPS</strong> — no Hetzner API calls, no server creation/teardown. The box is assumed to already exist.</li>
+<li><strong>Multiple VPSes</strong> — one config file, one host. Not a concern for a single-user personal tool; revisit only if it ever actually comes up.</li>
+<li><strong>Auto-invoking from <code>bootstrap</code>/<code>adopt</code></strong> — deliberately opt-in only, see Depot Integration above.</li>
+<li><strong>Relocating the Agentic Bridge (or any other Depot resource) to run on the VPS</strong> — a materially different, much larger idea (real network auth, dev/prod separation) that was deliberately split out during this same brainstorm into its own backlog item, <code>backlog/practice-devprod-infra-x.md</code>, rather than designed here.</li>
+<li><strong>Automating the one-time interactive OAuth login</strong> — can't be automated by design (a real browser flow), and isn't attempted.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/vps-session/design.html</footer>
+
+</body>
+</html>
