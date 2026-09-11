@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DigiSmith CLI on npm (V.4)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>DigiSmith CLI on npm (V.4)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: V.4 (Depot)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#layout">Package Layout</a></li>
+    <li><a href="#commands">Command Tree and Entry Point</a></li>
+    <li><a href="#relocation">Relocation and Skill Integration</a></li>
+    <li><a href="#publishing">Versioning and Publishing</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing and Acceptance</a></li>
+    <li><a href="#outofscope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>Everything DigiSmith can do from a terminal today needs a repo checkout:
+<code>node --experimental-strip-types scripts/vps-session/cli.ts status</code> only works
+from inside a clone. V.4 publishes a real CLI package, <code>@digismith/cli</code>, so the
+same commands install on any machine with <code>pnpm add -g @digismith/cli</code> and run as
+<code>digismith …</code> or the short alias <code>dg …</code>. It is Depot's distribution
+surface — the "biggest descendant" of <strong>V</strong> — and V.3's <code>vps</code>
+commands are the first thing shipped through it.</p>
+<p>The first version is deliberately small: one command group (<code>vps</code>), no build
+step, no dependencies, manual publish. The package's job in V.4 is to exist correctly and to
+have a shape that later groups slot into without restructuring.</p>
+<div class="callout">Decided during this brainstorm, in order: scope is the package only
+(login/credentials/server connection is a later spec — it needs the server side that
+<code>backlog/practice-devprod-infra-x.md</code> reserves for letter X) · v1 ships
+<code>vps</code> only · name <code>@digismith/cli</code>, matching the workspace scope
+<code>@digismith/jira-client</code> already uses · console names <code>digismith</code> and
+<code>dg</code> · no build — Node ≥ 24 strips types natively, verified on this machine
+(v24.16.0 runs a <code>.ts</code> entry with no flag and no warning), and an npm
+<code>bin</code> cannot pass Node flags anyway, so this is the only zero-build option that
+actually works.</div>
+</section>
+
+<section id="layout">
+<h2>Package Layout</h2>
+<p>A new workspace package. The root <code>pnpm-workspace.yaml</code> already globs
+<code>packages/*</code>, so <code>pnpm install</code> picks it up with no root change.</p>
+<pre><code>packages/cli/
+  package.json
+  README.md
+  src/
+    index.ts              #!/usr/bin/env node — dispatcher
+    index.test.ts
+    vps/                  ← moved verbatim from scripts/vps-session/
+      index.ts            was cli.ts; exports run(argv) instead of owning process entry
+      config.ts       config.test.ts
+      checks.ts       checks.test.ts
+      run-command.ts
+      status.ts       status.test.ts
+      connect.ts      connect.test.ts</code></pre>
+<p><code>package.json</code>, in full:</p>
+<pre><code>{
+  "name": "@digismith/cli",
+  "version": "0.1.0",
+  "description": "DigiSmith's command line — Depot's distribution surface",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "bin": { "digismith": "src/index.ts", "dg": "src/index.ts" },
+  "files": ["src", "!src/**/*.test.ts"],
+  "publishConfig": { "access": "public" },
+  "scripts": { "test": "vitest run" },
+  "repository": { "type": "git", "url": "https://github.com/Jazurite/DigiSmith.git", "directory": "packages/cli" },
+  "author": { "name": "Jack Huỳnh", "email": "jack@jazurite.com" }
+}</code></pre>
+<p>No <code>main</code> — nothing imports this package as a library. No
+<code>dependencies</code> or <code>devDependencies</code> — the code uses only
+<code>node:</code> builtins, and Vitest comes from the workspace root exactly as it does for
+<code>@digismith/jira-client</code>. No <code>dist/</code>, no <code>tsconfig</code> of its
+own: the root <code>tsconfig.json</code> already includes <code>scripts/**/*.ts</code> and
+gains <code>packages/cli/src/**/*.ts</code> so <code>tsc --noEmit</code> keeps covering it.
+The naming rule for the whole tree is one sentence: <em>the package runs
+<code>src/index.ts</code>; a command group runs <code>src/&lt;group&gt;/index.ts</code></em>
+— no file is called <code>cli</code>.</p>
+<p><code>README.md</code> is what npmjs.com renders: install line, the two commands, the
+<code>~/.digismith-depot/vps.json</code> config shape, and a pointer to this repo. Kept short
+and plain.</p>
+</section>
+
+<section id="commands">
+<h2>Command Tree and Entry Point</h2>
+<pre><code>digismith vps status        dg vps status
+digismith vps connect       dg vps connect
+digismith --version         prints the version from its own package.json
+digismith                   usage listing the groups, exit 1</code></pre>
+<p><code>src/index.ts</code> is thin on purpose. It owns exactly three things: a group table
+mapping a name to that group's <code>run</code>, the top-level usage text, and the process
+exit code for the cases nothing below it handles. Shape:</p>
+<pre><code>#!/usr/bin/env node
+import { run as runVps } from "./vps/index.ts";
+
+const GROUPS: Record&lt;string, (argv: string[]) =&gt; void&gt; = { vps: runVps };
+
+export function usage(): string { … lists Object.keys(GROUPS) … }
+export function resolveGroup(name: string | undefined): ((argv: string[]) =&gt; void) | undefined { … }
+export function readVersion(): string { … JSON.parse of the sibling package.json … }
+
+function main(): void {
+  const [group, ...rest] = process.argv.slice(2);
+  if (group === "--version") { console.log(readVersion()); return; }
+  const run = resolveGroup(group);
+  if (!run) { console.error(usage()); process.exitCode = 1; return; }
+  run(rest);
+}
+
+if (process.argv[1] &amp;&amp; pathToFileURL(process.argv[1]).href === import.meta.url) main();</code></pre>
+<p>The self-invocation guard is the same idiom the repo's other entry points use
+(<code>scripts/agentic-bridge/server.ts</code>, <code>scripts/preferences.ts</code>). Adding a
+future group is one folder plus one line in <code>GROUPS</code>.</p>
+<p><code>src/vps/index.ts</code> is today's <code>scripts/vps-session/cli.ts</code> with the
+process-entry seam moved up one level: its <code>main()</code> becomes an exported
+<code>run(argv: string[]): void</code> that receives the arguments <em>after</em>
+<code>vps</code>, and its own usage string becomes <code>usage: digismith vps
+&lt;status|connect&gt;</code>. Everything else — <code>loadVpsConfig</code>, the checks,
+<code>runConnect</code>'s <code>process.exit</code>, exit codes — is unchanged. No other string changes: nothing in <code>connect.ts</code>,
+<code>checks.ts</code>, <code>status.ts</code>, <code>config.ts</code>, or
+<code>run-command.ts</code> references the old script path, so those five files move
+byte-for-byte.</p>
+</section>
+
+<section id="relocation">
+<h2>Relocation and Skill Integration</h2>
+<p><code>scripts/vps-session/</code> moves to <code>packages/cli/src/vps/</code> with
+<code>git mv</code>, so history is preserved. Content changes are limited to the two named in
+the previous section (<code>cli.ts</code> → <code>index.ts</code> exporting <code>run</code>;
+usage strings). The tests move with their modules and keep passing without edits beyond
+import paths that were already relative.</p>
+<p>Every reference to the old path is updated:</p>
+<ul>
+<li><code>skills/depot/SKILL.md</code>, "Resource: VPS Session" — the invocation becomes
+  <code>node &lt;digismith-repo&gt;/packages/cli/src/index.ts vps status|connect</code>, plus
+  one sentence noting that once <code>@digismith/cli</code> is installed globally the same
+  thing is <code>digismith vps …</code> / <code>dg vps …</code> from any directory. The
+  skill keeps invoking the checkout path itself — a Claude Code session driving Depot always
+  has one — so nothing in the skill depends on the package being installed.</li>
+<li><code>MEMORY.md</code>'s <strong>V</strong> row — V.3's path reference, and a new V.4
+  entry.</li>
+<li><code>.digismith/history.html</code> — V.4 timeline entry and V row (until the Y.1.3 hook
+  exists this is still manual).</li>
+</ul>
+<p><code>.digismith/docs/vps-session/*</code> is <strong>not</strong> touched — it is the
+frozen build record for V.3 and keeps its original paths, the same precedent as the
+<code>toolchain</code> docs still saying "U".</p>
+</section>
+
+<section id="publishing">
+<h2>Versioning and Publishing</h2>
+<p><strong>Own semver, starting <code>0.1.0</code>.</strong> The CLI's version is independent
+of the plugin's (<code>0.40.0-beta</code> at the time of writing). W.4.1's
+<code>post-finish</code> version-bump hook edits <code>.claude-plugin/plugin.json</code> and
+<code>marketplace.json</code> only and is not extended; a CLI release should be a deliberate
+act, not a side effect of an unrelated skill merge.</p>
+<p><strong>Manual publish.</strong> From <code>packages/cli</code>:</p>
+<pre><code>npm login                       # once per machine; Jack's own account
+pnpm pack --dry-run             # inspect the tarball's file list first
+pnpm publish --access public</code></pre>
+<p>Prerequisites that live with Jack, not the repo: an npm account, and ownership of the
+<code>digismith</code> org on npmjs.com (unclaimed as of 2026-09-11 — all of
+<code>digismith</code>, <code>digismith-cli</code>, <code>@digismith/cli</code>, and
+<code>@jazurite/digismith</code> returned 404). This machine is not logged in to npm; the plan
+never runs <code>npm login</code> or <code>pnpm publish</code> itself — publishing is a step
+Jack performs, and the build's acceptance bar stops at a verified tarball and a working global
+install <em>from that tarball</em>.</p>
+<p>Auto-publish on merge is a natural future <code>post-finish</code> hook (Y-lineage); it is
+recorded as a follow-up in this design's Out of Scope, not built here.</p>
+</section>
+
+<section id="errors">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td>No group given (<code>digismith</code> alone)</td><td>Print the top-level usage to stderr, exit 1.</td></tr>
+<tr><td>Unknown group (<code>digismith foo</code>)</td><td>Same: top-level usage, exit 1. No "did you mean" — one group exists.</td></tr>
+<tr><td><code>--version</code></td><td>Print the version read from the package's own <code>package.json</code>, exit 0. If that file can't be read (a broken install), print <code>unknown</code> rather than crashing.</td></tr>
+<tr><td>Anything inside <code>vps</code></td><td>Unchanged from V.3's Error Handling table: absent <code>vps.json</code>, SSH unreachable, linger failure, toolchain missing, tmux/claude state, credentials absent — all handled by the moved code exactly as before.</td></tr>
+<tr><td>Node &lt; 24 on the consumer machine</td><td><code>engines.node &gt;= 24</code> makes <code>pnpm</code> refuse the global install up front with its own message; no runtime check is added.</td></tr>
+<tr><td>Running from a checkout without the package installed</td><td>Works: <code>node packages/cli/src/index.ts vps status</code> — the path Depot's SKILL.md uses.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing and Acceptance</h2>
+<p>Vitest, per the standing default. The five moved test files
+(<code>config</code>, <code>checks</code>, <code>status</code>, <code>connect</code>) run
+unchanged. One new file, <code>src/index.test.ts</code>, covers the dispatcher's pure surface:
+<code>resolveGroup</code> returns the <code>vps</code> runner and <code>undefined</code> for
+unknown/missing names; <code>usage()</code> names every group in <code>GROUPS</code>;
+<code>readVersion()</code> returns the version string from <code>package.json</code>. The
+process-entry <code>main()</code> and everything that shells out to <code>ssh</code> stay
+live-verify-only, as in V.3.</p>
+<p>Acceptance for the build (all runnable on the build machine, none needing the VPS or an
+npm login):</p>
+<ol>
+<li><code>npx vitest run</code> at the root is green, including the moved and new tests;
+  <code>npx tsc --noEmit -p tsconfig.json</code> is clean with the new include.</li>
+<li><code>node packages/cli/src/index.ts vps status</code> prints V.3's exact
+  <code>vps-session: no VPS configured — create …/vps.json</code> line and exits 1;
+  <code>node packages/cli/src/index.ts</code> and <code>… foo</code> print usage and exit 1;
+  <code>… --version</code> prints <code>0.1.0</code>.</li>
+<li><code>pnpm pack --dry-run</code> in <code>packages/cli</code> lists exactly
+  <code>package.json</code>, <code>README.md</code>, and <code>src/**</code> minus tests.</li>
+<li><code>pnpm add -g ./digismith-cli-0.1.0.tgz</code> (the packed tarball) puts
+  <code>digismith</code> and <code>dg</code> on PATH on this Windows machine, and
+  <code>dg vps status</code> prints the same no-config line. Uninstall afterwards.</li>
+</ol>
+</section>
+
+<section id="outofscope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>Login, credentials, "connecting to our server"</strong> — needs a server with real
+  auth first; that is X-lineage's practice-devprod-infra idea. Its own spec later, likely as a
+  second command group.</li>
+<li><strong>Any second command group</strong> (<code>depot</code>, <code>prefs</code>,
+  <code>jira</code>, …) — the tree is designed for them; none ships in V.4.</li>
+<li><strong>Auto-publish on merge</strong> — a future <code>post-finish</code> hook, filed as a
+  follow-up.</li>
+<li><strong>A <code>dist/</code> build or bundling</strong> — ruled out; Node ≥ 24 is the
+  requirement.</li>
+<li><strong>Changing V.3's behaviour</strong> — the move is mechanical; V.3's own outstanding
+  live verification against the real VPS remains outstanding and is unaffected.</li>
+<li><strong>Skills invoking the installed binary</strong> — Depot keeps calling the checkout
+  path; installed-binary detection is not added.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/digismith-cli-npm/design.html</footer>
+
+</body>
+</html>
