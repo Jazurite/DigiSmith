@@ -1,13 +1,13 @@
 ---
 name: depot
-description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it — e.g. "stop the agentic bridge"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
 ---
 
 # Depot
 
 ## Overview
 
-DigiSmith's map item **V**. Manages three independent, machine-wide
+DigiSmith's map item **V**. Manages four independent, machine-wide
 runtime resources, each available to anything that needs it, independent
 of any single repo, ticket, or plan:
 
@@ -19,15 +19,19 @@ of any single repo, ticket, or plan:
   backing every `digismith:offload-implementer` `opencode`-runner
   dispatch across every concurrent `subagent-driven-development` plan on
   the machine, so no plan needs to spin up its own.
+- **The Agentic Bridge proxy** — a single shared local HTTP proxy backing
+  every `digismith:offload-implementer` `claude-code`-runner dispatch to
+  TokenReply, repairing `kimi-k3`'s XTML tool-call format into a real
+  `tool_use` block before Claude Code sees it, so a dispatch just works.
 - **Claude Code readiness** — a stateless PATH + `--bare`-support check
   backing offload-implementer's `claude-code`-runner dispatches. Unlike
-  the other two, nothing is provisioned or reused here — there's no
+  the other three, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
 
 These resources share nothing but the same shape of idea — available
 without the caller needing to know where they live — and are managed by
 entirely separate operations below. Depot has no generalized "resource"
-abstraction between them: a git clone, a live process, and a stateless
+abstraction between them: a git clone, two live processes, and a stateless
 check don't share mechanics.
 
 ## Resource: packages/ Clone
@@ -183,6 +187,85 @@ then delete `~/.digismith-depot/opencode-server.json`. If the file's PID is
 already dead (process gone), still delete the tracking file — nothing
 to kill, but stale state should not survive.
 
+## Resource: Agentic Bridge Proxy
+
+A single, shared local HTTP proxy (map item **K.9**, `scripts/agentic-bridge/server.ts`)
+backing every `digismith:offload-implementer` `claude-code`-runner dispatch to TokenReply —
+it repairs `kimi-k3`'s leaked XTML tool-call format into a real `tool_use` block before
+Claude Code ever sees it, so a single ordinary dispatch just works. See
+`.digismith/docs/agentic-bridge/design.html`. Tracked at
+`~/.digismith-depot/agentic-bridge.json` (`{"pid": ..., "port": ...}`), sibling to
+`~/.digismith-depot/repo` and `~/.digismith-depot/opencode-server.json`.
+
+This skill knows nothing about TokenReply's response shape, XTML, or tool-call formats
+beyond running the CLI that already knows all of that — entirely
+`digismith:offload-implementer`'s (and the proxy's own) concern.
+
+### Which Operation
+
+- **Invoked by `digismith:offload-implementer`**, every `claude-code`-runner dispatch (not
+  just the first — same as `ensure-claude-code`, this call is cheap once the server is
+  already running: a tracked-file read plus one liveness check) → always
+  `ensure-agentic-bridge`.
+- **Invoked directly by the user** → always `stop-agentic-bridge` ("stop the agentic
+  bridge", "kill the kimi-k3 proxy"). Never automatic, never tied to any single plan
+  finishing — a shared server may still be backing a different plan's in-progress
+  dispatch. There is no `refresh-agentic-bridge`: refreshing a process is just
+  stop-then-ensure, not a distinct operation worth naming.
+
+### Operation: `ensure-agentic-bridge` — start if not alive
+
+Check `~/.digismith-depot/agentic-bridge.json` for a tracked `{"pid": ..., "port": ...}`.
+
+**Present** → confirm the process is still alive (Windows: `tasklist //FI "PID eq <pid>"`
+and check the output actually lists it, not just that the command succeeded — an absent
+PID still exits 0 with an empty-ish table). **Alive** → return the tracked port, done.
+**Not alive** → treat as stale, continue as if the file were absent.
+
+**Absent, or stale** → start a fresh server, letting the OS pick a free port rather than
+guessing one. `<digismith-repo>` is the same path `offload-implementer` already resolved
+under "Locating the Standards Library" — this operation is always invoked from within that
+same resolution, never standalone:
+
+```bash
+mkdir -p ~/.digismith-depot
+node --experimental-strip-types <digismith-repo>/scripts/agentic-bridge/server.ts --port 0 > ~/.digismith-depot/agentic-bridge.log 2>&1 &
+SERVER_PID=$!
+sleep 2
+```
+
+Read `~/.digismith-depot/agentic-bridge.log` for the line `agentic-bridge listening on
+http://127.0.0.1:<port>` and extract `<port>` from it — this is the real assigned port,
+not something to guess. If that line isn't present after a few seconds, this is a startup
+failure (see Error Handling).
+
+**Windows Git Bash only:** resolve the real WINPID before persisting or checking any
+PID — same reasoning and same fallback as `ensure-opencode-server` above:
+
+```bash
+WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
+```
+
+If `$WINPID` comes back empty, fall back to resolving the PID by parsing `netstat -ano`
+for the process listening on the captured port instead. Never persist an empty pid. On
+other platforms `$!` is already the right PID — skip this lookup there.
+
+On success, write `~/.digismith-depot/agentic-bridge.json` as `{"pid": <WINPID on
+Windows, else SERVER_PID>, "port": <port>}`. Return the port.
+
+### Operation: `stop-agentic-bridge` — explicit only
+
+Read `~/.digismith-depot/agentic-bridge.json`. **Absent** → nothing to stop, report that
+plainly. **Present** →
+
+```bash
+taskkill //PID <pid> //F
+```
+
+then delete `~/.digismith-depot/agentic-bridge.json`. If the file's PID is already dead
+(process gone), still delete the tracking file — nothing to kill, but stale state should
+not survive.
+
 ## Resource: Claude Code Readiness
 
 A **stateless readiness check** for `digismith:offload-implementer`'s
@@ -219,6 +302,8 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | `claude` not on PATH, or doesn't support `--bare` | Stop, tell the caller plainly, point at `npm install -g @anthropic-ai/claude-code`. Never auto-install. |
 | Server fails to start (no "listening on" line in the log within a few seconds) | Stop, show the log content, don't retry silently. |
 | Tracked PID in `~/.digismith-depot/opencode-server.json` is no longer running | Treat as stale, start fresh per `ensure-opencode-server` above, overwrite the tracking file. |
+| Agentic Bridge fails to start (no "listening on" line in `~/.digismith-depot/agentic-bridge.log` within a few seconds) | Stop, show the log content, don't retry silently. |
+| Tracked PID in `~/.digismith-depot/agentic-bridge.json` is no longer running | Treat as stale, start fresh per `ensure-agentic-bridge` above, overwrite the tracking file. |
 | WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
 
 ## Out of Scope
@@ -245,6 +330,11 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
   the shared-stop risk above — a personal, single-operator tool doesn't
   warrant a lockfile/mutex for a window this narrow — but disclosed
   explicitly rather than left as a silent gap.
+- **Locking `ensure-agentic-bridge`'s check-then-start against a concurrent caller** —
+  same accepted, disclosed risk as `ensure-opencode-server` above: two sessions calling it
+  within the same few seconds can each start their own proxy process; whichever writes
+  `~/.digismith-depot/agentic-bridge.json` last wins the tracking slot, the other leaks
+  untracked. Not solved here, for the same reason.
 - **Reference-counted or multi-consumer-safe stop** — `stop-opencode-server`
   is explicit-only, same as the clone never auto-deletes itself. If
   another plan is still relying on the server when it's stopped, that
@@ -254,10 +344,12 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 - **Model or provider abstraction** — this skill knows nothing about
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
-- **A generalized multi-resource interface** — three concrete resources
-  (one of them stateless), three concrete operation sets. Not
-  generalized until a fourth real resource needs the same shape as an
-  existing one.
+- **A generalized multi-resource interface** — four concrete resources
+  (one of them stateless), four concrete operation sets. Two of them
+  (OpenCode server, Agentic Bridge proxy) share the identical ensure/stop +
+  PID/port-tracking lifecycle shape, but duplicating this well-understood
+  ~80-line pattern twice is still cheaper and clearer than a premature
+  abstraction — reconsider only if a third resource needs the same shape.
 
 ## Quick Reference
 
@@ -267,4 +359,6 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | packages/ clone | `refresh` | User asks directly, any time | Fetch + hard reset to `origin/main` (runs `ensure` first if the clone doesn't exist yet) |
 | OpenCode server | `ensure-opencode-server` | Called by `digismith:offload-implementer`, first offload in a session | Start if not alive (resolving the real Windows PID), else return the tracked port |
 | OpenCode server | `stop-opencode-server` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
+| Agentic Bridge proxy | `ensure-agentic-bridge` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Start if not alive (resolving the real Windows PID), else return the tracked port |
+| Agentic Bridge proxy | `stop-agentic-bridge` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
 | Claude Code readiness | `ensure-claude-code` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Stateless PATH + `--bare`-support check, no state written |

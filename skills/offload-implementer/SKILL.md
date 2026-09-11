@@ -49,8 +49,10 @@ install -g @anthropic-ai/claude-code` if missing — never auto-install,
 see Error Handling). Whichever credential env var the resolved provider
 needs must be set in the environment `claude` runs in — Claude Code
 reads it directly at spawn time via `ANTHROPIC_BASE_URL`/
-`ANTHROPIC_AUTH_TOKEN`, no shared server to pre-configure. Only
-providers whose `supportsRunner` includes `"claude-code"` may be
+`ANTHROPIC_AUTH_TOKEN`. There is a shared server to pre-configure now:
+Step 2 also invokes `ensure-agentic-bridge`, and `ANTHROPIC_BASE_URL`
+ends up pointing at that local proxy rather than the provider directly.
+Only providers whose `supportsRunner` includes `"claude-code"` may be
 resolved this way (today, TokenReply only — see `scripts/providers/`).
 
 **`--auto` (opencode) / `--permission-mode auto` (claude-code) grant
@@ -158,10 +160,12 @@ chose (the single key inside `.models` in its output) — Step 4 needs
 both to build its `opencode run --model` argument.
 
 **`claude-code` runner, exit 0:** stdout is `{"baseUrl": "...",
-"credentialEnv": "...", "model": "..."}`. No file is written — Step 4
-exports `baseUrl`/`credentialEnv` as `ANTHROPIC_BASE_URL`/
-`ANTHROPIC_AUTH_TOKEN` environment variables and passes `model` as its
-`--model` argument at dispatch time.
+"credentialEnv": "...", "model": "..."}`. No file is written. `baseUrl`
+is resolved here but only used informationally now — Step 4 sets
+`ANTHROPIC_BASE_URL` to the Agentic Bridge's local port instead (per
+Step 2's `ensure-agentic-bridge` call), exports `credentialEnv` as
+`ANTHROPIC_AUTH_TOKEN`, and passes `model` as its `--model` argument at
+dispatch time.
 
 ### Step 2: Ensure the Resolved Runner Is Ready
 
@@ -185,6 +189,15 @@ stateless PATH + `--bare`-support check, invoked fresh on every
 
 If Depot's operation reports not-ready, stop here and report `BLOCKED`
 rather than continuing to Step 3/4.
+
+Then, also for the `claude-code` runner, invoke `digismith:depot`'s
+`ensure-agentic-bridge` operation and record the port it returns — every
+`claude-code`-runner dispatch (TokenReply is currently the only provider this
+runner supports) routes through this local proxy instead of TokenReply
+directly, so a leaked `kimi-k3` tool call is repaired before Claude Code
+ever sees it (map item **K.9**, `.digismith/docs/agentic-bridge/design.html`).
+If this operation doesn't return a usable port, stop here and report
+`BLOCKED`, same as an unready `ensure-claude-code` check above.
 
 ### Step 3: Build the Task Prompt
 
@@ -320,7 +333,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 <prompt built in Step 3, verbatim>
 PROMPT_EOF
 )
-ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_BASE_URL="http://127.0.0.1:<port from Step 2's ensure-agentic-bridge call>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json --verbose \
@@ -344,7 +357,7 @@ PROMPT=$(cat <<'PROMPT_EOF'
 <prompt built in Step 3, verbatim>
 PROMPT_EOF
 )
-ANTHROPIC_BASE_URL="<resolved baseUrl>" \
+ANTHROPIC_BASE_URL="http://127.0.0.1:<port from Step 2's ensure-agentic-bridge call>" \
 ANTHROPIC_AUTH_TOKEN="$<resolved credential env var NAME>" \
 claude -p "$PROMPT" --bare --model <resolved-model-id> \
   --permission-mode auto --output-format stream-json --verbose \
@@ -404,6 +417,17 @@ to send.
 **Only runs when Step 5's `parse-result.ts` output has `xtmlLeakDetected: true`** — TokenReply's
 `kimi-k3` route returned raw, unconverted tool-call text instead of executing anything (see
 `backlog/tokenreply-kimi-k3-tool-calling-failure.md`). Skip this step entirely otherwise.
+
+**For the `claude-code` runner, this step should no longer trigger in practice** — the
+Agentic Bridge proxy (map item K.9, wired in at Step 2/4 above) repairs the leak before
+Claude Code's own agentic loop ever sees it, so a single ordinary dispatch completes
+without needing this recovery procedure at all. This step remains the real, necessary
+path for two cases: the `opencode` runner (out of scope for the proxy — see the design
+doc's Out of Scope section) and an undecodable leak even the proxy couldn't fix (the
+proxy relays those unchanged rather than guessing). If `xtmlLeakDetected: true` shows up
+for a `claude-code`/TokenReply dispatch despite the proxy being in the path, treat that as
+a signal something is wrong with the proxy itself, not a routine recovery case — worth
+investigating rather than just working around.
 
 1. Extract `resultText` to a temp file **byte-exact** — no intermediate print/stdout
    round-trip, since a shell's own text-mode translation can silently corrupt it (real evidence:
@@ -535,9 +559,9 @@ This skill's own job for this dispatch ends here.
 |---|---|
 | 0 | Determine intent — a stop request is no longer this skill's concern (tell the user to invoke `digismith:depot`'s `stop-opencode-server` directly, `opencode` runner only), otherwise this is a dispatch (fresh/fix round) |
 | 1 | Resolve `task_offload_runner`/`task_offload_provider`, run `print-config.ts --runner <name>` — `opencode` runner writes `opencode.json` (ignored via `.git/info/exclude`, never the tracked `.gitignore`); `claude-code` runner gets `{baseUrl, credentialEnv}`, no file written |
-| 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch) |
+| 2 | `opencode` runner: invoke `digismith:depot`'s `ensure-opencode-server`, use the returned port. `claude-code` runner: invoke `digismith:depot`'s `ensure-claude-code` (stateless, every dispatch), then `ensure-agentic-bridge` and record the port — routes through this local proxy instead of TokenReply directly |
 | 3 | Invoke `digismith:inject-standards` (Scenario 4), then build the prompt — brief + standards + report contract requiring implement → test → **commit** → report (fresh), or findings + standards + report contract appending to the same report file (fix round) |
-| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json --verbose` (`--verbose` is required alongside `--print`/`--output-format=stream-json` — `claude` errors before producing any output without it; shell-expanded credential, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
+| 4 | Capture the prompt into `$PROMPT` via a single-quoted heredoc, then dispatch — `opencode run --attach ... --format json "$PROMPT"` or `ANTHROPIC_BASE_URL="http://127.0.0.1:<port from Step 2's ensure-agentic-bridge>" ANTHROPIC_AUTH_TOKEN="$<credentialEnv>" claude -p "$PROMPT" --bare --model <model> --output-format stream-json --verbose` (for `claude-code`, `ANTHROPIC_BASE_URL` is the Agentic Bridge proxy's local port, not TokenReply's direct URL; `--verbose` is required alongside `--print`/`--output-format=stream-json` — `claude` errors before producing any output without it; shell-expanded credential, never the literal secret value) — with an explicit ≥300000ms `Bash` timeout, `--session`/`--resume <id>` on fix rounds, events to a `-round<R>`-suffixed file on fix rounds |
 | 5 | Run `parse-result.ts <runner> <events-file>` for a uniform `{status, resultText, sessionId, costUsd?, xtmlLeakDetected?}`; capture `sessionId` into `opencode-sessions.jsonl` only on a fresh task, never re-appended on a fix round |
-| 5.5 | Only if `xtmlLeakDetected: true` — decode via `kimi-k3-xtml-parser.ts`, execute each decoded call with the controller's own tools, resume the session with a result summary, loop back to Step 5. Counts toward the existing fix-round cap — viable only for tasks needing roughly 3 or fewer tool calls total. |
+| 5.5 | Only if `xtmlLeakDetected: true` — decode via `kimi-k3-xtml-parser.ts`, execute each decoded call with the controller's own tools, resume the session with a result summary, loop back to Step 5. Counts toward the existing fix-round cap. For `opencode` runner: viable only for tasks needing roughly 3 or fewer tool calls total. For `claude-code` runner: should not trigger in practice (Agentic Bridge repairs the leak), but if it does, investigate the proxy. |
 | 6 | Independently verify a `DONE`/`DONE_WITH_CONCERNS` claim before trusting it, then hand back to the normal `subagent-driven-development` flow — review, fix loop, completion, unmodified |
