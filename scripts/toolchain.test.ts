@@ -155,3 +155,125 @@ describe("clearToolchainDefault", () => {
     expect(fs.existsSync(toolchainPath)).toBe(false);
   });
 });
+
+describe("main (CLI)", () => {
+  let tmpDir: string;
+  let toolchainPath: string;
+  let originalArgv: string[];
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-toolchain-test-"));
+    toolchainPath = path.join(tmpDir, "toolchain.yml");
+    originalArgv = process.argv;
+  });
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("prints nothing for list on a missing file", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "list", "--path", toolchainPath];
+
+    main();
+
+    expect(logSpy).not.toHaveBeenCalled();
+  });
+
+  it("prints every domain/value pair for list", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    setToolchainDefault("styling", "SCSS", toolchainPath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "list", "--path", toolchainPath];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("test_runner: Vitest");
+    expect(logSpy).toHaveBeenCalledWith("styling: SCSS");
+  });
+
+  it("writes the value and prints a confirmation for set", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = [
+      "node",
+      "toolchain.ts",
+      "--action",
+      "set",
+      "--domain",
+      "test_runner",
+      "--value",
+      "Vitest",
+      "--path",
+      toolchainPath,
+    ];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("toolchain: set test_runner=Vitest");
+    expect(readToolchain(toolchainPath).get("test_runner")).toBe("Vitest");
+  });
+
+  it("clears a domain and prints a confirmation", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "clear", "--domain", "test_runner", "--path", toolchainPath];
+
+    main();
+
+    expect(logSpy).toHaveBeenCalledWith("toolchain: cleared test_runner");
+    expect(readToolchain(toolchainPath).get("test_runner")).toBeUndefined();
+  });
+
+  it("fails clearly when --domain is missing for set", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "set", "--value", "Vitest", "--path", toolchainPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("toolchain: failed (missing required flag: --domain)");
+  });
+
+  it("fails clearly when --value is missing for set", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "set", "--domain", "test_runner", "--path", toolchainPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("toolchain: failed (missing required flag: --value)");
+  });
+
+  it("fails clearly when --domain is missing for clear", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "clear", "--path", toolchainPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("toolchain: failed (missing required flag: --domain)");
+  });
+
+  it("fails clearly when --action is missing", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--path", toolchainPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("toolchain: failed (missing required flag: --action)");
+  });
+
+  it("fails clearly on an unknown action", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.argv = ["node", "toolchain.ts", "--action", "get", "--path", toolchainPath];
+
+    main();
+
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("toolchain: failed (unknown action: get)");
+  });
+});

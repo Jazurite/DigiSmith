@@ -72,3 +72,58 @@ export function clearToolchainDefault(domain: string, filePath: string): void {
   entries.delete(domain);
   writeToolchain(filePath, entries);
 }
+
+export function main(): void {
+  const args = parseArgs(process.argv.slice(2));
+
+  try {
+    requireArgs(args, ["action"]);
+  } catch (err) {
+    console.error(`toolchain: failed (${(err as Error).message})`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const filePath = args.path ?? DEFAULT_TOOLCHAIN_PATH;
+
+  switch (args.action) {
+    case "list": {
+      for (const [domain, value] of readToolchain(filePath)) {
+        console.log(`${domain}: ${value}`);
+      }
+      return;
+    }
+    case "set": {
+      if (args.domain === undefined) {
+        console.error("toolchain: failed (missing required flag: --domain)");
+        process.exitCode = 1;
+        return;
+      }
+      if (args.value === undefined) {
+        console.error("toolchain: failed (missing required flag: --value)");
+        process.exitCode = 1;
+        return;
+      }
+      setToolchainDefault(args.domain, args.value, filePath);
+      console.log(`toolchain: set ${args.domain}=${args.value}`);
+      return;
+    }
+    case "clear": {
+      if (args.domain === undefined) {
+        console.error("toolchain: failed (missing required flag: --domain)");
+        process.exitCode = 1;
+        return;
+      }
+      clearToolchainDefault(args.domain, filePath);
+      console.log(`toolchain: cleared ${args.domain}`);
+      return;
+    }
+    default:
+      console.error(`toolchain: failed (unknown action: ${args.action})`);
+      process.exitCode = 1;
+  }
+}
+
+if (import.meta.filename === process.argv[1]) {
+  main();
+}
