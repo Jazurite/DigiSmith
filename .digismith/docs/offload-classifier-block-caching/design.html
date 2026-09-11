@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offload Classifier-Block Fallback Caching</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Offload Classifier-Block Fallback Caching</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: Z.2</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#detection">Detection</a></li>
+    <li><a href="#caching">Caching in the ledger</a></li>
+    <li><a href="#edit-location">Where this lands</a></li>
+    <li><a href="#error-handling">Error handling &amp; edge cases</a></li>
+    <li><a href="#testing">Testing / verification</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>Confirmed live twice in one session (<code>backlog/offload-blocked-by-permission-classifier-k.md</code>),
+across both configured runners (<code>claude-code</code> and <code>opencode</code>): Claude Code's own
+auto-mode permission classifier refuses the credential-fetch-then-spawn action shape that
+<code>digismith:offload-implementer</code>'s dispatch step requires — after every real DigiSmith-side
+prerequisite (runner on PATH, credential resolved, <code>print-config.ts</code> exiting 0) has already
+passed. This is confirmed environmental, not a DigiSmith bug.</p>
+<p><code>subagent-driven-development</code>'s "Mechanical-tier auto-offload" paragraph (Z.1's own
+mechanism) already has four named fallback triggers — runner not on PATH, credential env var unset,
+<code>print-config.ts</code> exits non-zero, Depot's readiness check fails — and falls back gracefully to
+a normal Claude cheap-tier dispatch for any of them. A classifier refusal isn't one of the four, so today
+a controller has to recognize the pattern live and manually route around it, which is exactly what
+happened building K.4: the same refusal was silently re-discovered on all three of that plan's mechanical
+tasks, one wasted attempt per task, because nothing remembered the first one.</p>
+</section>
+
+<section id="scope">
+<h2>Scope</h2>
+<p>Extends <code>subagent-driven-development</code>'s existing "Mechanical-tier auto-offload" paragraph
+only — the vendored primitive's own automatic path. Two things change: the paragraph's fallback-trigger
+list gains a fifth trigger (a live classifier refusal), and every mechanical-tier task after the one that
+first discovers it checks for that discovery before attempting its own dispatch.</p>
+<p><strong>Out of scope:</strong> <code>digismith:offload-implementer</code> itself is untouched — its
+Error Handling table stays exactly as it is today, since this fix targets only the automatic mechanical-tier
+path, not an explicitly-requested offload. Also out of scope: anything that tries to unblock the classifier
+itself (the only real lever is the user's own Claude Code permission settings, entirely outside this repo's
+control and not something to prompt for automatically) and any persistence across separate plan runs or
+sessions (see "Error handling &amp; edge cases" for why this is deliberately per-run, not durable).</p>
+</section>
+
+<section id="detection">
+<h2>Detection</h2>
+<p>A classifier refusal is categorically different from every disposition already in
+<code>offload-implementer</code>'s Error Handling table: the <code>Bash</code> tool call attempting the
+dispatch command (the credential-export-then-spawn shape) is refused outright by the harness itself before
+the resolved runner's process ever starts. Recognizable by two things together:</p>
+<ul>
+<li>No events file is produced at all — not empty, not partial, simply never created — because the process
+that would have written it never ran.</li>
+<li>The tool result itself carries an explicit permission-refusal notice from the harness, not any command
+output, exit code, or stderr text from <code>claude</code>/<code>opencode</code> — distinct from a genuine
+runner error (which produces <em>some</em> real output), a <code>Bash</code> tool timeout (already handled
+separately as "not a failure by itself"), or a missing prerequisite (already caught earlier, before any
+dispatch is attempted, by the PATH/credential/<code>print-config.ts</code> checks).</li>
+</ul>
+</section>
+
+<section id="caching">
+<h2>Caching in the ledger</h2>
+<p>On first detection within a plan run, record it as a new ledger line — not just in-session/controller
+memory — using the same append-only convention every other ledger line already follows, e.g.:</p>
+<pre><code>Task &lt;N&gt;: mechanical-tier offload environment blocked (classifier refusal) — falling back to Claude for the rest of this plan</code></pre>
+<p>Ledger-based rather than an in-memory flag because the ledger is this skill's own designed-for-compaction-survival
+mechanism (per its own "conversation memory does not survive compaction" warning) — a plan that spans a
+compaction should still remember the block on resume, the same way it already remembers which tasks
+completed.</p>
+<p>Every later mechanical-tier task, before attempting anything, scans the ledger for that line first. If
+present, it skips the offload attempt entirely and dispatches straight to a normal Claude cheap-tier
+implementer — no wasted attempt, no re-discovery.</p>
+</section>
+
+<section id="edit-location">
+<h2>Where this lands</h2>
+<p>Entirely within <code>subagent-driven-development</code>'s existing "Mechanical-tier auto-offload"
+paragraph (the vendored primitive DigiSmith forks) — extending its existing sentence "If any of
+<code>offload-implementer</code>'s own prerequisites aren't met (runner not on PATH, credential env var
+unset, <code>print-config.ts</code> exits non-zero, Depot's readiness check fails) — fall back to a normal
+Claude cheap-tier <code>Agent</code>-tool dispatch instead" with a fifth trigger, plus a new short
+instruction: check the ledger for an existing block-discovery line before attempting any mechanical-tier
+task's first dispatch. No changes to <code>digismith:offload-implementer</code>, K.2/K.3/K.6, or the
+existing memory note/backlog item — those stay as the informal record this design formalizes into the
+skill's own text.</p>
+</section>
+
+<section id="error-handling">
+<h2>Error handling &amp; edge cases</h2>
+<ul>
+<li><strong>Environment-wide, not runner-specific.</strong> Both configured runners were independently
+confirmed blocked by the identical action shape (credential-fetch-then-spawn), not by anything specific to
+one binary. The cached block therefore applies plan-wide regardless of which runner a later task would have
+used — a task configured for <code>opencode</code> still skips its attempt even if the discovery happened
+on a <code>claude-code</code>-runner task, and vice versa.</li>
+<li><strong>Never generalized across plan runs.</strong> The backlog item's own finding is explicit that
+this is "likely session/harness-specific... don't generalize to 'offload is broken everywhere.'" Caching
+lives only in this plan's own ledger, which is deleted once <code>digismith:report-implementation</code>
+has run and the plan finishes — the next plan, in a possibly-different session or with possibly-different
+permission settings, starts with a clean slate and gets a fair, fresh attempt at real offload. This is a
+deliberate choice, not an oversight: a durable, cross-session flag risked permanently disabling a real
+optimization based on stale evidence, which is exactly what a peer session's Approach 3 alternative would
+have risked (see design discussion).</li>
+<li><strong>Must not fire on a genuine runner error.</strong> A dispatch that starts and then fails (bad
+exit code, malformed output, TokenReply/Chutes returning a real HTTP error) is already the existing
+"dispatched runner genuinely errors → BLOCKED" disposition in <code>offload-implementer</code>'s own Error
+Handling table — untouched by this design. The two must stay distinguishable: this trigger requires that
+the dispatch command itself never ran.</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>Testing / verification</h2>
+<p>This is a prose change to a controller-facing skill, not executable code — there is no automated test
+suite to run. Verification is: (1) the updated paragraph reads unambiguously to a fresh controller with no
+memory of this incident (the same bar every DigiSmith skill edit is held to); (2) the next real plan that
+hits a live classifier refusal is watched to confirm the ledger line gets written on first discovery and
+later mechanical tasks actually skip their attempt — this can't be forced deterministically since the block
+is environment-dependent, so it's confirmed opportunistically on the next real occurrence rather than in a
+dedicated test task.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/offload-classifier-block-caching/design.html</footer>
+
+</body>
+</html>
