@@ -78,4 +78,4 @@ Raw findings from a single live session, not yet run through
 `superpowers:brainstorming`/`writing-plans`. Needs a design spec
 before becoming a skill, including the new profile field for **I.2**
 (name, default, which profiles set it) alongside **O**'s existing
-ticket/ephemeral/reporting/publish_artifact fields.
+ticket/ephemeral/reporting fields.

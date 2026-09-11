@@ -195,10 +195,7 @@ criteria already loaded as seed context, plus the slug it already
 derived — `brainstorming` itself now knows to write its output to
 DigiSmith's unified docs location (`.digismith/docs/<slug>/design.html`,
 HTML) instead of its own third-party default, and `writing-plans` does
-the same for `plan.md` once the spec is approved. Once `brainstorming`
-reports its design doc written, `bootstrap` publishes it via the
-`Artifact` tool for readability, unless the active profile has
-`publish_artifact: false`. From there,
+the same for `plan.md` once the spec is approved. From there,
 Superpowers' own chain takes over unmodified — brainstorming →
 `writing-plans` → `subagent-driven-development`/`executing-plans` — with
 its own approval gates at each stage. `bootstrap`'s job ends at

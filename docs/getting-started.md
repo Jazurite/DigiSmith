@@ -39,11 +39,11 @@ Asked once per repo, remembered in `.digismith/profile`. Change later
 with "switch this repo's profile to X" — it states the behavioral delta
 and confirms before writing.
 
-| Profile | ticket | standards | ephemeral | reporting | publish_artifact | logging | Use for |
-|---|---|---|---|---|---|---|---|
-| `emma` | ✓ | global, shopify, team | ✓ | ✓ | ✓ | ✓ | Client Shopify theme repos |
-| `personal` | – | – | – | ✓ | ✓ | – | Throwaway / scratch personal work |
-| `jazurite` | – | – | – | ✓ | ✓ | ✓ | Your own branded projects — process worth a corpus, no client machinery |
+| Profile | ticket | standards | ephemeral | reporting | logging | Use for |
+|---|---|---|---|---|---|---|
+| `emma` | ✓ | global, shopify, team | ✓ | ✓ | ✓ | Client Shopify theme repos |
+| `personal` | – | – | – | ✓ | – | Throwaway / scratch personal work |
+| `jazurite` | – | – | – | ✓ | ✓ | Your own branded projects — process worth a corpus, no client machinery |
 
 There's one more field, `model_offload_provider`, deliberately left off
 the table because none of the three profiles above set it: it names the
@@ -85,9 +85,7 @@ trigger point inside the chain above, gated by the active profile:
   resolves, nothing to write to.
 - **N — implementation report.** The moment a plan's final review comes
   back clean, before that plan's ledger gets deleted. Gated by
-  `reporting`. Report/spec generation itself isn't gated by
-  `publish_artifact` — the separate `Artifact`-publish step inside
-  `report-implementation`, `bootstrap`, and `adopt` is.
+  `reporting`.
 - **P — telemetry.** At `finishing-a-development-branch`'s integration
   decision (merge, PR, or keep-as-is all count), commits this session's
   transcript slice back into DigiSmith's own repo. Gated by `logging`;
