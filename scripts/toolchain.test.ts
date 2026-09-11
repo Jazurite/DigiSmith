@@ -117,3 +117,41 @@ describe("setToolchainDefault", () => {
     expect(entries.get("styling")).toBe("SCSS");
   });
 });
+
+describe("clearToolchainDefault", () => {
+  let tmpDir: string;
+  let toolchainPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-toolchain-test-"));
+    toolchainPath = path.join(tmpDir, "toolchain.yml");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("removes a set domain", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    clearToolchainDefault("test_runner", toolchainPath);
+    expect(readToolchain(toolchainPath).get("test_runner")).toBeUndefined();
+  });
+
+  it("leaves other domains untouched", () => {
+    setToolchainDefault("test_runner", "Vitest", toolchainPath);
+    setToolchainDefault("styling", "SCSS", toolchainPath);
+    clearToolchainDefault("test_runner", toolchainPath);
+    expect(readToolchain(toolchainPath).get("styling")).toBe("SCSS");
+  });
+
+  it("is a no-op when the domain was never set", () => {
+    setToolchainDefault("styling", "SCSS", toolchainPath);
+    clearToolchainDefault("test_runner", toolchainPath);
+    expect(readToolchain(toolchainPath).get("styling")).toBe("SCSS");
+  });
+
+  it("is a no-op when the file doesn't exist", () => {
+    expect(() => clearToolchainDefault("test_runner", toolchainPath)).not.toThrow();
+    expect(fs.existsSync(toolchainPath)).toBe(false);
+  });
+});

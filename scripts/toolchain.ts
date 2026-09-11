@@ -65,3 +65,10 @@ export function setToolchainDefault(domain: string, value: string, filePath: str
   entries.set(domain, value);
   writeToolchain(filePath, entries);
 }
+
+export function clearToolchainDefault(domain: string, filePath: string): void {
+  const entries = readToolchain(filePath);
+  if (!entries.has(domain)) return;
+  entries.delete(domain);
+  writeToolchain(filePath, entries);
+}
