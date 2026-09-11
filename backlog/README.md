@@ -27,6 +27,7 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [First non-fast-forward merge — re-examine report-implementation's assumption](non-fast-forward-merge-first-occurrence.md) — happened for real merging K.2; didn't break anything since the report is written pre-merge, but the original design note asked to be revisited when this occurred
 - [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; core item for the four below
 - [Mechanical/task-tier offload blocked by Claude Code's auto-mode permission classifier (K)](offload-blocked-by-permission-classifier-k.md) — confirmed live twice, both runners; likely session-specific, not a DigiSmith bug
+- [`report-implementation`'s only source of truth gets deleted by the very next step it feeds into](report-implementation-ordering-not-enforced.md) — controller skipped it entirely on K.4, deleting the ledger before running it; recovered only by luck (no compaction had happened yet)
 - [Review templates don't guard against AI attribution in commits](review-templates-dont-guard-ai-attribution.md) — an implementer added a `Co-Authored-By: Claude` trailer despite explicit instructions; the reviewer assumed it was expected instead of flagging it
 - [Run multiple gateways in parallel (K.5)](gateway-parallel-execution-k5.md) — depends on K.3
 - [Harness benchmark: Claude Code vs. OpenCode (K.6)](harness-benchmark-claude-code-vs-opencode-k6.md) — independent axis, shares K.3's spike evidence

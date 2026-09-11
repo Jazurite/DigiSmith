@@ -1,9 +1,12 @@
 # Non-fast-forward merges in this repo — re-examine report-implementation's assumption
 
-**Status:** Not applied. A flag for a future pass, not a bug to fix now. Now confirmed twice.
+**Status:** Not applied. A flag for a future pass, not a bug to fix now. Now confirmed three times.
 
 **Source:** 2026-08-27, merging map item K.2 (`implementer-offload`) into
-`main`. **Recurred** 2026-09-04, merging map item W.6 (retiring H) into `main`.
+`main`. **Recurred** 2026-09-04, merging map item W.6 (retiring H) into `main`. **Recurred again**
+2026-09-11, merging map item K.4 (token counter) into `main` — same shape, another concurrent
+session's unrelated commits (a map-item G rename) had landed on local `main` while K.4 was being
+built in its own worktree.
 
 ## What happened
 
