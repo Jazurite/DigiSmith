@@ -61,6 +61,17 @@ not an afterthought.
   infra vs. functional resource provisioning) to deserve its own letter after all — genuinely
   undecided, `X` above is a placeholder, not a commitment.
 
+## Possible architectural reference (2026-09-11, raised during K.4's brainstorm)
+
+Jack, in passing during an unrelated K.4 session: vLLM (already cloned locally at
+`D:/Workspace/Library/vllm` for the K.9/kimi-k3 investigation) might be "similar to what I
+want to achieve for Depot or in X" — a real, self-hosted server architecture worth looking at
+as a reference when this actually gets brainstormed, rather than designing dev/prod
+separation from scratch. Not explored at all beyond the name-drop — no specific parallel
+identified yet (vLLM is a model-serving engine, not obviously an infra/deploy-topology
+pattern, so the actual applicable lesson, if any, needs real investigation when this letter's
+own brainstorm happens). Noted here so it isn't lost, not a decision.
+
 ## Why not applied yet
 
 Deliberately deferred mid-brainstorm rather than designed under an unrelated task's momentum,
