@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structure (G/U merge)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Structure (G/U merge)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: no map letter — restructures existing map items G and U, not a new feature</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#memory-changes">MEMORY.md Changes</a></li>
+    <li><a href="#live-doc-updates">Live Doc Updates</a></li>
+    <li><a href="#left-alone">Left Alone</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+Raised live 2026-09-11 mid-implementation of map item <strong>U</strong> (Toolchain): Jack's read is
+that map item <strong>G</strong> (Standards injection) and map item <strong>U</strong> are "the same
+domain" — both carry Jack's own established conventions/preferences into work that's about to happen,
+just at different moments (G at implementation time, against code that already exists; U at
+brainstorming time, before any code or spec exists). Deliberately deferred at the time
+(<code>backlog/structure-merge-g-and-u.md</code>) rather than reworking U's in-flight plan; picked back
+up now that U has shipped.
+</p>
+<p>
+This is a pure map-labeling change, not a technical merge. Neither mechanism's storage format, skill
+name, script, or trigger point changes: <code>digismith:toolchain</code> stays its own skill wrapping
+<code>toolchain.yml</code>; <code>digismith:inject-standards</code> stays its own skill wrapping
+<code>standards/</code>. Only the map's letter/number bookkeeping, and every doc that still actively
+describes it by the old label, change.
+</p>
+</section>
+
+<section id="memory-changes">
+<h2>MEMORY.md Changes</h2>
+<div class="cards">
+  <div class="card">
+    <div class="tag">Rename</div>
+    <h4>G: "Standards injection" → "Structure"</h4>
+    <p>The umbrella title for both sub-items below.</p>
+  </div>
+  <div class="card">
+    <div class="tag">G.1</div>
+    <h4>Standards</h4>
+    <p>G's existing row content, carried over unchanged — just renumbered under the new umbrella.</p>
+  </div>
+  <div class="card">
+    <div class="tag">G.2</div>
+    <h4>Toolchain</h4>
+    <p>U's row content folded in, correcting the stale "Not yet built" to reflect what actually
+    shipped (skill, storage, brainstorming consult, final-review fix). Letter <strong>U</strong> is
+    freed for future reuse, same precedent as <strong>R</strong>, <strong>Q</strong>, and
+    <strong>H</strong> before it.</p>
+  </div>
+</div>
+</section>
+
+<section id="live-doc-updates">
+<h2>Live Doc Updates</h2>
+<p>
+Files that describe the <em>current, still-active</em> mechanism get their map-letter references
+updated from U to G.2:
+</p>
+<ul>
+<li><code>skills/toolchain/SKILL.md</code> — "DigiSmith's map item <strong>U</strong>" → G.2</li>
+<li><code>skills/brainstorming/SKILL.md</code> — "Toolchain defaults (map item U)" heading → G.2</li>
+<li><code>backlog/README.md</code> — its U-referencing index line → G.2</li>
+<li><code>backlog/opinionated-tech-stack-defaults.md</code> — still-active backlog item, references
+"map item U" throughout → G.2</li>
+<li><code>backlog/toolchain-general-trigger-scope.md</code> — same, still-active, deferred scope item
+→ G.2</li>
+<li><code>backlog/structure-merge-g-and-u.md</code> — this file itself: mark resolved, then delete per
+the standing "delete an item's file once it's been applied" backlog convention</li>
+</ul>
+</section>
+
+<section id="left-alone">
+<h2>Left Alone</h2>
+<p>
+Frozen historical build record, never rewritten after the fact — the same treatment every other
+retired/renumbered map item's old docs already get (e.g. H's original "subagent-driven-always"
+plan/design were never retroactively edited when that letter was reused):
+</p>
+<ul>
+<li><code>.digismith/docs/toolchain/design.html</code></li>
+<li><code>.digismith/docs/toolchain/plan.md</code></li>
+<li><code>.digismith/docs/toolchain/report.html</code></li>
+</ul>
+<p>
+All three keep saying "U" — they're dated artifacts of a specific build, not living references. A
+reader landing on them from git history/an old link sees exactly what was true when U shipped, which
+is correct.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li>Any change to <code>digismith:toolchain</code> or <code>digismith:inject-standards</code>'s
+actual mechanisms, storage, or invocation — label-only.</li>
+<li>Renumbering anything else that touches G or U in passing (e.g. <code>skills/report-implementation/SKILL.md</code>'s
+historical "written by hand for map item G" reference, or old shipped plans that mention map item G by
+name) — G the letter still exists and is still correctly named G; only its row's internal structure
+changes.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/structure-merge-g-and-u/design.html</footer>
+
+</body>
+</html>
