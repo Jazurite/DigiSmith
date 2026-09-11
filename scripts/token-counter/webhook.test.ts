@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dispatchWebhook } from "./webhook.ts";
 import type { CostRecord } from "./types.ts";
 
@@ -8,6 +8,10 @@ const SAMPLE_RECORD: CostRecord = {
   usage: { inputTokens: 100, outputTokens: 50 },
   costUsd: 0.000008,
 };
+
+beforeEach(() => {
+  delete process.env.DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL;
+});
 
 afterEach(() => {
   delete process.env.DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL;
@@ -51,5 +55,15 @@ describe("dispatchWebhook", () => {
     await expect(dispatchWebhook(SAMPLE_RECORD)).resolves.toBeUndefined();
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("network down"));
+  });
+
+  it("logs but does not throw when the webhook responds with an HTTP error status", async () => {
+    process.env.DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL = "https://example.com/hook";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(dispatchWebhook(SAMPLE_RECORD)).resolves.toBeUndefined();
+
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("500"));
   });
 });

@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computeTokenCost } from "./compute.ts";
+
+beforeEach(() => {
+  delete process.env.DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL;
+});
 
 afterEach(() => {
   delete process.env.DIGISMITH_TOKEN_COUNTER_WEBHOOK_URL;
@@ -30,6 +34,17 @@ describe("computeTokenCost", () => {
     });
 
     expect(record.costUsd).toBeCloseTo(0.95 + 4.0 + 0.19, 10);
+  });
+
+  it("computes input+output cost and sets a note when cache-read tokens are used but unpriced", () => {
+    const record = computeTokenCost("chutes", "moonshotai/Kimi-K3-TEE", {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 200_000,
+    });
+
+    expect(record.costUsd).toBeCloseTo(3 + 7.5, 10); // 1M input @ $3/M + 0.5M output @ $15/M, no cache rate
+    expect(record.note).toMatch(/cache-read/i);
   });
 
   it("returns costUsd null with a marker for an unknown provider/model", () => {

@@ -10,12 +10,21 @@ export async function dispatchWebhook(record: CostRecord): Promise<void> {
   const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
 
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(record),
       signal: controller.signal,
     });
+
+    if (!response.ok) {
+      console.error(`token-counter: webhook dispatch failed: HTTP ${response.status}`);
+      try {
+        response.body?.cancel();
+      } catch {
+        // best-effort drain — some runtimes don't support cancel()
+      }
+    }
   } catch (err) {
     console.error(`token-counter: webhook dispatch failed: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
