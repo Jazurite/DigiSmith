@@ -1,6 +1,9 @@
 # `inject-standards` has no scenario for review-time dispatch
 
-**Status:** Not applied. Idea only.
+**Status:** Not applied. Folded into `backlog/activate-requesting-code-review-w8.md` (2026-09-11),
+which reframes this gap as a dependency of activating the `requesting-code-review` W-lineage
+primitive rather than a standalone G.1 change. Don't brainstorm this file's gap in isolation —
+pick up the W.8-framed file instead.
 
 **Source:** Jack's own observation, 2026-08-14, prompted by writing
 `standards/global/surgical-changes.md`.
