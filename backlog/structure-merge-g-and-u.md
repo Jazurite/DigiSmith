@@ -45,4 +45,6 @@ before.
   before applying, since it was settled fast mid-flow rather than deliberated at length.
 - Whether `digismith:inject-standards`'s and `digismith:toolchain`'s own doc-level references to
   their map letters (if any exist beyond MEMORY.md itself) need updating too, or whether MEMORY.md's
-  table is the only place map letters are recorded as of this writing.
+  table is the only place map letters are recorded as of this writing. **Answer: yes, specifically
+  `skills/toolchain/SKILL.md`'s "DigiSmith's map item **U**" line and `skills/brainstorming/SKILL.md`'s
+  "Toolchain defaults (map item U)" heading would both need updating.**

@@ -42,6 +42,12 @@ do: current working directory is the DigiSmith repo
 (`.claude-plugin/plugin.json` with `"name": "digismith"`) → use directly;
 otherwise ask once for DigiSmith's repo path and remember it for the session.
 
+When the resolved DigiSmith repo path is NOT the current working directory,
+every command below must include `--path <digismith-repo>/toolchain.yml`
+explicitly. The data file has exactly one real location and must always resolve
+there, never relative to whatever repo happens to be the current working
+directory.
+
 ### `list`
 
 ```bash
@@ -70,9 +76,11 @@ node --experimental-strip-types <digismith-repo>/scripts/toolchain.ts --action c
 Removes `<domain>` if present; a no-op (not an error) if it was never set or
 the file doesn't exist. Prints `toolchain: cleared <domain>` either way.
 
-`--path <path>` overrides the default `toolchain.yml` location — used only by
-this skill's own test suite; there is exactly one real location, so a normal
-invocation never needs it.
+`--path <path>` overrides the default `toolchain.yml` location. Required
+whenever the current working directory is NOT the DigiSmith repo — it points
+at the one real `toolchain.yml` location, exactly the same way
+`<digismith-repo>` in the script path itself is required in that case. Also
+used by this skill's own test suite, but it's not the only purpose.
 
 ## Error Handling
 
@@ -80,7 +88,8 @@ invocation never needs it.
 |---|---|
 | `toolchain.yml` missing | `list` prints nothing; every domain reads as unset. Not an error. |
 | File present but malformed/unparseable (e.g. non-UTF-8) | Treated as empty, same as missing. Never crashes the caller. |
-| `set` invoked without `--domain` or `--value` | Fails clearly (`toolchain: failed (missing required flag: --domain|--value)`), exit 1. Never silently sets an empty string. |
+| `set` invoked without `--domain` | Fails clearly (`toolchain: failed (missing required flag: --domain)`), exit 1. Never silently sets an empty string. |
+| `set` invoked without `--value` | Fails clearly (`toolchain: failed (missing required flag: --value)`), exit 1. Never silently sets an empty string. |
 | `clear` on a domain that was never set | Silent no-op; still reports `toolchain: cleared <domain>` (never an error). |
 
 ## Out of Scope

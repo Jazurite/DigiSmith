@@ -78,6 +78,7 @@ digraph brainstorming {
 - Match the question you're about to ask against the listed domains by meaning, not exact wording (e.g. "which test runner do you want" matches a stored `test_runner` entry).
 - **Match found** — state the assumption instead of asking: "`<domain>`: defaulting to `<value>` per your standing default — say the word if you want something else this time." Still honor an immediate override in the same turn if given; don't write the override back automatically.
 - **No match** — ask via `AskUserQuestion` as normal. If the answer reads as a standing preference rather than a one-off choice, offer to record it: "Want me to remember `<value>` as your standing default for `<domain>`?" On yes, call `digismith:toolchain`'s `set` operation.
+- **Ambiguous match** — if the question could plausibly map to more than one stored domain, ask as normal rather than guess; a wrong silent assumption is worse than one extra question.
 - Missing/empty/malformed `toolchain.yml` → `list` returns nothing; ask every tooling question fresh, same as before this mechanism existed. Never blocks this step.
 - This check runs only here, inside `digismith:brainstorming` — not inside `digismith:writing-plans`, subagent dispatch, or any other flow. See `backlog/toolchain-general-trigger-scope.md` for the deferred broader version.
 
