@@ -314,6 +314,39 @@ signal than live per-request cost (e.g. pre-computed static pricing tables per m
 they won't reflect real-time promotional pricing or usage-based discounts), or treat cost-based
 routing as lower-confidence than other criteria until a real data source is found.
 
+## Z.2: cache a classifier refusal in the SDD ledger instead of re-discovering it per task (2026-09-11)
+
+Not the router itself — a fix for a real gap in Z.1's own mechanical-tier auto-offload mechanism,
+found live shipping K.4. Full formal design (brainstormed, approved, published as an Artifact):
+`.digismith/docs/offload-classifier-block-caching/design.html`. Summary here since this file is
+Z-lineage's own record:
+
+**The problem:** `backlog/offload-blocked-by-permission-classifier-k.md` confirmed live, twice in
+one session, on both configured runners, that Claude Code's own auto-mode permission classifier
+refuses the credential-fetch-then-spawn action shape `digismith:offload-implementer`'s dispatch
+step needs — after every real DigiSmith-side prerequisite already passed. `subagent-driven-development`'s
+"Mechanical-tier auto-offload" paragraph (Z.1's own mechanism) already has four named fallback
+triggers (runner not on PATH, credential unset, `print-config.ts` fails, Depot not ready) and
+falls back gracefully for any of them — but a classifier refusal isn't one of the four, so a
+controller has to recognize it live each time. Building K.4, the same refusal got silently
+re-discovered on all three of that plan's mechanical tasks — one wasted attempt per task, because
+nothing remembered the first one.
+
+**The fix, in one line:** on first live detection within a plan run, record it as a new ledger
+line (ledger-based, not just in-session memory, so it survives a mid-plan compaction the same way
+task-completion lines already do); every later mechanical-tier task in that same run checks the
+ledger first and skips the offload attempt entirely if the line is present.
+
+**Deliberately scoped out:** `digismith:offload-implementer` itself (untouched — this only affects
+the automatic mechanical-tier path, not an explicit offload request); anything that tries to
+unblock the classifier itself (the only real lever is the user's own Claude Code permission
+settings, outside this repo's control); and any persistence *across* plan runs or sessions — the
+backlog item's own finding that this is "likely session/harness-specific" means a durable,
+cross-session flag would risk permanently disabling real offload based on stale evidence. The
+cache lives and dies with one plan's own ledger.
+
+**Not yet planned or implemented** — design approved, `digismith:writing-plans` not yet invoked.
+
 ## Why not applied yet
 
 Idea only, captured verbatim per Jack's request rather than
