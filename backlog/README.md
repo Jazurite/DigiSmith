@@ -10,7 +10,6 @@ Delete an item's file once it's been applied (or explicitly dropped).
 
 ## Items
 
-- [Merge G (Standards) and U (Toolchain) into a new umbrella letter, "Structure"](structure-merge-g-and-u.md) — raised live mid-U-implementation; map-labeling change only, deferred until U ships
 - [capture-ephemeral-url: fetch PR comments via REST, not `gh pr view`](capture-ephemeral-url-rest-comment-fetch.md) — Step 4's comment fetch has two independent bugs that can silently return "not found"
 - [PR creation: existing-PR check, fork-aware remotes, injection-safe args](pr-creation-fork-and-existing-check.md) — gaps found against upstream `superpowers:finishing-a-development-branch`'s bare-bones "push and create PR" option
 - [Worktree creation: support arbitrary per-project setup](worktree-custom-setup-script.md) — `.env` provisioning (and similar) isn't covered by `using-git-worktrees`'s fixed package-manager install list
@@ -22,8 +21,8 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Multi-repo distribution (I.2)](jira-write-back-adf-reporting.md) — profile-gated worktree fan-out across market repos, learned from EMKT-784; I.1 (real ADF formatting) shipped 2026-08-26
 - [Technical writing / content-voice skill (new letter, tentatively T)](technical-writing-content-voice.md) — I.1's first progress-comment draft leaked git/PR mechanics at a PO/PM audience; no map letter reserved yet
 - [Ticket description Track-section template (Deliverable / Per Market)](track-section-template.md) — live-tested on EMKT-756, tension with `I.1`'s current single-checkmark Step 7 noted; natural output for I.2
-- [Opinionated default tech stack (designed as map item U, Toolchain)](opinionated-tech-stack-defaults.md) — source narrative for U; design shipped 2026-09-11, see `.digismith/docs/toolchain/design.html`
-- [Toolchain defaults: trigger scope beyond brainstorming](toolchain-general-trigger-scope.md) — deferred out of U's initial design; brainstorming-only for now, per Jack's own scope call
+- [Opinionated default tech stack (designed as map item G.2, Toolchain)](opinionated-tech-stack-defaults.md) — source narrative for G.2; design shipped 2026-09-11, see `.digismith/docs/toolchain/design.html`
+- [Toolchain defaults: trigger scope beyond brainstorming](toolchain-general-trigger-scope.md) — deferred out of G.2's initial design; brainstorming-only for now, per Jack's own scope call
 - [First non-fast-forward merge — re-examine report-implementation's assumption](non-fast-forward-merge-first-occurrence.md) — happened for real merging K.2; didn't break anything since the report is written pre-merge, but the original design note asked to be revisited when this occurred
 - [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; core item for the four below
 - [Gateway-vs-native-Claude-Code cost comparison (K.4)](gateway-cost-comparison-k4.md) — depends on K.3
