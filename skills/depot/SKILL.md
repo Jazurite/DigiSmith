@@ -25,7 +25,7 @@ of any single repo, ticket, or plan:
   `tool_use` block before Claude Code sees it, so a dispatch just works.
 - **Claude Code readiness** — a stateless PATH + `--bare`-support check
   backing offload-implementer's `claude-code`-runner dispatches. Unlike
-  the other three, nothing is provisioned or reused here — there's no
+  the other four, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
 - **VPS Session** — reconnects to an already-provisioned, persistent `claude`
   tmux session on a Hetzner VPS over SSH (`scripts/vps-session/cli.ts`,
@@ -340,6 +340,12 @@ not a blocker — the user completes the one-time browser OAuth login themselves
 Never auto-installs a missing toolchain piece (nvm/node/pnpm/claude) — same disposition Depot
 already takes for a missing local `opencode`/`claude`.
 
+`connect`'s final step is an interactive `ssh -t ... tmux attach` that needs a real controlling
+terminal. Run it from a proper console (Windows Terminal, PowerShell, cmd, or a macOS/Linux
+terminal) — not from an agent's Bash tool, and not from MinTTY-based Git Bash without `winpty`,
+where `ssh -t` cannot allocate a pseudo-terminal and `tmux attach` fails with "not a terminal".
+`status` has no such requirement and works from anywhere.
+
 ## Error Handling
 
 | Case | Disposition |
@@ -355,6 +361,12 @@ already takes for a missing local `opencode`/`claude`.
 | Agentic Bridge fails to start (no "listening on" line in `~/.digismith-depot/agentic-bridge.log` within a few seconds) | Stop, show the log content, don't retry silently. |
 | Tracked PID in `~/.digismith-depot/agentic-bridge.json` is no longer running | Treat as stale, start fresh per `ensure-agentic-bridge` above, overwrite the tracking file. |
 | WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
+| `~/.digismith-depot/vps.json` absent | Both VPS Session commands stop immediately with a plain "no VPS configured, create the file" message. Neither guesses a host. |
+| VPS SSH unreachable (timeout, refused, key rejected, or no local `ssh` binary) | Report the actual error plainly. No retry. `connect` attempts nothing further. |
+| VPS lingering can't be enabled | Report the actual `loginctl` error; `connect` stops rather than continuing as if it succeeded. |
+| nvm/node/pnpm/claude missing on the VPS | Stop, report exactly which piece is missing, point at the manual install steps. Never auto-install — same stance as the local `opencode`/`claude` rows above. |
+| VPS tmux session alive but `claude` has exited to the fallback shell | `status` reports it as its own non-healthy state; `connect` still attaches (the user lands in the live shell with the crash visible) rather than recreating the session. |
+| VPS credentials file absent | Warn, but `connect` proceeds to attach — an expected first-time state, not a failure. |
 
 ## Out of Scope
 
