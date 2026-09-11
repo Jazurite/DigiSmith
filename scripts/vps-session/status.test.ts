@@ -38,6 +38,12 @@ describe("formatStatusReport", () => {
     expect(text).toContain("[OK] tmux session alive — session found");
     expect(text).toContain("[FAIL] Claude process running — pane is running bash (claude exited)");
   });
+
+  it("omits the detail separator when a check has no detail", () => {
+    const text = formatStatusReport(healthyReport());
+    expect(text).toContain("[OK] SSH reachable\n");
+    expect(text).not.toContain("[OK] SSH reachable —");
+  });
 });
 
 describe("isFullyHealthy", () => {

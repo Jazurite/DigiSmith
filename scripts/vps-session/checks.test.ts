@@ -105,6 +105,10 @@ describe("parseToolchainOutput", () => {
   it("falls back to unknown when the failure output doesn't match", () => {
     expect(parseToolchainOutput(1, "some other error\n")).toEqual({ ready: false, missing: "unknown" });
   });
+
+  it("finds the MISSING marker after preceding output", () => {
+    expect(parseToolchainOutput(1, "some warning line\nMISSING:claude\n")).toEqual({ ready: false, missing: "claude" });
+  });
 });
 
 describe("isTmuxSessionAlive", () => {
@@ -116,6 +120,10 @@ describe("isTmuxSessionAlive", () => {
   it("returns false when the session isn't listed", () => {
     expect(isTmuxSessionAlive("other-session: 1 windows\n", "claude-main")).toBe(false);
   });
+
+  it("does not match a session whose name merely starts with the target", () => {
+    expect(isTmuxSessionAlive("claude-main-2: 1 windows\n", "claude-main")).toBe(false);
+  });
 });
 
 describe("isClaudeProcessRunning", () => {
@@ -125,5 +133,9 @@ describe("isClaudeProcessRunning", () => {
 
   it("is false when the pane fell back to a shell", () => {
     expect(isClaudeProcessRunning("bash\n")).toBe(false);
+  });
+
+  it("is true when any of several panes is running claude", () => {
+    expect(isClaudeProcessRunning("bash\nclaude\n")).toBe(true);
   });
 });
