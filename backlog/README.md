@@ -26,6 +26,7 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Toolchain defaults: trigger scope beyond brainstorming](toolchain-general-trigger-scope.md) — deferred out of G.2's initial design; brainstorming-only for now, per Jack's own scope call
 - [First non-fast-forward merge — re-examine report-implementation's assumption](non-fast-forward-merge-first-occurrence.md) — happened for real merging K.2; didn't break anything since the report is written pre-merge, but the original design note asked to be revisited when this occurred
 - [AI Gateway Vendors (K.3)](ai-gateway-vendors-k3.md) — pluggable gateway choice beyond Chutes, live-tested via TokenReply + Claude Agent SDK; core item for the four below
+- [Mechanical/task-tier offload blocked by Claude Code's auto-mode permission classifier (K)](offload-blocked-by-permission-classifier-k.md) — confirmed live twice, both runners; likely session-specific, not a DigiSmith bug
 - [Run multiple gateways in parallel (K.5)](gateway-parallel-execution-k5.md) — depends on K.3
 - [Harness benchmark: Claude Code vs. OpenCode (K.6)](harness-benchmark-claude-code-vs-opencode-k6.md) — independent axis, shares K.3's spike evidence
 - [Vendor benchmark: Chutes vs. TokenReply vs. future gateways (K.7)](gateway-vendor-benchmark-k7.md) — depends on K.3
