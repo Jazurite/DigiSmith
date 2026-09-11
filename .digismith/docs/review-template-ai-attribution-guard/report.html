@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Attribution Guard for Reviews (W.8) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>AI Attribution Guard for Reviews (W.8) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: <strong>W.8</strong></span>
+    <span>Commit range: <code>624f96c..4f7dd8c</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Makes AI/assistant attribution in a commit message mechanically, deterministically blocked
+  before any review package is written — not left to a reviewer subagent's judgment, which
+  already got it backwards once. A new <code>check-attribution</code> script inspects a commit
+  range's full messages for three narrow attribution patterns; <code>review-package</code> calls
+  it before writing anything, failing loudly with nothing written on a hit;
+  <code>code-reviewer.md</code>'s standalone review path (which can't always route through
+  <code>review-package</code>) runs the same script directly; the one documented bash-less
+  fallback and the task reviewer's own policy gap were closed too. Followed the full Superpowers
+  process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code>
+  (4 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final
+  whole-branch review, plus 4 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <h4>Task 1: <code>check-attribution</code> script</h4>
+      <span class="tag">Code</span>
+      <p>A CLI, <code>check-attribution BASE HEAD</code> — exit 0 silent (clean), exit 1 with
+      commit-by-commit detail on stderr (attribution found), exit 2 on usage/bad-SHA error.</p>
+    </div>
+    <div class="card">
+      <h4>Task 2: Wire <code>check-attribution</code> into <code>review-package</code></h4>
+      <span class="tag">Code</span>
+      <p>No review package is ever written for a commit range that carries attribution — the
+      guard fires before any reviewer is dispatched, not after.</p>
+    </div>
+    <div class="card">
+      <h4>Task 3: Activate <code>requesting-code-review</code></h4>
+      <span class="tag">Docs / Activation</span>
+      <p>First-ever activation of this dormant Superpowers primitive — its shared
+      <code>code-reviewer.md</code> template now runs the same mandatory attribution check,
+      covering the standalone review path <code>review-package</code> can't reach.</p>
+    </div>
+    <div class="card">
+      <h4>Task 4: Close the manual-fallback bypass; fix the root-cause policy gap</h4>
+      <span class="tag">Docs</span>
+      <p>The one documented bash-less review path now runs the check inline too; the task
+      reviewer template gained an explicit stated no-attribution policy, closing the exact gap
+      that let the original incident's reviewer assume the trailer was expected.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td><code>check-attribution</code> script</td>
+      <td>Mechanical, deterministic attribution detector with a narrow, false-positive-resistant regex.</td>
+      <td>Approved after 1 fix round</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Wire <code>check-attribution</code> into <code>review-package</code></td>
+      <td><code>review-package</code> fails closed on any attribution hit, writing nothing.</td>
+      <td>Approved after 1 fix round</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>Activate <code>requesting-code-review</code></td>
+      <td>Fork-provenance tag added; <code>code-reviewer.md</code> runs the mandatory check; <code>vendored/PROVENANCE.md</code> bookkeeping corrected (also backfilling <code>subagent-driven-development</code>'s never-recorded W.7 activation).</td>
+      <td>Approved after 1 fix round</td>
+      <td>task-3-report.md never got its fix-round appendix across either dispatch round (bookkeeping gap in the SDD workspace's own scratch file, not shipped code/docs; the actual fix was independently verified via git history directly regardless)</td>
+    </tr>
+    <tr>
+      <td>Close the manual-fallback bypass; fix the root-cause policy gap</td>
+      <td><code>SKILL.md</code>'s "without bash" fallback now runs the check inline; <code>task-reviewer-prompt.md</code> gained the explicit no-attribution policy line.</td>
+      <td>Approved, clean</td>
+      <td><code>task-reviewer-prompt.md</code>'s new policy line has no explicit severity-bucket pointer (unlike <code>code-reviewer.md</code>'s own "automatic Critical finding" wording) — plan-mandated exact text, not an implementer choice; Important is implied via the template's general Calibration section</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 4 findings resolved via one fix wave, 3 more resolved directly
+  by the controller as backlog housekeeping (including a real map-letter collision), and 3
+  additional findings deliberately deferred to new backlog items for their own future design
+  work.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td>The plan's own Task 5 (record W.8 in <code>MEMORY.md</code>) was never dispatched before the final review ran — the W row still had the undesigned <code>W.8+</code> placeholder.</td>
+      <td>Fixed in the fix wave: real W.8 entry added, using <code>W.10+</code> (not <code>W.9+</code>, since that number was separately claimed in the meantime) as the new trailing placeholder.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>The standalone <code>requesting-code-review</code> dispatch path's own <code>SKILL.md</code> never mentioned the new <code>{CHECK_ATTRIBUTION_PATH}</code> placeholder, even though the shared template already documented it.</td>
+      <td>Fixed in the fix wave: placeholder added to <code>SKILL.md</code>'s own list and worked Example, using this file's own <code>{X}</code> brace convention.</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>A real map-letter collision: <code>backlog/activate-requesting-code-review-w8.md</code> had independently claimed W.8 for a different, unrelated <code>requesting-code-review</code> activation (DigiSmith standards injection), and asserted premises this branch invalidated ("still fully dormant").</td>
+      <td>Fixed directly by the controller: that item renumbered to <strong>W.9</strong> (file renamed too), its premises corrected to acknowledge W.8's activation.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td><code>review-package</code>'s own <code>rev-parse --verify --quiet</code> checks were unanchored (the same bug already fixed in <code>check-attribution</code> itself), and its <code>if !</code> guard collapsed <code>check-attribution</code>'s two distinct exit codes into a hardcoded exit 1.</td>
+      <td>Fixed in the fix wave: anchored with <code>^{commit}</code>; the real exit code is now captured and propagated via the <code>&amp;&amp;</code>/<code>||</code> idiom.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td><code>vendored/PROVENANCE.md</code> had a phrasing seam from the Task 3/4 split ("messages. The same day, ...") reading as two separate later changes.</td>
+      <td>Fixed in the fix wave: joined into one coherent, semicolon-linked sentence.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>The source backlog item this whole plan responded to (<code>backlog/review-templates-dont-guard-ai-attribution.md</code>) was never retired despite this repo's own "delete once applied" convention.</td>
+      <td>Fixed directly by the controller: file deleted, its <code>backlog/README.md</code> line removed.</td>
+    </tr>
+    <tr>
+      <td>Important (deferred)</td>
+      <td>39 commits already in this repo's real history carry AI attribution, including this branch's own merge-base — <code>check-attribution</code> has no escape hatch, so a future long-lived branch merging <code>main</code> in could become permanently unable to write any review package.</td>
+      <td>Parked — filed as <code>backlog/check-attribution-no-escape-hatch-for-pre-policy-history.md</code>. Not live today (fails closed, and every currently-active worktree's own merge-base is clean); needs its own brainstorm to pick a cutoff/allowlist mechanism.</td>
+    </tr>
+    <tr>
+      <td>Recommendation (deferred)</td>
+      <td>The new policy line promises "commit messages or PR descriptions" but <code>check-attribution</code> only ever checks commit messages — <code>finishing-a-development-branch</code> Option 2 (PR creation) is an unchecked live gap.</td>
+      <td>Parked — filed as <code>backlog/attribution-guard-pr-description-gap.md</code>. Explicitly out of scope for W.8's own design; the existing regex already covers the pattern, just needs a second call site.</td>
+    </tr>
+    <tr>
+      <td>Minor (deferred)</td>
+      <td>Two smaller hardening gaps: a reversed BASE/HEAD argument order silently reports clean; <code>{CHECK_ATTRIBUTION_PATH}</code> has no quoting guidance and no defined resolution rule for a non-DigiSmith consumer repo.</td>
+      <td>Parked — filed as <code>backlog/check-attribution-hardening.md</code>. Neither reachable under today's real conditions.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">0d83e68</span> docs(review-template-ai-attribution-guard): design spec (W.8)</li>
+    <li><span class="sha">f03dd58</span> docs(review-template-ai-attribution-guard): implementation plan (W.8)</li>
+    <li><span class="sha">9818ca8</span> feat(subagent-driven-development): add check-attribution mechanical guard</li>
+    <li><span class="sha">2c1b564</span> fix(check-attribution): verify SHA object existence, not just syntax</li>
+    <li><span class="sha">521ba6d</span> feat(review-package): block writing when a commit carries AI attribution</li>
+    <li><span class="sha">115b694</span> feat(requesting-code-review): activate with mandatory attribution check</li>
+    <li><span class="sha">a5d1490</span> docs(review-template-ai-attribution-guard): correct Task 3/4 PROVENANCE.md sequencing</li>
+    <li><span class="sha">381a988</span> fix(provenance): trim subagent-driven-development entry to what Task 3 actually shipped</li>
+    <li><span class="sha">afd543e</span> docs(subagent-driven-development): close attribution-check bypass, state the policy explicitly</li>
+    <li><span class="sha">1b8dc08</span> docs(backlog): resolve W.8/W.9 collision, retire superseded item, capture 3 deferred findings</li>
+    <li><span class="sha">4f7dd8c</span> fix(W.8): address final review findings</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/review-template-ai-attribution-guard/report.html</footer>
+
+</body>
+</html>

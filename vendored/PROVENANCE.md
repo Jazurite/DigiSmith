@@ -10,8 +10,6 @@ Cloned: 2026-08-20
 
 - dispatching-parallel-agents
 - receiving-code-review
-- requesting-code-review
-- subagent-driven-development
 - systematic-debugging
 - test-driven-development
 - using-git-worktrees
@@ -45,6 +43,21 @@ Cloned: 2026-08-20
   a per-task self-check step it never had before — DigiSmith's `writing-plans` now dispatches
   here directly for low-complexity plans instead of defaulting to
   `subagent-driven-development` unconditionally. See DigiSmith `MEMORY.md` map item W.
+- **subagent-driven-development** — map item **W.7**, activated 2026-09-05. Gained one guard
+  paragraph in its Setup section's pre-flight conflict scan, closing a rationalization loophole
+  a live session hit (found a Global Constraint contradicting the actual codebase, reasoned
+  "this is just my own wording bug, not a real conflict," and silently fixed it instead of
+  asking). See DigiSmith `MEMORY.md` map item W. **Further diverged by W.8** (2026-09-11): a new
+  `scripts/check-attribution` is now called by `scripts/review-package` before any review
+  package is written, blocking on any AI/assistant attribution found in the commit range's
+  messages; `task-reviewer-prompt.md` gained an explicit no-attribution policy line, and the
+  Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
+  `MEMORY.md` map item W.
+- **requesting-code-review** — map item **W.8**, activated 2026-09-11. Its shared
+  `code-reviewer.md` template (used both as `subagent-driven-development`'s own final
+  whole-branch review template and standalone) now runs `scripts/check-attribution` as a
+  mandatory step alongside its existing diff commands — a hit is an automatic Critical finding,
+  full stop, regardless of the rest of the diff. See DigiSmith `MEMORY.md` map item W.
 
 ## License
 

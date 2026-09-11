@@ -19,8 +19,14 @@ base=$2
 head=$3
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
-git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
-git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+git rev-parse --verify --quiet "${base}^{commit}" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+git rev-parse --verify --quiet "${head}^{commit}" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+
+"$(cd "$(dirname "$0")" && pwd)/check-attribution" "$base" "$head" && attribution_status=0 || attribution_status=$?
+if [ "$attribution_status" -ne 0 ]; then
+  echo "Review package not written." >&2
+  exit "$attribution_status"
+fi
 
 if [ $# -eq 4 ]; then
   out=$4

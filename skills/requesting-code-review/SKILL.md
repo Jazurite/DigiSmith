@@ -1,6 +1,6 @@
 ---
 name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements (DigiSmith fork of Superpowers' requesting-code-review)
 ---
 
 # Requesting Code Review
@@ -38,6 +38,10 @@ Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md
 - `{PLAN_OR_REQUIREMENTS}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
+- `{CHECK_ATTRIBUTION_PATH}` - REQUIRED: absolute path to
+  `skills/subagent-driven-development/scripts/check-attribution`, resolved before dispatching —
+  never a relative path, since the reviewer's own working directory is not guaranteed to be any
+  particular skill folder
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -60,6 +64,7 @@ HEAD_SHA=$(git rev-parse HEAD)
   PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
+  CHECK_ATTRIBUTION_PATH: /path/to/digismith/skills/subagent-driven-development/scripts/check-attribution
 
 [Subagent returns]:
   Strengths: Clean architecture, real tests

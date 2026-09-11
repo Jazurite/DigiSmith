@@ -75,6 +75,10 @@ Subagent (general-purpose):
     Warnings or other noise in the implementer's reported test output are
     findings — test output should be pristine.
 
+    This project forbids AI/assistant attribution anywhere in commit messages or PR
+    descriptions — no exceptions. If you see one despite this, it is a real violation, not
+    something the project might have wanted.
+
     ## Part 1: Spec Compliance
 
     Compare the diff against What Was Requested:
