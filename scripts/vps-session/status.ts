@@ -86,9 +86,10 @@ export function runStatusChecks(config: VpsConfig, configPath: string): StatusRe
   } else {
     const pane = runSshCommand(buildPaneCommandQuery(config));
     const running = pane.status === 0 && isClaudeProcessRunning(pane.stdout);
+    const panes = pane.stdout.trim().split("\n").map((s) => s.trim()).filter(Boolean).join(", ");
     claudeRunning = running
       ? { ok: true, detail: "claude" }
-      : { ok: false, detail: `pane is running ${pane.stdout.trim() || "unknown"} (claude exited)` };
+      : { ok: false, detail: `pane is running ${panes || "unknown"} (claude exited)` };
   }
 
   const creds = runSshCommand(buildCredentialsCheckCommand(config));
@@ -96,7 +97,7 @@ export function runStatusChecks(config: VpsConfig, configPath: string): StatusRe
   return {
     configPath,
     sshReachable: { ok: true, detail: "" },
-    lingerEnabled: { ok: lingerOk, detail: linger.stdout.trim() },
+    lingerEnabled: { ok: lingerOk, detail: linger.stdout.trim() || linger.stderr.trim() },
     toolchainReady: {
       ok: toolchainResult.ready,
       detail: toolchainResult.ready ? toolchainResult.version ?? "" : `missing: ${toolchainResult.missing}`,

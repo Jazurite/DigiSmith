@@ -26,6 +26,7 @@ describe("buildBaseSshArgs", () => {
     expect(buildBaseSshArgs(CONFIG)).toEqual([
       "-o", "BatchMode=yes",
       "-o", "ConnectTimeout=10",
+      "-o", "IdentitiesOnly=yes",
       "-i", "~/.ssh/jazurite",
       "root@46.225.49.140",
     ]);

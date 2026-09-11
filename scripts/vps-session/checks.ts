@@ -5,7 +5,7 @@ export interface SshCommand {
   args: string[];
 }
 
-const SSH_CONNECT_FLAGS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"];
+const SSH_CONNECT_FLAGS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "IdentitiesOnly=yes"];
 
 export function buildBaseSshArgs(config: VpsConfig): string[] {
   return [...SSH_CONNECT_FLAGS, "-i", config.identity_file, `${config.user}@${config.host}`];
