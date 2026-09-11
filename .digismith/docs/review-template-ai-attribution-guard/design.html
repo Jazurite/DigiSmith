@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Attribution Guard for Reviews (W.8)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>AI Attribution Guard for Reviews (W.8)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: W.8 (further diverges subagent-driven-development; first activation of requesting-code-review)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — check-attribution</a></li>
+    <li><a href="#s2">Section 2 — review-package's new prerequisite</a></li>
+    <li><a href="#s3">Section 3 — code-reviewer.md's mandatory step</a></li>
+    <li><a href="#s4">Section 4 — closing the manual-fallback bypass, fixing the root cause</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>Confirmed live 2026-09-11 (<code>backlog/review-templates-dont-guard-ai-attribution.md</code>):
+an implementer subagent committed with <code>Co-Authored-By: Claude Haiku 4.5</code> despite both
+the inlined <code>global/commit-style</code> standard and the repo owner's own broader standing
+rule — no AI attribution anywhere, full stop — telling it not to. The task reviewer that reviewed
+the diff afterward flagged this only as "unverifiable," and its own report phrased the finding as
+if the trailer were <em>expected</em> ("the required attribution... was added per session
+rules") — backwards from this repo's actual policy. Only caught because the controller
+independently ran <code>git show --format=fuller -s</code> instead of trusting either the
+implementer's report or the reviewer's assumption.</p>
+<p>Root cause, from the backlog item's own analysis: every Claude Code subagent's baseline
+instructions include appending a <code>Co-Authored-By: Claude</code> trailer by default. A
+repo-specific override competes with that baseline instinct and, at least once, lost — a
+non-deterministic failure mode. A reviewer subagent checking for this after the fact is itself
+another LLM call, and one already demonstrably got it backwards when nothing told it what this
+repo's actual policy was. <strong>Prevention (a mechanical, deterministic check run by the
+controller) is therefore the primary defense; a review-time instruction is a secondary layer</strong>,
+not the other way around.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — check-attribution</h2>
+<p>New script, <code>skills/subagent-driven-development/scripts/check-attribution</code>, matching
+<code>review-package</code>'s own bash style and conventions (<code>set -euo pipefail</code>,
+usage-error exit code 2). Usage: <code>check-attribution BASE HEAD</code>.</p>
+<p>Runs <code>git log BASE..HEAD --format=%B</code> (the full commit body, which includes any
+trailers) and greps it, case-insensitively, for:</p>
+<pre><code>co-authored-by:.*claude|co-authored-by:.*anthropic|generated with.*claude|generated with.*anthropic|🤖</code></pre>
+<p>Deliberately <strong>not</strong> a bare <code>claude</code>/<code>anthropic</code> keyword
+match — this repo's own commit messages legitimately mention "Claude Code" in ordinary
+descriptive ways (e.g. a commit that updates a Claude Code skill reference), and a bare-keyword
+check would false-positive on those. The three sub-patterns above target only the actually-confirmed
+attribution shapes: a <code>Co-Authored-By:</code> trailer naming Claude or Anthropic, a
+"Generated with" phrase naming either, or the 🤖 footer emoji from the standard PR-description
+signature.</p>
+<p>Exit 0 and silent when nothing matches. Exit 1 when something does, printing the matching
+commit SHA(s) and the matched line(s) to stderr — clear enough for the controller to know exactly
+what to fix without re-deriving it.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — review-package's new prerequisite</h2>
+<p><code>scripts/review-package</code> (in <code>skills/subagent-driven-development/</code>,
+current behavior fully described in this session's own reading of the file) calls
+<code>check-attribution BASE HEAD</code> immediately after validating that BASE and HEAD both
+resolve, before writing anything. A hit: the script prints <code>check-attribution</code>'s own
+failure output, plus one line naming that the review package was <strong>not</strong> written
+because of it, and exits 1 — nothing is written to disk. A clean result: proceeds exactly as
+today, byte-for-byte unchanged.</p>
+<p>This is the primary defense: it fires the moment the controller tries to generate any review
+package — task-level, fix-round re-review, or final whole-branch — before any reviewer subagent
+is ever dispatched. A caught violation gets fixed at the source (amend the local, unreviewed
+commit) rather than flowing into a review round that then has to catch and adjudicate it.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — code-reviewer.md's mandatory step</h2>
+<p><code>skills/requesting-code-review/code-reviewer.md</code> — used both as
+<code>subagent-driven-development</code>'s final whole-branch review template and standalone by
+<code>requesting-code-review</code> itself (which has no plan file, so it can't always route
+through <code>review-package</code>'s plan-file-keyed workspace resolution) — gains one new
+required command alongside its existing "Git Range to Review" block:</p>
+<pre><code>&lt;path-to-skill&gt;/subagent-driven-development/scripts/check-attribution BASE HEAD</code></pre>
+<p>A hit is an automatic Critical finding, full stop, regardless of anything else found in the
+diff — worded exactly that plainly in the template, removing any room for a reviewer to talk
+itself into treating it as anything softer. This is this fix's second, secondary layer: it covers
+the standalone-review path that can't go through <code>review-package</code> at all, since the
+reviewer subagent here already has live git access per this template's own existing "read-only
+review" instructions.</p>
+<p>This is <code>requesting-code-review</code>'s first-ever content divergence from upstream
+Superpowers — gains the fork-provenance tag in its frontmatter <code>description:</code>, per
+W.2's established activation convention, and an entry in <code>vendored/PROVENANCE.md</code>'s
+"Skills activated" list.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — closing the manual-fallback bypass, fixing the root cause</h2>
+<p><code>skills/subagent-driven-development/SKILL.md</code>'s Step 3 ("Review the task") currently
+documents a manual fallback for environments without bash: <code>git log --oneline</code>,
+<code>git diff --stat</code>, and <code>git diff -U10</code>, redirected by hand into one file —
+this path skips <code>review-package</code> entirely, and with it, Section 2's check. That
+fallback instruction gains one inserted line: run <code>check-attribution BASE HEAD</code> first,
+and stop (fix the commit) if it reports a hit, before doing anything else in that fallback.</p>
+<p><code>skills/subagent-driven-development/task-reviewer-prompt.md</code> gains one explicit
+policy line the original incident's root cause shows was missing: <strong>"This project forbids
+AI/assistant attribution anywhere in commit messages or PR descriptions — no exceptions. If you
+see one despite this, it is a real violation, not something the project might have wanted."</strong>
+By the time a task reviewer receives a package, Section 2 already guarantees it's clean — this
+line exists purely so that if a controller ever hands a reviewer a package generated some other
+way (the fallback in this section, or a future path this design didn't anticipate), the reviewer
+has an explicit, correct policy to check against instead of defaulting to the harness's own
+baseline assumption the way the original incident's reviewer did.</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><code>check-attribution</code> is a bash script in the same untested-by-vitest category as
+<code>review-package</code> and <code>sdd-workspace</code> (this skill's other bash scripts) —
+verified live: a small local git fixture repo with a clean commit range (exit 0, silent), a range
+containing a <code>Co-Authored-By: Claude Haiku 4.5 &lt;noreply@anthropic.com&gt;</code> trailer
+(exit 1, correctly identifies the commit and matched text), a range containing an unrelated
+commit that merely mentions "Claude Code" in ordinary prose with none of the three sub-patterns
+(exit 0 — proves the narrowed regex avoids the false-positive this design deliberately designed
+around), and a range containing the 🤖 footer emoji alone (exit 1).</li>
+<li><code>review-package</code>'s new prerequisite: run it once against a fixture range with a
+planted attribution commit — confirm exit 1, confirm no file was written to the workspace
+directory. Run it once against a clean range — confirm output and file-write behavior are
+unchanged from before this plan.</li>
+<li>The template and <code>SKILL.md</code> changes are agentic instruction text, not code —
+verified by reading the rendered diff for correctness, the same way this session's own prior
+prose-only tasks (e.g. W.4.1's <code>finishing-a-development-branch</code> edit) were verified,
+rather than by an automated suite.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>PR-description attribution checks (the 🤖 footer / "Generated with Claude Code" pattern in a
+<em>PR body</em> rather than a commit message) — this design's <code>check-attribution</code>
+pattern would catch it if pointed at the right text, but nothing in this plan wires a PR-creation
+path (<code>finishing-a-development-branch</code> Option 2) to call it. A real but separate gap,
+not raised by the confirmed incident this fix responds to.</li>
+<li>Any change to Claude Code's own baseline commit-instruction behavior — out of DigiSmith's
+control entirely; this design only ever reacts to what a subagent actually committed, never tries
+to suppress the underlying instinct at its source.</li>
+<li>A broader, general-purpose "does this text contain AI attribution" utility usable outside the
+review flow — <code>check-attribution</code> is scoped to the two call sites this design actually
+needs (Section 2, Section 3/4); extracting a shared library is unwarranted for two callers.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/review-template-ai-attribution-guard/design.html</footer>
+
+</body>
+</html>
