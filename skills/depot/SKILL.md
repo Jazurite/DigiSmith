@@ -394,8 +394,8 @@ already takes for a missing local `opencode`/`claude`.
 - **Model or provider abstraction** — this skill knows nothing about
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
-- **A generalized multi-resource interface** — four concrete resources
-  (one of them stateless), four concrete operation sets. Two of them
+- **A generalized multi-resource interface** — five concrete resources
+  (one of them stateless, one a remote tmux session), five concrete operation sets. Two of them
   (OpenCode server, Agentic Bridge proxy) share the identical ensure/stop +
   PID/port-tracking lifecycle shape, but duplicating this well-understood
   ~80-line pattern twice is still cheaper and clearer than a premature
