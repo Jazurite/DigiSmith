@@ -127,7 +127,7 @@
     <li>Bumps the header's <code>Last updated:</code> span to today.</li>
     <li>Writes <code>history.html</code>, prints <code>APPENDED &lt;n&gt;: &lt;titles&gt;</code>.</li>
     <li>Hook's bash: on <code>APPENDED</code>, chains
-      <code>git add .digismith/history.html &amp;&amp; git commit -m "docs(history): record shipped features" &amp;&amp; git push origin &lt;base-branch&gt;</code>
+      <code>git add .digismith/history.html &amp;&amp; git commit -m "docs(history): record shipped features" -- .digismith/history.html &amp;&amp; git push origin &lt;base-branch&gt;</code>
       — same chained-commands-plus-rejection-handling pattern <code>01</code> uses (stop, report, no
       force-push, if rejected).</li>
     <li>Always ends with a plain reminder: the Map table, Build Order, and Progress Overview sections
