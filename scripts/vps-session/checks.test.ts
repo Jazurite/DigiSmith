@@ -52,6 +52,7 @@ describe("buildToolchainCommand", () => {
     const cmd = buildToolchainCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
     expect(remote).toContain('NVM_DIR="$HOME/.nvm"');
+    expect(remote).toContain("nvm use default");
     expect(remote).toContain('PNPM_HOME="$HOME/.local/share/pnpm"');
     expect(remote).toContain("claude --version");
   });

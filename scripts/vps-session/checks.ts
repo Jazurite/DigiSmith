@@ -25,6 +25,7 @@ export function buildLingerCommand(config: VpsConfig): SshCommand {
 const TOOLCHAIN_REMOTE_SCRIPT = [
   'export NVM_DIR="$HOME/.nvm"',
   'if [ -s "$NVM_DIR/nvm.sh" ]; then . "$NVM_DIR/nvm.sh"; else echo "MISSING:nvm"; exit 1; fi',
+  'nvm use default >/dev/null 2>&1 || { echo "MISSING:node"; exit 1; }',
   'export PNPM_HOME="$HOME/.local/share/pnpm"',
   'export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"',
   'command -v node >/dev/null 2>&1 || { echo "MISSING:node"; exit 1; }',
