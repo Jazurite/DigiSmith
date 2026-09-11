@@ -377,6 +377,7 @@ git commit -m "feat(requesting-code-review): activate with mandatory attribution
 **Files:**
 - Modify: `skills/subagent-driven-development/SKILL.md`
 - Modify: `skills/subagent-driven-development/task-reviewer-prompt.md`
+- Modify: `vendored/PROVENANCE.md`
 
 **Interfaces:**
 - Consumes: Task 1's `check-attribution` CLI contract (referenced by path, not imported).
@@ -429,10 +430,37 @@ Replace it with:
     ## Part 1: Spec Compliance
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Append this task's own follow-on to `vendored/PROVENANCE.md`**
+
+Task 3 (already complete) deliberately scoped the `subagent-driven-development` PROVENANCE
+entry's "Further diverged by W.8" clause to only what it and Task 2 actually shipped
+(`check-attribution` + `review-package`'s wiring) — leaving out this task's own work, since it
+hadn't happened yet at the time. Now that it has, append to it.
+
+Find this exact substring:
+
+```
+  `scripts/check-attribution` is now called by `scripts/review-package` before any review
+  package is written, blocking on any AI/assistant attribution found in the commit range's
+  messages. See DigiSmith `MEMORY.md` map item W.
+- **requesting-code-review** — map item **W.8**, activated 2026-09-11.
+```
+
+Replace it with:
+
+```
+  `scripts/check-attribution` is now called by `scripts/review-package` before any review
+  package is written, blocking on any AI/assistant attribution found in the commit range's
+  messages. The same day, `task-reviewer-prompt.md` gained an explicit no-attribution policy
+  line and the Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
+  `MEMORY.md` map item W.
+- **requesting-code-review** — map item **W.8**, activated 2026-09-11.
+```
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add skills/subagent-driven-development/SKILL.md skills/subagent-driven-development/task-reviewer-prompt.md
+git add skills/subagent-driven-development/SKILL.md skills/subagent-driven-development/task-reviewer-prompt.md vendored/PROVENANCE.md
 git commit -m "docs(subagent-driven-development): close attribution-check bypass, state the policy explicitly"
 ```
 
