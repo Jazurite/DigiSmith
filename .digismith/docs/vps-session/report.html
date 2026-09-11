@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Session CLI (V.3) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>VPS Session CLI (V.3) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-11</span>
+    <span>Map item: <strong>V.3</strong></span>
+
+    <span>Commit range: <code>72343cf..f958184</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Built <code>scripts/vps-session/cli.ts</code>, a standalone <code>status</code>/<code>connect</code> CLI that reconnects to an already-provisioned Hetzner VPS's persistent <code>claude</code> tmux session over SSH, and documented it as Depot's fourth managed resource. A small set of pure, unit-tested modules (config loading, SSH command construction, output parsing, status aggregation/formatting) is wired together by two thin orchestration functions (<code>runStatusChecks</code>, <code>runConnect</code>) that do the actual <code>spawnSync</code>-based SSH/tmux work; the orchestration functions and the final interactive attach are live-verified against the real VPS rather than unit tested, since mocking SSH would only test the mock. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (6 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>VPS config loader</h4><p><code>VpsConfig</code>, <code>DEFAULT_VPS_CONFIG_PATH</code>, and <code>loadVpsConfig()</code> — returns <code>null</code> when <code>~/.digismith-depot/vps.json</code> is absent and throws a <code>vps-session:</code>-prefixed error when it is malformed or missing a required field.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>SSH command builders and output parsers</h4><p><code>SshCommand</code> argv builders for every health check (reachability, linger, toolchain, tmux list, credentials, pane command) plus the pure parsers <code>isLingerEnabled</code>, <code>parseToolchainOutput</code>, <code>isTmuxSessionAlive</code>, and <code>isClaudeProcessRunning</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Status aggregation, formatting, and orchestration</h4><p><code>runSshCommand</code> (one <code>spawnSync</code> wrapper), the <code>StatusReport</code>/<code>CheckOutcome</code> types, <code>formatStatusReport</code>, <code>isFullyHealthy</code>, and <code>runStatusChecks</code>, which runs the real checks and reports "tmux alive but claude exited" as its own distinct state.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Connect auto-fix builders and orchestration</h4><p><code>START_CLAUDE_SCRIPT</code>, <code>TOOLCHAIN_INSTALL_HINT</code>, the enable-linger / write-start-script / start-tmux / attach builders, and <code>runConnect</code>, which checks, auto-fixes what is safe, warns on missing credentials, and attaches interactively.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>CLI entry point</h4><p><code>node --experimental-strip-types scripts/vps-session/cli.ts &lt;status|connect&gt;</code> — argv dispatch over the modules above, stopping with a plain message when no <code>vps.json</code> is configured.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>Depot documentation</h4><p>A new "Resource: VPS Session" section in <code>skills/depot/SKILL.md</code>, plus its frontmatter <code>description</code> clause, Quick Reference rows, and Error Handling rows.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. VPS config loader</td><td><code>scripts/vps-session/config.ts</code> + test (<code>a9e60ac</code>)</td><td><span class="status-ok">Approved, clean</span></td><td><ul><li><code>config.ts:103-107</code> — present-but-wrong-typed field (e.g. <code>host: 123</code>) is reported as "missing" rather than "wrong type"; brief only mandates a missing-field message</li><li><code>config.test.ts</code> — no test for wrong-typed-but-present field or extra unknown keys</li><li><code>config.ts:86-90</code> — existsSync+readFileSync TOCTOU window; inconsequential for a local single-user config</li></ul></td></tr>
+    <tr><td>2. SSH command builders and output parsers</td><td><code>scripts/vps-session/checks.ts</code> + test (<code>85f065e</code>, fix <code>c12feb6</code>)</td><td><span class="status-fixed">Approved after 1 fix round</span> — the reviewer's plan-mandated finding (nvm.sh sourcing without <code>nvm use default</code>) was escalated; Jack ruled to add the safeguard line</td><td><ul><li><code>checks.ts</code> — six builders repeat <code>{ command: "ssh", args: [...buildBaseSshArgs(config), &lt;remote&gt;] }</code>; a tiny <code>sshCommand(config, remote)</code> helper would dedupe</li><li><code>task-2-report.md:7</code> claims checks.test.ts is 141 lines; diff shows 127 — report inaccuracy, not a code defect</li><li><code>checks.ts</code> TOOLCHAIN_REMOTE_SCRIPT — <code>command -v node</code> check after <code>nvm use default</code> is now redundant (both emit MISSING:node); harmless belt-and-suspenders</li></ul></td></tr>
+    <tr><td>3. Status aggregation, formatting, and orchestration</td><td><code>run-command.ts</code>, <code>status.ts</code> + test (<code>0106fd5</code>)</td><td><span class="status-ok">Approved, clean</span></td><td><ul><li><code>status.ts:59,64</code> — lingerEnabled/tmuxAlive derive <code>ok</code> from stdout only, ignoring the sub-command's exit status/stderr; a remote error before output yields an empty detail (inherited from the plan's reference code) — <em>fixed before merge in the final fix wave</em></li><li><code>task-3-report.md</code> line counts off by 2/8 vs diff stat — report inaccuracy, not code</li></ul></td></tr>
+    <tr><td>4. Connect auto-fix builders and orchestration</td><td><code>scripts/vps-session/connect.ts</code> + test (<code>9c23703</code>)</td><td><span class="status-ok">Approved, clean</span></td><td><ul><li><code>task-4-report.md:76</code> — self-review line "zero warnings (only CRLF warnings from git)" is self-contradictory wording; refers to git CRLF notices, not vitest output</li></ul></td></tr>
+    <tr><td>5. CLI entry point</td><td><code>scripts/vps-session/cli.ts</code> (<code>c9c0de0</code>)</td><td><span class="status-ok">Approved, clean</span> — live-VPS step skipped as the plan permits (no VPS reachable from this machine; no <code>vps.json</code> invented)</td><td>—</td></tr>
+    <tr><td>6. Depot documentation</td><td><code>skills/depot/SKILL.md</code> (<code>4c62862</code>, fix <code>337c6d6</code>)</td><td><span class="status-fixed">Approved after 1 fix round</span> — a stale "four concrete resources" count elsewhere in the file</td><td><ul><li>commit subject says "fourth managed resource" while the doc body counts five — plan-mandated wording, mirrors the design's own "fourth machine-wide resource" framing (which excludes the stateless check)</li><li>SKILL.md status description says "whether the one-time interactive login has been completed" vs the CLI's literal credentials-file check — same check at a different level of description</li></ul></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 0 Critical, 3 Important, 8 Minor. All three Importants plus one triaged Minor were fixed in a single fix wave (<code>61e80ae</code>, <code>aa1c675</code>, <code>f958184</code>); the scoped re-review found every finding addressed with no new breakage; four Minors were parked with rulings.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>run-command.ts</code> discarded <code>spawnSync</code>'s <code>result.error</code>, so a missing local <code>ssh</code> binary reported "connection failed" instead of the real spawn error — violating the design's "report the actual SSH error"</td><td><span class="status-fixed">Fixed</span> (<code>61e80ae</code>): stderr falls back to <code>result.error.message</code>; a 30-second command timeout was added alongside</td></tr>
+    <tr><td>Important</td><td><code>skills/depot/SKILL.md</code> Claude Code readiness bullet still said "Unlike the other three" with five resources listed — the sibling of the Task 6 fix</td><td><span class="status-fixed">Fixed</span> (<code>f958184</code>): "the other four"</td></tr>
+    <tr><td>Important (design-level)</td><td><code>connect</code>'s final <code>ssh -t ... tmux attach</code> needs a real controlling terminal, so it cannot run from an agent's Bash tool or MinTTY Git Bash — despite the design saying both entry points work from a Claude Code session</td><td><span class="status-fixed">Fixed as documentation</span> (<code>f958184</code>): a caveat paragraph in SKILL.md's <code>connect</code> section; no code change — the design's claim was the defect, <code>status</code> is unaffected</td></tr>
+    <tr><td>Minor (triaged: fix before merge)</td><td><code>status.ts</code> derived the linger detail from stdout only and embedded raw multi-pane output in the claude-running detail</td><td><span class="status-fixed">Fixed</span> (<code>61e80ae</code>): stderr fallback; pane names joined on one line</td></tr>
+    <tr><td>Minor (batched)</td><td>One-shot ssh checks lacked <code>-o IdentitiesOnly=yes</code> (the attach had it); four parser/formatter edge cases were untested; the Error Handling table had no VPS Session rows</td><td><span class="status-fixed">Fixed</span> (<code>61e80ae</code>, <code>aa1c675</code>, <code>f958184</code>)</td></tr>
+    <tr><td>Minor</td><td><code>status</code> exits 1 when only the credentials file is missing, though the design calls that an expected first-time state</td><td>Parked — ruling: plan text (exit code = <code>isFullyHealthy</code>) governs; changing exit semantics needs Jack's call, not a fix wave; revisit if it bites in practice</td></tr>
+    <tr><td>Minor</td><td><code>config.user</code>/<code>config.tmux_session</code> interpolated unquoted into remote shell strings</td><td>Parked — ruling: single-user, hand-written config; not load-bearing</td></tr>
+    <tr><td>Minor</td><td><code>~/claude-session.log</code> grows unbounded</td><td>Parked — ruling: design-mandated pipe-pane logging; rotation is a future concern</td></tr>
+    <tr><td>Minor</td><td>A <code>sshCommand(config, remote)</code> dedupe helper; a "claude has exited" notice before attach</td><td>Parked — ruling: the reviewer's own recommendations for the next touch, not defects</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">a9e60ac</span> feat(vps-session): add VPS config loader</li>
+    <li><span class="sha">85f065e</span> feat(vps-session): add SSH check command builders and parsers</li>
+    <li><span class="sha">c12feb6</span> fix(vps-session): activate nvm default before toolchain check</li>
+    <li><span class="sha">0106fd5</span> feat(vps-session): add status aggregation and orchestration</li>
+    <li><span class="sha">9c23703</span> feat(vps-session): add connect auto-fix and orchestration</li>
+    <li><span class="sha">c9c0de0</span> feat(vps-session): add CLI entry point</li>
+    <li><span class="sha">4c62862</span> docs(depot): document VPS Session as a fourth managed resource</li>
+    <li><span class="sha">337c6d6</span> docs(depot): correct resource count in out-of-scope note</li>
+    <li><span class="sha">61e80ae</span> fix(vps-session): surface spawn errors and harden one-shot ssh checks</li>
+    <li><span class="sha">aa1c675</span> test(vps-session): cover parser and formatter edge cases</li>
+    <li><span class="sha">f958184</span> docs(depot): fix resource count, add VPS error rows, note connect needs a terminal</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/vps-session/report.html</footer>
+
+</body>
+</html>

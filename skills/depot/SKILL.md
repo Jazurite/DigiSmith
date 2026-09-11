@@ -1,13 +1,13 @@
 ---
 name: depot
-description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it — e.g. "stop the agentic bridge"), and a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch).
+description: Provisions and manages machine-wide runtime resources that any consumer repo or plan can rely on without knowing where they live — a sparse clone of DigiSmith's shared packages/ code at ~/.digismith-depot/repo (invoked automatically by digismith:bootstrap/digismith:adopt at the start of ticket work; invoke directly any time to pull the latest changes — e.g. "update my DigiSmith clone"), a shared OpenCode server backing digismith:offload-implementer's opencode-runner dispatches (invoked by offload-implementer itself the first time a task is offloaded; invoke directly any time to stop it — e.g. "stop the OpenCode server"), a local Agentic Bridge proxy repairing kimi-k3's XTML format for TokenReply dispatches (invoked by offload-implementer on every claude-code-runner dispatch; invoke directly any time to stop it — e.g. "stop the agentic bridge"), a stateless Claude Code readiness check backing offload-implementer's claude-code-runner dispatches (invoked by offload-implementer on every such dispatch), and a VPS Session CLI reconnecting to an already-provisioned persistent claude tmux session on a Hetzner VPS over SSH (invoked directly by the user only — e.g. "connect me to my VPS", "check my VPS status" — never auto-invoked by bootstrap/adopt).
 ---
 
 # Depot
 
 ## Overview
 
-DigiSmith's map item **V**. Manages four independent, machine-wide
+DigiSmith's map item **V**. Manages five independent, machine-wide
 runtime resources, each available to anything that needs it, independent
 of any single repo, ticket, or plan:
 
@@ -25,14 +25,20 @@ of any single repo, ticket, or plan:
   `tool_use` block before Claude Code sees it, so a dispatch just works.
 - **Claude Code readiness** — a stateless PATH + `--bare`-support check
   backing offload-implementer's `claude-code`-runner dispatches. Unlike
-  the other three, nothing is provisioned or reused here — there's no
+  the other four, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
+- **VPS Session** — reconnects to an already-provisioned, persistent `claude`
+  tmux session on a Hetzner VPS over SSH (`scripts/vps-session/cli.ts`,
+  map item **V.3**). Unlike the OpenCode server and Agentic Bridge proxy,
+  there is nothing for Depot to spawn or own the lifecycle of — the resource
+  being "ensured" is a remote, already-running `tmux` session, not a local
+  process tracked by PID.
 
 These resources share nothing but the same shape of idea — available
 without the caller needing to know where they live — and are managed by
 entirely separate operations below. Depot has no generalized "resource"
-abstraction between them: a git clone, two live processes, and a stateless
-check don't share mechanics.
+abstraction between them: a git clone, two live processes, a stateless
+check, and a remote tmux session don't share mechanics.
 
 ## Resource: packages/ Clone
 
@@ -290,6 +296,56 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 **Exit 0** → `claude` is on PATH and supports `--bare`; return ready.
 **Non-zero exit** → not ready (see Error Handling).
 
+## Resource: VPS Session
+
+A standalone CLI (`scripts/vps-session/cli.ts`, map item **V.3**) that reconnects to an
+already-provisioned, persistent `claude` tmux session on a Hetzner VPS over SSH. See
+`.digismith/docs/vps-session/design.html`. Config lives at `~/.digismith-depot/vps.json`
+(`{"host", "user", "identity_file", "tmux_session"}`), sibling to Depot's other state files —
+written by hand, no creation/edit tooling.
+
+Unlike the OpenCode server and Agentic Bridge proxy, there is nothing for this skill to spawn
+or track by PID: the resource being "ensured" is a remote, already-running `tmux` session, not
+a local process.
+
+### Which Operation
+
+- **Invoked directly by the user, by name or by asking a Claude Code session** ("connect me to
+  my VPS", "check my VPS status") → `status` (a pure read, never modifies anything) or
+  `connect` (auto-fixes what's safely fixable, then attaches) depending on intent.
+- **Never auto-invoked by `digismith:bootstrap`/`digismith:adopt`** — unlike the packages/
+  clone, this is not a per-ticket dependency most tickets need.
+
+### Operation: `status`
+
+```bash
+node --experimental-strip-types scripts/vps-session/cli.ts status
+```
+
+Reports each check plainly: SSH reachability, systemd lingering, toolchain-on-PATH, tmux
+session liveness, whether `claude` itself is running inside that session (an alive session
+whose `claude` has exited to the fallback shell is reported as its own distinct, non-healthy
+state), and whether the one-time interactive login has been completed. Never modifies anything
+on the VPS.
+
+### Operation: `connect`
+
+```bash
+node --experimental-strip-types scripts/vps-session/cli.ts connect
+```
+
+Runs the same checks as `status`, auto-fixing what's safely fixable (enabling lingering,
+recreating the tmux session), then attaches interactively. Missing credentials is a warning,
+not a blocker — the user completes the one-time browser OAuth login themselves once attached.
+Never auto-installs a missing toolchain piece (nvm/node/pnpm/claude) — same disposition Depot
+already takes for a missing local `opencode`/`claude`.
+
+`connect`'s final step is an interactive `ssh -t ... tmux attach` that needs a real controlling
+terminal. Run it from a proper console (Windows Terminal, PowerShell, cmd, or a macOS/Linux
+terminal) — not from an agent's Bash tool, and not from MinTTY-based Git Bash without `winpty`,
+where `ssh -t` cannot allocate a pseudo-terminal and `tmux attach` fails with "not a terminal".
+`status` has no such requirement and works from anywhere.
+
 ## Error Handling
 
 | Case | Disposition |
@@ -305,6 +361,12 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | Agentic Bridge fails to start (no "listening on" line in `~/.digismith-depot/agentic-bridge.log` within a few seconds) | Stop, show the log content, don't retry silently. |
 | Tracked PID in `~/.digismith-depot/agentic-bridge.json` is no longer running | Treat as stale, start fresh per `ensure-agentic-bridge` above, overwrite the tracking file. |
 | WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
+| `~/.digismith-depot/vps.json` absent | Both VPS Session commands stop immediately with a plain "no VPS configured, create the file" message. Neither guesses a host. |
+| VPS SSH unreachable (timeout, refused, key rejected, or no local `ssh` binary) | Report the actual error plainly. No retry. `connect` attempts nothing further. |
+| VPS lingering can't be enabled | Report the actual `loginctl` error; `connect` stops rather than continuing as if it succeeded. |
+| nvm/node/pnpm/claude missing on the VPS | Stop, report exactly which piece is missing, point at the manual install steps. Never auto-install — same stance as the local `opencode`/`claude` rows above. |
+| VPS tmux session alive but `claude` has exited to the fallback shell | `status` reports it as its own non-healthy state; `connect` still attaches (the user lands in the live shell with the crash visible) rather than recreating the session. |
+| VPS credentials file absent | Warn, but `connect` proceeds to attach — an expected first-time state, not a failure. |
 
 ## Out of Scope
 
@@ -344,8 +406,8 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 - **Model or provider abstraction** — this skill knows nothing about
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
-- **A generalized multi-resource interface** — four concrete resources
-  (one of them stateless), four concrete operation sets. Two of them
+- **A generalized multi-resource interface** — five concrete resources
+  (one of them stateless, one a remote tmux session), five concrete operation sets. Two of them
   (OpenCode server, Agentic Bridge proxy) share the identical ensure/stop +
   PID/port-tracking lifecycle shape, but duplicating this well-understood
   ~80-line pattern twice is still cheaper and clearer than a premature
@@ -362,3 +424,5 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 | Agentic Bridge proxy | `ensure-agentic-bridge` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Start if not alive (resolving the real Windows PID), else return the tracked port |
 | Agentic Bridge proxy | `stop-agentic-bridge` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
 | Claude Code readiness | `ensure-claude-code` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Stateless PATH + `--bare`-support check, no state written |
+| VPS Session | `status` | User asks directly, any time | Read-only report of every check above |
+| VPS Session | `connect` | User asks directly, any time | Auto-fixes what's safely fixable, then attaches interactively |
