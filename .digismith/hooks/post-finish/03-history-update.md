@@ -22,8 +22,10 @@ Otherwise, update the build history:
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
-BASE_SHA=$(git rev-parse ORIG_HEAD)
-UPDATE_OUTPUT=$(node --experimental-strip-types .digismith/hooks/post-finish/scripts/update-history.ts --base "$BASE_SHA")
+PIN="refs/digismith/post-finish/<feature-branch>"
+BASE_SHA=$(git rev-parse --verify --quiet "$PIN/base") || { echo "MISSING PIN $PIN/base — this hook reads the merge range finishing-a-development-branch Option 1 pins right after git merge; fire it from there, or pin by hand first (fire-lifecycle-hook.md, \"Merge-range pins\"). Stopping." >&2; exit 1; }
+HEAD_SHA=$(git rev-parse --verify --quiet "$PIN/head") || { echo "MISSING PIN $PIN/head — same as above. Stopping." >&2; exit 1; }
+UPDATE_OUTPUT=$(node --experimental-strip-types .digismith/hooks/post-finish/scripts/update-history.ts --base "$BASE_SHA" --head "$HEAD_SHA")
 UPDATE_STATUS=$?
 echo "$UPDATE_OUTPUT"
 if [ "$UPDATE_STATUS" -ne 0 ]; then
@@ -40,13 +42,17 @@ If that push is rejected (the remote moved since Option 1's own push, or since
 `01-version-bump.md`'s own second push): stop, report the rejection plainly, and investigate —
 do not force-push automatically, the same as every other push in this skill.
 
-`ORIG_HEAD` is git's own record of the branch tip immediately before the merge that triggered
-this `post-finish` firing — the same value `01-version-bump.md` reads, for the same reason: still
-valid here since nothing between the merge and this hook firing changes it.
+`BASE_SHA`/`HEAD_SHA` are the merge range `finishing-a-development-branch` Option 1 pinned right
+after `git merge <feature-branch>` — stored as `refs/digismith/post-finish/<feature-branch>/{base,head}`,
+the same two refs `01-version-bump.md` reads, deleted by Option 1 once every `post-finish` hook has
+fired. Never substitute `ORIG_HEAD` or the live `HEAD`: on this shared checkout another session's
+merge may have moved both by the time this hook runs, and a wrong range here means a history entry
+appended twice or not at all. A missing pin stops this hook — see `fire-lifecycle-hook.md`'s
+"Merge-range pins" for firing by hand and for recovering the branch name after a compaction.
 
 An `APPENDED <n>: <titles>` result commits `.digismith/history.html` in its own commit — separate
 from the merge commit and from `01`'s bump commit — and pushes it. A `NOTHING (no report in
-range)` result means the merged range contained no `.digismith/docs/<slug>/report.html` — either
+range)` result means the pinned range (`base..head`) contained no `.digismith/docs/<slug>/report.html` — either
 a docs-only change, or a merge that didn't go through `report-implementation` (N) — and nothing
 further happens. A non-zero exit means the script itself failed (a malformed report, or the
 Timeline section couldn't be located): stop, do not commit, and investigate — a bad append would
