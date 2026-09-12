@@ -41,7 +41,8 @@ refs/digismith/<point>/<feature-branch>/head   — the merge commit itself
 ```
 
 For `<point>` = `post-finish`, `finishing-a-development-branch` Option 1 writes these right after
-`git merge <feature-branch>` (`git update-ref ... ORIG_HEAD` / `... HEAD`) and deletes both with
+`git merge <feature-branch>` — `base` from the tip it recorded just before the merge, `head` from
+`HEAD` afterward, and only if the merge actually moved `HEAD` — and deletes both with
 `git update-ref -d` once every hook has fired. A hook that reads a range resolves it from those
 two refs and nothing else:
 
@@ -58,8 +59,9 @@ in the **same** bash block — shell variables do not survive from one block to 
 **Missing pin → fail loud.** If either ref does not exist, the hook stops with a message naming
 the missing ref. It never falls back to `ORIG_HEAD` — a wrong range silently applied is the exact
 failure the pins exist to prevent. Hooks fire from the skill that pins them; running one by hand
-means pinning by hand first: the two `git update-ref` lines above, with the real pre-merge and
-merge-commit SHAs in place of `ORIG_HEAD` and `HEAD`.
+means pinning by hand first: `git update-ref <ref>/base <pre-merge tip>` and
+`git update-ref <ref>/head <merge commit>` — for a true merge commit the pre-merge tip is its first
+parent, `<merge commit>^1`.
 
 **Branch name not in context** (a hook resumed after compaction, or run by hand): list the
 pending pins with `git for-each-ref refs/digismith/<point>/`. Exactly one branch pinned → that is
@@ -68,8 +70,10 @@ finished rather than guess. None → see "Missing pin" above.
 
 **Leftover pins are inert.** A finish that stopped partway (failed merged-result tests, a hook
 that failed before the unpin step) leaves its two refs in place. Nothing reads them until a hook
-for that same branch fires, and the next Option 1 run for that branch overwrites them.
-`git for-each-ref refs/digismith/` shows anything left to tidy by hand.
+for that same branch fires. A re-run of Option 1 for that branch that reports `Already up to date`
+leaves them untouched and continues from them; only a fresh merge that actually moves `HEAD` (after
+the earlier merge was undone) overwrites them. `git for-each-ref refs/digismith/` shows anything
+left to tidy by hand.
 
 ## Notes
 

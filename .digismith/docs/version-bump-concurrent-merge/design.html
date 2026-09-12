@@ -127,12 +127,20 @@ through Option 1's bash blocks is <code>&lt;feature-branch&gt;</code> (hook 01's
 
 <section id="s1">
 <h2>Section 1 — Pinning the merge in Option 1</h2>
-<p><code>skills/finishing-a-development-branch/SKILL.md</code>, Option 1, immediately after
-<code>git merge &lt;feature-branch&gt;</code> and before the test run:</p>
-<pre><code>git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/base ORIG_HEAD
-git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/head HEAD</code></pre>
+<p><code>skills/finishing-a-development-branch/SKILL.md</code>, Option 1, around
+<code>git merge &lt;feature-branch&gt;</code> and before the test run — pinning only when the merge
+actually moved <code>HEAD</code>, so a conflicted merge or an <code>Already up to date</code>
+re-run never writes a wrong pin:</p>
+<pre><code>PRE_MERGE=$(git rev-parse HEAD)      # recorded in the same block, before the merge
+git merge &lt;feature-branch&gt;
+if [ "$(git rev-parse HEAD)" != "$PRE_MERGE" ]; then
+  git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/base "$PRE_MERGE"
+  git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/head HEAD
+fi</code></pre>
 <p>Pinning before the tests is deliberate: the merge commit is the thing being pinned, and if
-tests fail Option 1 stops anyway — the two refs are inert leftovers, harmless (see Section 5).
+tests fail Option 1 stops anyway — the two refs are inert leftovers, harmless (see Section 5). A
+conflicted merge leaves <code>HEAD</code> unmoved and therefore pins nothing; Option 1 tells the
+agent to resolve, commit, and pin by hand from the merge commit's first parent (<code>HEAD^1</code>).
 After the <code>post-finish</code> hooks have all fired, Option 1 deletes both:</p>
 <pre><code>git update-ref -d refs/digismith/post-finish/&lt;feature-branch&gt;/base
 git update-ref -d refs/digismith/post-finish/&lt;feature-branch&gt;/head</code></pre>
@@ -218,9 +226,18 @@ path <code>update-history.ts</code> already takes for a missing <code>--base</co
 <td>No ambiguity when <code>&lt;feature-branch&gt;</code> is known — each hook reads its own. When
 it isn't (Section 2 recovery), stop and ask; never pick one.</td></tr>
 <tr><td>Tests fail after the merge, Option 1 stops</td>
-<td>Refs remain. Inert — nothing reads them until a hook for that branch fires. The next Option 1
-run for the same branch overwrites them; <code>git for-each-ref refs/digismith/</code> shows
-leftovers for manual tidy-up.</td></tr>
+<td>Refs remain, inert — nothing reads them until a hook for that branch fires. A re-run that
+reports <code>Already up to date</code> pins nothing and continues from them. If the fix needs new
+commits on the branch, Option 1 says to undo the local merge first (<code>git reset --hard</code>
+to the <code>base</code> pin) — guarded on <code>HEAD</code> still equalling the <code>head</code>
+pin, so another session's merge on top is never reset away.</td></tr>
+<tr><td><code>git merge</code> stops on conflicts</td>
+<td><code>HEAD</code> did not move, so nothing was pinned. Resolve, <code>git commit</code>, then
+pin by hand: <code>base</code> = <code>HEAD^1</code>, <code>head</code> = <code>HEAD</code>.</td></tr>
+<tr><td><code>git merge</code> reports <code>Already up to date</code></td>
+<td>An earlier run already merged this branch and stopped partway. Nothing is pinned now; that
+run's pins stand and are correct. Continue from where it stopped — never re-pin, since
+<code>ORIG_HEAD</code> now reflects the <code>git pull</code>, not this merge.</td></tr>
 <tr><td>A hook fails partway, firing halts before cleanup</td>
 <td>Same as above — refs left in place, inert, visible via <code>for-each-ref</code>.</td></tr>
 </table>
