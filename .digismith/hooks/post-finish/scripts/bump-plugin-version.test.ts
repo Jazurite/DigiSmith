@@ -371,4 +371,20 @@ describe("main (CLI)", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("bumps minor, never skips, when base and head are the same commit — an empty pinned range", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-bump-cli-"));
+    try {
+      initPluginFixtureRepo(dir, "0.23.0-beta");
+      const sha = revParseHead(dir);
+
+      const result = runScript(dir, ["--base", sha, "--head", sha]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("BUMPED 0.23.0-beta -> 0.24.0-beta");
+      expect(result.stdout).not.toContain("SKIPPED");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

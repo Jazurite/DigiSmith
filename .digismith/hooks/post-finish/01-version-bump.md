@@ -24,7 +24,7 @@ Otherwise, bump the plugin version:
 cd "$(git rev-parse --show-toplevel)"
 PIN="refs/digismith/post-finish/<feature-branch>"
 BASE_SHA=$(git rev-parse --verify --quiet "$PIN/base") || { echo "MISSING PIN $PIN/base — this hook reads the merge range finishing-a-development-branch Option 1 pins right after git merge; fire it from there, or pin by hand first (fire-lifecycle-hook.md, \"Merge-range pins\"). Stopping." >&2; exit 1; }
-HEAD_SHA=$(git rev-parse --verify --quiet "$PIN/head") || { echo "MISSING PIN $PIN/head — same as above. Stopping." >&2; exit 1; }
+HEAD_SHA=$(git rev-parse --verify --quiet "$PIN/head") || { echo "MISSING PIN $PIN/head — the base pin exists but the head pin does not; pin by hand first (fire-lifecycle-hook.md, \"Merge-range pins\"). Stopping." >&2; exit 1; }
 BUMP_OUTPUT=$(node --experimental-strip-types .digismith/hooks/post-finish/scripts/bump-plugin-version.ts --base "$BASE_SHA" --head "$HEAD_SHA")
 BUMP_STATUS=$?
 echo "$BUMP_OUTPUT"
