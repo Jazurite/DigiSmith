@@ -9,6 +9,12 @@ global:
     description: Fix genuine blockers found mid-task in the same PR, without bundling unrelated work
   pr-descriptions:
     description: PR description conventions — short and plain, no templated headers/checklists
+  ste100-use-cases:
+    description: Per-genre writing patterns (errors, PR descriptions, changelogs, agent instructions, etc.) for applying the ASD-STE100 writing standard
+  ste100-word-swaps:
+    description: Slop-word to plain-word substitution table for AI-generated prose
+  ste100-writing:
+    description: Writing style for AI-generated prose artifacts (PR descriptions, comments, reports, SKILL.md) — concise, unambiguous, hedge-preserving; not for code or live conversation
   surgical-changes:
     description: Touch only what the request requires; don't refactor or clean up adjacent code
 
