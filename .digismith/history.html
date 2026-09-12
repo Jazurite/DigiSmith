@@ -178,7 +178,7 @@
       <td>Visual regression vs Figma designs via a custom Figma skill. Split out of <strong>I</strong> (2026-08-26) for the same reason as <strong>R</strong></td>
       <td><span class="status todo">Not started</span></td></tr>
     <tr><td><strong>V</strong></td><td>Runtime clone provisioning (Depot)</td>
-      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith-depot/repo</code>, renamed from <code>~/.digismith/</code> 2026-09-04) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh <span class="status done">Done</span> · <strong>V.1</strong> a single shared OpenCode server backing every <code>offload-implementer</code> dispatch, one per machine instead of one per plan, 2026-08-28 <span class="status done">Done</span> · <strong>V.2</strong> the Agentic Bridge proxy (K.9) as a third managed resource, 2026-09-11 <span class="status done">Done</span> · <strong>V.3</strong> VPS Session CLI — <code>status</code>/<code>connect</code> against a hand-provisioned Hetzner VPS's persistent <code>claude</code> tmux session over SSH; nothing spawned locally, the resource is remote; not yet live-verified against the real box, 2026-09-11 <span class="status done">Done</span></td>
+      <td>Maintains a sparse, refreshable local clone of DigiSmith's shared <code>packages/</code> code at a fixed, machine-wide location (<code>~/.digismith-depot/repo</code>, renamed from <code>~/.digismith/</code> 2026-09-04) — <code>bootstrap</code>/<code>adopt</code> invoke it automatically at ticket start, also callable directly to refresh <span class="status done">Done</span> · <strong>V.1</strong> a single shared OpenCode server backing every <code>offload-implementer</code> dispatch, one per machine instead of one per plan, 2026-08-28 <span class="status done">Done</span> · <strong>V.2</strong> the Agentic Bridge proxy (K.9) as a third managed resource, 2026-09-11 <span class="status done">Done</span> · <strong>V.3</strong> VPS Session CLI — <code>status</code>/<code>connect</code> against a hand-provisioned Hetzner VPS's persistent <code>claude</code> tmux session over SSH; nothing spawned locally, the resource is remote; not yet live-verified against the real box, 2026-09-11 <span class="status done">Done</span> · <strong>V.4</strong> the CLI published to npm as <code>@digismith/cli</code> (<code>digismith</code>/<code>dg</code>; <code>vps</code> is the first command group; <code>tsc</code>-built to <code>dist/</code> after a live install-time restriction ruled out shipping raw <code>.ts</code>), 2026-09-11 <span class="status done">Done</span></td>
       <td><span class="status done">Done</span></td></tr>
     <tr><td><strong>W</strong></td><td>Primitive ownership</td>
       <td>DigiSmith vendors Superpowers' 14 primitives and replaces specific ones outright — a deliberate, bounded exception to philosophy #2, triggered by upstream <code>finishing-a-development-branch</code> never pushing after a local merge. <strong>W.1</strong> verbatim vendor of all 14 skills, 2026-08-20 <span class="status done">Done</span> · <strong>W.2</strong> activation mechanism: fork-provenance tag + <code>check_vendored_skills.ts</code> 3-way drift check, 2026-08-29 (<strong>W.2.1</strong> baseline against upstream GitHub instead of a local plugin cache, 2026-09-05) <span class="status done">Done</span> · <strong>W.3</strong> internal <code>superpowers:</code> → <code>digismith:</code> call-site cutover, 2026-08-29 <span class="status done">Done</span> · <strong>W.4</strong> first activation: Option 1 "Merge Locally" pushes to origin, 2026-09-04 <span class="status done">Done</span> · <strong>W.4.1</strong> automatic plugin version bump on self-merge, 2026-09-05; hardened for patch-vs-minor 2026-09-08 after a live miss; later retrofitted as Y's first stock hook <span class="status done">Done</span> · <strong>W.5</strong> Q (convention enforcement) folded into the vendored primitives, 2026-09-04 <span class="status done">Done</span> · <strong>W.6</strong> H (subagent-driven always) folded into <code>writing-plans</code>' handoff as autonomous complexity-based reasoning; <code>executing-plans</code> gains a ledger and feeds <code>report-implementation</code>, 2026-09-04 <span class="status done">Done</span> · <strong>W.7</strong> <code>subagent-driven-development</code>'s conflict-scan rationalization guard, 2026-09-05 <span class="status done">Done</span> · <strong>W.8+</strong> further activations (<code>requesting-code-review</code> with standards injection is brainstormed and in backlog) <span class="status todo">Not started</span></td>
@@ -272,7 +272,9 @@
     <a href="docs/depot-opencode-server/report.html">report</a> ·
     V.3 <a href="docs/vps-session/design.html">design</a> ·
     <a href="docs/vps-session/plan.md">plan</a> ·
-    <a href="docs/vps-session/report.html">report</a>
+    <a href="docs/vps-session/report.html">report</a> ·
+    V.4 <a href="docs/digismith-cli-npm/design.html">design</a> ·
+    <a href="docs/digismith-cli-npm/plan.md">plan</a>
   </p>
   <p style="font-size:.88rem; color:var(--muted);">
     <strong>W — Primitive ownership:</strong>
@@ -1052,6 +1054,35 @@
       <a href="docs/vps-session/design.html">design</a>,
       <a href="docs/vps-session/plan.md">plan</a>, and
       <a href="docs/vps-session/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-11</div>
+      <h4>V.4 — the DigiSmith CLI published to npm as <code>@digismith/cli</code> — 3 tasks, subagent-driven-development</h4>
+      <p>Straight after V.3 shipped, Jack asked for "our own DigiSmith CLI" on npm so it
+      runs from any machine without a checkout. The brainstorm split the ask in two: the
+      package itself (this), and the "login / save credentials / connect to our server" half,
+      which needs the server side letter <strong>X</strong> reserves and stays out of scope.
+      v1 ships one command group, <code>vps</code> — <code>scripts/vps-session/</code> moved
+      by <code>git mv</code> into <code>packages/cli/src/vps/</code> with only its entry file
+      changing to an exported <code>run(argv)</code> — behind a thin
+      <code>src/index.ts</code> dispatcher, with binaries <code>digismith</code> and the alias
+      <code>dg</code>. Designed with no build step at all — Node 24 strips <code>.ts</code>
+      types natively, verified against the checkout — but that premise didn't survive a real
+      install: Node unconditionally refuses to type-strip any <code>.ts</code> file under a
+      <code>node_modules</code> directory (<code>ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING</code>,
+      confirmed live and reproduced independently with a two-line test file), and every package
+      manager installs a package there. Reversed mid-implementation to a <code>tsc</code> build
+      to <code>dist/</code> — no new dependency, <code>typescript</code> was already a root
+      devDependency — with the bin pointing at compiled JS; the checkout path, source layout,
+      and dispatcher logic never changed. Separately, pnpm's global installs go through symlinks
+      and Node realpaths <code>import.meta.url</code>, so the entry guard compares real paths or
+      the installed binary silently does nothing. Own semver from <code>0.1.0</code>; publishing
+      stays manual and Jack's (<code>npm login</code>,
+      the <code>digismith</code> org, <code>pnpm publish</code>) — the build's acceptance bar is
+      a verified tarball and a working global install from it on this Windows machine. See
+      <a href="docs/digismith-cli-npm/design.html">design</a> and
+      <a href="docs/digismith-cli-npm/plan.md">plan</a>.</p>
     </div>
 
   </div>

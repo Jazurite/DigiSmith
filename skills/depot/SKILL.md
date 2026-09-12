@@ -28,7 +28,7 @@ of any single repo, ticket, or plan:
   the other four, nothing is provisioned or reused here — there's no
   process or clone to hold onto, just a check run fresh every dispatch.
 - **VPS Session** — reconnects to an already-provisioned, persistent `claude`
-  tmux session on a Hetzner VPS over SSH (`scripts/vps-session/cli.ts`,
+  tmux session on a Hetzner VPS over SSH (`packages/cli/src/index.ts vps` — published on npm as `@digismith/cli` (map item **V.4**),
   map item **V.3**). Unlike the OpenCode server and Agentic Bridge proxy,
   there is nothing for Depot to spawn or own the lifecycle of — the resource
   being "ensured" is a remote, already-running `tmux` session, not a local
@@ -298,11 +298,18 @@ claude --version >/dev/null 2>&1 && claude -p --help 2>&1 | grep -q -- "--bare"
 
 ## Resource: VPS Session
 
-A standalone CLI (`scripts/vps-session/cli.ts`, map item **V.3**) that reconnects to an
+The `vps` command group of DigiSmith's CLI (`packages/cli/src/index.ts`, map items **V.3**
+and **V.4**) that reconnects to an
 already-provisioned, persistent `claude` tmux session on a Hetzner VPS over SSH. See
 `.digismith/docs/vps-session/design.html`. Config lives at `~/.digismith-depot/vps.json`
 (`{"host", "user", "identity_file", "tmux_session"}`), sibling to Depot's other state files —
 written by hand, no creation/edit tooling.
+
+From a checkout the commands below run via `node <digismith-repo>/packages/cli/src/index.ts`;
+with the package installed globally (`pnpm add -g @digismith/cli`) the same thing is
+`digismith vps status|connect` or `dg vps status|connect` from any directory. This skill
+always uses the checkout form — a Claude Code session driving Depot has one — and never
+depends on the package being installed.
 
 Unlike the OpenCode server and Agentic Bridge proxy, there is nothing for this skill to spawn
 or track by PID: the resource being "ensured" is a remote, already-running `tmux` session, not
@@ -319,7 +326,7 @@ a local process.
 ### Operation: `status`
 
 ```bash
-node --experimental-strip-types scripts/vps-session/cli.ts status
+node <digismith-repo>/packages/cli/src/index.ts vps status
 ```
 
 Reports each check plainly: SSH reachability, systemd lingering, toolchain-on-PATH, tmux
@@ -331,7 +338,7 @@ on the VPS.
 ### Operation: `connect`
 
 ```bash
-node --experimental-strip-types scripts/vps-session/cli.ts connect
+node <digismith-repo>/packages/cli/src/index.ts vps connect
 ```
 
 Runs the same checks as `status`, auto-fixing what's safely fixable (enabling lingering,
