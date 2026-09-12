@@ -1117,6 +1117,12 @@
   self-check before moving on). See <a href="docs/asd-ste100-writing-standard/design.html">design</a>, <a href="docs/asd-ste100-writing-standard/plan.md">plan</a>, and <a href="docs/asd-ste100-writing-standard/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-12</div>
+      <h4>Post-Finish Merge Pinning (W.4.1 hardening)</h4>
+      <p>Made every range-reading <code>post-finish</code> hook read a per-branch pinned merge range instead of <code>ORIG_HEAD</code> and the live tree, so a delayed hook produces exactly the result an immediate one would. <code>finishing-a-development-branch</code> Option 1 records the pre-merge tip, merges, and — only if the merge actually moved <code>HEAD</code> — writes two git refs, <code>refs/digismith/post-finish/&lt;feature-branch&gt;/base</code> and <code>.../head</code>, deleting them after the hooks fire; <code>fire-lifecycle-hook.md</code> documents that contract point-agnostically under "Merge-range pins". Hooks <code>01</code> and <code>03</code> read those refs and pass <code>--base</code>/<code>--head</code> to their scripts; <code>bump-plugin-version.ts</code> and <code>update-history.ts</code> reason only about <code>base..head</code>, never the working tree, <code>HEAD</code>, or <code>ORIG_HEAD</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge. See <a href="docs/version-bump-concurrent-merge/design.html">design</a>, <a href="docs/version-bump-concurrent-merge/plan.md">plan</a>, and <a href="docs/version-bump-concurrent-merge/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
