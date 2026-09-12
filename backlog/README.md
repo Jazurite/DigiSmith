@@ -57,3 +57,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Wire generated artifacts to the writing standard (G.3.2)](ste100-artifact-integration-g3-2.md) — `generate-comment` and `report-implementation` don't consult any standard today; depends on G.3.1
 - [Propagate the writing standard into consuming repos' own `CLAUDE.md` (G.3.3)](ste100-consuming-repo-propagation-g3-3.md) — team-shared, committed to the consuming repo, not Jack's personal global config; depends on G.3.1
 - [Portable output-style + mechanical linter for the writing standard (G.3.4)](ste100-portable-packaging-g3-4.md) — smallest/least urgent child; reuses toppa's output-style mechanism and adapts danyuchn's `ste-lint.py`; depends on G.3.1
+- [Expand the ASD-STE100 word-swaps table beyond AminBlg's original list](ste100-word-swaps-expansion.md) — raised live during G.3.1's brainstorm, deliberately deferred; likely a G.3.1 follow-up, not a new child
