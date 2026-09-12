@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASD-STE100 Writing Standard (G.3.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>ASD-STE100 Writing Standard (G.3.1)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-12</span>
+    <span>Map item: G.3.1 (child of G.3, "ASD-STE100 Writing Standard" — sibling to G.1 Standards injection, G.2 Toolchain, under G "Methodology")</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#placement">Placement &amp; file layout</a></li>
+    <li><a href="#core">Core file: ste100-writing.md</a></li>
+    <li><a href="#word-swaps">Word-swaps file</a></li>
+    <li><a href="#use-cases">Use-cases file</a></li>
+    <li><a href="#index">Index entries</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+    <li><a href="#validation">Validation</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>G.3.1 is the content backbone of G.3, the ASD-STE100 (Simplified Technical English) writing
+standard. It adds three new content-only files to DigiSmith's existing <code>standards/</code>
+library, indexed the same way every other standard already is. Nothing about
+<code>digismith:inject-standards</code> changes — it already knows how to find, suggest, and
+inject anything listed in <code>standards/index.yml</code>. G.3.1 supplies the content; wiring
+specific consumers (<code>generate-comment</code>, <code>report-implementation</code>) to
+proactively pull it in is G.3.2's job, deferred (see <code>backlog/ste100-artifact-integration-g3-2.md</code>).</p>
+<p>The standard targets one specific kind of writing: prose DigiSmith generates <em>for a reader
+other than Jack in the moment</em> — PR descriptions, JIRA/Teams comments, report prose, and
+(per this design) DigiSmith's own <code>SKILL.md</code> authoring. It explicitly does not apply
+to code, code comments (G.1's territory), or live conversation with Jack.</p>
+<p>Sources, decided earlier this session: <a href="https://github.com/danyuchn/asd-ste100-skill">danyuchn/asd-ste100-skill</a>
+(MIT) is the content backbone, STE-flavored mode only — no Strict/agent-facing mode.
+<a href="https://github.com/AminBlg/SimpleEnglish">AminBlg/SimpleEnglish</a> (MIT) contributes the
+word-swap table (adopted whole) and the use-cases pattern guide (adapted). Both cloned to
+<code>D:/Workspace/Library/</code> for reference. Toppa's output-style gist contributes only a
+packaging mechanism, deferred to G.3.4 — not part of this design.</p>
+</section>
+
+<section id="placement">
+<h2>Placement &amp; file layout</h2>
+<p>Three new files under <code>standards/global/</code>, following G.1's existing one-topic-per-file
+convention (e.g. <code>pr-descriptions.md</code>, <code>commit-style.md</code>):</p>
+<div class="cards">
+  <div class="card">
+    <div class="tag">Core</div>
+    <h4>ste100-writing.md</h4>
+    <p>The rule content: structural rules, lexical rules (advisory), hedge-preservation, Scan
+    Checklist, Boundaries.</p>
+  </div>
+  <div class="card">
+    <div class="tag">Reference</div>
+    <h4>ste100-word-swaps.md</h4>
+    <p>Slop-word → plain-word substitution table, adopted whole from AminBlg (58 rows,
+    unchanged).</p>
+  </div>
+  <div class="card">
+    <div class="tag">Reference</div>
+    <h4>ste100-use-cases.md</h4>
+    <p>Per-genre writing patterns, adapted from AminBlg's 9-genre guide with DigiSmith-specific
+    notes where a real consumer exists today.</p>
+  </div>
+</div>
+<p>A three-file split rather than one comprehensive file: the rules travel together as a unit and
+always apply, while the word-swap table (a lookup, not prose) and the use-cases guide (picked by
+genre, not read start-to-finish) are naturally separate references — consistent with how
+<code>inject-standards</code> already lets a caller pull in only what's relevant.</p>
+</section>
+
+<section id="core">
+<h2>Core file: ste100-writing.md</h2>
+<p>Adapted from danyuchn's <code>SKILL.md</code>, STE-flavored only — no mode-picking, since Jack
+already decided Strict mode (agent-facing tool descriptions, inter-agent instructions) has no
+DigiSmith use case.</p>
+
+<h3>Kept, close to verbatim</h3>
+<div class="table-wrap">
+<table>
+<tr><th>Section</th><th>Content</th></tr>
+<tr><td>Structural rules</td><td>Active voice, no phrasal verbs, one instruction per sentence,
+sentence-length caps (≤20-25 words), no semicolons, noun-cluster limit (≤3 words), no ellipsis,
+paragraph limits (≤6 sentences, one topic), lists for 3+ step sequences</td></tr>
+<tr><td>Lexical rules</td><td>Framed explicitly as advisory / "direction of travel" — one word one
+meaning, verb not noun, domain terms defined once. Never claims verified dictionary compliance
+(DigiSmith doesn't have and won't redistribute ASD's actual ~900-word dictionary, same reasoning
+danyuchn's source already documents)</td></tr>
+<tr><td>Hedge-preservation principle</td><td><strong>Nonnegotiable.</strong> Never upgrade a hedge
+("may have failed", "could be caused by") into a stated fact. A rewrite that removes a hedge is a
+different claim, not a simplification. This rule overrides AminBlg's own incident-report example
+(which drops a hedge for punchier prose) — where the two sources conflict, danyuchn's stricter
+position wins, per Jack's backbone choice</td></tr>
+<tr><td>Scan Checklist</td><td>Synonym rotation, hedge stacking, nominalization, marketing
+adjectives, run-on sentences, soft phrasal verbs — repurposed here as a self-check to run before
+finalizing any drafted paragraph, not as a post-hoc rewrite pass</td></tr>
+<tr><td>Boundaries (trimmed)</td><td>Not for creative/marketing copy; never fabricate a certainty
+the source material didn't state; don't polish a hollow paragraph into looking substantive — if
+there's nothing to say, say that instead</td></tr>
+</table>
+</div>
+
+<h3>Dropped</h3>
+<ul>
+<li><strong>Modes section</strong> (Strict vs. STE-flavored) — this file simply <em>is</em> the
+STE-flavored ruleset; no mode question needed.</li>
+<li><strong>Process section</strong> (pick mode → read input → walk sentence-by-sentence → run
+linter) — this describes a rewrite-tool's own operating steps when invoked directly on existing
+text. G.3.1 is ambient guidance consulted while drafting new prose, not a rewrite pass, so this
+doesn't apply.</li>
+<li><strong>Output Format section</strong> (rewritten text alone, no preamble) — same reasoning;
+that's a rewrite-skill's response contract, not relevant to a standards file.</li>
+</ul>
+</section>
+
+<section id="word-swaps">
+<h2>Word-swaps file</h2>
+<p>Adopted whole from AminBlg's <code>references/word-swaps.md</code> — all 58 rows (leverage→use,
+in order to→to, seamlessly→delete, robust/powerful→delete or give the measurable property, etc.),
+no changes. Already generic English with nothing aerospace-specific to strip and nothing
+DigiSmith-specific to add.</p>
+<p class="callout">Growing this table further (e.g. from slop phrases observed in DigiSmith's own
+generated artifacts over time) is captured separately as
+<code>backlog/ste100-word-swaps-expansion.md</code> — out of scope for this initial ship.</p>
+</section>
+
+<section id="use-cases">
+<h2>Use-cases file</h2>
+<p>Adapted from AminBlg's <code>references/use-cases.md</code>. Per Jack's explicit call, keeps the
+full 9-genre spread rather than trimming to only what DigiSmith generates today — future consumers
+get pattern guidance ready and waiting rather than needing a second brainstorm later.</p>
+<div class="table-wrap">
+<table>
+<tr><th>Genre</th><th>DigiSmith fit</th></tr>
+<tr><td>Error messages / CLI output</td><td>Real current home: <code>@digismith/cli</code>'s own
+output</td></tr>
+<tr><td>Commit messages &amp; PR descriptions</td><td>Cross-references G.1's existing
+<code>commit-style.md</code> / <code>pr-descriptions.md</code> rather than restating them — STE100
+tightens the same surface for a second, compounding reason (reader clarity), doesn't compete with
+the existing rule</td></tr>
+<tr><td>Instructions for AI agents (prompts / SKILL.md / AGENTS.md)</td><td>Real current home:
+writing any DigiSmith <code>SKILL.md</code> is exactly this genre</td></tr>
+<tr><td>Runbooks / SOPs, incident reports, API changelogs, support macros, translation prep, UI
+copy</td><td>No current DigiSmith consumer — kept close to AminBlg's original text as forward-looking
+reference, flagged inline as such so the content's purpose is clear</td></tr>
+</table>
+</div>
+</section>
+
+<section id="index">
+<h2>Index entries</h2>
+<p>Three new entries under <code>global:</code> in <code>standards/index.yml</code>, written so
+<code>inject-standards</code>' relevance-matching can distinguish these from G.1's code/commit
+standards:</p>
+<pre><code>global:
+  ste100-writing:
+    description: Writing style for AI-generated prose artifacts (PR descriptions, comments, reports, SKILL.md) — concise, unambiguous, hedge-preserving; not for code or live conversation
+  ste100-word-swaps:
+    description: Slop-word to plain-word substitution table for AI-generated prose
+  ste100-use-cases:
+    description: Per-genre writing patterns (errors, PR descriptions, changelogs, agent instructions, etc.) for applying the ASD-STE100 writing standard
+</code></pre>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Wiring <code>generate-comment</code> / <code>report-implementation</code> to consult this
+standard — G.3.2, deferred (<code>backlog/ste100-artifact-integration-g3-2.md</code>)</li>
+<li>Propagating this standard into consuming repos' own <code>CLAUDE.md</code> — G.3.3, deferred
+(<code>backlog/ste100-consuming-repo-propagation-g3-3.md</code>)</li>
+<li>Portable output-style packaging and a mechanical linter — G.3.4, deferred
+(<code>backlog/ste100-portable-packaging-g3-4.md</code>)</li>
+<li>Expanding the word-swaps table beyond AminBlg's original list — deferred
+(<code>backlog/ste100-word-swaps-expansion.md</code>)</li>
+<li>Retroactively rewriting any existing DigiSmith prose (SKILL.md files, past PR descriptions) to
+comply — this design ships the standard, not a cleanup pass</li>
+</ul>
+</section>
+
+<section id="validation">
+<h2>Validation</h2>
+<p>No code changes — three markdown content files plus a YAML index update. Validation is:
+<code>standards/index.yml</code> still parses as valid YAML after the edit, the three new files
+exist at their stated paths, and <code>digismith:inject-standards</code>' existing Step 1 (read the
+index) picks up the new entries with no changes needed on its side.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/asd-ste100-writing-standard/design.html</footer>
+
+</body>
+</html>
