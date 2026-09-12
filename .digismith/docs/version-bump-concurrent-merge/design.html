@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-Finish Merge Pinning (W.4.1 hardening)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Post-Finish Merge Pinning (W.4.1 hardening)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-12</span>
+    <span>Map item: W.4.1 hardening — also diverges Y.1's <code>post-finish</code> firing contract</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — Pinning the merge in Option 1</a></li>
+    <li><a href="#s2">Section 2 — The firing contract</a></li>
+    <li><a href="#s3">Section 3 — Hooks 01 and 03 read the pin</a></li>
+    <li><a href="#s4">Section 4 — Scripts: pinned range, one invariant</a></li>
+    <li><a href="#s5">Section 5 — Error handling</a></li>
+    <li><a href="#s6">Section 6 — Docs and backlog</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>Every <code>post-finish</code> hook that reasons about "what did this merge bring in" derives
+its range from mutable global state: <code>01-version-bump.md</code> and Y.1.3's
+<code>03-history-update.md</code> both run <code>BASE_SHA=$(git rev-parse ORIG_HEAD)</code>, and
+their scripts compare against the live working tree (<code>versionChangedSince</code>) or scan
+<code>${base}..HEAD</code> (<code>findChangedReports</code>). Both hook files assert, in identical
+words, that <code>ORIG_HEAD</code> is "still valid here since nothing between the merge and this
+hook firing changes it." That assumption held for every merge whose hooks fired immediately — and
+broke the first time a hook was <em>delayed</em>.</p>
+<p><strong>The real instance (2026-09-11/12).</strong> Z's session merged (<code>ac1b451</code>,
+base <code>de7ac6b</code>) and deliberately paused its <code>post-finish</code> to avoid colliding
+with Y.1.3, which then merged on top (<code>bd67ecc</code>) and bumped <code>0.41.0-beta</code> →
+<code>0.42.0-beta</code> (<code>058212f</code>). Two merges, one bump. When Z's paused hooks
+eventually run on the shared checkout: <code>ORIG_HEAD</code> now reads Y's base
+(<code>ac1b451</code>), not Z's, and live <code>HEAD</code> includes Y's commits. Hook 01 reports
+<code>SKIPPED already changed by incoming branch</code> — a false reason (Z's branch never touched
+<code>plugin.json</code>). Hook 03 scans the wrong range and would either append Y.1.3's history
+entry a second time or miss Z's own. (Filed as
+<code>backlog/bump-plugin-version-concurrent-merge-gap.md</code> by the Y session.)</p>
+<p><strong>What this does and does not fix — the corrected premise.</strong> Content never
+strands in the version-keyed plugin cache: on this repo's single shared <code>main</code>
+checkout, Option 1 merges are sequential, so a later merge is always a descendant of an earlier
+one, a later bump+reinstall always covers earlier content, and the <em>last</em> merge in any
+burst always bumps (nothing lands after it to move the version). The earlier owning-lineage
+verdict's "stale cache on a coin flip" claim was wrong and is withdrawn here. The defect that
+remains is real but narrower: the hooks' stated contract (<code>SKIPPED</code> "means the incoming
+branch's own commits already changed the version") is not what the code checks, and a delayed hook
+reads another merge's base and range. For hook 01 that is a lying message and an extra or missing
+bump; for hook 03 it is a duplicated or missing history entry.</p>
+<p><strong>Why a naive fix doesn't work.</strong> Checking <code>git log &lt;base&gt;..HEAD --
+plugin.json</code> still uses live <code>HEAD</code>, which has moved too. And any single shared
+"latest merge" slot — <code>ORIG_HEAD</code>, or a lone <code>refs/digismith/post-finish/base</code>
+— is clobbered by the very next merge on the shared checkout, reproducing the bug one level up.
+<strong>The pin must be keyed per merge.</strong> The durable per-merge key already threaded
+through Option 1's bash blocks is <code>&lt;feature-branch&gt;</code> (hook 01's own
+<code>git push origin &lt;base-branch&gt;</code> works this way today), and it outlives
+<code>git branch -d</code>.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — Pinning the merge in Option 1</h2>
+<p><code>skills/finishing-a-development-branch/SKILL.md</code>, Option 1, around
+<code>git merge &lt;feature-branch&gt;</code> and before the test run — pinning only when the merge
+actually moved <code>HEAD</code>, so a conflicted merge or an <code>Already up to date</code>
+re-run never writes a wrong pin:</p>
+<pre><code>PRE_MERGE=$(git rev-parse HEAD)      # recorded in the same block, before the merge
+git merge &lt;feature-branch&gt;
+if [ "$(git rev-parse HEAD)" != "$PRE_MERGE" ]; then
+  git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/base "$PRE_MERGE"
+  git update-ref refs/digismith/post-finish/&lt;feature-branch&gt;/head HEAD
+fi</code></pre>
+<p>Pinning before the tests is deliberate: the merge commit is the thing being pinned, and if
+tests fail Option 1 stops anyway — the two refs are inert leftovers, harmless (see Section 5). A
+conflicted merge leaves <code>HEAD</code> unmoved and therefore pins nothing; Option 1 tells the
+agent to resolve, commit, and pin by hand from the merge commit's first parent (<code>HEAD^1</code>).
+After the <code>post-finish</code> hooks have all fired, Option 1 deletes both:</p>
+<pre><code>git update-ref -d refs/digismith/post-finish/&lt;feature-branch&gt;/base
+git update-ref -d refs/digismith/post-finish/&lt;feature-branch&gt;/head</code></pre>
+<p><strong>Why a git ref and not the alternatives.</strong> A shell variable cannot survive
+across the separate bash blocks the hooks run in — the exact cross-block-state-loss bug W.4.1
+already hit once (<code>e7ca1a7</code>). A file in the working tree lands on the <em>shared</em>
+<code>main</code> checkout every concurrent session reads, needs a gitignore entry, and shows up
+in other sessions' <code>git status</code>. A ref is atomic, invisible to the working tree, cannot
+be accidentally committed, survives branch deletion, and — keyed by branch — is never clobbered by
+another merge. No custom-ref precedent exists in this repo; that is fine, this is the git
+primitive for "remember a SHA."</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — The firing contract</h2>
+<p><code>skills/finishing-a-development-branch/fire-lifecycle-hook.md</code> today passes only the
+point name. It gains one documented contract clause, phrased point-agnostically: <em>the firing
+skill pins the merge range for the point at
+<code>refs/digismith/&lt;point&gt;/&lt;feature-branch&gt;/{base,head}</code> before firing, and any
+hook that reasons about "what this merge brought in" resolves its range from those refs — never
+from <code>ORIG_HEAD</code> or live <code>HEAD</code>.</em> The firing skill substitutes
+<code>&lt;feature-branch&gt;</code> into hook blocks from its own context, the same way it already
+substitutes <code>&lt;base-branch&gt;</code>.</p>
+<p><strong>Recovery when the branch name is not in context</strong> (a hook resumed after
+compaction, or run by hand): <code>git for-each-ref refs/digismith/&lt;point&gt;/</code> lists every
+pending pin. Exactly one pin → it is yours. Several → several delayed sessions are pending; stop
+and ask which branch is being finished rather than guess. None → see Section 5.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — Hooks 01 and 03 read the pin</h2>
+<p>Both <code>01-version-bump.md</code> and <code>03-history-update.md</code> replace
+<code>BASE_SHA=$(git rev-parse ORIG_HEAD)</code> with:</p>
+<pre><code>BASE_SHA=$(git rev-parse --verify refs/digismith/post-finish/&lt;feature-branch&gt;/base) || exit 1
+HEAD_SHA=$(git rev-parse --verify refs/digismith/post-finish/&lt;feature-branch&gt;/head) || exit 1</code></pre>
+<p>and pass <code>--base "$BASE_SHA" --head "$HEAD_SHA"</code> to their scripts. Each hook's
+"<code>ORIG_HEAD</code> is still valid here" paragraph is replaced with one stating the pinned-ref
+mechanism and the recovery rule from Section 2. Hook 01's <code>SKIPPED</code> semantics paragraph
+is corrected to what is now actually checked: <em>a <code>SKIPPED</code> result means this merge's
+own commits (<code>base..head</code>) changed <code>plugin.json</code> themselves — do nothing
+further.</em> Hook 03's <code>NOTHING (no report in range)</code> semantics are unchanged in
+wording; the range it refers to is now the pinned one.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — Scripts: pinned range, one invariant</h2>
+<p><strong><code>bump-plugin-version.ts</code>.</strong> <code>versionChangedSince(baseSha,
+headSha, pluginJsonRelPath, cwd)</code> compares <code>git show &lt;base&gt;:plugin.json</code>
+against <code>git show &lt;head&gt;:plugin.json</code> — never the live working tree.
+<code>bumpTypeSince(baseSha, headSha, cwd)</code> scans <code>base..head</code>. <code>main()</code>
+requires <code>--head</code> whenever <code>--base</code> is given (both or neither; one alone is a
+usage error, rejected through the shared <code>requireArgs</code> helper with a non-zero exit — the
+same path <code>update-history.ts</code> already takes for a missing <code>--base</code>). The bump itself still edits the live working tree and reads the
+<em>current</em> version to increment — the next version is "one past whatever <code>main</code>
+is at now," which is what a fresh cache key needs. The <code>SKIPPED</code> line becomes
+<code>SKIPPED this merge's own commits already changed plugin.json (base..head)</code>.</p>
+<p><strong><code>update-history.ts</code>.</strong> <code>findChangedReports(baseSha, headSha,
+cwd)</code> diffs <code>base..head</code>; <code>main()</code> requires <code>--head</code>
+alongside the already-required <code>--base</code>.</p>
+<div class="callout"><strong>The invariant this buys:</strong> every merge bumps exactly once
+unless its own commits already bumped, and every merge records exactly its own reports —
+regardless of when its hooks fire or what else has landed on the shared checkout since. A delayed
+hook now produces the <em>same</em> result it would have produced immediately. In the real
+instance above, Z's delayed hook 01 would <code>BUMP</code> (its range never touched
+<code>plugin.json</code>) — one more bump than today's accidental <code>SKIP</code>, which is
+harmless (a monotonic cache key incremented once more) and, unlike today, predictable.</div>
+</section>
+
+<section id="s5">
+<h2>Section 5 — Error handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td>Pin refs missing when a hook runs (fired by hand outside Option 1, or already deleted)</td>
+<td><code>git rev-parse --verify</code> fails → the hook stops with a clear message: no
+<code>post-finish</code> pin for <code>&lt;feature-branch&gt;</code>; hooks must be fired from
+<code>finishing-a-development-branch</code> Option 1, or pin by hand with the two
+<code>update-ref</code> lines. Fail loud — never fall back to <code>ORIG_HEAD</code>.</td></tr>
+<tr><td>Script gets <code>--base</code> without <code>--head</code> (or vice versa)</td>
+<td>Usage error — the shared <code>requireArgs</code> helper rejects it with a non-zero exit, the same
+path <code>update-history.ts</code> already takes for a missing <code>--base</code>.</td></tr>
+<tr><td>Several pins present at once (several delayed sessions)</td>
+<td>No ambiguity when <code>&lt;feature-branch&gt;</code> is known — each hook reads its own. When
+it isn't (Section 2 recovery), stop and ask; never pick one.</td></tr>
+<tr><td>Tests fail after the merge, Option 1 stops</td>
+<td>Refs remain, inert — nothing reads them until a hook for that branch fires. A re-run that
+reports <code>Already up to date</code> pins nothing and continues from them. If the fix needs new
+commits on the branch, Option 1 says to undo the local merge first (<code>git reset --hard</code>
+to the <code>base</code> pin) — guarded on <code>HEAD</code> still equalling the <code>head</code>
+pin, so another session's merge on top is never reset away.</td></tr>
+<tr><td><code>git merge</code> stops on conflicts</td>
+<td><code>HEAD</code> did not move, so nothing was pinned. Resolve, <code>git commit</code>, then
+pin by hand: <code>base</code> = <code>HEAD^1</code>, <code>head</code> = <code>HEAD</code>.</td></tr>
+<tr><td><code>git merge</code> reports <code>Already up to date</code></td>
+<td>An earlier run already merged this branch and stopped partway. Nothing is pinned now; that
+run's pins stand and are correct. Continue from where it stopped — never re-pin, since
+<code>ORIG_HEAD</code> now reflects the <code>git pull</code>, not this merge.</td></tr>
+<tr><td>A hook fails partway, firing halts before cleanup</td>
+<td>Same as above — refs left in place, inert, visible via <code>for-each-ref</code>.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="s6">
+<h2>Section 6 — Docs and backlog</h2>
+<ul>
+<li><code>backlog/bump-plugin-version-concurrent-merge-gap.md</code> — this pass applies it:
+retire the file (repo convention: delete once applied) and its <code>backlog/README.md</code>
+line. Its corrected analysis lives here, in this Background, so nothing is lost — including the
+explicit withdrawal of the earlier verdict's stale-cache claim.</li>
+<li><code>backlog/post-finish-hooks-direct-push-gap.md</code> — related, not retired: a direct-to-
+<code>main</code> push has no merge and therefore no pin. Update its note: hooks no longer read
+<code>ORIG_HEAD</code> at all, so the by-hand case now fails loudly with a named missing pin
+instead of silently using a stale base.</li>
+<li><code>MEMORY.md</code> — W.4.1's sentence gains a second "Hardened 2026-09-12" note (the
+first was the patch/minor pass); Y's row gains a note that <code>post-finish</code> now pins the
+merge range per branch and hooks 01/03 read it.</li>
+<li><code>vendored/PROVENANCE.md</code> — <code>finishing-a-development-branch</code>'s entry gains
+a further-diverged note for the pin/unpin steps.</li>
+<li>Process, not a file: the Y session is notified that this pass modifies its
+<code>03-history-update.md</code> and <code>update-history.ts</code> (done at design approval, per
+the owning-lineage rule).</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><code>bump-plugin-version.test.ts</code> (real git fixtures, no mocking — existing style,
+existing <code>initVersionFixtureRepo</code>/<code>commitMessage</code> helpers):
+<code>versionChangedSince(base, head)</code> → <code>false</code> when <code>plugin.json</code> is
+identical at both; <code>true</code> when a commit inside <code>base..head</code> changed it;
+<strong><code>false</code> when a commit <em>after</em> <code>head</code> changed it</strong> — the
+delayed-hook case, the test that proves the fix; <code>bumpTypeSince(base, head)</code> ignores
+commits after <code>head</code>; <code>main()</code> rejects <code>--base</code> without
+<code>--head</code>.</li>
+<li><code>update-history.test.ts</code>: <code>findChangedReports(base, head)</code> ignores a
+report added after <code>head</code>; <code>main()</code> rejects a missing <code>--head</code>.</li>
+<li>Option 1, the firing contract, and both hook files are agentic prose — verified by reading the
+diff, as every prior prose-only task in this lineage was.</li>
+<li>Live: this branch's own finish is the first end-to-end run of the new path — Option 1 pins,
+both hooks read the pins, bump and history entry land, refs are deleted afterward
+(<code>git for-each-ref refs/digismith/</code> empty at the end).</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Direct-to-<code>main</code> pushes (no merge, no pin) — stays with
+<code>backlog/post-finish-hooks-direct-push-gap.md</code>; this pass only makes that case fail
+loudly instead of silently.</li>
+<li>Any lifecycle point other than <code>post-finish</code>, and cross-repo hook sharing
+(<strong>Y2</strong>) — the contract clause is written point-agnostically so a second point can
+reuse it, but none is added.</li>
+<li>The version-keyed cache mechanism itself, and how <code>claude plugin install</code> behaves
+on an already-present version dir — irrelevant once every merge with new content gets its own
+bump.</li>
+<li><code>02-plugin-reinstall.md</code> — reads no range, unchanged.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/version-bump-concurrent-merge/design.html</footer>
+
+</body>
+</html>

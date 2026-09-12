@@ -174,15 +174,53 @@ cd "$MAIN_ROOT"
 # Merge first — verify success before removing anything
 git checkout <base-branch>
 git pull
+PRE_MERGE=$(git rev-parse HEAD)
 git merge <feature-branch>
+
+# Pin this merge's range for the post-finish hooks (see fire-lifecycle-hook.md,
+# "Merge-range pins") — only if the merge actually moved HEAD, so a conflicted
+# or already-merged run never writes a wrong pin. Keyed by branch, so concurrent
+# merges on a shared checkout never clobber each other's pins.
+if [ "$(git rev-parse HEAD)" != "$PRE_MERGE" ]; then
+  git update-ref refs/digismith/post-finish/<feature-branch>/base "$PRE_MERGE"
+  git update-ref refs/digismith/post-finish/<feature-branch>/head HEAD
+fi
 
 # Verify tests on merged result
 <test command>
 ```
 
+If `git merge` stops on conflicts, nothing was pinned (`HEAD` did not move).
+Resolve the conflicts and `git commit` the merge, then pin by hand before
+running `<test command>` — the merge commit's first parent is the pre-merge
+tip:
+
+```bash
+git update-ref refs/digismith/post-finish/<feature-branch>/base HEAD^1
+git update-ref refs/digismith/post-finish/<feature-branch>/head HEAD
+```
+
+If `git merge` reports `Already up to date`, an earlier Option 1 run already
+merged this branch and stopped partway (failed tests, a hook that failed
+before the unpin step). Nothing was pinned just now, so that run's pins are
+still in place and still correct — `git for-each-ref
+refs/digismith/post-finish/<feature-branch>/` shows them. Continue from
+wherever that run stopped. Never re-pin here: `ORIG_HEAD` now reflects the
+`git pull` above, not this branch's merge.
+
 If tests fail on the merged result: stop, leave the worktree and branch in
-place, and investigate — nothing has been pushed, so the merge is local
-and recoverable.
+place, and investigate — nothing has been pushed, so the merge is local and
+recoverable. The two pin refs stay in place; nothing reads them until a
+`post-finish` hook for this branch fires. If the fix needs new commits on
+`<feature-branch>`, undo the local merge first, so the re-run merges and pins
+the full range in one go — but only while `HEAD` is still this merge's own
+pinned `head`. If it is not, another session has since merged on top of your
+unpushed merge: stop and ask instead of resetting.
+
+```bash
+[ "$(git rev-parse HEAD)" = "$(git rev-parse refs/digismith/post-finish/<feature-branch>/head)" ] && \
+  git reset --hard refs/digismith/post-finish/<feature-branch>/base
+```
 
 Once the merged result is green, push `<base-branch>` to origin:
 
@@ -205,7 +243,18 @@ git branch -d <feature-branch>
 Finally, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
 DigiSmith's own included — a repo with no `.digismith/hooks/post-finish/`
-folder simply has nothing to fire.
+folder simply has nothing to fire. Hooks that reason about "what did this
+merge bring in" read the two pin refs written right after `git merge`
+above — never `ORIG_HEAD` or the live `HEAD`, both of which another
+session's merge on the same checkout may have moved by the time a hook
+actually runs.
+
+Once every hook has fired, delete the pins:
+
+```bash
+git update-ref -d refs/digismith/post-finish/<feature-branch>/base
+git update-ref -d refs/digismith/post-finish/<feature-branch>/head
+```
 
 ### Option 2: Push and Create PR
 
@@ -311,3 +360,4 @@ logic.
 | "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request. |
 | "A saved preference means I can skip the follow-up ask" | The first-run "remember this?" question (Step 4.5) is still required on every fresh menu answer — a saved preference is written only by explicit consent or an explicit "always" instruction, never inferred silently. |
 | "The PR was just created, they'd obviously want a Teams message too" | Always ask first — this is an offer, never an automatic action. Declining is a normal outcome, not something to talk them out of. |
+| "The merge was seconds ago — the hook can just read `ORIG_HEAD`" | Another session's merge on the same checkout moves `ORIG_HEAD` and `HEAD` without warning, and hooks get paused. Hooks read this merge's pin refs, nothing else. |

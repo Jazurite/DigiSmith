@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-Finish Merge Pinning (W.4.1 hardening) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Post-Finish Merge Pinning (W.4.1 hardening) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-12</span>
+    <span>Map item: <strong>W.4.1</strong></span>
+    
+    <span>Commit range: <code>252b148..3ca9f84</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Made every range-reading <code>post-finish</code> hook read a per-branch pinned merge range instead of <code>ORIG_HEAD</code> and the live tree, so a delayed hook produces exactly the result an immediate one would. <code>finishing-a-development-branch</code> Option 1 records the pre-merge tip, merges, and — only if the merge actually moved <code>HEAD</code> — writes two git refs, <code>refs/digismith/post-finish/&lt;feature-branch&gt;/base</code> and <code>.../head</code>, deleting them after the hooks fire; <code>fire-lifecycle-hook.md</code> documents that contract point-agnostically under "Merge-range pins". Hooks <code>01</code> and <code>03</code> read those refs and pass <code>--base</code>/<code>--head</code> to their scripts; <code>bump-plugin-version.ts</code> and <code>update-history.ts</code> reason only about <code>base..head</code>, never the working tree, <code>HEAD</code>, or <code>ORIG_HEAD</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4><code>bump-plugin-version.ts</code> reasons only about the pinned <code>base..head</code></h4><p><code>versionChangedSince(base, head, relPath)</code> compares the committed <code>plugin.json</code> version at both SHAs and <code>bumpTypeSince(base, head)</code> scans <code>base..head</code>; the CLI requires <code>--base</code> and <code>--head</code> together and prints the corrected <code>SKIPPED</code> wording.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4><code>update-history.ts</code> scans <code>base..head</code></h4><p><code>findChangedReports(base, head)</code> returns the <code>.digismith/docs/*/report.html</code> files added or modified in the pinned range; the CLI requires both <code>--base</code> and <code>--head</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Option 1 pins the merge; the firing contract documents it</h4><p><code>finishing-a-development-branch</code> Option 1 writes <code>refs/digismith/post-finish/&lt;feature-branch&gt;/{base,head}</code> around <code>git merge</code> and deletes both after the hooks fire; <code>fire-lifecycle-hook.md</code> gains the point-agnostic "Merge-range pins" contract.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Hooks 01 and 03 read the pins</h4><p>Both stock hooks resolve <code>BASE_SHA</code>/<code>HEAD_SHA</code> from the pin refs and call their scripts with <code>--base</code>/<code>--head</code>, stopping loudly on a missing pin.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Docs and backlog</h4><p>The applied backlog item is retired, the related direct-push item annotated, and <code>MEMORY.md</code>'s W and Y rows plus <code>vendored/PROVENANCE.md</code> record the pass.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: <code>bump-plugin-version.ts</code> reasons only about the pinned <code>base..head</code></td><td><code>versionChangedSince</code> now diffs <code>git show base:</code> against <code>git show head:</code> — never the working tree; <code>bumpTypeSince</code> scans <code>base..head</code>; <code>main()</code> enforces both-or-neither via the shared <code>requireArgs</code> before touching any file. Ten new real-git-fixture tests, including the delayed-hook case and an end-to-end CLI run of the invariant.</td><td><span class="status-ok">Approved, clean</span></td><td>test helpers <code>commitVersion</code> (flat <code>plugin.json</code>) and <code>commitPluginVersion</code> (<code>.claude-plugin/plugin.json</code>) are similarly named for two fixture shapes — both brief-prescribed; note if a third fixture variant ever appears</td></tr>
+    <tr><td>Task 2: <code>update-history.ts</code> scans <code>base..head</code></td><td><code>findChangedReports</code> diffs <code>base..head</code> instead of <code>base..HEAD</code>; <code>requireArgs</code> now demands <code>--head</code> too. Tests cover a report added after <code>head</code> (ignored) and the missing-flag rejection.</td><td><span class="status-ok">Approved, clean</span></td><td>—</td></tr>
+    <tr><td>Task 3: Option 1 pins the merge; the firing contract documents it</td><td>Option 1 pins the merge range and unpins after firing; a Common Rationalizations row guards against reading <code>ORIG_HEAD</code>; <code>fire-lifecycle-hook.md</code>'s new "Merge-range pins" section covers fail-loud, branch-name recovery via <code>git for-each-ref</code>, and leftover pins. Git mechanics proven in a scratch repo.</td><td><span class="status-ok">Approved, clean</span></td><td>implementer report's per-step line-number citations drift from final file lines — report-accuracy nit, no diff defect</td></tr>
+    <tr><td>Task 4: Hooks 01 and 03 read the pins</td><td>Pin reads and the script call share one bash block in each hook; every <code>ORIG_HEAD</code> read is gone (only "never substitute" warnings remain); hook 01's <code>SKIPPED</code> semantics now match what the code checks. Missing-pin path smoke-tested.</td><td><span class="status-ok">Approved, clean</span></td><td>brief-mandated MISSING PIN paragraph is a dense reduced relative clause — plan wording nit, unambiguous once parsed</td></tr>
+    <tr><td>Task 5: Docs and backlog</td><td>Deleted <code>backlog/bump-plugin-version-concurrent-merge-gap.md</code> and its README line; added a dated update to <code>post-finish-hooks-direct-push-gap.md</code>; one inserted passage each in <code>MEMORY.md</code>'s W and Y rows; <code>PROVENANCE.md</code>'s <code>finishing-a-development-branch</code> entry extended.</td><td><span class="status-ok">Approved, clean</span></td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 2 Important findings (both prose gaps in Option 1's merge-range pinning, verified in scratch repos), fixed in one fix wave and confirmed ADDRESSED by a scoped re-review; 3 Minor findings fixed or deferred with rulings; the re-review's 2 residual Minor documentation nits parked with rulings. Attribution check clean; <code>pnpm test</code> 345/345.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>A conflicted <code>git merge</code> still ran the two pin lines, recording <code>base == head</code>; after resolving and committing, the head pin was stale and the hooks' scripts ran with <code>--base X --head X</code> — a silent minor bump / <code>NOTHING</code> with exit 0.</td><td>Fixed (<code>5ec02ef</code>): Option 1 records the pre-merge tip in the same bash block and pins only if the merge moved <code>HEAD</code>; a conflicted merge pins nothing, and the prose says to resolve, commit, then pin by hand from the merge commit's first parent (<code>HEAD^1</code>). Design §1 and the §5 table updated to match.</td></tr>
+    <tr><td>Important</td><td>"The next Option 1 run for the same branch overwrites the pins" was false: a re-run after a partly-finished run reports <code>Already up to date</code>, leaves <code>ORIG_HEAD</code> untouched, and would have re-pinned a wrong base; re-merging on top after failed tests covered only the delta.</td><td>Fixed (<code>5ec02ef</code>): <code>SKILL.md</code>, <code>fire-lifecycle-hook.md</code>, and the design's §5 table now say an <code>Already up to date</code> re-run pins nothing and continues from the existing pins, and that a failed-tests re-run undoes the local merge first — <code>git reset --hard</code> to the <code>base</code> pin, guarded on <code>HEAD</code> still equalling the <code>head</code> pin, otherwise stop and ask.</td></tr>
+    <tr><td>Minor</td><td>Both hooks' <code>/head</code> MISSING PIN message said "same as above", but when only the head pin is missing nothing precedes it on stderr.</td><td>Fixed (<code>3ca9f84</code>): self-contained message naming the base-present/head-missing state and pointing at "Merge-range pins".</td></tr>
+    <tr><td>Recommendation</td><td>Document the empty-range behavior of <code>bump-plugin-version.ts</code> (<code>--base X --head X</code>) with a test.</td><td>Done (<code>3ca9f84</code>): new <code>main (CLI)</code> test asserts <code>BUMPED 0.23.0-beta -&gt; 0.24.0-beta</code>, never <code>SKIPPED</code>.</td></tr>
+    <tr><td>Minor</td><td><code>update-history.ts</code> calls <code>requireArgs</code> outside its <code>try</code>, so a missing <code>--head</code> dies with a Node stack trace instead of the one-line error <code>bump-plugin-version.ts</code> produces.</td><td>Deferred: the plan explicitly left that pre-existing placement unchanged and the test asserts non-zero exit plus the message; a one-line move on the next touch of this file (<code>backlog/history-update-hook-hardening.md</code> territory).</td></tr>
+    <tr><td>Minor</td><td><code>backlog/history-update-hook-hardening.md:32</code> still quotes Y.1.3's old <code>ORIG_HEAD..HEAD</code> rationale.</td><td>Left: it is analysis, not an instruction, and its conclusion (no dedup needed) is only strengthened by pinning.</td></tr>
+    <tr><td>Minor (re-review)</td><td>Design §5's "A hook fails partway" row says "Same as above" and two rows were inserted above it, loosening the antecedent.</td><td>Parked — ruling: real but non-functional in a reference document; the restated content is still true. Defer to the next touch of the error table.</td></tr>
+    <tr><td>Minor (re-review)</td><td><code>SKILL.md</code>'s sentence "read the two pin refs written right after <code>git merge</code> above" is now a loose generalization — pins may be by-hand or carried over from an earlier run.</td><td>Parked — ruling: hooks read the refs regardless of how they were written; no behavioral effect; leave.</td></tr>
+    <tr><td>Out of scope (re-review)</td><td><code>plan.md</code> still quotes the pre-fix "same as above" hook message.</td><td>Left: the plan is a historical planning artifact, not the shipped mechanism.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">1844c98</span> feat(hooks): pin version-bump reasoning to --base/--head instead of the live tree</li>
+    <li><span class="sha">d20833b</span> feat(hooks): scan update-history's report range as the pinned base..head</li>
+    <li><span class="sha">ca8a9b7</span> feat(finishing): pin each merge's range for post-finish hooks</li>
+    <li><span class="sha">f06100f</span> feat(hooks): read the pinned merge range instead of ORIG_HEAD</li>
+    <li><span class="sha">4f59f5f</span> docs: record W.4.1 merge pinning and retire the concurrent-merge backlog item</li>
+    <li><span class="sha">5ec02ef</span> fix(finishing): pin only when the merge moves HEAD; document conflict and re-run paths</li>
+    <li><span class="sha">3ca9f84</span> fix(hooks): self-contained head-pin message; document empty-range bump behavior</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/version-bump-concurrent-merge/report.html</footer>
+
+</body>
+</html>

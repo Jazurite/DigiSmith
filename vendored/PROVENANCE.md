@@ -26,7 +26,11 @@ Cloned: 2026-08-20
   `.digismith/hooks/post-finish/` and `fire-lifecycle-hook.md` in this skill's own
   folder. W.4.1's version-bump (previously wired directly into this file) is now
   the first stock hook there, alongside a new plugin-cache-reinstall hook. See
-  DigiSmith `MEMORY.md` map items W and Y.
+  DigiSmith `MEMORY.md` map items W and Y. **Further diverged by W.4.1's merge-pinning pass**
+  (2026-09-12): Option 1 now pins the merge range as
+  `refs/digismith/post-finish/<feature-branch>/{base,head}` right after `git merge` and deletes
+  both pins after the `post-finish` hooks fire; `fire-lifecycle-hook.md` gained the "Merge-range
+  pins" contract those hooks read.
 - **brainstorming** — map item **W.5**, activated 2026-09-04 (alongside
   `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
   to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream

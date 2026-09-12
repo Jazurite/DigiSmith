@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   findChangedReports,
   parseReport,
@@ -264,14 +265,24 @@ function initHistoryFixtureRepo(dir: string): void {
   spawnSync("git", ["commit", "-q", "-m", "base commit"], { cwd: dir });
 }
 
+function revParseHead(dir: string): string {
+  return spawnSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).stdout.trim();
+}
+
+const SCRIPT_PATH = fileURLToPath(new URL("./update-history.ts", import.meta.url));
+
+function runScript(cwd: string, args: string[]) {
+  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
+}
+
 describe("findChangedReports", () => {
   it("returns an empty array when no report.html changed", () => {
     const dir = makeTmpDir("update-history-repo-");
     try {
       initHistoryFixtureRepo(dir);
-      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).stdout.trim();
+      const baseSha = revParseHead(dir);
 
-      expect(findChangedReports(baseSha, dir)).toEqual([]);
+      expect(findChangedReports(baseSha, revParseHead(dir), dir)).toEqual([]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -281,14 +292,15 @@ describe("findChangedReports", () => {
     const dir = makeTmpDir("update-history-repo-");
     try {
       initHistoryFixtureRepo(dir);
-      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).stdout.trim();
+      const baseSha = revParseHead(dir);
 
       const reportPath = path.join(dir, ".digismith", "docs", "sample-feature", "report.html");
       writeReportFixture(reportPath);
       spawnSync("git", ["add", "-A"], { cwd: dir });
       spawnSync("git", ["commit", "-q", "-m", "add report"], { cwd: dir });
+      const headSha = revParseHead(dir);
 
-      expect(findChangedReports(baseSha, dir)).toEqual([".digismith/docs/sample-feature/report.html"]);
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([".digismith/docs/sample-feature/report.html"]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -298,13 +310,72 @@ describe("findChangedReports", () => {
     const dir = makeTmpDir("update-history-repo-");
     try {
       initHistoryFixtureRepo(dir);
-      const baseSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).stdout.trim();
+      const baseSha = revParseHead(dir);
 
       fs.writeFileSync(path.join(dir, "README.md"), "changed");
       spawnSync("git", ["add", "-A"], { cwd: dir });
       spawnSync("git", ["commit", "-q", "-m", "unrelated change"], { cwd: dir });
+      const headSha = revParseHead(dir);
 
-      expect(findChangedReports(baseSha, dir)).toEqual([]);
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a report added after head — the delayed-hook case", () => {
+    const dir = makeTmpDir("update-history-repo-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+
+      fs.writeFileSync(path.join(dir, "README.md"), "this merge's own change");
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "this merge's own commit"], { cwd: dir });
+      const headSha = revParseHead(dir);
+
+      const reportPath = path.join(dir, ".digismith", "docs", "sample-feature", "report.html");
+      writeReportFixture(reportPath);
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "another session's later merge adds a report"], { cwd: dir });
+
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("main (CLI)", () => {
+  it("rejects a missing --head", () => {
+    const dir = makeTmpDir("update-history-cli-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+
+      const result = runScript(dir, ["--base", baseSha]);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("missing required flag: --head");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports NOTHING for a pinned range with no report in it", () => {
+    const dir = makeTmpDir("update-history-cli-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+      fs.writeFileSync(path.join(dir, "README.md"), "changed");
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "unrelated change"], { cwd: dir });
+      const headSha = revParseHead(dir);
+
+      const result = runScript(dir, ["--base", baseSha, "--head", headSha]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("NOTHING (no report in range)");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

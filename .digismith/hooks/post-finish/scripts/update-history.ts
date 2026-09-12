@@ -3,14 +3,16 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "../../../../scripts/cli-args.ts";
 
-export function findChangedReports(baseSha: string, cwd: string = process.cwd()): string[] {
+// Diffs the pinned merge range only — never `HEAD`, which another session's merge may have
+// moved since this merge landed.
+export function findChangedReports(baseSha: string, headSha: string, cwd: string = process.cwd()): string[] {
   const result = spawnSync(
     "git",
-    ["diff", "--name-only", "--diff-filter=AM", `${baseSha}..HEAD`, "--", ".digismith/docs/*/report.html"],
+    ["diff", "--name-only", "--diff-filter=AM", `${baseSha}..${headSha}`, "--", ".digismith/docs/*/report.html"],
     { cwd, encoding: "utf8" },
   );
   if (result.status !== 0) {
-    throw new Error(`git diff failed for ${baseSha}..HEAD: ${result.stderr}`);
+    throw new Error(`git diff failed for ${baseSha}..${headSha}: ${result.stderr}`);
   }
   return result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
 }
@@ -120,11 +122,11 @@ export function bumpLastUpdated(historyHtml: string, todayIso: string): string {
 
 export function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  requireArgs(args, ["base"]);
+  requireArgs(args, ["base", "head"]);
 
   try {
     const cwd = process.cwd();
-    const changedReports = findChangedReports(args.base, cwd);
+    const changedReports = findChangedReports(args.base, args.head, cwd);
 
     if (changedReports.length === 0) {
       console.log("NOTHING (no report in range)");
