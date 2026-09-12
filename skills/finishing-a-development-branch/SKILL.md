@@ -176,13 +176,21 @@ git checkout <base-branch>
 git pull
 git merge <feature-branch>
 
+# Pin this merge's range for the post-finish hooks (see fire-lifecycle-hook.md,
+# "Merge-range pins"). Keyed by branch, so concurrent merges on a shared
+# checkout never clobber each other's pins.
+git update-ref refs/digismith/post-finish/<feature-branch>/base ORIG_HEAD
+git update-ref refs/digismith/post-finish/<feature-branch>/head HEAD
+
 # Verify tests on merged result
 <test command>
 ```
 
 If tests fail on the merged result: stop, leave the worktree and branch in
 place, and investigate — nothing has been pushed, so the merge is local
-and recoverable.
+and recoverable. The two pin refs written above are inert leftovers in
+that case: nothing reads them until a `post-finish` hook for this branch
+fires, and the next Option 1 run for the same branch overwrites them.
 
 Once the merged result is green, push `<base-branch>` to origin:
 
@@ -205,7 +213,18 @@ git branch -d <feature-branch>
 Finally, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
 DigiSmith's own included — a repo with no `.digismith/hooks/post-finish/`
-folder simply has nothing to fire.
+folder simply has nothing to fire. Hooks that reason about "what did this
+merge bring in" read the two pin refs written right after `git merge`
+above — never `ORIG_HEAD` or the live `HEAD`, both of which another
+session's merge on the same checkout may have moved by the time a hook
+actually runs.
+
+Once every hook has fired, delete the pins:
+
+```bash
+git update-ref -d refs/digismith/post-finish/<feature-branch>/base
+git update-ref -d refs/digismith/post-finish/<feature-branch>/head
+```
 
 ### Option 2: Push and Create PR
 
@@ -311,3 +330,4 @@ logic.
 | "The push was rejected — force-push will fix it" | A rejected push means the remote moved. Investigate; force-push only on your human partner's explicit request. |
 | "A saved preference means I can skip the follow-up ask" | The first-run "remember this?" question (Step 4.5) is still required on every fresh menu answer — a saved preference is written only by explicit consent or an explicit "always" instruction, never inferred silently. |
 | "The PR was just created, they'd obviously want a Teams message too" | Always ask first — this is an offer, never an automatic action. Declining is a normal outcome, not something to talk them out of. |
+| "The merge was seconds ago — the hook can just read `ORIG_HEAD`" | Another session's merge on the same checkout moves `ORIG_HEAD` and `HEAD` without warning, and hooks get paused. Hooks read this merge's pin refs, nothing else. |
