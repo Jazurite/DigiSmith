@@ -2,6 +2,7 @@
   "name": "@digismith/cli",
   "version": "0.1.0",
   "description": "DigiSmith's command line — Depot's distribution surface",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=24"
