@@ -6,7 +6,7 @@ than just this" aside, deliberately deferred so it doesn't block G.3.1's initial
 ## What this covers
 
 G.3.1 ships `standards/global/ste100-word-swaps.md` adopted whole from AminBlg/SimpleEnglish's
-`references/word-swaps.md` (58 rows), unchanged. Jack's aside: that table is a reasonable starting
+`references/word-swaps.md` (52 rows), unchanged. Jack's aside: that table is a reasonable starting
 point, not the ceiling — DigiSmith could grow it over time with slop-word entries observed
 directly in its own history (real AI-generated PR descriptions, JIRA/Teams comments, report prose)
 rather than staying frozen at whatever AminBlg happened to catalog.
