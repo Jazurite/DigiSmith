@@ -58,6 +58,48 @@ designed case, e.g. a feature that edits `plugin.json` directly).
   reading hook output isn't left wondering whether their merge's version
   was silently dropped.
 
+## Owning-lineage verdict (W, 2026-09-12)
+
+**Real defect, not a messaging issue.** `01-version-bump.md`'s own contract says a `SKIPPED`
+result "means the incoming branch's own commits already changed the version" — but
+`versionChangedSince` never inspects the incoming branch's commits. It compares the version at
+`baseSha` against the current working tree, which conflates two different causes: *my* range
+bumped it, or *someone else's* already-landed merge bumped it in between. The doc promises a
+range check; the code does a snapshot check.
+
+**Why the outcome depends on race ordering, not on correctness.** The plugin cache is
+version-keyed (`02-plugin-reinstall.md` writes a new version dir and flushes non-current ones).
+Two merges close together:
+
+- *Ordering A (what happened here):* the second-finishing session's bump+reinstall lands
+  **after** the first's content is already on `main` — the fresh key's cache includes both.
+  Correct, by luck. Confirmed for this instance: two merges (`ac1b451` Z, `bd67ecc` Y.1.3), one
+  bump (`058212f`, 0.41→0.42); the installed `0.42.0-beta/` contains Y.1.3's
+  `03-history-update.md`; nothing is stale.
+- *Ordering B (the dangerous one):* a merge lands **after** another's bump+reinstall, its
+  post-finish sees the version already moved and `SKIPPED`s, the key never changes, and there is
+  no bump left to refresh the cache with that merge's content. Whether `claude plugin install`
+  re-fetches an already-present version dir is CLI behavior the hook doesn't control — so this is
+  exactly the stale-cache failure W.4.1 exists to prevent, gated on a coin flip.
+
+**Fix direction (the second "still worth examining" bullet above, confirmed):**
+`versionChangedSince` should ask "did *this range's own commits* touch
+`.claude-plugin/plugin.json`?" — e.g. `git log <base>..HEAD -- .claude-plugin/plugin.json`
+non-empty, or `git diff --quiet` over the range on that path — not "is the version different
+from the snapshot at base." That flips the default to the safe side: **bump unless my own range
+touched the file.** A double bump in the race case is harmless (a monotonic key incremented
+twice); a missed bump is a stale cache. It also makes the CLI's unchanged-version reinstall
+behavior moot — any merge that lands new content gets a fresh key regardless of what landed
+before it.
+
+**Size:** one function plus two tests — the existing `initVersionFixtureRepo`/`commitMessage`
+fixtures already cover the shape; the current "returns true when the working tree's version
+differs" test re-points to "returns true when the range's own commits touched `plugin.json`", plus
+a new "returns false when a bump landed before `base..HEAD` but this range didn't touch it." Plus
+one line in `01-version-bump.md` so the `SKIPPED` wording matches what's actually being checked.
+Same shape as W.4.1's patch/minor hardening pass (`version-bump-patch-minor`). Not applied here —
+Jack's call on timing, per this file's holding-pen disposition.
+
 ## Why not applied yet
 
 Surfaced live, mid-merge, via a cross-session heads-up — writing it down
