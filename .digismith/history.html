@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-11</span>
+    <span>Last updated: 2026-09-12</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1101,6 +1101,20 @@
       a verified tarball and a working global install from it on this Windows machine. See
       <a href="docs/digismith-cli-npm/design.html">design</a> and
       <a href="docs/digismith-cli-npm/plan.md">plan</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-12</div>
+      <h4>G.3.1 — ASD-STE100 Writing Standard</h4>
+      <p>Adds three new content-only standards files — the ASD-STE100 writing rules, a word-swap
+  table, and a per-genre use-cases guide — to DigiSmith's <code>standards/</code> library,
+  indexed the same way as every other standard. The three markdown files live under
+  <code>standards/global/</code>, with three new entries in <code>standards/index.yml</code>;
+  no code or skill changes were needed, since <code>digismith:inject-standards</code> already
+  knows how to find, suggest, and inject anything listed in the index. Followed the full
+  Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:executing-plans</code> (1 task, executed directly in this session, with a
+  self-check before moving on). See <a href="docs/asd-ste100-writing-standard/design.html">design</a>, <a href="docs/asd-ste100-writing-standard/plan.md">plan</a>, and <a href="docs/asd-ste100-writing-standard/report.html">report</a>.</p>
     </div>
 
   </div>
