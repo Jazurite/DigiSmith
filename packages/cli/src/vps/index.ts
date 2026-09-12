@@ -1,12 +1,11 @@
-import { pathToFileURL } from "node:url";
 import { loadVpsConfig, DEFAULT_VPS_CONFIG_PATH, type VpsConfig } from "./config.ts";
 import { runStatusChecks, formatStatusReport, isFullyHealthy } from "./status.ts";
 import { runConnect } from "./connect.ts";
 
-export function main(): void {
-  const subcommand = process.argv[2];
+export function run(argv: string[]): void {
+  const subcommand = argv[0];
   if (subcommand !== "status" && subcommand !== "connect") {
-    console.error("usage: node --experimental-strip-types scripts/vps-session/cli.ts <status|connect>");
+    console.error("usage: digismith vps <status|connect>");
     process.exitCode = 1;
     return;
   }
@@ -34,8 +33,4 @@ export function main(): void {
   }
 
   runConnect(config, DEFAULT_VPS_CONFIG_PATH);
-}
-
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  main();
 }

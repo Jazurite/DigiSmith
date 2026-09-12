@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DigiSmith CLI on npm (V.4) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DigiSmith CLI on npm (V.4) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-12</span>
+    <span>Map item: <strong>V.4</strong></span>
+
+    <span>Commit range: <code>f2debf8..ca18c54</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Publishes <code>@digismith/cli</code>, an npm package whose <code>digismith</code>/<code>dg</code> binaries run V.3's <code>vps status|connect</code> commands from any machine, with the vps-session code relocated in as the first command group. Built as a zero-runtime-dependency workspace package with a thin <code>src/index.ts</code> dispatcher, and <code>src/vps/</code> moved verbatim from <code>scripts/vps-session/</code>. The original design shipped raw <code>.ts</code> sources with no build step, on the assumption that Node natively strips types — that premise did not survive a real install: Node unconditionally refuses to type-strip any <code>.ts</code> file resolving under a <code>node_modules</code> directory (<code>ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING</code>, confirmed live and independently reproduced), and every package manager installs a package there by definition. The design and plan were amended mid-implementation to a <code>tsc</code> build to <code>dist/</code>, with the bin pointing at compiled JS; the checkout-path invocation, source layout, and dispatcher logic were unaffected. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Relocate vps-session into the CLI package</h4><p><code>packages/cli/src/vps/index.ts</code> exports <code>run(argv: string[]): void</code> — <code>argv</code> is the argument list after the group name, so <code>argv[0]</code> is <code>"status"</code> or <code>"connect"</code>. The other five modules and their tests moved byte-for-byte via <code>git mv</code>.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>The <code>@digismith/cli</code> package</h4><p>The published package itself: <code>package.json</code>, <code>tsconfig.build.json</code>, the <code>src/index.ts</code> dispatcher (<code>GROUPS</code>, <code>usage()</code>, <code>resolveGroup()</code>, <code>readVersion()</code>), its tests, and the README — verified end-to-end with a real <code>pnpm pack</code> and a real global install/uninstall on the build machine.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Docs — Depot skill, map row, history</h4><p>Repoints <code>skills/depot/SKILL.md</code>'s VPS Session section at the new invocation path, extends <code>MEMORY.md</code>'s V row with V.4, and records V.4 in <code>.digismith/history.html</code>.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Relocate vps-session into the CLI package as the <code>vps</code> group</td><td><code>packages/cli/src/vps/</code> + tests (<code>1d347d4</code>)</td><td><span class="status-ok">Approved, clean</span></td><td>—</td></tr>
+    <tr><td>2. The <code>@digismith/cli</code> package — manifest, build config, dispatcher, README, and packaging verification</td><td><code>packages/cli/{package.json,tsconfig.build.json,README.md,src/index.ts}</code> + test (<code>fb6c72c</code>, fix <code>0dc1d94</code>)</td><td><span class="status-fixed">Approved after 1 fix round</span> — a mid-task design reversal (see Summary) plus one post-review hardening fix</td><td><ul><li><code>engines.node&gt;=24</code> is now a vestige of the abandoned no-build premise — the compiled output (ES2022, <code>node:</code> builtins only) no longer strictly needs it; a later relaxation is free</li><li>no <code>prepare</code> script — a git-URL install would ship a broken bin since <code>dist/</code> is gitignored and only <code>prepack</code> rebuilds; not reachable today (this repo's root is private with no <code>bin</code>, no subdirectory install support), so out of the stated use case</li><li><code>.gitignore</code>'s <code>dist/</code> line is unanchored (matches any <code>dist/</code> at any depth in the monorepo, not just <code>packages/cli/dist/</code>); harmless today, zero collisions found</li></ul></td></tr>
+    <tr><td>3. Docs — Depot skill, map row, history</td><td><code>skills/depot/SKILL.md</code>, <code>MEMORY.md</code>, <code>.digismith/history.html</code> (<code>69e295d</code>)</td><td><span class="status-ok">Approved, clean</span></td><td><ul><li><code>skills/depot/SKILL.md</code> Overview bullet reads awkwardly after the plan's literal substring swap (nested parenthetical looks like two stacked map-item citations); plan-mandated wording, not an implementer deviation</li></ul></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes — 0 Critical, 1 Important, 3 Minor. The reviewer independently re-verified the design-reversal fix from the actual tarball and compiled output (not the implementer's report) and confirmed it genuinely eliminates the <code>.ts</code>-under-<code>node_modules</code> condition rather than relocating it. The one Important finding was parked per a direct ruling; one Minor was fixed directly as a factual docs correction; the remaining two Minors ride as cosmetic.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>packages/cli/package.json</code> has no <code>license</code> field, and there is no <code>LICENSE</code> file anywhere in the repo — the first package here with <code>publishConfig.access: "public"</code>. Plan-mandated: the design's own <code>package.json</code> block (rendered "in full") omits it too, and the implementer reproduced it faithfully — a plan/design gap, not an implementer deviation.</td><td>Parked — ruling: skip for now, revisit before the first real <code>pnpm publish</code> (npm will warn again at that point if it's still missing)</td></tr>
+    <tr><td>Minor</td><td>Ship-date drift in the permanent record: <code>.digismith/history.html</code>'s V.4 timeline entry and map-row date, and <code>MEMORY.md</code>'s V.4 entry, all said 2026-09-11 (when the design and plan were authored) though the implementation actually landed 2026-09-12; <code>MEMORY.md</code>'s V.3 row also claimed V.4 relocated its code "the same day," which was no longer true.</td><td><span class="status-fixed">Fixed</span> — corrected directly as a factual docs correction (<code>ca18c54</code>); the design doc's own <code>Date: 2026-09-11</code> header was left untouched since it genuinely was written that day</td></tr>
+    <tr><td>Minor</td><td><code>skills/depot/SKILL.md</code>'s Overview bullet reads awkwardly after the plan's literal substring swap — a nested parenthetical makes it look like two map-item citations are stacked rather than one qualifying the other.</td><td>Parked — cosmetic, no factual error; plan-mandated wording, not an implementer deviation</td></tr>
+    <tr><td>Minor</td><td><code>.digismith/docs/digismith-cli-npm/design.html</code>'s Package Layout still renders the pre-hardening <code>build</code> script ("tsc -p tsconfig.build.json") rather than the shipped <code>rmSync</code>-then-<code>tsc</code> form.</td><td>Parked — approved deviation, not a defect; this report captures the actually-shipped shape</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">4c9a8ec</span> docs(digismith-cli-npm): design spec for V.4 CLI package</li>
+    <li><span class="sha">f187796</span> docs(digismith-cli-npm): add V.4 implementation plan</li>
+    <li><span class="sha">1d347d4</span> refactor(vps-session): move into packages/cli/src/vps as a command group</li>
+    <li><span class="sha">631581d</span> docs(digismith-cli-npm): reverse no-build decision after live node_modules type-stripping failure</li>
+    <li><span class="sha">618b515</span> docs(digismith-cli-npm): update plan for tsc build after node_modules type-stripping finding</li>
+    <li><span class="sha">fb6c72c</span> feat(cli): add @digismith/cli package with the vps command group</li>
+    <li><span class="sha">0dc1d94</span> fix(cli): clean dist/ before rebuilding to avoid stale artifacts</li>
+    <li><span class="sha">69e295d</span> docs: record V.4 across the depot skill, map, and history</li>
+    <li><span class="sha">ca18c54</span> docs: correct V.4 ship date to 2026-09-12</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/digismith-cli-npm/report.html</footer>
+
+</body>
+</html>
