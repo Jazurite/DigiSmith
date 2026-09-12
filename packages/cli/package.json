@@ -1,0 +1,33 @@
+{
+  "name": "@digismith/cli",
+  "version": "0.1.0",
+  "description": "DigiSmith's command line — Depot's distribution surface",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "digismith": "dist/index.js",
+    "dg": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm build",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jazurite/DigiSmith.git",
+    "directory": "packages/cli"
+  },
+  "author": {
+    "name": "Jack Huỳnh",
+    "email": "jack@jazurite.com"
+  }
+}
