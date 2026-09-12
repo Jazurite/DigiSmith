@@ -15,6 +15,7 @@ known, give the command or condition that fixes it.
 > Before: Oops! Something went wrong while attempting to establish a
 > connection. Please ensure your credentials are properly configured and
 > try again.
+>
 > After: Connection to the database failed. The password for user `app`
 > was not correct. Set `DB_PASSWORD` and connect again.
 
@@ -23,36 +24,45 @@ known, give the command or condition that fixes it.
 **DigiSmith fit:** none yet — kept as forward-looking reference.
 
 Every step is imperative, one instruction per step, condition first. A
-warning comes before its step: command first, risk second. The 20-word
-sentence-length limit is not negotiable here — a reader under pager stress
-reads each sentence once.
+warning comes before the step it protects. Inside the warning itself,
+state the command first and the risk second. The 20-word sentence-length
+limit is not negotiable here — a reader under pager stress reads each
+sentence once.
 
 ## Incident reports and postmortems
 
 **DigiSmith fit:** none yet — kept as forward-looking reference.
 
 Simple past only. A timeline in present perfect ("we have identified")
-hides when things happened.
+hides when things happened. State what is known and say "unknown" for the
+rest — but never at the cost of the hedge-preservation rule in
+`global/ste100-writing.md`. The example below states a time window, a
+failure rate, and a cause as fact only because those were confirmed after
+investigation. If a cause genuinely isn't confirmed, keep the hedge ("may
+have been caused by") instead of asserting one for a cleaner sentence.
 
 > Before: We have identified an issue that may have impacted some users'
 > ability to access the service.
+>
 > After: Between 14:02 and 14:31 UTC, 12% of requests failed. A deploy at
 > 14:00 removed the cache warmup step.
 
-State what is known and say "unknown" for the rest — but never at the cost
-of the hedge-preservation rule in `global/ste100-writing.md`. If the cause
-genuinely isn't confirmed, keep the hedge ("may have been caused by")
-rather than asserting a cause for the sake of a cleaner sentence.
-
 ## Commit messages and PR descriptions
 
-**DigiSmith fit:** real and current — see `global/commit-style.md` and
-`global/pr-descriptions.md` for the standing rules on this surface. This
-standard tightens the same surface for a second, compounding reason
-(reader clarity), it doesn't replace those rules.
+**DigiSmith fit:** real and current — `global/commit-style.md` and
+`global/pr-descriptions.md` set the shape (title-only commits, short plain
+PR bodies). This file only tightens the sentence-level wording within
+that shape, for the same reader-clarity reason, and never adds structure
+those standards don't already allow.
 
-Imperative subject line, descriptive body. Apply the word swaps and the
-25-word limit to the body. Delete "this PR aims to."
+Commit messages have no body to apply sentence-level rules to at all —
+`global/commit-style.md` is title-only. Apply the word swaps to the title.
+
+For a PR description: apply the word swaps and the 25-word limit per
+sentence. Delete "this PR aims to." Where this file's own structural
+rules ("Lists for sequences," "Paragraph limits") would add headers or
+checklists, `global/pr-descriptions.md` wins — it explicitly bans that
+shape.
 
 ## API changelogs and release notes
 
@@ -64,15 +74,18 @@ entry follows the warning pattern, command first: "Update your calls to
 
 ## Instructions for AI agents (prompts, SKILL.md files)
 
-**DigiSmith fit:** real and current — writing any DigiSmith `SKILL.md` is
-exactly this genre.
+**DigiSmith fit:** intended, not yet enforced — no skill currently checks
+`SKILL.md` prose against this standard, and existing `SKILL.md` files
+predate it (many already use "e.g."). Apply it to new or edited prose,
+not as a retroactive audit of what's already there.
 
-One instruction per sentence keeps each rule quotable and hard to
-half-follow. One word, one meaning stops a model from treating "check",
-"verify", and "validate" as three different operations. A condition first
-("If the build fails, stop") beats a trailing condition, which models
-drop. No "should" — a model reads "should" as optional; write "must" or
-delete the rule.
+For imperative framing, hedged instructions, and when directive language
+helps versus backfires, see `digismith:writing-skills` — that skill owns
+the judgment call on how forceful to be. This file adds only the
+sentence-shape rules on top: one instruction per sentence keeps each rule
+quotable and hard to half-follow, and one word, one meaning stops a model
+from treating "check", "verify", and "validate" as three different
+operations.
 
 ## Support macros and status-page updates
 

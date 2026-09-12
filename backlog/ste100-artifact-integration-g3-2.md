@@ -22,6 +22,12 @@ Concretely:
   arguably in scope too — worth confirming during the real brainstorm, since the global
   `CLAUDE.md` commit-style convention already governs part of this same surface for a different
   reason (avoiding AI-generated-PR flags).
+- `SKILL.md` authoring — G.3.1's `ste100-use-cases.md` names it a real, current genre, but no
+  skill currently checks `SKILL.md` prose against the standard (found during G.3.1's post-merge
+  review, 2026-09-12). Whatever wires this should also decide how to treat the ~59 existing
+  `e.g.` occurrences across 21 already-shipped `SKILL.md` files that predate the standard —
+  apply going forward, not a retroactive audit, per `ste100-use-cases.md`'s own "DigiSmith fit"
+  note for that genre.
 
 ## Why not applied yet
 

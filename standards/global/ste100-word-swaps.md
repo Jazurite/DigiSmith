@@ -2,7 +2,15 @@
 
 Slop-word → plain-word substitutions for AI-generated prose. Adopted
 whole from [AminBlg/SimpleEnglish](https://github.com/AminBlg/SimpleEnglish)
-(MIT) — companion to `global/ste100-writing.md`.
+(MIT) — companion table to `global/ste100-writing.md`'s Lexical rules:
+treat every row below as a rule, not a suggestion, whenever that file is
+in effect.
+
+These are style swaps, not hedge removal — see
+`global/ste100-writing.md`'s Hedge preservation rule. "Is designed to" and
+"aims to" become "(delete — say what it does)" only when the source is
+already certain the thing happens. If the outcome is genuinely still
+uncertain, keep a hedge instead of deleting it.
 
 | Slop | Write instead |
 |---|---|

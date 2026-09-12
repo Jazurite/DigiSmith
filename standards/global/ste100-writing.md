@@ -23,7 +23,7 @@ external dictionary to check.
 | Sentence length | ≤20 words for instructions, ≤25 words for descriptions | Long compound/subordinate-clause sentences |
 | No semicolons | Split into separate sentences | Any semicolon at all |
 | Noun clusters | ≤3 words stacked as a noun phrase ("fuel pump valve") | 4+ word noun stacks |
-| No ellipsis | Keep subject, verb, and article explicit | Drop words to save space, even if it reads longer |
+| No ellipsis | Keep subject, verb, and article explicit, even if it reads longer | Drop words to save space ("Files not backed up will be lost" → ambiguous which files) |
 | Keep modality | "The request **may have** failed." stays "may have" | Promote a hedge to a fact, or invent a certainty the source didn't state |
 | Paragraph limits | One topic per paragraph, ≤6 sentences | Multi-topic paragraphs |
 | Lists for sequences | Use a numbered or bulleted list for 3+ steps or conditions | Bury a sequence inside one prose sentence |
@@ -41,15 +41,26 @@ mechanically.
 | Verb, not noun | "Analyze the log." | "Perform an analysis of the log." |
 | Domain terms | Keep necessary technical nouns/verbs, define once if not common English | Use jargon without ever defining it |
 
-See `global/ste100-word-swaps.md` for a concrete slop-word substitution
-table and `global/ste100-use-cases.md` for per-genre patterns.
+See `global/ste100-word-swaps.md` (same rule weight as the Lexical rules
+above) for a concrete slop-word substitution table and
+`global/ste100-use-cases.md` for per-genre patterns. If only this file
+gets injected, the Structural rules, Hedge preservation, and Scan
+checklist above still apply in full on their own — the two companion
+files add detail, not a missing prerequisite.
+
+Where another standard already governs a surface's overall shape —
+`global/commit-style.md`'s title-only commits, `global/pr-descriptions.md`'s
+plain PR body — that standard's shape wins. Apply this file's sentence-
+level rules only within whatever shape the other standard already sets.
+Never use "Lists for sequences" or "Paragraph limits" above to add
+structure a shape-governing standard forbids.
 
 ## Hedge preservation
 
 **Never upgrade a hedge into a stated fact.**
 "May have failed" stays "may have failed" — it does not become "failed."
 "Could be caused by X" does not become "X is the cause." A hedge carries
-the author's actual confidence; removing it is a different claim, not a
+the author's actual confidence. Removing it is a different claim, not a
 simplification. This rule applies even when a tighter, hedge-free rewrite
 would read better — clarity never trades against accuracy.
 
@@ -57,30 +68,27 @@ would read better — clarity never trades against accuracy.
 
 Run this check before finalizing any drafted paragraph:
 
-1. **Synonym rotation** — does the same thing have several names in one
-   document ("the user", "the customer", "the client")? Pick one, use it
-   throughout.
+1. **Synonym rotation** — see "One word, one meaning" above.
 2. **Hedge stacking** — do qualifiers pile up until the sentence asserts
    nothing ("it is important to note that this may potentially help")?
-   State the claim, or delete it.
-3. **Nominalization** — is an action frozen into a noun ("perform an
-   analysis of")? Use the verb ("analyze").
-4. **Marketing adjectives** — words that claim quality instead of showing
-   it (seamless, robust, powerful, cutting-edge, effortless). Delete, or
-   replace with the measurement that earns the claim.
-5. **Run-on sentences** — are several ideas joined by semicolons or em
-   dashes? One idea per sentence.
-6. **Soft phrasal verbs** — spin up, reach out, dive into, kick off. Use
-   the plain verb (start, contact, read, begin).
+   Cut down to the single hedge that's still accurate ("this may help")
+   — never all the way to a bare assertion ("this helps") unless the
+   source itself is certain.
+3. **Nominalization** — see "Verb, not noun" above.
+4. **Marketing adjectives** — see the word-swap table
+   (`global/ste100-word-swaps.md`).
+5. **Run-on sentences** — see "No semicolons" and "One instruction per
+   sentence" above.
+6. **Soft phrasal verbs** — see "No phrasal verbs" above and the
+   word-swap table.
 
 ## Boundaries
 
 **Will:**
-- Apply structural rules with confidence; treat lexical rules as a
-  direction, not a checked standard
+- Apply structural rules with confidence, and treat lexical rules as a
+  direction rather than a checked standard
 - Preserve every fact, condition, and scope qualifier in the source
-  material
-- Preserve the strength of every hedge
+  material — see Hedge preservation above for hedges specifically
 
 **Will not:**
 - Simplify creative, marketing, or persuasive copy — voice and nuance are
