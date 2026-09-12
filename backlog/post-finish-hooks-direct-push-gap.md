@@ -41,6 +41,22 @@ same two problems: hooks that don't fire on their own, and a stale/wrong `ORIG_H
 hand afterward. Distinct from [[no-push-after-local-merge]] (which is about Option 1 merging but
 never pushing) — this is about work that never merges at all.
 
+## Update 2026-09-12 — the hooks no longer read `ORIG_HEAD` at all
+
+W.4.1's merge-pinning pass (`.digismith/docs/version-bump-concurrent-merge/design.html`) removed
+every `ORIG_HEAD` read from the `post-finish` hooks: `finishing-a-development-branch` Option 1 now
+pins the merge range as `refs/digismith/post-finish/<feature-branch>/{base,head}` right after
+`git merge`, and `01-version-bump.md`/`03-history-update.md` read only those refs, passing
+`--base`/`--head` to their scripts. For this item that means consequence 2 above ("`ORIG_HEAD`
+stale and actively misleading if trusted") can no longer happen silently — a by-hand run with no
+pin stops with a message naming the missing ref, and `fire-lifecycle-hook.md`'s "Merge-range pins"
+section documents pinning by hand. Consequence 1 (the hooks never fire on their own for a
+direct-to-`main` push) is untouched and remains this item's open question. Of the bullets below,
+the first (caller-supplied SHAs instead of `ORIG_HEAD`) and third (naming the failure mode in the
+hooks) are now effectively answered by that pass; the second is the one still open. The
+"no `--base` → always bump" workaround still exists in `bump-plugin-version.ts` (both flags
+omitted), still unsanctioned.
+
 ## What's still worth examining
 
 - Whether `post-finish` hooks need an explicit "direct commit, no merge" invocation path — e.g.
