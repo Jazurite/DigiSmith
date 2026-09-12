@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { spawnSync } from "node:child_process";
-import { parseArgs } from "../../../../scripts/cli-args.ts";
+import { parseArgs, requireArgs } from "../../../../scripts/cli-args.ts";
 
 export function computeNextVersion(current: string, bumpType: "patch" | "minor" = "minor"): string {
   const match = /^(\d+)\.(\d+)\.(\d+)(-.+)?$/.exec(current);
@@ -33,27 +32,33 @@ export function bumpVersionInFile(filePath: string, nextVersion: string): void {
   fs.writeFileSync(filePath, updated);
 }
 
-export function versionChangedSince(
-  baseSha: string,
-  pluginJsonRelPath: string,
-  cwd: string = process.cwd(),
-): boolean {
-  const result = spawnSync("git", ["show", `${baseSha}:${pluginJsonRelPath}`], { cwd, encoding: "utf8" });
+function versionAt(sha: string, pluginJsonRelPath: string, cwd: string): string {
+  const result = spawnSync("git", ["show", `${sha}:${pluginJsonRelPath}`], { cwd, encoding: "utf8" });
   if (result.status !== 0) {
-    throw new Error(`git show failed for ${baseSha}:${pluginJsonRelPath}: ${result.stderr}`);
+    throw new Error(`git show failed for ${sha}:${pluginJsonRelPath}: ${result.stderr}`);
   }
   const parsed = JSON.parse(result.stdout) as { version?: string };
   if (typeof parsed.version !== "string") {
-    throw new Error(`No "version" field found at ${baseSha}:${pluginJsonRelPath}`);
+    throw new Error(`No "version" field found at ${sha}:${pluginJsonRelPath}`);
   }
-  const currentVersion = readPluginVersion(path.join(cwd, pluginJsonRelPath));
-  return parsed.version !== currentVersion;
+  return parsed.version;
 }
 
-export function bumpTypeSince(baseSha: string, cwd: string = process.cwd()): "patch" | "minor" {
-  const result = spawnSync("git", ["log", `${baseSha}..HEAD`, "--format=%s"], { cwd, encoding: "utf8" });
+// Compares the committed version at base against the committed version at head — never the
+// live working tree, which another session's merge may have moved since this merge landed.
+export function versionChangedSince(
+  baseSha: string,
+  headSha: string,
+  pluginJsonRelPath: string,
+  cwd: string = process.cwd(),
+): boolean {
+  return versionAt(baseSha, pluginJsonRelPath, cwd) !== versionAt(headSha, pluginJsonRelPath, cwd);
+}
+
+export function bumpTypeSince(baseSha: string, headSha: string, cwd: string = process.cwd()): "patch" | "minor" {
+  const result = spawnSync("git", ["log", `${baseSha}..${headSha}`, "--format=%s"], { cwd, encoding: "utf8" });
   if (result.status !== 0) {
-    throw new Error(`git log failed for ${baseSha}..HEAD: ${result.stderr}`);
+    throw new Error(`git log failed for ${baseSha}..${headSha}: ${result.stderr}`);
   }
   const subjects = result.stdout.split("\n").filter((line) => line.length > 0);
   if (subjects.length === 0) {
@@ -71,14 +76,21 @@ export function main(): void {
   const args = parseArgs(process.argv.slice(2));
 
   try {
+    if (args.base !== undefined || args.head !== undefined) {
+      requireArgs(args, ["base", "head"]);
+    }
+    const pinned = args.base !== undefined;
     const currentVersion = readPluginVersion(PLUGIN_JSON_PATH);
 
-    if (args.base !== undefined && versionChangedSince(args.base, PLUGIN_JSON_PATH)) {
-      console.log(`SKIPPED already changed by incoming branch (current: ${currentVersion})`);
+    if (pinned && versionChangedSince(args.base, args.head, PLUGIN_JSON_PATH)) {
+      console.log(
+        `SKIPPED this merge's own commits already changed plugin.json ` +
+          `(${args.base.slice(0, 7)}..${args.head.slice(0, 7)}; current: ${currentVersion})`,
+      );
       return;
     }
 
-    const bumpType = args.base !== undefined ? bumpTypeSince(args.base) : "minor";
+    const bumpType = pinned ? bumpTypeSince(args.base, args.head) : "minor";
     const nextVersion = computeNextVersion(currentVersion, bumpType);
     bumpVersionInFile(PLUGIN_JSON_PATH, nextVersion);
     bumpVersionInFile(MARKETPLACE_JSON_PATH, nextVersion);
