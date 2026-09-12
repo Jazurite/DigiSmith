@@ -1,6 +1,6 @@
 {
   "name": "@digismith/cli",
-  "version": "0.1.0",
+  "version": "0.1.0-beta",
   "description": "DigiSmith's command line — Depot's distribution surface",
   "license": "MIT",
   "type": "module",
