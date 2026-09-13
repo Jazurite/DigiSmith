@@ -1146,6 +1146,12 @@
   session, with a self-check before moving on). See <a href="docs/ai-voice-conversational/design.html">design</a>, <a href="docs/ai-voice-conversational/plan.md">plan</a>, and <a href="docs/ai-voice-conversational/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-13</div>
+      <h4>Depot CLI Command Group (V.5)</h4>
+      <p>Adds a <code>depot</code> command group to <code>@digismith/cli</code> (<code>dg depot clone|opencode|bridge ...</code>) covering the three Depot resources that already have a documented "invoke directly" use case, and rewrites <code>skills/depot/SKILL.md</code> to delegate to it instead of embedding raw bash. Built as a new <code>packages/cli/src/depot/</code> module: <code>clone.ts</code> (git commands, no process tracking), <code>process-lifecycle.ts</code> (shared ensure/stop helper for daemon-style resources), <code>opencode.ts</code> and <code>bridge.ts</code> (each wired to the shared helper), and <code>index.ts</code> as the resource dispatcher registered in the top-level <code>GROUPS</code> map alongside <code>vps</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix round(s) before merge. See <a href="docs/depot-cli-command-group/design.html">design</a>, <a href="docs/depot-cli-command-group/plan.md">plan</a>, and <a href="docs/depot-cli-command-group/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
