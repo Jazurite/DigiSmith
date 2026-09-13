@@ -12,6 +12,10 @@ describe("resolveGroup", () => {
     expect(resolveGroup("vps")).toBe(GROUPS.vps);
   });
 
+  it("returns the depot runner for 'depot'", () => {
+    expect(resolveGroup("depot")).toBe(GROUPS.depot);
+  });
+
   it("returns undefined for an unknown group", () => {
     expect(resolveGroup("foo")).toBeUndefined();
   });

@@ -3,11 +3,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { run as runVps } from "./vps/index.ts";
+import { run as runDepot } from "./depot/index.ts";
 
 export type GroupRunner = (argv: string[]) => void;
 
 export const GROUPS: Record<string, GroupRunner> = {
   vps: runVps,
+  depot: runDepot,
 };
 
 export function usage(): string {
