@@ -1,8 +1,13 @@
-# Technical writing / content-voice skill (new letter, tentatively T)
+# Audience-filtering content-voice skill (G.3.6)
 
-**Status:** Not applied. Raw idea only — no map letter formally added
-yet, no design spec, needs `superpowers:brainstorming` before becoming
-a skill.
+**Status:** Not applied. Raw idea only, no design spec yet — needs `digismith:brainstorming`
+before becoming a skill. Renumbered 2026-09-13 from a tentative standalone letter, **T**, into
+**G.3.6** once G.3 broadened from "ASD-STE100 Writing Standard" into "AI Voice" (a general
+umbrella for how DigiSmith-generated content and conversation should read) and this item was
+recognized as a sibling facet — audience-filtering for non-engineer readers — alongside G.3.1
+(artifact sentence-level clarity, engineer/agent readers) and G.3.5 (live-conversation response
+shape). Letter **T** freed for future reuse, same precedent as **R**, **Q**, **H**, and **U**
+before it.
 
 **Source:** Surfaced during an EMKT-756 (cross-sell component) session.
 Two separate moments exposed the same gap:

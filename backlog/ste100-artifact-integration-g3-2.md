@@ -1,6 +1,6 @@
 # Wire generated artifacts to the ASD-STE100 standard (G.3.2)
 
-**Status:** Not applied. Deferred child of **G.3** ("ASD-STE100 Writing Standard"), split out
+**Status:** Not applied. Deferred child of **G.3** ("AI Voice"), split out
 2026-09-12 once G.3 grew into a multi-part feature. Depends on **G.3.1** (the standard file
 itself) existing first.
 
