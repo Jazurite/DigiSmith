@@ -950,14 +950,14 @@ export function resolveDigismithRepo(explicitRepo: string | undefined, cwd: stri
   if (explicitRepo !== undefined) {
     if (!isDigismithCheckout(explicitRepo)) {
       throw new Error(
-        `depot bridge: --repo ${explicitRepo} does not look like a DigiSmith checkout (no .claude-plugin/plugin.json with "name": "digismith")`
+        `--repo ${explicitRepo} does not look like a DigiSmith checkout (no .claude-plugin/plugin.json with "name": "digismith")`
       );
     }
     return explicitRepo;
   }
   const found = findDigismithRepoMarker(cwd);
   if (!found) {
-    throw new Error("depot bridge: not inside a DigiSmith checkout and no --repo <path> given");
+    throw new Error("not inside a DigiSmith checkout and no --repo <path> given");
   }
   return found;
 }
@@ -987,7 +987,7 @@ export function run(
   try {
     repo = resolveDigismithRepo(explicitRepo);
   } catch (err) {
-    console.error((err as Error).message);
+    console.error(`depot bridge: ${(err as Error).message}`);
     process.exitCode = 1;
     return;
   }
@@ -1009,7 +1009,7 @@ export function run(
     });
     console.log(`depot bridge: ready on port ${port}`);
   } catch (err) {
-    console.error((err as Error).message);
+    console.error(`depot bridge: ${(err as Error).message}`);
     process.exitCode = 1;
   }
 }
