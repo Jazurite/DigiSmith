@@ -1,6 +1,6 @@
 # Propagate the ASD-STE100 standard into consuming repos' own `CLAUDE.md` (T.3)
 
-**Status:** Not applied. Deferred child of **T** ("AI Voice", promoted 2026-09-13 out of `G` —
+**Status:** Not applied. Deferred child of **T** ("Voice", promoted 2026-09-13 out of `G` —
 this item was "G.3.3" before that). Depends on **T.1** (the standard content)
 existing first. The most novel and most consequential of T's children — writes into a file
 other engineers on a consuming repo will see and that changes their own Claude Code sessions too,

@@ -2,7 +2,7 @@
 
 ## Status
 Brainstormed 2026-09-12. Grew into a multi-part feature — G's original working number, **G.3**,
-was promoted 2026-09-13 into its own top-level letter, **T** ("AI Voice"), once the umbrella
+was promoted 2026-09-13 into its own top-level letter, **T** ("Voice"), once the umbrella
 outgrew a single-facet "writing standard" into three distinct axes (artifact sentence-clarity,
 live-conversation shape, audience-filtering) that a three-level `G.3.x` nesting couldn't hold
 cleanly. Six children: **T.1** (this file's own subject — the ASD-STE100 standard content itself,
@@ -60,7 +60,7 @@ Two external sources compared:
   same surface for a second, compounding reason (reader clarity), not contradict the existing rule.
 
 ## Where it fits
-**T ("AI Voice")** — its own top-level letter as of 2026-09-13, promoted out of `G` (Methodology)
+**T ("Voice")** — its own top-level letter as of 2026-09-13, promoted out of `G` (Methodology)
 once the umbrella grew past a single sub-item into a genuinely distinct pillar: how any AI model
 should generate artifacts and communicate with engineers, spanning three axes (artifact
 sentence-clarity, live-conversation shape, audience-filtering) rather than one. T.1 (this file's

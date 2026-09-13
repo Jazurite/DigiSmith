@@ -1,6 +1,6 @@
 # Portable output-style packaging + mechanical linter for ASD-STE100 (T.4)
 
-**Status:** Not applied. Deferred child of **T** ("AI Voice", promoted 2026-09-13 out of `G` —
+**Status:** Not applied. Deferred child of **T** ("Voice", promoted 2026-09-13 out of `G` —
 this item was "G.3.4" before that). Depends on **T.1** (the standard content)
 existing first. Smallest and least urgent of T's children.
 

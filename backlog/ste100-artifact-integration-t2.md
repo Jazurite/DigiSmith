@@ -1,6 +1,6 @@
 # Wire generated artifacts to the ASD-STE100 standard (T.2)
 
-**Status:** Not applied. Deferred child of **T** ("AI Voice"), split out
+**Status:** Not applied. Deferred child of **T** ("Voice"), split out
 2026-09-12 (as "G.3.2", renumbered 2026-09-13 when the whole lineage promoted out of `G` into its
 own letter, `T`). Depends on **T.1** (the standard file itself) existing first.
 

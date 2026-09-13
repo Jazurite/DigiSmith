@@ -3,7 +3,7 @@
 **Status:** Not applied. Raw idea only, no design spec yet — needs `digismith:brainstorming`
 before becoming a skill. A small, tangled numbering history worth spelling out exactly, all on
 2026-09-13: this item started as a tentative standalone letter, **T** → got folded in as **G.3.6**
-once "G.3" broadened from "ASD-STE100 Writing Standard" into "AI Voice" (a general umbrella for
+once "G.3" broadened from "ASD-STE100 Writing Standard" into "Voice" (a general umbrella for
 how DigiSmith-generated content and conversation should read), recognized as a sibling facet —
 audience-filtering for non-engineer readers — alongside G.3.1 (artifact sentence-level clarity,
 engineer/agent readers) and G.3.5 (live-conversation response shape) → then, later the same day,
