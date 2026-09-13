@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depot CLI Command Group (V.5) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Depot CLI Command Group (V.5) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-13</span>
+    <span>Map item: <strong>V.5</strong></span>
+    <span>Commit range: <code>57440aa..05d1d41</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Adds a <code>depot</code> command group to <code>@digismith/cli</code> (<code>dg depot clone|opencode|bridge ...</code>) covering the three Depot resources that already have a documented "invoke directly" use case, and rewrites <code>skills/depot/SKILL.md</code> to delegate to it instead of embedding raw bash. Built as a new <code>packages/cli/src/depot/</code> module: <code>clone.ts</code> (git commands, no process tracking), <code>process-lifecycle.ts</code> (shared ensure/stop helper for daemon-style resources), <code>opencode.ts</code> and <code>bridge.ts</code> (each wired to the shared helper), and <code>index.ts</code> as the resource dispatcher registered in the top-level <code>GROUPS</code> map alongside <code>vps</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><h4>Task 1</h4><span class="tag">clone</span><p><code>depot</code> command-group dispatcher (routes clone/opencode/bridge), plus the <code>clone</code> resource: <code>ensureClone</code>/<code>refreshClone</code> against a sparse <code>~/.digismith-depot/repo</code> checkout.</p></div>
+    <div class="card"><h4>Task 2</h4><span class="tag">process-lifecycle</span><p>Shared <code>ensureProcess</code>/<code>stopProcess</code> helper: spawns a detached daemon, confirms its real PID via <code>netstat</code> (never <code>ps</code>/<code>awk</code>), stops via a tree-killing <code>taskkill</code>.</p></div>
+    <div class="card"><h4>Task 3</h4><span class="tag">opencode</span><p><code>opencode</code> resource — <code>ensure</code> starts a shared OpenCode server (fetching a Chutes API key), <code>stop</code> tears it down, both wired to the Task 2 helper.</p></div>
+    <div class="card"><h4>Task 4</h4><span class="tag">bridge</span><p><code>bridge</code> resource — <code>ensure</code> locates a real DigiSmith checkout (<code>cwd</code> walk-up or <code>--repo</code>) and starts the Agentic Bridge proxy; <code>stop</code> tears it down.</p></div>
+    <div class="card"><h4>Task 5</h4><span class="tag">docs</span><p>Documentation-only: <code>skills/depot/SKILL.md</code> delegates its three resource sections to the new CLI, <code>README.md</code> and <code>MEMORY.md</code> updated.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: <code>depot</code> command-group dispatcher + <code>clone</code> resource</td><td><code>depot</code> dispatcher (clone/opencode/bridge routing) + clone resource (ensure/refresh)</td><td>Approved after 1 fix round</td><td>—</td></tr>
+    <tr><td>Task 2: Shared process-lifecycle helper</td><td>Shared <code>ensureProcess</code>/<code>stopProcess</code> helper for daemon-style resources</td><td>Approved, clean</td><td>No test for the "netstat can't confirm a PID" or "tracked PID died" paths (traceable to the plan's own reference tests); <code>isPidListed</code>'s plain substring match (safe today, sole caller pre-filters via <code>/FI</code>)</td></tr>
+    <tr><td>Task 3: <code>opencode</code> resource</td><td><code>opencode</code> resource (ensure/stop) wired to the shared helper</td><td>Approved after 1 fix round</td><td>—</td></tr>
+    <tr><td>Task 4: <code>bridge</code> resource</td><td><code>bridge</code> resource (ensure/stop) with DigiSmith-repo resolution, wired to the shared helper</td><td>Approved, clean</td><td><code>--repo</code> given with no value silently falls back to <code>cwd</code> resolution instead of a clearer error (inherited from the plan's own sample code)</td></tr>
+    <tr><td>Task 5: Skill delegation, README, and MEMORY.md</td><td>Documentation-only: SKILL.md delegation, README, MEMORY.md</td><td>Approved, clean</td><td>README's depot command block placed before <code>--version</code> rather than strictly after it (defensible reading of ambiguous brief wording)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 2 Important findings (plus 1 bundled Minor), all resolved in one fix wave and independently re-reviewed clean.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>stopProcess</code> claimed success without verifying <code>taskkill</code> actually succeeded, risking an untracked-but-still-running process on failure</td><td>Fixed — captures <code>taskkill</code>'s exit status, re-checks liveness via <code>tasklist</code> before deleting the tracking file; keeps the tracking file if the process is confirmed still alive</td></tr>
+    <tr><td>Important</td><td>A missing <code>opencode</code>/<code>node</code> binary produced a misleading generic 5-second timeout error instead of the disposition <code>skills/depot/SKILL.md</code> documents</td><td>Fixed — a synchronous <code>child.pid === undefined</code> check fails fast with a specific "not found on PATH" message; a no-op <code>error</code> listener was added to prevent an async process crash this check would otherwise expose</td></tr>
+    <tr><td>Minor</td><td>Redundant resource-label prefix in <code>ensureProcess</code>'s thrown messages caused doubled output prefixes (e.g. <code>depot opencode: opencode-server: ...</code>)</td><td>Fixed — removed the label prefix from all three throw sites; the calling CLI file (<code>opencode.ts</code>/<code>bridge.ts</code>) now owns the single <code>depot &lt;resource&gt;: </code> prefix</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">10510b5</span> feat(cli): add depot command group with clone resource</li>
+    <li><span class="sha">d230588</span> fix(cli): use --no-cone for sparse-checkout to avoid invalid cone-mode syntax</li>
+    <li><span class="sha">2933c39</span> feat(cli): add shared process-lifecycle helper for depot daemons</li>
+    <li><span class="sha">66ae24e</span> feat(cli): add depot opencode resource</li>
+    <li><span class="sha">b1384ce</span> docs(depot-cli): fix plan's Task 4 bridge.ts message-prefix bug before dispatch</li>
+    <li><span class="sha">fd4f1c2</span> fix(cli): correct error message prefix convention in depot opencode</li>
+    <li><span class="sha">3ca6dbe</span> feat(cli): add depot bridge resource</li>
+    <li><span class="sha">8f20940</span> docs(depot): delegate SKILL.md to the new depot CLI command group</li>
+    <li><span class="sha">5ab53b4</span> fix(cli): verify taskkill result and fail fast on missing binary in depot lifecycle</li>
+    <li><span class="sha">05d1d41</span> docs(depot-cli): add map item to plan's H1 title for report-implementation parsing</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/depot-cli-command-group/report.html</footer>
+
+</body>
+</html>
