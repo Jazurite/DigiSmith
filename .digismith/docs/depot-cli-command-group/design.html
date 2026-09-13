@@ -161,7 +161,7 @@ daemon/PID lifecycle here, just sequential commands with pass/fail exit codes.</
 function ensureProcess(config: LifecycleConfig): { port: number } { ... }
 function stopProcess(config: LifecycleConfig): { stopped: boolean } { ... }</code></pre>
 <p><strong><code>ensureProcess</code></strong> — read the tracking JSON. Present → confirm
-the tracked PID is still alive (<code>tasklist //FI "PID eq &lt;pid&gt;"</code>, checking the
+the tracked PID is still alive (<code>tasklist /FI "PID eq &lt;pid&gt;"</code>, checking the
 output actually lists it, not just that the command exits 0 — an absent PID still exits 0
 with an empty-ish table). Alive → return the tracked port. Absent or stale → spawn detached
 (<code>--port 0</code>, output redirected into <code>logFile</code>), resolve the real PID,
@@ -169,7 +169,7 @@ poll the log for a line ending <code>listening on http://127.0.0.1:&lt;port&gt;<
 shared regex works for both resources, since both log lines share that suffix), write the
 tracking file, return the port.</p>
 <p><strong><code>stopProcess</code></strong> — read the tracking file. Absent → report
-nothing-to-stop, exit 0. Present → <code>taskkill //PID &lt;pid&gt; //T //F</code> (tree-kill,
+nothing-to-stop, exit 0. Present → <code>taskkill /PID &lt;pid&gt; /T /F</code> (tree-kill,
 so a wrapper process's whole subtree dies too), then delete the tracking file regardless of
 whether the process was still alive by the time it ran.</p>
 <div class="callout"><strong>PID resolution amended 2026-09-13, during plan-writing:</strong>
@@ -198,7 +198,7 @@ binary that may resolve through a <code>.cmd</code>/PowerShell wrapper on Window
 <code>netstat -ano</code> matched to the actual listening port before persisting — treating
 netstat as the authoritative confirmation, same spirit as the recorded lesson, just implemented
 with binaries guaranteed present on any Windows shell — and <code>stopProcess</code> uses
-<code>taskkill //PID &lt;pid&gt; //T //F</code> (tree-kill) so a wrapper process's whole subtree
+<code>taskkill /PID &lt;pid&gt; /T /F</code> (tree-kill) so a wrapper process's whole subtree
 dies even when the tracked PID turns out to be the wrapper, not the real process. Never persist
 an unconfirmed PID.</div>
 </section>
