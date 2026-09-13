@@ -62,36 +62,23 @@ later needs no change here.
 ### Operation: `ensure` — idempotent, clone-if-missing
 
 ```bash
-if [ ! -d ~/.digismith-depot/repo/.git ]; then
-  mkdir -p ~/.digismith-depot && \
-  git clone --filter=blob:none --no-checkout --sparse \
-    git@github.com:Jazurite/DigiSmith.git ~/.digismith-depot/repo && \
-  git -C ~/.digismith-depot/repo sparse-checkout set packages && \
-  git -C ~/.digismith-depot/repo checkout main
-fi
+node <digismith-repo>/packages/cli/src/index.ts depot clone ensure
 ```
 
-`~/.digismith-depot/repo/.git` already present → this is a no-op. Nothing
-below the existence check runs; no fetch, no reset, no network call at
-all.
+Idempotent: a no-op if `~/.digismith-depot/repo/.git` already exists.
 
 ### Operation: `refresh` — explicit, on demand
 
-If `~/.digismith-depot/repo` doesn't exist yet when `refresh` is invoked
-directly, run `ensure`'s sequence above instead of failing — refreshing
-something that was never provisioned isn't a real error case, just an
-ordering one.
-
-Otherwise:
-
 ```bash
-git -C ~/.digismith-depot/repo fetch --all --prune --tags -q && \
-git -C ~/.digismith-depot/repo checkout main && \
-git -C ~/.digismith-depot/repo reset --hard origin/main
+node <digismith-repo>/packages/cli/src/index.ts depot clone refresh
 ```
 
-The sparse-checkout pattern set during `ensure`'s initial clone persists
-across this `reset --hard` — never reapply it.
+If `~/.digismith-depot/repo` doesn't exist yet when `refresh` is invoked
+directly, run `ensure`'s sequence first instead of failing — refreshing
+something that was never provisioned isn't a real error case, just an
+ordering one. The sparse-checkout pattern set during `ensure`'s initial clone
+persists across the hard reset — never reapply it. Both are now handled
+inside `clone.ts` rather than inline bash.
 
 ## Resource: OpenCode Server
 
@@ -129,69 +116,24 @@ dispatch remain entirely `digismith:offload-implementer`'s concern.
 
 ### Operation: `ensure-opencode-server` — start if not alive
 
-Check `~/.digismith-depot/opencode-server.json` for a tracked
-`{"pid": ..., "port": ...}`.
-
-**Present** → confirm the process is still alive (Windows:
-`tasklist //FI "PID eq <pid>"` and check the output actually lists it,
-not just that the command succeeded — an absent PID still exits 0 with
-an empty-ish table). **Alive** → return the tracked port, done. **Not
-alive** → treat as stale, continue as if the file were absent.
-
-**Absent, or stale** → fetch the Chutes API key and start a fresh
-server, letting the OS pick a free port rather than guessing one:
-
 ```bash
-mkdir -p ~/.digismith-depot
-CHUTES_API_KEY=$(python3 ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key) opencode serve --port 0 --hostname 127.0.0.1 > ~/.digismith-depot/opencode-server.log 2>&1 &
-SERVER_PID=$!
-sleep 2
+node <digismith-repo>/packages/cli/src/index.ts depot opencode ensure
 ```
 
-`ensure-opencode-server` isn't auto-invoked by `bootstrap`/`adopt` (unlike
-the clone's `ensure`), so `~/.digismith-depot` may not exist yet the first time
-this runs on a machine — the `mkdir -p` above is required, not
-defensive.
-
-Read `~/.digismith-depot/opencode-server.log` for the line `opencode server
-listening on http://127.0.0.1:<port>` and extract `<port>` from it —
-this is the real assigned port, not something to guess. If that line
-isn't present after a few seconds, this is a startup failure (see Error
-Handling).
-
-**Windows Git Bash only:** `<pid>` here means the native Windows PID
-`tasklist`/`taskkill` operate on — never the MSYS/Cygwin PID a plain `$!`
-gives you, which differs (confirmed live: MSYS PID `6140` vs. the WINPID
-`24816` `tasklist` actually needed for the same process). Resolve the
-real WINPID before persisting or checking any PID:
-
-```bash
-WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
-```
-
-If `$WINPID` comes back empty (the `ps -W`/`awk` lookup can miss), fall
-back to resolving the PID by parsing `netstat -ano` for the process
-listening on the captured port instead. Never persist an empty pid — a
-tracking file with an unusable pid means nothing could ever stop that
-server later. On other platforms `$!` is already the right PID — skip
-this lookup there.
-
-On success, write `~/.digismith-depot/opencode-server.json` as
-`{"pid": <WINPID on Windows, else SERVER_PID>, "port": <port>}`. Return
-the port.
+Checks the tracked server first (`~/.digismith-depot/opencode-server.json`) and returns its
+port if still alive; otherwise starts a fresh `opencode serve` process (fetching the Chutes API
+key the same way as before), confirms the real PID of whatever is listening via `netstat` (not
+`ps -W`/`awk` — see `packages/cli/src/depot/process-lifecycle.ts`, which now owns all PID
+resolution and works from any Windows shell, not just Git Bash), and persists the tracking file.
 
 ### Operation: `stop-opencode-server` — explicit only
 
-Read `~/.digismith-depot/opencode-server.json`. **Absent** → nothing to stop,
-report that plainly. **Present** →
-
 ```bash
-taskkill //PID <pid> //F
+node <digismith-repo>/packages/cli/src/index.ts depot opencode stop
 ```
 
-then delete `~/.digismith-depot/opencode-server.json`. If the file's PID is
-already dead (process gone), still delete the tracking file — nothing
-to kill, but stale state should not survive.
+Reports "nothing to stop" plainly if no server is tracked; otherwise tree-kills the tracked
+process and deletes the tracking file.
 
 ## Resource: Agentic Bridge Proxy
 
@@ -221,56 +163,24 @@ beyond running the CLI that already knows all of that — entirely
 
 ### Operation: `ensure-agentic-bridge` — start if not alive
 
-Check `~/.digismith-depot/agentic-bridge.json` for a tracked `{"pid": ..., "port": ...}`.
-
-**Present** → confirm the process is still alive (Windows: `tasklist //FI "PID eq <pid>"`
-and check the output actually lists it, not just that the command succeeded — an absent
-PID still exits 0 with an empty-ish table). **Alive** → return the tracked port, done.
-**Not alive** → treat as stale, continue as if the file were absent.
-
-**Absent, or stale** → start a fresh server, letting the OS pick a free port rather than
-guessing one. `<digismith-repo>` is the same path `offload-implementer` already resolved
-under "Locating the Standards Library" — this operation is always invoked from within that
-same resolution, never standalone:
-
 ```bash
-mkdir -p ~/.digismith-depot
-node --experimental-strip-types <digismith-repo>/scripts/agentic-bridge/server.ts --port 0 > ~/.digismith-depot/agentic-bridge.log 2>&1 &
-SERVER_PID=$!
-sleep 2
+node <digismith-repo>/packages/cli/src/index.ts depot bridge ensure
 ```
 
-Read `~/.digismith-depot/agentic-bridge.log` for the line `agentic-bridge listening on
-http://127.0.0.1:<port>` and extract `<port>` from it — this is the real assigned port,
-not something to guess. If that line isn't present after a few seconds, this is a startup
-failure (see Error Handling).
-
-**Windows Git Bash only:** resolve the real WINPID before persisting or checking any
-PID — same reasoning and same fallback as `ensure-opencode-server` above:
-
-```bash
-WINPID=$(ps -W | awk -v p="$SERVER_PID" '$1==p {print $4}')
-```
-
-If `$WINPID` comes back empty, fall back to resolving the PID by parsing `netstat -ano`
-for the process listening on the captured port instead. Never persist an empty pid. On
-other platforms `$!` is already the right PID — skip this lookup there.
-
-On success, write `~/.digismith-depot/agentic-bridge.json` as `{"pid": <WINPID on
-Windows, else SERVER_PID>, "port": <port>}`. Return the port.
+`<digismith-repo>` is the same path this skill already resolves for its own invocation; the CLI
+also resolves it itself from `cwd` when run from inside a checkout, or accepts an explicit
+override: `node <digismith-repo>/packages/cli/src/index.ts depot bridge ensure --repo
+<digismith-repo>`. Otherwise behaves the same as before: checks the tracked proxy first,
+otherwise starts `scripts/agentic-bridge/server.ts` fresh, confirms the real PID via `netstat`,
+and persists the tracking file.
 
 ### Operation: `stop-agentic-bridge` — explicit only
 
-Read `~/.digismith-depot/agentic-bridge.json`. **Absent** → nothing to stop, report that
-plainly. **Present** →
-
 ```bash
-taskkill //PID <pid> //F
+node <digismith-repo>/packages/cli/src/index.ts depot bridge stop
 ```
 
-then delete `~/.digismith-depot/agentic-bridge.json`. If the file's PID is already dead
-(process gone), still delete the tracking file — nothing to kill, but stale state should
-not survive.
+Reports "nothing to stop" plainly if no proxy is tracked.
 
 ## Resource: Claude Code Readiness
 
@@ -367,7 +277,7 @@ where `ssh -t` cannot allocate a pseudo-terminal and `tmux attach` fails with "n
 | Tracked PID in `~/.digismith-depot/opencode-server.json` is no longer running | Treat as stale, start fresh per `ensure-opencode-server` above, overwrite the tracking file. |
 | Agentic Bridge fails to start (no "listening on" line in `~/.digismith-depot/agentic-bridge.log` within a few seconds) | Stop, show the log content, don't retry silently. |
 | Tracked PID in `~/.digismith-depot/agentic-bridge.json` is no longer running | Treat as stale, start fresh per `ensure-agentic-bridge` above, overwrite the tracking file. |
-| WINPID unresolvable (both `ps -W` and the `netstat -ano` fallback come back empty) | Never persist an empty PID — report the failure plainly rather than writing an unusable tracking file. |
+| `netstat -ano` can't confirm a PID listening on the expected port | Never persist an unconfirmed pid — `depot opencode ensure`/`depot bridge ensure` exit 1 and report the failure plainly rather than writing an unusable tracking file. |
 | `~/.digismith-depot/vps.json` absent | Both VPS Session commands stop immediately with a plain "no VPS configured, create the file" message. Neither guesses a host. |
 | VPS SSH unreachable (timeout, refused, key rejected, or no local `ssh` binary) | Report the actual error plainly. No retry. `connect` attempts nothing further. |
 | VPS lingering can't be enabled | Report the actual `loginctl` error; `connect` stops rather than continuing as if it succeeded. |
@@ -414,22 +324,22 @@ where `ssh -t` cannot allocate a pseudo-terminal and `tmux attach` fails with "n
   Kimi, Chutes routing, or `opencode.json`'s provider block. Entirely
   `digismith:offload-implementer`'s concern.
 - **A generalized multi-resource interface** — five concrete resources
-  (one of them stateless, one a remote tmux session), five concrete operation sets. Two of them
-  (OpenCode server, Agentic Bridge proxy) share the identical ensure/stop +
-  PID/port-tracking lifecycle shape, but duplicating this well-understood
-  ~80-line pattern twice is still cheaper and clearer than a premature
-  abstraction — reconsider only if a third resource needs the same shape.
+  (one of them stateless, one a remote tmux session), five concrete operation sets. OpenCode server and Agentic Bridge
+  share the identical ensure/stop + PID/port-tracking lifecycle shape; now that both are real,
+  tested TypeScript (`packages/cli/src/depot/process-lifecycle.ts`, map item **V.5**) rather than
+  duplicated skill prose, that shape is consolidated into one shared helper instead of being
+  copy-pasted twice.
 
 ## Quick Reference
 
 | Resource | Operation | When | Effect |
 |---|---|---|---|
-| packages/ clone | `ensure` | Called by `digismith:bootstrap`/`digismith:adopt` | Clone if missing, else no-op |
-| packages/ clone | `refresh` | User asks directly, any time | Fetch + hard reset to `origin/main` (runs `ensure` first if the clone doesn't exist yet) |
-| OpenCode server | `ensure-opencode-server` | Called by `digismith:offload-implementer`, first offload in a session | Start if not alive (resolving the real Windows PID), else return the tracked port |
-| OpenCode server | `stop-opencode-server` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
-| Agentic Bridge proxy | `ensure-agentic-bridge` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Start if not alive (resolving the real Windows PID), else return the tracked port |
-| Agentic Bridge proxy | `stop-agentic-bridge` | User asks directly, any time | `taskkill` the tracked pid, delete the tracking file (no-op if absent) |
+| packages/ clone | `ensure` | Called by `digismith:bootstrap`/`digismith:adopt` | Runs `depot clone ensure` — clone if missing, else no-op |
+| packages/ clone | `refresh` | User asks directly, any time | Runs `depot clone refresh` — fetch + hard reset to `origin/main` (runs `ensure` first if the clone doesn't exist yet) |
+| OpenCode server | `ensure-opencode-server` | Called by `digismith:offload-implementer`, first offload in a session | Runs `depot opencode ensure` — start if not alive, else return the tracked port |
+| OpenCode server | `stop-opencode-server` | User asks directly, any time | Runs `depot opencode stop` — stop the server and delete the tracking file (no-op if absent) |
+| Agentic Bridge proxy | `ensure-agentic-bridge` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Runs `depot bridge ensure` — start if not alive, else return the tracked port |
+| Agentic Bridge proxy | `stop-agentic-bridge` | User asks directly, any time | Runs `depot bridge stop` — stop the proxy and delete the tracking file (no-op if absent) |
 | Claude Code readiness | `ensure-claude-code` | Called by `digismith:offload-implementer`, every `claude-code`-runner dispatch | Stateless PATH + `--bare`-support check, no state written |
 | VPS Session | `status` | User asks directly, any time | Read-only report of every check above |
 | VPS Session | `connect` | User asks directly, any time | Auto-fixes what's safely fixable, then attaches interactively |
