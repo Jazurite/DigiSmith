@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversational Voice (T.5)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Conversational Voice (T.5)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-13</span>
+    <span>Map item: T.5 (child of T, "AI Voice" — sibling to T.1 ASD-STE100, T.6 Audience-Filtering Voice)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#source">Source and what changed</a></li>
+    <li><a href="#content">File content</a></li>
+    <li><a href="#placement">Placement</a></li>
+    <li><a href="#scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>T.5 curates <a href="https://github.com/ayghri/i-have-adhd">ayghri/i-have-adhd</a> (MIT) — a
+10-rule discipline shaping how an assistant's live conversational response reads — into a
+DigiSmith-owned standard: action-first, numbered steps, one concrete next step, suppressed
+tangents, restated progress, concrete time estimates, visible wins, matter-of-fact errors, capped
+lists, no preamble/recap/closers. Team-shared per Jack's explicit call (like T.3's direction),
+not a personal preference — the point is how <em>any</em> AI model should communicate with
+engineers on this team, not just how Claude talks to Jack specifically.</p>
+<p>Scope, mirroring T.1's own precedent: ship the curated content only. <em>How</em> this actually
+gets enforced for every live response in a consuming repo — the delivery/propagation mechanism —
+is deferred to T.3, which should generalize to carry any T.x content, not just T.1's.</p>
+</section>
+
+<section id="source">
+<h2>Source and what changed</h2>
+<p>Absorbed as-is: rules 1–7, 9, 10, all six "when to break the rules" overrides, and the
+pre-send deletion checklist — well-crafted, no tension with anything else DigiSmith already
+enforces.</p>
+<p>Amended: rule 8 ("matter-of-fact tone for errors"). The upstream repo's own published eval
+(blind judge, weighted rubric, 14 cases × 3 trials) caught this rule pressuring the model into
+asserting an unconfirmed root cause in one case (−0.63, the eval's one flagged regression) — the
+grader noted the response "asserts a definitive cause... without any evidence." That's the exact
+failure mode T.1's hedge-preservation rule already guards against for artifact prose, so T.5's own
+version of rule 8 adds the same discipline: state the cause plainly when confirmed; say "not yet
+confirmed" plainly when it isn't. Matter-of-fact tone survives; fabricated certainty doesn't.</p>
+<p>Discarded: the upstream delivery mechanism (a personal opt-in flag file,
+<code>~/.claude/.i-have-adhd-always</code>, toggled by "stop adhd mode") — built for one person's
+own global config, doesn't fit "team-shared." Its underlying idea (re-inject on every
+session start/resume/clear/<em>and compaction</em>, so the discipline survives a long session) is
+worth keeping in mind for T.3's eventual propagation design, but that's T.3's problem, not
+content T.5 needs to carry.</p>
+</section>
+
+<section id="content">
+<h2>File content</h2>
+<p><code>standards/global/ai-voice-conversational.md</code> — structure mirrors the upstream
+SKILL.md exactly (it's a well-proven shape), rules 1–7/9/10 adapted closely to the source, rule 8
+rewritten per above:</p>
+<div class="table-wrap">
+<table>
+<tr><th>Section</th><th>Content</th></tr>
+<tr><td>Intro + persistence note</td><td>The reader is an engineer on this team, not just Jack.
+These rules apply to every response for the rest of the session unless the task itself overrides
+them (see Overrides) — credit line to <code>ayghri/i-have-adhd</code></td></tr>
+<tr><td>10 rules</td><td>Lead with the next action · Number multi-step tasks · End with one
+concrete next action · Suppress tangents · Restate state every turn · Give specific time estimates
+· Make completed work visible · <strong>Matter-of-fact tone for errors (hedge-preserving)</strong>
+· Cap lists to 5 items · No preamble, no recap, no closing pleasantries</td></tr>
+<tr><td>When to break the rules</td><td>All six overrides kept verbatim in spirit: explain/walk-
+through mode, destructive-action confirmation, debug-spiral stop, real ambiguity, "the rule would
+delete the answer itself," harness system prompt outranks the skill</td></tr>
+<tr><td>Pre-send check</td><td>The 5-item deletion checklist kept as-is (strip announcement
+openers, strip "anything else?" closers, strip "by the way" sidebars, strip empty hedging
+adverbs while keeping real ones, strip idioms for literal actions)</td></tr>
+</table>
+</div>
+</section>
+
+<section id="placement">
+<h2>Placement</h2>
+<p><code>standards/index.yml</code> gets one new <code>global:</code> entry:</p>
+<pre><code>  ai-voice-conversational:
+    kind: prose
+    description: Live-conversation response-shape discipline for talking with engineers (action-first, numbered steps, no preamble/recap/closers, hedge-preserving error tone). Not for code — skip for code-writing tasks
+</code></pre>
+<p><code>kind: prose</code> reuses the gate T.1's own follow-up fix already built — this genuinely
+isn't code, so the same Scenario-4 exclusion applies, even though <em>how</em> this content
+eventually gets delivered (every live response, not per-task matching) will need its own
+mechanism beyond what <code>inject-standards</code> does today. That mechanism question belongs
+to T.3, not this file.</p>
+</section>
+
+<section id="scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Wiring this into any actual live-conversation delivery mechanism — T.3, deferred, generalized
+to carry any T.x content</li>
+<li>T.6 (audience-filtering by reader identity) — a separate, not-yet-brainstormed sibling</li>
+<li>Any change to T.1's own content or `inject-standards`/`index-standards` mechanics beyond
+reusing the existing `kind: prose` field</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/ai-voice-conversational/design.html</footer>
+
+</body>
+</html>
