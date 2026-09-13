@@ -169,18 +169,38 @@ poll the log for a line ending <code>listening on http://127.0.0.1:&lt;port&gt;<
 shared regex works for both resources, since both log lines share that suffix), write the
 tracking file, return the port.</p>
 <p><strong><code>stopProcess</code></strong> — read the tracking file. Absent → report
-nothing-to-stop, exit 0. Present → <code>taskkill //PID &lt;pid&gt; //F</code>, then delete
-the tracking file regardless of whether the process was still alive by the time it ran.</p>
-<div class="callout"><strong>PID resolution correction (folded in from a confirmed,
-recorded lesson, hit 3+ times including on the Agentic Bridge itself):</strong>
-<code>ps -W | awk</code> WINPID resolution can silently return the <em>wrong</em> PID under
-concurrent process load — not just empty, wrong. The skill's existing bash only falls back to
-<code>netstat -ano</code> when <code>ps -W</code> comes back empty, which doesn't catch this.
-Since this is the first real, tested implementation of this logic (the skill's bash prose
-never got this fix either), <code>ensureProcess</code> always cross-checks the <code>ps
--W</code> result against <code>netstat -ano</code> (matched to the actual listening port)
-before persisting or killing a PID, treating netstat as authoritative rather than a
-fallback-of-last-resort. Never persist an empty or unconfirmed PID.</div>
+nothing-to-stop, exit 0. Present → <code>taskkill //PID &lt;pid&gt; //T //F</code> (tree-kill,
+so a wrapper process's whole subtree dies too), then delete the tracking file regardless of
+whether the process was still alive by the time it ran.</p>
+<div class="callout"><strong>PID resolution amended 2026-09-13, during plan-writing:</strong>
+<p>the skill's bash resolves the launched process's PID via <code>ps -W | awk</code> because
+Claude Code's Bash tool is Git-Bash/MSYS-backed on Windows, and a background job's <code>$!</code>
+inside that MSYS-emulated shell is an MSYS-space PID, not the real Windows PID
+<code>tasklist</code>/<code>taskkill</code> operate on — a mismatch confirmed 3+ times, most
+recently on the Agentic Bridge itself, with <code>ps -W | awk</code> shown to silently return the
+<em>wrong</em> PID under load, not just an empty one.</p>
+<p>That entire mismatch is specific to bash's own job control inside an MSYS shell — it does not
+carry over to this feature's own code. <code>process-lifecycle.ts</code> is real Node.js calling
+<code>child_process.spawn()</code> directly, which already returns the true OS-native PID with no
+MSYS layer involved. Porting <code>ps -W</code>/<code>awk</code> verbatim would also be a step
+backward on portability: they are MSYS-only binaries, not guaranteed on PATH when this compiled
+CLI runs from a plain PowerShell/cmd/Windows Terminal session — the exact consoles the VPS Session
+resource already requires for its own interactive attach step. <code>tasklist</code>,
+<code>taskkill</code>, and <code>netstat</code> are real <code>System32</code> binaries, always
+present regardless of shell.</p>
+<p>The real remaining risk is different: <code>opencode</code> is a globally-installed pnpm
+binary that may resolve through a <code>.cmd</code>/PowerShell wrapper on Windows, so
+<code>child.pid</code> from spawning it could be that wrapper process rather than the real
+<code>opencode serve</code> process underneath (<code>node --experimental-strip-types
+.../server.ts</code> for the bridge has no such wrapper — a direct <code>node.exe</code> spawn).
+<code>ensureProcess</code> therefore takes <code>child.pid</code> as the primary PID (no
+<code>ps</code>/<code>awk</code> anywhere in this code), cross-checks it against
+<code>netstat -ano</code> matched to the actual listening port before persisting — treating
+netstat as the authoritative confirmation, same spirit as the recorded lesson, just implemented
+with binaries guaranteed present on any Windows shell — and <code>stopProcess</code> uses
+<code>taskkill //PID &lt;pid&gt; //T //F</code> (tree-kill) so a wrapper process's whole subtree
+dies even when the tracked PID turns out to be the wrapper, not the real process. Never persist
+an unconfirmed PID.</div>
 </section>
 
 <section id="opencode">
@@ -262,7 +282,7 @@ rather than skill prose.</p>
 <tr><td>Bridge repo not resolvable (no cwd marker, no valid <code>--repo</code>)</td><td>Exit 1, plain message — never guesses a path</td></tr>
 <tr><td>Server fails to start (no listening line in the log within a few seconds)</td><td>Exit 1, print the log content, no silent retry</td></tr>
 <tr><td>Tracking file's PID no longer alive</td><td>Treat as stale, start fresh, overwrite the tracking file</td></tr>
-<tr><td><code>ps -W</code> WINPID disagrees with (or is missing from) the <code>netstat -ano</code> cross-check</td><td>Treat netstat as authoritative; if neither resolves a PID, exit 1 and never persist an empty/unconfirmed PID</td></tr>
+<tr><td><code>netstat -ano</code> doesn't confirm <code>child.pid</code> as the process bound to the expected port (e.g. an <code>opencode</code> wrapper process)</td><td>Treat netstat as authoritative for which PID is actually listening; if it can't confirm one, exit 1 and never persist an unconfirmed PID</td></tr>
 <tr><td><code>stop</code> with no tracking file</td><td>Exit 0, "nothing to stop"</td></tr>
 </table>
 </div>
