@@ -1,4 +1,7 @@
 global:
+  ai-voice-conversational:
+    kind: prose
+    description: Live-conversation response-shape discipline for talking with engineers (action-first, numbered steps, no preamble/recap/closers, hedge-preserving error tone). Not for code — skip for code-writing tasks
   branch-scope-discipline:
     description: Verify file scope before squashing a branch, diffed against the target base
   code-comments:
