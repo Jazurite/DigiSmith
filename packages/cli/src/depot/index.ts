@@ -1,4 +1,5 @@
 import { run as runClone } from "./clone.ts";
+import { run as runOpencode } from "./opencode.ts";
 
 export function run(argv: string[]): void {
   const [resource, ...rest] = argv;
@@ -6,6 +7,10 @@ export function run(argv: string[]): void {
     runClone(rest);
     return;
   }
-  console.error("usage: digismith depot <clone> ...");
+  if (resource === "opencode") {
+    runOpencode(rest);
+    return;
+  }
+  console.error("usage: digismith depot <clone|opencode> ...");
   process.exitCode = 1;
 }
