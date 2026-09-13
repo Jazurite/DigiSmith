@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depot CLI Command Group</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Depot CLI Command Group</h1>
+  <div class="meta">
+    <span>Date: 2026-09-13</span>
+    <span>Map item: V.5</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#commands">Command Tree and Entry Point</a></li>
+    <li><a href="#clone">Resource: clone</a></li>
+    <li><a href="#lifecycle">Resource Lifecycle Helper</a></li>
+    <li><a href="#opencode">Resource: opencode</a></li>
+    <li><a href="#bridge">Resource: bridge</a></li>
+    <li><a href="#relocation">Relocation and Skill Integration</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing and Acceptance</a></li>
+    <li><a href="#outofscope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p><code>digismith:depot</code> (map item <strong>V</strong>) manages five machine-wide
+resources, but only VPS Session (<strong>V.3</strong>/<strong>V.4</strong>) has ever been
+ported into real, tested code — it already routes through
+<code>packages/cli/src/index.ts vps</code>. The other four resources are still raw bash
+embedded directly in <code>skills/depot/SKILL.md</code>, executed live by whichever Claude
+Code session invokes the skill.</p>
+<p>This feature adds a second command group, <code>depot</code>, to <code>@digismith/cli</code>,
+covering the three resources that already have a documented "invoke directly" use case
+outside any automated flow: the <strong>packages/ clone</strong>, the <strong>OpenCode
+server</strong>, and the <strong>Agentic Bridge proxy</strong>. <strong>Claude Code
+readiness</strong> stays skill-only — it has no standalone use case, only ever running as an
+internal prerequisite check inside <code>offload-implementer</code>'s own dispatch.</p>
+<div class="callout">Decided during this brainstorm, in order: scope is clone + opencode +
+bridge, not all four resources · <code>skills/depot/SKILL.md</code>'s three resource
+sections are rewritten to delegate to the new CLI commands, the same way its VPS Session
+section already delegates — one source of truth, not a second implementation · OpenCode
+and Agentic Bridge share a common process-lifecycle helper module, since this is now real
+tested code rather than skill prose (where duplicating the same ~80-line pattern was
+previously judged cheaper) · Agentic Bridge's <code>ensure</code> requires a resolvable
+DigiSmith checkout path (cwd walk-up, or an explicit <code>--repo</code>), the same real
+constraint that exists today, not a project to also bundle the proxy server into the
+package.</div>
+</section>
+
+<section id="commands">
+<h2>Command Tree and Entry Point</h2>
+<pre><code>dg depot clone ensure
+dg depot clone refresh
+dg depot opencode ensure
+dg depot opencode stop
+dg depot bridge ensure [--repo &lt;path&gt;]
+dg depot bridge stop</code></pre>
+<p><code>packages/cli/src/depot/index.ts</code> is the new command-group dispatcher (parses
+the resource, then the verb), registered in the top-level <code>GROUPS</code> map in
+<code>packages/cli/src/index.ts</code> alongside <code>vps</code>. An unknown resource or
+verb falls through to the same usage-message-plus-exit-1 behavior the dispatcher already
+gives <code>vps</code>. Naming follows the tree's existing rule: the package runs
+<code>src/index.ts</code>, a command group runs <code>src/&lt;group&gt;/index.ts</code> — no
+file is called <code>cli</code>.</p>
+</section>
+
+<section id="clone">
+<h2>Resource: clone</h2>
+<p>Simplest of the three — no process or PID tracking, just git commands against the fixed
+path <code>~/.digismith-depot/repo</code>, ported directly from the skill's existing bash.
+<code>packages/cli/src/depot/clone.ts</code> uses <code>node:child_process</code> directly
+(<code>spawnSync</code> per git step) — no shared helper needed, since there is no
+daemon/PID lifecycle here, just sequential commands with pass/fail exit codes.</p>
+<ul>
+<li><strong><code>ensure</code></strong> — idempotent, clone-if-missing: sparse
+  <code>packages</code> checkout of <code>git@github.com:Jazurite/DigiSmith.git</code>,
+  <code>main</code> checked out. No-op if <code>~/.digismith-depot/repo/.git</code> already
+  exists.</li>
+<li><strong><code>refresh</code></strong> — <code>fetch --all --prune --tags</code> +
+  <code>checkout main</code> + <code>reset --hard origin/main</code>. If the clone doesn't
+  exist yet, runs <code>ensure</code>'s sequence first instead of failing (an ordering case,
+  not an error case — same disposition as today).</li>
+</ul>
+</section>
+
+<section id="lifecycle">
+<h2>Resource Lifecycle Helper</h2>
+<p><code>packages/cli/src/depot/process-lifecycle.ts</code> exports the shape shared by
+<code>opencode</code> and <code>bridge</code>:</p>
+<pre><code>interface LifecycleConfig {
+  trackingFile: string;   // e.g. ~/.digismith-depot/opencode-server.json
+  logFile: string;
+  spawn: () =&gt; { command: string; args: string[]; env?: Record&lt;string, string&gt; };
+}
+
+function ensureProcess(config: LifecycleConfig): { port: number } { ... }
+function stopProcess(config: LifecycleConfig): { stopped: boolean } { ... }</code></pre>
+<p><strong><code>ensureProcess</code></strong> — read the tracking JSON. Present → confirm
+the tracked PID is still alive (<code>tasklist //FI "PID eq &lt;pid&gt;"</code>, checking the
+output actually lists it, not just that the command exits 0 — an absent PID still exits 0
+with an empty-ish table). Alive → return the tracked port. Absent or stale → spawn detached
+(<code>--port 0</code>, output redirected into <code>logFile</code>), resolve the real PID,
+poll the log for a line ending <code>listening on http://127.0.0.1:&lt;port&gt;</code> (a
+shared regex works for both resources, since both log lines share that suffix), write the
+tracking file, return the port.</p>
+<p><strong><code>stopProcess</code></strong> — read the tracking file. Absent → report
+nothing-to-stop, exit 0. Present → <code>taskkill //PID &lt;pid&gt; //F</code>, then delete
+the tracking file regardless of whether the process was still alive by the time it ran.</p>
+<div class="callout"><strong>PID resolution correction (folded in from a confirmed,
+recorded lesson, hit 3+ times including on the Agentic Bridge itself):</strong>
+<code>ps -W | awk</code> WINPID resolution can silently return the <em>wrong</em> PID under
+concurrent process load — not just empty, wrong. The skill's existing bash only falls back to
+<code>netstat -ano</code> when <code>ps -W</code> comes back empty, which doesn't catch this.
+Since this is the first real, tested implementation of this logic (the skill's bash prose
+never got this fix either), <code>ensureProcess</code> always cross-checks the <code>ps
+-W</code> result against <code>netstat -ano</code> (matched to the actual listening port)
+before persisting or killing a PID, treating netstat as authoritative rather than a
+fallback-of-last-resort. Never persist an empty or unconfirmed PID.</div>
+</section>
+
+<section id="opencode">
+<h2>Resource: opencode</h2>
+<p><code>packages/cli/src/depot/opencode.ts</code> calls the shared helper with:</p>
+<ul>
+<li><code>trackingFile</code>: <code>~/.digismith-depot/opencode-server.json</code></li>
+<li><code>logFile</code>: <code>~/.digismith-depot/opencode-server.log</code></li>
+<li><code>spawn</code>: <code>opencode serve --port 0 --hostname 127.0.0.1</code>, with
+  <code>CHUTES_API_KEY</code> fetched via <code>python3
+  ~/.claude/skills/chutes-ai/scripts/manage_credentials.py get --field api_key</code> and
+  passed as an environment variable — the same external credential-fetch script the skill
+  already shells out to today; nothing new introduced here.</li>
+</ul>
+</section>
+
+<section id="bridge">
+<h2>Resource: bridge</h2>
+<p><code>packages/cli/src/depot/bridge.ts</code> calls the same shared helper, plus a
+repo-resolution step <code>opencode</code> doesn't need: <code>ensure-agentic-bridge</code>
+spawns <code>node &lt;digismith-repo&gt;/scripts/agentic-bridge/server.ts</code> — a file that
+only exists inside a full DigiSmith git checkout, not in the sparse <code>packages/</code>-only
+depot clone and not published in <code>@digismith/cli</code>'s own tarball. Today this works
+only because <code>offload-implementer</code> always calls it from inside a live DigiSmith-repo
+session that already resolved that repo's own path; a bare <code>dg depot bridge ensure</code>
+typed from an unrelated directory has no such path to fall back on.</p>
+<p>Resolution order: walk up from <code>cwd</code> for <code>.claude-plugin/plugin.json</code>
+with <code>"name": "digismith"</code> (the same marker <code>inject-standards</code> and
+<code>offload-implementer</code> already use); if not found, require an explicit
+<code>--repo &lt;path&gt;</code> and validate it carries the same marker. Exit 1 with a plain
+message if neither resolves — never guesses a path. The resolved path only matters for
+<code>ensure</code>; <code>stop</code> never needs it, since it only reads the tracking file.</p>
+<ul>
+<li><code>trackingFile</code>: <code>~/.digismith-depot/agentic-bridge.json</code></li>
+<li><code>logFile</code>: <code>~/.digismith-depot/agentic-bridge.log</code></li>
+<li><code>spawn</code>: <code>node --experimental-strip-types
+  &lt;repo&gt;/scripts/agentic-bridge/server.ts --port 0</code></li>
+</ul>
+<div class="callout">Deliberately not pursued here: bundling
+<code>scripts/agentic-bridge/{server,anthropic-response}.ts</code> into
+<code>packages/cli</code> the way V.4 relocated <code>scripts/vps-session/</code> — that would
+let <code>dg depot bridge ensure</code> work from a bare global install with no DigiSmith
+checkout nearby, but it's a bigger scope increase (also touches K.9's own map history and
+<code>offload-implementer</code>'s references to the script's current path) than this feature
+is meant to cover. Requiring a real checkout path preserves today's actual constraint, just
+expressed as an explicit CLI check instead of an agent's own prior resolution.</div>
+</section>
+
+<section id="relocation">
+<h2>Relocation and Skill Integration</h2>
+<p><code>skills/depot/SKILL.md</code>'s three resource sections (packages/ Clone, OpenCode
+Server, Agentic Bridge Proxy) are rewritten to delegate to the new CLI commands, the same way
+its VPS Session section already reads — replacing the embedded bash with checkout-form
+invocations:</p>
+<pre><code>node &lt;digismith-repo&gt;/packages/cli/src/index.ts depot clone ensure|refresh
+node &lt;digismith-repo&gt;/packages/cli/src/index.ts depot opencode ensure|stop
+node &lt;digismith-repo&gt;/packages/cli/src/index.ts depot bridge ensure|stop</code></pre>
+<p><code>bootstrap</code>/<code>adopt</code> (clone <code>ensure</code>) and
+<code>offload-implementer</code> (<code>opencode ensure</code>, <code>bridge ensure</code>)
+keep invoking the <code>digismith:depot</code> skill by name exactly as today — only the
+skill's own internal instructions change, from "run this bash" to "run this CLI command." No
+caller-facing change to any of those three skills. The "Which Operation" tables and Quick
+Reference table stay conceptually the same; only the commands they point at change. The
+existing Out of Scope bullet about the shared ensure/stop shape ("duplicating this
+well-understood ~80-line pattern twice is still cheaper and clearer than a premature
+abstraction") is updated to note the shape is now consolidated in
+<code>process-lifecycle.ts</code> rather than duplicated, since it's real tested code now
+rather than skill prose.</p>
+</section>
+
+<section id="errors">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td>No SSH/git access for the DigiSmith clone</td><td>Report the real git error, exit 1</td></tr>
+<tr><td><code>ensure</code> fails when the clone doesn't exist and <code>bootstrap</code>/<code>adopt</code> called it</td><td>Exit 1; caller skill fails the ticket-start flow, same as today</td></tr>
+<tr><td><code>opencode</code> not on PATH</td><td>Exit 1, point at <code>pnpm add -g --allow-build=opencode-ai opencode-ai</code></td></tr>
+<tr><td>Bridge repo not resolvable (no cwd marker, no valid <code>--repo</code>)</td><td>Exit 1, plain message — never guesses a path</td></tr>
+<tr><td>Server fails to start (no listening line in the log within a few seconds)</td><td>Exit 1, print the log content, no silent retry</td></tr>
+<tr><td>Tracking file's PID no longer alive</td><td>Treat as stale, start fresh, overwrite the tracking file</td></tr>
+<tr><td><code>ps -W</code> WINPID disagrees with (or is missing from) the <code>netstat -ano</code> cross-check</td><td>Treat netstat as authoritative; if neither resolves a PID, exit 1 and never persist an empty/unconfirmed PID</td></tr>
+<tr><td><code>stop</code> with no tracking file</td><td>Exit 0, "nothing to stop"</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing and Acceptance</h2>
+<p>Same split V.3/V.4 already established: log-line parsing, tracking-file read/write, port
+extraction, and repo-marker resolution are Vitest-unit-tested. Actual process spawn,
+<code>taskkill</code>, and PID resolution (<code>ps -W</code>/<code>netstat</code>) are
+live-verify-only by design — documented as such, not faked with mocks. Acceptance: from a
+checkout, each of the six commands runs correctly against a clean
+<code>~/.digismith-depot</code> state and against an already-running/already-cloned state
+(idempotency); <code>skills/depot/SKILL.md</code>'s three rewritten sections are read back to
+confirm they now point at the CLI, not embedded bash.</p>
+</section>
+
+<section id="outofscope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>Claude Code readiness as a fourth resource</strong> — stays skill-only; no
+  documented standalone use case, only ever runs as an internal prerequisite check inside
+  <code>offload-implementer</code>'s own dispatch.</li>
+<li><strong>Bundling the Agentic Bridge proxy server into <code>packages/cli</code></strong>
+  — see the callout under Resource: bridge above.</li>
+<li><strong>Locking <code>ensureProcess</code>'s check-then-start against a concurrent
+  caller</strong> — same accepted, disclosed risk the skill already carries for
+  <code>ensure-opencode-server</code>/<code>ensure-agentic-bridge</code>: two callers within
+  the same few seconds can each start their own process, whichever writes the tracking file
+  last wins the slot, the other leaks untracked. Not solved here, for the same reason (a
+  personal, single-operator tool doesn't warrant a lockfile for a window this narrow).</li>
+<li><strong>Publishing this as a new <code>@digismith/cli</code> version</strong> — ships as
+  an unreleased addition to the package until a separate decision to publish, same manual-publish
+  stance V.4 already established.</li>
+<li><strong>A generalized multi-resource CLI abstraction across command groups</strong> —
+  <code>vps</code> and <code>depot</code> each keep their own dispatcher and internal shape;
+  no shared "command group" framework beyond the existing <code>GROUPS</code> map.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/depot-cli-command-group/design.html</footer>
+
+</body>
+</html>
