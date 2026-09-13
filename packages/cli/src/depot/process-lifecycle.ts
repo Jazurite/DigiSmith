@@ -82,8 +82,14 @@ export function ensureProcess(config: EnsureConfig): { port: number } {
     stdio: ["ignore", logFd, logFd],
     env: env ? { ...process.env, ...env } : process.env,
   });
-  child.unref();
   fs.closeSync(logFd);
+  if (child.pid === undefined) {
+    // A failed spawn (e.g. ENOENT) still emits an async 'error' event later; swallow it here
+    // since we've already synchronously detected and reported the failure below.
+    child.on("error", () => {});
+    throw new Error(`could not start "${command}" — not found on PATH`);
+  }
+  child.unref();
 
   const deadline = Date.now() + 5000;
   let port: number | null = null;
@@ -94,23 +100,31 @@ export function ensureProcess(config: EnsureConfig): { port: number } {
   }
   if (port === null) {
     const content = fs.existsSync(config.logFile) ? fs.readFileSync(config.logFile, "utf-8") : "";
-    throw new Error(`${config.label}: failed to start — no "listening on" line in ${config.logFile} within 5s\n${content}`);
+    throw new Error(`failed to start — no "listening on" line in ${config.logFile} within 5s\n${content}`);
   }
 
   const netstat = spawnSync("netstat", ["-ano"], { encoding: "utf-8" });
   const confirmedPid = parseNetstatPidForPort(netstat.stdout ?? "", port);
   if (!confirmedPid) {
-    throw new Error(`${config.label}: could not confirm a PID listening on port ${port} via netstat`);
+    throw new Error(`could not confirm a PID listening on port ${port} via netstat`);
   }
 
   writeTracking(config.trackingFile, { pid: confirmedPid, port });
   return { port };
 }
 
-export function stopProcess(config: TrackingTarget): { stopped: boolean } {
+export function stopProcess(config: TrackingTarget): { stopped: boolean; error?: string } {
   const tracking = readTracking(config.trackingFile);
   if (!tracking) return { stopped: false };
-  spawnSync("taskkill", ["/PID", tracking.pid, "/T", "/F"], { encoding: "utf-8" });
+  const result = spawnSync("taskkill", ["/PID", tracking.pid, "/T", "/F"], { encoding: "utf-8" });
+  if (result.status !== 0) {
+    const check = spawnSync("tasklist", ["/FI", `PID eq ${tracking.pid}`], { encoding: "utf-8" });
+    if (isPidListed(check.stdout ?? "", tracking.pid)) {
+      return { stopped: false, error: (result.stderr ?? "").trim() || "taskkill failed" };
+    }
+    // taskkill returned non-zero but the process is already gone (e.g. it exited on its own) —
+    // this is a normal outcome, not a failure.
+  }
   fs.rmSync(config.trackingFile, { force: true });
   return { stopped: true };
 }

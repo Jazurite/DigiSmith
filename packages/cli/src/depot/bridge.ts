@@ -57,7 +57,14 @@ export function run(
 
   if (verb === "stop") {
     const result = stopProcess({ label: "agentic-bridge", trackingFile });
-    console.log(result.stopped ? "depot bridge: stopped" : "depot bridge: nothing to stop");
+    if (result.error) {
+      console.error(`depot bridge: failed to stop — ${result.error}`);
+      process.exitCode = 1;
+    } else if (result.stopped) {
+      console.log("depot bridge: stopped");
+    } else {
+      console.log("depot bridge: nothing to stop");
+    }
     return;
   }
 

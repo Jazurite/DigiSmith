@@ -39,7 +39,14 @@ export function run(
 
   if (verb === "stop") {
     const result = stopProcess({ label: "opencode-server", trackingFile });
-    console.log(result.stopped ? "depot opencode: stopped" : "depot opencode: nothing to stop");
+    if (result.error) {
+      console.error(`depot opencode: failed to stop — ${result.error}`);
+      process.exitCode = 1;
+    } else if (result.stopped) {
+      console.log("depot opencode: stopped");
+    } else {
+      console.log("depot opencode: nothing to stop");
+    }
     return;
   }
 

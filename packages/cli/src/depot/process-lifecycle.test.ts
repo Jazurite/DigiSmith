@@ -150,4 +150,21 @@ describe("ensureProcess / stopProcess against a real child process", () => {
       })
     ).toThrow(/failed to start/);
   }, 10000);
+
+  it("fails fast with a PATH error instead of stalling for 5s when the binary doesn't exist", () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-lifecycle-"));
+    const trackingFile = path.join(tmpDir, "tracking.json");
+    const logFile = path.join(tmpDir, "server.log");
+
+    const start = Date.now();
+    expect(() =>
+      ensureProcess({
+        label: "dummy",
+        trackingFile,
+        logFile,
+        spawnCommand: () => ({ command: "this-binary-does-not-really-exist-xyz", args: [] }),
+      })
+    ).toThrow(/not found on PATH/);
+    expect(Date.now() - start).toBeLessThan(2000);
+  }, 10000);
 });
