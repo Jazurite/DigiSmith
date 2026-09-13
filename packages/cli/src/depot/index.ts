@@ -1,5 +1,6 @@
 import { run as runClone } from "./clone.ts";
 import { run as runOpencode } from "./opencode.ts";
+import { run as runBridge } from "./bridge.ts";
 
 export function run(argv: string[]): void {
   const [resource, ...rest] = argv;
@@ -11,6 +12,10 @@ export function run(argv: string[]): void {
     runOpencode(rest);
     return;
   }
-  console.error("usage: digismith depot <clone|opencode> ...");
+  if (resource === "bridge") {
+    runBridge(rest);
+    return;
+  }
+  console.error("usage: digismith depot <clone|opencode|bridge> ...");
   process.exitCode = 1;
 }
