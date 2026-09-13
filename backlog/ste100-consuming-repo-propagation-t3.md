@@ -1,7 +1,8 @@
-# Propagate the ASD-STE100 standard into consuming repos' own `CLAUDE.md` (G.3.3)
+# Propagate the ASD-STE100 standard into consuming repos' own `CLAUDE.md` (T.3)
 
-**Status:** Not applied. Deferred child of **G.3**. Depends on **G.3.1** (the standard content)
-existing first. The most novel and most consequential of G.3's children — writes into a file
+**Status:** Not applied. Deferred child of **T** ("AI Voice", promoted 2026-09-13 out of `G` —
+this item was "G.3.3" before that). Depends on **T.1** (the standard content)
+existing first. The most novel and most consequential of T's children — writes into a file
 other engineers on a consuming repo will see and that changes their own Claude Code sessions too,
 not just Jack's.
 
@@ -44,5 +45,8 @@ effect).
 
 ## Why not applied yet
 
-Depends on G.3.1. Also genuinely the biggest of the three children — deserves its own full
-brainstorm rather than being squeezed into G.3.1's build.
+Depends on T.1. Also genuinely the biggest of T's children — deserves its own full
+brainstorm rather than being squeezed into T.1's build. Note it's now also the natural home for
+propagating T.5 (conversational voice) once that ships too, not just T.1 — the mechanism should
+generalize to "any T.x content that needs a consuming repo's buy-in," not stay hardcoded to the
+ASD-STE100 standard specifically.

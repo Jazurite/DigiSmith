@@ -1,13 +1,16 @@
-# Audience-filtering content-voice skill (G.3.6)
+# Audience-filtering content-voice skill (T.6)
 
 **Status:** Not applied. Raw idea only, no design spec yet — needs `digismith:brainstorming`
-before becoming a skill. Renumbered 2026-09-13 from a tentative standalone letter, **T**, into
-**G.3.6** once G.3 broadened from "ASD-STE100 Writing Standard" into "AI Voice" (a general
-umbrella for how DigiSmith-generated content and conversation should read) and this item was
-recognized as a sibling facet — audience-filtering for non-engineer readers — alongside G.3.1
-(artifact sentence-level clarity, engineer/agent readers) and G.3.5 (live-conversation response
-shape). Letter **T** freed for future reuse, same precedent as **R**, **Q**, **H**, and **U**
-before it.
+before becoming a skill. A small, tangled numbering history worth spelling out exactly, all on
+2026-09-13: this item started as a tentative standalone letter, **T** → got folded in as **G.3.6**
+once "G.3" broadened from "ASD-STE100 Writing Standard" into "AI Voice" (a general umbrella for
+how DigiSmith-generated content and conversation should read), recognized as a sibling facet —
+audience-filtering for non-engineer readers — alongside G.3.1 (artifact sentence-level clarity,
+engineer/agent readers) and G.3.5 (live-conversation response shape) → then, later the same day,
+"G.3" itself promoted out of `G` into its own top-level letter — and landed back on **T**, the
+same letter this item started with, now for an unrelated reason (it's the *lineage's* letter, not
+this item's own). Net effect: this item ends up as **T.6**, alongside **T.1** (artifact voice) and
+**T.5** (conversational voice, adapted from `ayghri/i-have-adhd`).
 
 **Source:** Surfaced during an EMKT-756 (cross-sell component) session.
 Two separate moments exposed the same gap:
@@ -67,7 +70,7 @@ duplicated per-skill.
 
 ## Why not applied yet
 
-Single-session observation, not yet run through
-`superpowers:brainstorming`. No map letter formally reserved — `T` is
-a placeholder suggested during discussion, not committed in
-`MEMORY.md`'s map table yet.
+Single-session observation, not yet run through `digismith:brainstorming` on its own terms —
+raised and scoped only as a comparison point while T.5 was being designed. `T` (and T.6's slot
+under it) is now formally committed in `MEMORY.md`'s map table, so this item is unblocked
+map-wise; it just hasn't had its own real brainstorm yet.

@@ -1,22 +1,29 @@
-# Simplified Technical English writing standard (tentative G.3)
+# Simplified Technical English writing standard (T lineage source narrative)
 
 ## Status
-Brainstormed 2026-09-12. Grew into a multi-part feature and was split into four children:
-**G.3.1** (the standard content itself — being designed now, see
-`.digismith/docs/asd-ste100-writing-standard/` once it exists), **G.3.2**
-(`backlog/ste100-artifact-integration-g3-2.md`, wiring generated artifacts), **G.3.3**
-(`backlog/ste100-consuming-repo-propagation-g3-3.md`, team-shared consuming-repo `CLAUDE.md`
-propagation), and **G.3.4** (`backlog/ste100-portable-packaging-g3-4.md`, output-style + linter).
+Brainstormed 2026-09-12. Grew into a multi-part feature — G's original working number, **G.3**,
+was promoted 2026-09-13 into its own top-level letter, **T** ("AI Voice"), once the umbrella
+outgrew a single-facet "writing standard" into three distinct axes (artifact sentence-clarity,
+live-conversation shape, audience-filtering) that a three-level `G.3.x` nesting couldn't hold
+cleanly. Six children: **T.1** (this file's own subject — the ASD-STE100 standard content itself,
+shipped 2026-09-12 as "G.3.1", renumbered in place), **T.2**
+(`backlog/ste100-artifact-integration-t2.md`, wiring generated artifacts), **T.3**
+(`backlog/ste100-consuming-repo-propagation-t3.md`, team-shared consuming-repo `CLAUDE.md`
+propagation), **T.4** (`backlog/ste100-portable-packaging-t4.md`, output-style + linter), **T.5**
+(conversational response discipline, adapted from `ayghri/i-have-adhd`, in progress 2026-09-13),
+and **T.6** (`backlog/audience-filtering-voice-t6.md`, audience-filtering for non-engineer
+readers — itself folded in from a separate tentative letter, T, before T became this lineage's
+own letter; see that file's own status note for the full, slightly tangled history).
 Don't re-brainstorm from this file directly — pick up whichever child is next instead. This file's
 own raw material (the source comparison, the scoping decision, the placement reasoning) still
-holds and isn't repeated in the four child files.
+holds and isn't repeated in the child files.
 
 Source repos cloned to `D:/Workspace/Library/` for reference during this brainstorm:
 `asd-ste100-skill` (danyuchn, MIT, 1,988 stars — the actual content backbone) and `SimpleEnglish`
 (AminBlg, MIT, 3,343 stars — source of the word-swap table, use-cases guide, and the cautionary
 self-eval showing a bloated ruleset underperforms a minimal one on the reply register). Toppa's
 gist (https://gist.github.com/toppa/bf7ff49d6fc44fd4fc3337248f8f2a7e) contributed the output-style
-*mechanism* only (G.3.4), not its rule content — superseded by danyuchn's more carefully engineered
+*mechanism* only (T.4), not its rule content — superseded by danyuchn's more carefully engineered
 version.
 
 ## What prompted it
@@ -31,13 +38,14 @@ Two external sources compared:
   `~/.claude/output-styles`), same underlying standard, simpler rule list (≤20/25-word sentences,
   noun clusters ≤3 words, active voice, simple tenses, one-word-one-meaning, no modal stacking).
 
-## Decision so far (not yet built)
+## Decision so far (T.1 shipped, rest still deferred)
 - **Assimilate SimpleEnglish's rule *content* (and borrow the gist's crisper wording for a few
   rules), not either source's packaging.** An "output style" is a Claude Code app-level global
   toggle — it would flatten *all* session output, including live brainstorming/design
-  conversation, which is the opposite of what's wanted.
-- **Scope is narrow, deliberately:** applies only to text DigiSmith generates *for a reader other
-  than Jack in the moment* — PR descriptions, JIRA/Teams comments (Q's `generate-comment`
+  conversation, which is the opposite of what's wanted for T.1 specifically (T.5, added later, is
+  the deliberate exception — it's about live conversation on purpose).
+- **T.1's scope is narrow, deliberately:** applies only to text DigiSmith generates *for a reader
+  other than Jack in the moment* — PR descriptions, JIRA/Teams comments (Q's `generate-comment`
   templates), and `report-implementation`'s (N) report prose. Does **not** apply to live
   conversation with Jack — no reason to flatten normal back-and-forth into controlled English.
 - **Reframed motivation:** not "accessibility for non-native speakers" (STE100's original
@@ -52,11 +60,14 @@ Two external sources compared:
   same surface for a second, compounding reason (reader clarity), not contradict the existing rule.
 
 ## Where it fits
-**G (Methodology)**, as a new sub-item, **G.3** — sibling to **G.1** (Standards injection,
-already explicitly "coding standards + style guide") and **G.2** (Toolchain). Same injection
-shape as G.1: fold a curated rule subset into the standards library, inject it specifically into
-whatever generates PR descriptions / JIRA-Teams comments / report prose — not into `G.1`'s
-general subagent brief, which would over-apply it to code and conversation.
+**T ("AI Voice")** — its own top-level letter as of 2026-09-13, promoted out of `G` (Methodology)
+once the umbrella grew past a single sub-item into a genuinely distinct pillar: how any AI model
+should generate artifacts and communicate with engineers, spanning three axes (artifact
+sentence-clarity, live-conversation shape, audience-filtering) rather than one. T.1 (this file's
+subject) was the founding piece and stays scoped exactly as designed: fold a curated rule subset
+into the standards library, inject it specifically into whatever generates PR descriptions /
+JIRA-Teams comments / report prose — not into `G.1`'s general subagent brief, which would
+over-apply it to code and conversation.
 
 ## Open questions for a real brainstorm
 - Which exact rule subset from SimpleEnglish's 53 is worth keeping vs. too aerospace-specific to
