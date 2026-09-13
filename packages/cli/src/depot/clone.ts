@@ -33,11 +33,11 @@ export function ensureClone(
   const clone = runGit(["clone", "--filter=blob:none", "--no-checkout", remote, repoPath]);
   if (clone.status !== 0) return clone;
 
-  // Initialize sparse-checkout
-  const init = runGit(["sparse-checkout", "init", "--cone"], repoPath);
+  // Use gitignore-style sparse-checkout (not cone mode) to support simple directory patterns
+  const init = runGit(["sparse-checkout", "init", "--no-cone"], repoPath);
   if (init.status !== 0) return init;
 
-  // Write sparse-checkout file to only include packages/
+  // Direct file write is more portable than git sparse-checkout set across git versions
   const gitDir = path.join(repoPath, ".git");
   const sparseCheckoutFile = path.join(gitDir, "info", "sparse-checkout");
   fs.mkdirSync(path.dirname(sparseCheckoutFile), { recursive: true });
