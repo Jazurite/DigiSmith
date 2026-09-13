@@ -135,6 +135,15 @@ nothing to inject, and this is not an error. The same goes for
 doesn't exist there's simply nothing indexed to match against — also not
 an error.
 
+**Prose exclusion (independent of the repo-type gate above).** Any `index.yml` entry with
+`kind: prose` is excluded from Scenario 4 entirely — never suggested, never matched, never
+auto-included — regardless of how well its `description` fits the dispatch's context. This applies
+in every folder, not just `global/`, and is unconditional: it doesn't depend on repo qualification.
+Scenario 4 dispatches are always code-implementer subagents (via `offload-implementer`); a
+prose-only standard has no Scenario-4 use case to weigh against the risk of polluting a code task's
+prompt with writing-style rules. Scenarios 1-3 are unaffected — `kind: prose` entries are matched
+normally there, same as any other standard.
+
 ### Step 4: Match and Suggest (skip in Explicit Mode)
 
 Match `index.yml` descriptions against the current work context. Present
@@ -167,6 +176,11 @@ Did you mean one of these?
 ```
 
 ### Step 6: Inject, Formatted for the Scenario
+
+**Companions.** Before formatting for any scenario below: if a matched entry has a `companions:`
+list in `index.yml`, read and inject each listed file immediately alongside it, in the same
+scenario-specific format as the primary match — a companion is never optional once its owning
+entry is matched. This applies in all four scenarios.
 
 **Scenario 1 — Conversation.** Read the standards and announce them
 inline:
@@ -233,7 +247,7 @@ augments the brief, it doesn't gate dispatch.
 | 0 | Profile gate: `.digismith/profile` present → only its `standards` list's folders are eligible below; missing → unchanged, all folders eligible |
 | 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |
-| 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated by this specific check |
+| 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated by this specific check. Separately, `kind: prose` entries are excluded from Scenario 4 entirely, in any folder |
 | 4 | Match + suggest (skip if explicit target given) |
 | 5 | Parse explicit target if given, validate it exists |
-| 6 | Inject formatted for the scenario |
+| 6 | Inject formatted for the scenario, always including a matched entry's `companions:` alongside it |

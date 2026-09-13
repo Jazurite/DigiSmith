@@ -92,6 +92,12 @@ Accept the updated description? (yes / or type a better one)
 Keep descriptions to one short sentence — they're for matching, not
 documentation.
 
+For a new file, also check whether it needs either new optional field before moving on: propose
+`kind: prose` when the file is prose style/writing guidance rather than a code pattern or process
+convention, and propose a `companions:` list when the file's own content references sibling files
+in the same folder by path. Both are proposals the user confirms alongside the description, not
+automatic — same disposition as the description suggestion itself.
+
 ### Step 5: Handle Deleted Files
 
 List any stale entries, then remove them automatically — no confirmation
@@ -114,6 +120,10 @@ Rules:
 - Files alphabetically within each folder
 - File names without the `.md` extension
 - One-line descriptions only
+- Two optional fields, in this order when present: `kind: prose` (marks writing-style guidance,
+  excluded from `inject-standards`' Scenario 4 entirely) and `companions: [name, ...]` (sibling
+  files always injected alongside this one). Both omitted entirely for an entry that doesn't need
+  them — never write `kind:` or `companions:` as an empty value.
 
 Example:
 ```yaml
@@ -124,6 +134,10 @@ root:
 global:
   error-handling:
     description: Error handling conventions across any language
+  writing-style-example:
+    kind: prose
+    companions: [writing-style-example-glossary]
+    description: Example entry showing the optional kind/companions fields (not a real standard)
 
 shopify:
   custom-element-components:

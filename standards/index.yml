@@ -10,10 +10,14 @@ global:
   pr-descriptions:
     description: PR description conventions — short and plain, no templated headers/checklists
   ste100-use-cases:
+    kind: prose
     description: Per-genre prose patterns (error messages, PR/commit descriptions, changelogs, agent instructions) for the ASD-STE100 writing standard. Prose only, not code — skip for code-writing tasks
   ste100-word-swaps:
+    kind: prose
     description: Slop-word to plain-word substitution table for AI-generated prose. Prose only, not code — skip for code-writing tasks
   ste100-writing:
+    kind: prose
+    companions: [ste100-word-swaps, ste100-use-cases]
     description: Writing style for AI-generated prose (PR descriptions, comments, reports, SKILL.md). Not for code, code comments, or live conversation — skip entirely for a code-writing task
   surgical-changes:
     description: Touch only what the request requires; don't refactor or clean up adjacent code

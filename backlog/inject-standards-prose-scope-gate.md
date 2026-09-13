@@ -1,8 +1,9 @@
 # `inject-standards` needs a real scope gate for prose-only standards, and companion-file awareness
 
-**Status:** Not applied. Surfaced during G.3.1's post-merge review (2026-09-12, Fable-model
-re-review), not a G.3.1 defect itself — a gap in `digismith:inject-standards`' own mechanism that
-G.3.1's shipped content exposed for the first time.
+**Status:** Applied 2026-09-13. See `.digismith/docs/inject-standards-prose-scope-gate/design.html`
+and `plan.md`. Both open questions below resolved: a `kind: prose` field (not a dedicated folder)
+excludes prose standards from Scenario 4, and a `companions:` list (not Markdown-reference parsing)
+keeps a multi-file standard's siblings attached whenever the primary entry is matched.
 
 ## What this covers
 
