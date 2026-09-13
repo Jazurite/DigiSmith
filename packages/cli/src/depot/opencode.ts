@@ -19,7 +19,7 @@ export function fetchChutesApiKey(): string {
   const result = spawnSync("python3", [CREDENTIALS_SCRIPT, "get", "--field", "api_key"], { encoding: "utf-8" });
   if (result.status !== 0) {
     throw new Error(
-      `depot opencode: could not fetch the Chutes API key — ${(result.stderr ?? "").trim() || "manage_credentials.py failed"}`
+      `could not fetch the Chutes API key — ${(result.stderr ?? "").trim() || "manage_credentials.py failed"}`
     );
   }
   return result.stdout.trim();
@@ -56,7 +56,7 @@ export function run(
     });
     console.log(`depot opencode: ready on port ${port}`);
   } catch (err) {
-    console.error((err as Error).message);
+    console.error(`depot opencode: ${(err as Error).message}`);
     process.exitCode = 1;
   }
 }
