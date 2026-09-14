@@ -30,6 +30,22 @@ from EveryDay-Writer's `core/anti-ai-rules.md`:
    writer didn't supply; what's the weakest sentence and is it load-bearing), then revise, then run
    a checklist. Worth considering as a companion process for T.1's own consumers (T.2's eventual
    wiring into `generate-comment`/`report-implementation`) rather than a one-shot rule application.
+4. **Numeric thresholds** (`core/ai_slop_commandments.md`, the file EveryDay-Writer's own precedence
+   order treats as more specific than `anti-ai-rules.md`). T.1's rules are entirely qualitative —
+   this source gives concrete counts: negative parallelism ("one instance permissible, two is a
+   pattern, three is a violation"), tricolons ("one per paragraph max, no back-to-back"), em-dashes
+   ("no more than 2-3 per piece"). Genuinely actionable in a way "don't overuse X" isn't.
+5. **Era-indexed slop vocabulary** (`ai_slop_commandments.md`'s appendix). Slop words are tracked by
+   which LLM-generation era they peaked in (2023 GPT-4 era vs. mid-2024 GPT-4o era vs. 2025 GPT-5
+   era), on the explicit premise that the vocabulary drifts as models change and needs periodic
+   refresh — a maintenance concept T.1's word-swap table doesn't have at all (it's frozen at
+   whatever AminBlg catalogued once).
+6. **Knowledge-cutoff disclaimer contamination** (`ai_slop_commandments.md` §2.9) — a distinct
+   pattern from hedge-preservation, not yet covered anywhere in T.1: don't invent speculative filler
+   ("maintains a low profile," "as of my last update," "while specific details are limited...") to
+   paper over genuinely missing information. Hedge-preservation protects a stated uncertainty from
+   being upgraded to false certainty; this rule targets the opposite failure — dressing up an
+   absence of information as if it were content.
 
 Also noted, not part of this item: EveryDay-Writer does per-person voice fingerprinting (calibrate
 generated writing to match a specific person's real samples, multi-profile for ghostwriting
@@ -48,6 +64,9 @@ pattern if T ever grows a "sound like Jack specifically" child.
   (the wiring/consumption layer, since T.1 itself is content-only by design)?
 - Original question, still open: where do new word-swap candidates come from — manual notice,
   periodic scan of DigiSmith's own artifacts, or something else?
+- Should the era-indexed vocabulary concept turn into a standing maintenance habit (revisit the
+  word-swap table on some cadence, or when a new model generation ships) rather than a one-time
+  import?
 
 ## Why not applied yet
 
