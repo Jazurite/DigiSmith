@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jira Client Windows Entry-Guard Fix (I.5)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Jira Client Windows Entry-Guard Fix (I.5)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-18</span>
+    <span>Map item: I.5</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#fix">The Fix</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+<code>packages/jira-client/src/cli.ts</code>'s entry-point guard (line 107) never matches on
+Windows:
+</p>
+<pre><code>if (process.argv[1] &amp;&amp; import.meta.url === `file://${process.argv[1]}`) {</code></pre>
+<p>
+Windows paths don't carry the <code>file:///</code> scheme the string comparison expects, so the
+comparison always fails, <code>main()</code> never runs, and every subcommand silently exits 0
+with no real work done. Found live during EMKT-711 (shopify-hub, 2026-09-18): <code>check-credentials</code>
+falsely reported "ok" with genuinely blank credentials, since the guard failure means the whole
+switch statement — including its own error handling — never executes at all. Filed as
+<code>backlog/jira-client-cli-windows-entrypoint-bug.md</code>.
+</p>
+<p>
+Splitting a separate concern out of this fix: an <code>upload-attachment</code> subcommand plus
+inline-image support (originally scoped together with this fix as one item) is a new capability,
+not a bugfix, and belongs to its own later map item (<strong>I.6</strong>), not bundled here.
+</p>
+</section>
+
+<section id="fix">
+<h2>The Fix</h2>
+<p>
+Swap the guard to:
+</p>
+<pre><code>if (import.meta.filename === process.argv[1]) {</code></pre>
+<p>
+Matches the pattern already working in <code>scripts/preferences.ts</code> and
+<code>scripts/fill-template.ts</code>. <code>import.meta.filename</code> is stable since Node
+21.2; this package requires Node &ge;24, so no compatibility concern. No new import needed
+(unlike the alternative <code>pathToFileURL(process.argv[1]).href === import.meta.url</code>
+form used elsewhere in this repo — not needed here since this file has no symlink-resolution
+requirement the simpler form doesn't already cover).
+</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>
+<code>cli.test.ts</code> currently only tests the pure helpers (<code>parseArgs</code>,
+<code>requireArgs</code>) — it never actually invokes the CLI as a process, which is exactly how
+this bug went unnoticed: nothing exercises the entry guard itself. Add a real
+subprocess-invocation test following the pattern already established in
+<code>scripts/providers/print-config.test.ts</code> (<code>execFileSync("node", [SCRIPT_PATH, ...])</code>,
+asserting real stdout/exit behavior):
+</p>
+<ul>
+<li>Run <code>check-credentials</code> with the spawned process's <code>HOME</code>/<code>USERPROFILE</code>
+env vars pointed at a temp directory containing a real <code>.digismith-depot/.env</code> (no new
+CLI flag needed — <code>checkCredentials()</code>'s default path already resolves via
+<code>homedir()</code>, which Node's <code>os.homedir()</code> derives from those same env vars),
+assert exit 0 and the real <code>"check-credentials: ok"</code> stderr line actually printed by
+<code>main()</code> — not just that the process didn't crash.</li>
+<li>Run it again against a missing/incomplete temp credentials file, assert exit 1 and the real
+<code>CredentialsError</code> message — proving the guard's failure path also actually executes
+post-fix, not just its happy path.</li>
+</ul>
+<p>
+This is the durable fix for the backlog note's "every subcommand needs re-verifying, no evidence
+any of them have ever actually executed on Windows" — an automated regression guard instead of a
+one-off manual check.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>I.6</strong> — <code>upload-attachment</code> subcommand and inline-image (ADF Media
+Platform) support. Different domain (new capability vs. bugfix); picked up separately later.</li>
+<li>Testing every existing subcommand's Windows behavior beyond <code>check-credentials</code> —
+the subprocess-test pattern this establishes is reusable for the others later if needed, but
+proving the guard itself works via one representative subcommand is sufficient for this fix.</li>
+</ul>
+</section>
+
+<footer>DigiSmith &middot; .digismith/docs/jira-client-windows-entrypoint-fix/design.html</footer>
+
+</body>
+</html>
