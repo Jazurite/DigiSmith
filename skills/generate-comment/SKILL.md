@@ -82,6 +82,12 @@ this skill's):
 Compose all such bullets as one Markdown bullet-list block — the
 `next-steps` placeholder value.
 
+Set the `screenshots` placeholder to the literal string `N/A`, unconditionally
+— never ask whether screenshots exist. Real image attachment depends on map
+item **I.5** (jira-client attachment upload, not built as of this writing,
+owned separately from Q) — asking now would be a dead end with nothing to
+attach to. Once I.5 ships, this step is the place to revisit.
+
 **Stay within the supported Markdown subset** when drafting any of this
 step's bullets, since they get converted to ADF later (Progress Update
 only, not Teams): plain text, `**bold**`, `[text](url)` links,
@@ -224,7 +230,7 @@ itself; that's each caller's own job.
 | Step | Action |
 |---|---|
 | 1 | Determine template type — from the caller, or ask |
-| 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, today's date |
+| 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots placeholder (always `N/A` for now), today's date |
 | 3 | Investigation Update content: what's checked / found / needed, role/mention resolution, today's date |
 | 4 | Teams Review Request content: scope, PR info, reviewer names via `digismith:preferences`, ask line |
 | 5 | Fill the template via `fill-template.ts`, parse the returned JSON |
