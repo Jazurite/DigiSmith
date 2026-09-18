@@ -1166,6 +1166,29 @@
   this session, with a self-check before moving on). See <a href="docs/jira-client-windows-entrypoint-fix/design.html">design</a>, <a href="docs/jira-client-windows-entrypoint-fix/plan.md">plan</a>, and <a href="docs/jira-client-windows-entrypoint-fix/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-18</div>
+      <h4>Screenshots/Videos Section (Q.1 addendum)</h4>
+      <p>Adds a &#128444;&#65039; Screenshots / Videos section to the Progress Update template,
+  always reporting <code>N/A</code> for now since real image attachment depends on map item
+  <strong>I.5</strong> (owned separately by the I-lineage, not built here &mdash; asking whether
+  screenshots exist would be a dead end with nothing to attach to until it ships). Two file edits,
+  no new files: <code>skills/generate-comment/templates/progress-update.md</code> gains the new
+  section between &ldquo;All links&rdquo; and &ldquo;Next Steps&rdquo;, and
+  <code>skills/generate-comment/SKILL.md</code>'s Step 2 gains one instruction setting the new
+  <code>screenshots</code> placeholder to the literal string <code>N/A</code>. Also fixed two
+  pre-existing round-trip tests from the original Q build that hardcoded the old template shape
+  and broke once the new section landed. Followed the full Superpowers process: brainstorming
+  &rarr; spec &rarr; writing-plans &rarr; <code>digismith:executing-plans</code> (1 task, executed
+  directly in this session, with a self-check before moving on). See
+  <a href="docs/generate-comment/design.html">design</a> (Addendum section),
+  <a href="docs/generate-comment/plan-screenshots-section.md">plan</a>, and
+  <a href="docs/generate-comment/report-screenshots-section.html">report</a> &mdash; filed under
+  Q's existing <code>generate-comment</code> docs folder rather than a new slug, with
+  addendum-specific filenames to avoid overwriting the original Q build's own
+  <code>plan.md</code>/<code>report.html</code>.</p>
+    </div>
+
   </div>
 </section>
 
