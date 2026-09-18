@@ -56,6 +56,7 @@ describe("fillTemplate", () => {
         "- Trial/Returns banner implemented and verified live on JP, PH, and KR — icon + editable text, shown only on product pages, correct desktop/mobile ordering next to breadcrumbs.",
       "next-steps":
         "- **🔍 Code Review Needed >** (@[Jane Doe](5f8a2bc1)) — please review the banner styling changes",
+      screenshots: "N/A",
     });
     expect(result.markdown).toBe(
       [
@@ -68,6 +69,10 @@ describe("fillTemplate", () => {
         "- Trial/Returns banner implemented and verified live on JP, PH, and KR — icon + editable text, shown only on product pages, correct desktop/mobile ordering next to breadcrumbs.",
         "",
         "👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.",
+        "",
+        "🖼️ Screenshots / Videos:",
+        "",
+        "N/A",
         "",
         "#### 🎯 Next Steps:",
         "",

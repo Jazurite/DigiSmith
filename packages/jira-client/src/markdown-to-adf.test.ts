@@ -148,6 +148,10 @@ describe("markdownToAdf", () => {
       "",
       "👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.",
       "",
+      "🖼️ Screenshots / Videos:",
+      "",
+      "N/A",
+      "",
       "#### 🎯 Next Steps:",
       "",
       "- **🔍 Code Review Needed >** (@[Jane Doe](5f8a2bc1)) — please review the banner styling changes",
@@ -189,6 +193,14 @@ describe("markdownToAdf", () => {
               text: "👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.",
             },
           ],
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "🖼️ Screenshots / Videos:" }],
+        },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "N/A" }],
         },
         { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "🎯 Next Steps:" }] },
         {
