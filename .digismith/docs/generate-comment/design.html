@@ -65,7 +65,7 @@
   <span class="badge">approved for planning</span>
   <h1>Templating (Q)</h1>
   <div class="meta">
-    <span>Date: 2026-09-08, revised 2026-09-09</span>
+    <span>Date: 2026-09-08, revised 2026-09-09, addendum 2026-09-18</span>
     <span>Map item: Q.1, Q.2</span>
   </div>
 </header>
@@ -80,6 +80,7 @@
     <li><a href="#error-handling">Error Handling</a></li>
     <li><a href="#testing">Testing</a></li>
     <li><a href="#out-of-scope">Out of Scope</a></li>
+    <li><a href="#addendum-screenshots">Addendum: Screenshots/Videos section</a></li>
   </ol>
 </nav>
 
@@ -343,6 +344,45 @@ ask only, per this design's own decision.</li>
 doc (<code>.digismith/docs/teams-pr-review-notification/design.html</code>) and unchanged here; I.4
 still only ever produces pasteable text.</li>
 </ul>
+</section>
+
+<section id="addendum-screenshots">
+<h2>Addendum: Screenshots/Videos section (2026-09-18)</h2>
+<p>
+Surfaced live during EMKT-711 (shopify-hub) &mdash; Jack's real usage of the Progress Update shape
+always includes a <code>&#128444;&#65039; Screenshots / Videos:</code> section between &ldquo;What's
+done&rdquo; and &ldquo;Next Steps,&rdquo; which <code>progress-update.md</code> never captured when
+Q.1 shipped. Full finding: <code>backlog/jira-progress-update-screenshots-section.md</code>.
+</p>
+<p>
+<strong>Scope decision:</strong> the template section ships now; real image attachment does not.
+Getting actual screenshot bytes into a Jira comment requires an attachment-upload capability that
+doesn't exist yet (<code>packages/jira-client</code> has no upload subcommand, only
+<code>get-attachment</code> for download) &mdash; that gap, plus a prerequisite Windows CLI
+entry-point bug and the harder Media Platform inline-embedding flow, is scoped as a separate map
+item, <strong>I.5</strong>, owned by the I-lineage (Reporting) rather than Q &mdash; it's Jira-API
+infrastructure serving I.1, not a templating-mechanism concern. Until I.5 ships, this section always
+reports <code>N/A</code>.
+</p>
+<h3>Template change</h3>
+<p><code>skills/generate-comment/templates/progress-update.md</code> gains one section, inserted
+between the &ldquo;All links&hellip;&rdquo; line and &ldquo;Next Steps&rdquo;:</p>
+<pre><code>👆 All links (Preview Theme, Customize, Pull Request) are in the ticket description above.
+
+🖼️ Screenshots / Videos:
+
+&lt;screenshots&gt;
+
+🎯 Next Steps:</code></pre>
+<h3>generate-comment change</h3>
+<p>
+Step 2 (Progress Update content-gathering) sets the new <code>screenshots</code> placeholder to the
+literal string <code>N/A</code>, unconditionally &mdash; no question asked. Asking &ldquo;do you have
+screenshots?&rdquo; would be a dead end with no attachment mechanism behind it; the skill states
+plainly that real image support is deferred to I.5. The date placeholder needed no change &mdash; it
+already computes <code>D/M</code> form (<code>date +%-d/%-m</code>), matching the confirmed real
+shape from the backlog finding.
+</p>
 </section>
 
 <footer>DigiSmith &middot; .digismith/docs/generate-comment/design.html</footer>
