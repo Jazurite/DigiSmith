@@ -39,10 +39,8 @@ inline rendering is wanted for that one comment.
 
 ## Prerequisite noted, not this item's scope
 
-This is blocked by
-[jira-client-cli-windows-entrypoint-bug.md](jira-client-cli-windows-entrypoint-bug.md) —
-no CLI subcommand actually executes on Windows today, so a new one would
-inherit the same silent no-op until that's fixed.
+The Windows CLI entry-point bug this was blocked on is fixed — shipped as **I.5**, 2026-09-18
+(see `MEMORY.md`'s I row). This item is unblocked.
 
 Also needs a way to get real image bytes for a screenshot Jack pastes
 inline in chat rather than a file already on disk — see the
@@ -58,5 +56,5 @@ returning the new attachment's numeric ID and content URL for the caller
 
 ## Why not applied yet
 
-Raw finding, not yet run through `digismith:brainstorming`. Depends on
-the Windows CLI fix landing first to be verifiable at all.
+Raw finding, not yet run through `digismith:brainstorming`. Now numbered **I.6** (deferred sub-item
+of I, split from what would otherwise have been bundled into I.5) — see `MEMORY.md`'s I row.
