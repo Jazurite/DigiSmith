@@ -253,3 +253,47 @@ logging into TokenReply's dashboard to check model capability flags) needs eithe
 opt-in on cost/scope (Chutes) or an account he'd need to create himself (TokenReply login). Revisit
 by trying `kimi-k3` again after some time (TokenReply may fix their `kimi-k3` route), or by
 checking TokenReply's own Models page while logged in for an explicit tool-calling capability flag.
+
+## 2026-09-19 addition — two more live data points, via herdr+OpenCode, outside any DigiSmith recovery path
+
+Surfaced incidentally during X's herdr persistence spike (`backlog/mcp-orchestration-architecture-xvk.md`'s
+herdr sections) — not a dedicated investigation session, but two real, controlled `kimi-k3` dispatches
+worth recording. Both went through OpenCode's own `@ai-sdk/openai-compatible` provider (config generated
+by `scripts/providers/print-config.ts`, same as always) directly against TokenReply, with **no Agentic
+Bridge (K.9) or any other recovery layer in front** — raw upstream behavior, same shape as this file's
+own earlier "control dispatch sent directly to TokenReply bypassing the proxy" trials.
+
+| Dispatch | Host | Tool call attempted | Result |
+|---|---|---|---|
+| Trial 1 | Local Windows machine, via herdr | Read a file (`notes.txt`) | ❌ New, third failure signature — see below |
+| Trial 2 | The Hetzner VPS, via herdr | List files (`ls -la`) | ✅ Real tool call executed correctly, coherent answer, no leak |
+
+**Trial 1 — a genuinely new failure signature, not the documented XTML leak:**
+
+```json
+{"message":"upstream: agent stream closed without producing any output","type":"cursor_error","code":"cursor_stream_error"}
+```
+
+This happened after a real ~14s thinking pass, right at the point a tool call should have been
+emitted. Unlike the garbled-XTML-text pattern documented above (a response *arrives*, just in the
+wrong format), here the stream simply **closed with zero output** — no text, no garbled tool-call
+markup, nothing for a parser to even attempt to decode. This is a different failure shape than
+either of `kimi-k3`'s own documented signature (garbled XTML text) or `gpt-5.6-luna`'s two logged
+signatures (silent fake-success, honest BLOCKED) — none of the three existing signatures match a
+closed stream with no output at all. `hasXtmlToolCallChannel`/`extractXtmlToolCalls` would not
+detect this case at all (there is no leaked text to detect), so neither K.3's manual recovery nor
+K.9's Agentic Bridge would catch or repair it — worth noting as a real gap if this signature turns
+out to be common rather than rare.
+
+**Trial 2 — a clean success, reinforcing that the bug is intermittent, not deterministic:** same
+model, same unmediated path, a different real tool call (`ls -la`) executed correctly with a
+coherent follow-up answer. Consistent with K.9's own already-recorded observation that "the leak
+did not reproduce in any real dispatches attempted" on other days — this is now at least a third
+occasion where `kimi-k3` tool-calling worked cleanly on TokenReply with no intervention.
+
+**Net effect on this file's open questions:** doesn't resolve anything below, but adds a third
+distinct observed failure shape to track, and further weakens any assumption that the leak is a
+reliable, reproducible-on-demand bug — four "clean" observations now exist (this file's own trial 3
+control, K.9's four dispatches, and this trial 2) against a smaller number of confirmed failures,
+across at least three different failure signatures. Anyone testing `kimi-k3` again should expect
+inconsistent behavior run-to-run, not a deterministic repro.
