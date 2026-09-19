@@ -10,13 +10,19 @@ describe("loadConfigOrExit", () => {
   });
 
   it("exits 1 and reports when no vps.json exists", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vps-shared-missing-"));
+    const missingPath = path.join(dir, "vps.json");
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`exit:${code}`);
     }) as never);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    expect(() => loadConfigOrExit()).toThrow("exit:1");
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no VPS configured"));
+    try {
+      expect(() => loadConfigOrExit(missingPath)).toThrow("exit:1");
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no VPS configured"));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("returns the parsed config when vps.json is valid", () => {

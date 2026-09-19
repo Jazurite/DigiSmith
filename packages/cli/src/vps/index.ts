@@ -11,9 +11,4 @@ const vpsCommand: CommandModule = {
   handler: () => {},
 };
 
-export function run(argv: string[]): void {
-  console.error("usage: digismith vps <status|connect>");
-  process.exitCode = 1;
-}
-
 export default vpsCommand;
