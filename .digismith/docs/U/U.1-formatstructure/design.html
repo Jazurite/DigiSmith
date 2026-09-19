@@ -205,8 +205,10 @@ Domains:
   <h2>Non-goals</h2>
   <ul>
     <li>No new global option groups (HubSpot's <code>commonOpts.ts</code> equivalent — <code>--account</code>,
-    <code>--debug</code>, etc.) — neither existing domain takes any flags today; adding speculative ones
-    is scope creep with no current consumer.</li>
+    <code>--debug</code>, etc.) — the one existing flag, <code>depot bridge ensure --repo &lt;path&gt;</code>
+    (currently hand-parsed via <code>argv.indexOf</code>), becomes a proper declared yargs
+    <code>.option('repo', { type: 'string' })</code> on that single leaf; nothing speculative is added
+    beyond that migration.</li>
     <li>No command aliasing (yargs supports <code>command: [canonical, ...aliases]</code> for free later
     if a real need arises — not invented here).</li>
     <li>No auto-publish-on-merge hook — V.4's own flagged future work, stays deferred.</li>
