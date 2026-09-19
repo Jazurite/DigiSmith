@@ -8,7 +8,26 @@
 
 **Tech Stack:** TypeScript (NodeNext ESM, Node ≥24), yargs ^17.7.3, @types/yargs ^17.0.35 (dev), picocolors ^1.1.1, Vitest.
 
-**Correction (found during Task 5, blocking the whole tree):** Task 1's original `attachHelp`/`brandHelp`
+**Second correction (found during Task 5's review):** the `.updateLocale()`/`.usage()` fix below is
+verified non-eager, but it's still wrong — yargs renders all help/usage text through `cliui`/`wrap-ansi`
+before printing, and that pass mangles raw ANSI escape codes embedded in the strings passed to either
+method (confirmed with a minimal repro: `"[1m[35mCommands:[39m[22m"` renders as
+`"[1mCommands:[35m"` — the close codes vanish and the color-open relocates past the text),
+corrupting the terminal state after every help/error print. The actually-correct mechanism, verified by
+reading `yargs-factory.js`'s `kCreateLogger`/`parse()` implementation directly: **`.parse(args, context,
+callback)`** buffers all of yargs' own final rendered output (already past `cliui`/`wrap-ansi`, safe to
+regex-postprocess) into a string handed to the callback as its third argument, instead of printing it
+directly — this is the supported, non-eager hook Task 1 should have used from the start. `lib/brand-help.ts`
+goes back to something close to Task 1's *original* pure-string post-processing function (`brandOutput`,
+regex-colorizing an already-rendered string is safe — it never reflows text) — the only real mistake
+across every attempt was *when* that processing ran, never the string-manipulation logic itself.
+`.usage()` still sets a **plain, uncolored** root banner string once (`ROOT_USAGE`, a literal marker
+`brandOutput` later detects to distinguish root output from nested output and recover the
+`Commands:`→`Domains:` root relabel — no `.updateLocale()` call at all anymore). The one `.parse(...,
+callback)` call lives once, at the real entry point in `src/index.ts`, not inside `buildCli()` (which
+stays a pure builder for testability) and not inside any bucket.
+
+**First correction (found during Task 5, blocking the whole tree):** Task 1's original `attachHelp`/`brandHelp`
 design (post-processing yargs' own generated help text via `.showHelp(callback)`, called inside every
 bucket's `builder`) is fundamentally broken — confirmed by reading yargs 17.7.3's actual source
 (`yargs-factory.js`): `.showHelp()`/`.getHelp()` are **eager, imperative** methods that immediately
