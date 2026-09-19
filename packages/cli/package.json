@@ -1,7 +1,7 @@
 {
   "name": "@digismith/cli",
   "version": "0.1.0-beta",
-  "description": "DigiSmith's command line — Depot's distribution surface",
+  "description": "DigiSmith's command line — binaries, dispatcher, and command-group framework",
   "license": "MIT",
   "dependencies": {
     "yargs": "^17.7.3",
