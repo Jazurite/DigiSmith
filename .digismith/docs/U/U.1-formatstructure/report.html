@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Domain Framework (U.1) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>CLI Domain Framework (U.1) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: <strong>U.1</strong></span>
+    <span>Commit range: <code>c5aad89..331ee3f</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Migrated <code>@digismith/cli</code>'s hand-rolled <code>vps</code>/<code>depot</code> dispatcher to a
+  yargs-based, HubSpot-style domain framework with branded help output, and closed out letter U's ownership
+  split from Depot's own V lineage. Every domain (<code>vps</code>, <code>depot</code>) and sub-domain
+  (<code>depot clone</code>, <code>depot opencode</code>, <code>depot bridge</code>) is now a yargs "bucket"
+  <code>CommandModule</code> composed of leaf <code>CommandModule</code>s that call the logic functions each
+  file already exported — no logic changes, only the argv-parsing shell around each was replaced. The shipped
+  branding mechanism differs from the plan's original design: <code>src/lib/brand-help.ts</code>'s
+  <code>brandOutput()</code> regex-colorizes yargs' own fully-rendered help/error text, delivered via
+  <code>.parse(argv, {}, callback)</code>'s output-buffering — not the originally-planned
+  <code>.showHelp(callback)</code>/<code>.updateLocale()</code> approaches, both of which turned out to have
+  real defects only a live end-to-end parse could expose (see Final Review &amp; Fix, and <code>plan.md</code>'s
+  two "Correction" sections for the full history).</p>
+  <p>Followed the full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (6 tasks, each dispatched to a fresh implementer
+  subagent and independently reviewed) → a final whole-branch review. This was an unusually eventful build:
+  Task 5 (the root dispatcher) discovered that the branding mechanism already shipped in Tasks 1/2/4 was
+  fundamentally broken, requiring three full design iterations — each independently reviewed, two of which
+  found real defects — before the mechanism was verified correct against yargs' own source rather than just
+  its documentation. The final whole-branch review found 3 Important findings and 1 real Minor bug, all
+  fixed in one review-mandated fix wave plus one additional targeted fix for a residual finding the scoped
+  re-review surfaced.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <span class="tag">Task 1</span>
+      <h4>Shared CLI framework primitives</h4>
+      <p><code>lib/brand-help.ts</code> — <code>brandOutput(rawOutput, colors?)</code>, a pure string
+      post-processor colorizing yargs' already-rendered help/error text, plus <code>ROOT_USAGE</code>, a
+      plain marker string used to distinguish root from nested output. (This is the final, third-iteration
+      shape — see Final Review &amp; Fix.)</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 2</span>
+      <h4><code>vps</code> domain → yargs bucket</h4>
+      <p>Default-exports <code>vpsCommand: CommandModule</code>, composing <code>status</code>/<code>connect</code>
+      leaves; <code>shared.ts</code>'s <code>loadConfigOrExit()</code> centralizes the config-loading guard
+      both leaves need.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 3</span>
+      <h4><code>depot clone</code> sub-domain → yargs bucket</h4>
+      <p>Default-exports <code>cloneCommand: CommandModule</code>, composing <code>ensure</code>/<code>refresh</code>
+      leaves over the pure logic moved into <code>clone/lib.ts</code>.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 4</span>
+      <h4><code>depot opencode</code>/<code>bridge</code> + the <code>depot</code> root bucket</h4>
+      <p>Default-exports <code>depotCommand: CommandModule</code>, composing <code>clone</code>/<code>opencode</code>/<code>bridge</code>.
+      <code>opencode</code>/<code>bridge</code>'s <code>ensure</code>/<code>stop</code> leaves use a
+      <code>createEnsureCommand(trackingFile?, logFile?)</code>/<code>createStopCommand(trackingFile?)</code>
+      factory pattern preserving the old code's test-path overridability. The hand-parsed <code>--repo</code>
+      flag became a declared yargs option.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 5</span>
+      <h4>Root dispatcher</h4>
+      <p><code>buildCli(argv): Argv</code> — the real yargs root instance, wiring <code>vpsCommand</code>/<code>depotCommand</code>,
+      <code>.strict()</code>, <code>.version()</code>. The production entry point
+      (<code>isDirectRun()</code>) drives <code>.parse(argv, {}, callback)</code>, buffering yargs' rendered
+      output through <code>brandOutput()</code> before printing.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 6</span>
+      <h4>Ownership/docs cleanup</h4>
+      <p><code>package.json</code>'s description no longer frames the package as Depot's;
+      <code>MEMORY.md</code>'s U row records U.1's shipped state, V's row cross-references the ownership
+      move.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent per task,
+  independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. Shared framework primitives</td>
+      <td><code>brand-help.ts</code> + <code>yargs</code>/<code>picocolors</code> deps</td>
+      <td>Approved after 1 fix round (yargs v18→v17 + missing type declarations; header-coloring wrongly
+      root-gated) — later superseded entirely by Task 5's redesign</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>2. <code>vps</code> domain</td>
+      <td><code>vpsCommand</code> bucket</td>
+      <td>Approved, clean (after a controller-caught pre-review fix: a non-hermetic test relying on a real
+      <code>~/.digismith-depot/vps.json</code> present on the dev machine, plus a stray unrequested
+      <code>run()</code> compatibility stub)</td>
+      <td><code>process.exit(1)</code> hard exit vs. the old graceful <code>exitCode</code> drain
+      (plan-mandated); <code>shared.test.ts</code>'s <code>exitSpy</code> looked unused but is actually load-bearing
+      for its <code>mockImplementation</code></td>
+    </tr>
+    <tr>
+      <td>3. <code>depot clone</code> sub-domain</td>
+      <td><code>cloneCommand</code> bucket</td>
+      <td>Approved, clean (after a controller-caught pre-review fix: an unrequested transitional
+      compatibility shim, and an AI-attribution trailer on both commits, rewritten via
+      <code>git filter-branch</code>)</td>
+      <td><code>ensure.ts</code>/<code>refresh.ts</code> duplicate the same error-handling shape verbatim
+      (plan-mandated)</td>
+    </tr>
+    <tr>
+      <td>4. <code>depot opencode</code>/<code>bridge</code> + root bucket</td>
+      <td><code>depotCommand</code> bucket</td>
+      <td>Approved, clean, no fix round — dispatched on a more capable model given the prior tasks'
+      deviation pattern</td>
+      <td>No test covered <code>bridge/ensure.ts</code>'s <code>--repo</code> option path directly — later
+      picked up and fixed in the final whole-branch review (see below)</td>
+    </tr>
+    <tr>
+      <td>5. Root dispatcher</td>
+      <td><code>buildCli()</code> + the real <code>.parse()</code> entry point</td>
+      <td><span class="status-fixed">BLOCKED</span> (the branding mechanism shipped in Tasks 1/2/4 is eager
+      and re-enters yargs' own parse pipeline) → 3 full design iterations, each independently reviewed on the
+      most capable available model (2 of the 3 found real, concrete defects) → 1 test-hardening fix round →
+      Approved</td>
+      <td>None outstanding — this task's own findings are all resolved in its final iteration</td>
+    </tr>
+    <tr>
+      <td>6. Ownership/docs cleanup</td>
+      <td><code>package.json</code>/<code>MEMORY.md</code> updates</td>
+      <td>Approved, clean (after a NEEDS_CONTEXT clarification: this worktree branched before an earlier
+      commit adding <code>MEMORY.md</code>'s U row was ever pushed, so the brief's "replace existing text"
+      assumption didn't hold — redirected to insert fresh)</td>
+      <td>The new U row's theme label ("CLI command framework") is an implementer-invented gloss, not
+      verbatim from the brief — accurate but worth a glance</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes — 3 Important findings and 1 bundled real Minor bug, all fixed in one
+  review-mandated fix wave; one further residual finding from the scoped re-review closed with one
+  additional targeted fix (a deliberate, documented exception to the "no second fix wave" default, since
+  the defect was small and fully diagnosed).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Important</td>
+      <td><code>design.html</code>'s Branding section described the first (abandoned) mechanism design —
+      none of its three central claims matched what shipped</td>
+      <td><span class="status-ok">Fixed</span> — appended a callout to that section naming what actually
+      shipped and pointing at <code>plan.md</code>'s Correction sections, without rewriting the section</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td>No test exercised the real production entry point (<code>isDirectRun()</code>'s
+      <code>.parse(argv, {}, callback)</code> composition) — exactly the seam where three real bugs already
+      lived</td>
+      <td><span class="status-ok">Fixed</span> — added <code>index.e2e.test.ts</code>, a real subprocess
+      test against the compiled <code>dist/index.js</code>, asserting a single non-duplicated usage line and
+      a properly paired/closed ANSI-colored <code>Domains:</code> header</td>
+    </tr>
+    <tr>
+      <td>Important</td>
+      <td><code>package.json</code>'s version (<code>0.1.0-beta</code>) was already published to npm,
+      making this work unpublishable as committed</td>
+      <td><span class="status-ok">Fixed</span> — bumped to <code>0.2.0-beta</code></td>
+    </tr>
+    <tr>
+      <td>Minor (real bug)</td>
+      <td><code>bridge ensure --repo</code> with no value passed <code>""</code> (not <code>undefined</code>)
+      to <code>resolveDigismithRepo</code>, silently resolving a relative path instead of erroring</td>
+      <td><span class="status-ok">Fixed</span> — added <code>requiresArg: true</code> to the option
+      declaration, plus a test confirming yargs itself now rejects the valueless flag</td>
+    </tr>
+    <tr>
+      <td>Minor (polish)</td>
+      <td>README didn't mention branded <code>--help</code>; <code>depot</code>'s describe string wrapped
+      awkwardly at 80 columns; <code>plan.md</code>'s Task 5 code sample still showed the abandoned
+      <code>attachHelp</code> design</td>
+      <td><span class="status-ok">Fixed</span> — one-line additions/edits to each</td>
+    </tr>
+    <tr>
+      <td>Important (residual, post-scoped-re-review)</td>
+      <td>The new e2e test's build-freshness guarantee (a <code>pretest</code> npm-lifecycle hook) only fires
+      under <code>pnpm --filter @digismith/cli test</code>, not this repo's actual standard root-level
+      <code>pnpm test</code> (a direct, workspace-wide <code>vitest run</code>) — defeating the safety net
+      just added, on a fresh checkout with no <code>dist/</code> built</td>
+      <td><span class="status-ok">Fixed</span> — moved the build guarantee into a <code>beforeAll</code>
+      inside the test file itself (invocation-path-independent); reproduced the exact failing scenario
+      (deleted <code>dist/</code>, ran <code>pnpm vitest run</code> from the repo root) both before and after,
+      confirming the fix</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">7a69ed4</span> feat(cli): add yargs/picocolors deps and a branded help renderer</li>
+    <li><span class="sha">49ca40e</span> docs(cli): correct plan — pin yargs to v17.x to match available type declarations</li>
+    <li><span class="sha">d03948d</span> fix(cli): pin yargs to v17, add types, and apply colors unconditionally</li>
+    <li><span class="sha">4fccbb6</span> feat(cli): migrate vps domain to a yargs bucket with status/connect leaves</li>
+    <li><span class="sha">723986f</span> docs(cli): fix non-hermetic test in Task 2's brief — shared.test.ts must use an explicit missing path</li>
+    <li><span class="sha">85e4a6f</span> fix(cli): make vps/shared test hermetic, remove stray run() export</li>
+    <li><span class="sha">b9df93e</span> feat(cli): migrate depot clone sub-domain to a yargs bucket with ensure/refresh leaves</li>
+    <li><span class="sha">a73c99a</span> fix(cli): remove unrequested compatibility shim from clone/index.ts</li>
+    <li><span class="sha">9c16166</span> feat(cli): migrate depot opencode/bridge sub-domains and the depot root bucket to yargs</li>
+    <li><span class="sha">41cd66e</span> docs(cli): correct plan — attachHelp/.showHelp() is eager, redesign around updateLocale/usage</li>
+    <li><span class="sha">95504f8</span> fix(cli): replace eager .showHelp() branding with safe updateLocale/usage config</li>
+    <li><span class="sha">fb031a7</span> feat(cli): migrate the root dispatcher to yargs</li>
+    <li><span class="sha">dc01c10</span> docs(cli): second correction — updateLocale/usage colors get mangled by cliui/wrap-ansi, use parse() callback instead</li>
+    <li><span class="sha">e8799f4</span> fix(cli): replace mangled updateLocale/usage colors with a safe parse() callback post-processor</li>
+    <li><span class="sha">508a2d2</span> test(cli): strengthen branding assertions per review — assert real Domains: output, guard against async callback skip</li>
+    <li><span class="sha">e9df646</span> docs(cli): close out U.1 — reword package ownership, record the split in MEMORY.md</li>
+    <li><span class="sha">0bb39e3</span> fix(cli): final-review fixes — design doc corrections, e2e entry-point test, version bump, --repo requiresArg</li>
+    <li><span class="sha">331ee3f</span> fix(cli): move e2e test's build guarantee from a pretest hook into a beforeAll (pretest doesn't fire under root-level vitest run)</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/U/U.1-formatstructure/report.html</footer>
+
+</body>
+</html>
