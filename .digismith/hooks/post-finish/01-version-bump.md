@@ -32,9 +32,14 @@ if [ "$BUMP_STATUS" -ne 0 ]; then
   echo "Version bump script failed — stop here, do not push, and do not continue to any further post-finish hook. Investigate." >&2
 fi
 if [[ "$BUMP_OUTPUT" == BUMPED* ]]; then
+  SSH_KEY=$(node --experimental-strip-types scripts/preferences.ts --key ssh_key --action get)
   git add .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
   git commit -m "chore: bump plugin version" -- .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
-  git push origin <base-branch>
+  if [ "$SSH_KEY" != "unset" ]; then
+    GIT_SSH_COMMAND="ssh -i $SSH_KEY" git push origin <base-branch>
+  else
+    git push origin <base-branch>
+  fi
 fi
 ```
 

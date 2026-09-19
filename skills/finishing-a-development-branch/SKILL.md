@@ -166,6 +166,15 @@ Then continue to Step 5 exactly as written.
 
 ### Option 1: Merge Locally
 
+Resolve this repo's `ssh_key` preference once, before running any command
+below: invoke `digismith:preferences`' `get` operation for key `ssh_key`.
+**Unset** → `SSH_KEY_PREFIX` is empty for the rest of this option. **Set**
+→ `SSH_KEY_PREFIX` is `GIT_SSH_COMMAND="ssh -i <ssh_key>" ` (note the
+trailing space) — substitute it literally in front of every command below
+that's shown prefixed with `${SSH_KEY_PREFIX}`. This never writes to
+`~/.gitconfig` or `~/.ssh/config` — the override applies only to each
+individual command it's prefixed onto.
+
 ```bash
 # Get main repo root for CWD safety
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
@@ -173,7 +182,7 @@ cd "$MAIN_ROOT"
 
 # Merge first — verify success before removing anything
 git checkout <base-branch>
-git pull
+${SSH_KEY_PREFIX}git pull
 PRE_MERGE=$(git rev-parse HEAD)
 git merge <feature-branch>
 
@@ -225,7 +234,7 @@ unpushed merge: stop and ask instead of resetting.
 Once the merged result is green, push `<base-branch>` to origin:
 
 ```bash
-git push origin <base-branch>
+${SSH_KEY_PREFIX}git push origin <base-branch>
 ```
 
 If the push is rejected (the remote moved since `git pull` above): stop,
@@ -258,10 +267,18 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 
 ### Option 2: Push and Create PR
 
+Resolve this repo's `ssh_key` preference once, before running the command
+below: invoke `digismith:preferences`' `get` operation for key `ssh_key`.
+**Unset** → `SSH_KEY_PREFIX` is empty. **Set** → `SSH_KEY_PREFIX` is
+`GIT_SSH_COMMAND="ssh -i <ssh_key>" ` (note the trailing space) —
+substitute it literally in front of the command below. This never writes
+to `~/.gitconfig` or `~/.ssh/config` — the override applies only to this
+one command.
+
 ```bash
-git push -u origin <feature-branch>
+${SSH_KEY_PREFIX}git push -u origin <feature-branch>
 # From a detached HEAD, name the new branch on the remote:
-# git push origin HEAD:refs/heads/<new-branch>
+# ${SSH_KEY_PREFIX}git push origin HEAD:refs/heads/<new-branch>
 ```
 
 Then create the pull/merge request against <base-branch> with the forge's

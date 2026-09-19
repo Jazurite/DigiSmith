@@ -32,9 +32,14 @@ if [ "$UPDATE_STATUS" -ne 0 ]; then
   echo "History update script failed — stop here, do not commit, and investigate." >&2
 fi
 if [[ "$UPDATE_OUTPUT" == APPENDED* ]]; then
+  SSH_KEY=$(node --experimental-strip-types scripts/preferences.ts --key ssh_key --action get)
   git add .digismith/history.html && \
   git commit -m "docs(history): record shipped features" -- .digismith/history.html && \
-  git push origin <base-branch>
+  if [ "$SSH_KEY" != "unset" ]; then
+    GIT_SSH_COMMAND="ssh -i $SSH_KEY" git push origin <base-branch>
+  else
+    git push origin <base-branch>
+  fi
 fi
 ```
 
