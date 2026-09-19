@@ -8,6 +8,33 @@
 
 **Tech Stack:** TypeScript (NodeNext ESM, Node ≥24), yargs ^17.7.3, @types/yargs ^17.0.35 (dev), picocolors ^1.1.1, Vitest.
 
+**Correction (found during Task 5, blocking the whole tree):** Task 1's original `attachHelp`/`brandHelp`
+design (post-processing yargs' own generated help text via `.showHelp(callback)`, called inside every
+bucket's `builder`) is fundamentally broken — confirmed by reading yargs 17.7.3's actual source
+(`yargs-factory.js`): `.showHelp()`/`.getHelp()` are **eager, imperative** methods that immediately
+trigger yargs' own parse-and-execute pipeline as a side effect when called before the instance has
+finished a real `.parse()` — calling either one *inside a builder*, which runs *during* parsing, causes
+re-entrant nested execution. Live smoke-testing after Task 5's real end-to-end `.parse()` confirmed the
+fallout: duplicated help output, `--version` never printing, spurious repeated help dumps. This wasn't
+caught by Tasks 1/2/4's own reviews because nothing before Task 5 ever drove a real `.parse()`.
+
+**The fix**, verified safe by reading the same source: `.updateLocale(obj)` and `.usage(msg)` are pure
+declarative config setters (they only store strings, confirmed by inspecting their implementation) —
+never eager, never trigger execution. `lib/brand-help.ts` is redesigned around these instead:
+`applyBranding(y: Argv): Argv` calls `.updateLocale({ 'Commands:': ..., 'Options:': ..., 'Positionals:':
+... })` **once, at root** (global to the whole instance, so header coloring genuinely applies at every
+level — the original design's root-gating bug is now structurally impossible, not just fixed) plus
+`.usage(coloredBanner)` at root only (each subcommand gets its own auto-derived usage line unless it
+also calls `.usage()` itself, so the banner naturally stays root-only). This also **removes** the need
+for every bucket (`vps`, `depot`, `depot/clone`, `depot/opencode`, `depot/bridge`) to call `attachHelp`
+in its own builder at all — every `attachHelp(y.command(...).demandCommand(1, ""), { root: false })`
+call in the task sections below is superseded; the fix collapses each to plain
+`y.command(...).demandCommand(1, "")`, dropping the `attachHelp`/`brand-help.ts` import entirely from
+every one of those files. Only `src/index.ts` (root) still touches `lib/brand-help.ts`, calling
+`applyBranding(cli)` once. `BrandHelpOptions`/the `root` parameter are gone — there is no longer a
+per-call "am I root" distinction to thread through, since `.updateLocale()`'s one root-level call
+already governs the whole tree.
+
 **Correction (found during Task 1's review):** the plan originally specified `yargs@^18.1.0`. yargs v18 is an ESM-first rewrite whose package `exports` map declares no `types` condition on its main entry — building against it fails with `TS7016: Could not find a declaration file for module 'yargs'` under this project's `strict: true` build config, confirmed via a direct `tsc --noEmit` run. yargs's own README documents `@types/yargs` as a required separate devDependency, but the published `@types/yargs` is capped at `17.0.35` — it does not cover v18's breaking API changes. Pinning to the latest v17 line (`^17.7.3`, `node >= 12`, comfortably under this package's `>=24` floor) keeps the dependency's actual shape matched to its published types. Every code sample below reflects this correction.
 
 ## Global Constraints
