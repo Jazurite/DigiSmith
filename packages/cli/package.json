@@ -4,8 +4,11 @@
   "description": "DigiSmith's command line — Depot's distribution surface",
   "license": "MIT",
   "dependencies": {
-    "yargs": "^18.1.0",
+    "yargs": "^17.7.3",
     "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.35"
   },
   "type": "module",
   "engines": {

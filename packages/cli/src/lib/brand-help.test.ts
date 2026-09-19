@@ -34,11 +34,25 @@ describe("brandHelp", () => {
   it("omits the banner and keeps the literal Commands header for nested help", () => {
     const out = brandHelp(NESTED_HELP, { root: false });
     expect(out).not.toContain("personal SDLC CLI");
-    expect(out).toMatch(/^Commands:$/m);
+    expect(out).toContain("Commands:");
   });
 
   it("defaults to non-root when no options are given", () => {
     const out = brandHelp(NESTED_HELP);
     expect(out).not.toContain("personal SDLC CLI");
+    expect(out).toContain("Commands:");
+  });
+
+  it("applies ANSI color codes to Commands header in nested help when colors are forced", () => {
+    const oldForceColor = process.env.FORCE_COLOR;
+    try {
+      process.env.FORCE_COLOR = "1";
+      const out = brandHelp(NESTED_HELP, { root: false });
+      // Check for ANSI escape sequence (all colors start with [)
+      expect(out).toMatch(/\[[0-9;]*m/);
+      expect(out).toContain("Commands:");
+    } finally {
+      process.env.FORCE_COLOR = oldForceColor;
+    }
   });
 });

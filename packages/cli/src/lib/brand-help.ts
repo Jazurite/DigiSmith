@@ -9,7 +9,7 @@ export interface BrandHelpOptions {
 
 export function brandHelp(rawHelp: string, options: BrandHelpOptions = {}): string {
   const relabeled = options.root ? rawHelp.replace(/^Commands:$/m, "Domains:") : rawHelp;
-  const colored = options.root ? relabeled.replace(HEADER_PATTERN, (label) => pc.bold(pc.magenta(label))) : relabeled;
+  const colored = relabeled.replace(HEADER_PATTERN, (label) => pc.bold(pc.magenta(label)));
   const banner = options.root
     ? `${pc.bold(pc.magenta("digismith"))}${pc.dim(" — personal SDLC CLI")}\n\n`
     : "";
