@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
-import { cloneExists, ensureClone, refreshClone } from "./clone.ts";
+import { cloneExists, ensureClone, refreshClone } from "./lib.ts";
 
 function git(args: string[], cwd: string): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
