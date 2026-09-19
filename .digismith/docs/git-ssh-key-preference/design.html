@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Per-Repo SSH Key Preference</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Per-Repo SSH Key Preference</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: H.2 (tentative — extension of H's Preferences store)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#storage">Storage</a></li>
+    <li><a href="#trigger">Trigger: bootstrap/adopt</a></li>
+    <li><a href="#usage">Usage: scoped per-invocation, no persistent config writes</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>
+Jack works across repos that need different SSH identities (e.g. personal projects vs. a
+different GitHub account/organization). Nothing today records which key a given repo expects, so
+a DigiSmith session running a <code>git</code> command on Jack's behalf (push, fetch, clone) has
+no way to know which key applies before trying — and picking the wrong one either fails outright
+or, worse, could succeed against the wrong remote identity.
+</p>
+<p>
+Surfaced live 2026-09-19 while moving a project into the <code>devkit</code> monorepo — in that
+specific incident SSH already happened to work correctly and only the unrelated <code>gh</code>
+CLI account was mismatched, but the underlying gap (no recorded per-repo SSH identity) is real and
+worth closing proactively rather than only after it actually causes a failed push. See
+<code>backlog/per-repo-git-credential-preference-h2.md</code> for the original incident.
+</p>
+</section>
+
+<section id="storage">
+<h2>Storage</h2>
+<p>
+No new store. This reuses H's existing per-repo settings mechanism exactly as-is: one key,
+<code>ssh_key</code>, in that repo's own <code>.digismith/preferences.yml</code>, value the
+absolute path to an SSH private key file:
+</p>
+<pre><code># DigiSmith-managed. Settings decided through live interaction, not hand-authored.
+ssh_key: C:\Users\jazurite\.ssh\id_ed25519_personal</code></pre>
+<p>
+Read and written exclusively through <code>digismith:preferences</code>' existing
+<code>get</code>/<code>set</code> operations — nothing here parses or writes
+<code>.digismith/preferences.yml</code> directly. No new skill, no new global file, no named
+registry: the same raw path is stored once per repo and reused for that repo only. Per-repo scope
+only, matching the grain H's own design already settled on for <code>finish_option</code> — no
+per-subfolder granularity even for a monorepo, since the actual need is "one key per remote," not
+per-package.
+</p>
+</section>
+
+<section id="trigger">
+<h2>Trigger: bootstrap/adopt</h2>
+<p>
+Checked at the same moment <code>digismith:bootstrap</code>/<code>digismith:adopt</code> already
+resolve <code>.digismith/profile</code> on first use in a repo. If this repo's
+<code>ssh_key</code> preference is unset, ask once, plainly:
+</p>
+<blockquote>"Which SSH key file should I use on this computer for this repo?"</blockquote>
+<p>
+Store the answer verbatim via <code>digismith:preferences</code>' <code>set</code> operation. If
+it's already set, skip the question entirely — no re-asking, no "remember this?" follow-up
+needed (unlike H.1's menu-skip case, there's no competing "fresh answer" to distinguish from a
+reused one; this is a plain first-use-only prompt). Because <code>.digismith/preferences.yml</code>
+already propagates into freshly created worktrees via H's own bootstrap/adopt copy step, this
+preference carries forward automatically — no new propagation code needed here.
+</p>
+</section>
+
+<section id="usage">
+<h2>Usage: scoped per-invocation, no persistent config writes</h2>
+<p>
+<strong>DigiSmith never writes to <code>~/.gitconfig</code>, <code>~/.ssh/config</code>, or any
+file outside the repo's own <code>.digismith/</code> folder.</strong> This was explicitly
+decided against a materializing-real-git-config approach considered earlier in this brainstorm —
+too invasive for what the actual problem needs.
+</p>
+<p>
+Instead, whenever a DigiSmith skill runs a <code>git</code> command that needs network access on
+Jack's behalf within that repo (push, fetch, clone, pull) — <code>finishing-a-development-branch</code>
+being the main caller today — it resolves this repo's <code>ssh_key</code> preference first and,
+if set, scopes the key to that one command only:
+</p>
+<pre><code>GIT_SSH_COMMAND="ssh -i &lt;ssh_key&gt;" git push origin &lt;branch&gt;</code></pre>
+<p>
+If unset (a repo where the question was never asked or was declined — see Error Handling), the
+command runs exactly as it does today, with no <code>GIT_SSH_COMMAND</code> override — identical
+to current behavior, so this is purely additive.
+</p>
+</section>
+
+<section id="errors">
+<h2>Error Handling</h2>
+<ul>
+<li><strong>Preference unset</strong> — not an error. Run the git command with no
+<code>GIT_SSH_COMMAND</code> override, exactly as today.</li>
+<li><strong>Stored key file doesn't exist on this machine</strong> (e.g. the same
+<code>.digismith/preferences.yml</code> checked out on a second machine with different key
+paths) — warn plainly before running the command ("This repo's saved SSH key,
+<code>&lt;path&gt;</code>, doesn't exist on this machine") and ask whether to proceed without the
+override, or supply a different path for this machine. Never silently fall through to a wrong or
+missing key without saying so.</li>
+<li><strong>File present but malformed preferences.yml</strong> — already covered by
+<code>digismith:preferences</code>' own existing contract: reads as unset, never crashes the
+caller.</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>
+The bootstrap/adopt prompt-and-store logic and the git-command scoping are skill prose with no
+new code to unit test — <code>digismith:preferences</code>' own <code>get</code>/<code>set</code>
+already have real-fixture tests from H's own build, and this feature only calls those existing,
+already-tested operations. Verification here is a careful manual read-through plus a real
+end-to-end run the next time a DigiSmith-driven push happens in a repo with this preference set.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>The <code>gh</code> CLI account mismatch</strong> — the actual trigger for this
+backlog item, deliberately excluded per Jack's explicit call ("prefer to avoid gh"). No per-directory
+auto-switch exists upstream (<code>gh auth switch</code> is a global, manual step); if this
+becomes worth solving later it's a separate, future item.</li>
+<li><strong>Writing real git/SSH config</strong> (<code>~/.gitconfig</code> <code>includeIf</code>
+blocks, <code>~/.ssh/config</code> <code>Host</code> aliases) — considered and explicitly declined;
+DigiSmith only ever scopes the key to its own command invocations, never edits persistent config.</li>
+<li><strong>Named/reusable identity registry</strong> — considered (a global,
+<code>toolchain.yml</code>-shaped file mapping names to key paths) and explicitly declined in
+favor of a plain per-repo raw path with a direct prompt.</li>
+<li><strong>Per-subfolder granularity for monorepos</strong> — considered (the originating
+<code>devkit</code> incident is a monorepo) and explicitly declined; per-repo-root only.</li>
+<li><strong>The auto-mode credential-materialization classifier blocking read-only
+<code>gh auth status</code></strong> — flagged in the original backlog item as likely deserving
+its own separate entry (possibly related to <code>backlog/offload-blocked-by-permission-classifier-k.md</code>,
+a different-context classifier complaint) — not investigated or addressed here.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/git-ssh-key-preference/design.html</footer>
+
+</body>
+</html>
