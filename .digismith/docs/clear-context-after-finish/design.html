@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clear Context After Finish</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Clear Context After Finish</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: <strong>H.3</strong> (extends the Preferences store, same lineage as H.1
+    Saved Finish Option and H.2 SSH Key Preference)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#preference">The clear_context preference</a></li>
+    <li><a href="#placement">Placement</a></li>
+    <li><a href="#flow">Flow</a></li>
+    <li><a href="#mechanics">Clear-call mechanics</a></li>
+    <li><a href="#warning">Unresolved-thread warning</a></li>
+    <li><a href="#scope">Scope</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>
+After <code>finishing-a-development-branch</code> completes, the running session's context keeps
+everything from the just-finished feature — full implementation detail, review findings, doc
+content — none of which is useful for whatever comes next. Jack's request: a cleanup step that
+offers to clear the session's context once the work is genuinely done, so the next piece of work
+starts fresh instead of carrying that bloat forward.
+</p>
+</section>
+
+<section id="preference">
+<h2>The <code>clear_context</code> preference</h2>
+<p>
+A new key in the existing per-repo preferences store (map item H), read and written through
+<code>digismith:preferences</code> exactly like <code>finish_option</code> (H.1) and
+<code>ssh_key</code> (H.2) already are — no new storage mechanism. Values: <code>yes</code> or
+<code>no</code>. Unset means no default has been chosen yet for this repo.
+</p>
+</section>
+
+<section id="placement">
+<h2>Placement</h2>
+<p>
+A new <strong>Step 7: Offer to Clear Context</strong> in <code>finishing-a-development-branch</code>,
+placed after Step 6 (Cleanup Workspace) and before the Quick Reference table. Applies only after
+<strong>Option 1</strong> (Merge Locally) and <strong>Option 2</strong> (Push and Create PR) —
+never Option 3 (Keep As-Is), which is a deliberate deferral, not completion. This is the same
+distinction Step 4.5 already draws for its own follow-up ("never Option 3").
+</p>
+<p>
+Applies in every repo this skill runs in, DigiSmith's own included — unlike the three stock
+<code>post-finish</code> hooks (version bump, plugin reinstall, history update), which are
+gated to DigiSmith's own repo and currently only ever fire there (confirmed: <code>bootstrap</code>/
+<code>adopt</code> do not propagate <code>.digismith/hooks/post-finish/</code> into consumer
+repos today). Because this needs to work everywhere, it is wired directly into
+<code>finishing-a-development-branch</code>'s own body — the same way H.1's <code>finish_option</code>
+and H.2's <code>ssh_key</code> already are — not built as a fourth stock hook.
+</p>
+</section>
+
+<section id="flow">
+<h2>Flow</h2>
+<p>Mirrors Step 3.5/4.5's existing shape exactly:</p>
+<ol>
+<li><strong>Check</strong> <code>clear_context</code> via <code>digismith:preferences</code>' <code>get</code>.</li>
+<li><strong>Unset</strong> → ask: <em>"Clear this session's context now that the feature is done?"</em>
+After the answer, a separate follow-up: <em>"Remember this as your default for this repo?"</em> —
+yes writes the value via <code>digismith:preferences</code>' <code>set</code>; no proceeds for
+this run only, asking again next time.</li>
+<li><strong>Set to <code>yes</code></strong> → skip the ask, announce <em>"Using saved default for
+this repo: clearing context now. Say 'don't clear' to override once."</em></li>
+<li><strong>Set to <code>no</code></strong> → skip silently, proceed without clearing.</li>
+<li><strong>Explicit override</strong> present in the human partner's own message for this
+specific run (either direction) wins for that run only — the saved value is never touched by an
+override alone, same restraint Step 3.5 already applies to <code>finish_option</code>.</li>
+</ol>
+</section>
+
+<section id="mechanics">
+<h2>Clear-call mechanics</h2>
+<p>
+When proceeding to clear, invoke <code>mcp__ccd_session_mgmt__clear_session</code> with
+<code>session_id: "self"</code>. Critical ordering: the clear only takes effect once the current
+turn ends and the session goes idle — nothing said before that point survives into the next
+context — so the assistant's complete final summary (what shipped, what's next) must be said
+<strong>before</strong> this tool call, never after. The call itself also carries its own
+app-level approval prompt, independent of this feature's own conversational ask (except in auto
+or bypass-permissions mode). If the human partner sends another message before the session goes
+idle, the queued clear is silently dropped by the tool itself — an existing safety net this
+design relies on rather than re-implements.
+</p>
+</section>
+
+<section id="warning">
+<h2>Unresolved-thread warning</h2>
+<p>
+Before clearing, scan the conversation for any unresolved thread <strong>unrelated</strong> to
+the feature just shipped — a pending question, a task mentioned but not started, something asked
+to be revisited later. If one exists, say so plainly as part of the final message, before the
+clear call: <em>"Note: before I clear this session's context, you still have [X] open from
+earlier — nothing's tracking that after this clears, so make a note if you want to come back to
+it."</em> This is a verbal warning only — no file is written, no memory entry is created; the
+human partner carries the information forward themselves. If nothing unresolved is found, skip
+this silently.
+</p>
+</section>
+
+<section id="scope">
+<h2>Scope</h2>
+<p>
+Out of scope: persisting unresolved-thread state anywhere (explicitly declined in favor of a
+plain warning); a fourth stock <code>post-finish</code> hook or propagating hooks to consumer
+repos (this feature doesn't need that infrastructure); any change to Option 3's behavior;
+verifying whether <code>clear_session</code> re-triggers full session-start initialization
+(<code>MEMORY.md</code>/<code>CLAUDE.md</code> reload) — not load-bearing for this design since
+nothing here depends on it, and will be observable empirically the first time this actually runs.
+</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/clear-context-after-finish/design.html</footer>
+
+</body>
+</html>
