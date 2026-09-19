@@ -19,6 +19,15 @@ not `<date>-<slug>-plan.md`. Resolved ad hoc for this one run by treating the sl
 the kind of call-site check the "Why this is a real decision" section below already flagged as
 needing an update, now with a concrete, confirmed instance rather than a hypothetical one.
 
+**Second confirmed instance, same run:** `.digismith/hooks/post-finish/scripts/update-history.ts`'s
+`parseReport()` has the identical single-segment-slug assumption
+(`/\.digismith\/docs\/([^/]+)\/report\.html$/`) and failed the same way on the same report path,
+exiting non-zero per its own designed "fail loud rather than corrupt history.html" contract. Worked
+around by hand for this one entry (computed the same fields the script would have — title, date,
+summary, reference links — and appended the Timeline entry manually, matching the file's existing
+single-line-paragraph convention). Both call sites need the same fix once this convention question
+is actually resolved.
+
 ## The idea
 
 The unified docs convention (adopted 2026-08-08, see `MEMORY.md`'s Conventions section) currently
