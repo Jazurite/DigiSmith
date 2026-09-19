@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
+import * as path from "node:path";
 
 // Real subprocess test against the compiled entry point — mirrors the pattern in
 // packages/jira-client/src/cli.test.ts, which spawns the real CLI and asserts on
@@ -23,9 +24,43 @@ const DIST_ENTRY = fileURLToPath(new URL("../dist/index.js", import.meta.url));
 const ownPackageJson = new URL("../package.json", import.meta.url);
 const ownVersion = (JSON.parse(readFileSync(ownPackageJson, "utf-8")) as { version: string }).version;
 
+function isDigismithCheckout(dir: string): boolean {
+  const marker = path.join(dir, ".claude-plugin", "plugin.json");
+  if (!existsSync(marker)) return false;
+  try {
+    const parsed = JSON.parse(readFileSync(marker, "utf-8")) as { name?: unknown };
+    return parsed.name === "digismith";
+  } catch {
+    return false;
+  }
+}
+
+function findRepoRoot(startDir: string): string {
+  let dir = startDir;
+  while (true) {
+    if (isDigismithCheckout(dir)) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) throw new Error("Could not find DigiSmith repo root");
+    dir = parent;
+  }
+}
+
 function run(args: string[]) {
   return spawnSync("node", [DIST_ENTRY, ...args], { encoding: "utf-8" });
 }
+
+beforeAll(() => {
+  const testFileDir = path.dirname(fileURLToPath(import.meta.url));
+  const repoRoot = findRepoRoot(testFileDir);
+  const result = spawnSync("pnpm", ["--filter", "@digismith/cli", "build"], {
+    cwd: repoRoot,
+    stdio: "inherit",
+    shell: true,
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`Failed to build: ${result.error?.message || `exit code ${result.status}`}`);
+  }
+});
 
 describe("dist/index.js (real entry point, subprocess)", () => {
   it("--help exits 0 with a single Usage line and a properly-closed colorized Domains header", () => {
