@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jira Client Attachment Upload (I.6)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Jira Client Attachment Upload (I.6)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: I.6</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>
+<code>packages/jira-client/src/cli.ts</code> has a <code>get-attachment</code> subcommand for
+downloading an attachment, but nothing for uploading one &mdash; the missing half needed to get a
+screenshot into a Jira comment at all. Found live during <code>EMKT-711</code> (shopify-hub,
+2026-09-18); filed as <code>backlog/jira-client-attachment-upload-subcommand.md</code> and
+<code>backlog/jira-media-platform-inline-images.md</code>. Originally scoped together with
+<strong>I.5</strong>'s Windows entry-point-guard fix, then split out (different domain: new
+capability vs. bugfix) once I.5's own scope was confirmed &mdash; I.5 shipped 2026-09-18.
+</p>
+<p>
+This is deliberately narrow: it adds the upload capability to <code>packages/jira-client</code>
+only. It does not touch the Progress Update template's Screenshots/Videos section (that stays
+<strong>Q.1</strong>'s deferred work, per Jack's own split: "the attachment-upload capability
+belongs to I... the template-section change stays under Q.1, deferred until real attachments
+exist") and does not wire anything into <code>generate-comment</code> or
+<code>jira-progress-write-back</code>.
+</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p>
+One new function in <code>client.ts</code>, one new CLI subcommand wrapping it &mdash; same shape
+every existing operation in this file already follows.
+</p>
+<div class="callout">
+Real inline image embedding needs a Jira Media Platform UUID, a completely separate ID namespace
+from classic attachments, obtained (per confirmed research) via an undocumented technique: upload
+via the classic endpoint, then read the <code>Location</code> header of a manual-redirect request
+to that attachment's content URL &mdash; the UUID appears in
+<code>api.media.atlassian.com/file/{UUID}/binary</code>. This is not an officially documented
+flow (Atlassian's own bug tracker confirms inline images via REST are broken/unsupported for
+non-Forge integrations &mdash; <a href="https://jira.atlassian.com/browse/JRACLOUD-97869">JRACLOUD-97869</a>),
+and community reports say it has gotten less reliable over time. Per the earlier brainstorm's
+explicit decision: build it with a graceful fallback, never a hard requirement.
+</div>
+</section>
+
+<section id="components">
+<h2>Components</h2>
+
+<h3>packages/jira-client/src/client.ts (modified)</h3>
+<pre><code>export interface AttachmentUploadResult {
+  id: string;
+  filename: string;
+  contentUrl: string;
+  mediaId?: string;
+}
+
+export async function uploadAttachment(
+  key: string,
+  filePath: string,
+  creds: Credentials
+): Promise&lt;AttachmentUploadResult&gt;</code></pre>
+<ul>
+<li>Reads the file via <code>readFileSync</code>, wraps it in a native <code>Blob</code>/
+<code>FormData</code> (no library &mdash; Node &ge;18 globals), <code>POST</code>s to
+<code>/issue/{key}/attachments</code> with header <code>X-Atlassian-Token: no-check</code>.</li>
+<li>Jira's classic endpoint returns an <strong>array</strong> of attachment objects even for a
+single file &mdash; takes the first.</li>
+<li><code>contentUrl</code> is built manually as <code>${baseUrl(creds)}/attachment/content/${id}</code>,
+the same pattern <code>getAttachmentContent</code> already uses &mdash; never trusts whatever URL
+shape Jira's own response includes.</li>
+<li>Then attempts the UUID extraction via a small internal (non-exported) helper,
+<code>tryGetMediaPlatformId(attachmentId, creds)</code>: a single <code>fetch</code> with
+<code>redirect: "manual"</code> against <code>/attachment/content/{id}</code>, reads the
+<code>Location</code> header, regexes out the UUID
+(<code>api.media.atlassian.com/file/([^/]+)/binary</code>). Any miss &mdash; non-3xx response,
+missing header, non-matching URL shape &mdash; returns <code>undefined</code> silently; never
+throws. Mirrors the existing <code>fetchFollowingRedirectsSameOriginAuthOnly</code> helper's
+manual-redirect pattern but stops at reading the header instead of following it.</li>
+<li>The upload itself is <strong>not</strong> best-effort &mdash; a failed <code>POST</code>
+throws via the existing <code>jiraFetch</code> helper, same as every other function here. Only
+the UUID lookup is allowed to fail quietly.</li>
+</ul>
+
+<h3>packages/jira-client/src/cli.ts (modified)</h3>
+<pre><code>case "upload-attachment": {
+  requireArgs(args, ["key", "file"]);
+  const creds = checkCredentials();
+  const result = await uploadAttachment(args.key, args.file, creds);
+  console.log(JSON.stringify(result));
+  break;
+}</code></pre>
+<p>Same shape as every existing subcommand &mdash; no new patterns introduced.</p>
+</section>
+
+<section id="error-handling">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td>Upload POST fails (bad key, network error, auth)</td><td>Throws via <code>jiraFetch</code>,
+same as every other write op &mdash; reported plainly by the CLI's existing catch block</td></tr>
+<tr><td>File doesn't exist at <code>--file</code> path</td><td><code>readFileSync</code> throws a
+real <code>ENOENT</code> &mdash; no special handling needed, the CLI's catch already reports
+it</td></tr>
+<tr><td>Media UUID lookup gets a non-3xx response, missing <code>Location</code>, or a
+<code>Location</code> that doesn't match the expected URL shape</td><td><code>mediaId</code> simply
+absent from the result &mdash; never thrown, never logged as an error; this is the
+confirmed-undocumented technique's expected failure mode</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>
+New <code>describe("uploadAttachment", ...)</code> block in <code>client.test.ts</code>, mocking
+<code>fetch</code> per test (matching every existing block's style):
+</p>
+<ul>
+<li>Successful upload + successful UUID match: asserts the <code>POST</code>'s URL/headers/multipart
+body shape, and that a mocked <code>redirect: manual</code> response with a matching
+<code>Location</code> header produces the right <code>mediaId</code>.</li>
+<li>Successful upload, UUID lookup returns a non-matching <code>Location</code> (e.g. a different
+host) &rarr; <code>mediaId</code> absent, no throw.</li>
+<li>Successful upload, UUID lookup gets a non-redirect (200) response &rarr; <code>mediaId</code>
+absent, no throw.</li>
+<li>Upload itself fails (non-ok response) &rarr; throws, matching every other write function's
+existing failure test.</li>
+</ul>
+<p>
+No CLI-level subprocess test needed here &mdash; <strong>I.5</strong> already added that regression
+coverage for the entry guard itself; this subcommand just needs to exist and delegate correctly,
+which the <code>client.ts</code> tests already cover at the level that matters.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of Scope</h2>
+<ul>
+<li>Getting real image bytes onto disk from a screenshot Jack pastes in chat &mdash; that's the
+calling skill's job, whenever this gets wired up, not <code>jira-client</code>'s concern.</li>
+<li>The Progress Update template's Screenshots/Videos section &mdash; <strong>Q.1</strong>'s
+deferred work.</li>
+<li>Wiring <code>uploadAttachment</code> into <code>generate-comment</code> or
+<code>jira-progress-write-back</code> &mdash; a future consumer-integration task, not this one.</li>
+<li>Actually constructing or posting a comment containing the <code>mediaSingle</code>/<code>media</code>
+ADF node &mdash; this item only discovers the UUID; using it is the future consumer's job.</li>
+</ul>
+</section>
+
+<footer>DigiSmith &middot; .digismith/docs/jira-client-attachment-upload/design.html</footer>
+
+</body>
+</html>
