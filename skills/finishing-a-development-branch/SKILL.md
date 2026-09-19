@@ -169,7 +169,7 @@ Then continue to Step 5 exactly as written.
 Resolve this repo's `ssh_key` preference once, before running any command
 below: invoke `digismith:preferences`' `get` operation for key `ssh_key`.
 **Unset** → `SSH_KEY_PREFIX` is empty for the rest of this option. **Set**
-→ `SSH_KEY_PREFIX` is `GIT_SSH_COMMAND="ssh -i <ssh_key>" ` (note the
+→ `SSH_KEY_PREFIX` is `GIT_SSH_COMMAND="ssh -i '<ssh_key>'" ` (note the
 trailing space) — substitute it literally in front of every command below
 that's shown prefixed with `${SSH_KEY_PREFIX}`. This never writes to
 `~/.gitconfig` or `~/.ssh/config` — the override applies only to each
@@ -270,7 +270,7 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 Resolve this repo's `ssh_key` preference once, before running the command
 below: invoke `digismith:preferences`' `get` operation for key `ssh_key`.
 **Unset** → `SSH_KEY_PREFIX` is empty. **Set** → `SSH_KEY_PREFIX` is
-`GIT_SSH_COMMAND="ssh -i <ssh_key>" ` (note the trailing space) —
+`GIT_SSH_COMMAND="ssh -i '<ssh_key>'" ` (note the trailing space) —
 substitute it literally in front of the command below. This never writes
 to `~/.gitconfig` or `~/.ssh/config` — the override applies only to this
 one command.

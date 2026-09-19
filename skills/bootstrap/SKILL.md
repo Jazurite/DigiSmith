@@ -193,7 +193,7 @@ Nothing to do — continue to Step 1.
 
 **Returns `unset`** → first use in this repo. Ask once, plainly:
 
-> "Which SSH key file should I use on this computer for this repo?"
+> "Which SSH key file should I use on this computer for this repo? (absolute path; on Windows, forward slashes are safest)"
 
 Store the answer verbatim via `digismith:preferences`' `set` operation for
 key `ssh_key`. If the user declines to answer, don't block ticket

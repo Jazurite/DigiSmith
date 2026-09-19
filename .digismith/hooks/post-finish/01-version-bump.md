@@ -35,8 +35,8 @@ if [[ "$BUMP_OUTPUT" == BUMPED* ]]; then
   SSH_KEY=$(node --experimental-strip-types scripts/preferences.ts --key ssh_key --action get)
   git add .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
   git commit -m "chore: bump plugin version" -- .claude-plugin/plugin.json .claude-plugin/marketplace.json && \
-  if [ "$SSH_KEY" != "unset" ]; then
-    GIT_SSH_COMMAND="ssh -i $SSH_KEY" git push origin <base-branch>
+  if [ -n "$SSH_KEY" ] && [ "$SSH_KEY" != "unset" ]; then
+    GIT_SSH_COMMAND="ssh -i '$SSH_KEY'" git push origin <base-branch>
   else
     git push origin <base-branch>
   fi

@@ -35,8 +35,8 @@ if [[ "$UPDATE_OUTPUT" == APPENDED* ]]; then
   SSH_KEY=$(node --experimental-strip-types scripts/preferences.ts --key ssh_key --action get)
   git add .digismith/history.html && \
   git commit -m "docs(history): record shipped features" -- .digismith/history.html && \
-  if [ "$SSH_KEY" != "unset" ]; then
-    GIT_SSH_COMMAND="ssh -i $SSH_KEY" git push origin <base-branch>
+  if [ -n "$SSH_KEY" ] && [ "$SSH_KEY" != "unset" ]; then
+    GIT_SSH_COMMAND="ssh -i '$SSH_KEY'" git push origin <base-branch>
   else
     git push origin <base-branch>
   fi
