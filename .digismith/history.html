@@ -1202,6 +1202,12 @@
   (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/jira-client-attachment-upload/design.html">design</a>, <a href="docs/jira-client-attachment-upload/plan.md">plan</a>, and <a href="docs/jira-client-attachment-upload/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-19</div>
+      <h4>Per-Repo SSH Key Preference (H.2)</h4>
+      <p>Lets a repo remember which SSH key file DigiSmith should use for its own <code>git</code> network commands (push/pull) in that repo, asked once at bootstrap/adopt and reused automatically afterward, with zero writes to <code>~/.gitconfig</code> or <code>~/.ssh/config</code>. One new preference key, <code>ssh_key</code>, stored through H's existing <code>digismith:preferences</code> skill — no new store, no new skill. A new <strong>Step 0.6</strong> in <code>digismith:bootstrap</code> (mirrored by a one-line addition to <code>digismith:adopt</code>'s own Step 2) asks for it once per repo, at the same moment <code>.digismith/profile</code> is resolved. Every network <code>git</code> command DigiSmith itself runs afterward — in <code>finishing-a-development-branch</code>'s Option 1/2, and in the two <code>post-finish</code> hooks that push on DigiSmith's own behalf — resolves this preference first and scopes the key to that one command via <code>GIT_SSH_COMMAND</code>, never touching any persistent config file. Followed the full Superpowers process: brainstorming &rarr; spec &rarr; writing-plans &rarr; <code>digismith:subagent-driven-development</code> (2 tasks, each dispatched to a fresh implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 1 fix round before merge. See <a href="docs/git-ssh-key-preference/design.html">design</a>, <a href="docs/git-ssh-key-preference/plan.md">plan</a>, and <a href="docs/git-ssh-key-preference/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
