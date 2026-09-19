@@ -1214,6 +1214,12 @@
       <p>Migrated <code>@digismith/cli</code>'s hand-rolled <code>vps</code>/<code>depot</code> dispatcher to a yargs-based, HubSpot-style domain framework with branded help output, and closed out letter U's ownership split from Depot's own V lineage. Every domain (<code>vps</code>, <code>depot</code>) and sub-domain (<code>depot clone</code>, <code>depot opencode</code>, <code>depot bridge</code>) is now a yargs "bucket" <code>CommandModule</code> composed of leaf <code>CommandModule</code>s that call the logic functions each file already exported — no logic changes, only the argv-parsing shell around each was replaced. The shipped branding mechanism differs from the plan's original design: <code>src/lib/brand-help.ts</code>'s <code>brandOutput()</code> regex-colorizes yargs' own fully-rendered help/error text, delivered via <code>.parse(argv, {}, callback)</code>'s output-buffering — not the originally-planned <code>.showHelp(callback)</code>/<code>.updateLocale()</code> approaches, both of which turned out to have real defects only a live end-to-end parse could expose (see Final Review &amp; Fix, and <code>plan.md</code>'s two "Correction" sections for the full history). See <a href="docs/U/U.1-formatstructure/design.html">design</a>, <a href="docs/U/U.1-formatstructure/plan.md">plan</a>, and <a href="docs/U/U.1-formatstructure/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-19</div>
+      <h4>Vitest Worktree Contamination Fix</h4>
+      <p>Stops <code>pnpm test</code> at the repo root from picking up other concurrent sessions' worktree test files, which was causing false failures and silent double-counting. The fix adds a single root <code>vitest.config.ts</code> that extends Vitest's default <code>exclude</code> list (via <code>configDefaults.exclude</code>, not a bare array — which would silently drop Vitest's own built-in excludes) with all three worktree-path conventions <code>using-git-worktrees</code> documents. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/vitest-worktree-contamination/design.html">design</a>, <a href="docs/vitest-worktree-contamination/plan.md">plan</a>, and <a href="docs/vitest-worktree-contamination/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
