@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { findDigismithRepoMarker, resolveDigismithRepo, run } from "./bridge.ts";
+import { findDigismithRepoMarker, resolveDigismithRepo } from "./lib.ts";
 
 function makeDigismithCheckout(root: string): void {
   const dir = path.join(root, ".claude-plugin");
@@ -77,41 +77,5 @@ describe("resolveDigismithRepo", () => {
   it("throws when neither cwd nor --repo resolves", () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-bridge-"));
     expect(() => resolveDigismithRepo(undefined, tmpDir)).toThrow(/not inside a DigiSmith checkout/);
-  });
-});
-
-describe("run", () => {
-  afterEach(() => {
-    process.exitCode = 0;
-  });
-
-  it("prints usage and sets exit 1 for an unknown verb", () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    run(["bogus"]);
-    expect(errorSpy).toHaveBeenCalledWith("usage: digismith depot bridge <ensure|stop> [--repo <path>]");
-    expect(process.exitCode).toBe(1);
-    errorSpy.mockRestore();
-  });
-
-  it("reports nothing to stop when no bridge is tracked", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-bridge-run-"));
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    run(["stop"], path.join(tmpDir, "tracking.json"), path.join(tmpDir, "server.log"));
-    expect(logSpy).toHaveBeenCalledWith("depot bridge: nothing to stop");
-    expect(process.exitCode).toBe(0);
-    logSpy.mockRestore();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("errors when ensure can't resolve a DigiSmith repo", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-bridge-run-"));
-    const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    run(["ensure"], path.join(tmpDir, "tracking.json"), path.join(tmpDir, "server.log"));
-    expect(errorSpy).toHaveBeenCalledWith("depot bridge: not inside a DigiSmith checkout and no --repo <path> given");
-    expect(process.exitCode).toBe(1);
-    cwdSpy.mockRestore();
-    errorSpy.mockRestore();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });

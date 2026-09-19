@@ -2,27 +2,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { run as runVps } from "./vps/index.ts";
-import { run as runDepot } from "./depot/index.ts";
-
-export type GroupRunner = (argv: string[]) => void;
-
-export const GROUPS: Record<string, GroupRunner> = {
-  vps: runVps,
-  depot: runDepot,
-};
-
-export function usage(): string {
-  const groups = Object.keys(GROUPS)
-    .map((name) => `  ${name}`)
-    .join("\n");
-  return `usage: digismith <group> [args]\n       digismith --version\n\ngroups:\n${groups}`;
-}
-
-export function resolveGroup(name: string | undefined): GroupRunner | undefined {
-  if (name === undefined) return undefined;
-  return Object.prototype.hasOwnProperty.call(GROUPS, name) ? GROUPS[name] : undefined;
-}
+import yargs, { type Argv } from "yargs";
+import { hideBin } from "yargs/helpers";
+import { ROOT_USAGE, brandOutput } from "./lib/brand-help.ts";
+import vpsCommand from "./vps/index.ts";
+import depotCommand from "./depot/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -35,19 +19,15 @@ export function readVersion(packageJsonPath: string = OWN_PACKAGE_JSON): string 
   }
 }
 
-function main(): void {
-  const [group, ...rest] = process.argv.slice(2);
-  if (group === "--version") {
-    console.log(readVersion());
-    return;
-  }
-  const run = resolveGroup(group);
-  if (run === undefined) {
-    console.error(usage());
-    process.exitCode = 1;
-    return;
-  }
-  run(rest);
+export function buildCli(argv: string[]): Argv {
+  return yargs(argv)
+    .scriptName("digismith")
+    .usage(ROOT_USAGE)
+    .command(vpsCommand)
+    .command(depotCommand)
+    .demandCommand(1, "")
+    .strict()
+    .version(readVersion());
 }
 
 // pnpm installs global packages behind symlinks, and Node resolves
@@ -64,5 +44,17 @@ function isDirectRun(): boolean {
 }
 
 if (isDirectRun()) {
-  main();
+  const argv = hideBin(process.argv);
+  // yargs' single-argument `.parse(callback)` form mis-parses the callback
+  // itself as the args array in this version (throws inside argsert, caught
+  // and logged as a console.warn on every invocation) — passing the same
+  // argv explicitly to both `buildCli` and `.parse` avoids that.
+  buildCli(argv).parse(argv, {}, (err, _argv, output) => {
+    if (output) {
+      (err ? console.error : console.log)(brandOutput(output));
+    }
+    if (err) {
+      process.exitCode = 1;
+    }
+  });
 }

@@ -1,8 +1,15 @@
 {
   "name": "@digismith/cli",
-  "version": "0.1.0-beta",
-  "description": "DigiSmith's command line — Depot's distribution surface",
+  "version": "0.2.0-beta",
+  "description": "DigiSmith's command line — binaries, dispatcher, and command-group framework",
   "license": "MIT",
+  "dependencies": {
+    "yargs": "^17.7.3",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.35"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"

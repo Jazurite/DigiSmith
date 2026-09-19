@@ -24,7 +24,7 @@ digismith depot bridge stop      # stop it
 digismith --version
 ```
 
-`dg` accepts exactly the same arguments.
+`dg` accepts exactly the same arguments. `--help`, at any level, shows branded, colorized command help.
 
 `vps` expects `~/.digismith-depot/vps.json`, written by hand once:
 
