@@ -1,4 +1,4 @@
-# Extend the unified docs convention: per-letter nesting, configurable per repo — also resolves the report/plan filename-collision gap (tentatively map item G.3)
+# G.3 Dynamic Doc Conventions — per-letter nesting, configurable per repo, also resolves the report/plan filename-collision gap
 
 ## Status
 
@@ -11,7 +11,7 @@ V.5, I.6, etc.) stays on the current flat `.digismith/docs/<slug>/` shape unchan
 records the merged proposal and its scope so whoever picks it up next doesn't re-derive it from
 scratch.
 
-**Map item:** tentatively **G** (Methodology), as a new sub-item **G.3** — not **I** (Reporting;
+**Map item:** **G.3**, "Dynamic Doc Conventions" (Methodology) — not **I** (Reporting;
 that lineage is external notification channels, not DigiSmith's own doc structure), not **H**
 (Preferences) or **O** (Profiling; either might end up *hosting* this item's per-repo toggle as an
 implementation detail, but neither owns the docs-convention question itself). **G.2.1** (filed the
