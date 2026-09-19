@@ -176,6 +176,38 @@ regardless.
 If the active profile's `ticket` field is `false`, skip this credential
 check entirely — continue straight to Step 1.
 
+### Step 0.6: Resolve SSH Key Preference
+
+**Only runs when Step 0 falls through to actual ticket work** — same guard
+Step 0.5 already applies. If the user's request was a standalone profile
+switch and Step 0 already stopped there, skip this step entirely, same as
+if it didn't exist.
+
+Otherwise, check whether this repo already has a saved SSH key preference:
+invoke `digismith:preferences`' `get` operation for key `ssh_key` (that
+skill owns its own repo-resolution and invocation details — this step
+never duplicates them).
+
+**Returns a value other than `unset`** → a preference already exists.
+Nothing to do — continue to Step 1.
+
+**Returns `unset`** → first use in this repo. Ask once, plainly:
+
+> "Which SSH key file should I use on this computer for this repo?"
+
+Store the answer verbatim via `digismith:preferences`' `set` operation for
+key `ssh_key`. If the user declines to answer, don't block ticket
+creation over it — note plainly that DigiSmith's own `git` commands in
+this repo will run with no explicit key override until this is set, and
+continue to Step 1 regardless (mirrors Step 0.5's own non-blocking
+disposition for a declined Jira credential prompt).
+
+This preference is never written to `~/.gitconfig` or `~/.ssh/config` —
+it lives only in this repo's own `.digismith/preferences.yml`, exactly
+where H's existing worktree-propagation copy step (sub-step 8 of Step 2)
+already carries it into every future worktree with no new code needed
+here.
+
 ### Step 1: Get a Real Ticket
 
 Check whether this conversation already produced a
@@ -484,6 +516,7 @@ not re-invoke or duplicate any part of that chain yourself.
 |---|---|
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
 | 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails. Then, if `ticket: true`, `check-credentials` — bootstrap via `AskUserQuestion` if incomplete; declining doesn't block, just defers the failure to write-back time |
+| 0.6 | Skipped under the same condition as 0.5. Otherwise, check `digismith:preferences` for a saved `ssh_key`; if unset, ask once which SSH key file to use for this repo and store the answer via `set` — never written to `~/.gitconfig`/`~/.ssh/config`, only to `.digismith/preferences.yml` |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile`, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run), and **2.8** copy `.digismith/preferences.yml` if the original checkout has one — all three plain file copies, never `git add -f` |
