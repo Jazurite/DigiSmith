@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLI Domain Framework — Letter U</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>CLI Domain Framework — Letter U</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: U</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#ownership">Ownership split (U vs. V)</a></li>
+    <li><a href="#framework">Domain-oriented CLI framework</a></li>
+    <li><a href="#structure">File structure</a></li>
+    <li><a href="#branding">Branding</a></li>
+    <li><a href="#nongoals">Non-goals</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#rollout">Rollout &amp; compatibility</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>Letter <strong>U</strong> was assigned 2026-09-19 to fully decouple <code>@digismith/cli</code>
+  (<code>packages/cli</code>) from Depot's own "V" lineage — the CLI's binaries, dispatcher, and
+  publishing mechanics are a distinct concern from Depot's <code>ensure-*</code> resource-management
+  concern, even though V.4 originally built the package as "Depot's distribution surface." Research
+  during this brainstorm confirmed the split needs no code move and no refactor of <code>vps</code>/
+  <code>depot</code> themselves — the existing <code>GROUPS</code> dispatcher in <code>src/index.ts</code>
+  already treats them as pure, decoupled consumers.</p>
+  <p>The session's scope grew from there once HubSpot's own CLI
+  (<a href="https://developers.hubspot.com/docs/developer-tooling/local-development/hubspot-cli/reference">hs</a>,
+  cloned locally to <code>D:\Workspace\Library\hubspot-cli</code> for reference) came up as a structural
+  model: a real, multi-domain CLI (<code>hs account</code>, <code>hs cms</code>, …) built on <strong>yargs</strong>,
+  with uniform nested subcommands and branded help. Jack's direct call: adopt that same mechanism —
+  yargs, not a hand-rolled dispatcher — and give <code>digismith</code> its own brand identity in the
+  terminal, reusing the purple accent already established across every generated <code>design.html</code>/
+  <code>report.html</code>. This design covers both: the ownership split, and letter U's first real
+  activation (the yargs-based domain framework).</p>
+</section>
+
+<section id="ownership">
+  <h2>Ownership split (U vs. V)</h2>
+  <p>Confirmed via direct inspection of <code>packages/cli/src/</code>: <code>index.ts</code> is a flat
+  <code>GROUPS: Record&lt;string, (argv: string[]) =&gt; void&gt;</code> map wiring in <code>vps</code> and
+  <code>depot</code>, neither of which references the other or the dispatcher beyond a plain
+  <code>run(argv)</code> contract. Both of the backlog's open questions resolve the simple way:</p>
+  <ul>
+    <li>The package does <strong>not</strong> move location — map-letter ownership is a documentation/
+    responsibility concept, same precedent as V.4/V.5 coexisting with V.1–V.3's non-CLI code.</li>
+    <li>V.5's <code>depot</code> command group needs <strong>no refactor</strong> to become a consumer —
+    it already is one, structurally.</li>
+  </ul>
+  <p>The one real ownership artifact: <code>packages/cli/package.json</code>'s description reads
+  <code>"DigiSmith's command line — Depot's distribution surface"</code>, framing ownership as Depot's.
+  This changes to ownership-neutral language reflecting U's framework, V's <code>vps</code>/<code>depot</code>
+  as its consumers.</p>
+</section>
+
+<section id="framework">
+  <h2>Domain-oriented CLI framework</h2>
+  <p>Adopts <strong>yargs</strong> as a real runtime dependency, reversing V.4's original "zero runtime
+  dependencies" decision — recorded here explicitly rather than left as silent drift. Each domain
+  (<code>vps</code>, <code>depot</code>) becomes a yargs "bucket" command
+  (<code>{ command, describe, builder, handler: () =&gt; {} }</code> with <code>demandCommand(1, '')</code>
+  forcing a subcommand), composed of leaf command modules that wrap the logic functions already exported
+  by each existing file (<code>ensureClone</code>, <code>refreshClone</code>, <code>runStatusChecks</code>,
+  <code>runConnect</code>, etc.) — no logic changes, only the argv-parsing shell around each is replaced.</p>
+  <p>This mirrors HubSpot's actual mechanics (bucket → leaf composition, manual import wiring, no
+  filesystem auto-discovery, nested subcommands never flattened with dashes) while deliberately not
+  copying two things that don't fit a two-domain personal CLI: HubSpot's sibling-file-plus-folder layout
+  (DigiSmith keeps its own established <code>&lt;domain&gt;/index.ts</code> bucket convention) and its
+  centralized i18n <code>lang/en.js</code> module (describe strings stay inline — nothing here is
+  user-facing product copy needing translation).</p>
+  <p>Root setup in <code>src/index.ts</code>:</p>
+  <pre><code>yargs(hideBin(process.argv))
+  .scriptName("digismith")
+  .command(vpsCommand)
+  .command(depotCommand)
+  .demandCommand(1, "")
+  .strict()
+  .version(readVersion())
+  .parse();</code></pre>
+  <p><code>.strict()</code> rejects typos (previously silent no-ops); every bucket getting
+  <code>demandCommand(1, '')</code> means <code>dg depot</code> alone now shows its subcommands instead
+  of falling through to the old hand-written <code>usage()</code> string, which is retired entirely.</p>
+</section>
+
+<section id="structure">
+  <h2>File structure</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Path</th><th>Role</th></tr>
+    <tr><td><code>src/index.ts</code></td><td>yargs root — registers <code>vps</code>/<code>depot</code>, <code>.strict()</code>, <code>.version()</code></td></tr>
+    <tr><td><code>src/vps/index.ts</code></td><td>bucket — registers <code>status</code>/<code>connect</code></td></tr>
+    <tr><td><code>src/vps/status.ts</code>, <code>connect.ts</code></td><td>leaves — existing logic + new yargs export</td></tr>
+    <tr><td><code>src/depot/index.ts</code></td><td>bucket — registers <code>clone</code>/<code>opencode</code>/<code>bridge</code> sub-buckets</td></tr>
+    <tr><td><code>src/depot/clone/index.ts</code></td><td>sub-bucket — registers <code>ensure</code>/<code>refresh</code></td></tr>
+    <tr><td><code>src/depot/clone/lib.ts</code></td><td>shared logic moved from old <code>clone.ts</code> (<code>runGit</code>, <code>cloneExists</code>, <code>ensureClone</code>, <code>refreshClone</code>)</td></tr>
+    <tr><td><code>src/depot/clone/ensure.ts</code>, <code>refresh.ts</code></td><td>leaves wrapping <code>lib.ts</code></td></tr>
+    <tr><td><code>src/depot/opencode/</code>, <code>src/depot/bridge/</code></td><td>same split as <code>clone/</code> (<code>lib.ts</code> + <code>ensure.ts</code>/<code>stop.ts</code> + <code>index.ts</code>); <code>process-lifecycle.ts</code> stays in place, imports become one level deeper</td></tr>
+    <tr><td><code>src/lib/brand-help.ts</code></td><td>new — shared branded help renderer (see Branding)</td></tr>
+  </table>
+  </div>
+  <p>Every user-facing command keeps its exact current argv shape (<code>dg depot clone ensure</code>,
+  <code>dg vps status</code>, …) — this is an internal restructure, not a breaking change to command
+  surface.</p>
+</section>
+
+<section id="branding">
+  <h2>Branding</h2>
+  <p>Adds <strong>picocolors</strong> (tiny, zero-deps, auto-detects TTY/<code>NO_COLOR</code>) as a
+  second new dependency. Reuses the purple accent already established in every generated
+  <code>design.html</code>/<code>report.html</code> (<code>#7a4fb5</code> light / <code>#b892ea</code>
+  dark) so the CLI reads as the same product as DigiSmith's docs, not a separately-branded tool.
+  Deliberately no ASCII logo — DigiSmith's own writing standard (T.1, ASD-STE100) favors plain,
+  unembellished output; a splashy banner would contradict it.</p>
+  <p><code>src/lib/brand-help.ts</code> replaces yargs' default <code>--help</code> output
+  (<code>.help(false)</code>, manual <code>-h</code>/<code>--help</code> wiring) with a renderer driven
+  by each module's own already-declared <code>command</code>/<code>describe</code> metadata — no yargs
+  internals hacking. Root help gets a one-line bold-purple wordmark
+  (<code>digismith — personal SDLC CLI</code>); every level gets a <code>Usage:</code> line and a
+  <code>Domains:</code>/<code>Commands:</code>/<code>Options:</code> section with bold-purple command
+  names and dim descriptions, e.g.:</p>
+  <pre><code>$ dg --help
+
+digismith — personal SDLC CLI
+
+Usage: dg &lt;domain&gt; &lt;command&gt; [options]
+
+Domains:
+  vps      reconnect to the Hetzner VPS's persistent claude session
+  depot    manage machine-wide shared resources (clone, opencode, bridge)
+
+  -h, --help     show help
+  --version      show version number</code></pre>
+</section>
+
+<section id="nongoals">
+  <h2>Non-goals</h2>
+  <ul>
+    <li>No new global option groups (HubSpot's <code>commonOpts.ts</code> equivalent — <code>--account</code>,
+    <code>--debug</code>, etc.) — neither existing domain takes any flags today; adding speculative ones
+    is scope creep with no current consumer.</li>
+    <li>No command aliasing (yargs supports <code>command: [canonical, ...aliases]</code> for free later
+    if a real need arises — not invented here).</li>
+    <li>No auto-publish-on-merge hook — V.4's own flagged future work, stays deferred.</li>
+    <li>No login/credentials/server work — deferred to letter X per V.4's original note, unchanged by
+    this split.</li>
+    <li><code>process-lifecycle.ts</code> is untouched logic — confirmed V's own Depot resource-lifecycle
+    code, not shared CLI framework.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>Existing unit tests against the pure logic functions (<code>ensureClone</code>,
+  <code>runStatusChecks</code>, etc.) are unaffected — those functions don't change. Tests that currently
+  invoke the old <code>run(argv)</code> shells directly move to either calling the logic functions
+  directly (preferred, matching how most of the existing suite likely already works) or exercising the
+  built CLI via <code>spawnSync</code> against <code>dist/index.js</code>, the same pattern
+  <code>cli.test.ts</code> already established for <code>packages/jira-client</code> (I.5). The plan will
+  enumerate exactly which existing test files need updating once <code>writing-plans</code> reads them.</p>
+</section>
+
+<section id="rollout">
+  <h2>Rollout &amp; compatibility</h2>
+  <p>Pure internal restructure plus two new dependencies — no consumer-facing breaking change to command
+  surface. <code>packages/cli</code> keeps its own semver (currently <code>0.1.0-beta</code>); this plan
+  does not itself require a version bump decision beyond whatever <code>writing-plans</code>/the final
+  review judges appropriate for a dependency addition of this size on a pre-1.0 package.</p>
+  <p><code>MEMORY.md</code> updates: <strong>U</strong>'s row moves from "letter assignment only" to
+  recording this activation (ownership split done, yargs/picocolors adopted, branded help shipped);
+  <strong>V</strong>'s row (V.4/V.5) gets a short cross-reference noting the package's ownership moved to
+  U. Frozen historical docs (<code>digismith-cli-npm/</code>, <code>depot-cli-command-group/</code>)
+  stay untouched per existing precedent. <code>backlog/cli-decouple-from-depot-u.md</code> is resolved
+  and deleted once this ships, same pattern as I.6's own backlog resolution.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/cli-decouple-from-depot/design.html</footer>
+
+</body>
+</html>
