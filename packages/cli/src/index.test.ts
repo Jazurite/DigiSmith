@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildCli, readVersion } from "./index.ts";
+import { brandOutput } from "./lib/brand-help.ts";
 
 const ownPackageJson = new URL("../package.json", import.meta.url);
 const ownVersion = (JSON.parse(fs.readFileSync(ownPackageJson, "utf-8")) as { version: string }).version;
@@ -12,6 +13,32 @@ describe("buildCli", () => {
     const help = await buildCli([]).getHelp();
     expect(help).toMatch(/vps/);
     expect(help).toMatch(/depot/);
+  });
+});
+
+describe("buildCli end-to-end via parse()", () => {
+  it("--help produces single branded output, no error", () => {
+    const argv = ["--help"];
+    buildCli(argv).parse(argv, {}, (err, _argv, output) => {
+      expect(err).toBeFalsy();
+      expect(output).toBeTruthy();
+      expect(brandOutput(output)).toContain("personal SDLC CLI");
+    });
+  });
+
+  it("--version prints exactly the package version, no error", () => {
+    const argv = ["--version"];
+    buildCli(argv).parse(argv, {}, (err, _argv, output) => {
+      expect(err).toBeFalsy();
+      expect(output.trim()).toBe(readVersion());
+    });
+  });
+
+  it("an unknown subcommand fails strict validation", () => {
+    const argv = ["depot", "clone", "bogus"];
+    buildCli(argv).parse(argv, {}, (err) => {
+      expect(err).toBeTruthy();
+    });
   });
 });
 

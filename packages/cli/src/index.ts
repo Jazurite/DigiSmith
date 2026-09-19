@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import yargs, { type Argv } from "yargs";
 import { hideBin } from "yargs/helpers";
-import { applyBranding } from "./lib/brand-help.ts";
+import { ROOT_USAGE, brandOutput } from "./lib/brand-help.ts";
 import vpsCommand from "./vps/index.ts";
 import depotCommand from "./depot/index.ts";
 
@@ -20,14 +20,14 @@ export function readVersion(packageJsonPath: string = OWN_PACKAGE_JSON): string 
 }
 
 export function buildCli(argv: string[]): Argv {
-  const cli = yargs(argv)
+  return yargs(argv)
     .scriptName("digismith")
+    .usage(ROOT_USAGE)
     .command(vpsCommand)
     .command(depotCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
-  return applyBranding(cli);
 }
 
 // pnpm installs global packages behind symlinks, and Node resolves
@@ -44,5 +44,17 @@ function isDirectRun(): boolean {
 }
 
 if (isDirectRun()) {
-  buildCli(hideBin(process.argv)).parse();
+  const argv = hideBin(process.argv);
+  // yargs' single-argument `.parse(callback)` form mis-parses the callback
+  // itself as the args array in this version (throws inside argsert, caught
+  // and logged as a console.warn on every invocation) — passing the same
+  // argv explicitly to both `buildCli` and `.parse` avoids that.
+  buildCli(argv).parse(argv, {}, (err, _argv, output) => {
+    if (output) {
+      (err ? console.error : console.log)(brandOutput(output));
+    }
+    if (err) {
+      process.exitCode = 1;
+    }
+  });
 }

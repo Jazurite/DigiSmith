@@ -1,24 +1,23 @@
-import { describe, it, expect, afterEach } from "vitest";
-import yargs from "yargs";
-import { applyBranding } from "./brand-help.ts";
+import { describe, it, expect } from "vitest";
+import pc from "picocolors";
+import { brandOutput, ROOT_USAGE } from "./brand-help.ts";
 
-describe("applyBranding", () => {
-  const originalForceColor = process.env.FORCE_COLOR;
+const colors = pc.createColors(true);
 
-  afterEach(() => {
-    if (originalForceColor === undefined) delete process.env.FORCE_COLOR;
-    else process.env.FORCE_COLOR = originalForceColor;
+const ROOT_HELP = `${ROOT_USAGE}\n\nCommands:\n  digismith vps    ...\n  digismith depot  ...\n\nOptions:\n  --help\n  --version\n`;
+const NESTED_HELP = `digismith depot clone\n\nmanage the shared packages/ clone\n\nCommands:\n  digismith depot clone ensure   ...\n  digismith depot clone refresh  ...\n`;
+
+describe("brandOutput", () => {
+  it("colorizes the wordmark and relabels Commands as Domains at root", () => {
+    const out = brandOutput(ROOT_HELP, colors);
+    expect(out).toContain(`${colors.bold(colors.magenta("digismith"))}${colors.dim(" — personal SDLC CLI")}`);
+    expect(out).toContain(`${colors.bold(colors.magenta("Domains:"))}`);
+    expect(out).not.toMatch(/^Commands:$/m);
   });
 
-  it("colorizes section headers and the root banner", async () => {
-    process.env.FORCE_COLOR = "1";
-    const cli = applyBranding(
-      yargs([]).scriptName("digismith").command("status", "check status").demandCommand(1, "")
-    );
-    const help = await cli.getHelp();
-
-    expect(help).toContain("digismith");
-    expect(help).toContain("personal SDLC CLI");
-    expect(help).toMatch(/\x1b\[[0-9;]*mCommands:/); // ANSI-colorized "Commands:" header
+  it("colorizes headers but keeps the literal Commands label and no banner for nested output", () => {
+    const out = brandOutput(NESTED_HELP, colors);
+    expect(out).not.toContain("personal SDLC CLI");
+    expect(out).toContain(`${colors.bold(colors.magenta("Commands:"))}`);
   });
 });
