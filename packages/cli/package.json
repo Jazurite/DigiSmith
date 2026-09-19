@@ -3,6 +3,10 @@
   "version": "0.1.0-beta",
   "description": "DigiSmith's command line — Depot's distribution surface",
   "license": "MIT",
+  "dependencies": {
+    "yargs": "^18.1.0",
+    "picocolors": "^1.1.1"
+  },
   "type": "module",
   "engines": {
     "node": ">=24"
