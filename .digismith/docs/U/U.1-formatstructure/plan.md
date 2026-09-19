@@ -180,13 +180,23 @@ describe("loadConfigOrExit", () => {
   });
 
   it("exits 1 and reports when no vps.json exists", () => {
+    // Must pass an explicit, guaranteed-missing path rather than relying on the
+    // default (~/.digismith-depot/vps.json) — that file can genuinely exist on a
+    // real developer machine that's already set up VPS access, which would silently
+    // take the happy-path branch instead and make this test non-hermetic.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vps-shared-missing-"));
+    const missingPath = path.join(dir, "vps.json");
     const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
       throw new Error(`exit:${code}`);
     }) as never);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    expect(() => loadConfigOrExit()).toThrow("exit:1");
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no VPS configured"));
+    try {
+      expect(() => loadConfigOrExit(missingPath)).toThrow("exit:1");
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("no VPS configured"));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("returns the parsed config when vps.json is valid", () => {
