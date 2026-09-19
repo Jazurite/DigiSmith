@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-18</span>
+    <span>Last updated: 2026-09-19</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1187,6 +1187,19 @@
   Q's existing <code>generate-comment</code> docs folder rather than a new slug, with
   addendum-specific filenames to avoid overwriting the original Q build's own
   <code>plan.md</code>/<code>report.html</code>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-19</div>
+      <h4>Jira Client Attachment Upload (I.6)</h4>
+      <p>Added attachment-upload capability to <code>packages/jira-client</code>, including a
+  best-effort Media Platform UUID discovery for future inline-image use, without touching any
+  template or consumer skill. The shape is one new function, <code>uploadAttachment</code>, in
+  <code>client.ts</code> (classic REST multipart upload plus a graceful-fallback UUID lookup via
+  an internal helper), plus one new CLI subcommand wrapping it &mdash; the same shape every
+  existing operation in this file already follows. Followed the full Superpowers process:
+  brainstorming &rarr; spec &rarr; writing-plans &rarr; <code>digismith:executing-plans</code>
+  (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/jira-client-attachment-upload/design.html">design</a>, <a href="docs/jira-client-attachment-upload/plan.md">plan</a>, and <a href="docs/jira-client-attachment-upload/report.html">report</a>.</p>
     </div>
 
   </div>
