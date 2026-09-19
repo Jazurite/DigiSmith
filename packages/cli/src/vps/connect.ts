@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
-import type { VpsConfig } from "./config.ts";
+import type { CommandModule } from "yargs";
+import { DEFAULT_VPS_CONFIG_PATH, type VpsConfig } from "./config.ts";
 import { buildBaseSshArgs, buildLingerCommand, isLingerEnabled, type SshCommand } from "./checks.ts";
 import { runSshCommand } from "./run-command.ts";
 import { runStatusChecks } from "./status.ts";
+import { loadConfigOrExit } from "./shared.ts";
 
 // Deliberately not `exec claude` as the last line: if claude exits for any
 // reason, `exec bash` keeps the pane (and therefore the tmux session, and
@@ -112,3 +114,12 @@ export function runConnect(config: VpsConfig, configPath: string): never {
   const attach = spawnSync("ssh", buildAttachArgs(config), { stdio: "inherit" });
   process.exit(attach.status ?? 1);
 }
+
+export const connectCommand: CommandModule = {
+  command: "connect",
+  describe: "fix what's safely fixable, then attach interactively",
+  handler: () => {
+    const config = loadConfigOrExit();
+    runConnect(config, DEFAULT_VPS_CONFIG_PATH);
+  },
+};

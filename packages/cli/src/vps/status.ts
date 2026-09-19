@@ -1,4 +1,6 @@
-import type { VpsConfig } from "./config.ts";
+import type { CommandModule } from "yargs";
+import { DEFAULT_VPS_CONFIG_PATH, type VpsConfig } from "./config.ts";
+import { loadConfigOrExit } from "./shared.ts";
 import {
   buildReachabilityCommand,
   buildLingerCommand,
@@ -110,3 +112,14 @@ export function runStatusChecks(config: VpsConfig, configPath: string): StatusRe
     },
   };
 }
+
+export const statusCommand: CommandModule = {
+  command: "status",
+  describe: "read-only health report of the VPS claude session",
+  handler: () => {
+    const config = loadConfigOrExit();
+    const report = runStatusChecks(config, DEFAULT_VPS_CONFIG_PATH);
+    console.log(formatStatusReport(report));
+    process.exitCode = isFullyHealthy(report) ? 0 : 1;
+  },
+};
