@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import pc from "picocolors";
 import { buildCli, readVersion } from "./index.ts";
 import { brandOutput } from "./lib/brand-help.ts";
 
@@ -18,15 +19,18 @@ describe("buildCli", () => {
 
 describe("buildCli end-to-end via parse()", () => {
   it("--help produces single branded output, no error", () => {
+    expect.assertions(3);
     const argv = ["--help"];
     buildCli(argv).parse(argv, {}, (err, _argv, output) => {
       expect(err).toBeFalsy();
-      expect(output).toBeTruthy();
-      expect(brandOutput(output)).toContain("personal SDLC CLI");
+      const c = pc.createColors(true);
+      expect(brandOutput(output, c)).toContain(c.bold(c.magenta("Domains:")));
+      expect(output.match(/^Usage: digismith/gm)).toHaveLength(1);
     });
   });
 
   it("--version prints exactly the package version, no error", () => {
+    expect.assertions(2);
     const argv = ["--version"];
     buildCli(argv).parse(argv, {}, (err, _argv, output) => {
       expect(err).toBeFalsy();
@@ -35,6 +39,7 @@ describe("buildCli end-to-end via parse()", () => {
   });
 
   it("an unknown subcommand fails strict validation", () => {
+    expect.assertions(1);
     const argv = ["depot", "clone", "bogus"];
     buildCli(argv).parse(argv, {}, (err) => {
       expect(err).toBeTruthy();
