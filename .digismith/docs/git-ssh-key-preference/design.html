@@ -159,6 +159,11 @@ If unset (a repo where the question was never asked or was declined — see Erro
 command runs exactly as it does today, with no <code>GIT_SSH_COMMAND</code> override — identical
 to current behavior, so this is purely additive.
 </p>
+<p>
+This covers the commands DigiSmith runs against the repo currently being worked in.
+<code>digismith:depot</code>'s own clone of a fixed, separate DigiSmith remote is out of scope —
+it targets a different repo entirely, not the one this preference is set for.
+</p>
 </section>
 
 <section id="errors">
