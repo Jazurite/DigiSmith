@@ -7,6 +7,7 @@ import {
   addComment,
   getComments,
   getAttachmentContent,
+  uploadAttachment,
 } from "./client.ts";
 import { markdownToAdf } from "./markdown-to-adf.ts";
 
@@ -79,6 +80,13 @@ async function main() {
         const creds = checkCredentials();
         const savedPath = await getAttachmentContent(args.id, args.out, creds);
         console.log(savedPath);
+        break;
+      }
+      case "upload-attachment": {
+        requireArgs(args, ["key", "file"]);
+        const creds = checkCredentials();
+        const result = await uploadAttachment(args.key, args.file, creds);
+        console.log(JSON.stringify(result));
         break;
       }
       case "markdown-to-adf": {

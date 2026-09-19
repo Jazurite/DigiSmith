@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -208,4 +209,57 @@ export async function getAttachmentContent(
   const buf = Buffer.from(await res.arrayBuffer());
   writeFileSync(outPath, buf);
   return outPath;
+}
+
+const MEDIA_PLATFORM_ID_PATTERN = /api\.media\.atlassian\.com\/file\/([^/]+)\/binary/;
+
+async function tryGetMediaPlatformId(
+  attachmentId: string,
+  creds: Credentials
+): Promise<string | undefined> {
+  const url = `${baseUrl(creds)}/attachment/content/${attachmentId}`;
+  const res = await fetch(url, {
+    headers: { Authorization: authHeader(creds) },
+    redirect: "manual",
+  });
+  if (res.status < 300 || res.status >= 400) return undefined;
+  const location = res.headers.get("location");
+  if (!location) return undefined;
+  const match = location.match(MEDIA_PLATFORM_ID_PATTERN);
+  return match ? match[1] : undefined;
+}
+
+export interface AttachmentUploadResult {
+  id: string;
+  filename: string;
+  contentUrl: string;
+  mediaId?: string;
+}
+
+export async function uploadAttachment(
+  key: string,
+  filePath: string,
+  creds: Credentials
+): Promise<AttachmentUploadResult> {
+  const fileBytes = readFileSync(filePath);
+  const form = new FormData();
+  form.append("file", new Blob([fileBytes]), basename(filePath));
+  const url = `${baseUrl(creds)}/issue/${key}/attachments`;
+  const res = await jiraFetch(
+    url,
+    {
+      method: "POST",
+      headers: {
+        Authorization: authHeader(creds),
+        "X-Atlassian-Token": "no-check",
+      },
+      body: form,
+    },
+    "uploadAttachment"
+  );
+  const attachments = (await res.json()) as Array<{ id: string; filename: string }>;
+  const attachment = attachments[0];
+  const contentUrl = `${baseUrl(creds)}/attachment/content/${attachment.id}`;
+  const mediaId = await tryGetMediaPlatformId(attachment.id, creds);
+  return { id: attachment.id, filename: attachment.filename, contentUrl, mediaId };
 }

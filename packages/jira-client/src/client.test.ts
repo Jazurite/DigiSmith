@@ -10,6 +10,7 @@ import {
   addComment,
   getComments,
   getAttachmentContent,
+  uploadAttachment,
 } from "./client.ts";
 
 describe("checkCredentials", () => {
@@ -376,5 +377,119 @@ describe("getAttachmentContent", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(getAttachmentContent("att-1", "/tmp/x", CREDS)).rejects.toThrow(/too many redirects/);
+  });
+});
+
+describe("uploadAttachment", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uploads via multipart POST and returns id/filename/contentUrl plus mediaId on a matching redirect", async () => {
+    const uploadResponse = {
+      ok: true,
+      json: () => Promise.resolve([{ id: "10001", filename: "screenshot.png" }]),
+    };
+    const redirectResponse = {
+      status: 303,
+      headers: makeHeaders({
+        location: "https://api.media.atlassian.com/file/abc-123-uuid/binary?token=xyz",
+      }),
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(uploadResponse)
+      .mockResolvedValueOnce(redirectResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tmpDir = mkdtempSync(join(tmpdir(), "jira-client-upload-"));
+    const filePath = join(tmpDir, "screenshot.png");
+    writeFileSync(filePath, Buffer.from([1, 2, 3]));
+
+    const result = await uploadAttachment("EMKT-1", filePath, CREDS);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://example.atlassian.net/rest/api/3/issue/EMKT-1/attachments",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ "X-Atlassian-Token": "no-check" }),
+      })
+    );
+    const firstCallInit = fetchMock.mock.calls[0][1];
+    expect(firstCallInit.body).toBeInstanceOf(FormData);
+
+    expect(result).toEqual({
+      id: "10001",
+      filename: "screenshot.png",
+      contentUrl: "https://example.atlassian.net/rest/api/3/attachment/content/10001",
+      mediaId: "abc-123-uuid",
+    });
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("omits mediaId when the redirect Location doesn't match the expected Media Platform URL shape", async () => {
+    const uploadResponse = {
+      ok: true,
+      json: () => Promise.resolve([{ id: "10002", filename: "shot.png" }]),
+    };
+    const redirectResponse = {
+      status: 303,
+      headers: makeHeaders({
+        location: "https://example.atlassian.net/secure/attachment/10002/shot.png",
+      }),
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(uploadResponse)
+      .mockResolvedValueOnce(redirectResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tmpDir = mkdtempSync(join(tmpdir(), "jira-client-upload-"));
+    const filePath = join(tmpDir, "shot.png");
+    writeFileSync(filePath, Buffer.from([1]));
+
+    const result = await uploadAttachment("EMKT-1", filePath, CREDS);
+
+    expect(result.mediaId).toBeUndefined();
+    expect(result.id).toBe("10002");
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("omits mediaId when the content-URL lookup returns a non-redirect response", async () => {
+    const uploadResponse = {
+      ok: true,
+      json: () => Promise.resolve([{ id: "10003", filename: "shot2.png" }]),
+    };
+    const nonRedirectResponse = { status: 200, headers: makeHeaders({}) };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(uploadResponse)
+      .mockResolvedValueOnce(nonRedirectResponse);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tmpDir = mkdtempSync(join(tmpdir(), "jira-client-upload-"));
+    const filePath = join(tmpDir, "shot2.png");
+    writeFileSync(filePath, Buffer.from([1]));
+
+    const result = await uploadAttachment("EMKT-1", filePath, CREDS);
+
+    expect(result.mediaId).toBeUndefined();
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("throws when the upload itself fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 413,
+      text: () => Promise.resolve("payload too large"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const tmpDir = mkdtempSync(join(tmpdir(), "jira-client-upload-"));
+    const filePath = join(tmpDir, "big.png");
+    writeFileSync(filePath, Buffer.from([1]));
+
+    await expect(uploadAttachment("EMKT-1", filePath, CREDS)).rejects.toThrow(/413/);
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });
