@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitest Worktree Contamination Fix</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Vitest Worktree Contamination Fix</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: no map letter — a workspace-wide test config fix, not a change to any
+    vendored primitive's own content (does not activate <code>using-git-worktrees</code>)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#fix">Fix</a></li>
+    <li><a href="#why">Why configDefaults, not a bare array</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>
+No <code>vitest.config.ts</code> exists at the repo root, so <code>vitest run</code> (via
+<code>package.json</code>'s <code>test</code> script) uses its own default file discovery, which
+has no exclusion for nested worktree directories. Every worktree lives physically inside
+<code>main</code>'s own working tree under <code>.claude/worktrees/&lt;name&gt;/</code>, so vitest
+globs straight into each one and runs its test files too, as if they belonged to <code>main</code>'s
+own suite.
+</p>
+<p>
+Confirmed live (2026-09-18, filed by another session): a completely unrelated worktree's failing
+test surfaced as a false failure while finishing an unrelated, already-correct change. Reconfirmed
+today (2026-09-19) with two different concurrent worktrees present: 1155 tests at the repo root vs.
+385 in an isolated run — the same order of contamination, different worktrees, same root cause.
+Silent double-counting is the same bug's flip side: a sibling worktree's passing tests get counted
+as if they were part of <code>main</code>'s own coverage, with no signal anything unusual happened.
+</p>
+</section>
+
+<section id="fix">
+<h2>Fix</h2>
+<p>Add <code>vitest.config.ts</code> at the repo root:</p>
+<pre><code>import { configDefaults, defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  test: {
+    exclude: [
+      ...configDefaults.exclude,
+      '**/.claude/worktrees/**',
+      '**/.worktrees/**',
+      '**/worktrees/**',
+    ],
+  },
+})</code></pre>
+<p>
+Covers all three worktree-path conventions <code>using-git-worktrees</code> documents, not only
+the one currently in use (<code>.claude/worktrees/</code>) — the other two aren't exercised by any
+live worktree today, but the config should be correct for whichever convention gets used. No
+<code>package.json</code> change needed — <code>vitest run</code> picks up a root
+<code>vitest.config.ts</code> automatically.
+</p>
+</section>
+
+<section id="why">
+<h2>Why <code>configDefaults</code>, not a bare array</h2>
+<p>
+Verified against Vitest's own current documentation: setting <code>test.exclude</code> directly
+to a plain array <strong>replaces</strong> the built-in default excludes (<code>node_modules</code>,
+<code>dist</code>, etc.) rather than extending them — exactly the pitfall the original finding
+flagged as a risk. The documented way to extend rather than replace is spreading
+<code>configDefaults.exclude</code> from <code>vitest/config</code> before adding new patterns,
+which is what the fix above does. (This differs from the CLI <code>--exclude</code> flag used to
+confirm the bug, which the same docs note is additive — a config-file array and a CLI flag do not
+behave the same way here.)
+</p>
+</section>
+
+<section id="scope">
+<h2>Scope</h2>
+<p>
+Repo-wide: this repo has a single <code>package.json</code> with one <code>test</code> script
+(<code>vitest run</code>) and no existing per-package test configs — one root
+<code>vitest.config.ts</code> covers everything. No nested <code>packages/*</code> config is
+needed or exists to reconcile.
+</p>
+</section>
+
+<section id="verification">
+<h2>Verification</h2>
+<p>
+Run <code>pnpm test</code> after adding the file, with at least one concurrent worktree present,
+and confirm the count matches an isolated run (currently ~385 tests) rather than the inflated
+count including worktree contents. No unit test applies to a config file itself; verification is
+this live before/after comparison.
+</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/vitest-worktree-contamination/design.html</footer>
+
+</body>
+</html>
