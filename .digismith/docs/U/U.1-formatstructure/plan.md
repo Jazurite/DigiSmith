@@ -6,7 +6,9 @@
 
 **Architecture:** Every domain (`vps`, `depot`) and sub-domain (`depot clone`, `depot opencode`, `depot bridge`) becomes a yargs "bucket" `CommandModule` (`{ command, describe, builder, handler: () => {} }` with `demandCommand(1, '')`) composed of leaf `CommandModule`s that call the logic functions each file already exports. A shared `src/lib/brand-help.ts` post-processes yargs' own generated help text (via `.showHelp(callback)`) to add DigiSmith's purple brand accent and a root-only banner, rather than replacing yargs' help generation outright.
 
-**Tech Stack:** TypeScript (NodeNext ESM, Node ≥24), yargs ^18.1.0, picocolors ^1.1.1, Vitest.
+**Tech Stack:** TypeScript (NodeNext ESM, Node ≥24), yargs ^17.7.3, @types/yargs ^17.0.35 (dev), picocolors ^1.1.1, Vitest.
+
+**Correction (found during Task 1's review):** the plan originally specified `yargs@^18.1.0`. yargs v18 is an ESM-first rewrite whose package `exports` map declares no `types` condition on its main entry — building against it fails with `TS7016: Could not find a declaration file for module 'yargs'` under this project's `strict: true` build config, confirmed via a direct `tsc --noEmit` run. yargs's own README documents `@types/yargs` as a required separate devDependency, but the published `@types/yargs` is capped at `17.0.35` — it does not cover v18's breaking API changes. Pinning to the latest v17 line (`^17.7.3`, `node >= 12`, comfortably under this package's `>=24` floor) keeps the dependency's actual shape matched to its published types. Every code sample below reflects this correction.
 
 ## Global Constraints
 
@@ -31,15 +33,20 @@
 
 - [ ] **Step 1: Add the new dependencies**
 
-Edit `packages/cli/package.json`, adding a `dependencies` block (the package currently has none) right after `"license"`:
+Edit `packages/cli/package.json`, adding a `dependencies` block (the package currently has none) right after `"license"`, plus `@types/yargs` as a devDependency (yargs ships no type declarations on its own main entry — see the correction note in this plan's header):
 
 ```json
   "license": "MIT",
   "dependencies": {
-    "yargs": "^18.1.0",
+    "yargs": "^17.7.3",
     "picocolors": "^1.1.1"
   },
+  "devDependencies": {
+    "@types/yargs": "^17.0.35"
+  },
 ```
+
+(If `packages/cli/package.json` already has its own `devDependencies` block, merge `@types/yargs` into it instead of adding a second one.)
 
 Run from the repo root: `pnpm install`
 
