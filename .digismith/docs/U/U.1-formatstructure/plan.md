@@ -1109,6 +1109,8 @@ if (isDirectRun()) {
 }
 ```
 
+**Superseded by the "Second correction" above** — the actual shipped code in `src/index.ts` uses `.parse(argv, {}, callback)` with `brandOutput`/`ROOT_USAGE` from `lib/brand-help.ts`, not `attachHelp`.
+
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `pnpm --filter @digismith/cli exec vitest run src/index.test.ts`

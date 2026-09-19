@@ -199,6 +199,19 @@ Domains:
 
   -h, --help     show help
   --version      show version number</code></pre>
+  <div class="callout">
+    <strong>Shipped deviation from the design above:</strong> the mechanism described in this section
+    (<code>.help(false)</code>, manual <code>-h</code>/<code>--help</code> wiring, a module-metadata-driven
+    renderer) turned out to have real problems once it ran against yargs' actual parsing pipeline — see
+    <code>plan.md</code>'s two "Correction" sections for the full history. What shipped instead:
+    <code>.parse(argv, {}, callback)</code> buffers yargs' own fully-rendered help/error output (a
+    real, supported yargs feature), and <code>brandOutput()</code> in <code>lib/brand-help.ts</code>
+    regex-colorizes that already-rendered text. The visual result (colored section headers, a root-only
+    wordmark banner, <code>Domains:</code> at root vs. <code>Commands:</code> nested) is unchanged from
+    what's shown above — only the delivery mechanism differs. Zero runtime dependencies was also given
+    up (the design doc's own "Framework" section already documents adding <code>yargs</code>; this note
+    is only about the *branding* delivery mechanism specifically).
+  </div>
 </section>
 
 <section id="nongoals">

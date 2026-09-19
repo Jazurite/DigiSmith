@@ -13,6 +13,7 @@ export function createEnsureCommand(
     builder: (y) =>
       y.option("repo", {
         type: "string",
+        requiresArg: true,
         describe: "DigiSmith checkout to run the bridge from (defaults to the current checkout)",
       }),
     handler: (argv) => {
