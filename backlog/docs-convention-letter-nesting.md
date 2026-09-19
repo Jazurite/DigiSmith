@@ -7,6 +7,18 @@ first (`.digismith/docs/U/U.1-formatstructure/design.html`), every other existin
 (V.4, V.5, I.6, etc.) stays on the current flat `.digismith/docs/<slug>/` shape unchanged. This file
 records the proposal and its scope so whoever picks it up next doesn't re-derive it from scratch.
 
+## Confirmed live gap (2026-09-19, during U.1's own `report-implementation` run)
+
+`digismith:report-implementation`'s Step 1 slug-derivation guard has exactly two cases: the plan
+sits directly under `.digismith/docs/<slug>/plan.md` (parent dir is the slug), or it doesn't (fall
+back to parsing `<date>-<slug>-plan.md` out of the filename, the old pre-unified-docs convention).
+U.1's own plan at `.digismith/docs/U/U.1-formatstructure/plan.md` matches neither: its parent dir
+(`U.1-formatstructure`) isn't directly under `.digismith/docs/`, and its filename is plain `plan.md`,
+not `<date>-<slug>-plan.md`. Resolved ad hoc for this one run by treating the slug as the full
+`U/U.1-formatstructure` path segment (matching the skill's intent, not its letter) — this is exactly
+the kind of call-site check the "Why this is a real decision" section below already flagged as
+needing an update, now with a concrete, confirmed instance rather than a hypothetical one.
+
 ## The idea
 
 The unified docs convention (adopted 2026-08-08, see `MEMORY.md`'s Conventions section) currently
