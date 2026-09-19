@@ -2,41 +2,16 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { GROUPS, resolveGroup, usage, readVersion } from "./index.ts";
+import { buildCli, readVersion } from "./index.ts";
 
 const ownPackageJson = new URL("../package.json", import.meta.url);
 const ownVersion = (JSON.parse(fs.readFileSync(ownPackageJson, "utf-8")) as { version: string }).version;
 
-describe("resolveGroup", () => {
-  it("returns the vps runner for 'vps'", () => {
-    expect(resolveGroup("vps")).toBe(GROUPS.vps);
-  });
-
-  it("returns the depot runner for 'depot'", () => {
-    expect(resolveGroup("depot")).toBe(GROUPS.depot);
-  });
-
-  it("returns undefined for an unknown group", () => {
-    expect(resolveGroup("foo")).toBeUndefined();
-  });
-
-  it("returns undefined when no group is given", () => {
-    expect(resolveGroup(undefined)).toBeUndefined();
-  });
-
-  it("does not resolve Object.prototype members as groups", () => {
-    expect(resolveGroup("toString")).toBeUndefined();
-  });
-});
-
-describe("usage", () => {
-  it("names the binary and every registered group", () => {
-    const text = usage();
-    expect(text).toContain("digismith");
-    expect(text).toContain("--version");
-    for (const name of Object.keys(GROUPS)) {
-      expect(text).toContain(name);
-    }
+describe("buildCli", () => {
+  it("registers both domains", async () => {
+    const help = await buildCli([]).getHelp();
+    expect(help).toMatch(/vps/);
+    expect(help).toMatch(/depot/);
   });
 });
 
