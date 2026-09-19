@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dynamic Doc Conventions</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Dynamic Doc Conventions</h1>
+  <div class="meta">
+    <span>Date: 2026-09-19</span>
+    <span>Map item: G.3 (Methodology)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#shape">Folder shape</a></li>
+    <li><a href="#trigger">Numbering trigger and resolution point</a></li>
+    <li><a href="#unlettered">Unlettered builds</a></li>
+    <li><a href="#compat">Compatibility and lookup</a></li>
+    <li><a href="#callsites">Call sites that change</a></li>
+    <li><a href="#scope">Out of scope</a></li>
+    <li><a href="#validation">Validation</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>Two confirmed live gaps turned out to be the same underlying decision. First, 2026-09-19 during
+U.1's own <code>report-implementation</code> run: Jack wants docs nested by map letter
+(<code>.digismith/docs/&lt;Letter&gt;/&lt;Letter.N&gt;-&lt;slug&gt;/</code>, piloted at
+<code>U/U.1-formatstructure/</code>), but <code>report-implementation</code>'s slug-derivation and
+<code>update-history.ts</code>'s <code>parseReport()</code> both only understood the old flat shape
+and broke on the new one. Second, 2026-09-18 shipping a Screenshots/Videos addendum under Q.1: the
+addendum reused an already-occupied slug, and both <code>writing-plans</code> and
+<code>report-implementation</code> nearly wrote over an existing build's <code>plan.md</code>/
+<code>report.html</code>.</p>
+<p>Both resolve the same way: give every distinct build — a first pass or a later addendum, it
+doesn't matter which — its own permanent <code>&lt;Letter.N&gt;</code> sub-item and thus its own
+folder. No shared filename ever exists to collide over, and the nested shape Jack wants falls out
+of the same rule for free.</p>
+</section>
+
+<section id="shape">
+<h2>Folder shape</h2>
+<p><code>.digismith/docs/&lt;Letter&gt;/&lt;Letter.N&gt;-&lt;slug&gt;/{design.html,plan.md,report.html}</code>
+— the full triplet lives together in one folder per build. An addendum gets its own complete set,
+not a patch to the original's <code>design.html</code>: today's in-place "Addendum" section pattern
+is retired in favor of full consistency across all three files.</p>
+<pre><code>.digismith/docs/
+  G/
+    G.1-standards-injection/
+      design.html  plan.md  report.html
+    G.3-dynamic-doc-conventions/
+      design.html  plan.md  report.html
+  Q/
+    Q.1-generate-comment/
+      design.html  plan.md  report.html
+    Q.3-screenshots-section/              (addendum — own full set, not a patch to Q.1)
+      design.html  plan.md  report.html</code></pre>
+<p>The trailing slug segment stays full-length (matching U.1's own pilot,
+<code>U.1-formatstructure</code>) — no reason to shorten it now that a numeric prefix already
+disambiguates; the slug still earns its keep for search/grep.</p>
+</section>
+
+<section id="trigger">
+<h2>Numbering trigger and resolution point</h2>
+<p><strong>Trigger:</strong> any distinct build gets the next unused <code>&lt;Letter.N&gt;</code>
+under its letter — a first pass and a later addendum are both "distinct builds." An addendum never
+reuses its parent's number. This is mechanical, not a judgment call: there is no case where two
+separate design/plan/report cycles share one folder.</p>
+<p><strong>Resolution point:</strong> the number is assigned once, the first time <em>this build's</em>
+<code>design.html</code> is about to be written — i.e. inside <code>brainstorming</code>'s own "After
+the Design" documentation step, computed by scanning <code>.digismith/docs/&lt;Letter&gt;/</code> on
+disk for existing <code>&lt;Letter&gt;.M-*</code> folders and taking <code>max(M)+1</code>. No new
+state to maintain — the filesystem is the source of truth. <code>writing-plans</code> and
+<code>report-implementation</code> both reuse that same already-resolved
+<code>&lt;Letter&gt;/&lt;Letter.N&gt;-&lt;slug&gt;</code> path rather than re-deriving anything,
+extending the existing "reuse the slug the caller already resolved" convention both skills already
+follow.</p>
+</section>
+
+<section id="unlettered">
+<h2>Unlettered builds</h2>
+<p>A structural change with no map letter (like the original <code>unified-docs-convention</code>
+work itself) has no natural key to nest under. These go to
+<code>.digismith/docs/_unlettered/&lt;slug&gt;/</code> — its own bucket, flat inside (no
+<code>.N</code> numbering), keeping every letterless build grouped together rather than scattered in
+the top-level namespace with everything else. No historical case has ever needed a second build
+under the same letterless slug; if one ever does, it's caught the same way any other unexpected
+collision is — <code>report-implementation</code>'s existing overwrite-ask — rather than a numbering
+scheme designed ahead of a real need.</p>
+</section>
+
+<section id="compat">
+<h2>Compatibility and lookup</h2>
+<p>Existing flat folders (V.4, V.5, I.6, and everything else shipped before this) are frozen
+historical record, exactly like a shipped <code>design.html</code> is never edited after the fact.
+They are never migrated into the nested shape.</p>
+<p>Because old folders never move, any call site that reads <code>.digismith/docs/&lt;slug&gt;/</code>
+needs to check <strong>both</strong> shapes permanently, not just during a transition window: try the
+nested shape first (<code>.digismith/docs/*/&lt;Letter&gt;.*-&lt;slug&gt;/</code>-style match), fall
+back to the flat shape second. There is no cutover date after which the flat fallback can be
+deleted.</p>
+</section>
+
+<section id="callsites">
+<h2>Call sites that change</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Skill / script</th><th>Change</th></tr>
+<tr><td><code>digismith:brainstorming</code></td><td>"After the Design" step gains the
+number-resolution logic above; writes <code>design.html</code> to the resolved nested path instead of
+flat <code>.digismith/docs/&lt;slug&gt;/</code>. Unlettered case writes to
+<code>_unlettered/&lt;slug&gt;/</code> instead.</td></tr>
+<tr><td><code>digismith:writing-plans</code></td><td>Reuses the already-resolved path from the same
+session's brainstorming step rather than deriving its own; writes <code>plan.md</code> there.</td></tr>
+<tr><td><code>digismith:report-implementation</code></td><td>Step 1's slug-derivation guard gains a
+third case (nested shape: parent directory is <code>&lt;Letter&gt;.&lt;N&gt;-&lt;slug&gt;</code>,
+grandparent is the bare letter) alongside its existing two (flat, and the old pre-unified
+<code>&lt;date&gt;-&lt;slug&gt;-plan.md</code> fallback).</td></tr>
+<tr><td><code>.digismith/hooks/post-finish/scripts/update-history.ts</code></td><td>
+<code>parseReport()</code>'s exact-literal single-segment regex
+(<code>/\.digismith\/docs\/([^/]+)\/report\.html$/</code>) becomes a pattern that also matches the
+nested shape, so a merge range containing a nested build's <code>report.html</code> is picked up
+automatically instead of needing a manual Timeline entry.</td></tr>
+<tr><td><code>.digismith/hooks/post-finish/03-history-update.md</code></td><td>Prose description of
+the matching behavior updated to describe both shapes.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="scope">
+<h2>Out of scope</h2>
+<ul>
+<li>Consumer repos — this build covers DigiSmith's own repo only (map-letter grouping). What the
+"grouping key" is for a repo with no map letters (a ticket key, or something else) is deliberately
+deferred until a real consumer-repo case forces the decision, rather than designed speculatively
+now.</li>
+<li>Migrating any existing flat folder into the nested shape — frozen historical record, permanent,
+not touched by this build.</li>
+<li>A numbering scheme for repeat builds under the same unlettered slug — no historical case has
+needed one; the existing overwrite-ask catches it if it ever happens.</li>
+<li>A per-repo on/off toggle's storage location (a new <code>profiles/&lt;name&gt;.yml</code> field
+vs. <code>preferences.yml</code>-adjacent config) — moot for this build since it's scoped to
+DigiSmith's own repo only; revisit once the consumer-repo question above is actually being
+answered.</li>
+</ul>
+</section>
+
+<section id="validation">
+<h2>Validation</h2>
+<p>No behavior changes to any already-shipped, already-flat build — verified by the compatibility
+rule itself (old folders untouched, dual-shape lookup added rather than a shape swap). For new
+work: the next real DigiSmith build after this ships should land in the nested shape end-to-end
+(design → plan → report → history entry), the same way U.1 already validated the nested shape by
+hand before this convention existed to formalize it.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/dynamic-doc-conventions/design.html</footer>
+
+</body>
+</html>
