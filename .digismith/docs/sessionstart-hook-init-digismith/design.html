@@ -128,13 +128,15 @@ and print plain text to stdout, which Claude then sees as context. <code>scripts
 (repo never bootstrapped, or plugin enabled somewhere DigiSmith isn't actually used) → exit 0, print
 nothing. This is the common case across most sessions a Jack-wide plugin install touches, so silence here
 matters.</li>
-<li>Reads <code>.digismith/preferences.yml</code> via <code>scripts/preferences.ts</code>'s existing
-<code>readPreferences()</code> — reused as-is, no new parsing logic.</li>
 <li>Calls the voice contract (below). Its result, if any, folds into the same banner line.</li>
 <li>Prints one terse line to stdout, e.g. <code>DigiSmith: profile=emma, voices=conversational</code> —
 kept minimal since this now runs on every session start/resume/clear/compact for every DigiSmith-tracked
 repo, not just ticket-scoped work where token cost is already budgeted for.</li>
 </ol>
+<p><code>.digismith/preferences.yml</code> (map item H's own store — operational settings like
+<code>finish_option</code>/<code>ssh_key</code>) is deliberately not read here: nothing in it is worth
+announcing on every session start, and the three approved init-sequence pieces (voice, profile, banner)
+don't call for it. <code>.digismith/profile</code> (map item O) is the only file this step reads.</p>
 </section>
 
 <section id="voice">
@@ -156,12 +158,12 @@ this design is approved, so it can build against it directly.</p>
 
 <section id="failure">
 <h2>Failure Mode</h2>
-<p>Missing or malformed <code>.digismith/profile</code> / <code>preferences.yml</code> are always silently
-benign — this reuses <code>readPreferences()</code>'s existing behavior unchanged, matching the same
-precedent every other consumer of that file already follows (map items G.2, H, P). A typo in a YAML file is
-not a bug worth surfacing on every session start.</p>
+<p>A missing <code>.digismith/profile</code> is always silently benign — exit 0, no output — matching the
+same precedent every other consumer of a missing DigiSmith config file already follows (map items G.2, H,
+P).</p>
 <p>A genuine unexpected exception — <code>voice-init.ts</code> existing but throwing, or an unrelated
-filesystem error — is different: <code>session-init.ts</code> wraps its own top-level logic in a
+filesystem error reading <code>.digismith/profile</code> — is different: <code>session-init.ts</code> wraps
+its own top-level logic in a
 try/catch and on an unhandled error prints a one-line warning to stderr and exits non-zero.
 <code>SessionStart</code> can't block session start regardless of exit code, so this never gets in the way;
 it just means a genuinely broken script doesn't fail invisibly. Open to making this fully silent too if
@@ -173,10 +175,10 @@ hook noise turns out to be unwelcome in practice — cheap to flip later.</p>
 <p>Vitest, colocated as <code>scripts/session-init.test.ts</code>, following the existing
 <code>.digismith/hooks/post-finish/scripts/*.test.ts</code> shape (real filesystem fixtures in a temp dir,
 not mocked fs). Cases: no <code>.digismith/profile</code> → silent exit 0 and empty stdout; profile present,
-no preferences → banner with just the profile; preferences present → banner includes them; no
-<code>voice-init.ts</code> → banner unaffected; a fake <code>voice-init.ts</code> returning a string →
-appended to the banner; a fake <code>voice-init.ts</code> that throws → stderr warning, non-zero exit,
-process doesn't crash uncaught.</p>
+no <code>voice-init.ts</code> → banner with just the profile; a fake <code>voice-init.ts</code> returning a
+string → appended to the banner; a fake <code>voice-init.ts</code> returning <code>null</code> → banner
+unaffected, same as if the file didn't exist; a fake <code>voice-init.ts</code> that throws → stderr
+warning, non-zero exit, process doesn't crash uncaught.</p>
 </section>
 
 <section id="out-of-scope">
