@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Selection (T.7) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Voice Selection (T.7) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-22</span>
+    <span>Map item: <strong>T.7</strong></span>
+    <span>Commit range: <code>11bbd91..4f8540f</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Let a repo explicitly turn <code>technical_voice</code> (ASD-STE100 artifact style, T.1) and
+  <code>conversation_voice</code> (live-conversation shape, T.5) on or off independently, persisted
+  per repo, with an immediate felt effect and auto-inclusion at the triggers DigiSmith already has.
+  Two new preference keys (<code>technical_voice</code>, <code>conversation_voice</code>, values
+  <code>on</code>/<code>off</code>, missing = <code>on</code>) live in the existing H-lineage store;
+  a new <code>scripts/voice.ts</code> wraps that store with axis-aware get/set and a small CLI; a
+  new <code>digismith:voice</code> skill exposes view/set with immediate inline injection;
+  <code>inject-standards</code> gained a Voice Gate auto-including whichever axis is on in
+  Scenario 1 only; <code>bootstrap</code>/<code>adopt</code> gained the same auto-inject at ticket
+  start; and <code>scripts/voice-init.ts</code> plugs into W.10's already-shipped
+  <code>SessionStart</code> hook so every session gets a one-line voice summary in its startup
+  banner. Followed the full Superpowers process: brainstorming &rarr; spec &rarr; writing-plans
+  &rarr; <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 3 fix
+  round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+  <div class="callout">Commit range note: this branch merged <code>main</code> mid-plan (a real,
+  non-fast-forward merge — <code>64946bb</code> — to pick up W.10's <code>SessionStart</code> hook
+  for Task 5) rather than the fast-forward history this repo's history-recording convention
+  usually assumes. The range above uses <code>git merge-base main HEAD</code>
+  (<code>11bbd91</code>) rather than the ledger's own literal Task&nbsp;1 base
+  (<code>998c654</code>), to exclude unrelated commits from other lineages that merge pulled in.
+  See <code>backlog/report-implementation-non-ff-merge-range.md</code> for the general gap this
+  exposed in <code>digismith:report-implementation</code> itself.</div>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>scripts/voice.ts</h4><p>Axis-aware preference wrapper exporting <code>AXES</code>, <code>isAxis</code>, <code>standardForAxis</code>, <code>resolveVoice</code>, <code>resolveAllVoices</code>, <code>setVoice</code>, and a small CLI (<code>status</code>/<code>set</code>).</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>digismith:voice skill</h4><p>View/set skill for both voice axes, with immediate inline injection of the standard the moment an axis is switched on.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Voice Gate</h4><p>New Step 0.5 in <code>inject-standards</code> auto-including whichever axis is on, unconditionally, in Scenario 1 only.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>bootstrap/adopt auto-inject</h4><p>New Step 0.7 announcing ON voices at ticket start, mirroring H.2's SSH-key-preference pattern.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>scripts/voice-init.ts</h4><p>Bridges into W.10's <code>SessionStart</code> hook contract, giving every session a one-line voice summary in its startup banner.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. scripts/voice.ts — axis-aware preference wrapper + CLI</td><td>Preference wrapper + CLI, 18 tests</td><td>Approved, clean</td><td><code>resolveAllVoices</code> uses a <code>{} as Record&lt;Axis, VoiceValue&gt;</code> cast in a loop (scripts/voice.ts:27-31) — plan-mandated, verbatim from brief, harmless.<br>Implementer report's line-count claims (66/207) don't match diff stat (87/192) — cosmetic, no functional impact.</td></tr>
+    <tr><td>2. digismith:voice skill — view and set, with immediate inline injection</td><td>skills/voice/SKILL.md</td><td>Approved after 1 fix round</td><td>None</td></tr>
+    <tr><td>3. Voice Gate in inject-standards</td><td>Step 0.5 + Quick Reference row</td><td>Approved, clean</td><td>Brief's own Step 3 verification command used case-sensitive <code>grep</code> for "Voice Gate" but Step 2's literal row text is lowercase "gate" — a plan/brief authoring flaw, not an implementation defect; implementer correctly preserved verbatim text over the flawed check.</td></tr>
+    <tr><td>4. Auto-inject in bootstrap and adopt</td><td>Step 0.7 (bootstrap) + reference paragraph (adopt)</td><td>Approved, clean</td><td>None</td></tr>
+    <tr><td>5. scripts/voice-init.ts — plug into W.10's SessionStart hook</td><td>voice-init.ts + 3 tests</td><td>Approved after 1 fix round</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Important finding, fixed and re-reviewed clean; 9 Minor/Recommendation items triaged by the reviewer itself as non-blocking.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Voice Gate (Step 0.5 in <code>inject-standards</code>) didn't state precedence over <code>ste100-writing</code>'s own <code>index.yml</code> scope note ("skip for a code-writing task"), creating an apparent self-contradiction for code-writing sessions.</td><td>Fixed — a clause was added clarifying the Voice Gate loads unconditionally regardless of the scope note, which instead governs Step 4's suggestion logic (commit 4f8540f). Scoped re-review confirmed addressed, no new Critical/Important breakage.</td></tr>
+    <tr><td>Minor</td><td>9 minor/recommendation items from the final review (test-name clarity, ledger triage of pre-existing deferred minors, a missing <code>clear</code> action on <code>scripts/voice.ts</code>, case-sensitive off-matching, an unrelated <code>ssh_key</code> preference commit riding along on the branch, a contract test tying standard names to disk, etc.).</td><td>Parked — the reviewer itself triaged all as non-blocking; none required a fix before merge.</td></tr>
+    <tr><td>Minor</td><td>2 new minor issues surfaced by the final-review fix's own scoped re-review (an unwrapped 298-character line at <code>inject-standards/SKILL.md:87</code>; an imprecise quotation of <code>ste100-writing</code>'s scope note), plus one pre-existing out-of-scope observation (unstated interaction between the Profile Gate and the Voice Gate when a profile's <code>standards</code> list excludes <code>global</code>).</td><td>Parked — cosmetic or latent, not introduced as blocking, left for a future pass.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">afec19c</span> docs(voice): add T.7 voice-selection design and W.10 backlog item</li>
+    <li><span class="sha">6263ebc</span> docs(voice): add T.7 implementation plan</li>
+    <li><span class="sha">30b56e3</span> docs(preferences): add H.2 backlog item for SSH key candidate listing</li>
+    <li><span class="sha">6d31572</span> docs(voice): relocate T.7 docs to match branch slug, add voice-init.ts task for W.10</li>
+    <li><span class="sha">998c654</span> chore: save ssh_key preference for this repo</li>
+    <li><span class="sha">dd3f1bf</span> feat(voice): add technical/conversation voice preference wrapper</li>
+    <li><span class="sha">eaa8502</span> feat(voice): add digismith:voice skill for view/set</li>
+    <li><span class="sha">7571f57</span> feat(voice): add Voice Gate to inject-standards Scenario 1</li>
+    <li><span class="sha">8d4dbfe</span> feat(voice): auto-inject voice preferences at bootstrap/adopt ticket start</li>
+    <li><span class="sha">997f214</span> feat(voice): add voice-init.ts for the W.10 SessionStart hook</li>
+    <li><span class="sha">64946bb</span> merge main: bring in W.10 (SessionStart hook) for Task 5's voice-init.ts to build against</li>
+    <li><span class="sha">fe61270</span> fix(tests): update session-init test to reflect voice-init.ts integration</li>
+    <li><span class="sha">4f8540f</span> fix(voice): clarify Voice Gate precedence over ste100-writing's own scope note</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/voice-selection-t7/report.html</footer>
+
+</body>
+</html>
