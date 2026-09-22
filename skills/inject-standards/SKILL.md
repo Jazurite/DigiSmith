@@ -84,7 +84,7 @@ companion rule), `conversation_voice` → `global/ai-voice-conversational` —
 formatted exactly like any other Scenario 1 match (Step 6), but skipping
 Step 4's suggestion/confirm prompt entirely for these two: the repo already
 decided this explicitly, via `digismith:voice` or its own default, so
-re-asking every time defeats the point.
+re-asking every time defeats the point. An entry's own `index.yml` scope note—such as `ste100-writing`'s "skip for code-writing tasks"—governs Step 4's suggestion logic, not this gate: this gate loads standards unconditionally, and the standard's own body determines which output it applies to.
 
 This gate does not apply to Scenarios 2-4. Scenario 4 already excludes
 every `kind: prose` entry regardless of this gate (Step 3's prose-exclusion
