@@ -68,6 +68,32 @@ every `standards/` subfolder, `global/` included — the "`global/` never
 has a repo-type gate" statement in Step 3 refers only to the Shopify-repo
 auto-include check below, not to this profile gate.
 
+### Step 0.5: Voice Gate
+
+Read `.digismith/preferences.yml`'s `technical_voice` and
+`conversation_voice` keys (via `digismith:preferences`' `get` operation, or
+`scripts/voice.ts --action status` — either resolves the same values). A
+missing or malformed value reads as `on`, same as `digismith:preferences`'
+own missing-key disposition — never an error, never a reason to skip this
+gate.
+
+Whichever axis reads `on` is auto-included in **Scenario 1 (Conversation)
+only** — `technical_voice` → `global/ste100-writing` (with its
+`companions:` `ste100-word-swaps` and `ste100-use-cases`, per Step 6's
+companion rule), `conversation_voice` → `global/ai-voice-conversational` —
+formatted exactly like any other Scenario 1 match (Step 6), but skipping
+Step 4's suggestion/confirm prompt entirely for these two: the repo already
+decided this explicitly, via `digismith:voice` or its own default, so
+re-asking every time defeats the point.
+
+This gate does not apply to Scenarios 2-4. Scenario 4 already excludes
+every `kind: prose` entry regardless of this gate (Step 3's prose-exclusion
+rule) — both voice entries are `kind: prose`, so Scenario 4 was already
+excluding them before this step existed. Scenarios 2 and 3 are unaffected;
+this gate is deliberately scoped to Scenario 1 only, where "every live
+response" (the `ai-voice-conversational` standard's own persistence rule)
+actually applies.
+
 ### Step 1: Check the Index Exists
 
 Read `standards/index.yml`. If it doesn't exist:
@@ -245,6 +271,7 @@ augments the brief, it doesn't gate dispatch.
 | Step | Action |
 |---|---|
 | 0 | Profile gate: `.digismith/profile` present → only its `standards` list's folders are eligible below; missing → unchanged, all folders eligible |
+| 0.5 | Voice gate: read `technical_voice`/`conversation_voice` (default `on` if unset); whichever is `on` auto-includes in Scenario 1 only, no suggestion prompt |
 | 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |
 | 3 | Detect Shopify-repo layers (2 signals) — gates `shopify/` + `team/` for Scenario 4's auto-include only, never a filter in Scenarios 1-3; `global/` is never gated by this specific check. Separately, `kind: prose` entries are excluded from Scenario 4 entirely, in any folder |
