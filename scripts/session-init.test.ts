@@ -163,14 +163,14 @@ describe("main (CLI)", () => {
     expect(logSpy).not.toHaveBeenCalled();
   });
 
-  it("prints the profile-only banner when .digismith/profile exists (the real scripts/voice-init.ts doesn't exist yet)", async () => {
+  it("prints the banner with a voice summary when .digismith/profile exists and voice-init.ts is present", async () => {
     fs.mkdirSync(path.join(tmpDir, ".digismith"));
     fs.writeFileSync(path.join(tmpDir, ".digismith", "profile"), "emma\n");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await main();
 
-    expect(logSpy).toHaveBeenCalledWith("DigiSmith: profile=emma");
+    expect(logSpy).toHaveBeenCalledWith("DigiSmith: profile=emma, voices=technical+conversation");
   });
 
   it("surfaces a stderr warning and a non-zero exit code on an unexpected read error", async () => {
