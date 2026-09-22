@@ -208,6 +208,26 @@ where H's existing worktree-propagation copy step (sub-step 8 of Step 2)
 already carries it into every future worktree with no new code needed
 here.
 
+### Step 0.7: Resolve Voice Preferences
+
+**Only runs when Step 0 falls through to actual ticket work** — same guard
+Steps 0.5 and 0.6 already apply.
+
+Otherwise, read `technical_voice` and `conversation_voice` via
+`digismith:preferences`' `get` operation (or `scripts/voice.ts --action
+status`, which wraps the same read with the same missing-key-defaults-to-
+`on` disposition `digismith:preferences` documents). Whichever axis reads
+`on` — announce that standard inline, the same `--- Standard: ... ---`
+block `digismith:inject-standards` Scenario 1 uses, including any
+`companions:` from `standards/index.yml`. This is a plain read-and-
+announce, never a prompt: unlike Step 0.6's `ssh_key` (which has no
+default and must be asked once), both voice axes default to `on` and need
+no first-use question.
+
+This step needs no worktree-propagation step of its own beyond what
+sub-step 8 of Step 2 already does — `technical_voice`/`conversation_voice`
+live in the same `.digismith/preferences.yml` that sub-step already copies.
+
 ### Step 1: Get a Real Ticket
 
 Check whether this conversation already produced a
@@ -517,6 +537,7 @@ not re-invoke or duplicate any part of that chain yourself.
 | 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
 | 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails. Then, if `ticket: true`, `check-credentials` — bootstrap via `AskUserQuestion` if incomplete; declining doesn't block, just defers the failure to write-back time |
 | 0.6 | Skipped under the same condition as 0.5. Otherwise, check `digismith:preferences` for a saved `ssh_key`; if unset, ask once which SSH key file to use for this repo and store the answer via `set` — never written to `~/.gitconfig`/`~/.ssh/config`, only to `.digismith/preferences.yml` |
+| 0.7 | Skipped under the same condition as 0.5/0.6. Otherwise, read `technical_voice`/`conversation_voice` via `digismith:preferences` (default `on` if unset) and announce whichever is `on` inline — no prompt, unlike 0.6 |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile`, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run), and **2.8** copy `.digismith/preferences.yml` if the original checkout has one — all three plain file copies, never `git add -f` |
