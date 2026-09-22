@@ -1226,6 +1226,12 @@
       <p>Adds a new Step 7 to <code>finishing-a-development-branch</code> that offers to clear the running session's context after Option 1 or Option 2 completes, backed by a new per-repo <code>clear_context</code> preference — map item H.3. The addition is a single-file prose change: a new <code>## Step 7: Offer to Clear Context</code> section mirroring Step 3.5/4.5's existing ask/remember/override shape, plus small cross-reference pointers at the tail of Option 1 and Option 2, plus a Quick Reference note — no new scripts or code, reusing the existing <code>digismith:preferences</code> skill and the existing <code>mcp__ccd_session_mgmt__clear_session</code> tool. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/clear-context-after-finish/design.html">design</a>, <a href="docs/clear-context-after-finish/plan.md">plan</a>, and <a href="docs/clear-context-after-finish/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-22</div>
+      <h4>Real Claude Code SessionStart Hook to Init DigiSmith (W.10)</h4>
+      <p>Ships a Claude Code plugin-bundled <code>SessionStart</code> hook that prints a terse "DigiSmith active" banner — repo profile plus any active voice — into every session's context, closing the gap where a plain conversation with no ticket or task never sees DigiSmith at all. A <code>hooks/hooks.json</code> manifest at the plugin root registers a <code>SessionStart</code> command hook that runs <code>scripts/session-init.ts</code> via <code>node --experimental-strip-types</code>; the script reads <code>.digismith/profile</code> from the invoking session's cwd and, if present, checks for <code>scripts/voice-init.ts</code> next to itself, dynamically importing its default export (<code>() =&gt; Promise&lt;string | null&gt;</code>) to fold a voice summary into the same banner line — no profile means a silent exit with no output. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (1 task, executed directly in this session, each with a self-check before moving on). See <a href="docs/sessionstart-hook-init-digismith/design.html">design</a>, <a href="docs/sessionstart-hook-init-digismith/plan.md">plan</a>, and <a href="docs/sessionstart-hook-init-digismith/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
