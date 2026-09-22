@@ -265,6 +265,8 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/base
 git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 ```
 
+Once cleanup (Step 6) is done, continue to Step 7 to offer clearing this session's context.
+
 ### Option 2: Push and Create PR
 
 Resolve this repo's `ssh_key` preference once, before running the command
@@ -296,6 +298,9 @@ PR's title, URL, and the current ticket key if the branch name matched
 invoke it unasked — this is an offer, not an automatic action, the same
 disposition Step 4.5's "remember this?" follow-up already has for a
 different case.
+
+Once the Teams-notification offer is resolved (either answer), continue to Step 7 to offer
+clearing this session's context.
 
 ### Option 3: Keep As-Is
 
@@ -349,6 +354,47 @@ git worktree prune  # Self-healing: clean up any stale registrations
 **Otherwise:** The host environment owns this workspace — leave it in
 place. If your platform provides a workspace-exit tool, use it.
 
+## Step 7: Offer to Clear Context
+
+**Runs after Option 1 or Option 2 only** — never after Option 3 (Keep As-Is), which is a
+deliberate deferral, not completion, the same distinction Step 4.5 already draws for its own
+follow-up.
+
+Check this repo's saved default: invoke `digismith:preferences`' `get` operation for key
+`clear_context`.
+
+**Returns `unset`** → ask: "Clear this session's context now that the feature is done?" After
+the human partner answers, ask one separate follow-up: "Remember this as your default for this
+repo?" **Yes** → write `clear_context` (`yes` or `no`, matching the answer just given) via
+`digismith:preferences`' `set` operation. **No** → proceed for this run only; ask again next
+time.
+
+**Returns `yes`** → check the human partner's own message for this specific run for an explicit
+override ("don't clear", "keep going", "not this time"). **No override** → skip the ask,
+announce: "Using saved default for this repo: clearing context now. Say 'don't clear' to
+override once." then proceed to clear. **Override present** → skip clearing for this run only;
+the saved value is untouched.
+
+**Returns `no`** → check the human partner's own message for this specific run for an explicit
+override ("clear context", "start fresh"). **No override** → skip silently, do not clear.
+**Override present** → proceed to clear for this run only; the saved value is untouched.
+
+Before actually clearing (whichever path led here), scan the conversation for any unresolved
+thread unrelated to the feature just shipped — a pending question, a task mentioned but not
+started, something asked to be revisited later. If one exists, name it plainly as part of the
+final message: "Note: before I clear this session's context, you still have `<X>` open from
+earlier — nothing's tracking that after this clears, so make a note if you want to come back to
+it." This is a verbal warning only — never write it to a file or a memory entry. If nothing
+unresolved is found, skip this silently.
+
+To actually clear: say the complete final summary first — what shipped, what's next, the
+unresolved-thread warning if one applies — then, as the last action of the turn, invoke
+`mcp__ccd_session_mgmt__clear_session` with `session_id: "self"`. The clear only takes effect
+once this turn ends and the session goes idle, so nothing said before it is lost from the
+conversation the human partner just read — only from what a future turn remembers. If the human
+partner sends another message before the session goes idle, the tool itself silently drops the
+queued clear; that is expected behavior, not a bug to work around.
+
 ## Quick Reference
 
 | Option | Merge | Push | Keep Worktree | Cleanup Branch |
@@ -362,10 +408,16 @@ Steps 3.5/4.5 can skip this menu entirely when a `finish_option`
 preference is already saved for the repo — see those steps for the full
 logic.
 
+Step 7 (after Options 1/2 only) can similarly skip its own ask when a
+`clear_context` preference is already saved for the repo — see that step
+for the full logic.
+
 ## Common Rationalizations
 
 | Excuse | Reality |
 |--------|---------|
+| "The feature's done, they'd obviously want a fresh start" | Ask first, same as every other Step 7 decision — a saved `yes` preference is what skips the ask, never an inferred assumption. |
+| "I'll clear now and mention what's next after" | The clear takes effect once this turn ends — anything said after the tool call in a later turn never happened as far as the next context is concerned. Say the full summary first, clear last. |
 | "Tests passed earlier this session" | Run the suite on the tree you are about to integrate. A green run only proves the tree it ran on. |
 | "They obviously want it merged" | Integration is your human partner's decision. Present the menu and wait. |
 | "They seem done with this feature — I'll offer to discard it" | The menu is complete as written. Discard happens only when your human partner asks for it in so many words. |
