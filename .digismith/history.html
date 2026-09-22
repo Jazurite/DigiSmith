@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-19</span>
+    <span>Last updated: 2026-09-22</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1218,6 +1218,12 @@
       <div class="date">2026-09-19</div>
       <h4>Vitest Worktree Contamination Fix</h4>
       <p>Stops <code>pnpm test</code> at the repo root from picking up other concurrent sessions' worktree test files, which was causing false failures and silent double-counting. The fix adds a single root <code>vitest.config.ts</code> that extends Vitest's default <code>exclude</code> list (via <code>configDefaults.exclude</code>, not a bare array — which would silently drop Vitest's own built-in excludes) with all three worktree-path conventions <code>using-git-worktrees</code> documents. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/vitest-worktree-contamination/design.html">design</a>, <a href="docs/vitest-worktree-contamination/plan.md">plan</a>, and <a href="docs/vitest-worktree-contamination/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-22</div>
+      <h4>Clear Context After Finish (H.3)</h4>
+      <p>Adds a new Step 7 to <code>finishing-a-development-branch</code> that offers to clear the running session's context after Option 1 or Option 2 completes, backed by a new per-repo <code>clear_context</code> preference — map item H.3. The addition is a single-file prose change: a new <code>## Step 7: Offer to Clear Context</code> section mirroring Step 3.5/4.5's existing ask/remember/override shape, plus small cross-reference pointers at the tail of Option 1 and Option 2, plus a Quick Reference note — no new scripts or code, reusing the existing <code>digismith:preferences</code> skill and the existing <code>mcp__ccd_session_mgmt__clear_session</code> tool. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (1 task, executed directly in this session, with a self-check before moving on). See <a href="docs/clear-context-after-finish/design.html">design</a>, <a href="docs/clear-context-after-finish/plan.md">plan</a>, and <a href="docs/clear-context-after-finish/report.html">report</a>.</p>
     </div>
 
   </div>
