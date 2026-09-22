@@ -1,2 +1,3 @@
 # DigiSmith-managed. Settings decided through live interaction, not hand-authored.
 finish_option: merge_locally
+clear_context: yes
