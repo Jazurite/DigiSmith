@@ -149,17 +149,22 @@ axes and <code>on</code>/<code>off</code>, same style as <code>inject-standards<
 </section>
 
 <section id="dependency">
-<h2>Scope boundary and dependency</h2>
-<p>This design covers exactly the sessions <code>bootstrap</code>/<code>adopt</code> (ticket start)
-and <code>inject-standards</code> (coding, skill-building, planning, subagent dispatch) already
-reach. A plain conversation with no ticket and no coding/planning trigger — like the one this
-feature was designed in — does not get an auto-loaded voice under this design alone.</p>
-<p>Full coverage depends on a real Claude Code <code>SessionStart</code> hook to init DigiSmith,
-filed separately as <code>backlog/digismith-init-sessionstart-hook-w10.md</code> (tentatively
-W.10, W-lineage's own territory per Jack's call) and messaged to that session. That hook's init
-sequence is scoped to invoke <code>digismith:voice</code>'s activation step directly — this is a
-hard dependency for full-conversation coverage, but not for the ticket/coding-path coverage this
-design already provides independently.</p>
+<h2>Scope boundary and dependency (resolved)</h2>
+<p><strong>Update, same day:</strong> W-lineage shipped W.10 (the real Claude Code
+<code>SessionStart</code> hook to init DigiSmith) while this design was in flight —
+<code>hooks/hooks.json</code> + <code>scripts/session-init.ts</code>, already on <code>main</code>.
+It fires on every session startup/resume/clear/compact/fork, reads <code>.digismith/profile</code>,
+and looks for a sibling <code>scripts/voice-init.ts</code> exporting
+<code>default (): Promise&lt;string | null&gt;</code> — missing file or a <code>null</code> return
+both mean "no voice segment," a thrown error is caught non-blockingly. This closes the gap this
+design originally deferred: T.7 now adds <code>scripts/voice-init.ts</code> directly (see the
+skill task list), giving <strong>every</strong> session a voice-aware banner
+(<code>DigiSmith: profile=&lt;name&gt;, voices=&lt;summary&gt;</code>), not just the
+ticket/coding-path triggers below.</p>
+<p><code>bootstrap</code>/<code>adopt</code> (ticket start) and <code>inject-standards</code>
+(coding, skill-building, planning, subagent dispatch) still each get their own auto-inclusion —
+W.10's banner is a terse one-line summary at session start, not a substitute for
+<code>inject-standards</code> actually injecting the full standard content where it's needed.</p>
 </section>
 
 <section id="scope">
@@ -167,13 +172,15 @@ design already provides independently.</p>
 <ul>
 <li>A named-voice registry or multi-option picker — deferred until a second real voice exists per
 axis.</li>
-<li>The real <code>SessionStart</code> hook itself (W.10) — separate brainstorm, W-lineage's own.</li>
+<li>Any change to <code>scripts/session-init.ts</code> itself, or to <code>hooks/hooks.json</code>
+— W.10 shipped both already; this design only adds the <code>voice-init.ts</code> file W.10's own
+contract expects.</li>
 <li>T.2 (wiring generated artifacts to the standard), T.3 (consuming-repo propagation), T.4
 (portable output-style + linter), T.6 (audience-filtering voice) — untouched by this design.</li>
 </ul>
 </section>
 
-<footer>DigiSmith · .digismith/docs/voice-selection/design.html</footer>
+<footer>DigiSmith · .digismith/docs/voice-selection-t7/design.html</footer>
 
 </body>
 </html>

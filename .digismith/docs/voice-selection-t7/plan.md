@@ -4,9 +4,11 @@
 
 **Goal:** Let a repo explicitly turn `technical_voice` (ASD-STE100 artifact style, T.1) and `conversation_voice` (live-conversation shape, T.5) on or off independently, persisted per repo, with an immediate felt effect and auto-inclusion at the triggers DigiSmith already has.
 
-**Architecture:** Two new preference keys (`technical_voice`, `conversation_voice`, values `on`/`off`, missing = `on`) in the existing H-lineage store (`.digismith/preferences.yml`, via `digismith:preferences`). A new `scripts/voice.ts` wraps that store with axis-aware get/set and a small CLI. A new `digismith:voice` skill exposes view/set to the user, injecting the corresponding standard inline the moment an axis is switched on. `inject-standards` gains a Voice Gate that auto-includes whichever axis is on, unconditionally, in Scenario 1 only. `bootstrap`/`adopt` gain the same auto-inject at ticket start.
+**Architecture:** Two new preference keys (`technical_voice`, `conversation_voice`, values `on`/`off`, missing = `on`) in the existing H-lineage store (`.digismith/preferences.yml`, via `digismith:preferences`). A new `scripts/voice.ts` wraps that store with axis-aware get/set and a small CLI. A new `digismith:voice` skill exposes view/set to the user, injecting the corresponding standard inline the moment an axis is switched on. `inject-standards` gains a Voice Gate that auto-includes whichever axis is on, unconditionally, in Scenario 1 only. `bootstrap`/`adopt` gain the same auto-inject at ticket start. `scripts/voice-init.ts` plugs into W.10's already-shipped `SessionStart` hook so every session — ticket, coding, or plain conversation — gets a one-line voice summary in its startup banner.
 
 **Tech Stack:** TypeScript run via `node --experimental-strip-types` (no build step), Vitest for tests, no new dependencies.
+
+**Update (same day, mid-plan):** W-lineage shipped W.10 (`hooks/hooks.json` + `scripts/session-init.ts`, real Claude Code `SessionStart` hook) while this plan was being written. It looks for a sibling `scripts/voice-init.ts` exporting `default (): Promise<string | null>` — missing file or `null` both mean "no voice segment" in its banner, a thrown error is caught non-blockingly. Task 5 below adds that file, closing the design's originally-deferred full-session-coverage gap immediately rather than waiting further.
 
 ## Global Constraints
 
@@ -26,7 +28,7 @@
 
 **Interfaces:**
 - Consumes: `getPreference(key: string, filePath: string): string | undefined` and `setPreference(key: string, value: string, filePath: string): void` from `scripts/preferences.ts` (already shipped, unchanged).
-- Produces (used by Task 2's `digismith:voice` skill, and referenced by name in Tasks 3-4's SKILL.md prose, though those tasks shell out to the CLI rather than importing): `AXES`, `Axis`, `VoiceValue`, `isAxis(value: string): value is Axis`, `standardForAxis(axis: Axis): string`, `resolveVoice(axis: Axis, filePath: string): VoiceValue`, `resolveAllVoices(filePath: string): Record<Axis, VoiceValue>`, `setVoice(axis: Axis, value: VoiceValue, filePath: string): void`, and a CLI `main()` with actions `status` (default) and `set`.
+- Produces (used by Task 2's `digismith:voice` skill and Task 5's `scripts/voice-init.ts`, and referenced by name in Tasks 3-4's SKILL.md prose, though those tasks shell out to the CLI rather than importing): `AXES`, `Axis`, `VoiceValue`, `isAxis(value: string): value is Axis`, `standardForAxis(axis: Axis): string`, `resolveVoice(axis: Axis, filePath: string): VoiceValue`, `resolveAllVoices(filePath: string): Record<Axis, VoiceValue>`, `setVoice(axis: Axis, value: VoiceValue, filePath: string): void`, and a CLI `main()` with actions `status` (default) and `set`. Task 5 specifically imports `AXES` and `resolveAllVoices` directly (not the CLI).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -644,4 +646,104 @@ Quick Reference row edit).
 ```bash
 git add skills/bootstrap/SKILL.md skills/adopt/SKILL.md
 git commit -m "feat(voice): auto-inject voice preferences at bootstrap/adopt ticket start"
+```
+
+---
+
+### Task 5: `scripts/voice-init.ts` — plug into W.10's `SessionStart` hook
+
+**Files:**
+- Create: `scripts/voice-init.ts`
+- Test: `scripts/voice-init.test.ts`
+
+**Interfaces:**
+- Consumes: Task 1's `AXES` and `resolveAllVoices(filePath: string): Record<Axis, VoiceValue>` from `scripts/voice.ts`, and `DEFAULT_PREFERENCES_PATH` from `scripts/preferences.ts`.
+- Produces: a default export matching `scripts/session-init.ts`'s existing `VoiceInitModule` contract (already shipped on `main` as part of W.10): `export default function(): Promise<string | null>`. `session-init.ts` itself is not modified by this task — it already looks for this file by convention (`VOICE_INIT_FILENAME = "voice-init.ts"`, sibling to itself) and silently skips the voice segment of its banner if the file is absent.
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `scripts/voice-init.test.ts`:
+
+```ts
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { setVoice } from "./voice.ts";
+import voiceInit from "./voice-init.ts";
+
+describe("voiceInit", () => {
+  let tmpDir: string;
+  let originalCwd: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-voice-init-test-"));
+    originalCwd = process.cwd();
+    process.chdir(tmpDir);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns both axis names joined when no preferences file exists (both default on)", async () => {
+    await expect(voiceInit()).resolves.toBe("technical+conversation");
+  });
+
+  it("returns only the on axis when one is turned off", async () => {
+    setVoice("technical", "off", ".digismith/preferences.yml");
+    await expect(voiceInit()).resolves.toBe("conversation");
+  });
+
+  it("returns null when both axes are off", async () => {
+    setVoice("technical", "off", ".digismith/preferences.yml");
+    setVoice("conversation", "off", ".digismith/preferences.yml");
+    await expect(voiceInit()).resolves.toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `pnpm test scripts/voice-init.test.ts`
+Expected: FAIL — `scripts/voice-init.ts` doesn't exist yet.
+
+- [ ] **Step 3: Write the implementation**
+
+Create `scripts/voice-init.ts`:
+
+```ts
+import { AXES, resolveAllVoices } from "./voice.ts";
+import { DEFAULT_PREFERENCES_PATH } from "./preferences.ts";
+
+export default async function voiceInit(): Promise<string | null> {
+  const state = resolveAllVoices(DEFAULT_PREFERENCES_PATH);
+  const on = AXES.filter((axis) => state[axis] === "on");
+  return on.length > 0 ? on.join("+") : null;
+}
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `pnpm test scripts/voice-init.test.ts`
+Expected: PASS, all three cases green.
+
+- [ ] **Step 5: Verify the real `SessionStart` hook picks it up**
+
+From DigiSmith's own repo root (this worktree), simulate what `session-init.ts` does:
+
+```bash
+node --experimental-strip-types scripts/session-init.ts
+```
+
+Expected: prints `DigiSmith: profile=digismith, voices=technical+conversation` (this worktree's
+`.digismith/profile` already reads `digismith`, and no preferences override exists here yet, so
+both axes default on).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/voice-init.ts scripts/voice-init.test.ts
+git commit -m "feat(voice): add voice-init.ts for the W.10 SessionStart hook"
 ```
