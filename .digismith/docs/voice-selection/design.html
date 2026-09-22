@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Selection (T.7)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Voice Selection (T.7)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-22</span>
+    <span>Map item: T.7 (child of T, "Voice" — sibling to T.1 ASD-STE100, T.5 Conversational Voice, T.6 Audience-Filtering)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#storage">Storage</a></li>
+    <li><a href="#skill">The digismith:voice skill</a></li>
+    <li><a href="#integration">Integration with existing triggers</a></li>
+    <li><a href="#errors">Error handling</a></li>
+    <li><a href="#dependency">Scope boundary and dependency</a></li>
+    <li><a href="#scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>T.1 (<code>technical_voice</code> — ASD-STE100 artifact-writing style) and T.5
+(<code>conversation_voice</code> — live-conversation response shape) both already exist as content
+in <code>standards/global/</code>, but nothing lets Jack deliberately turn either one on or off for
+a given repo the way a consumer app lets you pick a voice. Today <code>inject-standards</code> only
+<em>suggests</em> them contextually, per its own Scenario 1 matching — there's no persistent,
+explicit "this repo's voice is X" decision.</p>
+<p>T.7 adds that: two independently selectable on/off switches, persisted per repo, with a
+dedicated skill to view and change them and an immediate, felt effect when toggled on.</p>
+</section>
+
+<section id="storage">
+<h2>Storage</h2>
+<p>No new store. Two new keys in the existing H-lineage preference store
+(<code>.digismith/preferences.yml</code>, read/written via <code>digismith:preferences</code>
+get/set — same mechanism H.1/H.2 already use):</p>
+<pre><code>technical_voice: on
+conversation_voice: on</code></pre>
+<p>A missing key is treated as <code>on</code> — both axes default on for a repo with no saved
+preference yet, same missing-key-defaults-safely pattern H.1/H.2 established. Values are
+<code>on</code>/<code>off</code> only; no named-voice registry. Exactly one real standard exists
+per axis today (<code>ste100-writing</code> for <code>technical_voice</code>,
+<code>ai-voice-conversational</code> for <code>conversation_voice</code>) — building a picker for
+options that don't exist yet is deferred until a second real voice shows up per axis.</p>
+</section>
+
+<section id="skill">
+<h2>The digismith:voice skill</h2>
+<p>New skill, two modes:</p>
+<div class="table-wrap">
+<table>
+<tr><th>Invocation</th><th>Behavior</th></tr>
+<tr><td><code>digismith:voice</code> (no args)</td><td>View mode — reports effective state for
+both axes, e.g. <code>technical-voice: ON (ste100-writing)</code> /
+<code>conversation-voice: ON (ai-voice-conversational)</code>. Reads via
+<code>digismith:preferences get</code>, defaulting to <code>on</code> when a key is unset.</td></tr>
+<tr><td><code>digismith:voice technical off</code> / <code>digismith:voice conversation on</code></td>
+<td>Set mode — writes the key via <code>digismith:preferences set</code>. Switching an axis ON also
+immediately reads and announces that standard inline in the current session, in the same format
+<code>inject-standards</code> Scenario 1 already uses — the toggle has a felt effect right away,
+not just at the next bootstrap/inject-standards trigger.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="integration">
+<h2>Integration with existing triggers</h2>
+<p><code>inject-standards</code> gains a Voice Gate alongside its existing Profile Gate (Step 0):
+before matching/suggesting, read the two preference keys. Whichever axis is <code>on</code> gets
+its standard auto-included unconditionally in Scenario 1 (Conversation) — no suggestion prompt,
+since the repo already made this choice explicitly via <code>digismith:voice</code>. Scenario 4
+(Dispatching a Subagent) is unaffected: it already excludes every <code>kind: prose</code> entry
+regardless of this gate, so neither voice ever leaks into a subagent-dispatch prompt.</p>
+<p><code>bootstrap</code> and <code>adopt</code> gain the same auto-inject at their existing
+Step 0 preference-resolution point, mirroring how H.2 resolves the per-repo SSH-key preference
+there — whichever axis is <code>on</code> gets announced at ticket start, same as an explicit
+<code>digismith:voice</code> toggle would.</p>
+</section>
+
+<section id="errors">
+<h2>Error handling</h2>
+<ul>
+<li>Missing or malformed <code>.digismith/preferences.yml</code> → both keys treated as unset →
+default <code>on</code> (existing store's own established fallback, not a new behavior).</li>
+<li><code>digismith:voice</code> given an invalid axis name or value → error listing the two valid
+axes and <code>on</code>/<code>off</code>, same style as <code>inject-standards</code>' existing
+"Standard not found" message.</li>
+</ul>
+</section>
+
+<section id="dependency">
+<h2>Scope boundary and dependency</h2>
+<p>This design covers exactly the sessions <code>bootstrap</code>/<code>adopt</code> (ticket start)
+and <code>inject-standards</code> (coding, skill-building, planning, subagent dispatch) already
+reach. A plain conversation with no ticket and no coding/planning trigger — like the one this
+feature was designed in — does not get an auto-loaded voice under this design alone.</p>
+<p>Full coverage depends on a real Claude Code <code>SessionStart</code> hook to init DigiSmith,
+filed separately as <code>backlog/digismith-init-sessionstart-hook-w10.md</code> (tentatively
+W.10, W-lineage's own territory per Jack's call) and messaged to that session. That hook's init
+sequence is scoped to invoke <code>digismith:voice</code>'s activation step directly — this is a
+hard dependency for full-conversation coverage, but not for the ticket/coding-path coverage this
+design already provides independently.</p>
+</section>
+
+<section id="scope">
+<h2>Out of scope</h2>
+<ul>
+<li>A named-voice registry or multi-option picker — deferred until a second real voice exists per
+axis.</li>
+<li>The real <code>SessionStart</code> hook itself (W.10) — separate brainstorm, W-lineage's own.</li>
+<li>T.2 (wiring generated artifacts to the standard), T.3 (consuming-repo propagation), T.4
+(portable output-style + linter), T.6 (audience-filtering voice) — untouched by this design.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/voice-selection/design.html</footer>
+
+</body>
+</html>
