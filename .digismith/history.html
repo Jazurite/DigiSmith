@@ -1268,6 +1268,25 @@
   self-check before moving on). See <a href="docs/dynamic-doc-conventions/design.html">design</a>, <a href="docs/dynamic-doc-conventions/plan.md">plan</a>, and <a href="docs/dynamic-doc-conventions/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-09-23</div>
+      <h4>Wire Generated Artifacts to the ASD-STE100 Standard (T.2)</h4>
+      <p>Wires <code>digismith:generate-comment</code>, <code>digismith:report-implementation</code>,
+  and <code>digismith:finishing-a-development-branch</code>'s PR-description step to consult the
+  T.1 ASD-STE100 writing standard (<code>standards/global/ste100-writing.md</code>) before drafting
+  free-text prose, instead of composing it unstyled. Each of the three skills gains a
+  <code>technical_voice</code>-gated step that reads <code>ste100-writing.md</code> and its
+  companions directly into context — no <code>digismith:inject-standards</code> invocation, no
+  suggestion prompt or full-text re-announcement on every draft — and applies its sentence-level
+  rules while composing. Where a shape-governing standard already exists for the surface
+  (<code>global/pr-descriptions</code> for PR bodies), that standard's shape is read and applied
+  first, with <code>ste100-writing</code>'s rules operating only inside it. Followed the full
+  Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
+  round(s) before merge. See <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/design.html">design</a>, <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/plan.md">plan</a>, and <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
