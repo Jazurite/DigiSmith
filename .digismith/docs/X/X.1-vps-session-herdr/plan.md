@@ -904,6 +904,7 @@ This is the biggest task — the full auto-fix sequence. Read the design doc's C
 import { describe, it, expect } from "vitest";
 import * as path from "node:path";
 import type { VpsConfig } from "./config.ts";
+import { HERDR_PATH_PREFIX } from "./checks.ts";
 import {
   TOOLCHAIN_INSTALL_HINT,
   buildInstallHerdrIntegrationCommand,
@@ -937,6 +938,7 @@ describe("buildInstallHerdrIntegrationCommand", () => {
   it("installs herdr's opencode integration plugin", () => {
     const cmd = buildInstallHerdrIntegrationCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
     expect(remote).toContain("herdr integration install opencode");
   });
 });
@@ -945,6 +947,7 @@ describe("buildStartHerdrServerCommand", () => {
   it("starts herdr's server detached and backgrounded", () => {
     const cmd = buildStartHerdrServerCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
     expect(remote).toContain("nohup herdr server");
     expect(remote).toContain("&");
   });
@@ -954,6 +957,7 @@ describe("buildCreateWorkspaceCommand", () => {
   it("creates a herdr workspace with the configured label, unfocused", () => {
     const cmd = buildCreateWorkspaceCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
     expect(remote).toContain("herdr workspace create");
     expect(remote).toContain("--label digismith-main");
     expect(remote).toContain("--no-focus");
@@ -964,6 +968,7 @@ describe("buildStartAgentCommand", () => {
   it("starts the configured agent name running OpenCode on the default model", () => {
     const cmd = buildStartAgentCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
     expect(remote).toContain("herdr agent start opencode-main --kind opencode");
     expect(remote).toContain("--model tokenreply/kimi-k2.7");
   });
@@ -1019,7 +1024,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { CommandModule } from "yargs";
 import { DEFAULT_VPS_CONFIG_PATH, type VpsConfig } from "./config.ts";
-import { buildBaseSshArgs, type SshCommand } from "./checks.ts";
+import { buildBaseSshArgs, HERDR_PATH_PREFIX, type SshCommand } from "./checks.ts";
 import { runSshCommand } from "./run-command.ts";
 import { runStatusChecks } from "./status.ts";
 import { loadConfigOrExit } from "./shared.ts";
@@ -1038,23 +1043,20 @@ export const TOOLCHAIN_INSTALL_HINT = [
 export function buildInstallHerdrIntegrationCommand(config: VpsConfig): SshCommand {
   return {
     command: "ssh",
-    args: [...buildBaseSshArgs(config), 'export PATH="$HOME/.local/bin:$PATH"; herdr integration install opencode'],
+    args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr integration install opencode`],
   };
 }
 
 export function buildStartHerdrServerCommand(config: VpsConfig): SshCommand {
   return {
     command: "ssh",
-    args: [
-      ...buildBaseSshArgs(config),
-      'export PATH="$HOME/.local/bin:$PATH"; nohup herdr server > ~/herdr-server.log 2>&1 &',
-    ],
+    args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; nohup herdr server > ~/herdr-server.log 2>&1 &`],
   };
 }
 
 export function buildCreateWorkspaceCommand(config: VpsConfig): SshCommand {
   const remote = [
-    'export PATH="$HOME/.local/bin:$PATH"',
+    HERDR_PATH_PREFIX,
     `herdr workspace create --cwd "$HOME" --label ${config.workspace_label} --no-focus`,
   ].join("; ");
   return { command: "ssh", args: [...buildBaseSshArgs(config), remote] };
@@ -1062,7 +1064,7 @@ export function buildCreateWorkspaceCommand(config: VpsConfig): SshCommand {
 
 export function buildStartAgentCommand(config: VpsConfig): SshCommand {
   const remote = [
-    'export PATH="$HOME/.local/bin:$PATH"',
+    HERDR_PATH_PREFIX,
     `herdr agent start ${config.agent_name} --kind opencode --pane \${PANE_ID} -- --model ${DEFAULT_MODEL}`,
   ].join("; ");
   return { command: "ssh", args: [...buildBaseSshArgs(config), remote] };
