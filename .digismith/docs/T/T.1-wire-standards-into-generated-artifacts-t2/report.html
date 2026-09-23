@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wire Generated Artifacts to the ASD-STE100 Standard (T.2) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Wire Generated Artifacts to the ASD-STE100 Standard (T.2) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-23</span>
+    <span>Map item: <strong>T.2</strong></span>
+    <span>Commit range: <code>072bd07..613dc17</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Wires <code>digismith:generate-comment</code>, <code>digismith:report-implementation</code>,
+  and <code>digismith:finishing-a-development-branch</code>'s PR-description step to consult the
+  T.1 ASD-STE100 writing standard (<code>standards/global/ste100-writing.md</code>) before drafting
+  free-text prose, instead of composing it unstyled. Each of the three skills gains a
+  <code>technical_voice</code>-gated step that reads <code>ste100-writing.md</code> and its
+  companions directly into context — no <code>digismith:inject-standards</code> invocation, no
+  suggestion prompt or full-text re-announcement on every draft — and applies its sentence-level
+  rules while composing. Where a shape-governing standard already exists for the surface
+  (<code>global/pr-descriptions</code> for PR bodies), that standard's shape is read and applied
+  first, with <code>ste100-writing</code>'s rules operating only inside it. Followed the full
+  Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
+  round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Task 1</div>
+      <h4>generate-comment voice wiring</h4>
+      <p>New <code>technical_voice</code>-gated Step 1.5 applies <code>ste100-writing</code> to
+      Progress/Investigation Update bullets, scoped to those two template types and carved out
+      from the ADF Markdown-subset's list/paragraph rules and Step 4's verbatim <code>ask-line</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 2</div>
+      <h4>report-implementation voice wiring</h4>
+      <p>The <code>{{SUMMARY_PARAGRAPH}}</code> composition step now applies <code>ste100-writing</code>
+      to its two derived clauses, explicitly exempting the fixed closing sentence.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Task 3</div>
+      <h4>finishing-a-development-branch PR description wiring</h4>
+      <p>Option 2's PR-description step now reads <code>pr-descriptions</code>' shape unconditionally
+      and layers <code>ste100-writing</code>'s sentence rules inside it when <code>technical_voice</code>
+      is on.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. generate-comment voice wiring</td>
+      <td>Step 1.5 added, gated by <code>technical_voice</code></td>
+      <td>Approved, clean</td>
+      <td>SKILL.md:55-56 parenthetical "(Progress Update, Investigation Update)" attached to Step 2's mention is redundant/misleading — Step 2 covers Progress Update only. Plan-mandated wording artifact, harmless since Step 2's own scope line already disambiguates. (Later fixed during the final review's fix wave — see Final Review &amp; Fix below.)</td>
+    </tr>
+    <tr>
+      <td>2. report-implementation voice wiring</td>
+      <td><code>{{SUMMARY_PARAGRAPH}}</code> composition amended</td>
+      <td>Approved after 1 fix round(s)</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>3. finishing-a-development-branch PR description wiring</td>
+      <td>Option 2 PR-description step amended</td>
+      <td>Approved after 1 fix round(s)</td>
+      <td>None</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 2 Important findings and 6 correlated Minor findings, all fixed
+  in one wave and re-reviewed clean; 2 Minor findings parked as non-blocking cosmetics.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>generate-comment</code>'s Step 1.5 applied the full Structural rules table, including "Lists for sequences" — conflicting with Steps 2-3's own existing ban on numbered/nested lists (content converts to JIRA's ADF format).</td><td class="status-fixed">Fixed — carved out "Lists for sequences" and "Paragraph limits", stated the Markdown-subset restriction wins</td></tr>
+    <tr><td>Important</td><td><code>report-implementation</code> and <code>finishing-a-development-branch</code> called <code>scripts/voice.ts</code> and read <code>standards/global/...</code> by bare relative path, unlike <code>generate-comment</code>'s correct <code>&lt;digismith-repo&gt;/</code>-prefixed convention — breaks or reads the wrong repo's preferences in a consumer repo.</td><td class="status-fixed">Fixed — both files now resolve <code>&lt;digismith-repo&gt;</code> explicitly and prefix both paths with it</td></tr>
+    <tr><td>Minor</td><td><code>generate-comment</code>: "Step 2 (Progress Update, Investigation Update)" was a wrong cross-reference — Step 2 covers Progress Update only.</td><td class="status-fixed">Fixed — corrected to "Step 2 (Progress Update)"</td></tr>
+    <tr><td>Minor</td><td><code>generate-comment</code>'s Quick Reference row 1.5 read "Steps 2-3 except Step 4's <code>ask-line</code>" — ungrammatical, since Step 4 isn't in Steps 2-3.</td><td class="status-fixed">Fixed — reworded to state Step 4's <code>ask-line</code> always stays verbatim</td></tr>
+    <tr><td>Minor</td><td><code>generate-comment</code>'s Step 1.5 ran for every template type, including <code>teams-review-request</code>, which drafts no prose it applies to.</td><td class="status-fixed">Fixed — scoped to only <code>progress-update</code>/<code>investigation-update</code></td></tr>
+    <tr><td>Minor</td><td><code>report-implementation</code> asked for a note "in the report (or in your response...)" — the report template has no free slot for such a note.</td><td class="status-fixed">Fixed — simplified to "note plainly in your response"</td></tr>
+    <tr><td>Minor</td><td><code>finishing-a-development-branch</code>'s combined "Reads <code>off</code>, or any standard file is missing" branch conflated two different cases.</td><td class="status-fixed">Fixed — split into two separate, clearly stated branches</td></tr>
+    <tr><td>Minor</td><td><code>finishing-a-development-branch</code> called a repo's PR template "independent of" the prose-style standards — misleading, since <code>pr-descriptions.md</code> itself defers to a repo template when one exists.</td><td class="status-fixed">Fixed — reworded to state <code>pr-descriptions</code> defers to the template, prose standards still govern the free text within it</td></tr>
+    <tr><td>Minor</td><td>The fix wave's carve-out sentence in <code>generate-comment</code> dropped the explicit "...the rest of the Structural rules table" phrase, relying on <code>ste100-writing.md</code>'s own convention for scope.</td><td>Parked — still correct per that convention, just slightly compressed; not load-bearing</td></tr>
+    <tr><td>Minor</td><td><code>design.html</code> markup nits (duplicate section/h3 ids, h3 vs h2 inconsistency) and <code>plan.md</code>'s nested code-fence rendering in Task 3.</td><td>Parked — planning-artifact cosmetics only, no effect on shipped skill behavior</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">00443e3</span> feat(generate-comment): apply ste100-writing to drafted bullets when technical_voice is on</li>
+    <li><span class="sha">1192054</span> feat(report-implementation): apply ste100-writing to SUMMARY_PARAGRAPH when technical_voice is on</li>
+    <li><span class="sha">df045d6</span> feat(finishing-a-development-branch): apply pr-descriptions + ste100-writing to PR description drafting</li>
+    <li><span class="sha">bcbb9e7</span> docs(T.2): fix design.html footer path left stale by the earlier move</li>
+    <li><span class="sha">b996663</span> docs(backlog): record sdd-workspace plan-basename collision</li>
+    <li><span class="sha">613dc17</span> fix(t2): scope voice-check wording to ADF-safe rules and consumer-repo paths</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/T/T.1-wire-standards-into-generated-artifacts-t2/report.html</footer>
+
+</body>
+</html>
