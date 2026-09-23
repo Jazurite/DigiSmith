@@ -239,16 +239,18 @@ the plan file, the ledger, and `git` alone:
      1-3 for prose flow, but don't add facts that aren't in those sources.
 
   **Before composing sources 1-2 into prose:** check `technical_voice` for the repo currently
-  being worked in (`node --experimental-strip-types scripts/voice.ts --action status`, resolving
-  DigiSmith's own repo path the same two-step way `digismith:inject-standards` already
-  establishes for `standards/`). **Reads `off`** → compose 1-2 exactly as today. **Reads `on`**
-  (default, and also the disposition when the key is missing or malformed — same as `scripts/voice.ts`'s own existing behavior) → read `standards/global/ste100-writing.md` and its companions
-  (`ste100-word-swaps.md`, `ste100-use-cases.md`) and apply their sentence-level rules to the
-  composed 1-2 clauses only — **never to source 3**, the fixed closing sentence, which is reused
-  boilerplate text, not freshly drafted prose, so there's nothing for the standard to apply to.
+  being worked in: resolve `<digismith-repo>` the same two-step way `digismith:inject-standards`
+  already establishes for `standards/` (current working directory has `.claude-plugin/plugin.json`
+  naming `digismith` → use it directly; otherwise ask for DigiSmith's repo path this session and
+  remember it), then run `node --experimental-strip-types <digismith-repo>/scripts/voice.ts --action status`.
+  **Reads `off`** → compose 1-2 exactly as today. **Reads `on`** (default, and also the disposition
+  when the key is missing or malformed — same as `scripts/voice.ts`'s own existing behavior) → read
+  `<digismith-repo>/standards/global/ste100-writing.md` and its companions (`ste100-word-swaps.md`,
+  `ste100-use-cases.md`) and apply their sentence-level rules to the composed 1-2 clauses only —
+  **never to source 3**, the fixed closing sentence, which is reused boilerplate text, not freshly
+  drafted prose, so there's nothing for the standard to apply to.
   **Any standard file missing or unreadable** → don't block the report; compose 1-2 unstyled and
-  note plainly in the report (or in your response, if the note doesn't fit the report's own prose)
-  that the standard couldn't be applied this time.
+  note plainly in your response that the standard couldn't be applied this time.
 
 #### 2b. Build Process rows
 

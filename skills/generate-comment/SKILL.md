@@ -40,6 +40,9 @@ Investigation Update, or Teams Review Request?"
 
 ### Step 1.5: Check Technical Voice
 
+Only when the template type (determined in Step 1) is `progress-update` or `investigation-update`
+— skip this step entirely for `teams-review-request`, which drafts no prose this step would apply to.
+
 Before drafting any bullet content in Steps 2 or 3 below, check `technical_voice` for the repo
 currently being worked in: resolve `<digismith-repo>` the same two-step way Step 5 below
 describes (current working directory has `.claude-plugin/plugin.json` naming `digismith` → use it
@@ -52,11 +55,14 @@ directly; otherwise ask for DigiSmith's repo path this session and remember it),
 `scripts/voice.ts`'s own existing behavior) → read `<digismith-repo>/standards/global/ste100-writing.md`
 and its companions, `ste100-word-swaps.md` and `ste100-use-cases.md`, into context. Apply their
 sentence-level rules — active voice, one instruction per sentence, no phrasal verbs, hedge
-preservation, the rest of the Structural rules table — while drafting every bullet in Step 2
-(Progress Update, Investigation Update) and Step 3 (Investigation Update). **Never apply this to
-Step 4's `ask-line`** — that placeholder is Jack's own verbatim words (may be Vietnamese or
-English) and is never rephrased against this or any other standard, the same rule Step 4 already
-states for a different reason.
+preservation — while drafting every bullet in Step 2 (Progress Update) and Step 3 (Investigation
+Update). **Except** the Structural rules table's "Lists for sequences" and "Paragraph limits" rows:
+Steps 2 and 3 already forbid numbered or nested lists and require single-paragraph bullets, since
+this content gets converted to JIRA's ADF format later — that existing Markdown-subset restriction
+wins over these two rows wherever they'd conflict. **Never apply any of this to Step 4's
+`ask-line`** — that placeholder is Jack's own verbatim words (may be Vietnamese or English) and is
+never rephrased against this or any other standard, the same rule Step 4 already states for a
+different reason.
 
 **Any of the three standard files is missing or unreadable** → don't block drafting. Proceed with
 today's unstyled behavior for the bullets that would have used it, and note plainly in your
@@ -254,7 +260,7 @@ itself; that's each caller's own job.
 | Step | Action |
 |---|---|
 | 1 | Determine template type — from the caller, or ask |
-| 1.5 | Check `technical_voice` (default `on`); when `on`, apply `ste100-writing` + companions to every drafted bullet in Steps 2-3 except Step 4's `ask-line`, which is always verbatim |
+| 1.5 | Only for `progress-update`/`investigation-update`. Check `technical_voice` (default `on`); when `on`, apply `ste100-writing` + companions (minus the list/paragraph-limit rules, which the ADF Markdown subset already governs) to Steps 2-3's bullets. Step 4's `ask-line` always stays verbatim |
 | 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots placeholder (always `N/A` for now), today's date |
 | 3 | Investigation Update content: what's checked / found / needed, role/mention resolution, today's date |
 | 4 | Teams Review Request content: scope, PR info, reviewer names via `digismith:preferences`, ask line |
