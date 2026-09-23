@@ -88,14 +88,19 @@ to a subagent that can't ask.
 1. **Plan file** — the same plan file the just-finished run executed,
    normally `.digismith/docs/<feature-slug>/plan.md`. Derive
    `<feature-slug>` from that file's path, **guarded**:
-   - **Check first:** does the plan's path actually match
-     `.digismith/docs/<something>/plan.md` — i.e. is its parent directory
-     sitting directly under `.digismith/docs/`?
-   - **Yes (the normal case)** → `<feature-slug>` is that parent directory
+   - **Check first:** how many path segments sit between `.digismith/docs/` and `plan.md`?
+   - **Exactly one (the flat case)** → `<feature-slug>` is that single parent directory
      name. Read it straight off the path; don't re-derive it from content.
      E.g. `.digismith/docs/capture-ephemeral-url/plan.md` →
      `capture-ephemeral-url`.
-   - **No (the plan lives somewhere else)** → the parent directory name is
+   - **Exactly two (the nested case)** → `<feature-slug>` is both segments, joined by `/`.
+     E.g. `.digismith/docs/G/G.3-dynamic-doc-conventions/plan.md` →
+     `G/G.3-dynamic-doc-conventions`, or `.digismith/docs/_unlettered/some-slug/plan.md` →
+     `_unlettered/some-slug`. Preserve the slash — every downstream step in this skill already
+     treats `<feature-slug>` as a plain path-interpolation value
+     (`.digismith/docs/<feature-slug>/report.html` and so on), so a two-segment slug
+     reconstructs the correct nested path with no further changes needed anywhere else here.
+   - **Neither (the plan lives somewhere else)** → the parent directory name is
      *not* a slug and must not be used as one. This happens when a plan
      predates the unified-docs convention, or was deliberately excluded
      from a migration, and still sits under the old
@@ -199,7 +204,8 @@ the plan file, the ledger, and `git` alone:
   this is the empty string — the span is omitted entirely, not rendered
   blank.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
-  parent directory name in the normal case, or the slug parsed out of its
+  parent directory name in the flat case, both segments joined by `/` in the nested case
+  (e.g. `G/G.3-dynamic-doc-conventions`), or the slug parsed out of its
   filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
   a bare container directory like `plans`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
