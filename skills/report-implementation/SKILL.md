@@ -238,6 +238,20 @@ the plan file, the ledger, and `git` alone:
      fix-round or final-review clause, since neither exists for this ledger type. Trim/rewrap
      1-3 for prose flow, but don't add facts that aren't in those sources.
 
+  **Before composing sources 1-2 into prose:** check `technical_voice` for the repo currently
+  being worked in: resolve `<digismith-repo>` the same two-step way `digismith:inject-standards`
+  already establishes for `standards/` (current working directory has `.claude-plugin/plugin.json`
+  naming `digismith` → use it directly; otherwise ask for DigiSmith's repo path this session and
+  remember it), then run `node --experimental-strip-types <digismith-repo>/scripts/voice.ts --action status`.
+  **Reads `off`** → compose 1-2 exactly as today. **Reads `on`** (default, and also the disposition
+  when the key is missing or malformed — same as `scripts/voice.ts`'s own existing behavior) → read
+  `<digismith-repo>/standards/global/ste100-writing.md` and its companions (`ste100-word-swaps.md`,
+  `ste100-use-cases.md`) and apply their sentence-level rules to the composed 1-2 clauses only —
+  **never to source 3**, the fixed closing sentence, which is reused boilerplate text, not freshly
+  drafted prose, so there's nothing for the standard to apply to.
+  **Any standard file missing or unreadable** → don't block the report; compose 1-2 unstyled and
+  note plainly in your response that the standard couldn't be applied this time.
+
 #### 2b. Build Process rows
 
 **For an SDD ledger.** One per task. For each `Task <N>: complete (...)` line:
@@ -636,7 +650,7 @@ ledger type; this skill's job still just ends here.
 | Step | Action |
 |---|---|
 | 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
-| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a); per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |
