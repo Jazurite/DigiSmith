@@ -30,11 +30,23 @@ describe("loadConfigOrExit", () => {
     const configPath = path.join(dir, "vps.json");
     fs.writeFileSync(
       configPath,
-      JSON.stringify({ host: "h", user: "u", identity_file: "i", tmux_session: "t" })
+      JSON.stringify({
+        host: "h",
+        user: "u",
+        identity_file: "i",
+        workspace_label: "digismith-main",
+        agent_name: "opencode-main",
+      })
     );
     try {
       const config = loadConfigOrExit(configPath);
-      expect(config).toEqual({ host: "h", user: "u", identity_file: "i", tmux_session: "t" });
+      expect(config).toEqual({
+        host: "h",
+        user: "u",
+        identity_file: "i",
+        workspace_label: "digismith-main",
+        agent_name: "opencode-main",
+      });
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
