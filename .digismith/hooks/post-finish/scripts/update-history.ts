@@ -49,9 +49,11 @@ export function parseReport(reportPath: string): ParsedReport {
   }
 
   const normalizedPath = reportPath.replace(/\\/g, "/");
-  const slugMatch = /\.digismith\/docs\/([^/]+)\/report\.html$/.exec(normalizedPath);
-  if (!slugMatch) {
-    throw new Error(`Cannot derive slug from report path (expected .digismith/docs/<slug>/report.html): ${reportPath}`);
+  const nestedMatch = /\.digismith\/docs\/([^/]+)\/([^/]+)\/report\.html$/.exec(normalizedPath);
+  const flatMatch = /\.digismith\/docs\/([^/]+)\/report\.html$/.exec(normalizedPath);
+  const slug = nestedMatch ? `${nestedMatch[1]}/${nestedMatch[2]}` : flatMatch?.[1];
+  if (!slug) {
+    throw new Error(`Cannot derive slug from report path (expected .digismith/docs/<slug>/report.html or .digismith/docs/<parent>/<slug>/report.html): ${reportPath}`);
   }
 
   return {
@@ -59,7 +61,7 @@ export function parseReport(reportPath: string): ParsedReport {
     mapItem: mapItemMatch[1],
     date: dateMatch[1],
     summary: summaryMatch[1].trim(),
-    slug: slugMatch[1],
+    slug,
   };
 }
 
