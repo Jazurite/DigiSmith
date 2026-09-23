@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wire Generated Artifacts to the ASD-STE100 Standard (T.2)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Wire Generated Artifacts to the ASD-STE100 Standard (T.2)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-23</span>
+    <span>Map item: T.2</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#mechanism">Shared Mechanism</a></li>
+    <li><a href="#generate-comment">generate-comment</a></li>
+    <li><a href="#report-implementation">report-implementation</a></li>
+    <li><a href="#finishing">finishing-a-development-branch</a></li>
+    <li><a href="#testing">Testing &amp; Error Handling</a></li>
+    <li><a href="#future">Future Work</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem</h2>
+  <p><strong>T.1</strong> (the ASD-STE100 writing standard, <code>standards/global/ste100-writing.md</code>)
+  shipped as pure content: three files plus an index entry, with no consumer actually reading them
+  before drafting prose. Neither <code>digismith:generate-comment</code> nor
+  <code>digismith:report-implementation</code> calls <code>digismith:inject-standards</code> at
+  all — both compose free-text content (JIRA/Teams comment bullets, the implementation report's
+  summary paragraph) by filling fixed templates, with no style discipline applied. The same gap
+  exists in <code>digismith:finishing-a-development-branch</code>'s PR-description step, which
+  doesn't consult even the pre-existing <code>global/pr-descriptions</code> standard, let alone T.1.</p>
+</section>
+
+<section id="scope">
+  <h2>Scope</h2>
+  <p>Three consuming skills, each gaining one new or amended drafting step:</p>
+  <ul>
+    <li><code>digismith:generate-comment</code> — Progress Update and Investigation Update bullets</li>
+    <li><code>digismith:report-implementation</code> — the <code>{{SUMMARY_PARAGRAPH}}</code> composition step</li>
+    <li><code>digismith:finishing-a-development-branch</code> — Option 2's PR-description drafting step</li>
+  </ul>
+  <p><strong>Explicitly out of scope:</strong></p>
+  <ul>
+    <li><strong>SKILL.md authoring.</strong> <code>digismith:inject-standards</code>' existing
+    Scenario 2 ("Creating a Skill") already surfaces <code>ste100-writing</code> as a suggestion
+    when a <code>SKILL.md</code> is being edited — the only real gap is that nothing prompts
+    invoking it in the moment. That's a standing personal discipline, not a code change with a
+    clear home. No mechanical gate added here.</li>
+    <li><strong>Commit messages.</strong> <code>finishing-a-development-branch</code> never drafts
+    a commit message — only a PR description — so <code>global/commit-style</code> has no
+    touchpoint in this skill to wire.</li>
+  </ul>
+</section>
+
+<section id="mechanism">
+  <h2>Shared Mechanism</h2>
+  <p>All three skills apply the same pattern before composing free-text prose:</p>
+  <ol>
+    <li>Check <code>technical_voice</code> via <code>scripts/voice.ts --action status</code> (the
+    same gate T.7 shipped). <strong>OFF</strong> → skip straight to today's behavior, unchanged.</li>
+    <li><strong>ON</strong> → read <code>standards/global/ste100-writing.md</code> and its
+    companions (<code>ste100-word-swaps</code>, <code>ste100-use-cases</code>) directly into
+    context and apply them while drafting.</li>
+    <li>Where a shape-governing standard already exists for the surface
+    (<code>global/pr-descriptions</code> for PR text), read and apply <em>that</em> first — its
+    shape wins. <code>ste100-writing</code>'s sentence-level rules operate only inside whatever
+    shape the other standard sets, per the subordination rule already written into
+    <code>ste100-writing.md</code> itself ("Where another standard already governs a surface's
+    overall shape... that standard's shape wins").</li>
+  </ol>
+  <div class="callout">
+    This is a direct file read, not a <code>digismith:inject-standards</code> invocation — no
+    suggestion prompt, no full-standard chat announcement on every draft. These are backend
+    drafting steps that can run routinely mid-ticket; re-announcing the full standard text every
+    time would be repetitive noise, working against <code>ai-voice-conversational</code>'s own
+    anti-repetition spirit. A caller that already knows exactly which standard it needs doesn't
+    need the suggest-and-confirm ceremony <code>inject-standards</code> exists for.
+  </div>
+</section>
+
+<section id="generate-comment">
+  <h3 id="generate-comment">generate-comment</h3>
+  <p>Step 2 (Progress Update) and Step 3 (Investigation Update)'s drafted bullets go through
+  <code>ste100-writing</code> before being composed into the ADF-bound Markdown-subset block.</p>
+  <p><strong>Explicit carve-out:</strong> Step 4's <code>ask-line</code> (Teams Review Request) is
+  Jack's own verbatim words and is never touched by this — that rule already exists (never
+  auto-translate or rephrase it) and doesn't change. Structured fields (<code>reviewers</code>,
+  <code>ticket-line</code>, <code>pr-links</code>, <code>@[Name](accountId)</code> mention tokens)
+  aren't prose and are unaffected.</p>
+</section>
+
+<section id="report-implementation">
+  <h3 id="report-implementation">report-implementation</h3>
+  <p><code>{{SUMMARY_PARAGRAPH}}</code>'s two composed clauses (from the plan's own
+  <strong>Goal:</strong>/<strong>Architecture:</strong> lines) go through <code>ste100-writing</code>.
+  The fixed closing sentence (the SDD or inline-execution boilerplate) is unchanged — it's a
+  reused literal, not freshly drafted prose each time, so there's nothing to apply the standard to.</p>
+</section>
+
+<section id="finishing">
+  <h3 id="finishing">finishing-a-development-branch</h3>
+  <p>New step in Option 2, before creating the pull/merge request: draft the PR description
+  applying <code>global/pr-descriptions</code>' shape first (short, plain, no templated
+  headers/checklists), then <code>ste100-writing</code>'s sentence-level rules inside that shape.</p>
+</section>
+
+<section id="testing">
+  <h2>Testing &amp; Error Handling</h2>
+  <p>No automated tests — this is <code>SKILL.md</code> guidance, not <code>.ts</code> code, the
+  same shape as T.7's own prose-instruction steps (the Voice Gate, Step 0.7). Verification is via
+  each task's subagent spec/quality review plus the final whole-branch review, checked for clarity
+  and consistency with the existing subordination rule.</p>
+  <p>One real gap, named rather than hidden: <code>report-implementation</code>'s new step gets a
+  genuine live exercise for free — T.2 itself runs through <code>report-implementation</code> when
+  it finishes. <code>generate-comment</code> and <code>finishing-a-development-branch</code>'s PR
+  step won't get automatic live execution within this ticket: DigiSmith's own repo is
+  <code>ticket: false</code>, so <code>jira-progress-write-back</code> never fires here, and the
+  saved <code>finish_option</code> is <code>merge_locally</code>, which skips Option 2 entirely
+  unless overridden at finish time. Those two are verified by review, not a live run.</p>
+  <p><strong>Error handling:</strong> if <code>ste100-writing.md</code> or a companion file is
+  missing or unreadable while <code>technical_voice</code> reads <code>on</code>, don't block
+  drafting — proceed with today's unstyled behavior and note plainly that the standard couldn't be
+  applied this time, mirroring <code>inject-standards</code>' own non-blocking dispositions
+  elsewhere.</p>
+</section>
+
+<section id="future">
+  <h2>Future Work</h2>
+  <p>Raised during this brainstorm and deliberately left out of scope: a future,
+  category-scoped mode for <code>digismith:inject-standards</code> itself — letting a caller
+  request "the writing standards" or "the coding standards" directly by category, rather than by
+  content-relevance matching or by naming files. This ticket's own direct-read pattern is a
+  reasonable narrow fix, but a fourth consumer needing the same shape would be the signal to
+  generalize it. See <code>backlog/inject-standards-category-scoped-injection.md</code>.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/wire-standards-into-generated-artifacts-t2/design.html</footer>
+
+</body>
+</html>
