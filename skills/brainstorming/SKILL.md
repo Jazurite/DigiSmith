@@ -208,10 +208,6 @@ digraph brainstorming {
   </html>
   ```
 
-  `{{MAP_ITEM}}` is "no map letter — `<one-line reason>`" for a structural change with no map
-  letter, same as `unified-docs-convention/design.html` already does — never leave it blank or
-  invent a letter.
-
   **Slug:** reuse whatever slug the caller already resolved and passed into this invocation
   (e.g. `digismith:bootstrap` derives one before calling this skill, and passes it along) —
   never re-derive independently when one was already given. No slug was passed (a
@@ -220,8 +216,27 @@ digraph brainstorming {
   drop filler words (a, an, the, on, to, of, for, in), replace remaining non-alphanumeric runs
   with a single hyphen, truncate to ~40 characters at a word boundary.
 
-  **Before committing**, check whether the target path is gitignored in this repo:
-  `git check-ignore -q .digismith/docs/<slug>/design.html` — exit 0 (ignored) → write the file,
+  **Path:** once the slug is known, resolve where `design.html` actually gets written — this
+  resolved path (not just the bare slug) is what `digismith:writing-plans` and
+  `digismith:report-implementation` both reuse downstream, so carry it forward exactly rather
+  than letting a later step re-derive a bare slug and reconstruct a flat path from it.
+
+  - **Map item has a letter** (e.g. `G.3`, `U.1`) — nest under that letter: scan
+    `.digismith/docs/<Letter>/` on disk for existing `<Letter>.M-*` folders, take `max(M)+1` as
+    this build's own number `N` (a build with no existing folders under that letter yet starts at
+    `N=1`), and write to `.digismith/docs/<Letter>/<Letter>.<N>-<slug>/design.html`. An addendum
+    to already-shipped work gets its own new `N` here too — it never reuses its parent's folder,
+    even though the map item it addends may share the same conceptual number elsewhere; the
+    filesystem numbering is independent per-letter and always increments.
+  - **No map letter** (a structural change with no map item at all) — write to
+    `.digismith/docs/_unlettered/<slug>/design.html` instead. Flat inside this bucket, no `.N`
+    numbering — there's no letter to number against, and no historical case has ever needed a
+    second build under the same letterless slug. `{{MAP_ITEM}}` is "no map letter —
+    `<one-line reason>`" for this case, same as `unified-docs-convention/design.html` already
+    does — never leave it blank or invent a letter.
+
+  **Before committing**, check whether the resolved target path from above is gitignored in this
+  repo: `git check-ignore -q <resolved-path>/design.html` — exit 0 (ignored) → write the file,
   skip `git add`/commit, never force with `-f`; exit 1 (not ignored, the normal case for
   DigiSmith's own repo) → commit normally.
 

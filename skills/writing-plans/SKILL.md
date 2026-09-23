@@ -21,13 +21,19 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
   `"name": "digismith"`, or `.digismith/profile` is present) — `.digismith/docs/<slug>/plan.md`
   instead of this skill's own default location. Format is unchanged — plans stay Markdown.
 
-  **Slug:** reuse the slug already established earlier in this same session (this skill runs as
-  `brainstorming`'s own terminal step once the user approves the spec, so a slug is normally
-  already in context from that earlier work). No slug in context (a fully standalone
-  invocation) → derive it yourself, same rule as `brainstorming`'s own ad-hoc case: lowercase
-  the feature description, drop filler words (a, an, the, on, to, of, for, in), replace
-  remaining non-alphanumeric runs with a single hyphen, truncate to ~40 characters at a word
-  boundary.
+  **Path:** reuse the exact resolved path `brainstorming` already established earlier in this
+  same session — nested `.digismith/docs/<Letter>/<Letter.N>-<slug>/` or
+  `.digismith/docs/_unlettered/<slug>/`, per that skill's own Path rule (this skill runs as
+  `brainstorming`'s own terminal step once the user approves the spec, so the resolved path is
+  normally already in context from that earlier work). Write `plan.md` into that same folder,
+  alongside `design.html` — never re-derive a bare slug and reconstruct a flat
+  `.digismith/docs/<slug>/` path from it.
+
+  No resolved path in context (a fully standalone invocation, no prior `brainstorming` step this
+  session) → derive a bare slug yourself, same rule as `brainstorming`'s own ad-hoc case
+  (lowercase the feature description, drop filler words, hyphenate, truncate ~40 characters), and
+  fall back to the flat `.digismith/docs/<slug>/plan.md` shape — there's no letter to nest under
+  without `brainstorming`'s own resolution step having run.
 
   There is no gitignore check for `plan.md` — only `design.html` gets one.
 

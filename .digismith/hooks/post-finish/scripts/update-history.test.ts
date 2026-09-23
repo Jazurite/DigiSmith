@@ -87,6 +87,26 @@ describe("parseReport", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it("extracts a two-segment slug from a nested report path", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "docs", "G", "G.3-dynamic-doc-conventions");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Dynamic Doc Conventions (G.3)", mapItem: "G.3", date: "2026-09-23", summary: "Nested the docs." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed).toEqual({
+      featureTitle: "Dynamic Doc Conventions (G.3)",
+      mapItem: "G.3",
+      date: "2026-09-23",
+      summary: "Nested the docs.",
+      slug: "G/G.3-dynamic-doc-conventions",
+    });
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it("throws a clear error when the title marker is missing", () => {
     const dir = makeTmpDir("update-history-test-");
     const reportPath = path.join(dir, ".digismith", "docs", "sample-feature", "report.html");

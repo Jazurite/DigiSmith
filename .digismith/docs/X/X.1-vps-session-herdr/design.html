@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Session CLI (X.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>VPS Session CLI (X.1)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-23</span>
+    <span>Map item: X.1</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#config">Config File</a></li>
+    <li><a href="#credentials">Credential &amp; Provider Config</a></li>
+    <li><a href="#status">Command: status</a></li>
+    <li><a href="#connect">Command: connect</a></li>
+    <li><a href="#migration">Migration from V.3</a></li>
+    <li><a href="#errors">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#outofscope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+<h2>Overview</h2>
+<p><strong>X.1 replaces V.3 in place.</strong> Same purpose — a persistent, reach-from-anywhere
+coding session hosted on the Hetzner VPS — same CLI surface (<code>dg vps status</code>,
+<code>dg vps connect</code>), same config file path
+(<code>~/.digismith-depot/vps.json</code>). Two things change: the payload becomes
+OpenCode+TokenReply (default model <code>kimi-k2.7</code>) instead of <code>claude</code>, and
+the persistence mechanism becomes <a href="https://herdr.dev/">herdr</a> instead of raw
+tmux+SSH.</p>
+<p>The swap is deliberate, not incidental. Two real spikes (2026-09-19, 2026-09-22) confirmed
+herdr survives a genuine SSH disconnect on the actual VPS <strong>without</strong> needing the
+<code>loginctl enable-linger</code> fix V.3's tmux approach required — tested with lingering
+explicitly disabled as a controlled variable, both for a bare idle server and for a real
+OpenCode+TokenReply agent mid-conversation. The classifier-avoidance question that also
+motivated investigating herdr (does routing dispatch through it dodge Claude Code's auto-mode
+permission classifier — K-lineage's own problem) was tested too and came back genuinely
+inconclusive, not confirmed — that question stays open, tracked separately in
+<code>backlog/offload-blocked-by-permission-classifier-k.md</code>, and plays no role in this
+design. X.1 is scoped on the persistence result alone.</p>
+<p>Map placement: this is <strong>X</strong>'s territory by explicit decision, not a V
+sub-item, even though the shape (a Depot-style ensure/status/connect resource) looks similar to
+V.1/V.2/V.3. X stays the letter for "the VPS as a place things run"; V stays Depot's own
+narrower resource-management pattern.</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<p><code>packages/cli/src/vps/</code> gets its internals rewritten, not relocated — same files,
+same <code>dg vps status</code>/<code>connect</code> entry points, different implementation
+underneath:</p>
+<ul>
+<li><strong><code>config.ts</code></strong> — same <code>host</code>/<code>user</code>/<code>identity_file</code>
+fields; <code>tmux_session</code> is replaced by two herdr-native identifiers,
+<code>workspace_label</code> and <code>agent_name</code> (herdr addresses things by name, not a
+single session string).</li>
+<li><strong><code>checks.ts</code>/<code>status.ts</code></strong> — SSH reachable → herdr
+installed → herdr server running → toolchain on PATH (node/pnpm/opencode, via the same explicit
+nvm-sourcing dance V.3 already had to work out — a plain non-login SSH exec still doesn't source
+<code>~/.bashrc</code>) → workspace/agent alive → OpenCode actually running as a state distinct
+from "pane alive, agent dead" (same distinction V.3 already drew for <code>claude</code>) →
+TokenReply credential file present. <strong>The lingering check is dropped entirely</strong> —
+nothing on the VPS needs it once <code>claude</code>/tmux are retired.</li>
+<li><strong><code>connect.ts</code></strong> — same "run every check, auto-fix what's safe, then
+attach" shape as V.3. Auto-fixable: herdr server not running → start it; workspace/agent missing
+or dead → recreate (<code>herdr workspace create</code> + <code>herdr integration install
+opencode</code> if not already installed + <code>herdr agent start</code>). <strong>Never
+auto-installs herdr itself</strong> — same disposition V.3 already takes for nvm/node/pnpm/
+<code>claude</code>. Final step: <code>ssh -t ... herdr agent attach &lt;agent_name&gt;</code>,
+replacing <code>tmux attach</code>.</li>
+</ul>
+<div class="callout">Carried forward as an assumption, not a verified fact: if OpenCode itself
+crashes inside a herdr pane, the pane is assumed to survive (drops to its underlying shell, the
+same way V.3's <code>exec bash</code> fallback kept a dead <code>claude</code> from taking the
+whole tmux session down with it) — herdr panes are terminal panes, and a terminal pane's
+underlying shell doesn't die just because its current foreground process exited. Neither spike
+tested this directly. Worth a real check early in implementation; if it turns out false, this
+design needs a fallback-shell equivalent to V.3's launcher script.</div>
+</section>
+
+<section id="config">
+<h2>Config File</h2>
+<p><code>~/.digismith-depot/vps.json</code> — same location as V.3, updated shape:</p>
+<pre><code>{
+  "host": "46.225.49.140",
+  "user": "root",
+  "identity_file": "~/.ssh/jazurite",
+  "workspace_label": "digismith-main",
+  "agent_name": "opencode-main"
+}</code></pre>
+<p>Same disposition as V.3: hand-written, no creation/edit tooling, no automated VPS
+provisioning. Absent file → both commands stop immediately with a plain message; neither
+guesses a host.</p>
+</section>
+
+<section id="credentials">
+<h2>Credential &amp; Provider Config</h2>
+<p>This is where X.1 genuinely improves on V.3, not just swaps mechanisms. V.3's credential step
+(<code>claude</code>'s OAuth login) is a real browser flow — un-automatable by design, so
+<code>connect</code> could only warn and proceed. TokenReply's credential is a plain API key,
+already sitting in <code>~/.digismith-depot/.env</code> on the local machine — trivially
+copyable.</p>
+<ul>
+<li><strong>Credential file on the VPS</strong>: <code>~/.config/tokenreply.env</code>, sourced
+before OpenCode launches — same shape as V.3's <code>~/.config/claude-code.env</code>, holding a
+plain API key instead of an OAuth token.</li>
+<li><strong><code>connect</code> auto-fixes this</strong>, unlike V.3's <code>claude</code>-OAuth
+case: if the file is missing on the VPS, copy the value from the local
+<code>.digismith-depot/.env</code> — write-locally-then-<code>scp</code>, the same pattern that
+avoided the nested-SSH-quoting trap in both spikes (a <code>$schema</code> key got silently
+mangled to <code>"\":</code> the one time this was attempted as an inline
+<code>ssh host "... $VAR ..."</code> command instead). <strong>Never</strong> build the remote
+command by interpolating the credential into a quoted SSH argument.</li>
+<li><strong><code>opencode.json</code> provider config</strong>: also auto-written if missing,
+generated via DigiSmith's own already-working
+<code>scripts/providers/print-config.ts tokenreply --role task --runner opencode</code> — no new
+integration code; this already produces the correct JSON block, confirmed live in both spikes.
+Default model is <code>kimi-k2.7</code> (the <code>task</code> role), matching K.3's own
+reliability-driven default — <code>kimi-k3</code> has a confirmed-flaky tool-calling bug (three
+distinct failure signatures logged across
+<code>backlog/tokenreply-kimi-k3-tool-calling-failure.md</code>) and stays opt-in, never the
+default here.</li>
+</ul>
+<p><code>connect</code>'s full auto-fix list: herdr server, workspace/agent, the TokenReply
+credential file, and <code>opencode.json</code> — genuinely more self-healing than V.3, not just
+a mechanism swap wearing V.3's old clothes.</p>
+</section>
+
+<section id="status">
+<h2>Command: <code>status</code></h2>
+<p>Same read-only, non-modifying contract as V.3 — every check below over one-shot SSH calls,
+plain report.</p>
+<div class="table-wrap">
+<table>
+<tr><th>Check</th><th>How</th><th>Why it matters</th></tr>
+<tr><td>SSH reachable</td><td><code>ssh -o BatchMode=yes -o ConnectTimeout=10 -i &lt;identity_file&gt; &lt;user&gt;@&lt;host&gt; true</code></td><td>Everything else depends on this.</td></tr>
+<tr><td>herdr installed</td><td><code>herdr --version</code></td><td>The actual persistence mechanism this design exists to use.</td></tr>
+<tr><td>herdr server running</td><td>A herdr socket call (e.g. <code>herdr agent list</code>) succeeds</td><td>A stopped/crashed server means nothing else here can be reached.</td></tr>
+<tr><td>Toolchain on PATH</td><td>Explicit nvm/pnpm sourcing, then <code>opencode --version</code></td><td>Same gotcha V.3 already documented: a plain non-login SSH exec never sources <code>~/.bashrc</code>.</td></tr>
+<tr><td>Workspace/agent alive</td><td><code>herdr agent get &lt;agent_name&gt;</code></td><td>The actual persistent resource.</td></tr>
+<tr><td>OpenCode running</td><td><code>agent_status</code> from the same call, not just workspace presence</td><td>Distinct from "workspace alive, agent dead" — same distinction V.3 drew for <code>claude</code>.</td></tr>
+<tr><td>TokenReply credential present</td><td><code>test -f ~/.config/tokenreply.env</code></td><td>Without it, OpenCode has no model to talk to.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="connect">
+<h2>Command: <code>connect</code></h2>
+<p>Runs every <code>status</code> check, auto-fixing what's safely fixable, then attaches:</p>
+<ol>
+<li><strong>SSH unreachable</strong> → stop, report. Nothing past this point is attempted.</li>
+<li><strong>herdr missing</strong> → stop, report, point at herdr's own installer. <strong>Never
+auto-installs.</strong></li>
+<li><strong>Toolchain missing</strong> (node/pnpm/opencode) → stop, report exactly which piece,
+point at manual install steps. <strong>Never auto-installs</strong> — same stance V.3 already
+takes.</li>
+<li><strong>herdr server not running</strong> → auto-fix: start it (<code>nohup herdr server
+&amp;</code>, matching the exact invocation confirmed live in both spikes to survive an SSH
+disconnect).</li>
+<li><strong>Workspace/agent missing or dead</strong> → auto-fix: <code>herdr workspace create</code>
+if the workspace doesn't exist, <code>herdr integration install opencode</code> if not already
+installed, then <code>herdr agent start &lt;agent_name&gt; --kind opencode --pane &lt;id&gt; --
+--model tokenreply/kimi-k2.7</code>.</li>
+<li><strong>TokenReply credential missing on the VPS</strong> → auto-fix: copy from the local
+<code>.digismith-depot/.env</code>, write-locally-then-<code>scp</code>. If it's also missing
+locally, stop and report — nothing to copy.</li>
+<li><strong><code>opencode.json</code> missing or malformed</strong> → auto-fix: regenerate via
+<code>print-config.ts</code>, write-locally-then-<code>scp</code>.</li>
+<li><strong>Attach</strong> — the final step, replacing the script's own process:
+<pre><code>exec ssh -i &lt;identity_file&gt; -o IdentitiesOnly=yes -t &lt;user&gt;@&lt;host&gt; "herdr agent attach &lt;agent_name&gt;"</code></pre>
+</li>
+</ol>
+</section>
+
+<section id="migration">
+<h2>Migration from V.3</h2>
+<p>The existing hand-provisioned tmux+<code>claude</code> session on the VPS becomes dead weight
+once this ships. <strong>Not automated</strong> — a one-time teardown, not a reusable operation
+worth building tooling for. Manual steps during rollout: kill the <code>claude-main</code> tmux
+session, remove <code>~/start-claude.sh</code> and <code>claude</code>'s credentials file.
+<code>loginctl enable-linger</code> is left as-is (nothing will need it going forward, but
+leaving it on is harmless — not worth another risky toggle for no real gain).</p>
+</section>
+
+<section id="errors">
+<h2>Error Handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td><code>vps.json</code> absent</td><td>Stop immediately, plain message: no VPS configured.</td></tr>
+<tr><td>SSH unreachable</td><td>Report the actual SSH error plainly. No retry.</td></tr>
+<tr><td>herdr not installed</td><td>Stop, point at the platform-appropriate installer (Unix <code>curl \| sh</code> for the VPS itself, since it's Linux). Never auto-install.</td></tr>
+<tr><td>nvm/node/pnpm/opencode missing on the VPS</td><td>Stop, report exactly which piece is missing, point at manual install steps (nvm install script, <code>corepack enable</code>, <code>pnpm add -g opencode-ai</code> then <code>pnpm approve-builds --global opencode-ai</code> — pnpm skips postinstall scripts by default, hit live in both spikes). Never auto-install.</td></tr>
+<tr><td>herdr server fails to start</td><td>Stop, show the log content, don't retry silently.</td></tr>
+<tr><td>Workspace/agent recreated but OpenCode immediately crash-loops</td><td><code>connect</code> still attaches (pane assumed to survive, see Architecture's callout); <code>status</code> reports "workspace alive, OpenCode not running" as a distinct non-healthy state.</td></tr>
+<tr><td>TokenReply credential absent on both VPS and locally</td><td>Stop, report clearly — nothing to auto-copy.</td></tr>
+<tr><td><code>opencode.json</code> write fails</td><td>Report the actual error plainly, don't silently continue as if it succeeded.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>Same split V.3 already established, per map item G.2's standing toolchain default (Vitest):
+config-file parsing/validation, the ssh/herdr command strings the script constructs, and the
+health-check result-aggregation logic are pure functions, tested directly. The actual
+herdr/SSH orchestration itself is not meaningfully unit-testable — mocking it would test the
+mock, not the behavior that matters — so, matching V.1/V.2/V.3's own existing practice, that
+part is live-verify-only, confirmed against the real VPS as part of implementation.</p>
+</section>
+
+<section id="outofscope">
+<h2>Out of Scope</h2>
+<ul>
+<li><strong>Provisioning a new VPS</strong> — no Hetzner API calls, no server creation/teardown. Same as V.3.</li>
+<li><strong>Multiple VPSes</strong> — one config file, one host. Same as V.3; not a concern for a single-user personal tool.</li>
+<li><strong>Auto-invoking from <code>bootstrap</code>/<code>adopt</code></strong> — opt-in only, same as V.3.</li>
+<li><strong>The classifier-avoidance question</strong> — tested (2026-09-22), genuinely inconclusive, K-lineage's own open question, plays no role here. See <code>backlog/offload-blocked-by-permission-classifier-k.md</code>.</li>
+<li><strong>Relocating other Depot resources (Agentic Bridge, etc.) onto the VPS with real network auth</strong> — the separate, deliberately-unrelated idea in <code>backlog/practice-devprod-infra-x.md</code>.</li>
+<li><strong><code>claude</code> support</strong> — retired along with V.3's tmux approach, not preserved as a parallel option. If a future need arises for a <code>claude</code>-backed persistent session again, that's a new design, not a flag on this one.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/X/X.1-vps-session-herdr/design.html</footer>
+
+</body>
+</html>

@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-22</span>
+    <span>Last updated: 2026-09-23</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1250,6 +1250,22 @@
   &rarr; <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh
   implementer subagent and independently reviewed) &rarr; a final whole-branch review, plus 3 fix
   round(s) before merge. See <a href="docs/voice-selection-t7/design.html">design</a>, <a href="docs/voice-selection-t7/plan.md">plan</a>, and <a href="docs/voice-selection-t7/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-23</div>
+      <h4>Dynamic Doc Conventions (G.3)</h4>
+      <p>Gives every distinct DigiSmith build — a first pass or a later addendum — its own permanent,
+  never-reused <code>&lt;Letter.N&gt;</code> sub-item and a matching nested doc folder, resolving
+  both the report/plan filename-collision gap and the request for per-letter doc nesting in one
+  move. <code>digismith:brainstorming</code> resolves the nested path once (scanning the letter's
+  own folder on disk for the next free number) and writes <code>design.html</code> there;
+  <code>digismith:writing-plans</code> and <code>digismith:report-implementation</code> both
+  reuse that same resolved path rather than re-deriving anything, and
+  <code>update-history.ts</code>'s <code>parseReport()</code> gained a matching two-segment case.
+  Followed the full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:executing-plans</code> (2 tasks, executed directly in this session, with a
+  self-check before moving on). See <a href="docs/dynamic-doc-conventions/design.html">design</a>, <a href="docs/dynamic-doc-conventions/plan.md">plan</a>, and <a href="docs/dynamic-doc-conventions/report.html">report</a>.</p>
     </div>
 
   </div>
