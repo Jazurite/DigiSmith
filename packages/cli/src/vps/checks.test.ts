@@ -3,22 +3,24 @@ import type { VpsConfig } from "./config.ts";
 import {
   buildBaseSshArgs,
   buildReachabilityCommand,
-  buildLingerCommand,
+  buildHerdrVersionCommand,
+  buildHerdrServerCheckCommand,
   buildToolchainCommand,
-  buildTmuxListCommand,
+  buildAgentGetCommand,
   buildCredentialsCheckCommand,
-  buildPaneCommandQuery,
-  isLingerEnabled,
+  HERDR_PATH_PREFIX,
+  isHerdrInstalled,
+  isHerdrServerRunning,
   parseToolchainOutput,
-  isTmuxSessionAlive,
-  isClaudeProcessRunning,
+  parseAgentGetOutput,
 } from "./checks.ts";
 
 const CONFIG: VpsConfig = {
   host: "46.225.49.140",
   user: "root",
   identity_file: "~/.ssh/jazurite",
-  tmux_session: "claude-main",
+  workspace_label: "digismith-main",
+  agent_name: "opencode-main",
 };
 
 describe("buildBaseSshArgs", () => {
@@ -41,61 +43,81 @@ describe("buildReachabilityCommand", () => {
   });
 });
 
-describe("buildLingerCommand", () => {
-  it("queries loginctl for the configured user", () => {
-    const cmd = buildLingerCommand(CONFIG);
-    expect(cmd.args[cmd.args.length - 1]).toBe("loginctl show-user root -p Linger");
+describe("HERDR_PATH_PREFIX", () => {
+  it("puts herdr's install location on PATH explicitly", () => {
+    expect(HERDR_PATH_PREFIX).toBe('export PATH="$HOME/.local/bin:$PATH"');
+  });
+});
+
+describe("buildHerdrVersionCommand", () => {
+  it("checks herdr's version after ensuring it's on PATH", () => {
+    const cmd = buildHerdrVersionCommand(CONFIG);
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
+    expect(remote).toContain("herdr --version");
+  });
+});
+
+describe("buildHerdrServerCheckCommand", () => {
+  it("lists herdr agents to confirm the server socket is reachable", () => {
+    const cmd = buildHerdrServerCheckCommand(CONFIG);
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
+    expect(remote).toContain("herdr agent list");
   });
 });
 
 describe("buildToolchainCommand", () => {
-  it("sources nvm and pnpm before checking claude", () => {
+  it("sources nvm and pnpm before checking opencode", () => {
     const cmd = buildToolchainCommand(CONFIG);
     const remote = cmd.args[cmd.args.length - 1];
     expect(remote).toContain('NVM_DIR="$HOME/.nvm"');
     expect(remote).toContain("nvm use default");
     expect(remote).toContain('PNPM_HOME="$HOME/.local/share/pnpm"');
-    expect(remote).toContain("claude --version");
+    expect(remote).toContain("opencode --version");
+    expect(remote).not.toContain("claude --version");
   });
 });
 
-describe("buildTmuxListCommand", () => {
-  it("lists tmux sessions", () => {
-    const cmd = buildTmuxListCommand(CONFIG);
-    expect(cmd.args[cmd.args.length - 1]).toBe("tmux list-sessions");
+describe("buildAgentGetCommand", () => {
+  it("queries herdr for the configured agent's status", () => {
+    const cmd = buildAgentGetCommand(CONFIG);
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
+    expect(remote).toContain("herdr agent get opencode-main");
   });
 });
 
 describe("buildCredentialsCheckCommand", () => {
-  it("tests for the credentials file", () => {
+  it("tests for the TokenReply credential file", () => {
     const cmd = buildCredentialsCheckCommand(CONFIG);
-    expect(cmd.args[cmd.args.length - 1]).toBe("test -f ~/.claude/.credentials.json");
+    expect(cmd.args[cmd.args.length - 1]).toBe("test -f ~/.config/tokenreply.env");
   });
 });
 
-describe("buildPaneCommandQuery", () => {
-  it("queries the configured tmux session's current pane command", () => {
-    const cmd = buildPaneCommandQuery(CONFIG);
-    expect(cmd.args[cmd.args.length - 1]).toBe(
-      'tmux list-panes -t claude-main -F "#{pane_current_command}"'
-    );
+describe("isHerdrInstalled", () => {
+  it("is true on a zero exit code", () => {
+    expect(isHerdrInstalled(0)).toBe(true);
+  });
+
+  it("is false on a non-zero exit code", () => {
+    expect(isHerdrInstalled(127)).toBe(false);
   });
 });
 
-describe("isLingerEnabled", () => {
-  it("is true only for an exact Linger=yes", () => {
-    expect(isLingerEnabled("Linger=yes\n")).toBe(true);
-    expect(isLingerEnabled("Linger=no\n")).toBe(false);
-    expect(isLingerEnabled("")).toBe(false);
+describe("isHerdrServerRunning", () => {
+  it("is true on a zero exit code", () => {
+    expect(isHerdrServerRunning(0)).toBe(true);
+  });
+
+  it("is false on a non-zero exit code", () => {
+    expect(isHerdrServerRunning(1)).toBe(false);
   });
 });
 
 describe("parseToolchainOutput", () => {
   it("reports ready with the version on success", () => {
-    expect(parseToolchainOutput(0, "2.1.0 (Claude Code)\n")).toEqual({
-      ready: true,
-      version: "2.1.0 (Claude Code)",
-    });
+    expect(parseToolchainOutput(0, "1.18.31\n")).toEqual({ ready: true, version: "1.18.31" });
   });
 
   it("reports which piece is missing on failure", () => {
@@ -107,35 +129,35 @@ describe("parseToolchainOutput", () => {
   });
 
   it("finds the MISSING marker after preceding output", () => {
-    expect(parseToolchainOutput(1, "some warning line\nMISSING:claude\n")).toEqual({ ready: false, missing: "claude" });
+    expect(parseToolchainOutput(1, "some warning line\nMISSING:opencode\n")).toEqual({ ready: false, missing: "opencode" });
   });
 });
 
-describe("isTmuxSessionAlive", () => {
-  it("finds an exact session name among multiple listed sessions", () => {
-    const stdout = "other-session: 1 windows\nclaude-main: 2 windows (created ...)\n";
-    expect(isTmuxSessionAlive(stdout, "claude-main")).toBe(true);
+describe("parseAgentGetOutput", () => {
+  it("reports alive with the parsed agent_status on success", () => {
+    const stdout = JSON.stringify({
+      id: "cli:agent:get",
+      result: { agent: { agent_status: "idle", agent: "opencode", name: "opencode-main" } },
+    });
+    expect(parseAgentGetOutput(0, stdout)).toEqual({
+      alive: true,
+      agentStatus: "idle",
+      detail: "idle",
+    });
   });
 
-  it("returns false when the session isn't listed", () => {
-    expect(isTmuxSessionAlive("other-session: 1 windows\n", "claude-main")).toBe(false);
+  it("reports not alive on a non-zero exit code", () => {
+    expect(parseAgentGetOutput(1, "")).toEqual({ alive: false, detail: "" });
   });
 
-  it("does not match a session whose name merely starts with the target", () => {
-    expect(isTmuxSessionAlive("claude-main-2: 1 windows\n", "claude-main")).toBe(false);
-  });
-});
-
-describe("isClaudeProcessRunning", () => {
-  it("is true when the pane's current command is claude", () => {
-    expect(isClaudeProcessRunning("claude\n")).toBe(true);
+  it("reports not alive when stdout isn't parseable JSON despite exit 0", () => {
+    expect(parseAgentGetOutput(0, "not json")).toEqual({ alive: false, detail: "not json" });
   });
 
-  it("is false when the pane fell back to a shell", () => {
-    expect(isClaudeProcessRunning("bash\n")).toBe(false);
-  });
-
-  it("is true when any of several panes is running claude", () => {
-    expect(isClaudeProcessRunning("bash\nclaude\n")).toBe(true);
+  it("reports not alive when the expected fields are missing despite exit 0 and valid JSON", () => {
+    expect(parseAgentGetOutput(0, JSON.stringify({ id: "cli:agent:get" }))).toEqual({
+      alive: false,
+      detail: JSON.stringify({ id: "cli:agent:get" }),
+    });
   });
 });

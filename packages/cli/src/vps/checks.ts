@@ -15,11 +15,20 @@ export function buildReachabilityCommand(config: VpsConfig): SshCommand {
   return { command: "ssh", args: [...buildBaseSshArgs(config), "true"] };
 }
 
-export function buildLingerCommand(config: VpsConfig): SshCommand {
-  return { command: "ssh", args: [...buildBaseSshArgs(config), `loginctl show-user ${config.user} -p Linger`] };
+// herdr's own Unix installer does not add ~/.local/bin to ~/.bashrc, and a
+// non-interactive SSH shell doesn't source ~/.bashrc regardless — every
+// herdr-related remote command must export this itself.
+export const HERDR_PATH_PREFIX = 'export PATH="$HOME/.local/bin:$PATH"';
+
+export function buildHerdrVersionCommand(config: VpsConfig): SshCommand {
+  return { command: "ssh", args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr --version`] };
 }
 
-// A plain `ssh host "claude --version"` sees no claude on PATH: a
+export function buildHerdrServerCheckCommand(config: VpsConfig): SshCommand {
+  return { command: "ssh", args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr agent list`] };
+}
+
+// A plain `ssh host "opencode --version"` sees no opencode on PATH: a
 // non-interactive, non-login shell never sources ~/.bashrc, so nvm/pnpm's
 // PATH additions are invisible unless sourced explicitly here.
 const TOOLCHAIN_REMOTE_SCRIPT = [
@@ -30,34 +39,31 @@ const TOOLCHAIN_REMOTE_SCRIPT = [
   'export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"',
   'command -v node >/dev/null 2>&1 || { echo "MISSING:node"; exit 1; }',
   'command -v pnpm >/dev/null 2>&1 || { echo "MISSING:pnpm"; exit 1; }',
-  'command -v claude >/dev/null 2>&1 || { echo "MISSING:claude"; exit 1; }',
-  "claude --version",
+  'command -v opencode >/dev/null 2>&1 || { echo "MISSING:opencode"; exit 1; }',
+  "opencode --version",
 ].join("; ");
 
 export function buildToolchainCommand(config: VpsConfig): SshCommand {
   return { command: "ssh", args: [...buildBaseSshArgs(config), TOOLCHAIN_REMOTE_SCRIPT] };
 }
 
-export function buildTmuxListCommand(config: VpsConfig): SshCommand {
-  return { command: "ssh", args: [...buildBaseSshArgs(config), "tmux list-sessions"] };
-}
-
-export function buildCredentialsCheckCommand(config: VpsConfig): SshCommand {
-  return { command: "ssh", args: [...buildBaseSshArgs(config), "test -f ~/.claude/.credentials.json"] };
-}
-
-export function buildPaneCommandQuery(config: VpsConfig): SshCommand {
+export function buildAgentGetCommand(config: VpsConfig): SshCommand {
   return {
     command: "ssh",
-    args: [
-      ...buildBaseSshArgs(config),
-      `tmux list-panes -t ${config.tmux_session} -F "#{pane_current_command}"`,
-    ],
+    args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr agent get ${config.agent_name}`],
   };
 }
 
-export function isLingerEnabled(stdout: string): boolean {
-  return stdout.trim() === "Linger=yes";
+export function buildCredentialsCheckCommand(config: VpsConfig): SshCommand {
+  return { command: "ssh", args: [...buildBaseSshArgs(config), "test -f ~/.config/tokenreply.env"] };
+}
+
+export function isHerdrInstalled(exitCode: number): boolean {
+  return exitCode === 0;
+}
+
+export function isHerdrServerRunning(exitCode: number): boolean {
+  return exitCode === 0;
 }
 
 export interface ToolchainCheckResult {
@@ -75,13 +81,30 @@ export function parseToolchainOutput(exitCode: number, stdout: string): Toolchai
   return { ready: true, version: trimmed };
 }
 
-export function isTmuxSessionAlive(stdout: string, sessionName: string): boolean {
-  return stdout.split("\n").some((line) => line.trim().startsWith(`${sessionName}:`));
+export interface AgentGetResult {
+  alive: boolean;
+  agentStatus?: string;
+  detail: string;
 }
 
-export function isClaudeProcessRunning(paneCommandOutput: string): boolean {
-  return paneCommandOutput
-    .trim()
-    .split("\n")
-    .some((line) => line.trim() === "claude");
+interface HerdrAgentGetResponse {
+  result?: { agent?: { agent_status?: unknown } };
+}
+
+export function parseAgentGetOutput(exitCode: number, stdout: string): AgentGetResult {
+  const trimmed = stdout.trim();
+  if (exitCode !== 0) {
+    return { alive: false, detail: trimmed };
+  }
+  let parsed: HerdrAgentGetResponse;
+  try {
+    parsed = JSON.parse(trimmed) as HerdrAgentGetResponse;
+  } catch {
+    return { alive: false, detail: trimmed };
+  }
+  const status = parsed.result?.agent?.agent_status;
+  if (typeof status !== "string") {
+    return { alive: false, detail: trimmed };
+  }
+  return { alive: true, agentStatus: status, detail: status };
 }
