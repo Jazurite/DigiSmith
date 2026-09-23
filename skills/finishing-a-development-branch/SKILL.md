@@ -283,10 +283,23 @@ ${SSH_KEY_PREFIX}git push -u origin <feature-branch>
 # ${SSH_KEY_PREFIX}git push origin HEAD:refs/heads/<new-branch>
 ```
 
+**Draft the PR description before creating the request.** Read `standards/global/pr-descriptions.md`
+first (resolving DigiSmith's own repo path the same two-step way `digismith:inject-standards`
+already establishes for `standards/`) — its shape (short, plain, no templated headers/checklists)
+always governs, regardless of the check below. Then check `technical_voice` for this repo
+(`node --experimental-strip-types scripts/voice.ts --action status`, same repo-path resolution).
+**Reads `on`** (default, and also the disposition when the key is missing or malformed — same as `scripts/voice.ts`'s own existing behavior) → additionally read `standards/global/ste100-writing.md` and its
+companions, and apply their sentence-level rules only *within* the shape `pr-descriptions` already
+set — never adding structure (headers, checklists, extra sections) that `pr-descriptions` forbids.
+**Reads `off`, or any standard file is missing/unreadable** → draft using whichever standard(s) are
+actually available; never block PR creation over a missing standards file.
+
 Then create the pull/merge request against <base-branch> with the forge's
 tooling — its CLI if one is available, or the creation URL most forges
-print when you push — following the repo's PR template and conventions if
-present, and report the URL to your human partner.
+print when you push — using the description just drafted, following the
+repo's own PR template file if one exists (a structural template, e.g.
+`.github/PULL_REQUEST_TEMPLATE.md`, is independent of the prose-style
+standards above), and report the URL to your human partner.
 
 Keep the worktree — your human partner iterates on PR feedback there.
 
