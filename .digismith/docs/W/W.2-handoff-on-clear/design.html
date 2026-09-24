@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handoff on Clear</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Handoff on Clear</h1>
+  <div class="meta">
+    <span>Date: 2026-09-24</span>
+    <span>Map item: W.12</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#decisions">Settled Decisions</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#file-format">Handoff File Format</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    Today, <code>finishing-a-development-branch</code>'s Step 7 ("Offer to Clear Context") gives only a
+    <strong>verbal</strong> warning about unresolved threads right before calling <code>clear_session</code> —
+    its own text says "never write it to a file or a memory entry." Once the clear happens, the next session
+    starts from nothing: no orientation on which map lineage/ticket the prior session was on, what shipped, or
+    why the clear happened.
+  </p>
+  <p>
+    This build closes that gap with a minimal, Step-7-only change: right before clearing, Step 7 writes a
+    5-section markdown handoff to <code>.digismith/sessions/&lt;session-id&gt;.md</code>, and W.10's
+    <code>SessionStart</code> hook (<code>session-init.ts</code>) gains a small addition that points to it
+    whenever one exists. No new skill, no generalized "assemble sections from any ledger" mechanism — that
+    broader idea (<code>backlog/standard-handoff-format.md</code>) stays open for ad-hoc/cross-session
+    handoffs; this build only wires the Step-7-triggered case.
+  </p>
+</section>
+
+<section id="decisions">
+  <h2>Settled Decisions</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Scope</span><h4>Step-7-only, no new skill</h4>
+      <p>A fixed-shape write folded directly into Step 7. Not a generalized handoff-assembly mechanism.</p></div>
+    <div class="card"><span class="tag">Location</span><h4>.digismith/sessions/ folder</h4>
+      <p>One file per clear, named by the writing session's own CCD session_id — not a single overwritten slot.</p></div>
+    <div class="card"><span class="tag">Repo scope</span><h4>Every DigiSmith-tracked repo</h4>
+      <p>Same per-repo pattern as <code>.digismith/profile</code>/<code>preferences.yml</code>.</p></div>
+    <div class="card"><span class="tag">Trigger</span><h4>Always write</h4>
+      <p>Every Step 7 clear (Option 1/2 only) writes a file, even for a fully-resolved merge with nothing pending.</p></div>
+    <div class="card"><span class="tag">Sections</span><h4>Reuse the 5 candidates verbatim</h4>
+      <p>From <code>backlog/standard-handoff-format.md</code>'s own study of 4 real hand-written handoffs.</p></div>
+    <div class="card"><span class="tag">Verbal warning</span><h4>Replaced, not duplicated</h4>
+      <p>The unresolved-thread scan now feeds the file's sections; the final chat summary just points to the path.</p></div>
+    <div class="card"><span class="tag">Lifecycle</span><h4>Delete on genuine pickup</h4>
+      <p>The <em>reading</em> agent deletes the file once it has actually used the content — not the hook script.</p></div>
+    <div class="card"><span class="tag">Label sourcing</span><h4>No derivation mechanism</h4>
+      <p>"Where this fits" is written from whatever Step 7 already knows in context — no branch-name parsing, no per-repo fallback logic.</p></div>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    Two existing files change; nothing new is added beyond a <code>.gitignore</code> line:
+  </p>
+  <ol>
+    <li><code>skills/finishing-a-development-branch/SKILL.md</code> — Step 7's text is rewritten to write the
+      handoff file instead of speaking a warning.</li>
+    <li><code>scripts/session-init.ts</code> — gains a check for <code>.digismith/sessions/</code> and a
+      pointer line in the printed banner when it's non-empty.</li>
+  </ol>
+  <div class="callout">
+    <strong>Ordering check (already safe):</strong> Step 7 runs after Step 6's worktree cleanup for Option 1
+    (Merge Locally), but Option 1's own script already <code>cd</code>s to <code>$MAIN_ROOT</code>
+    <em>before</em> merge/cleanup (<code>skills/finishing-a-development-branch/SKILL.md:179-181</code>), so by
+    Step 7's turn cwd is the main repo root, not the deleted worktree. Option 2 (Create PR) never deletes the
+    worktree at all (kept per the Quick Reference table), so cwd there stays the worktree throughout. Either
+    way, writing relative to Step 7's current cwd lands somewhere that still exists, and <code>clear_session</code>'s
+    own description confirms a clear never changes a session's cwd ("the session keeps its folder") — so
+    <code>session-init.ts</code> resolves the same relative path afterward with no special-casing.
+  </div>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <h3>Step 7 rewrite</h3>
+  <ul>
+    <li>Resolve the session's own CCD session_id via <code>get_session</code> (<code>"self"</code>).</li>
+    <li>Compose the 5 sections (below) from what the session already knows — no parsing, no lookup.</li>
+    <li>Ensure <code>.digismith/sessions/</code> is gitignored in this repo (one-time; see Error Handling).</li>
+    <li>Write <code>.digismith/sessions/&lt;session-id&gt;.md</code>.</li>
+    <li>Final chat summary points to the path instead of restating content inline.</li>
+  </ul>
+  <h3>session-init.ts addition</h3>
+  <p>
+    New pure functions alongside the existing <code>readProfile</code>/<code>loadVoiceSummary</code> style:
+    a function to list <code>.digismith/sessions/</code>, tolerate a missing directory, and return the newest
+    file by mtime; and a title-line reader (first line of the file, <code>#</code> stripped). <code>buildBanner</code>
+    gains a third optional part fed by these.
+  </p>
+  <h3>.gitignore handling</h3>
+  <p>
+    A <code>.digismith/sessions/</code> line, added once per repo by Step 7 itself the first time it writes
+    there (checked via <code>git check-ignore</code>, the same mechanism <code>digismith:brainstorming</code>
+    already uses for <code>.digismith/docs/</code>) — kept inline in Step 7, not a <code>bootstrap</code>/<code>adopt</code>
+    change, so the build stays Step-7-only. Unlike <code>.digismith/docs/</code> (deliberately committed when
+    not otherwise ignored), <code>.digismith/sessions/</code> is <strong>always</strong> ignored regardless of
+    a repo's own docs/profile commit choice — it's ephemeral working state, the same category as
+    <code>.superpowers/</code>, never a permanent record.
+  </p>
+  <p>
+    Because Step 7 runs after Option 1/2's own push already happened, adding this line can't just sit as a
+    local-only edit — it needs its own small commit, made and pushed immediately as part of this same step
+    (reusing the already-resolved <code>SSH_KEY_PREFIX</code> from earlier in the flow), so the repo never
+    ends a Step 7 run with unpushed local state. This only fires the first time a given repo hits Step 7 after
+    this feature ships; every run after that finds the line already present and skips straight to writing the
+    handoff file.
+  </p>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow</h2>
+  <ol>
+    <li>Step 7 fires (Option 1 or 2 only) — cwd is already correct per the Architecture callout.</li>
+    <li>Gather context already known from the conversation; compose the 5-section markdown.</li>
+    <li>Ensure <code>.digismith/sessions/</code> is gitignored.</li>
+    <li>Resolve own session_id; write <code>.digismith/sessions/&lt;session-id&gt;.md</code>.</li>
+    <li>Say the final summary (what shipped, path to the handoff), then clear.</li>
+    <li>Next <code>SessionStart</code> fires (any trigger, same cwd) — <code>session-init.ts</code> checks the
+      folder, finds the newest file, reads its title line, appends a pointer to the banner.</li>
+    <li>A human partner or the agent notices the pointer in a real conversation turn, reads the file, and —
+      once genuinely used — deletes it.</li>
+  </ol>
+</section>
+
+<section id="file-format">
+  <h2>Handoff File Format</h2>
+  <p><code>.digismith/sessions/&lt;session-id&gt;.md</code> — 5 sections, reused verbatim from
+    <code>backlog/standard-handoff-format.md</code>:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Section</th><th>Content</th></tr>
+    <tr><td>Where this fits</td><td>Map item(s) or ticket key, links to the relevant design.html/plan.md, the branch/worktree path.</td></tr>
+    <tr><td>Status per unit of work</td><td>Explicit done/in-progress/not-started per item, cross-checked against any existing ledger/progress file rather than restated from memory.</td></tr>
+    <tr><td>Exact resume point</td><td>The next concrete action, named precisely enough that a cold session doesn't have to infer it.</td></tr>
+    <tr><td>Anything flagged but deliberately out of scope</td><td>A spawned background task, a deferred backlog note, a bug found in passing — named with its own tracking id/link.</td></tr>
+    <tr><td>Literal resume commands</td><td>The actual <code>cd</code>/skill-invocation a session would run, not just a description.</td></tr>
+  </table>
+  </div>
+  <p>The file's first line is an H1 title — this is what <code>session-init.ts</code> parses for the
+    SessionStart banner's pointer text.</p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <ul>
+    <li>Missing/empty <code>.digismith/sessions/</code> → banner unaffected, same "missing config is benign"
+      precedent as G.2/H/P/W.10.</li>
+    <li>Multiple pending files (e.g. two finishes with no session reading either in between) → point to the
+      newest by mtime; banner says "N handoffs pending" when N&gt;1 rather than silently hiding the older ones.</li>
+    <li><code>get_session</code> fails or returns no usable id at write time → fall back to an ISO-timestamp
+      filename rather than blocking the write — "always write" stays true even if session-id resolution hiccups.</li>
+    <li>File write fails (disk/permissions) → report it, but never block the actual clear on it — this is an
+      orientation aid, not a gate.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <p>
+    <code>scripts/session-init.test.ts</code> gains real-temp-dir-fixture unit tests (no mocked fs, matching
+    W.10's own precedent) for: empty folder, single file, multiple files (newest wins), and a malformed/empty
+    file (graceful fallback, no crash).
+  </p>
+  <p>
+    Step 7's own procedure is prose/process text, not unit-testable code — verified live, the same way
+    H.1/H.2/X.1 were: this repo's own next real Step 7 clear is the first live test of the whole path.
+  </p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li>A generalized handoff-assembly skill (<code>digismith:write-handoff</code> or similar) that builds
+      sections from any ledger/plan/design-doc context — the broader idea
+      <code>backlog/standard-handoff-format.md</code> originally sketched. This build only covers the
+      Step-7-triggered case; ad-hoc root <code>HANDOFF-*.md</code> files and cross-session
+      <code>SendMessage</code> handoffs stay hand-written, unstandardized.</li>
+    <li>Cross-worktree propagation of <code>.digismith/sessions/</code> (unlike <code>.digismith/profile</code>,
+      which <code>bootstrap</code> copies into every fresh worktree). This content is thread-specific and
+      ephemeral, not durable per-repo config, so it deliberately doesn't follow that precedent.</li>
+    <li>Structured JSON instead of markdown — rejected; every other DigiSmith-generated artifact is
+      markdown/HTML, human-reviewable directly, and this content is fundamentally narrative.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/W/W.2-handoff-on-clear/design.html</footer>
+
+</body>
+</html>

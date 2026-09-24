@@ -1,7 +1,9 @@
 # Standardized session handoff document format (no letter yet)
 
-**Status:** Not applied. Raw idea only — no map letter, no design spec,
-needs `superpowers:brainstorming` before becoming a skill/convention.
+**Status:** The Step 7-triggered sub-case has a map letter and design spec
+— see **W.12** below. The broader "any DigiSmith session, any handoff"
+convention remains raw idea only, no letter of its own, still needs
+`digismith:brainstorming` if pursued.
 
 **Source:** Surfaced live 2026-09-09 while building map item **Q**
 ("Templating"). Four differently-structured handoff documents/messages
@@ -87,3 +89,22 @@ Single-session observation (though evidenced by 4 real documents), not
 yet run through `superpowers:brainstorming`. No map letter suggested —
 genuinely unclear whether this is its own letter, a **C** extension, or
 just a documented convention with no skill at all.
+
+## 2026-09-24: Step 7 case split out and built as W.12
+
+The specific trigger noted here — `finishing-a-development-branch`'s Step 7
+("Offer to Clear Context") only giving a verbal warning, never writing
+anything down before `clear_session` fires — was brainstormed and shipped
+as map item **W.12**. See `.digismith/docs/W/W.2-handoff-on-clear/design.html`
+for the design: Step 7 now writes a 5-section markdown handoff to
+`.digismith/sessions/<session-id>.md` on every clear, and W.10's
+`SessionStart` hook points to it.
+
+**What's still open, unbuilt:** the broader idea this file originally
+described — a single reusable handoff structure for *any* DigiSmith
+session writing a handoff, not just Step 7's automatic case. Ad-hoc root
+`HANDOFF-*.md` files (like the one this very brainstorm resumed from) and
+cross-session `SendMessage` handoffs remain hand-written and
+unstandardized. The 5 candidate sections below are now validated in
+practice by W.12's format — reuse them as-is if this broader convention
+is ever designed.
