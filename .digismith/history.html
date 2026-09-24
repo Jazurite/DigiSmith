@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-23</span>
+    <span>Last updated: 2026-09-24</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1285,6 +1285,25 @@
   <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
   implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix
   round(s) before merge. See <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/design.html">design</a>, <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/plan.md">plan</a>, and <a href="docs/T/T.1-wire-standards-into-generated-artifacts-t2/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-24</div>
+      <h4>VPS Connect Workspace Dedup</h4>
+      <p>This fix stops <code>dg vps connect</code>'s crash-recovery path from leaking a duplicate
+  herdr workspace on every run. It reuses an existing, matching-labeled workspace's idle pane
+  before it creates a new one. It adds builder and parser functions for
+  <code>herdr workspace list</code> and <code>herdr pane list --workspace &lt;id&gt;</code> to
+  <code>checks.ts</code>, plus a parser for the <code>agent_pane_busy</code> error shape. These
+  follow the same pattern as the existing <code>buildAgentGetCommand</code>/<code>parseAgentGetOutput</code>
+  pair. It adds one new function, <code>tryReuseExistingPane</code>, to <code>connect.ts</code>.
+  <code>runConnect</code>'s recovery branch tries this function before it calls
+  <code>buildCreateWorkspaceCommand</code>. A failure that is not <code>agent_pane_busy</code>
+  still stops the process, matching today's behavior for a start-agent failure. Followed the
+  full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix
+  round before merge. See <a href="docs/X/X.2-vps-connect-workspace-dedup/design.html">design</a>, <a href="docs/X/X.2-vps-connect-workspace-dedup/plan.md">plan</a>, and <a href="docs/X/X.2-vps-connect-workspace-dedup/report.html">report</a>.</p>
     </div>
 
   </div>
