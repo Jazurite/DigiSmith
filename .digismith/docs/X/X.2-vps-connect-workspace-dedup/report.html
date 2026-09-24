@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Connect Workspace Dedup — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>VPS Connect Workspace Dedup — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-24</span>
+    <span>Map item: <strong>X.2</strong></span>
+    <span>Commit range: <code>98c2cf6..058f69d</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>This fix stops <code>dg vps connect</code>'s crash-recovery path from leaking a duplicate
+  herdr workspace on every run. It reuses an existing, matching-labeled workspace's idle pane
+  before it creates a new one. It adds builder and parser functions for
+  <code>herdr workspace list</code> and <code>herdr pane list --workspace &lt;id&gt;</code> to
+  <code>checks.ts</code>, plus a parser for the <code>agent_pane_busy</code> error shape. These
+  follow the same pattern as the existing <code>buildAgentGetCommand</code>/<code>parseAgentGetOutput</code>
+  pair. It adds one new function, <code>tryReuseExistingPane</code>, to <code>connect.ts</code>.
+  <code>runConnect</code>'s recovery branch tries this function before it calls
+  <code>buildCreateWorkspaceCommand</code>. A failure that is not <code>agent_pane_busy</code>
+  still stops the process, matching today's behavior for a start-agent failure. Followed the
+  full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix
+  round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card">
+      <span class="tag">Task 1</span>
+      <h4>herdr workspace/pane list builders and parsers</h4>
+      <p><code>buildWorkspaceListCommand</code>, <code>buildPaneListCommand</code>, and the
+      soft-fail parsers <code>parseWorkspaceListOutput</code>, <code>parsePaneListOutput</code>,
+      and <code>isAgentPaneBusyError</code>, added to <code>checks.ts</code>.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 2</span>
+      <h4>Reuse an existing pane in <code>runConnect</code></h4>
+      <p><code>tryReuseExistingPane(config: VpsConfig): boolean</code>, wired into
+      <code>runConnect</code>'s recovery branch ahead of workspace creation.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Task 3</span>
+      <h4>Live verification against the real VPS</h4>
+      <p>No code — confirmed on the real VPS that a simulated crash-recovery cycle reuses the
+      surviving pane instead of creating a duplicate workspace.</p>
+    </div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr>
+      <td>1. herdr workspace/pane list builders and parsers</td>
+      <td>2 builders, 1 interface, 3 parsers in <code>checks.ts</code>, with unit tests</td>
+      <td>Approved, clean</td>
+      <td><code>checks.test.ts</code>'s new imports sit in a second
+      <code>import { ... } from "./checks.ts"</code> block rather than merged into the existing
+      one at the top — plan-mandated (brief specified the literal code), cosmetic only, no lint
+      config enforces it.</td>
+    </tr>
+    <tr>
+      <td>2. Reuse an existing pane in <code>runConnect</code></td>
+      <td><code>tryReuseExistingPane</code> plus the reworked recovery branch in
+      <code>connect.ts</code></td>
+      <td>Approved, clean (2 reviewer ⚠️ items resolved directly by the controller: commit
+      message confirmed free of attribution, 508/508 test count independently confirmed)</td>
+      <td><code>tryReuseExistingPane</code>'s inner start-agent-and-handle-failure shape
+      duplicates the new-workspace fallback's shape — plan-mandated (both verbatim from the
+      brief); extract a shared helper only if a third call site appears.</td>
+    </tr>
+    <tr>
+      <td>3. Live verification — crash-recovery no longer leaks a workspace</td>
+      <td>Confirmed clean on the first real run</td>
+      <td>Live-verified by the controller directly (no code diff to review — an operational
+      check plus a one-line doc update, not independently reviewed by a fresh subagent)</td>
+      <td>None</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes — no Critical or Important findings, the attribution check came back
+  clean, and the review reported 6 Minor findings (1 fixed, 1 documented, 4 parked).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr>
+      <td>Minor</td>
+      <td>A literal <code>null</code> JSON payload could throw a <code>TypeError</code> in the
+      new soft-fail parsers, breaking the plan's own "never throws" rule.</td>
+      <td>Fixed via one fix dispatch (commit <code>058f69d</code>). A scoped re-review confirmed
+      the finding addressed in all three functions and both array-entry loops, with no new
+      breakage.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>A reused pane keeps whatever TokenReply API key was current when its workspace was
+      first created — it does not pick up a rotated key the way the old always-create path did.</td>
+      <td>Documented as a known limitation in <code>design.html</code>'s out-of-scope section
+      (commit <code>7f52140</code>), not code-fixed.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>A pane that disappears between <code>pane list</code> and <code>agent start</code>
+      hard-fails <code>connect</code> instead of falling back to creating a new workspace.</td>
+      <td>Parked — real, narrow edge case. The code correctly implements the plan's stated
+      requirement (only <code>agent_pane_busy</code> retries); widening the retry set is a
+      deliberate future design call, not an oversight.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>Workspace and pane IDs are interpolated unquoted into the remote shell command.</td>
+      <td>Parked — real but low-risk, since the IDs come from the VPS's own trusted
+      <code>herdr</code> output. A regex guard would be cheap but isn't load-bearing for this
+      fix.</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>The new test imports in <code>checks.test.ts</code> sit in a second import block.</td>
+      <td>Parked — cosmetic, plan-mandated (already parked at Task 1's own review).</td>
+    </tr>
+    <tr>
+      <td>Minor</td>
+      <td>The design doc says <code>isAgentPaneBusyError</code> needs the payload to match
+      "exactly" <code>{error:{code:"agent_pane_busy"}}</code>; the code only checks
+      <code>error.code</code>.</td>
+      <td>Parked — real but harmless doc-wording overstatement. The code's actual, looser check
+      is the more sensible behavior.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">cdf85b9</span> feat(vps): add herdr workspace/pane list builders and parsers</li>
+    <li><span class="sha">2bea741</span> fix(vps): reuse an existing labeled workspace/pane before creating a new one</li>
+    <li><span class="sha">cea666f</span> docs(X.2): record live verification of the workspace-dedup fix</li>
+    <li><span class="sha">7f52140</span> docs(X.2): note the reused-pane stale-credential limitation</li>
+    <li><span class="sha">058f69d</span> fix(vps): harden herdr list/error parsers against a literal null payload</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/X/X.2-vps-connect-workspace-dedup/report.html</footer>
+
+</body>
+</html>

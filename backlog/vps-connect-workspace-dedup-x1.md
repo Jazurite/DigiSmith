@@ -1,6 +1,10 @@
 # `dg vps connect` leaks a duplicate herdr workspace on every crash-recovery cycle
 
-**Status:** Not applied. Confirmed live, 2026-09-23, during X.1's Task 6 live verification.
+**Status:** Fixed by X.2, 2026-09-24 — see `.digismith/docs/X/X.2-vps-connect-workspace-dedup/`. Live-verified
+on the real VPS: killed `opencode-main`'s process (simulating the crash), confirmed `herdr agent get`
+returned `agent_not_found` while the workspace/pane survived, ran `dg vps connect` and confirmed the log
+line `reusing existing pane w5:p1 in workspace w5` (not a new-workspace-creation line), then confirmed
+`herdr workspace list` showed the same workspace count before and after — no duplicate created.
 
 **Source:** X.1 (`.digismith/docs/X/X.1-vps-session-herdr/`) replaced V.3's tmux-based VPS session
 with a herdr-supervised OpenCode one. The design's one open, explicitly-flagged unknown was

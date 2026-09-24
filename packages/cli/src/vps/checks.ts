@@ -58,6 +58,17 @@ export function buildCredentialsCheckCommand(config: VpsConfig): SshCommand {
   return { command: "ssh", args: [...buildBaseSshArgs(config), "test -f ~/.config/tokenreply.env"] };
 }
 
+export function buildWorkspaceListCommand(config: VpsConfig): SshCommand {
+  return { command: "ssh", args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr workspace list`] };
+}
+
+export function buildPaneListCommand(config: VpsConfig, workspaceId: string): SshCommand {
+  return {
+    command: "ssh",
+    args: [...buildBaseSshArgs(config), `${HERDR_PATH_PREFIX}; herdr pane list --workspace ${workspaceId}`],
+  };
+}
+
 export function isHerdrInstalled(exitCode: number): boolean {
   return exitCode === 0;
 }
@@ -107,4 +118,74 @@ export function parseAgentGetOutput(exitCode: number, stdout: string): AgentGetR
     return { alive: false, detail: trimmed };
   }
   return { alive: true, agentStatus: status, detail: status };
+}
+
+export interface WorkspaceInfo {
+  workspaceId: string;
+  label: string;
+}
+
+interface HerdrWorkspaceListResponse {
+  result?: { workspaces?: Array<{ workspace_id?: unknown; label?: unknown }> };
+}
+
+// Soft-fail by design: any exit-code or parse failure reads as "no reusable
+// candidates," never as a reason to abort connect — this is a leak-reduction
+// optimization on top of an already-working recovery path, not a
+// correctness requirement.
+export function parseWorkspaceListOutput(exitCode: number, stdout: string): WorkspaceInfo[] {
+  if (exitCode !== 0) return [];
+  let parsed: HerdrWorkspaceListResponse;
+  try {
+    parsed = JSON.parse(stdout) as HerdrWorkspaceListResponse;
+  } catch {
+    return [];
+  }
+  const workspaces = parsed?.result?.workspaces;
+  if (!Array.isArray(workspaces)) return [];
+  const result: WorkspaceInfo[] = [];
+  for (const w of workspaces) {
+    if (typeof w !== "object" || w === null) continue;
+    if (typeof w.workspace_id === "string" && typeof w.label === "string") {
+      result.push({ workspaceId: w.workspace_id, label: w.label });
+    }
+  }
+  return result;
+}
+
+interface HerdrPaneListResponse {
+  result?: { panes?: Array<{ pane_id?: unknown }> };
+}
+
+export function parsePaneListOutput(exitCode: number, stdout: string): string[] {
+  if (exitCode !== 0) return [];
+  let parsed: HerdrPaneListResponse;
+  try {
+    parsed = JSON.parse(stdout) as HerdrPaneListResponse;
+  } catch {
+    return [];
+  }
+  const panes = parsed?.result?.panes;
+  if (!Array.isArray(panes)) return [];
+  const result: string[] = [];
+  for (const p of panes) {
+    if (typeof p !== "object" || p === null) continue;
+    if (typeof p.pane_id === "string") result.push(p.pane_id);
+  }
+  return result;
+}
+
+interface HerdrErrorResponse {
+  error?: { code?: unknown };
+}
+
+export function isAgentPaneBusyError(exitCode: number, stdout: string): boolean {
+  if (exitCode === 0) return false;
+  let parsed: HerdrErrorResponse;
+  try {
+    parsed = JSON.parse(stdout) as HerdrErrorResponse;
+  } catch {
+    return false;
+  }
+  return parsed?.error?.code === "agent_pane_busy";
 }

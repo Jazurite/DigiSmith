@@ -161,3 +161,142 @@ describe("parseAgentGetOutput", () => {
     });
   });
 });
+
+import {
+  buildWorkspaceListCommand,
+  buildPaneListCommand,
+  parseWorkspaceListOutput,
+  parsePaneListOutput,
+  isAgentPaneBusyError,
+} from "./checks.ts";
+
+describe("buildWorkspaceListCommand", () => {
+  it("lists herdr workspaces after ensuring herdr is on PATH", () => {
+    const cmd = buildWorkspaceListCommand(CONFIG);
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
+    expect(remote).toContain("herdr workspace list");
+  });
+});
+
+describe("buildPaneListCommand", () => {
+  it("lists panes for the given workspace id after ensuring herdr is on PATH", () => {
+    const cmd = buildPaneListCommand(CONFIG, "w2");
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(HERDR_PATH_PREFIX);
+    expect(remote).toContain("herdr pane list --workspace w2");
+  });
+});
+
+const WORKSPACE_LIST_STDOUT = JSON.stringify({
+  id: "cli:workspace:list",
+  result: {
+    type: "workspace_list",
+    workspaces: [
+      { workspace_id: "w2", label: "opencode-k3-spike", pane_count: 1, agent_status: "unknown" },
+      { workspace_id: "w3", label: "digismith-main", pane_count: 1, agent_status: "unknown" },
+    ],
+  },
+});
+
+describe("parseWorkspaceListOutput", () => {
+  it("parses every workspace's id and label on success", () => {
+    expect(parseWorkspaceListOutput(0, WORKSPACE_LIST_STDOUT)).toEqual([
+      { workspaceId: "w2", label: "opencode-k3-spike" },
+      { workspaceId: "w3", label: "digismith-main" },
+    ]);
+  });
+
+  it("returns an empty array on a non-zero exit code", () => {
+    expect(parseWorkspaceListOutput(1, WORKSPACE_LIST_STDOUT)).toEqual([]);
+  });
+
+  it("returns an empty array when stdout isn't parseable JSON despite exit 0", () => {
+    expect(parseWorkspaceListOutput(0, "not json")).toEqual([]);
+  });
+
+  it("returns an empty array when result.workspaces is missing", () => {
+    expect(parseWorkspaceListOutput(0, JSON.stringify({ id: "cli:workspace:list", result: {} }))).toEqual([]);
+  });
+
+  it("skips an entry missing workspace_id or label", () => {
+    const stdout = JSON.stringify({
+      result: { workspaces: [{ workspace_id: "w2" }, { label: "only-a-label" }, { workspace_id: "w4", label: "ok" }] },
+    });
+    expect(parseWorkspaceListOutput(0, stdout)).toEqual([{ workspaceId: "w4", label: "ok" }]);
+  });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(parseWorkspaceListOutput(0, "null")).toEqual([]);
+  });
+
+  it("skips a null entry in the workspaces array", () => {
+    const stdout = JSON.stringify({ result: { workspaces: [null, { workspace_id: "w2", label: "ok" }] } });
+    expect(parseWorkspaceListOutput(0, stdout)).toEqual([{ workspaceId: "w2", label: "ok" }]);
+  });
+});
+
+const PANE_LIST_STDOUT = JSON.stringify({
+  id: "cli:pane:list",
+  result: {
+    type: "pane_list",
+    panes: [
+      { pane_id: "w2:p1", agent_status: "idle", workspace_id: "w2" },
+      { pane_id: "w2:p2", agent_status: "unknown", workspace_id: "w2" },
+    ],
+  },
+});
+
+describe("parsePaneListOutput", () => {
+  it("parses every pane's id, in order, on success", () => {
+    expect(parsePaneListOutput(0, PANE_LIST_STDOUT)).toEqual(["w2:p1", "w2:p2"]);
+  });
+
+  it("returns an empty array on a non-zero exit code", () => {
+    expect(parsePaneListOutput(1, PANE_LIST_STDOUT)).toEqual([]);
+  });
+
+  it("returns an empty array when stdout isn't parseable JSON despite exit 0", () => {
+    expect(parsePaneListOutput(0, "not json")).toEqual([]);
+  });
+
+  it("returns an empty array when result.panes is missing", () => {
+    expect(parsePaneListOutput(0, JSON.stringify({ id: "cli:pane:list", result: {} }))).toEqual([]);
+  });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(parsePaneListOutput(0, "null")).toEqual([]);
+  });
+
+  it("skips a null entry in the panes array", () => {
+    const stdout = JSON.stringify({ result: { panes: [null, { pane_id: "w2:p1" }] } });
+    expect(parsePaneListOutput(0, stdout)).toEqual(["w2:p1"]);
+  });
+});
+
+describe("isAgentPaneBusyError", () => {
+  it("is true for a real agent_pane_busy error payload", () => {
+    const stdout = JSON.stringify({
+      error: { code: "agent_pane_busy", message: "agent target pane w2:p1 is not an available shell" },
+      id: "cli:agent:start",
+    });
+    expect(isAgentPaneBusyError(1, stdout)).toBe(true);
+  });
+
+  it("is false for a different error code", () => {
+    const stdout = JSON.stringify({ error: { code: "workspace_not_found" }, id: "cli:agent:start" });
+    expect(isAgentPaneBusyError(1, stdout)).toBe(false);
+  });
+
+  it("is false on a zero exit code, regardless of stdout shape", () => {
+    expect(isAgentPaneBusyError(0, JSON.stringify({ error: { code: "agent_pane_busy" } }))).toBe(false);
+  });
+
+  it("is false when stdout isn't parseable JSON", () => {
+    expect(isAgentPaneBusyError(1, "not json")).toBe(false);
+  });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(isAgentPaneBusyError(1, "null")).toBe(false);
+  });
+});
