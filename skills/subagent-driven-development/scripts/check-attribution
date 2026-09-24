@@ -18,12 +18,12 @@ head=$2
 git rev-parse --verify --quiet "${base}^{commit}" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
 git rev-parse --verify --quiet "${head}^{commit}" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
 
-pattern='co-authored-by:.*claude|co-authored-by:.*anthropic|generated with.*claude|generated with.*anthropic|🤖'
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/scripts/git-hooks/attribution-pattern.sh"
 
 found=0
 for sha in $(git log "${base}..${head}" --format=%H); do
   body=$(git show -s --format=%B "$sha")
-  match=$(printf '%s\n' "$body" | grep -iE "$pattern" || true)
+  match=$(printf '%s\n' "$body" | attribution_matches || true)
   if [ -n "$match" ]; then
     echo "AI attribution found in commit $sha:" >&2
     echo "$match" >&2

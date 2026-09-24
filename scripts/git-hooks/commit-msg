@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/attribution-pattern.sh"
+
+msg_file="$1"
+body=$(sed '/^# -\{24\} >8 -\{24\}$/,$d' "$msg_file")
+match=$(printf '%s\n' "$body" | attribution_matches || true)
+
+if [ -n "$match" ]; then
+  echo "AI attribution found in commit message:" >&2
+  echo "$match" >&2
+  echo "This repo forbids AI/assistant attribution anywhere — no exceptions." >&2
+  exit 1
+fi

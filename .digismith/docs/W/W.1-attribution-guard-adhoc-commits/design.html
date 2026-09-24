@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attribution Guard for Ad-Hoc Commits (W.11)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Attribution Guard for Ad-Hoc Commits (W.11)</h1>
+  <div class="meta">
+    <span>Date: 2026-09-23</span>
+    <span>Map item: W.11</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#s1">Section 1 — Shared attribution pattern</a></li>
+    <li><a href="#s2">Section 2 — The commit-msg hook</a></li>
+    <li><a href="#s3">Section 3 — Automatic install via <code>prepare</code></a></li>
+    <li><a href="#s4">Section 4 — SessionStart reminder</a></li>
+    <li><a href="#s5">Section 5 — Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+<h2>Background</h2>
+<p>W.8 (<code>.digismith/docs/review-template-ai-attribution-guard/design.html</code>) built a real,
+working mechanical check for AI/assistant attribution in commit messages —
+<code>skills/subagent-driven-development/scripts/check-attribution</code> — and wired it into two
+places: <code>subagent-driven-development</code>'s <code>review-package</code> step, and
+<code>requesting-code-review</code>'s shared <code>code-reviewer.md</code> template. Both gates fire
+only inside a formal review flow.</p>
+<p><strong>The incident (2026-09-22/23).</strong> A session-level attribution instruction arrived
+mid-session and was followed literally instead of being overridden by the standing no-attribution
+rule, which explicitly says it overrides exactly this kind of generic default. Four commits —
+<code>b0f41c8</code>, <code>11bbd91</code>, <code>2508f74</code>, <code>490ce4f</code>, all
+docs-only backlog/design bookkeeping — carried an unwanted <code>Co-Authored-By: Claude ...</code>
+trailer and reached <code>origin/main</code> before Jack caught it directly. Left in git history
+as-is; fixing forward, not rewriting shared history other concurrent sessions may depend on.</p>
+<p><strong>The confirmed gap.</strong> All four commits were direct <code>git commit</code> calls
+made outside any plan or review skill — ad-hoc docs/backlog bookkeeping, the shape of most commits
+in a DigiSmith self-development session. <code>check-attribution</code> never runs on that path,
+because it is never invoked outside <code>review-package</code> or
+<code>code-reviewer.md</code>. W.10's <code>SessionStart</code> hook (<code>session-init.ts</code>,
+shipped the day before this incident) already fires on every session start in this repo, but only
+prints a banner when <code>.digismith/profile</code> exists — and this repo deliberately never sets
+that file, so the one proactive mechanism that could have surfaced a reminder here already runs and
+already does nothing. Filed as
+<code>backlog/attribution-guard-blind-spot-adhoc-commits-w.md</code>, a third gap distinct from
+W.8's own final review's two already-logged and deliberately deferred gaps (PR-description checking,
+no escape hatch for pre-policy history) — both untouched by this pass.</p>
+<p><strong>Two independent, non-exclusive fixes,</strong> matching the backlog item's own framing:
+a reactive git hook that fires on any commit regardless of flow (the one that would have actually
+caught this incident), and a proactive <code>SessionStart</code> reminder as defense in depth. Both
+are built here.</p>
+</section>
+
+<section id="s1">
+<h2>Section 1 — Shared attribution pattern</h2>
+<p>New file, single source of truth for the regex both consumers need:</p>
+<pre><code>#!/usr/bin/env bash
+# Shared regex for detecting AI/assistant attribution in commit messages.
+# Sourced by scripts/git-hooks/commit-msg (fires on every commit to this repo)
+# and skills/subagent-driven-development/scripts/check-attribution (fires on a
+# commit range inside review flows). Edit this one file, not either caller.
+export ATTRIBUTION_PATTERN='co-authored-by:.*claude|co-authored-by:.*anthropic|generated with.*claude|generated with.*anthropic|🤖'</code></pre>
+<p>Path: <code>scripts/git-hooks/attribution-pattern.sh</code>. <code>check-attribution</code>
+changes exactly one thing: its inline <code>pattern='...'</code> line becomes a <code>source</code>
+of this file, resolved relative to the script's own location (<code>3</code> directories up from
+<code>skills/subagent-driven-development/scripts/</code> to the repo/plugin root, then into
+<code>scripts/git-hooks/</code>) — never <code>git rev-parse --show-toplevel</code>, since
+<code>check-attribution</code> ships inside the vendored plugin and must resolve the same way
+whether it is running against DigiSmith's own repo or an installed plugin cache inside a consumer
+repo. No behavior change to <code>check-attribution</code> beyond this — same loop, same per-commit
+output, same exit codes.</p>
+</section>
+
+<section id="s2">
+<h2>Section 2 — The commit-msg hook</h2>
+<p>New file <code>scripts/git-hooks/commit-msg</code> (git's fixed name for this hook — not
+<code>pre-commit</code>, which fires before a message exists at all). Executable, sources
+Section 1's pattern file, reads the message git passes as <code>$1</code>, and on a match prints
+the offending line to stderr and exits 1 — blocking the commit. Same failure wording as
+<code>check-attribution</code>'s own:</p>
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/attribution-pattern.sh"
+
+msg_file="$1"
+body=$(cat "$msg_file")
+match=$(printf '%s\n' "$body" | grep -iE "$ATTRIBUTION_PATTERN" || true)
+
+if [ -n "$match" ]; then
+  echo "AI attribution found in commit message:" >&2
+  echo "$match" >&2
+  echo "This repo forbids AI/assistant attribution anywhere — no exceptions." >&2
+  exit 1
+fi</code></pre>
+<p>Fires on every commit to this repo that actually goes through message collection with hooks
+enabled — ad-hoc, merge, amended — since git invokes <code>commit-msg</code> unconditionally
+(barring <code>--no-verify</code>) once a message is collected and before the commit object is
+written. It does <strong>not</strong> fire for <code>git cherry-pick</code>, a rebase replaying
+existing commits, or <code>git am</code> — those paths carry an already-written message forward
+without re-collecting it. <code>check-attribution</code> in review flows remains the backstop for
+those cases.</p>
+</section>
+
+<section id="s3">
+<h2>Section 3 — Automatic install via <code>prepare</code></h2>
+<p><code>package.json</code> gains one script:</p>
+<pre><code>"scripts": {
+  "test": "vitest run",
+  "prepare": "git config core.hooksPath scripts/git-hooks"
+}</code></pre>
+<p>Both npm and pnpm run <code>prepare</code> automatically on every <code>pnpm install</code> —
+which already runs in every fresh worktree per <code>using-git-worktrees</code>' own setup step, so
+this needs no separate onboarding instruction.</p>
+<div class="callout"><strong>Why the value must stay relative.</strong>
+<code>core.hooksPath</code> is stored once, in the shared common <code>.git/config</code> every
+worktree of this repo reads — but git resolves a <em>relative</em> value against whichever working
+tree is currently active at hook-invocation time, not against wherever it was set. Writing the
+literal string <code>scripts/git-hooks</code> (never an absolute path) means every worktree runs
+<em>its own</em> checked-out copy of the hook — including one mid-edit on this very script. An
+absolute path, by contrast, would pin every worktree to whichever one happened to run
+<code>pnpm install</code> first. Section "Testing" below proves this live rather than trusting the
+claim.</div>
+<p>No existing hook infrastructure to preserve or collide with:
+<code>git config core.hooksPath</code> is confirmed unset today, no husky, no
+<code>.git/hooks/*</code> beyond git's own untouched <code>.sample</code> files. The
+<code>prepare</code> script overwrites unconditionally.</p>
+</section>
+
+<section id="s4">
+<h2>Section 4 — SessionStart reminder</h2>
+<p><code>scripts/session-init.ts</code> gains one new exported helper, matching this file's existing
+style of taking an explicit path rather than reading <code>process.cwd()</code> internally (so it
+stays unit-testable without <code>process.chdir()</code>), mirroring
+<code>scripts/model_offload.ts</code>'s own <code>isDigismithRepo()</code> check one level up:</p>
+<pre><code>export function isDigismithRepoRoot(pluginJsonPath: string): boolean {
+  if (!isFile(pluginJsonPath)) return false;
+  try {
+    const config = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8"));
+    return config?.name === "digismith";
+  } catch {
+    return false;
+  }
+}</code></pre>
+<p><code>main()</code> gains one more independent statement after its existing banner logic — not
+threaded through <code>buildBanner</code>/<code>formatBanner</code>, so both signatures and every
+existing test for them are untouched:</p>
+<pre><code>if (isDigismithRepoRoot(path.join(process.cwd(), ".claude-plugin", "plugin.json"))) {
+  console.log("DigiSmith: no AI attribution in commits or PRs — no exceptions");
+}</code></pre>
+<p>Fires whenever the session's cwd is DigiSmith's own repo root, independent of whether
+<code>.digismith/profile</code> also produced a banner line — in practice the two never coexist
+today (profile is deliberately never set in DigiSmith's own repo), but the checks stay genuinely
+independent rather than special-cased against each other.</p>
+</section>
+
+<section id="s5">
+<h2>Section 5 — Error handling</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Case</th><th>Disposition</th></tr>
+<tr><td><code>commit-msg</code> hook missing or not executable</td>
+<td>Git silently skips a missing hook file; a present-but-non-executable one is a build mistake —
+caught by the live commit smoke test in Testing, not by inspection.</td></tr>
+<tr><td><code>core.hooksPath</code> already set to something else</td>
+<td>Confirmed unset today. The <code>prepare</code> script overwrites unconditionally — nothing to
+preserve.</td></tr>
+<tr><td>Vitest fixture repos (real <code>git init</code> in <code>os.tmpdir()</code>, used by
+<code>bump-plugin-version.test.ts</code> and others)</td>
+<td>Unaffected. <code>core.hooksPath</code> is set in <em>this</em> repo's own shared config; a
+fresh, unrelated <code>git init</code> elsewhere never inherits it.</td></tr>
+<tr><td>Merge commits</td>
+<td><code>commit-msg</code> fires on these identically (barring <code>--no-verify</code>); no
+special case.</td></tr>
+<tr><td><code>--no-verify</code> used deliberately</td>
+<td>Bypasses the hook by design — git's own escape hatch, not this feature's problem to solve.
+Out of scope.</td></tr>
+</table>
+</div>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<ul>
+<li><code>scripts/git-hooks/commit-msg.test.ts</code> — new, same real-git-fixture style as
+<code>bump-plugin-version.test.ts</code> (temp repo via <code>fs.mkdtempSync</code>, no mocking):
+a commit whose message carries an attribution trailer is blocked (non-zero exit, message on
+stderr); a clean commit is allowed. Invoked directly via <code>spawnSync</code> against the hook
+script, not through a live <code>git commit</code>, for speed and isolation — the live-commit path
+is proven separately below.</li>
+<li><code>scripts/session-init.test.ts</code> — new cases for <code>isDigismithRepoRoot</code>
+(true for a tmp dir with <code>.claude-plugin/plugin.json</code> naming <code>digismith</code>,
+false otherwise) and for <code>main()</code> printing the reminder line in a DigiSmith-repo-shaped
+tmp dir with no profile. Every existing test in this file is unaffected: their tmp dirs never
+contain <code>.claude-plugin/plugin.json</code>, so <code>isDigismithRepoRoot</code> reads false
+and the new line never appears.</li>
+<li><strong>Scratch multi-worktree smoke test</strong> (run once during implementation, not
+committed): a second throwaway worktree of a scratch repo, <code>core.hooksPath</code> set once
+from the first, a commit with an attribution trailer attempted for real in the <em>second</em>
+worktree — proving the relative-path-resolves-per-worktree claim in Section 3, not just asserting
+it.</li>
+<li><strong>Live end-to-end check</strong> on this feature's own branch: once <code>prepare</code>
+has run in this worktree, attempt one real throwaway commit with a trailer and confirm git itself
+refuses it before any fixture-level test is trusted as the whole story.</li>
+</ul>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li>W.8's own two already-logged, deliberately deferred gaps — PR-description checking
+(<code>backlog/attribution-guard-pr-description-gap.md</code>) and the pre-policy-history escape
+hatch (<code>backlog/check-attribution-no-escape-hatch-for-pre-policy-history.md</code>). Both
+untouched.</li>
+<li>Extending the <code>SessionStart</code> reminder to print the full
+<code>standards/global/commit-style.md</code> content — one line only, matching the banner's own
+established terseness.</li>
+<li>Any consumer-repo enforcement. Both pieces here are scoped to DigiSmith's own repo specifically
+— the <code>prepare</code> script lives in <em>this</em> repo's own <code>package.json</code>, and
+<code>isDigismithRepoRoot</code> gates the reminder the same way. A consumer repo's own commits are
+untouched by this pass; they still route only through <code>check-attribution</code> when they hit
+a formal review flow.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/W/W.1-attribution-guard-adhoc-commits/design.html</footer>
+
+</body>
+</html>

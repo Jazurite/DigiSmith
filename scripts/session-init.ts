@@ -17,6 +17,16 @@ export function readProfile(filePath: string): string | undefined {
   return content || undefined;
 }
 
+export function isDigismithRepoRoot(pluginJsonPath: string): boolean {
+  if (!isFile(pluginJsonPath)) return false;
+  try {
+    const config = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8"));
+    return config?.name === "digismith";
+  } catch {
+    return false;
+  }
+}
+
 type VoiceInitModule = { default: () => Promise<string | null> };
 
 function isFile(filePath: string): boolean {
@@ -48,6 +58,9 @@ export async function buildBanner(profilePath: string, voiceInitPath: string): P
 
 export async function main(): Promise<void> {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  if (isDigismithRepoRoot(path.join(process.cwd(), ".claude-plugin", "plugin.json"))) {
+    console.log("DigiSmith: no AI attribution in commits or PRs — no exceptions");
+  }
   try {
     const banner = await buildBanner(
       path.join(process.cwd(), DEFAULT_PROFILE_PATH),
