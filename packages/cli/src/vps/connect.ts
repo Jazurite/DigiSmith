@@ -55,7 +55,7 @@ export function buildAttachArgs(config: VpsConfig): string[] {
     "-i", config.identity_file,
     "-o", "IdentitiesOnly=yes",
     "-t", `${config.user}@${config.host}`,
-    `herdr agent attach ${config.agent_name}`,
+    `${HERDR_PATH_PREFIX}; herdr agent attach ${config.agent_name}`,
   ];
 }
 
@@ -177,7 +177,11 @@ export function runConnect(config: VpsConfig, configPath: string): never {
     console.log(`vps-session: workspace/agent "${config.agent_name}" not found, creating it...`);
     const create = runSshCommand(buildCreateWorkspaceCommand(config));
     if (create.status !== 0) {
-      console.error(`vps-session: failed to create the herdr workspace — ${create.stderr.trim()}`);
+      // herdr's own errors are JSON printed to stdout, not stderr — only
+      // genuine SSH-level failures (connection refused, auth) land there.
+      console.error(
+        `vps-session: failed to create the herdr workspace — ${create.stderr.trim() || create.stdout.trim()}`
+      );
       process.exit(1);
     }
     // Idempotent — writes the plugin file if absent, no-ops otherwise.
@@ -200,7 +204,9 @@ export function runConnect(config: VpsConfig, configPath: string): never {
     );
     const startAgent = runSshCommand(startAgentCmd);
     if (startAgent.status !== 0) {
-      console.error(`vps-session: failed to start the OpenCode agent — ${startAgent.stderr.trim()}`);
+      console.error(
+        `vps-session: failed to start the OpenCode agent — ${startAgent.stderr.trim() || startAgent.stdout.trim()}`
+      );
       process.exit(1);
     }
   }

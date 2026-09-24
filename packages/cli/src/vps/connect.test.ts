@@ -72,12 +72,12 @@ describe("buildStartAgentCommand", () => {
 });
 
 describe("buildAttachArgs", () => {
-  it("builds an interactive ssh attach command for the configured agent", () => {
+  it("builds an interactive ssh attach command for the configured agent, with herdr on PATH", () => {
     expect(buildAttachArgs(CONFIG)).toEqual([
       "-i", "~/.ssh/jazurite",
       "-o", "IdentitiesOnly=yes",
       "-t", "root@46.225.49.140",
-      "herdr agent attach opencode-main",
+      `${HERDR_PATH_PREFIX}; herdr agent attach opencode-main`,
     ]);
   });
 });
