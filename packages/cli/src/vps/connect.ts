@@ -4,7 +4,17 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { CommandModule } from "yargs";
 import { DEFAULT_VPS_CONFIG_PATH, type VpsConfig } from "./config.ts";
-import { buildBaseSshArgs, buildHerdrServerCheckCommand, HERDR_PATH_PREFIX, type SshCommand } from "./checks.ts";
+import {
+  buildBaseSshArgs,
+  buildHerdrServerCheckCommand,
+  buildWorkspaceListCommand,
+  buildPaneListCommand,
+  parseWorkspaceListOutput,
+  parsePaneListOutput,
+  isAgentPaneBusyError,
+  HERDR_PATH_PREFIX,
+  type SshCommand,
+} from "./checks.ts";
 import { describeSshFailure, runSshCommand } from "./run-command.ts";
 import { runStatusChecks } from "./status.ts";
 import { loadConfigOrExit } from "./shared.ts";
@@ -50,6 +60,40 @@ export function buildStartAgentCommand(config: VpsConfig, paneId: string): SshCo
     `herdr agent start ${config.agent_name} --kind opencode --pane ${paneId} -- --model ${DEFAULT_MODEL}`,
   ].join("; ");
   return { command: "ssh", args: [...buildBaseSshArgs(config), remote] };
+}
+
+// Tries every pane of every workspace already carrying config.workspace_label,
+// in list order, before the caller falls back to creating a brand-new
+// workspace — closing the leak where a crash-recovered OpenCode process's
+// still-alive pane gets abandoned instead of reused. agent_pane_busy on a
+// candidate just means "try the next one"; any other start failure is a
+// hard failure, same as an unrecoverable start failure on a freshly created
+// pane always has been.
+export function tryReuseExistingPane(config: VpsConfig): boolean {
+  const listWorkspaces = runSshCommand(buildWorkspaceListCommand(config));
+  const workspaces = parseWorkspaceListOutput(listWorkspaces.status, listWorkspaces.stdout);
+  const matches = workspaces.filter((w) => w.label === config.workspace_label);
+
+  for (const workspace of matches) {
+    const listPanes = runSshCommand(buildPaneListCommand(config, workspace.workspaceId));
+    const paneIds = parsePaneListOutput(listPanes.status, listPanes.stdout);
+
+    for (const paneId of paneIds) {
+      const startAgent = runSshCommand(buildStartAgentCommand(config, paneId));
+      if (startAgent.status === 0) {
+        console.log(`vps-session: reusing existing pane ${paneId} in workspace ${workspace.workspaceId}`);
+        return true;
+      }
+      if (!isAgentPaneBusyError(startAgent.status, startAgent.stdout)) {
+        console.error(
+          `vps-session: failed to start the OpenCode agent on existing pane ${paneId} — ${describeSshFailure(startAgent)}`
+        );
+        process.exit(1);
+      }
+    }
+  }
+
+  return false;
 }
 
 export function buildAttachArgs(config: VpsConfig): string[] {
@@ -260,34 +304,42 @@ export function runConnect(config: VpsConfig, configPath: string, repoOverride?:
   }
 
   if (!status.agentAlive.ok) {
-    console.log(`vps-session: workspace/agent "${config.agent_name}" not found, creating it...`);
-    const create = runSshCommand(buildCreateWorkspaceCommand(config));
-    if (create.status !== 0) {
-      console.error(`vps-session: failed to create the herdr workspace — ${describeSshFailure(create)}`);
-      process.exit(1);
-    }
-    // Idempotent — writes the plugin file if absent, no-ops otherwise.
+    console.log(
+      `vps-session: workspace/agent "${config.agent_name}" not found, checking for a reusable "${config.workspace_label}" workspace...`
+    );
+    // Idempotent — writes the plugin file if absent, no-ops otherwise. Runs
+    // unconditionally here since it's machine-wide, not workspace-specific,
+    // regardless of whether we end up reusing a pane or creating a new one.
     const integrationInstall = runSshCommand(buildInstallHerdrIntegrationCommand(config));
     if (integrationInstall.status !== 0) {
       console.error(
         `vps-session: warning — herdr integration install failed: ${describeSshFailure(integrationInstall)}`
       );
     }
-    let paneId: string | null = null;
-    try {
-      const parsed = JSON.parse(create.stdout) as { result?: { root_pane?: { pane_id?: string } } };
-      paneId = parsed.result?.root_pane?.pane_id ?? null;
-    } catch {
-      paneId = null;
-    }
-    if (!paneId) {
-      console.error(`vps-session: could not parse a pane_id from workspace creation output:\n${create.stdout}`);
-      process.exit(1);
-    }
-    const startAgent = runSshCommand(buildStartAgentCommand(config, paneId));
-    if (startAgent.status !== 0) {
-      console.error(`vps-session: failed to start the OpenCode agent — ${describeSshFailure(startAgent)}`);
-      process.exit(1);
+
+    if (!tryReuseExistingPane(config)) {
+      console.log(`vps-session: no reusable pane found, creating a new workspace...`);
+      const create = runSshCommand(buildCreateWorkspaceCommand(config));
+      if (create.status !== 0) {
+        console.error(`vps-session: failed to create the herdr workspace — ${describeSshFailure(create)}`);
+        process.exit(1);
+      }
+      let paneId: string | null = null;
+      try {
+        const parsed = JSON.parse(create.stdout) as { result?: { root_pane?: { pane_id?: string } } };
+        paneId = parsed.result?.root_pane?.pane_id ?? null;
+      } catch {
+        paneId = null;
+      }
+      if (!paneId) {
+        console.error(`vps-session: could not parse a pane_id from workspace creation output:\n${create.stdout}`);
+        process.exit(1);
+      }
+      const startAgent = runSshCommand(buildStartAgentCommand(config, paneId));
+      if (startAgent.status !== 0) {
+        console.error(`vps-session: failed to start the OpenCode agent — ${describeSshFailure(startAgent)}`);
+        process.exit(1);
+      }
     }
   }
 
