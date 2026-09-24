@@ -163,8 +163,14 @@
   <p>
     New pure functions alongside the existing <code>readProfile</code>/<code>loadVoiceSummary</code> style:
     a function to list <code>.digismith/sessions/</code>, tolerate a missing directory, and return the newest
-    file by mtime; and a title-line reader (first line of the file, <code>#</code> stripped). <code>buildBanner</code>
-    gains a third optional part fed by these.
+    file by mtime; and a title-line reader (first line of the file, <code>#</code> stripped).
+  </p>
+  <p>
+    This does <strong>not</strong> feed into <code>buildBanner</code> — that function returns <code>null</code>
+    whenever no <code>.digismith/profile</code> exists, which is always true for DigiSmith's own repo (profile
+    deliberately unset, per W.11) and for any freshly-onboarded repo. The handoff pointer must print regardless
+    of profile presence, so it's wired as its own independent check in <code>main()</code>, printed alongside
+    (not nested inside) the existing unconditional attribution reminder and the profile-gated banner.
   </p>
   <h3>.gitignore handling</h3>
   <p>
