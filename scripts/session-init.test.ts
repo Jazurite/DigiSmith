@@ -10,6 +10,7 @@ import {
   formatBanner,
   buildBanner,
   main,
+  isDigismithRepoRoot,
 } from "./session-init.ts";
 
 describe("constants", () => {
@@ -104,6 +105,39 @@ describe("formatBanner", () => {
   });
 });
 
+describe("isDigismithRepoRoot", () => {
+  let tmpDir: string;
+  let pluginJsonPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
+    pluginJsonPath = path.join(tmpDir, "plugin.json");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns false when the file doesn't exist", () => {
+    expect(isDigismithRepoRoot(pluginJsonPath)).toBe(false);
+  });
+
+  it("returns true when the file names the digismith plugin", () => {
+    fs.writeFileSync(pluginJsonPath, JSON.stringify({ name: "digismith", version: "1.0.0" }));
+    expect(isDigismithRepoRoot(pluginJsonPath)).toBe(true);
+  });
+
+  it("returns false when the file names a different plugin", () => {
+    fs.writeFileSync(pluginJsonPath, JSON.stringify({ name: "some-other-plugin" }));
+    expect(isDigismithRepoRoot(pluginJsonPath)).toBe(false);
+  });
+
+  it("returns false for malformed JSON rather than throwing", () => {
+    fs.writeFileSync(pluginJsonPath, "{not valid json");
+    expect(isDigismithRepoRoot(pluginJsonPath)).toBe(false);
+  });
+});
+
 describe("buildBanner", () => {
   let tmpDir: string;
   let profilePath: string;
@@ -182,5 +216,18 @@ describe("main (CLI)", () => {
 
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("session-init: failed"));
+  });
+
+  it("prints the attribution reminder in DigiSmith's own repo even with no profile", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".claude-plugin"));
+    fs.writeFileSync(
+      path.join(tmpDir, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "digismith", version: "1.0.0" }),
+    );
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await main();
+
+    expect(logSpy).toHaveBeenCalledWith("DigiSmith: no AI attribution in commits or PRs — no exceptions");
   });
 });
