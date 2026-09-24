@@ -7,6 +7,7 @@ import { hideBin } from "yargs/helpers";
 import { ROOT_USAGE, brandOutput } from "./lib/brand-help.ts";
 import vpsCommand from "./vps/index.ts";
 import depotCommand from "./depot/index.ts";
+import clickupCommand from "./clickup/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -25,6 +26,7 @@ export function buildCli(argv: string[]): Argv {
     .usage(ROOT_USAGE)
     .command(vpsCommand)
     .command(depotCommand)
+    .command(clickupCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
