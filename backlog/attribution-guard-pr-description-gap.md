@@ -36,6 +36,18 @@ description text before it's actually submitted to the forge (`gh pr create --bo
 equivalent) — failing the same way `review-package` does: refuse to submit, name what matched,
 let the human fix the text.
 
+## Update 2026-09-24 — reusable infrastructure now exists
+
+W.11 (`.digismith/docs/W/W.1-attribution-guard-adhoc-commits/design.html`) built exactly the two
+pieces this item's "Candidate shape" section speculated about: the regex now lives in one shared
+file, `scripts/git-hooks/attribution-pattern.sh`, exporting `ATTRIBUTION_PATTERN` and an
+`attribution_matches()` function (locale-independent — see that file's own comments); and a
+second thin script, `scripts/git-hooks/commit-msg`, already checks arbitrary message text against
+it (today taking a file path, not stdin, but a small wrapper — or extending it to accept stdin
+too — is enough to check a PR description string the same way). Neither existed when this item
+was filed. Whoever picks this up no longer needs to design the sharing mechanism, only the call
+site inside `finishing-a-development-branch`'s Option 2.
+
 ## Why not applied yet
 
 Explicitly out of scope for W.8's own design (`.digismith/docs/review-template-ai-attribution-guard/design.html`'s

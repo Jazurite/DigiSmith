@@ -218,6 +218,24 @@ describe("main (CLI)", () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("session-init: failed"));
   });
 
+  it("still prints the attribution reminder when buildBanner throws, in DigiSmith's own repo", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".claude-plugin"));
+    fs.writeFileSync(
+      path.join(tmpDir, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "digismith", version: "1.0.0" }),
+    );
+    fs.mkdirSync(path.join(tmpDir, ".digismith"));
+    fs.writeFileSync(path.join(tmpDir, ".digismith", "profile"), Buffer.from([0xff, 0xfe]));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await main();
+
+    expect(logSpy).toHaveBeenCalledWith("DigiSmith: no AI attribution in commits or PRs — no exceptions");
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("session-init: failed"));
+  });
+
   it("prints the attribution reminder in DigiSmith's own repo even with no profile", async () => {
     fs.mkdirSync(path.join(tmpDir, ".claude-plugin"));
     fs.writeFileSync(

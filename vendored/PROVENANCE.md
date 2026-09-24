@@ -56,7 +56,7 @@ Cloned: 2026-08-20
   package is written, blocking on any AI/assistant attribution found in the commit range's
   messages; `task-reviewer-prompt.md` gained an explicit no-attribution policy line, and the
   Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
-  `MEMORY.md` map item W. **Further diverged by W.11** (2026-09-23): `check-attribution` now
+  `MEMORY.md` map item W. **Further diverged by W.11** (2026-09-24): `check-attribution` now
   sources its attribution regex from a new `scripts/git-hooks/attribution-pattern.sh` instead of
   declaring it inline, so the same pattern also backs a new `commit-msg` git hook that catches
   ad-hoc commits outside any review flow — see DigiSmith `MEMORY.md` map item W.

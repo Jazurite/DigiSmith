@@ -5,8 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/attribution-pattern.sh"
 
 msg_file="$1"
-body=$(cat "$msg_file")
-match=$(printf '%s\n' "$body" | grep -iE "$ATTRIBUTION_PATTERN" || true)
+body=$(sed '/^# -\{24\} >8 -\{24\}$/,$d' "$msg_file")
+match=$(printf '%s\n' "$body" | attribution_matches || true)
 
 if [ -n "$match" ]; then
   echo "AI attribution found in commit message:" >&2

@@ -160,9 +160,13 @@ if [ -n "$match" ]; then
   echo "This repo forbids AI/assistant attribution anywhere — no exceptions." >&2
   exit 1
 fi</code></pre>
-<p>Fires on every commit to this repo — ad-hoc, merge, amended, whatever the flow — since git
-invokes <code>commit-msg</code> unconditionally (barring <code>--no-verify</code>) once a message is
-collected and before the commit object is written.</p>
+<p>Fires on every commit to this repo that actually goes through message collection with hooks
+enabled — ad-hoc, merge, amended — since git invokes <code>commit-msg</code> unconditionally
+(barring <code>--no-verify</code>) once a message is collected and before the commit object is
+written. It does <strong>not</strong> fire for <code>git cherry-pick</code>, a rebase replaying
+existing commits, or <code>git am</code> — those paths carry an already-written message forward
+without re-collecting it. <code>check-attribution</code> in review flows remains the backstop for
+those cases.</p>
 </section>
 
 <section id="s3">
