@@ -58,15 +58,15 @@ export async function buildBanner(profilePath: string, voiceInitPath: string): P
 
 export async function main(): Promise<void> {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  if (isDigismithRepoRoot(path.join(process.cwd(), ".claude-plugin", "plugin.json"))) {
+    console.log("DigiSmith: no AI attribution in commits or PRs — no exceptions");
+  }
   try {
     const banner = await buildBanner(
       path.join(process.cwd(), DEFAULT_PROFILE_PATH),
       path.join(scriptDir, VOICE_INIT_FILENAME),
     );
     if (banner) console.log(banner);
-    if (isDigismithRepoRoot(path.join(process.cwd(), ".claude-plugin", "plugin.json"))) {
-      console.log("DigiSmith: no AI attribution in commits or PRs — no exceptions");
-    }
   } catch (err) {
     console.error(`session-init: failed (${(err as Error).message})`);
     process.exitCode = 1;
