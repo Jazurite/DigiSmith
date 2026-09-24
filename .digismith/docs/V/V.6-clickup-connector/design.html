@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClickUp Connector</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>ClickUp Connector</h1>
+  <div class="meta">
+    <span>Date: 2026-09-24</span>
+    <span>Map item: V.6</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; scope</a></li>
+    <li><a href="#decisions">Decisions settled</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Explicitly out of scope</a></li>
+    <li><a href="#source">Source material</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; scope</h2>
+  <p>
+    Jack is moving DigiSmith's own task/backlog tracking to ClickUp going forward
+    (reverses a prior standing decision that ClickUp was out of scope for DigiSmith
+    — see the global memory update this brainstorm triggers). This build is the
+    foundation for that: a generic <code>@digismith/clickup-client</code> package,
+    moved and generalized from Jack's existing, working ClickUp client in his
+    separate Soveron repo, plus a <code>dg clickup</code> CLI surface.
+  </p>
+  <p>
+    Scope is deliberately narrow: <strong>only the connector package and its CLI
+    commands.</strong> Four related efforts are explicitly deferred and filed as
+    backlog items rather than designed here:
+  </p>
+  <ul>
+    <li><code>backlog/clickup-backlog-map-flow-wiring.md</code> — wiring DigiSmith's own backlog/map creation flow to actually call the connector</li>
+    <li><code>backlog/clickup-ticket-writeback-i1-analog.md</code> — ticket-level ClickUp write-back (I.1/JIRA analog) for consuming-repo work</li>
+    <li><code>backlog/clickup-soveron-cutover.md</code> — Soveron's own packages cutting over from their local copy to this one</li>
+    <li><code>backlog/clickup-historical-backfill.md</code> — bulk-importing existing backlog/map history into ClickUp</li>
+  </ul>
+</section>
+
+<section id="decisions">
+  <h2>Decisions settled</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Scope</div>
+      <h4>Both consumption modes</h4>
+      <p>Direct TS library import (mirroring jira-client via Depot's sparse clone) and <code>dg clickup</code> CLI subcommands — each future call site picks whichever fits.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Move boundary</div>
+      <h4>Generic client only</h4>
+      <p>Only the generic ClickUp API client moves. Soveron's <code>sprint-resolver.ts</code>, <code>factory.ts</code>, and workspace-specific custom-field types stay in Soveron.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Style</div>
+      <h4>Keep the working shape</h4>
+      <p>Class-based, axios, existing <code>RateLimiter</code> — not rewritten to jira-client's functional/zero-dep style. Credential handling <em>is</em> adopted from jira-client for consistency.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Day one CLI</div>
+      <h4>Read-only</h4>
+      <p><code>check-credentials</code>, <code>list-tasks</code>, <code>get-task</code>, <code>get-lists</code>. Write operations (create/update task, add comment) deferred until a real consumer needs them.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Publishing</div>
+      <h4>clickup-client is published, unlike jira-client</h4>
+      <p>jira-client stays workspace-private (nothing published depends on it). clickup-client must be a real npm package because the published <code>@digismith/cli</code> depends on it for <code>dg clickup</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Deferred</div>
+      <h4>Historical migration, letter-scheme question</h4>
+      <p>No bulk-import of existing backlog/map history. Whether DigiSmith letters keep getting assigned once ClickUp replaces <code>MEMORY.md</code>'s map table is explicitly deferred to the map-flow-wiring backlog item — not answered here.</p>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    New package <code>packages/clickup-client</code> (<code>@digismith/clickup-client</code>),
+    sibling to <code>packages/jira-client</code> in the DigiSmith monorepo. Two consumption
+    paths:
+  </p>
+  <ul>
+    <li><strong>Direct TS import</strong> — for future consumers (Soveron's cutover, DigiSmith's own map-flow wiring), the same way <code>packages/jira-client</code> is consumed today via Depot's sparse clone.</li>
+    <li><strong><code>dg clickup &lt;command&gt;</code></strong> — a new command-group bucket in <code>@digismith/cli</code>, following the same bucket-of-leaves shape as the existing <code>depot</code> and <code>vps</code> buckets (<code>packages/cli/src/depot/index.ts</code> composing <code>clone</code>/<code>opencode</code>/<code>bridge</code> sub-buckets via yargs <code>.command()</code>).</li>
+  </ul>
+  <div class="callout">
+    <strong>Publishing fork:</strong> <code>packages/jira-client</code> is <code>"private": true</code> —
+    nothing published depends on it, so it never needs to be on npm. <code>@digismith/cli</code>,
+    however, <em>is</em> published (currently <code>0.2.0-beta</code>), and a published package
+    cannot depend on an unpublished workspace package. So <code>@digismith/clickup-client</code>
+    ships as a real, published npm package (<code>"private": false</code>, same
+    <code>publishConfig.access: "public"</code> as <code>cli</code>), and
+    <code>@digismith/cli</code> takes it as a normal <code>dependencies</code> entry. This is a new
+    precedent for <code>packages/cli</code> — it currently has zero dependencies on other
+    workspace packages — mirroring how U.1 already reversed V.4's original "zero runtime
+    dependencies" stance for <code>yargs</code>/<code>picocolors</code>. Direct-TS-import
+    consumers can still use either the published package or Depot's clone; publishing doesn't
+    remove that option.
+  </div>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Purpose</th></tr>
+    <tr><td><code>packages/clickup-client/src/client.ts</code></td><td>Moved <code>ClickUpClient</code> class (axios-based, all existing methods kept as-is: <code>get/post/put/delete/request</code>, <code>paginate</code>, <code>getTaskTypes</code>, <code>getListTasks</code>/<code>getAllListTasks</code>, <code>createTask</code>, <code>updateTask</code>, <code>deleteTask</code>, <code>setCustomField</code>, <code>getSpaceFolders</code>, <code>getFolderlessLists</code>, <code>getListFields</code>, <code>getListStatuses</code>). Constructor takes <code>{ teamId, apiToken }</code>.</td></tr>
+    <tr><td><code>packages/clickup-client/src/rate-limiter.ts</code></td><td>Moved as-is (100 req/60s).</td></tr>
+    <tr><td><code>packages/clickup-client/src/types.ts</code></td><td>Moved generic ClickUp types from Soveron's <code>Armory/types/src/clickup.ts</code> (<code>ClickUpTask</code>, <code>ClickUpCustomField</code>, <code>ClickUpList</code>, <code>ClickUpFolder</code>, <code>ClickUpSpace</code>, <code>ClickUpStatus</code>, <code>ClickUpTaskType</code>, request/response wrappers, <code>FrontdoorFieldPutBody</code>/<code>FrontdoorOptionAdd</code>).</td></tr>
+    <tr><td><code>packages/clickup-client/src/credentials.ts</code></td><td>New. <code>checkCredentials(envPath = defaultEnvPath())</code> / <code>CredentialsError</code>, reading <code>CLICKUP_API_TOKEN</code> and <code>CLICKUP_TEAM_ID</code> from <code>~/.digismith-depot/.env</code> — mirrors <code>packages/jira-client/src/client.ts</code>'s <code>checkCredentials</code>/<code>CredentialsError</code>/<code>parseEnvFile</code> pattern.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/index.ts</code></td><td>New bucket <code>CommandModule</code>, mirrors <code>depot/index.ts</code>.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/check-credentials.ts</code></td><td>Leaf command — validates <code>~/.digismith-depot/.env</code>, prints ok/error.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/list-tasks.ts</code></td><td>Leaf command — wraps <code>getAllListTasks</code>/<code>getListTasks</code>, list ID as a required option.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/get-task.ts</code></td><td>Leaf command — wraps a single-task fetch, task ID as a required positional/option.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/get-lists.ts</code></td><td>Leaf command — wraps <code>getSpaceFolders</code>/<code>getFolderlessLists</code>, space ID as a required option.</td></tr>
+    <tr><td><code>packages/cli/src/index.ts</code></td><td>Gains <code>.command(clickupCommand)</code> alongside <code>vps</code>/<code>depot</code>.</td></tr>
+    <tr><td><code>packages/cli/package.json</code></td><td>Gains <code>@digismith/clickup-client</code> as a real <code>dependencies</code> entry.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="data-flow">
+  <h2>Data flow</h2>
+  <p>
+    A <code>dg clickup</code> leaf command parses its argv (yargs options, matching the
+    existing <code>depot bridge ensure --repo</code> pattern) → calls
+    <code>checkCredentials()</code> → constructs <code>new ClickUpClient(creds)</code> →
+    calls the relevant method → prints the result (formatted JSON) to stdout, non-zero
+    exit code and a <code>clickup &lt;subcommand&gt;: &lt;message&gt;</code> line to stderr
+    on failure — the same shape as <code>depot bridge ensure</code>'s existing error
+    handling.
+  </p>
+  <p>
+    Direct-import consumers skip the CLI layer entirely:
+    <code>import { ClickUpClient, checkCredentials } from "@digismith/clickup-client"</code>,
+    then use the class directly.
+  </p>
+</section>
+
+<section id="error-handling">
+  <h2>Error handling</h2>
+  <ul>
+    <li><code>CredentialsError</code> on a missing <code>~/.digismith-depot/.env</code> or incomplete <code>CLICKUP_API_TOKEN</code>/<code>CLICKUP_TEAM_ID</code> fields — caught at the CLI layer, printed, exit 1.</li>
+    <li>HTTP/API errors thrown by axios inside <code>ClickUpClient</code> bubble up unchanged; CLI leaf commands catch generically and print <code>err.message</code>, exit 1.</li>
+    <li>The existing <code>RateLimiter</code> already throttles to ClickUp's 100 req/60s internally — inherited for free, no new rate-limit handling needed.</li>
+    <li>No new Windows entry-point guard needed — <code>clickup</code> commands run inside <code>packages/cli</code>'s dispatcher, which already uses the realpath-based <code>isDirectRun()</code> check that closed map item I.5's bug (jira-client's own separate <code>cli.ts</code> entry point isn't reused here since clickup goes through the yargs framework instead).</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li>Port <code>clickup.client.spec.ts</code> and <code>rate-limiter.spec.ts</code> from Jest/ts-jest to Vitest, per the standing toolchain default (map item G.2).</li>
+    <li>Drop <code>factory.spec.ts</code> and <code>sprint-resolver.spec.ts</code> — those test Soveron-only code that isn't moving.</li>
+    <li>New CLI leaf-command tests follow whatever pattern the existing <code>depot</code>/<code>vps</code> leaf commands already use.</li>
+    <li>Live ClickUp API calls stay credentials-gated and live-verify-only — not exercised in CI, the same caveat map item V.3's SSH/tmux logic carries.</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Explicitly out of scope</h2>
+  <ul>
+    <li>Write operations in the day-one CLI (<code>create-task</code>, <code>update-task</code>, <code>add-comment</code>, <code>set-custom-field</code>) — the library methods exist on the moved class, but no CLI subcommand wraps them yet.</li>
+    <li>Wiring any real consumer (DigiSmith's own map-flow, ticket write-back, Soveron's cutover) — see the four backlog items filed alongside this design.</li>
+    <li>Historical backfill of existing backlog/map data into ClickUp.</li>
+    <li>Deciding whether DigiSmith letters keep getting assigned once ClickUp replaces <code>MEMORY.md</code>'s map table for new entries — deferred to whenever the map-flow-wiring backlog item is actually brainstormed.</li>
+    <li>Choosing the ClickUp workspace/team DigiSmith's own future backlog/map would live under — deferred, not blocking this connector build (the client takes team ID as config either way).</li>
+  </ul>
+</section>
+
+<section id="source">
+  <h2>Source material</h2>
+  <p>
+    Moved from Jack's Soveron repo (<code>E:\MEGA\Obsidian\Knowpolis\1. Soveron</code>),
+    workspace <code>Armory/clickup-envoy/packages/clickup-client</code> (package
+    <code>@clickup-envoy/clickup-client</code>) and <code>Armory/types/src/clickup.ts</code>.
+    Stays in Soveron: <code>sprint-resolver.ts</code>, <code>factory.ts</code>,
+    <code>Armory/types/src/custom-fields.generated.ts</code>, and the
+    <code>finance</code>/<code>itinerary</code>/<code>cleanup</code>/<code>planning</code>
+    packages. Pattern mirrored: <code>packages/jira-client</code> (this repo).
+  </p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/V/V.6-clickup-connector/design.html</footer>
+
+</body>
+</html>
