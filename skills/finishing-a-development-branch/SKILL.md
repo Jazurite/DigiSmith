@@ -398,16 +398,76 @@ the saved value is untouched.
 override ("clear context", "start fresh"). **No override** → skip silently, do not clear.
 **Override present** → proceed to clear for this run only; the saved value is untouched.
 
-Before actually clearing (whichever path led here), scan the conversation for any unresolved
-thread unrelated to the feature just shipped — a pending question, a task mentioned but not
-started, something asked to be revisited later. If one exists, name it plainly as part of the
-final message: "Note: before I clear this session's context, you still have `<X>` open from
-earlier — nothing's tracking that after this clears, so make a note if you want to come back to
-it." This is a verbal warning only — never write it to a file or a memory entry. If nothing
-unresolved is found, skip this silently.
+Before actually clearing (whichever path led here), write a handoff file so the next session that
+opens this repo doesn't start from nothing — replacing the old verbal-only warning entirely.
 
-To actually clear: say the complete final summary first — what shipped, what's next, the
-unresolved-thread warning if one applies — then, as the last action of the turn, invoke
+**Ensure `.digismith/sessions/` is gitignored** (once per repo — every run after this finds the
+line already present and skips straight to writing the handoff file):
+
+```bash
+git check-ignore -q .digismith/sessions/ ; echo "exit=$?"
+```
+
+`exit=0` (already ignored) → skip straight to composing the handoff below. `exit=1` (not
+ignored) → append a `.digismith/sessions/` line to this repo's `.gitignore` (create the file if
+it doesn't exist), then commit and push immediately, reusing `SSH_KEY_PREFIX` exactly as already
+resolved earlier in this run's option (Option 1 or Option 2) — do not re-resolve the `ssh_key`
+preference:
+
+```bash
+git add .gitignore
+git commit -m "chore: gitignore .digismith/sessions/"
+${SSH_KEY_PREFIX}git push
+```
+
+This can't wait for a later commit — Step 7 runs after Option 1/2's own push already happened, so
+without this the repo would end the run with unpushed local state.
+
+**Resolve this session's own id:** invoke `mcp__ccd_session_mgmt__get_session` with
+`session_id: "self"` and read the returned `sessionId`. If the call fails or returns no usable
+id, fall back to an ISO-8601 timestamp (`date -u +%Y%m%dT%H%M%SZ`) instead — the write must still
+happen either way.
+
+**Compose the handoff:** scan the conversation for any unresolved thread unrelated to the feature
+just shipped — a pending question, a task mentioned but not started, something asked to be
+revisited later — the same scan this step already ran before this change, now feeding the file's
+sections instead of a spoken warning. Write `.digismith/sessions/<session-id-or-timestamp>.md`
+with exactly these 5 sections, drawn from what this session already knows — never parsed from a
+branch name, never inferred by a lookup:
+
+```markdown
+# <one-line title: what this session was doing>
+
+## Where this fits
+
+<Map item(s) or ticket key this session was working, links to the relevant design.html/plan.md,
+the branch/worktree path.>
+
+## Status per unit of work
+
+<Explicit done/in-progress/not-started per item, cross-checked against any existing ledger or
+progress file rather than restated from memory.>
+
+## Exact resume point
+
+<The next concrete action, named precisely enough that a cold session doesn't have to infer it.>
+
+## Anything flagged but deliberately out of scope
+
+<A spawned background task, a deferred backlog note, a bug found in passing — named with its own
+tracking id/link. "None" if there's genuinely nothing.>
+
+## Literal resume commands
+
+<The actual `cd`/skill-invocation a session would run, not just a description.>
+```
+
+If the file write itself fails (disk, permissions), report it in the final summary but do not
+block the clear on it — this is an orientation aid, not a gate.
+
+To actually clear: say the complete final summary first — what shipped, what's next, and
+`Handoff written to .digismith/sessions/<id>.md for the next session.` in place of the old
+unresolved-thread warning — then, as the last action of the turn, invoke
 `mcp__ccd_session_mgmt__clear_session` with `session_id: "self"`. The clear only takes effect
 once this turn ends and the session goes idle, so nothing said before it is lost from the
 conversation the human partner just read — only from what a future turn remembers. If the human
