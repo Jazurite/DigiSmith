@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Connect Workspace Dedup</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>VPS Connect Workspace Dedup</h1>
+  <div class="meta">
+    <span>Date: 2026-09-24</span>
+    <span>Map item: X.2</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#herdr-shapes">Confirmed herdr JSON shapes</a></li>
+    <li><a href="#flow">Recovery flow</a></li>
+    <li><a href="#components">New builders/parsers</a></li>
+    <li><a href="#orchestration">Orchestration</a></li>
+    <li><a href="#errors">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>
+<code>runConnect</code>'s recovery branch (<code>packages/cli/src/vps/connect.ts</code>, the
+<code>!status.agentAlive.ok</code> case) always calls <code>buildCreateWorkspaceCommand</code>
+whenever the named agent isn't found. herdr's own <code>workspace create</code> does not dedupe
+by label, confirmed live by creating two workspaces with the same <code>--label
+digismith-main</code> and getting two independent, identically-labeled workspaces back.
+</p>
+<p>
+A killed-but-recovering OpenCode process leaves its herdr pane alive — only the agent
+<em>registration</em> for that name disappears (<code>herdr agent get opencode-main</code> →
+<code>agent_not_found</code>). Every real crash/reconnect cycle through <code>dg vps connect</code>
+therefore abandons the surviving pane and creates a brand-new workspace instead of reusing it.
+This is not a correctness bug — the new agent still ends up healthy — just orphaned-workspace
+clutter on the VPS that nothing ever cleans up. Confirmed live during X.1's Task 6
+(2026-09-23); full detail in <code>backlog/vps-connect-workspace-dedup-x1.md</code>.
+</p>
+</section>
+
+<section id="herdr-shapes">
+<h2>Confirmed herdr JSON shapes</h2>
+<p>
+Confirmed locally (2026-09-24) by starting a local herdr server and running these commands
+directly, rather than assuming shapes from the backlog note's prose description alone.
+</p>
+<h3><code>herdr workspace list</code></h3>
+<pre><code>{"result":{"type":"workspace_list","workspaces":[
+  {"workspace_id":"w2","label":"opencode-k3-spike","pane_count":1, ...},
+  {"workspace_id":"w3","label":"classifier-trial-1","pane_count":1, ...}
+]}}</code></pre>
+<h3><code>herdr pane list --workspace &lt;id&gt;</code></h3>
+<pre><code>{"result":{"type":"pane_list","panes":[
+  {"pane_id":"w2:p1","agent_status":"idle","workspace_id":"w2", ...}
+]}}</code></pre>
+<h3><code>herdr agent start</code> on an already-occupied pane</h3>
+<pre><code>{"error":{"code":"agent_pane_busy","message":"agent target pane w2:p1 is not an available shell"},"id":"cli:agent:start"}</code></pre>
+<p>Exit code is non-zero (1) for this error, matching the existing convention that herdr prints
+its JSON errors to stdout (see <code>describeSshFailure</code>'s own comment in
+<code>run-command.ts</code>).</p>
+</section>
+
+<section id="flow">
+<h2>Recovery flow</h2>
+<p>
+Before creating a new workspace, list existing workspaces, filter to ones whose
+<code>label</code> matches <code>config.workspace_label</code>, and for each match (in list
+order), list its panes and attempt <code>agent start</code> on each pane (in list order) until
+one succeeds. Only fall through to today's <code>buildCreateWorkspaceCommand</code> path if
+every candidate pane comes back <code>agent_pane_busy</code>, or there were no label matches at
+all.
+</p>
+<div class="callout">
+No pre-filtering on the pane list's own <code>agent_status</code> field — that field could be
+stale between the list call and the start attempt. <code>agent start</code>'s own response is
+the single source of truth for whether a pane is actually available.
+</div>
+</section>
+
+<section id="components">
+<h2>New builders/parsers (<code>checks.ts</code>)</h2>
+<div class="table-wrap">
+<table>
+<tr><th>Function</th><th>Shape</th></tr>
+<tr><td><code>buildWorkspaceListCommand(config)</code></td><td>→ <code>SshCommand</code> running <code>herdr workspace list</code></td></tr>
+<tr><td><code>buildPaneListCommand(config, workspaceId)</code></td><td>→ <code>SshCommand</code> running <code>herdr pane list --workspace &lt;id&gt;</code></td></tr>
+<tr><td><code>parseWorkspaceListOutput(exitCode, stdout)</code></td><td>→ <code>{ workspaceId: string; label: string }[]</code>. Empty array on any exit-code or parse failure — soft-fail by design.</td></tr>
+<tr><td><code>parsePaneListOutput(exitCode, stdout)</code></td><td>→ <code>string[]</code> of pane IDs in list order. Empty array on failure.</td></tr>
+<tr><td><code>isAgentPaneBusyError(exitCode, stdout)</code></td><td>→ <code>boolean</code>. True only when exit≠0 and the parsed JSON is exactly <code>{error:{code:"agent_pane_busy"}}</code>.</td></tr>
+</table>
+</div>
+<p>Placed in <code>checks.ts</code> alongside the existing read/check-style builders and parsers
+(<code>buildAgentGetCommand</code>, <code>parseAgentGetOutput</code>, etc.) — the mutating
+<code>buildCreateWorkspaceCommand</code>/<code>buildStartAgentCommand</code> stay in
+<code>connect.ts</code>, matching the existing split.</p>
+</section>
+
+<section id="orchestration">
+<h2>Orchestration (<code>connect.ts</code>)</h2>
+<p>New function <code>tryReuseExistingPane(config): boolean</code>:</p>
+<ol>
+<li>List workspaces, filter to <code>label === config.workspace_label</code>.</li>
+<li>For each matching workspace (in order): list its panes, and for each pane (in order) run
+<code>buildStartAgentCommand(config, paneId)</code> — the same builder already used for a
+freshly-created pane, unchanged.
+  <ul>
+    <li>Exit 0 → log which pane was reused, return <code>true</code>. The agent is already
+    started; nothing further to do.</li>
+    <li><code>agent_pane_busy</code> → try the next candidate pane, then the next workspace.</li>
+    <li>Any other failure → hard failure, <code>process.exit(1)</code>, same treatment as
+    today's start-agent failure on a freshly created pane.</li>
+  </ul>
+</li>
+<li>All candidates exhausted (or no label matches at all) → return <code>false</code>.</li>
+</ol>
+<p><code>runConnect</code>'s <code>!status.agentAlive.ok</code> branch becomes:</p>
+<pre><code>if (!status.agentAlive.ok) {
+  // integration install stays unconditional here — idempotent, machine-wide,
+  // not workspace-specific
+  const integrationInstall = runSshCommand(buildInstallHerdrIntegrationCommand(config));
+  ...
+
+  if (!tryReuseExistingPane(config)) {
+    // today's create-workspace-and-start-agent path, unchanged
+  }
+}</code></pre>
+</section>
+
+<section id="errors">
+<h2>Error handling</h2>
+<p>
+The <code>workspace list</code>/<code>pane list</code> calls themselves are treated as
+soft-fail: if either comes back with an unexpected error (SSH hiccup, malformed JSON — anything
+other than a clean list), <code>parseWorkspaceListOutput</code>/<code>parsePaneListOutput</code>
+simply return an empty array, which reads as "no reusable candidates" and falls through to
+creating a new workspace exactly as today. This is a leak-reduction optimization on top of an
+already-working recovery path — it must never make <code>connect</code> less reliable than it is
+today, so a failure in the optimization itself never blocks reaching a healthy session.
+</p>
+<p>
+A confirmed <code>agent_pane_busy</code> is the only signal treated as "move to the next
+candidate." Every other <code>agent start</code> failure — on either a reused or freshly created
+pane — remains a hard, terminal failure, unchanged from today's behavior.
+</p>
+</section>
+
+<section id="testing">
+<h2>Testing</h2>
+<p>
+Vitest unit tests for the five new builders/parsers, added to <code>connect.test.ts</code> (or a
+<code>checks.test.ts</code> if one exists), using the real captured JSON shapes above — same
+style as the existing builder/parser tests in that file. Cases: multi-workspace list with a
+label match and a non-match, an empty/malformed list, a real <code>agent_pane_busy</code> error
+payload (true) vs. a different error code (false) vs. success (false).
+</p>
+<p>
+<code>tryReuseExistingPane</code> and <code>runConnect</code> itself stay live-verify-only,
+consistent with X.1's own precedent (no mocked SSH/spawnSync for the orchestration layer).
+</p>
+<p>
+Live verification: reuse X.1's Task 6 crash-simulation — kill the OpenCode process on the VPS,
+run <code>dg vps connect</code> again, and confirm via <code>herdr workspace list</code> that no
+new duplicate workspace was created and the existing pane was reused.
+</p>
+</section>
+
+<section id="out-of-scope">
+<h2>Out of scope</h2>
+<ul>
+<li><code>status.ts</code> gaining an orphaned-workspace warning (the backlog note's optional
+item 4) — deliberately deferred, kept out of this build to stay focused on the connect-path fix.</li>
+<li>Auto-closing already-busy or already-leaked workspaces — never done automatically. A
+"busy" pane only means it isn't an available shell right now, not that it's abandoned; closing
+it is a much bigger, riskier call than reusing an idle one.</li>
+<li>Backfilling <code>report.html</code> for X.1 and adding letter X's row to
+<code>MEMORY.md</code>'s map table — a separate housekeeping gap noticed in passing, spun off
+as its own task rather than folded into this build.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/X/X.2-vps-connect-workspace-dedup/design.html</footer>
+
+</body>
+</html>
