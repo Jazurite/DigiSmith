@@ -4,6 +4,7 @@
   "description": "DigiSmith's command line — binaries, dispatcher, and command-group framework",
   "license": "MIT",
   "dependencies": {
+    "@digismith/clickup-client": "workspace:^",
     "yargs": "^17.7.3",
     "picocolors": "^1.1.1"
   },
