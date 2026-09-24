@@ -4,7 +4,7 @@ import { connectCommand } from "./connect.ts";
 
 const vpsCommand: CommandModule = {
   command: "vps",
-  describe: "reconnect to the Hetzner VPS's persistent claude session",
+  describe: "reconnect to the Hetzner VPS's persistent herdr-managed OpenCode session",
   builder: (y) => y.command(statusCommand).command(connectCommand).demandCommand(1, ""),
   handler: () => {},
 };

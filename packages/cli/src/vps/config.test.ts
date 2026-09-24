@@ -23,14 +23,16 @@ describe("loadVpsConfig", () => {
         host: "46.225.49.140",
         user: "root",
         identity_file: "~/.ssh/jazurite",
-        tmux_session: "claude-main",
+        workspace_label: "digismith-main",
+        agent_name: "opencode-main",
       })
     );
     expect(loadVpsConfig(filePath)).toEqual({
       host: "46.225.49.140",
       user: "root",
       identity_file: "~/.ssh/jazurite",
-      tmux_session: "claude-main",
+      workspace_label: "digismith-main",
+      agent_name: "opencode-main",
     });
   });
 
@@ -41,6 +43,6 @@ describe("loadVpsConfig", () => {
 
   it("throws a clear error naming the missing field(s)", () => {
     const filePath = writeTempConfig(JSON.stringify({ host: "1.2.3.4", user: "root" }));
-    expect(() => loadVpsConfig(filePath)).toThrow("identity_file, tmux_session");
+    expect(() => loadVpsConfig(filePath)).toThrow("identity_file, workspace_label, agent_name");
   });
 });

@@ -8,10 +8,11 @@ export interface VpsConfig {
   host: string;
   user: string;
   identity_file: string;
-  tmux_session: string;
+  workspace_label: string;
+  agent_name: string;
 }
 
-const REQUIRED_FIELDS: (keyof VpsConfig)[] = ["host", "user", "identity_file", "tmux_session"];
+const REQUIRED_FIELDS: (keyof VpsConfig)[] = ["host", "user", "identity_file", "workspace_label", "agent_name"];
 
 export function loadVpsConfig(filePath: string = DEFAULT_VPS_CONFIG_PATH): VpsConfig | null {
   if (!fs.existsSync(filePath)) {

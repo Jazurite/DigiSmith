@@ -11,7 +11,7 @@ pnpm add -g @digismith/cli
 ## Commands
 
 ```
-digismith vps status      # read-only health report of the VPS claude session
+digismith vps status      # read-only health report of the VPS OpenCode session
 digismith vps connect     # fix what's safely fixable, then attach interactively
 
 digismith depot clone ensure     # clone ~/.digismith-depot/repo if missing, else no-op
@@ -26,18 +26,29 @@ digismith --version
 
 `dg` accepts exactly the same arguments. `--help`, at any level, shows branded, colorized command help.
 
-`vps` expects `~/.digismith-depot/vps.json`, written by hand once:
+`vps` manages a persistent OpenCode agent on a VPS, supervised by [herdr](https://herdr.dev) and
+backed by TokenReply. It expects `~/.digismith-depot/vps.json`, written by hand once:
 
 ```json
 {
   "host": "203.0.113.10",
   "user": "root",
   "identity_file": "~/.ssh/id_ed25519",
-  "tmux_session": "claude-main"
+  "workspace_label": "digismith-main",
+  "agent_name": "opencode-main"
 }
 ```
 
-`vps connect` ends in an interactive `ssh -t … tmux attach`, so run it from a real terminal (Windows Terminal, PowerShell, cmd, or a macOS/Linux terminal) — not from an agent's shell tool or MinTTY Git Bash without `winpty`. `vps status` works from anywhere.
+`workspace_label` names the herdr workspace `vps connect` creates when the agent is missing;
+`agent_name` is the herdr agent it starts, checks, and attaches to.
+
+`vps connect` ends in an interactive `ssh -t … herdr agent attach <agent_name>`, so run it from a real terminal (Windows Terminal, PowerShell, cmd, or a macOS/Linux terminal) — not from an agent's shell tool or MinTTY Git Bash without `winpty`. `vps status` works from anywhere.
+
+`vps connect` also works from any directory once `~/.config/opencode/opencode.json` on the VPS
+already has a `tokenreply` provider. When that provider is missing (first-time setup, or
+repairing a malformed file), it needs to run from inside a DigiSmith checkout (or pass
+`--repo <path>`) — it generates the provider block with that checkout's own
+`scripts/providers/print-config.ts`, which isn't published in this package.
 
 `depot bridge ensure` needs to run from inside a DigiSmith checkout (or pass `--repo <path>`)
 — it launches that checkout's own `scripts/agentic-bridge/server.ts`, which isn't published in
