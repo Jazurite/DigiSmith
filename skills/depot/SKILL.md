@@ -217,9 +217,13 @@ state files — written by hand, no creation/edit tooling.
 
 From a checkout the commands below run via `node <digismith-repo>/packages/cli/src/index.ts`;
 with the package installed globally (`pnpm add -g @digismith/cli`) the same thing is
-`digismith vps status|connect` or `dg vps status|connect` from any directory. This skill
-always uses the checkout form — a Claude Code session driving Depot has one — and never
-depends on the package being installed.
+`digismith vps status|connect` or `dg vps status|connect`. `status` works from any directory.
+`connect` does too once the VPS's `opencode.json` already has a working `tokenreply` provider,
+which is the common case; on first-time setup, or when repairing a missing/malformed provider,
+it needs a DigiSmith checkout — run it from inside one, or pass `--repo <path>` — because it
+generates the provider block with that checkout's `scripts/providers/print-config.ts`, which
+the published package doesn't ship. This skill always uses the checkout form — a Claude Code
+session driving Depot has one — and never depends on the package being installed.
 
 Unlike the OpenCode server and Agentic Bridge proxy, there is nothing for this skill to spawn
 or track by PID: the resource being "ensured" is a remote, already-running herdr
@@ -241,9 +245,10 @@ node <digismith-repo>/packages/cli/src/index.ts vps status
 
 Reports each check plainly: SSH reachability, whether herdr itself is installed, whether
 herdr's server is running, toolchain-on-PATH (node/pnpm/opencode), whether the configured herdr
-workspace/agent is alive, whether OpenCode is actually running inside it (alive-workspace-but-
-dead-OpenCode is reported as its own distinct, non-healthy state), and whether the TokenReply
-credential file is present. Never modifies anything on the VPS.
+agent is alive and OpenCode is running in it (both read from the same `herdr agent get
+<agent_name>` call — herdr drops an agent's name registration when its OpenCode process dies,
+so a surviving pane with dead OpenCode reports both as FAIL rather than as a separate state),
+and whether the TokenReply credential file is present. Never modifies anything on the VPS.
 
 ### Operation: `connect`
 
@@ -252,17 +257,22 @@ node <digismith-repo>/packages/cli/src/index.ts vps connect
 ```
 
 Runs the same checks as `status`, auto-fixing what's safely fixable — starting herdr's server
-if it's down, creating the herdr workspace/agent (installing herdr's OpenCode integration
-plugin first if not already installed) if missing or dead, and regenerating
-`~/.config/opencode/opencode.json` on the VPS via DigiSmith's own
-`scripts/providers/print-config.ts` — then attaches interactively.
+if it's down (and confirming it actually came up, showing its log if not), creating the herdr
+workspace/agent (installing herdr's OpenCode integration plugin first if not already
+installed) if missing or dead, and, when `~/.config/opencode/opencode.json` on the VPS has no
+`tokenreply` entry under its top-level `provider` key, merging one in (keeping any other
+settings and providers already there) via DigiSmith's own `scripts/providers/print-config.ts`
+— then attaches interactively.
 
 The TokenReply credential (`~/.config/tokenreply.env` on the VPS) is a plain API key, not
 `claude`'s OAuth login, so unlike the old tmux/`claude` setup this step **is** automatable: if
 the file is missing on the VPS, `connect` copies the key straight from the local
-`~/.digismith-depot/.env`, write-locally-then-`scp` — never interpolated into a quoted SSH
-string. Only when the key is missing on both sides does `connect` stop and report; there's
-nothing to copy. Never auto-installs a missing toolchain piece (nvm/node/pnpm/opencode/herdr) —
+`~/.digismith-depot/.env`, write-locally-then-`scp`, then restricts it to mode 600 — never
+interpolated into a quoted SSH string. Only when the key is missing on both sides does
+`connect` stop and report; there's nothing to copy. When `connect` creates the herdr
+workspace, the remote shell sources that file itself and hands the key to the workspace via
+herdr's `--env`, so OpenCode's `{env:TOKENREPLY_API_KEY}` provider option resolves — the key
+never passes through the local command line. Never auto-installs a missing toolchain piece (nvm/node/pnpm/opencode/herdr) —
 same disposition Depot already takes for a missing local `opencode`/`claude`.
 
 `connect`'s final step is an interactive `ssh -t ... herdr agent attach <agent_name>` that needs
@@ -291,7 +301,7 @@ without `winpty`, where `ssh -t` cannot allocate a pseudo-terminal and the attac
 | herdr not installed on the VPS | Stop, point at herdr's own installer (`curl -fsSL https://herdr.dev/install.sh \| sh`). Never auto-install. |
 | nvm/node/pnpm/opencode missing on the VPS | Stop, report exactly which piece is missing, point at the manual install steps. Never auto-install — same stance as the local `opencode`/`claude` rows above. |
 | herdr server fails to start | Stop, show the log content, don't retry silently. |
-| Herdr workspace/agent recreated but OpenCode immediately crash-loops | `connect` still attaches (the herdr pane is assumed to survive its foreground process dying, the same way the old tmux setup's fallback shell kept a dead `claude` from taking the session down); `status` reports "workspace alive, OpenCode not running" as its own distinct non-healthy state. |
+| Herdr workspace/agent recreated but OpenCode immediately crash-loops | The herdr pane survives OpenCode dying (confirmed live), but the agent's name registration does not — `herdr agent get <agent_name>` returns `agent_not_found`. So the next `connect` sees the agent as not alive and recreates it (currently in a brand-new workspace, leaving the old pane orphaned — see `backlog/vps-connect-workspace-dedup-x1.md`); it never attaches to a dead session. A raw `herdr agent attach <agent_name>` run by hand, bypassing `connect`, fails with `agent_not_found`. `status` reports the agent/OpenCode checks as FAIL with herdr's own error as the detail. |
 | TokenReply credential file absent on the VPS | `connect` auto-fixes it by copying the key from the local `~/.digismith-depot/.env`; absent on both sides is a stop, not a warning — nothing to auto-copy. |
 | `opencode.json` write to the VPS fails | Report the actual error plainly, don't silently continue as if it succeeded. |
 

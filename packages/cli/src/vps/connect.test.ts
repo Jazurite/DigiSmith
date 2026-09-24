@@ -11,6 +11,8 @@ import {
   buildAttachArgs,
   buildScpArgs,
   buildPrintConfigCommand,
+  hasValidTokenreplyProvider,
+  mergeOpencodeConfig,
 } from "./connect.ts";
 
 const CONFIG: VpsConfig = {
@@ -59,14 +61,23 @@ describe("buildCreateWorkspaceCommand", () => {
     expect(remote).toContain("--label digismith-main");
     expect(remote).toContain("--no-focus");
   });
+
+  it("sources the TokenReply credential on the VPS and passes it through via the remote shell, never locally", () => {
+    const cmd = buildCreateWorkspaceCommand(CONFIG);
+    const remote = cmd.args[cmd.args.length - 1];
+    expect(remote).toContain(". ~/.config/tokenreply.env");
+    expect(remote).toContain('--env "TOKENREPLY_API_KEY=$TOKENREPLY_API_KEY"');
+    expect(remote.indexOf(". ~/.config/tokenreply.env")).toBeLessThan(remote.indexOf("herdr workspace create"));
+  });
 });
 
 describe("buildStartAgentCommand", () => {
-  it("starts the configured agent name running OpenCode on the default model", () => {
-    const cmd = buildStartAgentCommand(CONFIG);
+  it("starts the configured agent name running OpenCode on the default model in the given pane", () => {
+    const cmd = buildStartAgentCommand(CONFIG, "w2:p1");
     const remote = cmd.args[cmd.args.length - 1];
     expect(remote).toContain(HERDR_PATH_PREFIX);
     expect(remote).toContain("herdr agent start opencode-main --kind opencode");
+    expect(remote).toContain("--pane w2:p1");
     expect(remote).toContain("--model tokenreply/kimi-k2.7");
   });
 });
@@ -83,10 +94,12 @@ describe("buildAttachArgs", () => {
 });
 
 describe("buildScpArgs", () => {
-  it("builds an scp command copying a local file to the configured remote path", () => {
+  it("builds a non-interactive, time-bounded scp command copying a local file to the configured remote path", () => {
     expect(buildScpArgs(CONFIG, "/tmp/local-file", "~/.config/tokenreply.env")).toEqual([
-      "-i", "~/.ssh/jazurite",
+      "-o", "BatchMode=yes",
+      "-o", "ConnectTimeout=10",
       "-o", "IdentitiesOnly=yes",
+      "-i", "~/.ssh/jazurite",
       "/tmp/local-file",
       "root@46.225.49.140:~/.config/tokenreply.env",
     ]);
@@ -102,5 +115,70 @@ describe("buildPrintConfigCommand", () => {
       "--role", "task",
       "--runner", "opencode",
     ]);
+  });
+});
+
+const TOKENREPLY_BLOCK = {
+  tokenreply: {
+    npm: "@ai-sdk/openai-compatible",
+    name: "TokenReply",
+    options: { baseURL: "https://api.tokenreply.com/v1", apiKey: "{env:TOKENREPLY_API_KEY}" },
+    models: { "kimi-k2.7": { name: "TokenReply", limit: { context: 200000, output: 65535 } } },
+  },
+};
+
+describe("hasValidTokenreplyProvider", () => {
+  it("is false for an empty config", () => {
+    expect(hasValidTokenreplyProvider({})).toBe(false);
+  });
+
+  it("is false when the provider block sits at the top level instead of under provider", () => {
+    expect(hasValidTokenreplyProvider({ ...TOKENREPLY_BLOCK })).toBe(false);
+  });
+
+  it("is false when provider holds only an unrelated provider", () => {
+    expect(hasValidTokenreplyProvider({ provider: { anthropic: { options: {} } } })).toBe(false);
+  });
+
+  it("is false when provider or provider.tokenreply is not an object", () => {
+    expect(hasValidTokenreplyProvider({ provider: null })).toBe(false);
+    expect(hasValidTokenreplyProvider({ provider: "tokenreply" })).toBe(false);
+    expect(hasValidTokenreplyProvider({ provider: { tokenreply: null } })).toBe(false);
+    expect(hasValidTokenreplyProvider({ provider: { tokenreply: true } })).toBe(false);
+  });
+
+  it("is true when provider.tokenreply is already configured", () => {
+    expect(hasValidTokenreplyProvider({ $schema: "https://opencode.ai/config.json", provider: TOKENREPLY_BLOCK })).toBe(
+      true
+    );
+  });
+});
+
+describe("mergeOpencodeConfig", () => {
+  it("wraps the provider block under provider with the schema, starting from an empty config", () => {
+    const merged = mergeOpencodeConfig({}, TOKENREPLY_BLOCK);
+    expect(merged).toEqual({ $schema: "https://opencode.ai/config.json", provider: TOKENREPLY_BLOCK });
+    expect(hasValidTokenreplyProvider(merged)).toBe(true);
+  });
+
+  it("keeps an unrelated provider and other top-level settings alongside tokenreply", () => {
+    const anthropic = { options: { apiKey: "{env:ANTHROPIC_API_KEY}" } };
+    const merged = mergeOpencodeConfig({ theme: "dark", provider: { anthropic } }, TOKENREPLY_BLOCK);
+    expect(merged).toEqual({
+      theme: "dark",
+      $schema: "https://opencode.ai/config.json",
+      provider: { anthropic, tokenreply: TOKENREPLY_BLOCK.tokenreply },
+    });
+  });
+
+  it("replaces a stale tokenreply entry with the freshly generated one", () => {
+    const merged = mergeOpencodeConfig({ provider: { tokenreply: { name: "stale" } } }, TOKENREPLY_BLOCK);
+    expect(merged.provider).toEqual(TOKENREPLY_BLOCK);
+  });
+
+  it("does not mutate the existing config", () => {
+    const existing = { provider: { anthropic: {} } };
+    mergeOpencodeConfig(existing, TOKENREPLY_BLOCK);
+    expect(existing).toEqual({ provider: { anthropic: {} } });
   });
 });

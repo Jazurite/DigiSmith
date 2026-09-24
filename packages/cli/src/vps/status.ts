@@ -13,7 +13,7 @@ import {
   parseToolchainOutput,
   parseAgentGetOutput,
 } from "./checks.ts";
-import { runSshCommand } from "./run-command.ts";
+import { describeSshFailure, runSshCommand } from "./run-command.ts";
 
 export interface CheckOutcome {
   ok: boolean;
@@ -84,9 +84,7 @@ export function runStatusChecks(config: VpsConfig, configPath: string): StatusRe
   const herdrServerRunning = herdrInstalledOk
     ? (() => {
         const check = runSshCommand(buildHerdrServerCheckCommand(config));
-        // herdr's own errors are JSON printed to stdout, not stderr — only
-        // genuine SSH-level failures land there.
-        const detail = check.status === 0 ? "" : check.stderr.trim() || check.stdout.trim();
+        const detail = check.status === 0 ? "" : describeSshFailure(check);
         return { ok: isHerdrServerRunning(check.status), detail };
       })()
     : skippedNoHerdr;
