@@ -225,6 +225,15 @@ describe("parseWorkspaceListOutput", () => {
     });
     expect(parseWorkspaceListOutput(0, stdout)).toEqual([{ workspaceId: "w4", label: "ok" }]);
   });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(parseWorkspaceListOutput(0, "null")).toEqual([]);
+  });
+
+  it("skips a null entry in the workspaces array", () => {
+    const stdout = JSON.stringify({ result: { workspaces: [null, { workspace_id: "w2", label: "ok" }] } });
+    expect(parseWorkspaceListOutput(0, stdout)).toEqual([{ workspaceId: "w2", label: "ok" }]);
+  });
 });
 
 const PANE_LIST_STDOUT = JSON.stringify({
@@ -254,6 +263,15 @@ describe("parsePaneListOutput", () => {
   it("returns an empty array when result.panes is missing", () => {
     expect(parsePaneListOutput(0, JSON.stringify({ id: "cli:pane:list", result: {} }))).toEqual([]);
   });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(parsePaneListOutput(0, "null")).toEqual([]);
+  });
+
+  it("skips a null entry in the panes array", () => {
+    const stdout = JSON.stringify({ result: { panes: [null, { pane_id: "w2:p1" }] } });
+    expect(parsePaneListOutput(0, stdout)).toEqual(["w2:p1"]);
+  });
 });
 
 describe("isAgentPaneBusyError", () => {
@@ -276,5 +294,9 @@ describe("isAgentPaneBusyError", () => {
 
   it("is false when stdout isn't parseable JSON", () => {
     expect(isAgentPaneBusyError(1, "not json")).toBe(false);
+  });
+
+  it("does not throw when stdout is the literal JSON value null", () => {
+    expect(isAgentPaneBusyError(1, "null")).toBe(false);
   });
 });

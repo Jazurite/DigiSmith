@@ -141,10 +141,11 @@ export function parseWorkspaceListOutput(exitCode: number, stdout: string): Work
   } catch {
     return [];
   }
-  const workspaces = parsed.result?.workspaces;
+  const workspaces = parsed?.result?.workspaces;
   if (!Array.isArray(workspaces)) return [];
   const result: WorkspaceInfo[] = [];
   for (const w of workspaces) {
+    if (typeof w !== "object" || w === null) continue;
     if (typeof w.workspace_id === "string" && typeof w.label === "string") {
       result.push({ workspaceId: w.workspace_id, label: w.label });
     }
@@ -164,10 +165,11 @@ export function parsePaneListOutput(exitCode: number, stdout: string): string[] 
   } catch {
     return [];
   }
-  const panes = parsed.result?.panes;
+  const panes = parsed?.result?.panes;
   if (!Array.isArray(panes)) return [];
   const result: string[] = [];
   for (const p of panes) {
+    if (typeof p !== "object" || p === null) continue;
     if (typeof p.pane_id === "string") result.push(p.pane_id);
   }
   return result;
@@ -185,5 +187,5 @@ export function isAgentPaneBusyError(exitCode: number, stdout: string): boolean 
   } catch {
     return false;
   }
-  return parsed.error?.code === "agent_pane_busy";
+  return parsed?.error?.code === "agent_pane_busy";
 }
