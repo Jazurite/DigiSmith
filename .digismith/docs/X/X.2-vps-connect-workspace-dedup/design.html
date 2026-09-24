@@ -238,6 +238,15 @@ item 4) — deliberately deferred, kept out of this build to stay focused on the
 <li>Auto-closing already-busy or already-leaked workspaces — never done automatically. A
 "busy" pane only means it isn't an available shell right now, not that it's abandoned; closing
 it is a much bigger, riskier call than reusing an idle one.</li>
+<li>Refreshing the TokenReply credential on a reused pane. <code>TOKENREPLY_API_KEY</code> is
+only injected via <code>--env</code> at <code>herdr workspace create</code> time — a reused pane
+keeps whatever key was current when its workspace was originally created. If the key was
+rotated since then, <code>agent start</code> still succeeds (it's not aware of credentials at
+all) and the agent fails authentication later, at runtime, rather than at connect time. The old
+always-create path didn't have this gap, since every workspace got a fresh key. Noted here as a
+known limitation (found during final review) rather than fixed — closing it would mean sourcing
+the credential file before every reused-pane <code>agent start</code>, which needs its own
+design pass if it ever causes a real failure.</li>
 <li>Backfilling <code>report.html</code> for X.1 and adding letter X's row to
 <code>MEMORY.md</code>'s map table — a separate housekeeping gap noticed in passing, spun off
 as its own task rather than folded into this build.</li>
