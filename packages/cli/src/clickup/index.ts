@@ -4,6 +4,7 @@ import { listTasksCommand } from "./list-tasks.ts";
 import { getTaskCommand } from "./get-task.ts";
 import { getListsCommand } from "./get-lists.ts";
 import { createTaskCommand } from "./create-task.ts";
+import { updateTaskCommand } from "./update-task.ts";
 
 const clickupCommand: CommandModule = {
   command: "clickup",
@@ -15,6 +16,7 @@ const clickupCommand: CommandModule = {
       .command(getTaskCommand)
       .command(getListsCommand)
       .command(createTaskCommand)
+      .command(updateTaskCommand)
       .demandCommand(1, ""),
   handler: () => {},
 };
