@@ -147,6 +147,17 @@
     own description confirms a clear never changes a session's cwd ("the session keeps its folder") — so
     <code>session-init.ts</code> resolves the same relative path afterward with no special-casing.
   </div>
+  <div class="callout">
+    <strong>Re-verified during final review:</strong> the concern raised was whether a Bash-tool-level <code>cd</code>
+    (Option 1's move to <code>$MAIN_ROOT</code>) or a native worktree-entry actually relocates where Claude Code
+    later spawns the next <code>SessionStart</code> hook's process — as opposed to some fixed, session-launch-time
+    directory that never updates. Claude Code's own hooks documentation settles this directly: "<code>cwd</code>
+    follows Claude: the <code>cwd</code> field in the hook's input JSON is the worktree root after Claude enters
+    a worktree, and the new directory after Claude runs <code>cd</code>." <code>session-init.ts</code> reads
+    <code>process.cwd()</code> (the hook process's own OS-level working directory), which this same behavior
+    governs — so both Option 1's <code>cd</code> and a native worktree switch are safe, confirmed by the
+    documentation, not just inferred from indirect evidence.
+  </div>
 </section>
 
 <section id="components">
@@ -172,23 +183,39 @@
     of profile presence, so it's wired as its own independent check in <code>main()</code>, printed alongside
     (not nested inside) the existing unconditional attribution reminder and the profile-gated banner.
   </p>
-  <h3>.gitignore handling</h3>
   <p>
-    A <code>.digismith/sessions/</code> line, added once per repo by Step 7 itself the first time it writes
-    there (checked via <code>git check-ignore</code>, the same mechanism <code>digismith:brainstorming</code>
-    already uses for <code>.digismith/docs/</code>) — kept inline in Step 7, not a <code>bootstrap</code>/<code>adopt</code>
-    change, so the build stays Step-7-only. Unlike <code>.digismith/docs/</code> (deliberately committed when
-    not otherwise ignored), <code>.digismith/sessions/</code> is <strong>always</strong> ignored regardless of
-    a repo's own docs/profile commit choice — it's ephemeral working state, the same category as
-    <code>.superpowers/</code>, never a permanent record.
+    <strong>Fixed during final review:</strong> the pointer must name the specific file and instruct deleting
+    it once used — the original text only said "see <code>.digismith/sessions/</code>," a directory, with no
+    delete cue, so nothing ever shrank the folder back down. Only files ending in <code>.md</code> are
+    considered a handoff (a stray <code>desktop.ini</code>/<code>Thumbs.db</code>/editor backup in that
+    directory must never become "the newest title").
+  </p>
+  <h3>Ignore handling — revised during final review</h3>
+  <p>
+    <strong>Originally speced as a committed <code>.gitignore</code> line; changed to
+    <code>.git/info/exclude</code> after the final whole-branch review found the commit approach unsafe.</strong>
+    A bare, unscoped <code>git commit</code> (no pathspec) after <code>git add .gitignore</code> commits
+    whatever else happens to be staged too — a real risk on the shared main checkout other sessions may be
+    concurrently touching. Worse, in Option 2 (Create PR) the commit would land <em>inside</em> the
+    just-opened PR, and from a detached HEAD the push would fail outright, leaving exactly the unpushed
+    state this step exists to prevent.
   </p>
   <p>
-    Because Step 7 runs after Option 1/2's own push already happened, adding this line can't just sit as a
-    local-only edit — it needs its own small commit, made and pushed immediately as part of this same step
-    (reusing the already-resolved <code>SSH_KEY_PREFIX</code> from earlier in the flow), so the repo never
-    ends a Step 7 run with unpushed local state. This only fires the first time a given repo hits Step 7 after
-    this feature ships; every run after that finds the line already present and skips straight to writing the
-    handoff file.
+    <code>.git/info/exclude</code> avoids all three: it's resolved once via
+    <code>git rev-parse --git-path info/exclude</code>, lives in the repository's common git directory (shared
+    automatically across the main checkout and every worktree of the same repo — never per-worktree), and
+    needs no commit or push at all. <code>git check-ignore</code> honors it exactly like a real
+    <code>.gitignore</code> line. The tradeoff versus the original design: it's local-only, not
+    version-controlled, so a genuinely fresh clone (a different machine, a from-scratch checkout) doesn't
+    inherit it — Step 7's own check-and-append is cheap and idempotent, so this just means the first Step 7
+    run in any new clone repeats the one-time self-heal, exactly as already designed, only now against a file
+    that never needs a commit.
+  </p>
+  <p>
+    Ensuring <code>.digismith/sessions/</code> is actually ignored (by whichever mechanism) stays load-bearing
+    for one more reason beyond keeping the working tree clean: it's the cheapest available signal that
+    content read from that directory is Step 7's own output, not something an attacker could have committed
+    into an untrusted repo before this feature ever ran there.
   </p>
 </section>
 
@@ -201,9 +228,11 @@
     <li>Resolve own session_id; write <code>.digismith/sessions/&lt;session-id&gt;.md</code>.</li>
     <li>Say the final summary (what shipped, path to the handoff), then clear.</li>
     <li>Next <code>SessionStart</code> fires (any trigger, same cwd) — <code>session-init.ts</code> checks the
-      folder, finds the newest file, reads its title line, appends a pointer to the banner.</li>
-    <li>A human partner or the agent notices the pointer in a real conversation turn, reads the file, and —
-      once genuinely used — deletes it.</li>
+      folder, finds the newest file, reads its title line, appends a pointer to the banner that names the
+      specific file and instructs deleting it once used (added during final review — see below; the first
+      draft only pointed at the directory, never telling the reader to delete anything).</li>
+    <li>A human partner or the agent notices the pointer in a real conversation turn, reads the named file,
+      and — once genuinely used — deletes it, per the pointer's own instruction.</li>
   </ol>
 </section>
 
