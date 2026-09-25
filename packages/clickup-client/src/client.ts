@@ -1,5 +1,8 @@
 import axios, { AxiosInstance } from "axios";
+import { readFileSync } from "node:fs";
+import { basename } from "node:path";
 import type {
+  ClickUpAttachment,
   ClickUpCustomField,
   ClickUpFolderWithLists,
   ClickUpFoldersResponse,
@@ -131,6 +134,14 @@ export class ClickUpClient {
 
   async setCustomField(taskId: string, fieldId: string, value: unknown): Promise<void> {
     await this.post(`/task/${taskId}/field/${fieldId}`, { data: { value } });
+  }
+
+  /** Multipart upload — ClickUp's attachment endpoint requires this content type. */
+  async uploadAttachment(taskId: string, filePath: string): Promise<ClickUpAttachment> {
+    const fileBytes = readFileSync(filePath);
+    const form = new FormData();
+    form.append("attachment", new Blob([fileBytes]), basename(filePath));
+    return this.post<ClickUpAttachment>(`/task/${taskId}/attachment`, { data: form });
   }
 
   async getSpaceFolders(spaceId: string): Promise<ClickUpFolderWithLists[]> {
