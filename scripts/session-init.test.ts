@@ -175,6 +175,13 @@ describe("listHandoffFiles", () => {
     expect(listHandoffFiles(sessionsDir)).toEqual([path.join(sessionsDir, "abc.md")]);
   });
 
+  it("ignores files that don't end in .md", () => {
+    fs.mkdirSync(sessionsDir);
+    fs.writeFileSync(path.join(sessionsDir, "abc.md"), "# Title\n");
+    fs.writeFileSync(path.join(sessionsDir, "desktop.ini"), "junk");
+    expect(listHandoffFiles(sessionsDir)).toEqual([path.join(sessionsDir, "abc.md")]);
+  });
+
   it("throws on a genuine read error other than a missing directory", () => {
     fs.writeFileSync(sessionsDir, "not a directory");
     expect(() => listHandoffFiles(sessionsDir)).toThrow();
@@ -276,7 +283,7 @@ describe("buildHandoffPointer", () => {
     fs.mkdirSync(sessionsDir);
     fs.writeFileSync(path.join(sessionsDir, "abc.md"), "# Handoff: Foo\n");
     expect(buildHandoffPointer(sessionsDir)).toBe(
-      'DigiSmith: handoff from prior session — "Handoff: Foo" — see .digismith/sessions/',
+      'DigiSmith: handoff from prior session — "Handoff: Foo" — read .digismith/sessions/abc.md, then delete it once used',
     );
   });
 
@@ -289,7 +296,15 @@ describe("buildHandoffPointer", () => {
     fs.writeFileSync(path.join(sessionsDir, "new.md"), "# New One\n");
 
     expect(buildHandoffPointer(sessionsDir)).toBe(
-      'DigiSmith: handoff from prior session — "New One" (2 pending) — see .digismith/sessions/',
+      'DigiSmith: handoff from prior session — "New One" — read .digismith/sessions/new.md, then delete it once used (2 pending)',
+    );
+  });
+
+  it("falls back to (untitled) when the newest file has no readable title", () => {
+    fs.mkdirSync(sessionsDir);
+    fs.writeFileSync(path.join(sessionsDir, "empty.md"), "");
+    expect(buildHandoffPointer(sessionsDir)).toBe(
+      'DigiSmith: handoff from prior session — "(untitled)" — read .digismith/sessions/empty.md, then delete it once used',
     );
   });
 });
@@ -413,7 +428,7 @@ describe("main (CLI)", () => {
     await main();
 
     expect(logSpy).toHaveBeenCalledWith(
-      'DigiSmith: handoff from prior session — "Handoff: Foo" — see .digismith/sessions/',
+      'DigiSmith: handoff from prior session — "Handoff: Foo" — read .digismith/sessions/abc123.md, then delete it once used',
     );
   });
 });

@@ -36,7 +36,9 @@ export function listHandoffFiles(sessionsDir: string): string[] {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  return entries.filter((entry) => entry.isFile()).map((entry) => path.join(sessionsDir, entry.name));
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .map((entry) => path.join(sessionsDir, entry.name));
 }
 
 export function findNewestHandoff(sessionsDir: string): string | undefined {
@@ -60,7 +62,7 @@ export function buildHandoffPointer(sessionsDir: string): string | undefined {
   const newest = findNewestHandoff(sessionsDir)!;
   const title = readHandoffTitle(newest) ?? "(untitled)";
   const countSuffix = files.length > 1 ? ` (${files.length} pending)` : "";
-  return `DigiSmith: handoff from prior session — "${title}"${countSuffix} — see ${SESSIONS_DIR_PATH}/`;
+  return `DigiSmith: handoff from prior session — "${title}" — read ${SESSIONS_DIR_PATH}/${path.basename(newest)}, then delete it once used${countSuffix}`;
 }
 
 type VoiceInitModule = { default: () => Promise<string | null> };
