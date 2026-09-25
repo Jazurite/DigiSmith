@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClickUp Connector — Write Commands</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>ClickUp Connector — Write Commands</h1>
+  <div class="meta">
+    <span>Date: 2026-09-25</span>
+    <span>Map item: V.7</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background &amp; scope</a></li>
+    <li><a href="#decisions">Decisions settled</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#field-mapping">Field mapping reference</a></li>
+    <li><a href="#data-flow">Data flow</a></li>
+    <li><a href="#error-handling">Error handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Explicitly out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background &amp; scope</h2>
+  <p>
+    <strong>V.6</strong> (shipped 2026-09-24) built the <code>@digismith/clickup-client</code>
+    package and a read-only <code>dg clickup</code> CLI surface, deliberately deferring write
+    operations and any real consumer wiring to backlog — see
+    <code>backlog/clickup-backlog-map-flow-wiring.md</code>. This build closes part of that gap:
+    it adds the write primitives (create, update, attach) so DigiSmith's own map/backlog history
+    can actually be pushed into ClickUp — but deliberately <strong>not</strong> the fuller
+    "auto-wire brainstorming/writing-plans/report-implementation to call ClickUp automatically"
+    vision that backlog item originally sketched. Jack's explicit call during this brainstorm:
+    this is a "one time job" per letter, not a recurring workflow — so it gets no new skill and
+    no lifecycle-hook trigger, only reusable low-level write commands that an agent drives ad hoc.
+  </p>
+  <p>
+    The real ClickUp structure was clarified live during this brainstorm (Jack's own workspace,
+    inspected via the API since it isn't public): the DigiSmith space has a <strong>Clans</strong>
+    folder containing one <strong>List per DigiSmith letter</strong> (e.g. the "V" list), and each
+    sub-item becomes its own task, a sibling within that letter's list — not nested as subtasks,
+    and not distinguished via ClickUp's Custom Task Type feature (considered, explicitly rejected;
+    see the Decisions section).
+  </p>
+  <p>
+    The whole field-mapping shape below was validated live: a real task was created for
+    <strong>V.1</strong> in the actual "V" list
+    (<a href="https://app.clickup.com/t/14zcebru1dg">https://app.clickup.com/t/14zcebru1dg</a>)
+    using the client directly, before this design was finalized. Jack confirmed it read well.
+  </p>
+  <p>
+    Rollout is a reversal of V.6's original "no historical migration" stance, but only via a
+    manual, gradual process: the <strong>V clan (V.1–V.6) is backfilled first</strong> and
+    validated, then the remaining ~39 clans follow one at a time, at Jack's own pace — never a
+    single bulk migration.
+  </p>
+</section>
+
+<section id="decisions">
+  <h2>Decisions settled</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">Trigger</div>
+      <h4>Manual, ad hoc — no new skill</h4>
+      <p>Every sync is a live, agent-assisted task using the new CLI primitives directly — not a skill, not a script, not a lifecycle hook. Jack's call: this is a one-time-per-letter job, not a recurring workflow.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Structure</div>
+      <h4>Clans folder → one List per letter</h4>
+      <p>Sub-items are sibling tasks within that letter's List. ClickUp's Custom Task Type feature was considered for representing letters and explicitly rejected ("No special task type").</p>
+    </div>
+    <div class="card">
+      <div class="tag">Backfill scope</div>
+      <h4>V clan first, then gradual</h4>
+      <p>Reverses V.6's "no bulk migration" stance, but stays manual and incremental — one clan at a time, never an automated batch-all.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Field sourcing</div>
+      <h4>Mixed judgment + mechanical</h4>
+      <p>Title/description are agent-drafted from <code>MEMORY.md</code>'s prose. Due date and status are read mechanically from the same prose. Start date comes from git history. Priority is a fixed default. See the Field mapping reference.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Report attachment</div>
+      <h4>PDF, not inline text</h4>
+      <p>A shipped sub-item's <code>report.html</code> is exported to PDF via Playwright's <code>page.pdf()</code> and attached to its task — ClickUp's task description is limited rich text and can't render the styled HTML report as-is.</p>
+    </div>
+    <div class="card">
+      <div class="tag">Frontdoor API (noted, unused)</div>
+      <h4>ClickUp's private Task-Type-creation endpoint</h4>
+      <p>Captured live during this brainstorm as a sibling to the already-vendored <code>FrontdoorFieldPutBody</code> pattern (<code>POST .../customItem</code>, session-cookie auth, not the public API). Moot for this build since Task Types were rejected for letters — kept here only so the knowledge isn't lost for a future need.</p>
+    </div>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    No new package and no new skill. This extends the existing
+    <code>packages/clickup-client</code> and the existing <code>dg clickup</code> bucket
+    (<code>packages/cli/src/clickup/</code>) that V.6 shipped. <code>createTask</code> and
+    <code>updateTask</code> already exist on <code>ClickUpClient</code> — V.6 built them but never
+    CLI-wrapped them. This build adds that CLI wrapping, plus the one genuinely new client
+    capability, attachment upload.
+  </p>
+  <div class="callout">
+    <strong>No orchestration layer.</strong> There is deliberately no "sync a whole letter"
+    command. Each <code>create-task</code>/<code>update-task</code>/<code>upload-attachment</code>
+    call is a discrete, low-level primitive; the agent issues one call per sub-item per field
+    group, driven by reading <code>MEMORY.md</code> live in the conversation — the same shape as
+    the V.1 test, just through the real CLI instead of a scratch script.
+  </div>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Change</th></tr>
+    <tr><td><code>packages/clickup-client/src/client.ts</code></td><td>New method <code>uploadAttachment(taskId: string, filePath: string): Promise&lt;ClickUpAttachment&gt;</code> — multipart POST to <code>/task/{task_id}/attachment</code> (confirmed via ClickUp's docs: <code>multipart/form-data</code>, field name <code>attachment</code>), built with native <code>FormData</code>/<code>Blob</code> mirroring <code>packages/jira-client/src/client.ts</code>'s <code>uploadAttachment</code> pattern, adapted to this client's axios transport.</td></tr>
+    <tr><td><code>packages/clickup-client/src/types.ts</code></td><td><code>ClickUpTaskWriteBody</code> gains <code>priority?: number</code> (ClickUp's 1–4 scale; "normal" = 3). New <code>ClickUpAttachment</code> response type (<code>id</code>, <code>version</code>, <code>date</code>, <code>title</code>, <code>extension</code>, <code>url</code>, per ClickUp's documented response shape).</td></tr>
+    <tr><td><code>packages/cli/src/clickup/create-task.ts</code></td><td>New leaf command: <code>create-task --list &lt;id&gt; --name &lt;str&gt; [--description] [--status] [--start-date] [--due-date] [--priority]</code>.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/update-task.ts</code></td><td>New leaf command: <code>update-task --task &lt;id&gt; [--name] [--description] [--status] [--start-date] [--due-date] [--priority]</code> — all fields optional, partial update.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/upload-attachment.ts</code></td><td>New leaf command: <code>upload-attachment --task &lt;id&gt; --file &lt;path&gt;</code>.</td></tr>
+    <tr><td><code>packages/cli/src/clickup/index.ts</code></td><td>Registers the three new leaf commands alongside the existing four read commands.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="field-mapping">
+  <h2>Field mapping reference</h2>
+  <p>This is the rulebook an agent follows when driving a sync by hand — not enforced by code.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Field</th><th>Source</th><th>Notes</th></tr>
+    <tr><td><code>name</code></td><td>Agent judgment, drafted from the sub-item's prose in its letter's <code>MEMORY.md</code> row</td><td>Validated live on V.1: <code>"V.1 — OpenCode server management"</code></td></tr>
+    <tr><td><code>description</code></td><td>Agent judgment, synthesized from the same prose</td><td>Full paragraph, not a summary — matches the V.1 test</td></tr>
+    <tr><td><code>status</code></td><td>Mapped from shipped-language in the prose to one of the List's real ClickUp statuses</td><td>V list's statuses: backlog, concept, discovery, to do, in progress, review, release, done, documentation. Shipped/built items → <code>done</code></td></tr>
+    <tr><td><code>due_date</code></td><td>The explicit shipped/built date stated in the prose</td><td>Mechanical, not judgment — one date, already in the text</td></tr>
+    <tr><td><code>start_date</code></td><td>Earliest git commit touching that sub-item's own <code>design.html</code> (<code>git log --follow</code>, first commit)</td><td>Approximates when brainstorming/planning for that item began. For pre-G.3 flat-doc items, the earliest commit referencing that item's own doc path</td></tr>
+    <tr><td><code>priority</code></td><td>Fixed default: <code>normal</code> (3)</td><td>Real prioritization logic explicitly deferred — "add priority [nuance] later"</td></tr>
+    <tr><td>Report attachment</td><td><code>report.html</code> → PDF (Playwright <code>page.pdf()</code>) → <code>upload-attachment</code></td><td>Only for sub-items that have a <code>report.html</code> (i.e. shipped ones)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="data-flow">
+  <h2>Data flow</h2>
+  <p>For a given letter's sub-item, the ad hoc flow is:</p>
+  <ol>
+    <li>Find the letter's List inside the Clans folder — existing <code>get-lists</code>, matched by name. No separate ID-mapping file; looked up live each time.</li>
+    <li>List that List's existing tasks — existing <code>list-tasks</code> — and check by name whether this sub-item already has a task, to decide create vs. update (safe to re-run).</li>
+    <li>Draft <code>name</code>/<code>description</code> from the sub-item's <code>MEMORY.md</code> prose.</li>
+    <li>Derive <code>status</code>/<code>due_date</code> from the prose, <code>start_date</code> from git history, fix <code>priority</code> to <code>normal</code>.</li>
+    <li>Call <code>create-task</code> (or <code>update-task</code> if it already exists) with those fields.</li>
+    <li>If the sub-item has a <code>report.html</code>, export it to PDF and call <code>upload-attachment</code> against the resulting task.</li>
+  </ol>
+</section>
+
+<section id="error-handling">
+  <h2>Error handling</h2>
+  <ul>
+    <li>Same <code>CredentialsError</code>/generic-catch shape as V.6's read commands — missing or incomplete <code>~/.digismith-depot/.env</code> fields caught at the CLI layer, printed, exit 1.</li>
+    <li><code>upload-attachment</code>: a missing local file is checked before the request is made, with a clear stderr message rather than surfacing a raw ClickUp API error.</li>
+    <li>No dedicated "find task by name" primitive — the create-vs-update decision (Data flow step 2) is a judgment step using the existing <code>list-tasks</code> output, not a new mechanized lookup.</li>
+    <li>The existing <code>RateLimiter</code> (100 req/60s) already covers the new write calls, same as every other client method.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li>Vitest unit tests for <code>uploadAttachment</code> (mocked multipart request, asserting the body/field shape — mirroring <code>packages/jira-client/src/client.test.ts</code>'s existing <code>uploadAttachment</code> describe block).</li>
+    <li>Vitest unit tests for the three new CLI leaf commands, following the existing <code>check-credentials</code>/<code>get-lists</code>/etc. test pattern.</li>
+    <li>No test for the ad hoc sync judgment itself (title/description drafting, git-history date lookup) — that stays a manual, conversational process, not code under test.</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Explicitly out of scope</h2>
+  <ul>
+    <li>Any new skill, script, or lifecycle-hook trigger — every sync run is manual and ad hoc, per Jack's explicit call.</li>
+    <li>A mechanical/regex parser for <code>MEMORY.md</code> — title/description extraction stays agent judgment; the prose is too unstructured for reliable parsing (confirmed by inspecting several existing rows during this brainstorm).</li>
+    <li>A "find task by name" or other idempotency-search CLI primitive — the create-vs-update decision is a judgment step over existing <code>list-tasks</code> output.</li>
+    <li>A "sync this whole letter" single command — each create/update/attach call is issued individually by the agent.</li>
+    <li><code>backlog/*.md</code> items (ideas not yet promoted to a shipped map letter) — this design covers only <code>MEMORY.md</code>'s lettered/sub-lettered rows.</li>
+    <li>Bidirectional sync — ClickUp never writes back into <code>MEMORY.md</code>.</li>
+    <li>Wrapping ClickUp's private "frontdoor" <code>customItem</code>-creation endpoint — noted for future reference only (see Decisions), not built here.</li>
+    <li>Real prioritization logic beyond the fixed <code>normal</code> default.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/V/V.7-clickup-write-commands/design.html</footer>
+
+</body>
+</html>
