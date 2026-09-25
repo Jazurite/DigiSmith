@@ -399,29 +399,29 @@ override ("clear context", "start fresh"). **No override** → skip silently, do
 **Override present** → proceed to clear for this run only; the saved value is untouched.
 
 Before actually clearing (whichever path led here), write a handoff file so the next session that
-opens this repo doesn't start from nothing — replacing the old verbal-only warning entirely.
+opens this repo doesn't start from nothing.
 
-**Ensure `.digismith/sessions/` is gitignored** (once per repo — every run after this finds the
-line already present and skips straight to writing the handoff file):
+**Ensure `.digismith/sessions/` is ignored** (once per repo — every run after this finds it
+already ignored and skips straight to writing the handoff file):
 
 ```bash
 git check-ignore -q .digismith/sessions/ ; echo "exit=$?"
 ```
 
 `exit=0` (already ignored) → skip straight to composing the handoff below. `exit=1` (not
-ignored) → append a `.digismith/sessions/` line to this repo's `.gitignore` (create the file if
-it doesn't exist), then commit and push immediately, reusing `SSH_KEY_PREFIX` exactly as already
-resolved earlier in this run's option (Option 1 or Option 2) — do not re-resolve the `ssh_key`
-preference:
+ignored) → append a `.digismith/sessions/` line to this repo's local, per-repo
+`.git/info/exclude` (resolve its path with `git rev-parse --git-path info/exclude`; create the
+file if it doesn't exist):
 
 ```bash
-git add .gitignore
-git commit -m "chore: gitignore .digismith/sessions/"
-${SSH_KEY_PREFIX}git push
+echo ".digismith/sessions/" >> "$(git rev-parse --git-path info/exclude)"
 ```
 
-This can't wait for a later commit — Step 7 runs after Option 1/2's own push already happened, so
-without this the repo would end the run with unpushed local state.
+This is local-only and never committed or pushed — `info/exclude` lives in the repository's
+common git directory, shared automatically across the main checkout and every worktree of this
+same repo, so this heal never touches `.gitignore`, never lands inside a just-opened PR (Option
+2), and never depends on a push that could fail from a detached HEAD. A genuinely fresh clone on
+another machine simply repeats this same one-time, idempotent check on its own first Step 7 run.
 
 **Resolve this session's own id:** invoke `mcp__ccd_session_mgmt__get_session` with
 `session_id: "self"` and read the returned `sessionId`. If the call fails or returns no usable
@@ -430,8 +430,8 @@ happen either way.
 
 **Compose the handoff:** scan the conversation for any unresolved thread unrelated to the feature
 just shipped — a pending question, a task mentioned but not started, something asked to be
-revisited later — the same scan this step already ran before this change, now feeding the file's
-sections instead of a spoken warning. Write `.digismith/sessions/<session-id-or-timestamp>.md`
+revisited later — and fold it into the sections below. Write
+`.digismith/sessions/<session-id-or-timestamp>.md`
 with exactly these 5 sections, drawn from what this session already knows — never parsed from a
 branch name, never inferred by a lookup:
 
@@ -466,8 +466,8 @@ If the file write itself fails (disk, permissions), report it in the final summa
 block the clear on it — this is an orientation aid, not a gate.
 
 To actually clear: say the complete final summary first — what shipped, what's next, and
-`Handoff written to .digismith/sessions/<id>.md for the next session.` in place of the old
-unresolved-thread warning — then, as the last action of the turn, invoke
+`Handoff written to .digismith/sessions/<id>.md for the next session.` — then, as the last action
+of the turn, invoke
 `mcp__ccd_session_mgmt__clear_session` with `session_id: "self"`. The clear only takes effect
 once this turn ends and the session goes idle, so nothing said before it is lost from the
 conversation the human partner just read — only from what a future turn remembers. If the human
