@@ -9,7 +9,7 @@ import { uploadAttachmentCommand } from "./upload-attachment.ts";
 
 const clickupCommand: CommandModule = {
   command: "clickup",
-  describe: "read ClickUp tasks, lists, and folders",
+  describe: "read and write ClickUp tasks, lists, and folders",
   builder: (y) =>
     y
       .command(checkCredentialsCommand)

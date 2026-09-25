@@ -58,4 +58,22 @@ describe("buildTaskWriteBody", () => {
   it("returns an empty body when nothing was provided", () => {
     expect(buildTaskWriteBody({})).toEqual({});
   });
+
+  it("throws when startDate is not a valid date", () => {
+    expect(() => buildTaskWriteBody({ startDate: "28/08/2026" })).toThrow(
+      /invalid --start-date "28\/08\/2026"/
+    );
+  });
+
+  it("throws when dueDate is not a valid date", () => {
+    expect(() => buildTaskWriteBody({ dueDate: "28/08/2026" })).toThrow(
+      /invalid --due-date "28\/08\/2026"/
+    );
+  });
+
+  it("throws when priority is not an integer", () => {
+    expect(() => buildTaskWriteBody({ priority: Number.NaN })).toThrow(
+      /invalid --priority "NaN" — expected an integer 1-4/
+    );
+  });
 });

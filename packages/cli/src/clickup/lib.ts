@@ -23,8 +23,25 @@ export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
   if (argv.name !== undefined) body.name = argv.name;
   if (argv.description !== undefined) body.description = argv.description;
   if (argv.status !== undefined) body.status = argv.status;
-  if (argv.startDate !== undefined) body.start_date = new Date(argv.startDate).getTime();
-  if (argv.dueDate !== undefined) body.due_date = new Date(argv.dueDate).getTime();
-  if (argv.priority !== undefined) body.priority = argv.priority;
+  if (argv.startDate !== undefined) {
+    const startDate = new Date(argv.startDate).getTime();
+    if (Number.isNaN(startDate)) {
+      throw new Error(`invalid --start-date "${argv.startDate}" — expected an ISO date like 2026-08-28`);
+    }
+    body.start_date = startDate;
+  }
+  if (argv.dueDate !== undefined) {
+    const dueDate = new Date(argv.dueDate).getTime();
+    if (Number.isNaN(dueDate)) {
+      throw new Error(`invalid --due-date "${argv.dueDate}" — expected an ISO date like 2026-08-28`);
+    }
+    body.due_date = dueDate;
+  }
+  if (argv.priority !== undefined) {
+    if (!Number.isInteger(argv.priority)) {
+      throw new Error(`invalid --priority "${argv.priority}" — expected an integer 1-4`);
+    }
+    body.priority = argv.priority;
+  }
   return body;
 }
