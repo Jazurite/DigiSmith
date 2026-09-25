@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import axios from "axios";
 import { ClickUpClient, type ClickUpClientConfig } from "./client.ts";
+import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 vi.mock("axios");
 
@@ -294,5 +297,47 @@ describe("ClickUpClient domain write/read methods", () => {
       data: undefined,
     });
     expect(statuses).toEqual(["to do", "done"]);
+  });
+});
+
+describe("ClickUpClient uploadAttachment", () => {
+  beforeEach(() => {
+    request.mockReset();
+    vi.mocked(axios.create).mockReset();
+  });
+
+  it("POSTs multipart form data to the task attachment endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({
+      data: {
+        id: "att1",
+        version: "1",
+        date: 1790000000000,
+        title: "report.pdf",
+        extension: "pdf",
+        thumbnail_small: null,
+        thumbnail_large: null,
+        url: "https://t.clickup.com/att1",
+      },
+    });
+
+    const tmpDir = mkdtempSync(join(tmpdir(), "clickup-client-upload-"));
+    const filePath = join(tmpDir, "report.pdf");
+    writeFileSync(filePath, Buffer.from([1, 2, 3]));
+
+    const result = await client.uploadAttachment("abc", filePath);
+
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/task/abc/attachment",
+      params: undefined,
+      data: expect.any(FormData),
+    });
+    const sentForm = request.mock.calls[0][0].data as FormData;
+    expect(sentForm.get("attachment")).toBeInstanceOf(Blob);
+    expect(result.id).toBe("att1");
+    expect(result.title).toBe("report.pdf");
+
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });

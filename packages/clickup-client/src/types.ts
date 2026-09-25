@@ -232,6 +232,19 @@ export interface ClickUpTaskWriteBody {
   time_estimate?: number;
   custom_item_id?: number;
   status?: string;
+  priority?: number;
+}
+
+/** Response shape from POST /task/{task_id}/attachment. */
+export interface ClickUpAttachment {
+  id: string;
+  version: string;
+  date: number;
+  title: string;
+  extension: string;
+  thumbnail_small: string | null;
+  thumbnail_large: string | null;
+  url: string;
 }
 
 export interface FrontdoorOptionAdd {
