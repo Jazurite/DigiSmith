@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add dg clickup create-list / create-folder commands</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Add dg clickup create-list / create-folder commands</h1>
+  <div class="meta">
+    <span>Date: 2026-09-26</span>
+    <span>Map item: V.8</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#client-methods">Client methods</a></li>
+    <li><a href="#space-object">The Space object</a></li>
+    <li><a href="#cli-commands">CLI commands</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem</h2>
+  <p>
+    <code>dg clickup</code> has no command to create a ClickUp List or Folder. This was
+    discovered live during the V-clan ClickUp backfill (2026-09-25) — the V.0/V.2/V.3 Lists had
+    to be created via a one-off script calling <code>ClickUpClient</code> directly, the same
+    workaround used for the original V.1 test task before <code>create-task</code> existed.
+    Tracked as ClickUp task <a href="https://app.clickup.com/t/5738747/DGS-17">DGS-17</a>
+    (D.3: ClickUp Channel) — no JIRA ticket, this is DigiSmith's own self-development.
+  </p>
+  <p class="callout">
+    Explicitly out of scope: wrapping ClickUp's private "frontdoor" API for moving a folder into
+    another folder after creation. That needs a completely different session-cookie/bearer/x-csrf
+    credential than the stored <code>CLICKUP_API_TOKEN</code>, and already has its own separate
+    backlog ticket ("Wrap ClickUp's frontdoor API for list/folder moves").
+  </p>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p>
+    New <code>ClickUpClient</code> methods for folder/list creation, a new generic
+    <code>Space</code> convenience class, and two new CLI commands — all following the existing
+    <code>create-task</code>/<code>get-lists</code> pattern already in this codebase: same file
+    layout, same try/catch → <code>console.error</code> + <code>process.exitCode = 1</code> on
+    failure, same <code>console.log(JSON.stringify(result, null, 2))</code> on success. No new
+    HTTP library — <code>ClickUpClient</code> already wraps <code>axios</code> internally, so the
+    new methods just call the existing <code>this.post()</code>.
+  </p>
+</section>
+
+<section id="client-methods">
+  <h2>Client methods</h2>
+  <p>New methods on <code>ClickUpClient</code> (<code>packages/clickup-client/src/client.ts</code>),
+  each taking just a <code>name</code> — no <code>content</code>/<code>due_date</code>/<code>priority</code>/etc.,
+  since nothing in the ticket or its real-world trigger ever needed more than a name:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Method</th><th>Endpoint</th><th>Returns</th></tr>
+    <tr><td><code>createFolder(spaceId, name)</code></td><td><code>POST /space/{spaceId}/folder</code></td><td><code>ClickUpFolder</code></td></tr>
+    <tr><td><code>createListInFolder(folderId, name)</code></td><td><code>POST /folder/{folderId}/list</code></td><td><code>ClickUpListSummary</code></td></tr>
+    <tr><td><code>createListInSpace(spaceId, name)</code></td><td><code>POST /space/{spaceId}/list</code></td><td><code>ClickUpListSummary</code></td></tr>
+  </table>
+  </div>
+  <p>
+    Three separate methods rather than one union-typed method — following the existing precedent
+    of <code>getSpaceFolders</code>/<code>getFolderlessLists</code> already being two separate
+    methods rather than one. <code>createListInFolder</code> stays a plain client method taking an
+    explicit <code>folderId</code>: a Folder isn't a fixed, single-instance concept the way the
+    Space is (there are many folders per space), so it doesn't belong on the <code>Space</code>
+    wrapper below.
+  </p>
+</section>
+
+<section id="space-object">
+  <h3 style="margin-top:0">The Space object</h3>
+  <p>
+    In practice, DigiSmith only ever works against one ClickUp space (id
+    <code>1301150000001271</code>, named "DigiSmith"). Rather than threading a
+    <code>spaceId</code> through every call site, a small <code>Space</code> class
+    (<code>packages/clickup-client/src/space.ts</code>) binds a client + a specific space id once:
+  </p>
+  <pre><code>export class Space {
+  constructor(private readonly client: ClickUpClient, readonly id: string) {}
+
+  createFolder(name: string): Promise&lt;ClickUpFolder&gt; {
+    return this.client.createFolder(this.id, name);
+  }
+
+  createList(name: string): Promise&lt;ClickUpListSummary&gt; {
+    return this.client.createListInSpace(this.id, name);
+  }
+}</code></pre>
+  <p>
+    <code>Space</code> stays generic — it takes any client and any space id, no DigiSmith-specific
+    knowledge — consistent with this package's own positioning ("Generic ClickUp API client") and
+    with the pending Soveron cutover (<code>backlog/clickup-soveron-cutover.md</code>), which will
+    consume this same package for a different workspace entirely.
+  </p>
+  <p>
+    The DigiSmith-specific constant lives in the CLI package instead, alongside the existing
+    <code>createClient()</code> (<code>packages/cli/src/clickup/lib.ts</code>):
+  </p>
+  <pre><code>export const DIGISMITH_SPACE_ID = "1301150000001271"; // the "DigiSmith" space
+
+export function createDigiSmithSpace(client: ClickUpClient = createClient()): Space {
+  return new Space(client, DIGISMITH_SPACE_ID);
+}</code></pre>
+</section>
+
+<section id="cli-commands">
+  <h2>CLI commands</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="tag">create-folder</div>
+      <h4><code>dg clickup create-folder --name &lt;name&gt;</code></h4>
+      <p>No <code>--space</code> flag — always uses <code>createDigiSmithSpace()</code>. Calls
+      <code>space.createFolder(name)</code>.</p>
+    </div>
+    <div class="card">
+      <div class="tag">create-list</div>
+      <h4><code>dg clickup create-list --name &lt;name&gt; [--folder &lt;id&gt;]</code></h4>
+      <p><code>--folder</code> given → <code>client.createListInFolder(folder, name)</code>.
+      Omitted → folderless list via <code>createDigiSmithSpace().createList(name)</code>. No
+      <code>--space</code> flag — there's only ever one space to default to.</p>
+    </div>
+  </div>
+  <p>
+    Both registered in <code>packages/cli/src/clickup/index.ts</code> alongside the existing
+    commands. <code>get-lists</code> (the existing read command) is untouched — it keeps its
+    explicit, required <code>--space</code>, out of scope for this ticket.
+  </p>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li>Unit tests for the three new client methods in <code>client.test.ts</code>, same
+    request-mock pattern already used for <code>createTask</code>.</li>
+    <li>Unit tests for <code>Space</code> in a new <code>space.test.ts</code> — verifying it
+    delegates to the client methods above with its bound id.</li>
+    <li><code>create-folder.test.ts</code> / <code>create-list.test.ts</code> in the CLI package,
+    same fake-client-factory pattern as <code>create-task.test.ts</code> — success case and
+    thrown-error case each, plus <code>create-list</code>'s two branches (with and without
+    <code>--folder</code>).</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of scope</h2>
+  <ul>
+    <li>Wrapping ClickUp's private "frontdoor" API for post-creation folder-nesting/moves —
+    separate backlog ticket, different credential type entirely.</li>
+    <li>Changing <code>get-lists</code> to default its own <code>--space</code> — existing
+    command, untouched by this ticket.</li>
+    <li>Any fields beyond <code>name</code> on the new create endpoints (content, due dates,
+    priority, assignees, status) — nothing in the ticket's own trigger case ever needed them.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/V/V.8-add-dg-clickup-create-list-create-folder/design.html</footer>
+
+</body>
+</html>

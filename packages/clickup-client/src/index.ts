@@ -1,5 +1,6 @@
 export { ClickUpClient } from "./client.ts";
 export type { ClickUpClientConfig, RequestOptions } from "./client.ts";
+export { Space } from "./space.ts";
 export { RateLimiter } from "./rate-limiter.ts";
 export type { Clock, Sleep } from "./rate-limiter.ts";
 export { checkCredentials, CredentialsError } from "./credentials.ts";

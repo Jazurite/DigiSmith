@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ClickUpClient } from "@digismith/clickup-client";
+import { ClickUpClient, Space } from "@digismith/clickup-client";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
-import { createClient, buildTaskWriteBody } from "./lib.ts";
+import { createClient, buildTaskWriteBody, createDigiSmithSpace, DIGISMITH_SPACE_ID } from "./lib.ts";
 
 describe("createClient", () => {
   it("builds a ClickUpClient from a valid credentials file", () => {
@@ -75,5 +75,21 @@ describe("buildTaskWriteBody", () => {
     expect(() => buildTaskWriteBody({ priority: Number.NaN })).toThrow(
       /invalid --priority "NaN" — expected an integer 1-4/
     );
+  });
+});
+
+describe("createDigiSmithSpace", () => {
+  it("binds the DigiSmith space id to the given client", async () => {
+    const createFolder = vi.fn().mockResolvedValue({ id: "f1", name: "x" });
+    const fakeClient = { createFolder } as unknown as ClickUpClient;
+
+    const space = createDigiSmithSpace(fakeClient);
+
+    expect(space).toBeInstanceOf(Space);
+    expect(space.id).toBe(DIGISMITH_SPACE_ID);
+
+    await space.createFolder("x");
+
+    expect(createFolder).toHaveBeenCalledWith(DIGISMITH_SPACE_ID, "x");
   });
 });

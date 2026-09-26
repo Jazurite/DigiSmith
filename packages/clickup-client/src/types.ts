@@ -31,6 +31,8 @@ export interface ClickUpFolder {
   access: boolean;
 }
 
+export type ClickUpCreatedFolder = Pick<ClickUpFolder, "id" | "name" | "hidden">;
+
 export interface ClickUpSpace {
   id: string;
 }

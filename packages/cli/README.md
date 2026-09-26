@@ -21,6 +21,16 @@ digismith depot opencode stop    # stop it
 digismith depot bridge ensure    # start the Agentic Bridge proxy if not already running
 digismith depot bridge stop      # stop it
 
+digismith clickup check-credentials                                # verify ClickUp credentials are present
+digismith clickup list-tasks --list <id>                           # list every task on a list
+digismith clickup get-task <task>                                  # fetch a single task by ID
+digismith clickup get-lists --space <id>                           # list a space's folders and folderless lists
+digismith clickup create-task --list <id> --name <name> [options]  # create a new task on a list
+digismith clickup update-task --task <id> [options]                # update an existing task
+digismith clickup create-folder --name <name>                      # create a new Folder in the DigiSmith space
+digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
+digismith clickup upload-attachment --task <id> --file <path>      # upload a file as an attachment on a task
+
 digismith --version
 ```
 
@@ -53,5 +63,10 @@ repairing a malformed file), it needs to run from inside a DigiSmith checkout (o
 `depot bridge ensure` needs to run from inside a DigiSmith checkout (or pass `--repo <path>`)
 — it launches that checkout's own `scripts/agentic-bridge/server.ts`, which isn't published in
 this package.
+
+`clickup` commands read `CLICKUP_API_TOKEN` and `CLICKUP_TEAM_ID` from `~/.digismith-depot/.env`;
+`check-credentials` verifies they're present. `create-folder`, and `create-list` without
+`--folder`, always create in the DigiSmith ClickUp space. `create-list --folder <id>` creates
+the list inside that folder instead.
 
 Source and design docs: <https://github.com/Jazurite/DigiSmith> (`packages/cli`).

@@ -215,6 +215,51 @@ describe("ClickUpClient domain write/read methods", () => {
     });
   });
 
+  it("createFolder() POSTs the name to the space folder endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "New Folder", hidden: false } });
+
+    const folder = await client.createFolder("90165960730", "New Folder");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/space/90165960730/folder",
+      params: undefined,
+      data: { name: "New Folder" },
+    });
+    expect(folder).toEqual({ id: "f1", name: "New Folder", hidden: false });
+  });
+
+  it("createListInFolder() POSTs the name to the folder list endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "l1", name: "New List" } });
+
+    const list = await client.createListInFolder("f1", "New List");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/folder/f1/list",
+      params: undefined,
+      data: { name: "New List" },
+    });
+    expect(list).toEqual({ id: "l1", name: "New List" });
+  });
+
+  it("createListInSpace() POSTs the name to the space list endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "l2", name: "Folderless List" } });
+
+    const list = await client.createListInSpace("90165960730", "Folderless List");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/space/90165960730/list",
+      params: undefined,
+      data: { name: "Folderless List" },
+    });
+    expect(list).toEqual({ id: "l2", name: "Folderless List" });
+  });
+
   it("setCustomField() POSTs { value } to the field endpoint", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });

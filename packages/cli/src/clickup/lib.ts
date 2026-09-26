@@ -1,4 +1,4 @@
-import { ClickUpClient, checkCredentials } from "@digismith/clickup-client";
+import { ClickUpClient, checkCredentials, Space } from "@digismith/clickup-client";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
 
 export function createClient(envPath?: string): ClickUpClient {
@@ -7,6 +7,12 @@ export function createClient(envPath?: string): ClickUpClient {
     CLICKUP_TEAM_ID: creds.teamId,
     CLICKUP_API_TOKEN: creds.apiToken,
   });
+}
+
+export const DIGISMITH_SPACE_ID = "1301150000001271";
+
+export function createDigiSmithSpace(client: ClickUpClient = createClient()): Space {
+  return new Space(client, DIGISMITH_SPACE_ID);
 }
 
 export interface TaskFieldArgv {
