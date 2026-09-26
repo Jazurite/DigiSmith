@@ -265,7 +265,7 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/base
 git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 ```
 
-Once cleanup (Step 6) is done, continue to Step 7 to offer clearing this session's context.
+Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 
 ### Option 2: Push and Create PR
 
@@ -318,8 +318,7 @@ invoke it unasked — this is an offer, not an automatic action, the same
 disposition Step 4.5's "remember this?" follow-up already has for a
 different case.
 
-Once the Teams-notification offer is resolved (either answer), continue to Step 7 to offer
-clearing this session's context.
+Once the Teams-notification offer is resolved (either answer), continue to Step 7 to hand off.
 
 ### Option 3: Keep As-Is
 
@@ -373,106 +372,15 @@ git worktree prune  # Self-healing: clean up any stale registrations
 **Otherwise:** The host environment owns this workspace — leave it in
 place. If your platform provides a workspace-exit tool, use it.
 
-## Step 7: Offer to Clear Context
+## Step 7: Hand Off
 
 **Runs after Option 1 or Option 2 only** — never after Option 3 (Keep As-Is), which is a
 deliberate deferral, not completion, the same distinction Step 4.5 already draws for its own
 follow-up.
 
-Check this repo's saved default: invoke `digismith:preferences`' `get` operation for key
-`clear_context`.
-
-**Returns `unset`** → ask: "Clear this session's context now that the feature is done?" After
-the human partner answers, ask one separate follow-up: "Remember this as your default for this
-repo?" **Yes** → write `clear_context` (`yes` or `no`, matching the answer just given) via
-`digismith:preferences`' `set` operation. **No** → proceed for this run only; ask again next
-time.
-
-**Returns `yes`** → check the human partner's own message for this specific run for an explicit
-override ("don't clear", "keep going", "not this time"). **No override** → skip the ask,
-announce: "Using saved default for this repo: clearing context now. Say 'don't clear' to
-override once." then proceed to clear. **Override present** → skip clearing for this run only;
-the saved value is untouched.
-
-**Returns `no`** → check the human partner's own message for this specific run for an explicit
-override ("clear context", "start fresh"). **No override** → skip silently, do not clear.
-**Override present** → proceed to clear for this run only; the saved value is untouched.
-
-Before actually clearing (whichever path led here), write a handoff file so the next session that
-opens this repo doesn't start from nothing.
-
-**Ensure `.digismith/sessions/` is ignored** (once per repo — every run after this finds it
-already ignored and skips straight to writing the handoff file):
-
-```bash
-git check-ignore -q .digismith/sessions/ ; echo "exit=$?"
-```
-
-`exit=0` (already ignored) → skip straight to composing the handoff below. `exit=1` (not
-ignored) → append a `.digismith/sessions/` line to this repo's local, per-repo
-`.git/info/exclude` (resolve its path with `git rev-parse --git-path info/exclude`; create the
-file if it doesn't exist):
-
-```bash
-echo ".digismith/sessions/" >> "$(git rev-parse --git-path info/exclude)"
-```
-
-This is local-only and never committed or pushed — `info/exclude` lives in the repository's
-common git directory, shared automatically across the main checkout and every worktree of this
-same repo, so this heal never touches `.gitignore`, never lands inside a just-opened PR (Option
-2), and never depends on a push that could fail from a detached HEAD. A genuinely fresh clone on
-another machine simply repeats this same one-time, idempotent check on its own first Step 7 run.
-
-**Resolve this session's own id:** invoke `mcp__ccd_session_mgmt__get_session` with
-`session_id: "self"` and read the returned `sessionId`. If the call fails or returns no usable
-id, fall back to an ISO-8601 timestamp (`date -u +%Y%m%dT%H%M%SZ`) instead — the write must still
-happen either way.
-
-**Compose the handoff:** scan the conversation for any unresolved thread unrelated to the feature
-just shipped — a pending question, a task mentioned but not started, something asked to be
-revisited later — and fold it into the sections below. Write
-`.digismith/sessions/<session-id-or-timestamp>.md`
-with exactly these 5 sections, drawn from what this session already knows — never parsed from a
-branch name, never inferred by a lookup:
-
-```markdown
-# <one-line title: what this session was doing>
-
-## Where this fits
-
-<Map item(s) or ticket key this session was working, links to the relevant design.html/plan.md,
-the branch/worktree path.>
-
-## Status per unit of work
-
-<Explicit done/in-progress/not-started per item, cross-checked against any existing ledger or
-progress file rather than restated from memory.>
-
-## Exact resume point
-
-<The next concrete action, named precisely enough that a cold session doesn't have to infer it.>
-
-## Anything flagged but deliberately out of scope
-
-<A spawned background task, a deferred backlog note, a bug found in passing — named with its own
-tracking id/link. "None" if there's genuinely nothing.>
-
-## Literal resume commands
-
-<The actual `cd`/skill-invocation a session would run, not just a description.>
-```
-
-If the file write itself fails (disk, permissions), report it in the final summary but do not
-block the clear on it — this is an orientation aid, not a gate.
-
-To actually clear: say the complete final summary first — what shipped, what's next, and
-`Handoff written to .digismith/sessions/<id>.md for the next session.` — then, as the last action
-of the turn, invoke
-`mcp__ccd_session_mgmt__clear_session` with `session_id: "self"`. The clear only takes effect
-once this turn ends and the session goes idle, so nothing said before it is lost from the
-conversation the human partner just read — only from what a future turn remembers. If the human
-partner sends another message before the session goes idle, the tool itself silently drops the
-queued clear; that is expected behavior, not a bug to work around.
+Invoke `digismith:handoff` in end-of-ticket mode. It writes this lineage's handoff note, runs the
+end-of-ticket cleanup round, and decides whether to clear this session using the repo's
+`clear_context` preference. This skill does nothing further after that.
 
 ## Quick Reference
 
@@ -487,16 +395,13 @@ Steps 3.5/4.5 can skip this menu entirely when a `finish_option`
 preference is already saved for the repo — see those steps for the full
 logic.
 
-Step 7 (after Options 1/2 only) can similarly skip its own ask when a
-`clear_context` preference is already saved for the repo — see that step
-for the full logic.
+Step 7 (after Options 1/2 only) hands off to `digismith:handoff`, which owns
+the `clear_context` preference.
 
 ## Common Rationalizations
 
 | Excuse | Reality |
 |--------|---------|
-| "The feature's done, they'd obviously want a fresh start" | Ask first, same as every other Step 7 decision — a saved `yes` preference is what skips the ask, never an inferred assumption. |
-| "I'll clear now and mention what's next after" | The clear takes effect once this turn ends — anything said after the tool call in a later turn never happened as far as the next context is concerned. Say the full summary first, clear last. |
 | "Tests passed earlier this session" | Run the suite on the tree you are about to integrate. A green run only proves the tree it ran on. |
 | "They obviously want it merged" | Integration is your human partner's decision. Present the menu and wait. |
 | "They seem done with this feature — I'll offer to discard it" | The menu is complete as written. Discard happens only when your human partner asks for it in so many words. |
