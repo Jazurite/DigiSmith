@@ -1,4 +1,4 @@
 # DigiSmith-managed. Settings decided through live interaction, not hand-authored.
 finish_option: merge_locally
-clear_context: yes
+clear_context: no
 ssh_key: C:/Users/jazurite/.ssh/jazurite
