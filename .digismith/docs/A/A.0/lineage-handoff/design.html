@@ -183,7 +183,7 @@
 
   <h3><code>scripts/lineage-handoff.ts</code></h3>
   <ul>
-    <li><code>parseLineageKey(title)</code>: matches <code>^\s*([A-Z])(?:\.(\d+))?\s*:</code>.
+    <li><code>parseLineageKey(title)</code>: matches <code>^\s*([A-Z])(?:\.(\d+))?\s*(?::|$)</code>, so a bare title like <code>D</code> also counts.
       <code>"A.0: Primitives"</code> → <code>{clan:"A", lineage:"A.0"}</code>. <code>"K: Maestro"</code> →
       <code>{clan:"K"}</code>. Any other title (<code>"General"</code>, lowercase, a deeper number like
       <code>W.4.1:</code>) → <code>null</code>.</li>

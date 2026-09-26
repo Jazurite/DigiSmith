@@ -14,7 +14,7 @@
 
 - Work only in the worktree `D:\Workspace\Jazurite\DigiSmith\.claude\worktrees\lineage-handoff` (branch `worktree-lineage-handoff`). Never edit the main checkout.
 - Note location: `.digismith/docs/<Clan>/<Lineage>/handoff.md` for a `<Letter>.<N>:` title, `.digismith/docs/<Clan>/handoff.md` for a `<Letter>:` title, `.digismith/docs/_unlettered/handoff.md` for any other title.
-- Title key regex, exactly: `^\s*([A-Z])(?:\.(\d+))?\s*:`
+- Title key regex, exactly: `^\s*([A-Z])(?:\.(\d+))?\s*(?::|$)`. A bare title (`D`, `A.1`) counts; the Depot session is titled just `D`.
 - The note is always read and written in the **main checkout** (resolved from the git common directory), never relative to `process.cwd()`.
 - Notes are never committed. Exclude pattern, exactly: `.digismith/docs/**/handoff.md`, appended to `.git/info/exclude`.
 - Any `handoff.md` that git tracks is skipped by the listing.
@@ -142,6 +142,8 @@ describe("parseLineageKey", () => {
     ["  D.3 : ClickUp Channel", { clan: "D", lineage: "D.3" }],
     ["A.12: Two digits", { clan: "A", lineage: "A.12" }],
     ["K: Maestro", { clan: "K" }],
+    ["D", { clan: "D" }],
+    ["A.1", { clan: "A", lineage: "A.1" }],
   ])("parses %j", (title, expected) => {
     expect(parseLineageKey(title)).toEqual(expected);
   });
@@ -353,7 +355,7 @@ export type LineageKey = { clan: string; lineage?: string };
 export type ExcludeResult = "already-ignored" | "added" | "not-a-repo";
 
 export function parseLineageKey(title: string): LineageKey | null {
-  const match = /^\s*([A-Z])(?:\.(\d+))?\s*:/.exec(title);
+  const match = /^\s*([A-Z])(?:\.(\d+))?\s*(?::|$)/.exec(title);
   if (!match) return null;
   const [, clan, number] = match;
   return number === undefined ? { clan } : { clan, lineage: `${clan}.${number}` };
