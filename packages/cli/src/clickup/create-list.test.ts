@@ -57,4 +57,20 @@ describe("createCreateListCommand", () => {
     expect(errorSpy).toHaveBeenCalledWith("clickup create-list: HTTP 404");
     expect(process.exitCode).toBe(1);
   });
+
+  it("rejects an empty --folder with an error and does not call any factory", async () => {
+    const clientFactory = vi.fn();
+    const spaceFactory = vi.fn();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const command = createCreateListCommand(clientFactory, spaceFactory);
+
+    await (
+      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
+    )({ name: "V.8", folder: "" });
+
+    expect(errorSpy).toHaveBeenCalledWith("clickup create-list: --folder needs a folder ID");
+    expect(process.exitCode).toBe(1);
+    expect(clientFactory).not.toHaveBeenCalled();
+    expect(spaceFactory).not.toHaveBeenCalled();
+  });
 });
