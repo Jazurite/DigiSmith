@@ -2,21 +2,19 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   DEFAULT_PROFILE_PATH,
   VOICE_INIT_FILENAME,
-  SESSIONS_DIR_PATH,
   readProfile,
   loadVoiceSummary,
-  listHandoffFiles,
-  findNewestHandoff,
-  readHandoffTitle,
-  buildHandoffPointer,
+  buildLineagePointer,
   formatBanner,
   buildBanner,
   main,
   isDigismithRepoRoot,
 } from "./session-init.ts";
+import { resolveMainRoot } from "./lineage-handoff.ts";
 
 describe("constants", () => {
   it("locks the documented default profile path", () => {
@@ -25,10 +23,6 @@ describe("constants", () => {
 
   it("locks the documented voice-init filename", () => {
     expect(VOICE_INIT_FILENAME).toBe("voice-init.ts");
-  });
-
-  it("locks the documented sessions directory path", () => {
-    expect(SESSIONS_DIR_PATH).toBe(".digismith/sessions");
   });
 });
 
@@ -147,164 +141,58 @@ describe("isDigismithRepoRoot", () => {
   });
 });
 
-describe("listHandoffFiles", () => {
+function writeNote(root: string, relPath: string): void {
+  const full = path.join(root, ...relPath.split("/"));
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, "# Note\n");
+}
+
+function initRepo(dir: string): void {
+  fs.mkdirSync(dir, { recursive: true });
+  spawnSync("git", ["init", "-q"], { cwd: dir });
+  spawnSync("git", ["config", "user.email", "test@example.com"], { cwd: dir });
+  spawnSync("git", ["config", "user.name", "Test"], { cwd: dir });
+  fs.writeFileSync(path.join(dir, "README.md"), "base\n");
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  spawnSync("git", ["commit", "-q", "-m", "base commit"], { cwd: dir });
+}
+
+describe("buildLineagePointer", () => {
   let tmpDir: string;
-  let sessionsDir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    sessionsDir = path.join(tmpDir, "sessions");
+    process.env.GIT_CEILING_DIRECTORIES = fs.realpathSync.native(path.dirname(tmpDir));
   });
 
   afterEach(() => {
+    delete process.env.GIT_CEILING_DIRECTORIES;
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("returns an empty array when the directory doesn't exist", () => {
-    expect(listHandoffFiles(sessionsDir)).toEqual([]);
+  it("returns undefined when there are no notes", () => {
+    expect(buildLineagePointer(tmpDir)).toBeUndefined();
   });
 
-  it("returns an empty array for an existing, empty directory", () => {
-    fs.mkdirSync(sessionsDir);
-    expect(listHandoffFiles(sessionsDir)).toEqual([]);
-  });
-
-  it("returns full paths of every file in the directory", () => {
-    fs.mkdirSync(sessionsDir);
-    fs.writeFileSync(path.join(sessionsDir, "abc.md"), "# Title\n");
-    expect(listHandoffFiles(sessionsDir)).toEqual([path.join(sessionsDir, "abc.md")]);
-  });
-
-  it("ignores files that don't end in .md", () => {
-    fs.mkdirSync(sessionsDir);
-    fs.writeFileSync(path.join(sessionsDir, "abc.md"), "# Title\n");
-    fs.writeFileSync(path.join(sessionsDir, "desktop.ini"), "junk");
-    expect(listHandoffFiles(sessionsDir)).toEqual([path.join(sessionsDir, "abc.md")]);
-  });
-
-  it("throws on a genuine read error other than a missing directory", () => {
-    fs.writeFileSync(sessionsDir, "not a directory");
-    expect(() => listHandoffFiles(sessionsDir)).toThrow();
-  });
-});
-
-describe("findNewestHandoff", () => {
-  let tmpDir: string;
-  let sessionsDir: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    sessionsDir = path.join(tmpDir, "sessions");
-    fs.mkdirSync(sessionsDir);
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("returns undefined when there are no files", () => {
-    expect(findNewestHandoff(sessionsDir)).toBeUndefined();
-  });
-
-  it("returns the only file when there's exactly one", () => {
-    const filePath = path.join(sessionsDir, "abc.md");
-    fs.writeFileSync(filePath, "# Title\n");
-    expect(findNewestHandoff(sessionsDir)).toBe(filePath);
-  });
-
-  it("returns the most recently modified file when there are several", () => {
-    const oldPath = path.join(sessionsDir, "old.md");
-    const newPath = path.join(sessionsDir, "new.md");
-    fs.writeFileSync(oldPath, "# Old\n");
-    const oldTime = new Date(Date.now() - 60_000);
-    fs.utimesSync(oldPath, oldTime, oldTime);
-    fs.writeFileSync(newPath, "# New\n");
-
-    expect(findNewestHandoff(sessionsDir)).toBe(newPath);
-  });
-});
-
-describe("readHandoffTitle", () => {
-  let tmpDir: string;
-  let filePath: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    filePath = path.join(tmpDir, "handoff.md");
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("returns undefined for a missing file", () => {
-    expect(readHandoffTitle(filePath)).toBeUndefined();
-  });
-
-  it("strips a leading '# ' and trims the first line", () => {
-    fs.writeFileSync(filePath, "# Handoff: Foo  \nBody text...\n");
-    expect(readHandoffTitle(filePath)).toBe("Handoff: Foo");
-  });
-
-  it("returns the first line as-is when there's no '#' prefix", () => {
-    fs.writeFileSync(filePath, "Foo\nBar\n");
-    expect(readHandoffTitle(filePath)).toBe("Foo");
-  });
-
-  it("returns undefined for an empty file", () => {
-    fs.writeFileSync(filePath, "");
-    expect(readHandoffTitle(filePath)).toBeUndefined();
-  });
-});
-
-describe("buildHandoffPointer", () => {
-  let tmpDir: string;
-  let sessionsDir: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    sessionsDir = path.join(tmpDir, "sessions");
-  });
-
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("returns undefined when the sessions directory is missing", () => {
-    expect(buildHandoffPointer(sessionsDir)).toBeUndefined();
-  });
-
-  it("returns undefined when the sessions directory is empty", () => {
-    fs.mkdirSync(sessionsDir);
-    expect(buildHandoffPointer(sessionsDir)).toBeUndefined();
-  });
-
-  it("points to the single file's title when there's exactly one", () => {
-    fs.mkdirSync(sessionsDir);
-    fs.writeFileSync(path.join(sessionsDir, "abc.md"), "# Handoff: Foo\n");
-    expect(buildHandoffPointer(sessionsDir)).toBe(
-      'DigiSmith: handoff from prior session — "Handoff: Foo" — read .digismith/sessions/abc.md, then delete it once used',
+  it("names every note in one line", () => {
+    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(tmpDir, ".digismith/docs/K/handoff.md");
+    expect(buildLineagePointer(tmpDir)).toBe(
+      `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.0, K — read the one matching your session title (get_session self), or say "resume"`,
     );
   });
 
-  it("includes a pending count and the newest title when there's more than one", () => {
-    fs.mkdirSync(sessionsDir);
-    const oldPath = path.join(sessionsDir, "old.md");
-    fs.writeFileSync(oldPath, "# Old One\n");
-    const oldTime = new Date(Date.now() - 60_000);
-    fs.utimesSync(oldPath, oldTime, oldTime);
-    fs.writeFileSync(path.join(sessionsDir, "new.md"), "# New One\n");
+  it("reads the main checkout's notes when resolved from a worktree", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    const wt = path.join(tmpDir, "wt");
+    spawnSync("git", ["worktree", "add", "-q", "-b", "wt", wt], { cwd: main });
+    writeNote(main, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(wt, ".digismith/docs/K/handoff.md");
+    const mainRoot = resolveMainRoot(wt);
 
-    expect(buildHandoffPointer(sessionsDir)).toBe(
-      'DigiSmith: handoff from prior session — "New One" — read .digismith/sessions/new.md, then delete it once used (2 pending)',
-    );
-  });
-
-  it("falls back to (untitled) when the newest file has no readable title", () => {
-    fs.mkdirSync(sessionsDir);
-    fs.writeFileSync(path.join(sessionsDir, "empty.md"), "");
-    expect(buildHandoffPointer(sessionsDir)).toBe(
-      'DigiSmith: handoff from prior session — "(untitled)" — read .digismith/sessions/empty.md, then delete it once used',
+    expect(buildLineagePointer(mainRoot)).toBe(
+      `DigiSmith: lineage handoff notes in ${path.join(mainRoot, ".digismith", "docs")}: A/A.0 — read the one matching your session title (get_session self), or say "resume"`,
     );
   });
 });
@@ -351,9 +239,11 @@ describe("main (CLI)", () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
     originalCwd = process.cwd();
     process.chdir(tmpDir);
+    process.env.GIT_CEILING_DIRECTORIES = fs.realpathSync.native(path.dirname(tmpDir));
   });
 
   afterEach(() => {
+    delete process.env.GIT_CEILING_DIRECTORIES;
     process.chdir(originalCwd);
     process.exitCode = 0;
     vi.restoreAllMocks();
@@ -420,15 +310,24 @@ describe("main (CLI)", () => {
     expect(logSpy).toHaveBeenCalledWith("DigiSmith: no AI attribution in commits or PRs — no exceptions");
   });
 
-  it("prints the handoff pointer even with no .digismith/profile", async () => {
-    fs.mkdirSync(path.join(tmpDir, ".digismith", "sessions"), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, ".digismith", "sessions", "abc123.md"), "# Handoff: Foo\n");
+  it("prints the lineage pointer even with no .digismith/profile", async () => {
+    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await main();
 
     expect(logSpy).toHaveBeenCalledWith(
-      'DigiSmith: handoff from prior session — "Handoff: Foo" — read .digismith/sessions/abc123.md, then delete it once used',
+      `DigiSmith: lineage handoff notes in ${path.join(process.cwd(), ".digismith", "docs")}: A/A.0 — read the one matching your session title (get_session self), or say "resume"`,
     );
+  });
+
+  it("ignores the retired sessions folder", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".digismith", "sessions"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".digismith", "sessions", "abc123.md"), "# Old handoff\n");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await main();
+
+    expect(logSpy).not.toHaveBeenCalled();
   });
 });
