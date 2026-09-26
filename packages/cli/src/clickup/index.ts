@@ -6,6 +6,7 @@ import { getListsCommand } from "./get-lists.ts";
 import { createTaskCommand } from "./create-task.ts";
 import { updateTaskCommand } from "./update-task.ts";
 import { createFolderCommand } from "./create-folder.ts";
+import { createListCommand } from "./create-list.ts";
 import { uploadAttachmentCommand } from "./upload-attachment.ts";
 
 const clickupCommand: CommandModule = {
@@ -20,6 +21,7 @@ const clickupCommand: CommandModule = {
       .command(createTaskCommand)
       .command(updateTaskCommand)
       .command(createFolderCommand)
+      .command(createListCommand)
       .command(uploadAttachmentCommand)
       .demandCommand(1, ""),
   handler: () => {},
