@@ -316,6 +316,102 @@ layer was needed: herdr plus OpenCode plus a gateway was enough.
 `dg vps`, which already knows the VPS config and herdr commands. For step 3, a narrow
 OpenCode `external_directory` allow rule for the review-package folder would be one option.
 
-**Clan change (Jack, 2026-09-26).** X, K, and Z are grouped into a new clan, **Agentic**. The
-ClickUp letter is not yet decided. This note's "spans three lineages (X, V, K)" framing is now
-mostly one clan, Agentic, plus Depot (real letter V, ClickUp clan D).
+**Clan change (Jack, 2026-09-26).** X, K, and Z are grouped into a new clan, **K: Agentic**, with
+one lineage per old letter (K.0: Maestro, K.1: VPS Hosting, K.2: Model Router). The "D.3: ClickUp"
+session builds it after V.8 ships. This note's "spans three lineages (X, V, K)" framing is now
+mostly one clan, K: Agentic, plus Depot (real letter V, ClickUp clan D). The automation backlog
+ticket is ClickUp `14zcebru2p7` (in Pavilion until K: Agentic exists).
+
+## 2026-09-26 addition — full V.8 run: a two-session, two-model proof of concept
+
+**Status: proof of concept, not a recipe.** Every review below was driven by hand, with about ten
+manual steps each. It proves that the split works end to end on a real feature. It is not yet
+a repeatable procedure.
+
+**The split.**
+- **Implementer session ("D.3: ClickUp", Claude Code on Windows).** Ran DigiSmith's full workflow
+  on V.8 (`dg clickup create-folder`/`create-list`, ClickUp ticket DGS-17): brainstorming, plan,
+  `digismith:subagent-driven-development`, 5 tasks. Its ledger recorded one routing change:
+  task reviews are not dispatched as subagents. Instead the controller writes a self-contained
+  reviewer prompt file per task, an external reviewer runs it, and the controller adjudicates the
+  findings and runs any fix round.
+- **Reviewer session ("X: VPS", this session).** Ran each prompt on OpenCode with TokenReply
+  `gpt-5.6-sol`, in the herdr workspace `opencode-sol` on the VPS, with a fresh OpenCode session
+  per review (`/new`). It checked the answer and wrote the report back.
+- **Handoff.** Cross-session messages (`send_message`) carried each request and each verdict.
+  Review packages went Windows → VPS by `scp`. Reports went VPS → Windows through MEGA, by writing
+  into the synced `.sdd-workspace` folder.
+
+**Per review (the manual loop):**
+1. Push the task's commit to `origin`, because the VPS repo can only fetch pushed commits.
+2. Rewrite the prompt's `D:\...` paths to VPS paths with a small Node script. (Inline shell
+   `sed`/`node -e` kept mangling the backslashes.)
+3. Copy the prompt, brief, report, and diff to `/tmp/review/` on the VPS with `scp`.
+4. On the VPS, `git fetch`, then `git checkout --detach origin/<branch>` in the VPS-local
+   worktree under `.worktrees/`, so the reviewer has working `git` at the right commit.
+5. `herdr agent prompt opencode-sol "/new"`, then send "Read <prompt> and do the review".
+6. Poll `herdr agent get` in the background until the status is `idle`/`done`/`blocked`.
+7. `opencode export <session-id>`, then extract the tool calls and the last assistant text.
+8. Verify: audit the tool calls, check every line reference against the real files, reproduce
+   any behavioral claim, and resolve ⚠️ items from unchanged code.
+9. Write `<task>-review-sol.md` with a short verification header above Sol's unchanged text.
+10. Wait for MEGA to deliver it, then message the implementer session.
+
+**Results (Sol's verdicts):**
+- Task 1: Approved, no findings.
+- Task 2: Approved, no findings. Three line references were diff-file line numbers, not source
+  line numbers.
+- Task 3: "Approved" despite two Important findings. One was real: a test named "binds … to the
+  given client" asserted only the id. It was fixed in a fix round and the re-review marked it
+  addressed. One minor contradicted an owner ruling that the prompt stated.
+- Task 4: Approved, no findings. The verdict was consistent after the prompt change below.
+- Task 5: Needs fixes. It found a real bug: `--folder ""` silently created a folderless list.
+  This session reproduced it with the worktree's own yargs. It was fixed per Jack's ruling (reject
+  the empty value, make no API call) and the re-review marked it addressed.
+- Whole branch (`1745e3b..c07bd52`, about 9 minutes, 42 tool calls): With fixes. Important:
+  `createFolder()` promises `ClickUpFolder`, whose type requires `access`, which Sol says the
+  create response lacks. Minor: whitespace-only `--folder`, and README gaps. It ran the
+  attribution check and the tests, fetched ClickUp's docs, and probed the CLI itself.
+- Timing: a task review ran in 30-65 seconds on Sol. A full task cycle (brief, implementation,
+  review, fix, re-review) took about 27 minutes for Task 3.
+
+**How the prompts improved during the run (implementer side, each change prompted by a review):**
+- After Task 3: ask for source-file line numbers, not diff line numbers.
+- Task 3 re-review: "open the file if unsure".
+- Task 4: the verdict must match the findings (any Important means "Needs fixes"), and Sol may
+  open source files for line numbers.
+- Final review: a different, broad template, with a Ready-to-merge verdict, deferred-minor
+  triage, a repo-relative `check-attribution` path so it runs on the VPS checkout, smoke-test
+  coverage, and owner rulings listed as deliberate departures.
+
+**What Sol did well, and where it slipped:**
+- Well: it caught a real routing bug that the implementer's tests missed. It raised a legitimate
+  test-strength gap. Its whole-branch review went beyond the diff: API docs, a build, and an
+  empirical parser probe.
+- Slips: it cites diff-file line numbers for files it did not open. That was fixed in practice
+  by making it open files. Before the rule it gave a verdict inconsistent with its findings. One
+  suggestion contradicted a stated owner ruling. In the whole-branch review it ran tests and a
+  build in a checkout it was told to keep read-only (only gitignored `node_modules/` and `dist/`
+  were created). It showed no visible reasoning, and raw `</think>`/`<|tool_call_start|>` tokens
+  leaked into the pane title, which is a display glitch only: no tool call failed.
+- The verification layer mattered. Line-reference checks and one empirical reproduction turned
+  "the reviewer says X" into "X is confirmed" before each verdict reached the implementer.
+
+**Infrastructure facts learned:**
+- MEGA's free plan hit its download quota on the VPS ("Reached bandwidth quota … free transfer
+  allowance for your IP address"). All downloads show RETRYING until it resets. Uploads keep
+  working. So Windows → VPS needs `scp`, while VPS → Windows through MEGA took under a minute
+  per report.
+- OpenCode's `external_directory` permission prompt appears once for `/tmp/review/*`. After an
+  "Allow always" it never came back.
+- A mid-build plugin upgrade (0.68.0-beta, DGS-77's fix) moved the SDD workspace from
+  `.superpowers/sdd/plan/` to `<plan-dir>/.sdd-workspace/`. The reviewer side only needed a
+  one-line path change in its rewrite script.
+- The VPS repo and its `.worktrees/` checkout are read-only references. `git fetch` and
+  `checkout --detach` in `.worktrees/` are safe. Nothing in the MEGA-synced main folder should
+  ever be rewritten by git on the VPS.
+
+**What automation would need to cover** (ClickUp `14zcebru2p7`): steps 1-10 above, especially
+the path rewrite, the package transport, fresh-session dispatch, answer extraction, and the
+verification pass. The pass/fail flow should probably stay with the implementer's controller,
+which already adjudicates and runs fix rounds.
