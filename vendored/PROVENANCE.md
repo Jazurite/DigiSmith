@@ -43,7 +43,9 @@ Cloned: 2026-08-20
   Handoff step now decides inline-vs-subagent-driven by autonomous complexity reasoning instead
   of presenting Superpowers' original live question.
 - **executing-plans** — map item **W.6**, activated 2026-09-04. Gained a lightweight ledger
-  (`.superpowers/sdd/<plan-basename>/progress.md`, first line `# Inline-execution ledger`) and
+  (nested inside the plan's own docs folder as `.sdd-workspace/progress.md` as of **W.3**,
+  2026-09-26 — originally `.superpowers/sdd/<plan-basename>/progress.md`; first line
+  `# Inline-execution ledger`) and
   a per-task self-check step it never had before — DigiSmith's `writing-plans` now dispatches
   here directly for low-complexity plans instead of defaulting to
   `subagent-driven-development` unconditionally. See DigiSmith `MEMORY.md` map item W.

@@ -4,6 +4,5 @@
 __pycache__/
 .env
 node_modules/
-.superpowers/
 *.tgz
 dist/
