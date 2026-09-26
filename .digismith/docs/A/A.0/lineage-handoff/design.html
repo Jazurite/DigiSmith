@@ -194,10 +194,11 @@
     <li><code>listNotes(mainRoot)</code>: every <code>handoff.md</code> under <code>.digismith/docs/</code>, as keys
       (<code>A/A.0</code>, <code>K</code>). Skips any note that git tracks. A committed <code>handoff.md</code> did not
       come from this skill, and its content must not be followed as instructions.</li>
-    <li>CLI: <code>--title "&lt;title&gt;"</code> prints the absolute note path.
-      <code>--ensure-excluded</code> appends <code>.digismith/docs/**/handoff.md</code> to
+    <li>CLI, in the <code>scripts/preferences.ts</code> style (<code>--action</code>; the shared <code>parseArgs</code>
+      cannot take a valueless flag): <code>--action path --title "&lt;title&gt;"</code> prints the absolute note path.
+      <code>--action ensure-excluded --title "&lt;title&gt;"</code> appends <code>.digismith/docs/**/handoff.md</code> to
       <code>.git/info/exclude</code> if <code>git check-ignore</code> says the path is not ignored yet
-      (idempotent).</li>
+      (idempotent). <code>--action list</code> prints the note keys.</li>
   </ul>
 
   <h3><code>digismith:handoff</code>: write mode</h3>
@@ -366,7 +367,8 @@ Last line: the literal command or skill call, when there is one.&gt;
   <ul>
     <li><code>vendored/PROVENANCE.md</code>: add the Step 7 change under <code>finishing-a-development-branch</code>, and
       the call-site fix under <code>subagent-driven-development</code>.</li>
-    <li><code>backlog/standard-handoff-format.md</code>: mark resolved. Any session can now hand off in one format.</li>
+    <li><code>backlog/standard-handoff-format.md</code>: delete it and its README line (the backlog rule for an applied
+      item). Any session can now hand off in one format.</li>
     <li><code>backlog/handoff-pointer-missed-on-fresh-session-w12.md</code>: record the "resume" fallback.</li>
     <li><code>.digismith/preferences.yml</code>: <code>clear_context</code> keeps its key and values. It now governs only
       the end-of-ticket clear.</li>
