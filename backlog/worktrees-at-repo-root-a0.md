@@ -9,7 +9,7 @@
 - New worktrees go to `.worktrees/<branch>` at the repo root, created with plain
   `git worktree add`.
 
-Filed under lineage **A.0** (Primitives, clan A).
+Filed under lineage **A.0** (Primitives, clan A) as ClickUp **DGS-86**.
 
 **Source:** Raised mid-brainstorm on the lineage-handoff build
 (`.digismith/docs/A/A.0/lineage-handoff/design.html`). That build still runs in a native worktree,
