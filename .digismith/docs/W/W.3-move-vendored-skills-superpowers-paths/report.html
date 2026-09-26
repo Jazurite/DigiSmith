@@ -77,7 +77,7 @@
   <h1>Move Vendored Skills' .superpowers/ Paths Into .digismith/ — Implementation Report</h1>
   <div class="meta">
     <span>Date: 2026-09-26</span>
-    <span>Map item: <strong>W.3</strong></span>
+    <span>Map item: <strong>W.13</strong></span>
     <span>Commit range: <code>cdb6c29..6dff1bb</code></span>
   </div>
 </header>
@@ -136,7 +136,7 @@
     <tr><td>Important</td><td>Brainstorm output was no longer gitignored anywhere &mdash; <code>start-server.sh</code> never wrote its own <code>.gitignore</code> for the brainstorm root once the top-level <code>.superpowers/</code> line was removed</td><td>Fixed: added a self-ignoring <code>.gitignore</code> at the <code>.digismith/brainstorm/</code> root</td></tr>
     <tr><td>Important</td><td>Docs told users to gitignore all of <code>.digismith/</code>, which is wrong since <code>.digismith/docs/</code> etc. are normally tracked</td><td>Fixed: removed the incorrect reminder</td></tr>
     <tr><td>Important</td><td>Cross-skill <code>scripts/sdd-workspace</code> references were unqualified and inconsistent across <code>executing-plans</code> and <code>report-implementation</code> <code>SKILL.md</code> files</td><td>Fixed: qualified every reference to <code>skills/subagent-driven-development/scripts/sdd-workspace</code></td></tr>
-    <tr><td>Minor</td><td><code>vendored/PROVENANCE.md</code> was missing divergence entries for <code>subagent-driven-development</code> and <code>brainstorming</code></td><td>Fixed: added &quot;Further diverged by W.3&quot; entries for both</td></tr>
+    <tr><td>Minor</td><td><code>vendored/PROVENANCE.md</code> was missing divergence entries for <code>subagent-driven-development</code> and <code>brainstorming</code></td><td>Fixed: added &quot;Further diverged by W.13&quot; entries for both</td></tr>
     <tr><td>Minor</td><td>Per-platform launch examples in <code>visual-companion.md</code> did not show <code>--slug</code></td><td>Fixed: added <code>--slug</code> to all four platform example blocks</td></tr>
     <tr><td>Minor</td><td>Two prose imprecisions: the fallback case was described as folder-sharing-based rather than filename-based, and <code>sdd-workspace</code>'s header comment still said it prints the plan directory rather than the workspace directory</td><td>Fixed: reworded both to match the actual implemented behavior</td></tr>
   </table>

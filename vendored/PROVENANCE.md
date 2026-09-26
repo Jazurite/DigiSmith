@@ -35,7 +35,7 @@ Cloned: 2026-08-20
   `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
   to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream
   Markdown default — absorbing map item Q's logic, which is now retired. See
-  DigiSmith `MEMORY.md` map item W. **Further diverged by W.3** (2026-09-26):
+  DigiSmith `MEMORY.md` map item W. **Further diverged by W.13** (2026-09-26):
   `scripts/start-server.sh` gained a `--slug <slug>` flag nesting mockup
   output under `.digismith/brainstorm/<slug>/` instead of a flat per-session
   bucket, and its brainstorm root moved to `.digismith/brainstorm/` (renamed
@@ -47,7 +47,7 @@ Cloned: 2026-08-20
   Handoff step now decides inline-vs-subagent-driven by autonomous complexity reasoning instead
   of presenting Superpowers' original live question.
 - **executing-plans** — map item **W.6**, activated 2026-09-04. Gained a lightweight ledger
-  (nested inside the plan's own docs folder as `.sdd-workspace/progress.md` as of **W.3**,
+  (nested inside the plan's own docs folder as `.sdd-workspace/progress.md` as of **W.13**,
   2026-09-26 — originally `.superpowers/sdd/<plan-basename>/progress.md`; first line
   `# Inline-execution ledger`) and
   a per-task self-check step it never had before — DigiSmith's `writing-plans` now dispatches
@@ -66,7 +66,7 @@ Cloned: 2026-08-20
   sources its attribution regex from a new `scripts/git-hooks/attribution-pattern.sh` instead of
   declaring it inline, so the same pattern also backs a new `commit-msg` git hook that catches
   ad-hoc commits outside any review flow — see DigiSmith `MEMORY.md` map item W. **Further
-  diverged by W.3** (2026-09-26): `scripts/sdd-workspace` now nests the workspace inside the
+  diverged by W.13** (2026-09-26): `scripts/sdd-workspace` now nests the workspace inside the
   plan's own folder (`.sdd-workspace/` for a plan literally named `plan.md`, else a
   `.sdd-workspace-<plan-basename>/` sibling) instead of resolving to the plan directory itself,
   also fixing a basename collision between differently-named plan files sharing one folder.
