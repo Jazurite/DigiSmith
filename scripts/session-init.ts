@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { DOCS_DIR_PATH, listNotes, resolveMainRoot } from "./lineage-handoff.ts";
 
 export const DEFAULT_PROFILE_PATH = ".digismith/profile";
 export const VOICE_INIT_FILENAME = "voice-init.ts";
-export const SESSIONS_DIR_PATH = ".digismith/sessions";
 
 export function readProfile(filePath: string): string | undefined {
   let raw: Buffer;
@@ -28,41 +28,11 @@ export function isDigismithRepoRoot(pluginJsonPath: string): boolean {
   }
 }
 
-export function listHandoffFiles(sessionsDir: string): string[] {
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(sessionsDir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .map((entry) => path.join(sessionsDir, entry.name));
-}
-
-export function findNewestHandoff(sessionsDir: string): string | undefined {
-  const files = listHandoffFiles(sessionsDir);
-  if (files.length === 0) return undefined;
-  return files.reduce((newest, current) =>
-    fs.statSync(current).mtimeMs > fs.statSync(newest).mtimeMs ? current : newest,
-  );
-}
-
-export function readHandoffTitle(filePath: string): string | undefined {
-  if (!isFile(filePath)) return undefined;
-  const firstLine = fs.readFileSync(filePath, "utf8").split("\n")[0]?.trim();
-  if (!firstLine) return undefined;
-  return firstLine.replace(/^#+\s*/, "");
-}
-
-export function buildHandoffPointer(sessionsDir: string): string | undefined {
-  const files = listHandoffFiles(sessionsDir);
-  if (files.length === 0) return undefined;
-  const newest = findNewestHandoff(sessionsDir)!;
-  const title = readHandoffTitle(newest) ?? "(untitled)";
-  const countSuffix = files.length > 1 ? ` (${files.length} pending)` : "";
-  return `DigiSmith: handoff from prior session — "${title}" — read ${SESSIONS_DIR_PATH}/${path.basename(newest)}, then delete it once used${countSuffix}`;
+export function buildLineagePointer(mainRoot: string): string | undefined {
+  const keys = listNotes(mainRoot);
+  if (keys.length === 0) return undefined;
+  const docsDir = path.join(mainRoot, ...DOCS_DIR_PATH.split("/"));
+  return `DigiSmith: lineage handoff notes in ${docsDir}: ${keys.join(", ")} — read the one matching your session title (get_session self), or say "resume"`;
 }
 
 type VoiceInitModule = { default: () => Promise<string | null> };
@@ -100,8 +70,8 @@ export async function main(): Promise<void> {
     console.log("DigiSmith: no AI attribution in commits or PRs — no exceptions");
   }
   try {
-    const handoffPointer = buildHandoffPointer(path.join(process.cwd(), SESSIONS_DIR_PATH));
-    if (handoffPointer) console.log(handoffPointer);
+    const lineagePointer = buildLineagePointer(resolveMainRoot(process.cwd()));
+    if (lineagePointer) console.log(lineagePointer);
   } catch (err) {
     console.error(`session-init: failed (${(err as Error).message})`);
     process.exitCode = 1;

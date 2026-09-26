@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lineage Handoff — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Lineage Handoff — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-09-26</span>
+    <span>Map item: <strong>A.0</strong></span>
+    
+    <span>Commit range: <code>8625f5d..3d109b0</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>This feature moves the clear-and-hand-off step out of <code>finishing-a-development-branch</code> into a new <code>digismith:handoff</code> skill. The skill keeps one living note for each lineage at <code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/handoff.md</code>. You can run it at any time, and <code>finishing-a-development-branch</code> calls it automatically at the end of a ticket. A small script, <code>scripts/lineage-handoff.ts</code>, does all the mechanical work. It maps a session title to a lineage key and a note path. It also finds the main checkout, lists the notes, and adds the <code>.git/info/exclude</code> line. The skill uses the script through its CLI, and the <code>SessionStart</code> hook imports it, so writing and reading cannot diverge. The skill text does the judgment work: it composes the note and runs the end-of-ticket cleanup checks. It also holds each clear until the note is checked, and it controls resume. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (4 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4><code>scripts/lineage-handoff.ts</code></h4><p>Title → key → path functions, main-checkout resolution, note listing, the <code>.git/info/exclude</code> line, and a CLI with <code>--action path|ensure-excluded|list</code>.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4><code>session-init.ts</code> points to lineage notes</h4><p><code>buildLineagePointer(mainRoot)</code>: the <code>SessionStart</code> hook prints one pointer line to the lineage notes.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4><code>skills/handoff/SKILL.md</code></h4><p>The <code>digismith:handoff</code> skill, with write mode (manual and end-of-ticket mode) and resume mode.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Wire Step 7, fix SDD call sites, bookkeeping</h4><p><code>finishing-a-development-branch</code> Step 7 hands off to <code>digismith:handoff</code>. No text in <code>skills/</code> refers to <code>.digismith/sessions/</code>.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: <code>scripts/lineage-handoff.ts</code></td><td>Title → key → path functions, main-checkout resolution, note listing, the <code>.git/info/exclude</code> line, and a CLI with <code>--action path|ensure-excluded|list</code>.</td><td>Complete, plus fix commit <code>6b1023c</code>. The original review record was lost with the old worktree. The final review covered this task at task depth.</td><td>None</td></tr>
+    <tr><td>Task 2: <code>session-init.ts</code> points to lineage notes</td><td><code>buildLineagePointer(mainRoot)</code>: the <code>SessionStart</code> hook prints one pointer line to the lineage notes.</td><td>Complete. The original review record was lost with the old worktree. The final review covered this task at task depth.</td><td>None</td></tr>
+    <tr><td>Task 3: <code>skills/handoff/SKILL.md</code></td><td>The <code>digismith:handoff</code> skill, with write mode (manual and end-of-ticket mode) and resume mode.</td><td>Approved, clean (re-reviewed after the ledger was rebuilt, without the lost implementer report)</td><td>skills/handoff/SKILL.md:65 documents <code>--action list</code> but no procedure in the skill ever calls it</td></tr>
+    <tr><td>Task 4: Wire Step 7, fix SDD call sites, bookkeeping</td><td><code>finishing-a-development-branch</code> Step 7 hands off to <code>digismith:handoff</code>. No text in <code>skills/</code> refers to <code>.digismith/sessions/</code>.</td><td>Approved, clean</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes. The review found 2 Important and 7 Minor findings. One fix wave corrected both Important findings and 3 Minor findings, and a scoped re-review confirmed them. The other 4 Minor findings are parked: 2 by Jack's rulings and 2 as cosmetic or informational.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>For a note path that git tracks, <code>ensureExcluded</code> appended the exclude pattern again on every run, because <code>check-ignore</code> never reports tracked files as ignored. <code>--action path</code> also returned the tracked <code>handoff.md</code>, which Write mode would overwrite and Resume mode would follow.</td><td>Fixed in <code>edc4e1b</code> (<code>check-ignore --no-index</code>) and <code>69769bc</code> (<code>--action path</code> fails with <code>lineage-handoff: &lt;path&gt; is tracked by git</code>, and the skill stops on it). One shared helper does the tracked check for <code>listNotes</code> and <code>--action path</code>. Tests added for both.</td></tr>
+    <tr><td>Important</td><td>Notes are permanent, so the <code>SessionStart</code> pointer fires on every source once any note exists. The skill treated that line as an unconditional resume trigger (plan-level).</td><td>Fixed in <code>3d109b0</code>, per Jack's ruling (skill text only): the line triggers resume only when the session's own key is in its list. Otherwise the session ignores it silently.</td></tr>
+    <tr><td>Minor</td><td><code>--action list</code> was documented but never called (Task 3 deferred minor).</td><td>Fixed in <code>3d109b0</code>: Resolve the Note step 4 offers the listed keys when there is no title.</td></tr>
+    <tr><td>Minor</td><td><code>--title "&lt;session title&gt;"</code> in double quotes let the shell expand backticks and <code>$()</code> in a title.</td><td>Fixed in <code>3d109b0</code>: single quotes in every example, and <code>'</code> is written as <code>'\''</code>.</td></tr>
+    <tr><td>Minor</td><td>The <code>git ls-files</code> call in <code>listNotes</code> C-quoted non-ASCII paths, and its pathspecs treated <code>*?[</code> as globs.</td><td>Fixed in <code>53fd6ed</code>: <code>git --literal-pathspecs ls-files -z</code>, plus a test. Before the fix, only the non-ASCII case failed on git 2.53.</td></tr>
+    <tr><td>Minor</td><td>The exclude pattern <code>.digismith/docs/**/handoff.md</code> is broad and case-folds on Windows (plan-mandated).</td><td>Parked. Jack's ruling: keep the plan-mandated pattern.</td></tr>
+    <tr><td>Minor</td><td><code>resolveMainRoot</code> gives a wrong root for submodules and bare-repo layouts (plan-level).</td><td>Parked. Jack's ruling: not in this wave, low likelihood.</td></tr>
+    <tr><td>Minor</td><td>Test gaps (the <code>HANDOFF.md</code> tests guard only case-insensitive filesystems, and no test covers a missing <code>info/</code> directory) and Windows path wording in the skill.</td><td>Parked as cosmetic or informational. The tracked-path test gap closed with the Important fixes above.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">49bd3c9</span> feat(handoff): add lineage-handoff path script</li>
+    <li><span class="sha">57da9e8</span> feat(session-init): point to lineage handoff notes</li>
+    <li><span class="sha">6b1023c</span> fix(handoff): match handoff.md by exact name</li>
+    <li><span class="sha">41917b5</span> feat(handoff): add handoff skill</li>
+    <li><span class="sha">eb7f15d</span> refactor(finishing): hand off to digismith:handoff at step 7</li>
+    <li><span class="sha">5811229</span> docs(handoff): record divergences and retire handoff-format backlog item</li>
+    <li><span class="sha">edc4e1b</span> fix(handoff): make ensureExcluded idempotent for tracked notes</li>
+    <li><span class="sha">53fd6ed</span> fix(handoff): harden tracked-note listing against globs and quotePath</li>
+    <li><span class="sha">69769bc</span> fix(handoff): reject --action path for a note tracked by git</li>
+    <li><span class="sha">3d109b0</span> docs(handoff): gate resume trigger, use --action list, quote titles safely</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/A/A.0/lineage-handoff/report.html</footer>
+
+</body>
+</html>

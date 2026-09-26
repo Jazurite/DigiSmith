@@ -88,3 +88,10 @@ there's a real bug here, it most likely lives in the host application's hook-inv
 in anything this repo controls. Recorded with the corrected, log-backed timeline so a second
 occurrence starts from real evidence instead of re-deriving it, and doesn't have to re-chase the
 already-ruled-out plugin-cache theory.
+
+## 2026-09-26: resume fallback (DGS-85)
+
+The per-session pointer this item describes is gone. `session-init.ts` now points to per-lineage
+notes (`.digismith/docs/<Clan>/<Lineage>/handoff.md`), and `digismith:handoff`'s resume mode
+("resume") runs the same lookup by hand when the hook line never arrives. The root cause of the
+missing hook output is still unknown.

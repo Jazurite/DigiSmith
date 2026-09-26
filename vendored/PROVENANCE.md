@@ -31,6 +31,10 @@ Cloned: 2026-08-20
   `refs/digismith/post-finish/<feature-branch>/{base,head}` right after `git merge` and deletes
   both pins after the `post-finish` hooks fire; `fire-lifecycle-hook.md` gained the "Merge-range
   pins" contract those hooks read.
+  **Further diverged by DGS-85** (2026-09-26, lineage A.0): Step 7 no longer writes
+  `.digismith/sessions/` handoffs or clears the session itself. It hands off to the new native
+  `digismith:handoff` skill, which owns the per-lineage handoff note and the `clear_context`
+  preference.
 - **brainstorming** — map item **W.5**, activated 2026-09-04 (alongside
   `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
   to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream
@@ -70,6 +74,9 @@ Cloned: 2026-08-20
   plan's own folder (`.sdd-workspace/` for a plan literally named `plan.md`, else a
   `.sdd-workspace-<plan-basename>/` sibling) instead of resolving to the plan directory itself,
   also fixing a basename collision between differently-named plan files sharing one folder.
+  **Further diverged by DGS-85** (2026-09-26): its four `superpowers:finishing-a-development-branch`
+  call sites now point at `digismith:finishing-a-development-branch`; W.3's call-site cutover had
+  missed them.
 - **requesting-code-review** — map item **W.8**, activated 2026-09-11. Its shared
   `code-reviewer.md` template (used both as `subagent-driven-development`'s own final
   whole-branch review template and standalone) now runs `scripts/check-attribution` as a
