@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Move Vendored Skills' .superpowers/ Paths Into .digismith/</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Move Vendored Skills' .superpowers/ Paths Into .digismith/</h1>
+  <div class="meta">
+    <span>Date: 2026-09-26</span>
+    <span>Map item: W.3</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#sdd-workspace">SDD Workspace Relocation</a></li>
+    <li><a href="#brainstorm">Brainstorm Mockup Storage</a></li>
+    <li><a href="#touch-list">File-by-File Touch List</a></li>
+    <li><a href="#testing">Testing / Verification</a></li>
+    <li><a href="#out-of-scope">Out of Scope / Deferred</a></li>
+  </ol>
+</nav>
+
+<section id="background">
+  <h2>Background</h2>
+  <p>
+    DigiSmith's vendored <code>subagent-driven-development</code> still writes every plan's
+    scratch workspace (progress ledger, task briefs, implementer reports, review packages) to
+    <code>.superpowers/sdd/&lt;plan-basename&gt;/</code> &mdash;
+    <code>skills/subagent-driven-development/scripts/sdd-workspace</code> hardcodes the upstream
+    Superpowers location, never re-homed when the skill was vendored into DigiSmith. The same
+    leftover <code>.superpowers/</code> path shows up in 9 files across 4 vendored skills
+    (<code>subagent-driven-development</code>, <code>brainstorming</code>,
+    <code>report-implementation</code>, <code>executing-plans</code>), split across two
+    unrelated scratch concerns: the SDD workspace, and the visual companion's mockup/session
+    storage.
+  </p>
+  <p>
+    A second, pre-existing bug folds into the same fix: <code>sdd-workspace</code> derives its
+    workspace name from <code>basename "$plan" .md</code>, but every DigiSmith plan file is
+    literally named <code>plan.md</code> &mdash; under both the old flat docs convention
+    (<code>.digismith/docs/&lt;slug&gt;/plan.md</code>) and the new nested one
+    (<code>.digismith/docs/&lt;Letter&gt;/&lt;Letter&gt;.&lt;N&gt;-&lt;slug&gt;/plan.md</code>).
+    Every plan in a given worktree resolves to the identical workspace,
+    <code>.superpowers/sdd/plan/</code>. Two plans active concurrently in the same worktree would
+    silently share one ledger and one set of task briefs/reports.
+  </p>
+</section>
+
+<section id="sdd-workspace">
+  <h2>SDD Workspace Relocation</h2>
+  <p>
+    The workspace nests directly inside the plan's own folder &mdash; the same folder that holds
+    <code>design.html</code>/<code>plan.md</code>/<code>report.html</code> &mdash; rather than a
+    separate top-level scratch root. This also fixes the basename-collision bug for free: every
+    plan already gets its own folder under both DigiSmith conventions, so nesting inside it means
+    two different plans can never resolve to the same workspace directory.
+  </p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Case</th><th>Plan file</th><th>Workspace</th></tr>
+    <tr>
+      <td>DigiSmith, nested (current)</td>
+      <td><code>.digismith/docs/W/W.3-move-vendored-skills-superpowers-paths/plan.md</code></td>
+      <td><code>.digismith/docs/W/W.3-move-vendored-skills-superpowers-paths/.sdd-workspace/</code></td>
+    </tr>
+    <tr>
+      <td>DigiSmith, old flat</td>
+      <td><code>.digismith/docs/&lt;slug&gt;/plan.md</code></td>
+      <td><code>.digismith/docs/&lt;slug&gt;/.sdd-workspace/</code></td>
+    </tr>
+    <tr>
+      <td>Shared-bucket fallback (e.g. vanilla upstream Superpowers' own default
+        <code>docs/superpowers/plans/YYYY-MM-DD-&lt;feature&gt;.md</code>, where every plan is a
+        sibling file in one shared folder, not its own folder)</td>
+      <td><code>docs/superpowers/plans/2026-09-26-foo.md</code></td>
+      <td><code>docs/superpowers/plans/.sdd-workspace-2026-09-26-foo/</code></td>
+    </tr>
+  </table>
+  </div>
+  <p>
+    Detection rule in <code>sdd-workspace</code>: literal filename is <code>plan.md</code> &rarr;
+    nest as <code>.sdd-workspace</code> beside it. Any other filename (the filename itself already
+    carries the differentiating info) &rarr; sibling <code>.sdd-workspace-&lt;basename&gt;</code>.
+    Each workspace directory writes its own self-ignoring <code>.gitignore</code> (<code>*</code>)
+    &mdash; previously this was written once at the shared <code>.superpowers/sdd/</code> root;
+    now every workspace owns its own, since there's no longer a shared parent bucket to ignore.
+  </p>
+  <p>The repo-root <code>git rev-parse --show-toplevel</code> lookup goes away entirely &mdash;
+  the new location is derived purely from the plan file's own path, not the repo root.</p>
+</section>
+
+<section id="brainstorm">
+  <h2>Brainstorm Mockup Storage</h2>
+  <p>
+    The visual companion's mockup/session storage has no equivalent "feature folder" to nest
+    into &mdash; mockups get created <em>during</em> brainstorming, before any docs folder
+    exists, and the final <code>&lt;Letter&gt;.&lt;N&gt;-slug&gt;</code> numbering isn't assigned
+    until the design is approved and written. The feature's <strong>slug</strong>, however, is
+    already known up front &mdash; <code>digismith:bootstrap</code> always derives one before
+    handing off to brainstorming &mdash; so nesting keys off the slug instead of the final
+    numbered folder.
+  </p>
+  <p><code>start-server.sh</code> gains an optional <code>--slug &lt;slug&gt;</code> flag:</p>
+  <ul>
+    <li><strong>Slug known</strong> (the normal case):
+      <code>SESSION_DIR="${PROJECT_DIR}/.digismith/brainstorm/${SLUG}/${SESSION_ID}"</code>
+      &mdash; mockups for this feature all land under one slug-keyed folder, even across server
+      restarts within the same conversation.</li>
+    <li><strong>No slug</strong> (fully ad-hoc brainstorming with no ticket/slug at all):
+      <code>SESSION_DIR="${PROJECT_DIR}/.digismith/brainstorm/${SESSION_ID}"</code> &mdash; today's
+      flat scheme, just the <code>.superpowers</code>&rarr;<code>.digismith</code> rename, no
+      nesting.</li>
+  </ul>
+  <p><code>visual-companion.md</code>'s own invocation examples get updated to pass
+  <code>--slug &lt;slug&gt;</code> whenever brainstorming already has one.</p>
+</section>
+
+<section id="touch-list">
+  <h2>File-by-File Touch List</h2>
+  <h3>Core logic</h3>
+  <ul>
+    <li><code>skills/subagent-driven-development/scripts/sdd-workspace</code> &mdash; replace the
+      shared-root <code>slug</code> derivation with the plan-directory nesting rule above.</li>
+    <li><code>skills/brainstorming/scripts/start-server.sh</code> &mdash; <code>.digismith</code>
+      rename + new <code>--slug</code> flag for <code>SESSION_DIR</code> nesting.</li>
+  </ul>
+  <h3>Prose/comment-only (read through the scripts above, no logic of their own)</h3>
+  <ul>
+    <li><code>skills/subagent-driven-development/scripts/task-brief</code> &mdash; default-OUTFILE
+      comment.</li>
+    <li><code>skills/subagent-driven-development/scripts/review-package</code> &mdash;
+      default-OUTFILE comment.</li>
+    <li><code>skills/subagent-driven-development/SKILL.md</code> &mdash; workspace description +
+      stale-ledger detection note (the "old flat path" callout becomes moot under the new
+      scheme).</li>
+    <li><code>skills/executing-plans/SKILL.md</code> &mdash; ledger path description.</li>
+    <li><code>skills/report-implementation/SKILL.md</code> &mdash; 3 references (trigger-timing
+      note, prerequisites, ledger listing).</li>
+    <li><code>skills/brainstorming/scripts/stop-server.sh</code> &mdash; comment reference.</li>
+    <li><code>skills/brainstorming/visual-companion.md</code> &mdash; path examples + new
+      <code>--slug</code> usage guidance (4 spots).</li>
+    <li><code>vendored/PROVENANCE.md</code> &mdash; historical note citing the old SDD ledger
+      path; update for accuracy (found during exploration, not in the ticket's original 9, same
+      stale-path pattern).</li>
+  </ul>
+  <h3>Cleanup</h3>
+  <ul>
+    <li><code>.gitignore</code> &mdash; remove the now-dead top-level <code>.superpowers/</code>
+      line.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing / Verification</h2>
+  <p>
+    No existing test harness applies here &mdash; these are plain shell scripts under
+    <code>skills/</code>, not <code>packages/*</code> TypeScript (where Vitest is the standing
+    default). Verification is manual:
+  </p>
+  <ul>
+    <li>Run <code>sdd-workspace</code> directly against three sample plan paths: nested
+      (<code>.digismith/docs/W/W.3-foo/plan.md</code>), old-flat
+      (<code>.digismith/docs/foo/plan.md</code>), and a non-<code>plan.md</code> name
+      (<code>docs/superpowers/plans/2026-01-01-foo.md</code>) &mdash; confirm each resolves to the
+      right folder and writes its own <code>.gitignore</code>.</li>
+    <li>Run <code>start-server.sh</code> once with <code>--slug</code> and once without &mdash;
+      confirm <code>SESSION_DIR</code> nests under the slug in the first case and falls back to
+      flat in the second.</li>
+    <li>Grep the repo afterward for any remaining <code>.superpowers</code> reference to confirm
+      nothing was missed.</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope / Deferred</h2>
+  <ul>
+    <li><strong>Plugin cache propagation</strong> &mdash; a running session executes these scripts
+      from the installed plugin cache, so this repo-side fix only takes effect after a
+      reinstall/version bump. Not this ticket's job to trigger that.</li>
+    <li><strong>Migrating any already-existing <code>.superpowers/</code> scratch directories on
+      disk</strong> &mdash; these are gitignored, ephemeral, and self-cleaning (deleted on plan
+      completion); nothing to migrate.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/W/W.3-move-vendored-skills-superpowers-paths/design.html</footer>
+
+</body>
+</html>
