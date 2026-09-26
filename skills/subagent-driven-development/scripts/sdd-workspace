@@ -3,15 +3,26 @@
 # short-lived artifacts: task briefs, implementer reports, review packages,
 # and the progress ledger. Print the plan directory's absolute path.
 #
-# One directory per plan (.superpowers/sdd/<plan-basename>/) so a follow-up
-# plan in the same working tree can never read or overwrite another plan's
-# artifacts. A stale ledger misread as current progress makes controllers
-# skip whole task sequences — plan-scoping removes that failure structurally.
+# The workspace nests inside the plan's own folder — the same folder that
+# holds design.html/plan.md/report.html — so a follow-up plan in a
+# different folder can never read or overwrite this one's artifacts. A
+# stale ledger misread as current progress makes controllers skip whole
+# task sequences — plan-scoping removes that failure structurally.
+#
+# Every DigiSmith plan file is literally named plan.md (flat
+# .digismith/docs/<slug>/plan.md or nested
+# .digismith/docs/<Letter>/<Letter>.<N>-<slug>/plan.md), so the plan's own
+# parent directory is what's unique — nest as <plan_dir>/.sdd-workspace/.
+# For a plan file whose own name already carries the differentiating
+# info (e.g. upstream Superpowers' own default
+# docs/superpowers/plans/YYYY-MM-DD-<feature>.md, where many plans are
+# siblings in one shared folder), fall back to a sibling
+# <plan_dir>/.sdd-workspace-<plan-basename>/ instead.
 #
 # The workspace lives in the working tree (not under .git/) because Claude Code
 # treats .git/ as a protected path and denies agent writes there — which blocks
 # an implementer subagent from writing its report file. A self-ignoring
-# .gitignore at .superpowers/sdd/ keeps every plan's workspace out of
+# .gitignore inside the workspace directory itself keeps it out of
 # `git status` and out of accidental commits without modifying any tracked file.
 #
 # Single source of truth for the workspace location, so task-brief and
@@ -28,13 +39,17 @@ fi
 plan=$1
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
-slug=$(basename "$plan" .md)
-[ -n "$slug" ] && [ "$slug" != "." ] && [ "$slug" != ".." ] \
+plan_dir=$(cd "$(dirname "$plan")" && pwd)
+basename=$(basename "$plan" .md)
+[ -n "$basename" ] && [ "$basename" != "." ] && [ "$basename" != ".." ] \
   || { echo "cannot derive a workspace name from: $plan" >&2; exit 2; }
 
-root=$(git rev-parse --show-toplevel)
-base="$root/.superpowers/sdd"
-dir="$base/$slug"
+if [ "$basename" = "plan" ]; then
+  dir="$plan_dir/.sdd-workspace"
+else
+  dir="$plan_dir/.sdd-workspace-$basename"
+fi
+
 mkdir -p "$dir"
-printf '*\n' > "$base/.gitignore"
+printf '*\n' > "$dir/.gitignore"
 cd "$dir" && pwd
