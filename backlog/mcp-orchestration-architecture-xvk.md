@@ -371,7 +371,19 @@ a repeatable procedure.
 - Whole branch (`1745e3b..c07bd52`, about 9 minutes, 42 tool calls): With fixes. Important:
   `createFolder()` promises `ClickUpFolder`, whose type requires `access`, which Sol says the
   create response lacks. Minor: whitespace-only `--folder`, and README gaps. It ran the
-  attribution check and the tests, fetched ClickUp's docs, and probed the CLI itself.
+  attribution check and the tests, fetched ClickUp's docs, and probed the CLI itself. Jack's live
+  ClickUp smoke test then confirmed the Important finding: the real create-folder response has no
+  top-level `access`.
+- Final fix-wave re-review (`c07bd52..3c6f562`, three commits, one per finding, about 8 minutes,
+  25 tool calls): all findings addressed, with no new breakage. The fixes were a minimal
+  `ClickUpCreatedFolder = Pick<ClickUpFolder, "id" | "name" | "hidden">`, a
+  `folderId?.trim() === ""` guard, and all nine `clickup` commands documented in the README. Sol
+  opened every touched file, ran `check-attribution` (clean), and this time stayed read-only (no
+  test or build runs, no worktree changes). Every line reference it gave was correct.
+- Totals: 9 reviews on Sol (5 task reviews, 2 task fix-round re-reviews, 1 whole-branch review,
+  and 1 fix-wave re-review). Sol found one real bug (the empty `--folder` routing), one weak test,
+  and one wrong public type. The live smoke test confirmed the type finding. All three were fixed
+  before merge.
 - Timing: a task review ran in 30-65 seconds on Sol. A full task cycle (brief, implementation,
   review, fix, re-review) took about 27 minutes for Task 3.
 
