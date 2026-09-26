@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -79,12 +79,17 @@ describe("buildTaskWriteBody", () => {
 });
 
 describe("createDigiSmithSpace", () => {
-  it("binds the DigiSmith space id to the given client", () => {
-    const fakeClient = {} as ClickUpClient;
+  it("binds the DigiSmith space id to the given client", async () => {
+    const createFolder = vi.fn().mockResolvedValue({ id: "f1", name: "x" });
+    const fakeClient = { createFolder } as unknown as ClickUpClient;
 
     const space = createDigiSmithSpace(fakeClient);
 
     expect(space).toBeInstanceOf(Space);
     expect(space.id).toBe(DIGISMITH_SPACE_ID);
+
+    await space.createFolder("x");
+
+    expect(createFolder).toHaveBeenCalledWith(DIGISMITH_SPACE_ID, "x");
   });
 });
