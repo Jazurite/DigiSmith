@@ -82,7 +82,9 @@ export function listNotes(mainRoot: string): string[] {
 }
 
 export function ensureExcluded(mainRoot: string, relPath: string): ExcludeResult {
-  const check = git(mainRoot, ["check-ignore", "-q", relPath]);
+  // --no-index: check-ignore never reports a tracked path as ignored otherwise,
+  // which would re-append EXCLUDE_PATTERN on every call for a committed note.
+  const check = git(mainRoot, ["check-ignore", "-q", "--no-index", relPath]);
   if (check.status === 0) return "already-ignored";
   if (check.status !== 1) return "not-a-repo";
   const excludePath = git(mainRoot, ["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"]).stdout.trim();

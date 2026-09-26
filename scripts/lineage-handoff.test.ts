@@ -225,6 +225,22 @@ describe("ensureExcluded", () => {
     fs.mkdirSync(plain);
     expect(ensureExcluded(plain, ".digismith/docs/K/handoff.md")).toBe("not-a-repo");
   });
+
+  it("is idempotent when the note is tracked by git", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    const relPath = ".digismith/docs/A/A.0/handoff.md";
+    writeNote(main, relPath);
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "-m", "commit note");
+    const excludePath = path.join(main, ".git", "info", "exclude");
+
+    expect(ensureExcluded(main, relPath)).toBe("added");
+    expect(ensureExcluded(main, relPath)).toBe("already-ignored");
+
+    const lines = fs.readFileSync(excludePath, "utf8").split("\n");
+    expect(lines.filter((line) => line === EXCLUDE_PATTERN)).toHaveLength(1);
+  });
 });
 
 describe("CLI", () => {
