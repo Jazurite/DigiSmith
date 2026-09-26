@@ -176,6 +176,22 @@ describe("listNotes", () => {
     writeNote(plain, ".digismith/docs/K/handoff.md");
     expect(listNotes(plain)).toEqual(["K"]);
   });
+
+  it("does not treat an upper-case HANDOFF.md as a note", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/docs/call-site-cutover/HANDOFF.md");
+    expect(listNotes(main)).toEqual([]);
+  });
+
+  it("skips a tracked upper-case HANDOFF.md", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/docs/call-site-cutover/HANDOFF.md");
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "-m", "commit legacy note");
+    expect(listNotes(main)).toEqual([]);
+  });
 });
 
 describe("ensureExcluded", () => {

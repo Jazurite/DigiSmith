@@ -37,14 +37,6 @@ export function resolveMainRoot(cwd: string): string {
   return commonDir ? path.dirname(path.resolve(commonDir)) : cwd;
 }
 
-function isFile(filePath: string): boolean {
-  try {
-    return fs.statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
-}
-
 function subdirs(dir: string): string[] {
   try {
     return fs
@@ -58,6 +50,16 @@ function subdirs(dir: string): string[] {
   }
 }
 
+function hasNote(dir: string): boolean {
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    return entries.some((entry) => entry.isFile() && entry.name === NOTE_FILENAME);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}
+
 function keyRelPath(key: string): string {
   return `${DOCS_DIR_PATH}/${key}/${NOTE_FILENAME}`;
 }
@@ -66,9 +68,9 @@ export function listNotes(mainRoot: string): string[] {
   const docsDir = path.join(mainRoot, ...DOCS_DIR_PATH.split("/"));
   const found: string[] = [];
   for (const clan of subdirs(docsDir)) {
-    if (isFile(path.join(docsDir, clan, NOTE_FILENAME))) found.push(clan);
+    if (hasNote(path.join(docsDir, clan))) found.push(clan);
     for (const lineage of subdirs(path.join(docsDir, clan))) {
-      if (isFile(path.join(docsDir, clan, lineage, NOTE_FILENAME))) found.push(`${clan}/${lineage}`);
+      if (hasNote(path.join(docsDir, clan, lineage))) found.push(`${clan}/${lineage}`);
     }
   }
   if (found.length === 0) return [];
