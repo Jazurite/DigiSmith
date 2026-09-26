@@ -316,11 +316,14 @@ layer was needed: herdr plus OpenCode plus a gateway was enough.
 `dg vps`, which already knows the VPS config and herdr commands. For step 3, a narrow
 OpenCode `external_directory` allow rule for the review-package folder would be one option.
 
-**Clan change (Jack, 2026-09-26).** X, K, and Z are grouped into a new clan, **K: Agentic**, with
-one lineage per old letter (K.0: Maestro, K.1: VPS Hosting, K.2: Model Router). The "D.3: ClickUp"
-session builds it after V.8 ships. This note's "spans three lineages (X, V, K)" framing is now
-mostly one clan, K: Agentic, plus Depot (real letter V, ClickUp clan D). The automation backlog
-ticket is ClickUp `14zcebru2p7` (in Pavilion until K: Agentic exists).
+**Clan change (Jack, 2026-09-26).** X, K, and Z are grouped into a new clan, **B: Agentic**, with
+one lineage per old letter (B.0: Maestro, B.1: VPS Hosting, B.2: Model Router). Jack gave it
+ClickUp letter B because it is DigiSmith's founding idea. It was briefly planned as K: Agentic the
+same day. Real map letter B (Spec seam) is not migrated yet and will need a different ClickUp
+letter. The "D.3: ClickUp" session builds the clan after V.8 ships. This note's "spans three
+lineages (X, V, K)" framing is now mostly one clan, B: Agentic, plus Depot (real letter V, ClickUp
+clan D). The automation backlog ticket is ClickUp `14zcebru2p7` (in Pavilion until B: Agentic
+exists).
 
 ## 2026-09-26 addition — full V.8 run: a two-session, two-model proof of concept
 
