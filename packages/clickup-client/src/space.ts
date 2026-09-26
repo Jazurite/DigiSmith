@@ -1,5 +1,5 @@
 import type { ClickUpClient } from "./client.ts";
-import type { ClickUpFolder, ClickUpListSummary } from "./types.ts";
+import type { ClickUpCreatedFolder, ClickUpListSummary } from "./types.ts";
 
 /** Binds a client to one space id, so callers stop threading spaceId through every call. */
 export class Space {
@@ -8,7 +8,7 @@ export class Space {
     readonly id: string
   ) {}
 
-  createFolder(name: string): Promise<ClickUpFolder> {
+  createFolder(name: string): Promise<ClickUpCreatedFolder> {
     return this.client.createFolder(this.id, name);
   }
 

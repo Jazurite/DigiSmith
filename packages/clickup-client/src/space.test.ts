@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import type { ClickUpClient } from "./client.ts";
-import type { ClickUpFolder, ClickUpListSummary } from "./types.ts";
+import type { ClickUpCreatedFolder, ClickUpListSummary } from "./types.ts";
 import { Space } from "./space.ts";
 
 describe("Space", () => {
   it("createFolder() delegates to the client with the bound space id", async () => {
-    const folder = { id: "f1", name: "New Folder" } as unknown as ClickUpFolder;
+    const folder: ClickUpCreatedFolder = { id: "f1", name: "New Folder", hidden: false };
     const createFolder = vi.fn().mockResolvedValue(folder);
     const fakeClient = { createFolder } as unknown as ClickUpClient;
     const space = new Space(fakeClient, "90165960730");

@@ -217,7 +217,7 @@ describe("ClickUpClient domain write/read methods", () => {
 
   it("createFolder() POSTs the name to the space folder endpoint", async () => {
     const client = makeClient();
-    request.mockResolvedValueOnce({ data: { id: "f1", name: "New Folder" } });
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "New Folder", hidden: false } });
 
     const folder = await client.createFolder("90165960730", "New Folder");
 
@@ -227,7 +227,7 @@ describe("ClickUpClient domain write/read methods", () => {
       params: undefined,
       data: { name: "New Folder" },
     });
-    expect(folder).toEqual({ id: "f1", name: "New Folder" });
+    expect(folder).toEqual({ id: "f1", name: "New Folder", hidden: false });
   });
 
   it("createListInFolder() POSTs the name to the folder list endpoint", async () => {

@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import type {
   ClickUpAttachment,
+  ClickUpCreatedFolder,
   ClickUpCustomField,
-  ClickUpFolder,
   ClickUpFolderWithLists,
   ClickUpFoldersResponse,
   ClickUpFieldsResponse,
@@ -133,8 +133,8 @@ export class ClickUpClient {
     await this.delete(`/task/${taskId}`);
   }
 
-  createFolder(spaceId: string, name: string): Promise<ClickUpFolder> {
-    return this.post<ClickUpFolder>(`/space/${spaceId}/folder`, { data: { name } });
+  createFolder(spaceId: string, name: string): Promise<ClickUpCreatedFolder> {
+    return this.post<ClickUpCreatedFolder>(`/space/${spaceId}/folder`, { data: { name } });
   }
 
   createListInFolder(folderId: string, name: string): Promise<ClickUpListSummary> {
