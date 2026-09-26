@@ -248,3 +248,74 @@ Jack corrected the framing above before any spike ran. Recording it precisely, s
   through herdr avoid the classifier" — it's now "does *setting up* a herdr-managed pane running
   an offload-style agent CLI avoid the classifier," since ongoing dispatch after setup wouldn't
   touch the controller's Bash tool regardless.
+
+## 2026-09-26 addition — first live cross-model review: Claude Code implements, GPT-5.6 Sol reviews on the VPS
+
+**What happened.** V.8 Task 1 ("ClickUpClient folder/list creation methods", diff
+`563ec73..e8b7fc8`) was built by a normal `digismith:subagent-driven-development` run on Windows,
+in the "D.3: ClickUp" session. A second task review then ran on a different model, on a
+different provider, on a different machine: OpenCode on TokenReply `gpt-5.6-sol`, inside a
+herdr pane on the VPS. It used the SDD task-reviewer prompt unchanged except for file paths. Its
+verdict was Approved, with no findings at any severity. It also made targeted checks on code
+outside the diff (the `ClickUpFolder` type, callers of the new methods). The report went back to
+the local session through MEGA (`task-1-review-sol.md` in the worktree's `.superpowers/sdd/plan/`),
+followed by a cross-session message to "D.3: ClickUp". This is the first working instance of the
+"implementer on one model, reviewer on another" tier this note has been circling. No MCP/REST
+layer was needed: herdr plus OpenCode plus a gateway was enough.
+
+**Setup that made it work:**
+- A herdr workspace `opencode-sol` on the VPS, with agent `opencode-sol`. It was created with
+  the same `herdr workspace create --env` plus `herdr agent start` shape that `dg vps connect`
+  (X.1) already uses. `gpt-5.6-sol` was added to the VPS's `~/.config/opencode/opencode.json`
+  under the TokenReply provider's `models`.
+- MEGA sync between `D:\Workspace` and `/root/Workspace`. Both sides use the same `.megaignore`
+  rules (skip `.git` and `node_modules`, sync every other dot-folder). Each machine keeps its own
+  `.git`.
+- A VPS-local git repo inside the synced DigiSmith folder, connected to `origin`. MEGA never sees
+  it (`-d:.git`). It is for read-only use only (`fetch`/`log`/`diff`), because any git command
+  that rewrites files would sync back into the Windows checkout. The review branch was pushed from
+  Windows and fetched on the VPS. A VPS-side worktree in `.worktrees/` held the reviewed commit, so
+  the reviewer had working `git`.
+
+**Manual steps (the gap to automate):**
+1. Copy the review package (prompt, brief, report, diff) to the VPS and rewrite the prompt's
+   Windows paths to VPS paths.
+2. Start the reviewer agent and send it the prompt with `herdr agent prompt`.
+3. Answer OpenCode's `external_directory` permission prompt for the review files. This needed a
+   human.
+4. Extract the final answer (`opencode export <session-id>`, last assistant text part) and write it
+   into the MEGA-synced plan folder.
+5. Notify the owning session that the review is ready.
+
+**Findings and gotchas:**
+- **Classifier (K's question): still not settled.** The `herdr workspace create --env
+  "TOKENREPLY_API_KEY=$TOKENREPLY_API_KEY"` step ran from this controller session's Bash tool in
+  auto mode without a block. But the credential was sourced on the VPS side of an `ssh` command,
+  not by local command substitution, and the known-blocked baseline shape was not run for
+  comparison. So this is not the controlled test the 2026-09-22 addition asks for. The classifier
+  did block a different action in the same session: saving persistent GitHub SSH auth on the VPS
+  (`known_hosts` plus a repo `core.sshCommand`), labelled "Unauthorized Persistence".
+- **No visible reasoning from GPT-5.6 through TokenReply.** OpenCode showed only "Thought: 82ms".
+  The OpenAI-compatible route does not appear to stream reasoning text, and a stray `</think>`
+  leaked into the pane title. OpenCode's `reasoningSummary: "auto"` model option is documented for
+  its built-in OpenAI (Responses API) provider. It is untested against TokenReply.
+- **MEGA rules are per machine.** `.megaignore` does not sync. MEGAcmd's default on the VPS
+  skipped every dot-folder (`-:.*`), which hid `.claude/` and `.superpowers/` until the Windows
+  rules were copied over. An append to a `.megaignore` with no trailing newline briefly merged two
+  rules and un-excluded `.git`. The VPS's `.git` and `.worktrees` leaked to the cloud as a result.
+  The cloud `.git` copy still needs manual cleanup.
+- **Worktree pointer files sync.** `-d:.git` only matches directories. A worktree's `.git` is a
+  file with an absolute `gitdir:` path, so it syncs and breaks on the other machine. Git 2.48+ can
+  write relative worktree paths. That is untested here.
+- **MEGA's bulk download stalled** at 14 MB of 6.87 GB (about 120,000 files queued). Small new
+  files still synced in under a minute. The cause is not confirmed; MEGA's account transfer quota
+  is one candidate.
+
+**What it changes.** The X.3 question moves from "can herdr host a second-model tier" (yes) to
+"automate steps 1-5 and remove the permission prompt." A dispatch helper could build on
+`dg vps`, which already knows the VPS config and herdr commands. For step 3, a narrow
+OpenCode `external_directory` allow rule for the review-package folder would be one option.
+
+**Clan change (Jack, 2026-09-26).** X, K, and Z are grouped into a new clan, **Agentic**. The
+ClickUp letter is not yet decided. This note's "spans three lineages (X, V, K)" framing is now
+mostly one clan, Agentic, plus Depot (real letter V, ClickUp clan D).
