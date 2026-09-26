@@ -26,7 +26,8 @@ Load plan, review critically, execute all tasks, report when complete.
 
 If this is the first task, create this plan's ledger with its identity as the first line:
 `# Inline-execution ledger — plan: <plan file path>`, at
-`.superpowers/sdd/<plan-basename>/progress.md` (the same path convention
+`<plan's own workspace>/progress.md` — the same directory
+`scripts/sdd-workspace PLAN_FILE` resolves to (the same path convention
 `digismith:subagent-driven-development` uses — a given plan only ever runs one way, so there's
 no collision). Record the commit at that point as `MERGE_BASE` for the ledger.
 
