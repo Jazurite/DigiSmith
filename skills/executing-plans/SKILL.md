@@ -24,12 +24,15 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ### Step 2: Execute Tasks
 
-If this is the first task, create this plan's ledger with its identity as the first line:
-`# Inline-execution ledger — plan: <plan file path>`, at
-`<plan's own workspace>/progress.md` — the same directory
-`scripts/sdd-workspace PLAN_FILE` resolves to (the same path convention
-`digismith:subagent-driven-development` uses — a given plan only ever runs one way, so there's
-no collision). Record the commit at that point as `MERGE_BASE` for the ledger.
+If this is the first task, run
+`skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE` to resolve (and create,
+with its own self-ignoring `.gitignore`) this plan's workspace directory — running it is what
+actually creates the directory and its `.gitignore`; interpolating the path by hand instead
+would skip that. Create this plan's ledger with its identity as the first line:
+`# Inline-execution ledger — plan: <plan file path>`, at `<that workspace>/progress.md` (the
+same path convention `digismith:subagent-driven-development` uses — a given plan only ever runs
+one way, so there's no collision). Record the commit at that point as `MERGE_BASE` for the
+ledger.
 
 For each task:
 1. Mark as in_progress

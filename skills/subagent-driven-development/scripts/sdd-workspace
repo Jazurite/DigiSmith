@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resolve and ensure the working-tree directory SDD uses for one plan's
 # short-lived artifacts: task briefs, implementer reports, review packages,
-# and the progress ledger. Print the plan directory's absolute path.
+# and the progress ledger. Print the workspace directory's absolute path.
 #
 # The workspace nests inside the plan's own folder — the same folder that
 # holds design.html/plan.md/report.html — so a follow-up plan in a
