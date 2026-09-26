@@ -22,7 +22,7 @@ Right when a `digismith:subagent-driven-development` plan's final
 whole-branch review has come back clean — every finding fixed, parked
 with a ruling, or the review found nothing to begin with — and **before**
 that skill's own Finish step runs `rm -rf` on the plan's workspace
-(`.superpowers/sdd/<plan-basename>/`). This is earlier than "after the
+(the directory `skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE` resolves to). This is earlier than "after the
 branch merges": the ledger this skill reads only exists until that
 deletion, and this repo's merges are always fast-forward, so the commit
 range recorded here won't change once
@@ -44,7 +44,8 @@ hand-off to `finishing-a-development-branch`," full stop.
 
 ## Prerequisites
 
-A ledger must exist at `.superpowers/sdd/<plan-basename>/progress.md`. If it doesn't (no
+A ledger must exist at the plan's workspace (the directory `skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE`
+resolves to, plus `/progress.md`). If it doesn't (no
 execution has happened yet for this plan), this skill's trigger condition isn't met — skip it
 silently and let the other skill's Finish step proceed as normal. Don't render a report from
 nothing. If a ledger does exist, its first line names which mechanism produced it — `# SDD
@@ -118,7 +119,8 @@ to a subagent that can't ask.
    `design.html` or `plan.md` at all (they're still at their old location);
    that needs no extra handling — Step 2a's existing
    omit-the-link-if-the-file-isn't-there rule already covers it.
-2. **Ledger** — `.superpowers/sdd/<plan-basename>/progress.md`, in full.
+2. **Ledger** — the plan's workspace (the directory
+   `skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE` resolves to) plus `/progress.md`, in full.
 3. **Commit range:**
    - `MERGE_BASE` — the hash before `..` in the ledger's *first*
      `Task 1: complete (commits <base>..<head>, ...)` line.
