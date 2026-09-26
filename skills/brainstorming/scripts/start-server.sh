@@ -134,6 +134,12 @@ if [[ -n "$PROJECT_DIR" ]]; then
   # URL with a valid cookie.
   export BRAINSTORM_PORT_FILE="${BRAINSTORM_ROOT}/.last-port"
   export BRAINSTORM_TOKEN_FILE="${BRAINSTORM_ROOT}/.last-token"
+  # Self-ignore the brainstorm root (not per-slug) so mockup output never
+  # needs a top-level .gitignore entry — one file covers both the flat and
+  # --slug-nested layouts.
+  BRAINSTORM_GITIGNORE_DIR="${PROJECT_DIR}/.digismith/brainstorm"
+  mkdir -p "$BRAINSTORM_GITIGNORE_DIR"
+  printf '*\n' > "${BRAINSTORM_GITIGNORE_DIR}/.gitignore"
 else
   SESSION_DIR="/tmp/brainstorm-${SESSION_ID}"
 fi
