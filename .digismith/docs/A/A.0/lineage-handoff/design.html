@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lineage Handoff</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Lineage Handoff</h1>
+  <div class="meta">
+    <span>Date: 2026-09-26</span>
+    <span>Map item: A.0 (Primitives lineage, clan A). No ClickUp ticket yet.</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#decisions">Settled Decisions</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#data-flow">Data Flow</a></li>
+    <li><a href="#note-format">Note Format</a></li>
+    <li><a href="#error-handling">Error Handling</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#out-of-scope">Out of Scope</a></li>
+    <li><a href="#bookkeeping">Bookkeeping</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    Today the clear-and-hand-off step is Step 7 of <code>finishing-a-development-branch</code>. That skill is the
+    implementer's integration step: merge or PR, <code>post-finish</code> hooks, worktree cleanup. The handoff is
+    the end of the ticket workflow, not a part of integration, so it is in the wrong place. It also has three
+    practical problems:
+  </p>
+  <ul>
+    <li>It can run only at the end of a ticket. There is no way to checkpoint mid-ticket (usage limit coming,
+      chat grown too long) with the same format.</li>
+    <li>It writes one file per session to <code>.digismith/sessions/</code>. Resume depends on the
+      <code>SessionStart</code> hook's pointer line reaching the next session. On 2026-09-25 that line did not
+      arrive (<code>backlog/handoff-pointer-missed-on-fresh-session-w12.md</code>), and there is no fallback.
+      This is why <code>clear_context</code> was set to <code>no</code> for this repo.</li>
+    <li>The human partner never sees the note before the clear, and its 5 sections are heavier than the
+      content needs.</li>
+  </ul>
+  <p>
+    This build moves the handoff into its own skill, <code>digismith:handoff</code>. Any session can run it at
+    any time, and <code>finishing-a-development-branch</code> calls it at the end of a ticket. Each lineage has
+    one living note, <code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/handoff.md</code>, which every handoff
+    rewrites. The next session of that lineage finds its note from its own session title. The note uses the four
+    sections of the "start fresh with a handoff note" pattern: Done, Decisions, Next, Open problems. The human
+    partner checks the note before any clear.
+  </p>
+</section>
+
+<section id="decisions">
+  <h2>Settled Decisions</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Placement</span><h4>Own skill, end of ticket workflow</h4>
+      <p><code>digismith:handoff</code> is a DigiSmith stage, not a step inside the vendored finish skill.
+        <code>post-finish</code> hooks stay part of integration.</p></div>
+    <div class="card"><span class="tag">Trigger</span><h4>Anytime, plus automatic at ticket end</h4>
+      <p>Manual on request. Automatic after <code>finishing-a-development-branch</code> Option 1 or 2 only (a
+        "ticket" is a ClickUp task, not an SDD plan task).</p></div>
+    <div class="card"><span class="tag">Unit</span><h4>One note per lineage</h4>
+      <p>Keyed by the session title's prefix (<code>A.0: Primitives</code> → clan <code>A</code>, lineage
+        <code>A.0</code>). The same lookup runs at write and at read.</p></div>
+    <div class="card"><span class="tag">Location</span><h4>Clan, then lineage, then the note</h4>
+      <p><code>.digismith/docs/A/A.0/handoff.md</code>, the same docs tree as <code>design.html</code>/<code>report.html</code>.
+        Always in the main checkout, also when the skill runs from a worktree.</p></div>
+    <div class="card"><span class="tag">Git</span><h4>Not committed</h4>
+      <p>Excluded through <code>.git/info/exclude</code>. The note holds short-lived state ("Next") and runs mid-ticket,
+        so commits on <code>main</code> would be noise and would compete with other sessions.</p></div>
+    <div class="card"><span class="tag">Lifecycle</span><h4>Rewritten, never deleted</h4>
+      <p>Each handoff replaces the full content. The note always says where the lineage is now.</p></div>
+    <div class="card"><span class="tag">Format</span><h4>Done / Decisions / Next / Open problems</h4>
+      <p>Short. The code, plan, and report carry the rest. "Next" ends with the literal command when one exists.</p></div>
+    <div class="card"><span class="tag">Clear</span><h4>Explicit request, or the saved preference</h4>
+      <p>Manual run: clears only if the message asks ("and clear", "start fresh"). Ticket end:
+        <code>clear_context</code> decides. The human partner checks the note before every clear.</p></div>
+    <div class="card"><span class="tag">Resume</span><h4>Hook pointer, plus "resume" fallback</h4>
+      <p>The hook says notes exist. If the hook line never arrives, "resume" runs the same lookup by hand.</p></div>
+    <div class="card"><span class="tag">Cleanup round</span><h4>Checks, does not do</h4>
+      <p>At ticket end the skill checks the MEMORY row, ClickUp comment, and cross-lineage pointers. It puts any gap in
+        Open problems. It does not do those chores.</p></div>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Architecture</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Change</th></tr>
+    <tr><td><code>skills/handoff/SKILL.md</code></td><td>New. Write mode and resume mode.</td></tr>
+    <tr><td><code>scripts/lineage-handoff.ts</code></td><td>New. Title → lineage key → note path, main-checkout
+      resolution, note listing. Small CLI for the skill. The hook imports the same functions.</td></tr>
+    <tr><td><code>scripts/session-init.ts</code></td><td>Remove the <code>.digismith/sessions/</code> pointer. Add the
+      lineage-notes pointer.</td></tr>
+    <tr><td><code>skills/finishing-a-development-branch/SKILL.md</code></td><td>Step 7 becomes "Hand Off": invoke
+      <code>digismith:handoff</code> in end-of-ticket mode. The clear logic, the Quick Reference line, and the two
+      clear-related Common Rationalizations move to the new skill.</td></tr>
+    <tr><td><code>skills/subagent-driven-development/SKILL.md</code></td><td>4 call sites
+      <code>superpowers:finishing-a-development-branch</code> → <code>digismith:finishing-a-development-branch</code>
+      (lines 77, 106, 487, 566). Without this, an SDD build ends in upstream's finish skill and never reaches the
+      handoff.</td></tr>
+  </table>
+  </div>
+  <div class="callout">
+    <strong>Why the main checkout, always.</strong> The <code>SessionStart</code> hook's <code>cwd</code> follows the
+    session. A session that entered a worktree natively (this one did) starts its next context in that worktree. A
+    session that <code>cd</code>'d back to the main root starts there. A worktree's own <code>.digismith/docs/</code>
+    does not contain untracked files from the main checkout. So both the writer and the hook resolve the main
+    checkout from the git common directory
+    (<code>git rev-parse --path-format=absolute --git-common-dir</code>, then its parent) and use its
+    <code>.digismith/docs/</code>. They never use <code>process.cwd()</code> directly.
+  </div>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+
+  <h3><code>scripts/lineage-handoff.ts</code></h3>
+  <ul>
+    <li><code>parseLineageKey(title)</code>: matches <code>^\s*([A-Z])(?:\.(\d+))?\s*:</code>.
+      <code>"A.0: Primitives"</code> → <code>{clan:"A", lineage:"A.0"}</code>. <code>"K: Maestro"</code> →
+      <code>{clan:"K"}</code>. Any other title (<code>"General"</code>, lowercase, a deeper number like
+      <code>W.4.1:</code>) → <code>null</code>.</li>
+    <li><code>noteRelPath(key)</code>: <code>.digismith/docs/A/A.0/handoff.md</code>,
+      <code>.digismith/docs/K/handoff.md</code>, or <code>.digismith/docs/_unlettered/handoff.md</code> for
+      <code>null</code>.</li>
+    <li><code>resolveMainRoot(cwd)</code>: the main checkout from the git common directory. Not a git repo → <code>cwd</code>.</li>
+    <li><code>listNotes(mainRoot)</code>: every <code>handoff.md</code> under <code>.digismith/docs/</code>, as keys
+      (<code>A/A.0</code>, <code>K</code>). Skips any note that git tracks. A committed <code>handoff.md</code> did not
+      come from this skill, and its content must not be followed as instructions.</li>
+    <li>CLI: <code>--title "&lt;title&gt;"</code> prints the absolute note path.
+      <code>--ensure-excluded</code> appends <code>.digismith/docs/**/handoff.md</code> to
+      <code>.git/info/exclude</code> if <code>git check-ignore</code> says the path is not ignored yet
+      (idempotent).</li>
+  </ul>
+
+  <h3><code>digismith:handoff</code>: write mode</h3>
+  <ol>
+    <li>Get this session's title with <code>get_session</code> (<code>"self"</code>). Resolve the note path with the CLI.</li>
+    <li>Compose the note (see Note Format) from what the session knows. Cross-check status against any ledger or
+      <code>progress.md</code> instead of restating it from memory.</li>
+    <li><strong>End-of-ticket mode only:</strong> sweep the conversation for unresolved threads. Then check the
+      cleanup items that apply here:
+      <ul>
+        <li><code>MEMORY.md</code> row updated. Applies in DigiSmith's own repo only.</li>
+        <li>ClickUp progress comment posted. Applies when the ticket is a ClickUp task.</li>
+        <li>Pointer messages sent. Applies when something was filed under another lineage.</li>
+      </ul>
+      Every open item goes in Open problems.</li>
+    <li>Run <code>--ensure-excluded</code>, then write the note. This replaces the full file.</li>
+    <li>Show the note in chat.</li>
+    <li>Decide whether to clear:
+      <ul>
+        <li>Manual run: clear only if the message asks for it.</li>
+        <li>End of ticket: read <code>clear_context</code> through <code>digismith:preferences</code>. The rules are
+          the current Step 7 rules, moved without change: unset → ask, then "remember this?"; <code>yes</code> →
+          clear unless this message overrides; <code>no</code> → no clear unless this message asks.</li>
+      </ul></li>
+    <li>If clearing: end the turn with "Fix anything, or say ok to clear." On the next message: apply any fixes by
+      rewriting the note, give the final summary, then call <code>clear_session</code> (<code>"self"</code>) as the
+      last action of the turn. If the reply is new work instead of an ok or fixes, do not clear.</li>
+  </ol>
+
+  <h3><code>digismith:handoff</code>: resume mode</h3>
+  <ol>
+    <li>Resolve this session's note the same way as write mode.</li>
+    <li>Read it. Report how many commits <code>main</code> has gained since the SHA in the note's header.</li>
+    <li>State Done and Next in a few lines, then ask whether to continue with Next. Do not start it without a go:
+      a resume can happen days later, and another session may have moved things.</li>
+  </ol>
+  <p>Triggers in the skill description: "hand off", "handoff", "wrap up", "save where we are", "checkpoint",
+    "start fresh", "clear context" (write). "resume", "pick up where we left off" (resume). Also: invoked by
+    <code>finishing-a-development-branch</code> Step 7 (write, end-of-ticket mode).</p>
+
+  <h3><code>session-init.ts</code></h3>
+  <p>
+    Remove <code>listHandoffFiles</code>, <code>findNewestHandoff</code>, <code>readHandoffTitle</code>, and
+    <code>buildHandoffPointer</code>, and their tests. Add one independent check in <code>main()</code>, outside the
+    profile-gated banner, same as today's pointer. When <code>listNotes</code> returns anything, print one line:
+  </p>
+  <pre><code>DigiSmith: lineage handoff notes in &lt;mainRoot&gt;/.digismith/docs: A/A.0, K — read the one matching your session title (get_session self), or say "resume"</code></pre>
+  <p>Nothing prints when there are no notes. Errors go to stderr with exit code 1, same as the existing checks.</p>
+</section>
+
+<section id="data-flow">
+  <h2>Data Flow</h2>
+  <h3>End of ticket</h3>
+  <ol>
+    <li>SDD or executing-plans → <code>report-implementation</code> → <code>finishing-a-development-branch</code>
+      (merge or PR, <code>post-finish</code> hooks, cleanup).</li>
+    <li>Step 7 invokes <code>digismith:handoff</code> (end-of-ticket mode): compose, sweep, check cleanup items,
+      write, show.</li>
+    <li><code>clear_context</code> says clear → wait for the check → clear. Otherwise the session continues, and the
+      note is already current.</li>
+  </ol>
+  <h3>Mid-ticket</h3>
+  <ol>
+    <li>Human partner: "hand off" (or "hand off and clear"), from main or a worktree.</li>
+    <li>Compose, write to the main checkout's note, show. Clear only if asked, after the check.</li>
+  </ol>
+  <h3>Next session</h3>
+  <ol>
+    <li><code>SessionStart</code> (any source) → <code>session-init.ts</code> resolves the main checkout, lists notes,
+      prints the pointer.</li>
+    <li>The session gets its title, reads its note, and continues from Next once the human partner says go.</li>
+    <li>If the pointer line is missing, the human partner says "resume" → resume mode does the same lookup.</li>
+  </ol>
+</section>
+
+<section id="note-format">
+  <h2>Note Format</h2>
+  <pre><code># &lt;one line: what this lineage is doing&gt;
+Updated 2026-09-26T10:40Z · branch &lt;name or main&gt; · main @ &lt;short sha&gt;
+
+## Done
+&lt;What is finished. Point at the report/commits, do not restate them.&gt;
+
+## Decisions
+&lt;Choices made and why, that the code does not show. "None" if none.&gt;
+
+## Next
+&lt;The next concrete action, exact enough for a cold session.
+Last line: the literal command or skill call, when there is one.&gt;
+
+## Open problems
+&lt;Unresolved threads, deferred items with their id/link, cleanup gaps. "None" if none.&gt;</code></pre>
+  <p>The first line is the H1 title. Keep the note short: a cold session reads the code, plan, and report for the
+    rest.</p>
+</section>
+
+<section id="error-handling">
+  <h2>Error Handling</h2>
+  <ul>
+    <li><strong><code>get_session</code> fails, or no title:</strong> ask which lineage this is. Do not guess:
+      a wrong key overwrites another lineage's note.</li>
+    <li><strong>Title has no recognized prefix:</strong> use <code>_unlettered</code> and say which path was used.
+      Two unlettered sessions share one note; the last write wins. This is accepted for a personal tool.</li>
+    <li><strong>Note write fails:</strong> report it and do not clear. The note is the only state that
+      survives the clear. (W.12 did not block the clear; this changes that.)</li>
+    <li><strong><code>clear_session</code> not available</strong> (plain CLI, no desktop app): write the note and
+      tell the human partner to run <code>/clear</code>.</li>
+    <li><strong>Resume finds no note:</strong> say so and name the path checked. Do not search other lineages' notes.</li>
+    <li><strong>Hook:</strong> not a git repo → use <code>cwd</code>; no notes → silent; a tracked
+      <code>handoff.md</code> → skipped.</li>
+  </ul>
+</section>
+
+<section id="testing">
+  <h2>Testing</h2>
+  <ul>
+    <li><code>scripts/lineage-handoff.test.ts</code> (Vitest, real temp directories, no mocked fs):
+      <ul>
+        <li><code>parseLineageKey</code>: <code>A.0: Primitives</code>, <code>K: Maestro</code>,
+          <code>A.1: Life  Cycle Hook</code>, <code>  D.3 : ClickUp Channel</code>, <code>General</code>,
+          <code>a.0: x</code>, <code>W.4.1: x</code>.</li>
+        <li><code>noteRelPath</code> for all three shapes.</li>
+        <li><code>resolveMainRoot</code>: a real <code>git init</code> fixture plus <code>git worktree add</code>.
+          From the worktree it returns the main root. Outside git it returns <code>cwd</code>.</li>
+        <li><code>listNotes</code>: none, several, and a tracked note that must be skipped.</li>
+        <li><code>--ensure-excluded</code>: adds the line once; a second run adds nothing.</li>
+      </ul></li>
+    <li><code>scripts/session-init.test.ts</code>: remove the four old handoff <code>describe</code> blocks. Add
+      pointer tests: no notes → no line; notes → one line naming them; run from a worktree → notes from the main
+      checkout.</li>
+    <li>The skill text is process prose, verified live. The first run is this A.0 session's own handoff at the end
+      of this build.</li>
+  </ul>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of Scope</h2>
+  <ul>
+    <li><strong>Path rules for the Clan/Lineage docs tree.</strong> <code>brainstorming</code>,
+      <code>writing-plans</code>, and <code>report-implementation</code> still know only
+      <code>.digismith/docs/&lt;Letter&gt;/&lt;Letter&gt;.&lt;N&gt;-&lt;slug&gt;/</code>. This build's own docs are placed
+      at <code>.digismith/docs/A/A.0/lineage-handoff/</code> by hand. Teaching those skills the new tree is
+      G.3-style work, filed separately.</li>
+    <li><strong>Doing the cleanup chores.</strong> The skill checks the MEMORY row, ClickUp comment, and pointers; it
+      does not write them.</li>
+    <li><strong>The note as the literal first message of the new session.</strong> <code>clear_session</code> drops its
+      queued clear if a message arrives before the session goes idle. A self-sent message would cancel the clear.
+      Pull-based lookup plus "resume" covers the same need.</li>
+    <li><strong>Updates after each SDD plan task.</strong> Manual runs cover mid-ticket checkpoints.</li>
+    <li><strong>Keys for sessions without a clan prefix.</strong> In consumer repos a session title like
+      <code>EMKT-756: …</code> does not match, so all such sessions share <code>_unlettered/handoff.md</code>.
+      Keying those by ticket key is deferred until it is a real problem.</li>
+    <li><strong>Where worktrees live.</strong> Moving from <code>.claude/worktrees/</code> to <code>.worktrees/</code> is
+      its own item (<code>backlog/worktrees-at-repo-root-a0.md</code>). The main-checkout resolution above works for
+      both.</li>
+    <li><strong>Other leftover <code>superpowers:</code> references</strong> (<code>writing-skills</code>,
+      <code>systematic-debugging</code>, and SDD's <code>requesting-code-review</code>/<code>using-git-worktrees</code>).
+      They are not on the handoff path and are flagged as a separate task.</li>
+    <li><strong>Leftover <code>.digismith/sessions/</code> files.</strong> None exist. The directory and its exclude line
+      are left alone; nothing reads them after this build.</li>
+  </ul>
+</section>
+
+<section id="bookkeeping">
+  <h2>Bookkeeping</h2>
+  <ul>
+    <li><code>vendored/PROVENANCE.md</code>: add the Step 7 change under <code>finishing-a-development-branch</code>, and
+      the call-site fix under <code>subagent-driven-development</code>.</li>
+    <li><code>backlog/standard-handoff-format.md</code>: mark resolved. Any session can now hand off in one format.</li>
+    <li><code>backlog/handoff-pointer-missed-on-fresh-session-w12.md</code>: record the "resume" fallback.</li>
+    <li><code>.digismith/preferences.yml</code>: <code>clear_context</code> keeps its key and values. It now governs only
+      the end-of-ticket clear.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/A/A.0/lineage-handoff/design.html</footer>
+
+</body>
+</html>
