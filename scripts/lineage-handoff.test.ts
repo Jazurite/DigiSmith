@@ -269,6 +269,22 @@ describe("CLI", () => {
     expect(real(printed.slice(0, -suffix.length))).toBe(real(main));
   });
 
+  it("--action path fails when the resolved note is tracked by git", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    const relPath = ".digismith/docs/A/A.0/handoff.md";
+    writeNote(main, relPath);
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "-m", "commit note");
+    const absPath = path.join(resolveMainRoot(main), ...relPath.split("/"));
+
+    const result = runCli(main, "--action", "path", "--title", "A.0: Primitives");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr.trim()).toBe(`lineage-handoff: ${absPath} is tracked by git`);
+  });
+
   it("--action list prints one key per line", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);

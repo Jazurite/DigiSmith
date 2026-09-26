@@ -110,7 +110,11 @@ export function main(): void {
       case "path": {
         requireArgs(args, ["title"]);
         const relPath = noteRelPath(parseLineageKey(args.title));
-        console.log(path.join(mainRoot, ...relPath.split("/")));
+        const absPath = path.join(mainRoot, ...relPath.split("/"));
+        if (trackedRelPaths(mainRoot, [relPath]).has(relPath)) {
+          throw new Error(`${absPath} is tracked by git`);
+        }
+        console.log(absPath);
         break;
       }
       case "ensure-excluded": {
