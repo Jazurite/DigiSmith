@@ -26,7 +26,7 @@ export function createCreateListCommand(
       try {
         const name = argv.name as string;
         const folderId = argv.folder as string | undefined;
-        if (folderId === "") throw new Error("--folder needs a folder ID");
+        if (folderId?.trim() === "") throw new Error("--folder needs a folder ID");
         const list = folderId
           ? await clientFactory().createListInFolder(folderId, name)
           : await spaceFactory().createList(name);
