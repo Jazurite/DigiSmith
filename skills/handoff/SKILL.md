@@ -35,7 +35,9 @@ Two modes:
   - resume: "resume", "pick up where we left off"
 - `digismith:finishing-a-development-branch` Step 7, after Option 1 or Option 2 (write,
   end-of-ticket mode).
-- A `SessionStart` line `DigiSmith: lineage handoff notes in ...` (resume).
+- A `SessionStart` line `DigiSmith: lineage handoff notes in ...` — resume, but only when this
+  session's own key (from its title, same mapping as the Overview table) is among the keys the
+  line lists. Otherwise ignore the line silently: no lookup, no mention of it.
 
 ## The Script
 
@@ -44,10 +46,12 @@ loads). Use this copy, not a path asked from the human partner: the script and t
 together in one plugin version.
 
 ```bash
-node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --action path --title "<session title>"
-node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --action ensure-excluded --title "<session title>"
+node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --action path --title '<session title>'
+node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --action ensure-excluded --title '<session title>'
 node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --action list
 ```
+
+Wrap the title in single quotes, and write any `'` inside it as `'\''`.
 
 Run them from the repo being worked in: its main checkout or any of its worktrees. The script
 resolves the main checkout itself, so the note always lands in the main checkout's
@@ -56,10 +60,13 @@ resolves the main checkout itself, so the note always lands in the main checkout
 ## Resolve the Note
 
 1. Call `mcp__ccd_session_mgmt__get_session` with `session_id: "self"` and read `title`.
-2. Run `--action path --title "<title>"`. The printed absolute path is this session's note.
+2. Run `--action path --title '<title>'`. The printed absolute path is this session's note. If it
+   fails because that path is tracked by git, stop: tell the human partner the note path holds a
+   file committed to git that this skill did not write, and do not read or write it.
 3. If the path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
-4. If `get_session` fails or there is no title, ask which lineage this is (e.g. `A.0`) and pass
-   `--title "<answer>:"`. Do not guess: a wrong key overwrites another lineage's note.
+4. If `get_session` fails or there is no title, run `--action list` and ask which lineage this is,
+   offering the listed keys (e.g. `A.0`). Pass the answer as a title (e.g. listed key `A/A.0` →
+   `--title 'A.0:'`). Do not guess: a wrong key overwrites another lineage's note.
 
 ## Write Mode
 
@@ -80,7 +87,7 @@ resolves the main checkout itself, so the note always lands in the main checkout
      - Something was filed under another lineage: that lineage's session got a pointer message.
    - Put every open thread and every missing item under Open problems, one line each. Do not do
      the chores themselves.
-5. Run `--action ensure-excluded --title "<title>"`.
+5. Run `--action ensure-excluded --title '<title>'`.
 6. Write the whole note to the resolved path. If the write fails, report it, do not clear, and
    stop.
 7. Show the note in the reply.
