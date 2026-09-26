@@ -192,6 +192,16 @@ describe("listNotes", () => {
     git(main, "commit", "-q", "-m", "commit legacy note");
     expect(listNotes(main)).toEqual([]);
   });
+
+  it("skips tracked notes in folders with a non-ASCII or glob-special name", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/docs/café/handoff.md");
+    writeNote(main, ".digismith/docs/a[b]/handoff.md");
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "-m", "commit odd-named notes");
+    expect(listNotes(main)).toEqual([]);
+  });
 });
 
 describe("ensureExcluded", () => {

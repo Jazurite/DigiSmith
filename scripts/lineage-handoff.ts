@@ -64,6 +64,15 @@ function keyRelPath(key: string): string {
   return `${DOCS_DIR_PATH}/${key}/${NOTE_FILENAME}`;
 }
 
+// --literal-pathspecs: without it, *?[ in a rel path are glob magic, not literal
+// characters. -z: NUL-terminated, unquoted output, regardless of core.quotePath.
+function trackedRelPaths(mainRoot: string, relPaths: string[]): Set<string> {
+  if (relPaths.length === 0) return new Set();
+  const tracked = git(mainRoot, ["--literal-pathspecs", "ls-files", "-z", "--", ...relPaths]);
+  if (tracked.status !== 0) return new Set();
+  return new Set(tracked.stdout.split("\0").filter((entry) => entry !== ""));
+}
+
 export function listNotes(mainRoot: string): string[] {
   const docsDir = path.join(mainRoot, ...DOCS_DIR_PATH.split("/"));
   const found: string[] = [];
@@ -74,10 +83,7 @@ export function listNotes(mainRoot: string): string[] {
     }
   }
   if (found.length === 0) return [];
-  const tracked = git(mainRoot, ["ls-files", "--", ...found.map(keyRelPath)]);
-  const trackedPaths = new Set(
-    tracked.status === 0 ? tracked.stdout.split(/\r?\n/).filter((line) => line !== "") : [],
-  );
+  const trackedPaths = trackedRelPaths(mainRoot, found.map(keyRelPath));
   return found.filter((key) => !trackedPaths.has(keyRelPath(key)));
 }
 
