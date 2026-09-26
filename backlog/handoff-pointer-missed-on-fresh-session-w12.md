@@ -1,9 +1,15 @@
 # W.12's SessionStart pointer can silently miss on a freshly-cleared session
 
-**Status:** Not applied. Observational — single occurrence, root cause narrowed but not fully
-confirmed. Confirmed *not* to be a plugin-cache race (see "First theory, ruled out" below) — the
-open question is now much narrower: why one plugin's `SessionStart` hook produced no output while
-another's fired correctly, on the same event.
+**Status:** Not applied — and now moot day-to-day. Single occurrence, root cause narrowed but
+never confirmed (see "First theory, ruled out" below). Jack sidestepped recurrence risk directly
+rather than chase the harness bug further: this repo's `clear_context` preference is now set to
+`no` (2026-09-25, `[[feedback_no-auto-clear-context]]`), so Step 7 no longer auto-clears and this
+exact window (clear → idle gap → app relaunch → missed pointer) no longer opens on its own. Also
+worth noting: a later session resume (2026-09-26) logged `SessionStart:resume hook success` with
+DigiSmith's pointer line present and correct — so the hook *can* fire cleanly on a `resume`
+source; whatever happened on 2026-09-25 either doesn't reproduce reliably or needed the specific
+clear→(idle)→relaunch sequence this preference change now avoids. Left as a historical record,
+not something actively being chased.
 
 **Source:** 2026-09-25, the first real session boundary after W.12 (Handoff on Clear) shipped.
 The session that built W.12 wrote its own handoff file as a live exercise of the new mechanism,
