@@ -107,6 +107,26 @@ describe("parseReport", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
+  it("extracts a three-segment slug from a clan/lineage/slug report path", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "docs", "A", "A.0", "lineage-handoff");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Lineage Handoff", mapItem: "A.0", date: "2026-09-26", summary: "Moved the handoff." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed).toEqual({
+      featureTitle: "Lineage Handoff",
+      mapItem: "A.0",
+      date: "2026-09-26",
+      summary: "Moved the handoff.",
+      slug: "A/A.0/lineage-handoff",
+    });
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
   it("throws a clear error when the title marker is missing", () => {
     const dir = makeTmpDir("update-history-test-");
     const reportPath = path.join(dir, ".digismith", "docs", "sample-feature", "report.html");
@@ -321,6 +341,25 @@ describe("findChangedReports", () => {
       const headSha = revParseHead(dir);
 
       expect(findChangedReports(baseSha, headSha, dir)).toEqual([".digismith/docs/sample-feature/report.html"]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a report.html nested three levels deep", () => {
+    const dir = makeTmpDir("update-history-repo-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+
+      const reportPath = path.join(dir, ".digismith", "docs", "A", "A.0", "lineage-handoff", "report.html");
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      writeReportFixture(reportPath);
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "add nested report"], { cwd: dir });
+      const headSha = revParseHead(dir);
+
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([".digismith/docs/A/A.0/lineage-handoff/report.html"]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
