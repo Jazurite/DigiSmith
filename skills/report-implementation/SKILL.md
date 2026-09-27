@@ -101,7 +101,10 @@ to a subagent that can't ask.
      treats `<feature-slug>` as a plain path-interpolation value
      (`.digismith/docs/<feature-slug>/report.html` and so on), so a two-segment slug
      reconstructs the correct nested path with no further changes needed anywhere else here.
-   - **Neither (the plan lives somewhere else)** → the parent directory name is
+   - **Exactly three (the lineage case)** → `<feature-slug>` is all three segments, joined by
+     `/`. E.g. `.digismith/docs/A/A.0/lineage-handoff/plan.md` → `A/A.0/lineage-handoff`.
+     Preserve both slashes, as in the nested case.
+   - **None of these (the plan lives somewhere else)** → the parent directory name is
      *not* a slug and must not be used as one. This happens when a plan
      predates the unified-docs convention, or was deliberately excluded
      from a migration, and still sits under the old
@@ -206,8 +209,8 @@ the plan file, the ledger, and `git` alone:
   this is the empty string — the span is omitted entirely, not rendered
   blank.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
-  parent directory name in the flat case, both segments joined by `/` in the nested case
-  (e.g. `G/G.3-dynamic-doc-conventions`), or the slug parsed out of its
+  parent directory name in the flat case, the segments joined by `/` in the nested and lineage
+  cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.0/lineage-handoff`), or the slug parsed out of its
   filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
   a bare container directory like `plans`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
