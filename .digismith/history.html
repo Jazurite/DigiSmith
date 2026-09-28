@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-27</span>
+    <span>Last updated: 2026-09-28</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1346,6 +1346,12 @@
       <div class="date">2026-09-26</div>
       <h4>Lineage Handoff</h4>
       <p>This feature moves the clear-and-hand-off step out of <code>finishing-a-development-branch</code> into a new <code>digismith:handoff</code> skill. The skill keeps one living note for each lineage at <code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/handoff.md</code>. You can run it at any time, and <code>finishing-a-development-branch</code> calls it automatically at the end of a ticket. A small script, <code>scripts/lineage-handoff.ts</code>, does all the mechanical work. It maps a session title to a lineage key and a note path. It also finds the main checkout, lists the notes, and adds the <code>.git/info/exclude</code> line. The skill uses the script through its CLI, and the <code>SessionStart</code> hook imports it, so writing and reading cannot diverge. The skill text does the judgment work: it composes the note and runs the end-of-ticket cleanup checks. It also holds each clear until the note is checked, and it controls resume. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (4 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge. See <a href="docs/A/A.0/lineage-handoff/design.html">design</a>, <a href="docs/A/A.0/lineage-handoff/plan.md">plan</a>, and <a href="docs/A/A.0/lineage-handoff/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-28</div>
+      <h4>Agentic Architect Prototype Milestone</h4>
+      <p>Turns DGS-110 into a ClickUp Milestone named <strong>Agentic Architect Prototype</strong>, after the first live test of B: Agentic's orchestrator/worker design. Its old name, "MCP-based orchestration: X as server, V as orchestrator, K as bare metal", and its original description moved to a new subtask, DGS-124. The design now runs in herdr on the VPS. The Desktop session "B: Agentic" is the orchestrator, and herdr sessions are workers that it reaches through SendMessage. DGS-119 (done) records the test across three machines: the VPS, the home PC, and the Gradion Mac M1. The SendMessage relay worked from both Desktop apps and across both Claude accounts, and <code>herdr</code> attached to the worker pane over SSH and from a Desktop terminal panel. The test also found why a cleared session missed its handoff note. A Desktop session over SSH loads the plugin copies that the Desktop app uploads from its own machine, without their <code>hooks/</code> folders, and the home PC uploaded DigiSmith 0.69.0-beta, which has no <code>handoff</code> skill. Jack turned DigiSmith off in that Desktop app, so the VPS's 0.71.0 install now loads. Four backlog subtasks hold the rest of the prototype: DGS-120 (kick a cleared worker with <code>herdr agent prompt</code>), DGS-121 (start the B.0, B.1 and B.2 workers), DGS-122 (the first real dispatch), and DGS-123 (parallel dispatch). One-off scripts on the built <code>@digismith/clickup-client</code> made the changes. The milestone type is <code>custom_item_id</code> 1 on the Update Task endpoint, and the subtasks use the <code>parent</code> field of Create Task. No code shipped and there is no <code>report.html</code>, so this entry is written by hand, like the ClickUp entries above.</p>
     </div>
 
   </div>
