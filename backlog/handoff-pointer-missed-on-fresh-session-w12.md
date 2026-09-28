@@ -11,6 +11,9 @@ source; whatever happened on 2026-09-25 either doesn't reproduce reliably or nee
 clear→(idle)→relaunch sequence this preference change now avoids. Left as a historical record,
 not something actively being chased.
 
+**2026-09-28:** a separate cause, for Desktop sessions over SSH, is confirmed and fixed. See the
+last section.
+
 **Source:** 2026-09-25, the first real session boundary after W.12 (Handoff on Clear) shipped.
 The session that built W.12 wrote its own handoff file as a live exercise of the new mechanism,
 then cleared per Step 7. Jack reported "there is no file yet after you clear the session" on
@@ -95,3 +98,34 @@ The per-session pointer this item describes is gone. `session-init.ts` now point
 notes (`.digismith/docs/<Clan>/<Lineage>/handoff.md`), and `digismith:handoff`'s resume mode
 ("resume") runs the same lookup by hand when the hook line never arrives. The root cause of the
 missing hook output is still unknown.
+
+## 2026-09-28: cause found for Desktop sessions over SSH
+
+A cleared "B: Agentic" Desktop session, connected to the VPS over SSH, again got no lineage
+pointer. This time the cause is confirmed:
+
+- A Desktop session over SSH loads the plugin copies that the Desktop app uploads from its own
+  machine (`--plugin-dir ~/.claude/remote/plugins/<account>/<hash>`), not the plugins installed
+  on the VPS.
+- The upload drops each plugin's `hooks/` folder, so the `SessionStart` hook of an uploaded plugin
+  never runs.
+- The home PC's Desktop app (Jazurite account) uploaded DigiSmith 0.69.0-beta. That version has no
+  `handoff` skill and no lineage pointer. Both shipped in 0.70.0-beta (`5bb0394`).
+
+Fix: Jack disabled DigiSmith in the home PC's Desktop app. Verified at 13:40Z: the restarted
+session gets only superpowers, anthropic-skills and gitkraken-hooks through `--plugin-dir`.
+DigiSmith loads from the VPS's 0.71.0 install, the `SessionStart` lineage line arrives, and
+`digismith:handoff` resume finds the note from the session title. A second clear at about 13:43Z
+confirmed it: the line arrived in the new session.
+
+Limit: a session does not act until it gets a message. So the resume starts on the first message
+after a clear, never by itself. For a herdr worker, the orchestrator sends that first message
+with `herdr agent prompt <agent> "resume" --wait` (DGS-120).
+
+Still open: the Gradion Mac's Desktop app uploads DigiSmith 0.57.0-beta into its VPS sessions.
+Disable DigiSmith there too, or update it on the Mac if Jack also uses it in local Mac sessions.
+
+This cause does not explain the 2026-09-25 incident above. That session was a local Windows
+session, not a session over SSH, and superpowers' hook output did arrive in it.
+
+Test record: ClickUp DGS-119 (cross-machine test, 2026-09-28).
