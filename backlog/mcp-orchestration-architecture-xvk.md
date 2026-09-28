@@ -430,3 +430,22 @@ a repeatable procedure.
 the path rewrite, the package transport, fresh-session dispatch, answer extraction, and the
 verification pass. The pass/fail flow should probably stay with the implementer's controller,
 which already adjudicates and runs fix rounds.
+
+## 2026-09-28 addition — DGS-110 is now the milestone "Agentic Architect Prototype"
+
+The herdr orchestrator/worker prototype worked across three machines, so DGS-110 is now a ClickUp
+Milestone named **Agentic Architect Prototype**. This idea (the MCP-based design in this file)
+moved to its subtask **DGS-124**, with its original name and description. It stays backlog until
+the dispatch subtasks show what herdr does not cover.
+
+Milestone subtasks:
+- DGS-119 (done): the cross-machine test on 2026-09-28. The VPS runs herdr, and the home PC and
+  the Gradion Mac M1 control it. The SendMessage relay worked across Desktop apps and across
+  Claude accounts.
+- DGS-120: kick a cleared worker with `herdr agent prompt`.
+- DGS-121: start the B.0, B.1 and B.2 workers.
+- DGS-122: the first real dispatch. The orchestrator gives a worker a task and collects the result.
+- DGS-123: parallel dispatch to two workers.
+- DGS-124: this idea.
+
+Runbook: `.digismith/sessions/b-clan-herdr.md`.
