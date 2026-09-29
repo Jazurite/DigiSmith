@@ -448,4 +448,4 @@ Milestone subtasks:
 - DGS-123: parallel dispatch to two workers.
 - DGS-124: this idea.
 
-Runbook: `.digismith/sessions/b-clan-herdr.md`.
+Runbook: `.digismith/sessions/workbox.md`.
