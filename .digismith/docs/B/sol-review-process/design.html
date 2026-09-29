@@ -218,7 +218,7 @@ status: ok
   <ul>
     <li><code>src/reviewer.ts</code>: the pure functions (<code>gradeToModel</code>, <code>extractAnswer</code>, <code>formatAnswerFile</code>) and the side-effect functions (<code>init</code>, <code>health</code>, <code>review</code>, <code>stop</code>).</li>
     <li><code>src/roster.ts</code>: read and write the reviewer entry in <code>~/.digismith-depot/workbox.json</code>. If later Workbox roles need the roster too, it can move to its own package.</li>
-    <li><code>src/cli.ts</code>: <code>node packages/reviewer/src/cli.ts init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. Sessions in other repos run it from Depot's clone: <code>node ~/.digismith-depot/repo/packages/reviewer/src/cli.ts …</code>. DGS-131 later wraps the same functions in <code>dg workbox</code> by importing this package.</li>
+    <li><code>src/index.ts</code>: the entry. It exports the functions, so DGS-131's <code>dg workbox</code> can import them. Run directly, it is the command line: <code>node packages/reviewer/src/index.ts init|health|review|stop …</code>, using the same <code>import.meta.url</code> check as <code>scripts/providers/print-config.ts</code>. It calls herdr and <code>opencode</code> directly. Sessions in other repos run it from Depot's clone: <code>node ~/.digismith-depot/repo/packages/reviewer/src/index.ts …</code>.</li>
     <li><code>src/*.test.ts</code>: the unit tests.</li>
   </ul>
   <h3>Unit tests (Vitest)</h3>
