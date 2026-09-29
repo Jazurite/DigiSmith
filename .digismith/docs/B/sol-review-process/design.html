@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sol Review Process</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Sol Review Process</h1>
+  <div class="meta">
+    <span>Date: 2026-09-29</span>
+    <span>Map item: B: Agentic → Pavilion (ClickUp DGS-127, milestone DGS-110)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal and scope</a></li>
+    <li><a href="#layout">The reviewer in Workbox</a></li>
+    <li><a href="#functions">The functions</a></li>
+    <li><a href="#roster">The Workbox roster</a></li>
+    <li><a href="#grades">Grades and models</a></li>
+    <li><a href="#setup">One-time setup</a></li>
+    <li><a href="#flow">One review, step by step</a></li>
+    <li><a href="#errors">Errors</a></li>
+    <li><a href="#spike">Testing: the spike</a></li>
+    <li><a href="#out">Out of scope</a></li>
+    <li><a href="#decisions">Decisions</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+  <h2>Goal and scope</h2>
+  <p>This is part 1 of the review pipeline for milestone DGS-110 (Agentic Architect Prototype). It gives DigiSmith one official reviewer: OpenCode on TokenReply, with GPT-6 models, running in Workbox. Workbox is Jack's name for herdr on the VPS.</p>
+  <p>The pipeline is independent. It does not know about <code>subagent-driven-development</code>, tasks, review prompts or <code>.sdd-workspace</code>. It does one thing: another session gives it a prompt and a directory, the reviewer reviews, and the pipeline returns the answer.</p>
+  <div class="callout">The manual steps from the V.8 run (DGS-78) that this part removes: start the reviewer and send it the prompt (step 2), answer OpenCode's permission prompt (step 3), and get the answer out (step 4). Step 1 (move the review package to the VPS) is already gone, because the VPS is the only machine. Step 5 (tell the implementer) is gone when the caller runs the review itself.</div>
+  <p><strong>Style for this ticket only (Jack):</strong> functional. Each procedure (init, review, stop) is an independent function with explicit inputs and outputs. The only shared state is the roster file, and each function reads or writes it explicitly. Pure functions (grade to model, answer extraction, header format) are separate from side effects (herdr commands, <code>opencode run</code>, file writes).</p>
+</section>
+
+<section id="layout">
+  <h2>The reviewer in Workbox</h2>
+  <p>The reviewer has one dedicated workspace: <code>w6</code>, label <code>DigiSmith ⚚ opencode-sol</code>. This is the workspace of the V.8 run.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Tab</th><th>Runs</th><th>Purpose</th></tr>
+    <tr><td><code>w6:t1</code> (pane <code>w6:p1</code>)</td><td><code>opencode serve --hostname 127.0.0.1 --port 4097</code></td><td>The reviewer server. Every review goes here.</td></tr>
+    <tr><td>watch tab</td><td><code>opencode attach http://127.0.0.1:4097</code></td><td>A TUI on the same server. Jack attaches to Workbox and sees each review live.</td></tr>
+  </table></div>
+  <p>There is one reviewer at a time. More than one reviewer is DGS-130.</p>
+</section>
+
+<section id="functions">
+  <h2>The functions</h2>
+  <h3>Side-effect functions (the edges)</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Function</th><th>In</th><th>Out</th><th>Who calls it</th></tr>
+    <tr><td><code>init</code></td><td>roster path, workspace (<code>w6</code>), port (4097)</td><td>the roster, status <code>running</code></td><td>The caller, only when <code>health</code> says <code>down</code>. If the reviewer is already up, <code>init</code> returns the roster that exists and starts nothing.</td></tr>
+    <tr><td><code>health</code></td><td>the roster</td><td><code>up</code> or <code>down</code></td><td>Any session, before a review. <code>up</code> means an HTTP GET to the server URL answers with status 200 in 3 seconds.</td></tr>
+    <tr><td><code>review</code></td><td>prompt (a file path, whose text is sent as the message, or the text itself), directory, grade (optional), title (optional, default <code>review &lt;UTC time&gt;</code>), output path, the roster</td><td>a result: status, model, session ID, duration, tokens, output path</td><td>Any session. It never starts OpenCode. If <code>health</code> is <code>down</code>, it returns status <code>no-reviewer</code>.</td></tr>
+    <tr><td><code>stop</code></td><td>the roster</td><td>the roster, status <code>stopped</code></td><td>Optional, when RAM is tight.</td></tr>
+  </table></div>
+  <h3>Pure functions</h3>
+  <ul>
+    <li><code>gradeToModel(grade)</code>: returns the model ID for a grade (see <a href="#grades">Grades and models</a>). No grade gives <code>complex</code>. An unknown grade is an error.</li>
+    <li><code>extractAnswer(events)</code>: takes the JSON events of one <code>opencode run</code> and returns the final assistant text, the session ID and the token counts. It returns nothing when there is no final text.</li>
+    <li><code>formatAnswerFile(result, text)</code>: returns the answer file: a front-matter header, then the reviewer's text unchanged.</li>
+  </ul>
+  <h3>How <code>init</code> starts the reviewer (herdr commands)</h3>
+<pre><code>herdr pane run w6:p1 'set -a; . ~/.digismith-depot/.env; set +a; exec opencode serve --hostname 127.0.0.1 --port 4097'
+herdr tab create --workspace w6 --label watch --no-focus
+herdr pane run &lt;watch pane&gt; 'opencode attach http://127.0.0.1:4097'</code></pre>
+  <p><code>&lt;watch pane&gt;</code> is the pane ID that <code>herdr tab create</code> returns. <code>init</code> writes it to the roster.</p>
+  <p>The pane's own shell reads <code>TOKENREPLY_API_KEY</code> from <code>~/.digismith-depot/.env</code>. The key does not appear in any agent's command, output or transcript.</p>
+  <p><code>stop</code> sends ctrl+c to <code>w6:p1</code>, closes the watch tab, and writes status <code>stopped</code> to the roster.</p>
+</section>
+
+<section id="roster">
+  <h2>The Workbox roster</h2>
+  <p>The roster tells every session which reviewer to use. It is <code>~/.digismith-depot/workbox.json</code>, in Depot's folder, so sessions in every repo (DigiSmith, Emma) find the same reviewer. <code>init</code> and <code>stop</code> write it. <code>health</code> and <code>review</code> read it.</p>
+<pre><code>{
+  "reviewer": {
+    "kind": "opencode",
+    "status": "running",
+    "workspace": "w6",
+    "server": "http://127.0.0.1:4097",
+    "panes": { "server": "w6:p1", "watch": "&lt;watch pane&gt;" },
+    "provider": "tokenreply",
+    "agent": "reviewer",
+    "models": { "simple": "gpt-6-sol", "complex": "gpt-6-luna", "extra-complex": "gpt-6-astra" },
+    "started": "2026-09-29T14:00:00Z"
+  }
+}</code></pre>
+  <p>Other Workbox roles, such as the worker slots in the runbook table, can go in the same file later.</p>
+</section>
+
+<section id="grades">
+  <h2>Grades and models</h2>
+  <p>The caller passes a grade. The pipeline owns only the map from grade to model. The grading rules (what makes a change simple or complex) belong to the caller. For SDD they go to DGS-129.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Grade</th><th>Model</th><th>For example</th></tr>
+    <tr><td><code>simple</code></td><td><code>tokenreply/gpt-6-sol</code></td><td>a text-only change, a small diff</td></tr>
+    <tr><td><code>complex</code> (the default)</td><td><code>tokenreply/gpt-6-luna</code></td><td>a normal task review</td></tr>
+    <tr><td><code>extra-complex</code></td><td><code>tokenreply/gpt-6-astra</code></td><td>a whole-branch review</td></tr>
+  </table></div>
+  <p>The map is in the roster, so a change of model is a one-line edit. TokenReply's API and models page do not say how the GPT-6 variants differ. The spike checks each one on a real review, and the map changes if the result shows a different order.</p>
+  <p>Cost does not decide the map. In the V.8 run, a task review used 10k to 35k tokens and the whole-branch review about 650k. At TokenReply's listed rates that is less than a cent for a task review.</p>
+</section>
+
+<section id="setup">
+  <h2>One-time setup</h2>
+  <ol>
+    <li><strong>Models.</strong> Add <code>gpt-6-sol</code>, <code>gpt-6-luna</code> and <code>gpt-6-astra</code> to the <code>tokenreply</code> provider in <code>~/.config/opencode/opencode.json</code>. Today it lists only <code>gpt-5.6-sol</code> and <code>kimi-k2.7</code>. Back up the file first.</li>
+    <li><strong>Read-only reviewer agent.</strong> Add an OpenCode agent named <code>reviewer</code> to the same file. File edits are denied. Shell commands are limited to read-only git: <code>git show</code>, <code>git diff</code>, <code>git log</code>, <code>git grep</code>. In the V.8 run, Sol once ran a build in a checkout it was told not to change. With this agent, OpenCode enforces read-only, not only the prompt.</li>
+    <li><strong>No permission prompt.</strong> Each review runs with <code>--dir &lt;directory&gt;</code>, and the prompt tells the reviewer to read files in that directory. Files inside the session's own directory are not external, so OpenCode's <code>external_directory</code> prompt does not appear.</li>
+  </ol>
+</section>
+
+<section id="flow">
+  <h2>One review, step by step</h2>
+  <ol>
+    <li>The caller calls <code>health</code>. If the answer is <code>down</code>, the caller calls <code>init</code>, then continues.</li>
+    <li><code>review</code> gets the model from <code>gradeToModel(grade)</code>.</li>
+    <li><code>review</code> runs, in the background:
+<pre><code>opencode run --attach http://127.0.0.1:4097 --dir &lt;directory&gt; --agent reviewer \
+  -m tokenreply/&lt;model&gt; --format json --title "&lt;title&gt;" "&lt;prompt&gt;" \
+  &gt; &lt;output path&gt;.events.jsonl</code></pre>
+      It runs in the background because a whole-branch review took about 9 minutes in the V.8 run, near the Bash tool's 10-minute limit.</li>
+    <li>When the run ends, <code>extractAnswer</code> reads the events file, and <code>formatAnswerFile</code> writes the output file:
+<pre><code>---
+reviewer: opencode
+model: tokenreply/gpt-6-luna
+grade: complex
+session: ses_...
+duration_s: 48
+tokens: { input: 9675, output: 974 }
+status: ok
+---
+&lt;the reviewer's final answer, unchanged&gt;</code></pre></li>
+    <li><code>review</code> returns the result and exits with 0.</li>
+  </ol>
+</section>
+
+<section id="errors">
+  <h2>Errors</h2>
+  <p><code>review</code> always writes the output file, with a status in the header, so the caller has a record. The caller decides what to do next, for example start the reviewer or fall back to a Claude reviewer.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Status</th><th>Exit</th><th>When</th></tr>
+    <tr><td><code>ok</code></td><td>0</td><td>The reviewer gave a final answer.</td></tr>
+    <tr><td><code>no-reviewer</code></td><td>2</td><td>No roster, or <code>health</code> is <code>down</code>. The caller calls <code>init</code> and tries again.</td></tr>
+    <tr><td><code>model-rejected</code></td><td>3</td><td>TokenReply or OpenCode refuses the model.</td></tr>
+    <tr><td><code>no-answer</code></td><td>4</td><td>The run ended without final text, for example after broken tool calls. In the V.8 run, one session got a leaked <code>&lt;|tool_call_start|&gt;</code> as its title.</td></tr>
+    <tr><td><code>timeout</code></td><td>5</td><td>The run took more than 20 minutes. Before it stops the run, <code>review</code> reads the session's live progress with <code>GET /session/&lt;id&gt;/message</code> (found in V.1, see DGS-102) and puts the last progress in the output file.</td></tr>
+  </table></div>
+</section>
+
+<section id="spike">
+  <h2>Testing: the spike</h2>
+  <p>Jack asked for a spike in a scratchpad. It proves each step live. Script language: TypeScript (Jack's standing default). Unit tests for the pure functions come with the CLI in DGS-131.</p>
+  <ol>
+    <li><strong>Setup.</strong> Back up <code>opencode.json</code>, then add the GPT-6 models and the <code>reviewer</code> agent.</li>
+    <li><strong>Init with herdr.</strong> Start the server in <code>w6:p1</code> with the key from the Depot file. Check that the classifier allows the command and that <code>health</code> is <code>up</code>.</li>
+    <li><strong>Watch tab.</strong> Open <code>opencode attach</code> in a second <code>w6</code> tab.</li>
+    <li><strong>Roster.</strong> Write <code>~/.digismith-depot/workbox.json</code>.</li>
+    <li><strong>One real review per grade.</strong> Replay the archived V.8 task-5 review prompt (<code>.digismith/sessions/workbox-archive/2026-09-26-v8-sol-review/</code>) on <code>gpt-6-sol</code>, <code>gpt-6-luna</code> and <code>gpt-6-astra</code>. The code comes from the reviewed commit with <code>git archive</code> into the scratchpad, not from a new worktree. For each model, check that: the tool calls work, there is a final answer, the answer finds the known <code>--folder ""</code> bug, and no file changed.</li>
+    <li><strong>Errors.</strong> Run one review with the server stopped (expect <code>no-reviewer</code>, exit 2) and one with an unknown model (expect <code>model-rejected</code>, exit 3).</li>
+    <li><strong>Stop with herdr.</strong> Send ctrl+c to the server, close the watch tab, and check that the roster says <code>stopped</code>.</li>
+    <li><strong>Record.</strong> Add a Reviewer section to the Workbox runbook (<code>.digismith/sessions/workbox.md</code>) and put the results on DGS-127. Save the spike scripts next to the runbook, so DGS-131 can build on them.</li>
+  </ol>
+  <p>Pass: steps 2 to 7 work with no manual step by Jack, and the results confirm or change the grade map.</p>
+</section>
+
+<section id="out">
+  <h2>Out of scope</h2>
+  <ul>
+    <li><strong>DGS-129:</strong> the hook into <code>subagent-driven-development</code>, which covers review prompts, the grading rules, checking the reviewer's claims, and the fallback to a Claude reviewer.</li>
+    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands that turn these functions into a CLI.</li>
+    <li><strong>DGS-130:</strong> more than one reviewer at a time.</li>
+    <li>Choosing between messaging channels. <code>opencode run --attach</code> with JSON events is the channel. The V.8 route (TUI, <code>herdr agent prompt</code>, <code>opencode export</code>) is not used, because it needs scraping and a model switch in the TUI.</li>
+  </ul>
+</section>
+
+<section id="decisions">
+  <h2>Decisions (Jack, 2026-09-29)</h2>
+  <ul>
+    <li>The pipeline is independent: prompt in, answer out.</li>
+    <li>OpenCode has one dedicated space in Workbox, <code>w6</code>. A file (the roster) tells future sessions which one is the reviewer.</li>
+    <li>The review call does not start OpenCode. If the reviewer is not running, the caller starts it.</li>
+    <li>The server is started with herdr commands in this ticket. The CLI comes later (DGS-131).</li>
+    <li>The key comes from <code>~/.digismith-depot/.env</code>.</li>
+    <li>Grades: <code>simple</code> is <code>gpt-6-sol</code>, <code>complex</code> is <code>gpt-6-luna</code>, and <code>extra-complex</code> (whole-branch) is <code>gpt-6-astra</code>. The caller passes the grade.</li>
+    <li>The one-reviewer limit is logged for later (DGS-130).</li>
+    <li>Functional style, for this ticket only.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/B/sol-review-process/design.html</footer>
+
+</body>
+</html>
