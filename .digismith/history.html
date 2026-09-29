@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-28</span>
+    <span>Last updated: 2026-09-29</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1352,6 +1352,12 @@
       <div class="date">2026-09-28</div>
       <h4>Agentic Architect Prototype Milestone</h4>
       <p>Turns DGS-110 into a ClickUp Milestone named <strong>Agentic Architect Prototype</strong>, after the first live test of B: Agentic's orchestrator/worker design. Its old name, "MCP-based orchestration: X as server, V as orchestrator, K as bare metal", and its original description moved to a new subtask, DGS-124. The design now runs in herdr on the VPS. The Desktop session "B: Agentic" is the orchestrator, and herdr sessions are workers that it reaches through SendMessage. DGS-119 (done) records the test across three machines: the VPS, the home PC, and the Gradion Mac M1. The SendMessage relay worked from both Desktop apps and across both Claude accounts, and <code>herdr</code> attached to the worker pane over SSH and from a Desktop terminal panel. The test also found why a cleared session missed its handoff note. A Desktop session over SSH loads the plugin copies that the Desktop app uploads from its own machine, without their <code>hooks/</code> folders, and the home PC uploaded DigiSmith 0.69.0-beta, which has no <code>handoff</code> skill. Jack turned DigiSmith off in that Desktop app, so the VPS's 0.71.0 install now loads. Four backlog subtasks hold the rest of the prototype: DGS-120 (kick a cleared worker with <code>herdr agent prompt</code>), DGS-121 (start the B.0, B.1 and B.2 workers), DGS-122 (the first real dispatch), and DGS-123 (parallel dispatch). One-off scripts on the built <code>@digismith/clickup-client</code> made the changes. The milestone type is <code>custom_item_id</code> 1 on the Update Task endpoint, and the subtasks use the <code>parent</code> field of Create Task. No code shipped and there is no <code>report.html</code>, so this entry is written by hand, like the ClickUp entries above.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-09-29</div>
+      <h4>Org Tag in herdr Workspace Labels</h4>
+      <p>Every herdr workspace on the VPS now has a label that starts with an org tag, <code>DigiSmith ⚚ </code> or <code>Emma ⚚ </code>, so DigiSmith and Emma workspaces are easy to tell apart in the herdr sidebar (DGS-125, Town Hall). The tag goes at the front because the sidebar cuts long labels at the end. All eight workspaces were renamed with <code>herdr workspace rename</code>. Emma's "Gradion: shopify-hub" is now <code>Emma ⚚ shopify-hub</code>. Jack limited the tag to herdr labels. Claude session titles do not get it, because the lineage note lookup reads the start of the session title. A parser change to skip the tag was written test-first and then reverted when the scope narrowed, so no code shipped. Jack also dropped an earlier <code>[Global]</code> tag idea, because every session on the VPS is reachable from every machine. While doing this, one naming problem turned up and was added to DGS-121: the runbook's worker session names, such as "B: Agentic › B.0: Maestro", map to the clan note <code>B/handoff.md</code>, not to <code>B/B.0</code>. There is no <code>report.html</code>, so this entry is written by hand.</p>
     </div>
 
   </div>
