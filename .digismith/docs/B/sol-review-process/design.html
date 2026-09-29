@@ -81,7 +81,7 @@
     <li><a href="#setup">One-time setup</a></li>
     <li><a href="#flow">One review, step by step</a></li>
     <li><a href="#errors">Errors</a></li>
-    <li><a href="#spike">Testing: the spike</a></li>
+    <li><a href="#code">Code and testing</a></li>
     <li><a href="#out">Out of scope</a></li>
     <li><a href="#decisions">Decisions</a></li>
   </ol>
@@ -90,6 +90,7 @@
 <section id="goal">
   <h2>Goal and scope</h2>
   <p>This is part 1 of the review pipeline for milestone DGS-110 (Agentic Architect Prototype). It gives DigiSmith one official reviewer: OpenCode on TokenReply, with GPT-6 models, running in Workbox. Workbox is Jack's name for herdr on the VPS.</p>
+  <p>DGS-78 was the spike: the V.8 proof of concept on 2026-09-26, driven by hand. This ticket is the build task. It delivers working code and tests.</p>
   <p>The pipeline is independent. It does not know about <code>subagent-driven-development</code>, tasks, review prompts or <code>.sdd-workspace</code>. It does one thing: another session gives it a prompt and a directory, the reviewer reviews, and the pipeline returns the answer.</p>
   <div class="callout">The manual steps from the V.8 run (DGS-78) that this part removes: start the reviewer and send it the prompt (step 2), answer OpenCode's permission prompt (step 3), and get the answer out (step 4). Step 1 (move the review package to the VPS) is already gone, because the VPS is the only machine. Step 5 (tell the implementer) is gone when the caller runs the review itself.</div>
   <p><strong>Style for this ticket only (Jack):</strong> functional. Each procedure (init, review, stop) is an independent function with explicit inputs and outputs. The only shared state is the roster file, and each function reads or writes it explicitly. Pure functions (grade to model, answer extraction, header format) are separate from side effects (herdr commands, <code>opencode run</code>, file writes).</p>
@@ -159,7 +160,7 @@ herdr pane run &lt;watch pane&gt; 'opencode attach http://127.0.0.1:4097'</code>
     <tr><td><code>complex</code> (the default)</td><td><code>tokenreply/gpt-6-luna</code></td><td>a normal task review</td></tr>
     <tr><td><code>extra-complex</code></td><td><code>tokenreply/gpt-6-astra</code></td><td>a whole-branch review</td></tr>
   </table></div>
-  <p>The map is in the roster, so a change of model is a one-line edit. TokenReply's API and models page do not say how the GPT-6 variants differ. The spike checks each one on a real review, and the map changes if the result shows a different order.</p>
+  <p>The map is in the roster, so a change of model is a one-line edit. TokenReply's API and models page do not say how the GPT-6 variants differ. The live acceptance test checks each one on a real review, and the map changes if the result shows a different order.</p>
   <p>Cost does not decide the map. In the V.8 run, a task review used 10k to 35k tokens and the whole-branch review about 650k. At TokenReply's listed rates that is less than a cent for a task review.</p>
 </section>
 
@@ -210,27 +211,42 @@ status: ok
   </table></div>
 </section>
 
-<section id="spike">
-  <h2>Testing: the spike</h2>
-  <p>Jack asked for a spike in a scratchpad. It proves each step live. Script language: TypeScript (Jack's standing default). Unit tests for the pure functions come with the CLI in DGS-131.</p>
+<section id="code">
+  <h2>Code and testing</h2>
+  <h3>Where the code lives</h3>
+  <p><code>scripts/workbox/</code> in the DigiSmith repo, in TypeScript (Jack's standing default), beside <code>scripts/providers/</code> and <code>scripts/agentic-bridge/</code>:</p>
+  <ul>
+    <li><code>reviewer.ts</code>: the pure functions (<code>gradeToModel</code>, <code>extractAnswer</code>, <code>formatAnswerFile</code>) and the side-effect functions (<code>init</code>, <code>health</code>, <code>review</code>, <code>stop</code>).</li>
+    <li>A small CLI entry in the same file: <code>node scripts/workbox/reviewer.ts init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. DGS-131 later wraps these functions in <code>dg workbox</code>.</li>
+    <li><code>reviewer.test.ts</code>: the unit tests.</li>
+  </ul>
+  <h3>Unit tests (Vitest)</h3>
+  <ul>
+    <li><code>gradeToModel</code>: each grade gives its model; no grade gives the <code>complex</code> model; an unknown grade is an error.</li>
+    <li><code>extractAnswer</code>: takes the final assistant text, session ID and tokens from a recorded events file; returns nothing when the run has no final text. The fixtures are small event files cut from the archived V.8 sessions.</li>
+    <li><code>formatAnswerFile</code>: the header fields and the unchanged answer text; the header for each error status.</li>
+    <li>The side-effect functions take their herdr, HTTP and process calls as parameters, so the tests pass fakes: <code>review</code> returns <code>no-reviewer</code> when <code>health</code> is <code>down</code>, and <code>init</code> starts nothing when the reviewer is already up.</li>
+  </ul>
+  <h3>Live acceptance test</h3>
+  <p>After the unit tests pass, run each step live on the VPS:</p>
   <ol>
     <li><strong>Setup.</strong> Back up <code>opencode.json</code>, then add the GPT-6 models and the <code>reviewer</code> agent.</li>
     <li><strong>Init with herdr.</strong> Start the server in <code>w6:p1</code> with the key from the Depot file. Check that the classifier allows the command and that <code>health</code> is <code>up</code>.</li>
     <li><strong>Watch tab.</strong> Open <code>opencode attach</code> in a second <code>w6</code> tab.</li>
     <li><strong>Roster.</strong> Write <code>~/.digismith-depot/workbox.json</code>.</li>
-    <li><strong>One real review per grade.</strong> Replay the archived V.8 task-5 review prompt (<code>.digismith/sessions/workbox-archive/2026-09-26-v8-sol-review/</code>) on <code>gpt-6-sol</code>, <code>gpt-6-luna</code> and <code>gpt-6-astra</code>. The code comes from the reviewed commit with <code>git archive</code> into the scratchpad, not from a new worktree. For each model, check that: the tool calls work, there is a final answer, the answer finds the known <code>--folder ""</code> bug, and no file changed.</li>
+    <li><strong>One real review per grade.</strong> Replay the archived V.8 task-5 review prompt (<code>.digismith/sessions/workbox-archive/2026-09-26-v8-sol-review/</code>) on <code>gpt-6-sol</code>, <code>gpt-6-luna</code> and <code>gpt-6-astra</code>. The code comes from the reviewed commit with <code>git archive</code> into a temporary folder, not from a new worktree. For each model, check that: the tool calls work, there is a final answer, the answer finds the known <code>--folder ""</code> bug, and no file changed.</li>
     <li><strong>Errors.</strong> Run one review with the server stopped (expect <code>no-reviewer</code>, exit 2) and one with an unknown model (expect <code>model-rejected</code>, exit 3).</li>
     <li><strong>Stop with herdr.</strong> Send ctrl+c to the server, close the watch tab, and check that the roster says <code>stopped</code>.</li>
-    <li><strong>Record.</strong> Add a Reviewer section to the Workbox runbook (<code>.digismith/sessions/workbox.md</code>) and put the results on DGS-127. Save the spike scripts next to the runbook, so DGS-131 can build on them.</li>
+    <li><strong>Record.</strong> Add a Reviewer section to the Workbox runbook (<code>.digismith/sessions/workbox.md</code>) and put the results on DGS-127.</li>
   </ol>
-  <p>Pass: steps 2 to 7 work with no manual step by Jack, and the results confirm or change the grade map.</p>
+  <p>Pass: the unit tests pass, steps 2 to 7 work with no manual step by Jack, and the results confirm or change the grade map.</p>
 </section>
 
 <section id="out">
   <h2>Out of scope</h2>
   <ul>
     <li><strong>DGS-129:</strong> the hook into <code>subagent-driven-development</code>, which covers review prompts, the grading rules, checking the reviewer's claims, and the fallback to a Claude reviewer.</li>
-    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands that turn these functions into a CLI.</li>
+    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands that wrap the functions in <code>scripts/workbox/reviewer.ts</code>.</li>
     <li><strong>DGS-130:</strong> more than one reviewer at a time.</li>
     <li>Choosing between messaging channels. <code>opencode run --attach</code> with JSON events is the channel. The V.8 route (TUI, <code>herdr agent prompt</code>, <code>opencode export</code>) is not used, because it needs scraping and a model switch in the TUI.</li>
   </ul>
@@ -247,6 +263,7 @@ status: ok
     <li>Grades: <code>simple</code> is <code>gpt-6-sol</code>, <code>complex</code> is <code>gpt-6-luna</code>, and <code>extra-complex</code> (whole-branch) is <code>gpt-6-astra</code>. The caller passes the grade.</li>
     <li>The one-reviewer limit is logged for later (DGS-130).</li>
     <li>Functional style, for this ticket only.</li>
+    <li>DGS-78 was the spike. This ticket is a build task with code and tests.</li>
   </ul>
 </section>
 
