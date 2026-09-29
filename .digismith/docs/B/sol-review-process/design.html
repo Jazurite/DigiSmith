@@ -214,11 +214,12 @@ status: ok
 <section id="code">
   <h2>Code and testing</h2>
   <h3>Where the code lives</h3>
-  <p><code>scripts/workbox/</code> in the DigiSmith repo, in TypeScript (Jack's standing default), beside <code>scripts/providers/</code> and <code>scripts/agentic-bridge/</code>:</p>
+  <p>A new workspace package, <code>packages/workbox/</code> (<code>@digismith/workbox</code>), in TypeScript (Jack's standing default). It follows <code>packages/jira-client</code>: private, run from source on Node 24, tests with <code>vitest run</code>. The name is Workbox, not reviewer, so the roster and later Workbox roles (for example the worker slots) fit in the same package.</p>
   <ul>
-    <li><code>reviewer.ts</code>: the pure functions (<code>gradeToModel</code>, <code>extractAnswer</code>, <code>formatAnswerFile</code>) and the side-effect functions (<code>init</code>, <code>health</code>, <code>review</code>, <code>stop</code>).</li>
-    <li>A small CLI entry in the same file: <code>node scripts/workbox/reviewer.ts init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. DGS-131 later wraps these functions in <code>dg workbox</code>.</li>
-    <li><code>reviewer.test.ts</code>: the unit tests.</li>
+    <li><code>src/reviewer.ts</code>: the pure functions (<code>gradeToModel</code>, <code>extractAnswer</code>, <code>formatAnswerFile</code>) and the side-effect functions (<code>init</code>, <code>health</code>, <code>review</code>, <code>stop</code>).</li>
+    <li><code>src/roster.ts</code>: read and write <code>~/.digismith-depot/workbox.json</code>.</li>
+    <li><code>src/cli.ts</code>: <code>node packages/workbox/src/cli.ts reviewer init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. Sessions in other repos run it from Depot's clone: <code>node ~/.digismith-depot/repo/packages/workbox/src/cli.ts …</code>. DGS-131 later wraps the same functions in <code>dg workbox</code> by importing this package.</li>
+    <li><code>src/*.test.ts</code>: the unit tests.</li>
   </ul>
   <h3>Unit tests (Vitest)</h3>
   <ul>
@@ -246,7 +247,7 @@ status: ok
   <h2>Out of scope</h2>
   <ul>
     <li><strong>DGS-129:</strong> the hook into <code>subagent-driven-development</code>, which covers review prompts, the grading rules, checking the reviewer's claims, and the fallback to a Claude reviewer.</li>
-    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands that wrap the functions in <code>scripts/workbox/reviewer.ts</code>.</li>
+    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands, which import <code>@digismith/workbox</code>.</li>
     <li><strong>DGS-130:</strong> more than one reviewer at a time.</li>
     <li>Choosing between messaging channels. <code>opencode run --attach</code> with JSON events is the channel. The V.8 route (TUI, <code>herdr agent prompt</code>, <code>opencode export</code>) is not used, because it needs scraping and a model switch in the TUI.</li>
   </ul>
