@@ -89,7 +89,7 @@
 
 <section id="goal">
   <h2>Goal and scope</h2>
-  <p>This is part 1 of the review pipeline for milestone DGS-110 (Agentic Architect Prototype). It gives DigiSmith one official reviewer: OpenCode on TokenReply, with GPT-6 models, running in Workbox. Workbox is Jack's name for herdr on the VPS.</p>
+  <p>This is part 1 of the review pipeline for milestone DGS-110 (Agentic Architect Prototype). It gives DigiSmith one official reviewer: OpenCode on TokenReply, with GPT-6 models, running in Workbox. Workbox is Jack's name for the whole concept of running herdr on a VPS or any dedicated server.</p>
   <p>DGS-78 was the spike: the V.8 proof of concept on 2026-09-26, driven by hand. This ticket is the build task. It delivers working code and tests.</p>
   <p>The pipeline is independent. It does not know about <code>subagent-driven-development</code>, tasks, review prompts or <code>.sdd-workspace</code>. It does one thing: another session gives it a prompt and a directory, the reviewer reviews, and the pipeline returns the answer.</p>
   <div class="callout">The manual steps from the V.8 run (DGS-78) that this part removes: start the reviewer and send it the prompt (step 2), answer OpenCode's permission prompt (step 3), and get the answer out (step 4). Step 1 (move the review package to the VPS) is already gone, because the VPS is the only machine. Step 5 (tell the implementer) is gone when the caller runs the review itself.</div>
@@ -214,11 +214,11 @@ status: ok
 <section id="code">
   <h2>Code and testing</h2>
   <h3>Where the code lives</h3>
-  <p>A new workspace package, <code>packages/workbox/</code> (<code>@digismith/workbox</code>), in TypeScript (Jack's standing default). It follows <code>packages/jira-client</code>: private, run from source on Node 24, tests with <code>vitest run</code>. The name is Workbox, not reviewer, so the roster and later Workbox roles (for example the worker slots) fit in the same package.</p>
+  <p>A new workspace package, <code>packages/reviewer/</code> (<code>@digismith/reviewer</code>), in TypeScript (Jack's standing default). It follows <code>packages/jira-client</code>: private, run from source on Node 24, tests with <code>vitest run</code>.</p>
   <ul>
     <li><code>src/reviewer.ts</code>: the pure functions (<code>gradeToModel</code>, <code>extractAnswer</code>, <code>formatAnswerFile</code>) and the side-effect functions (<code>init</code>, <code>health</code>, <code>review</code>, <code>stop</code>).</li>
-    <li><code>src/roster.ts</code>: read and write <code>~/.digismith-depot/workbox.json</code>.</li>
-    <li><code>src/cli.ts</code>: <code>node packages/workbox/src/cli.ts reviewer init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. Sessions in other repos run it from Depot's clone: <code>node ~/.digismith-depot/repo/packages/workbox/src/cli.ts …</code>. DGS-131 later wraps the same functions in <code>dg workbox</code> by importing this package.</li>
+    <li><code>src/roster.ts</code>: read and write the reviewer entry in <code>~/.digismith-depot/workbox.json</code>. If later Workbox roles need the roster too, it can move to its own package.</li>
+    <li><code>src/cli.ts</code>: <code>node packages/reviewer/src/cli.ts init|health|review|stop …</code>. It calls herdr and <code>opencode</code> directly. Sessions in other repos run it from Depot's clone: <code>node ~/.digismith-depot/repo/packages/reviewer/src/cli.ts …</code>. DGS-131 later wraps the same functions in <code>dg workbox</code> by importing this package.</li>
     <li><code>src/*.test.ts</code>: the unit tests.</li>
   </ul>
   <h3>Unit tests (Vitest)</h3>
@@ -247,7 +247,7 @@ status: ok
   <h2>Out of scope</h2>
   <ul>
     <li><strong>DGS-129:</strong> the hook into <code>subagent-driven-development</code>, which covers review prompts, the grading rules, checking the reviewer's claims, and the fallback to a Claude reviewer.</li>
-    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands, which import <code>@digismith/workbox</code>.</li>
+    <li><strong>DGS-131:</strong> the <code>dg workbox</code> commands, which import <code>@digismith/reviewer</code>.</li>
     <li><strong>DGS-130:</strong> more than one reviewer at a time.</li>
     <li>Choosing between messaging channels. <code>opencode run --attach</code> with JSON events is the channel. The V.8 route (TUI, <code>herdr agent prompt</code>, <code>opencode export</code>) is not used, because it needs scraping and a model switch in the TUI.</li>
   </ul>
