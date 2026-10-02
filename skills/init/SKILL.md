@@ -38,7 +38,9 @@ The profile is repo-level config, chosen once and persisted in the
 original checkout for as long as DigiSmith is used in this repo (see
 `digismith:bootstrap` Step 0) — its mere presence means "this repo has a
 profile," not "this specific ticket is done." Don't short-circuit on it
-alone. A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+alone.
+
+A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 Check, in order:
 
