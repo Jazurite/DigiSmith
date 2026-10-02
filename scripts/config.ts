@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ConfigError, parseConfig, type ConfigValue } from "./config-parse.ts";
-import { clearInText, formatScalar, setInText, splitKey } from "./config-write.ts";
+import { clearInText, formatScalar, HEADER, setInText, splitKey } from "./config-write.ts";
 import { resolveMainRoot } from "./lineage-handoff.ts";
 import { parseArgs, requireArgs } from "./cli-args.ts";
 
@@ -187,7 +187,11 @@ export function migrate(dir = DEFAULT_DIR): MigrateReport {
     }
   }
 
-  if (added.length > 0) writeAtomic(configPath, text);
+  if (added.length > 0) {
+    writeAtomic(configPath, text);
+  } else if (!fs.existsSync(configPath)) {
+    writeAtomic(configPath, `${HEADER}\n`);
+  }
   for (const file of toMove) fs.renameSync(path.join(dir, file), path.join(dir, file + MIGRATED_SUFFIX));
   return { moved: toMove, added, conflicts, commit: tracked ? commitCommands(dir, toMove) : null };
 }

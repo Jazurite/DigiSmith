@@ -348,6 +348,34 @@ describe("migrate", () => {
       '  git commit -m "m"',
     ]);
   });
+
+  it("creates a header-only config.yml when migrating a whitespace-only profile with no values", () => {
+    write("profile", "   \n");
+    const report = migrate(dir);
+    expect(report.added).toEqual([]);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(`${HEADER}\n`);
+  });
+
+  it("creates a header-only config.yml when migrating a comment-only preferences file", () => {
+    write("preferences.yml", "# just a comment\n");
+    const report = migrate(dir);
+    expect(report.added).toEqual([]);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(`${HEADER}\n`);
+  });
+
+  it("creates a header-only config.yml for a whitespace-only profile in a tracked checkout, so the printed git add succeeds", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    dir = path.join(repo, ".digismith");
+    write("profile", "   \n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "empty profile");
+
+    const report = migrate(dir);
+
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(true);
+    expect(report.commit).not.toBeNull();
+  });
 });
 
 describe("migrateCommand / commitCommands", () => {
