@@ -52,12 +52,12 @@ nothing. If a ledger does exist, its first line names which mechanism produced i
 ledger — plan: ...` or `# Inline-execution ledger — plan: ...` — determining which grammar
 Step 2 parses.
 
-The active profile must also have reporting turned on. Check for
-`.digismith/profile` in the repo currently being worked in (never
-DigiSmith's own repo, which only hosts this skill).
+The active profile must also have reporting turned on. Check for a
+profile in the repo currently being worked in (never DigiSmith's own
+repo, which only hosts this skill). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 - **Missing** → proceed exactly as today; this gate does nothing.
-- **Present** → read its one-line content as the active profile name,
+- **Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as the active profile name,
   then locate DigiSmith's own repo — same rule
   `digismith:inject-standards` uses for `standards/`: is the current
   working directory itself the DigiSmith repo
@@ -139,12 +139,12 @@ apply to this run.
    derived above, check whether
    `.digismith/docs/<feature-slug>/ticket.md` exists and has a
    `**Key:**` line. If so, note that key for Step 2a. Then check for
-   `.digismith/profile` in the repo currently being worked in (the same
+   a profile in the repo currently being worked in (the same
    repo `<feature-slug>` lives in) — Prerequisites already resolved this
    same file and its `profiles/<name>.yml` for the `reporting` gate, so
    reuse what you read there rather than re-locating or re-asking. Missing → the derived key (if any)
-   is used as-is in Step 2a. Present → read its one-line content as the
-   active profile name, locate DigiSmith's own repo (same rule
+   is used as-is in Step 2a. Present → use the profile name Prerequisites read,
+   locate DigiSmith's own repo (same rule
    `digismith:inject-standards` uses for `standards/`: current working
    directory has `.claude-plugin/plugin.json` with
    `"name": "digismith"` → use it directly; otherwise ask the user for
@@ -617,7 +617,7 @@ ledger type; this skill's job still just ends here.
   run.
 - **Active profile has `reporting: false`** → skip this skill entirely
   and silently, same as the no-ledger case; not applicable to this run.
-  (No `.digismith/profile`, a stale one, `reporting: true`, or the field
+  (No profile present, a stale one, `reporting: true`, or the field
   absent → proceed as normal.)
 - **Ledger missing a `Final review (...)` line** → branches by ledger type
   (Step 1). **For an SDD ledger:** say so plainly and ask before

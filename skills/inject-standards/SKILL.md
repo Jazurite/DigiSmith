@@ -39,26 +39,26 @@ still validate the target exists.
 
 ### Step 0: Profile Gate
 
-Check for `.digismith/profile` in the repo currently being worked in
+Check for a profile in the repo currently being worked in
 (the repo whose code this invocation is about — never DigiSmith's own
-repo, which is only where `standards/` and `profiles/` themselves live).
+repo, which is only where `standards/` and `profiles/` themselves live). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 **Missing** → unchanged, existing behavior: every folder in
 `standards/index.yml` is eligible for matching in Steps 4-6, including
 the Step 3 Shopify-repo-layer heuristic exactly as it works today. Skip
 the rest of this step.
 
-**Present** → read its one-line content as the active profile name.
+**Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as the active profile name.
 Locate DigiSmith's own repo — same rule already used above under
 "Locating the Standards Library": is the current working directory
 itself the DigiSmith repo (`.claude-plugin/plugin.json` with
 `"name": "digismith"`)? Use it directly. Otherwise ask the user for
 DigiSmith's repo path this session and remember it. Read
 `profiles/<name>.yml` there. No matching file → treat as stale; proceed
-as if `.digismith/profile` were missing (the "Missing" branch above) for
+as if no profile were present (the "Missing" branch above) for
 this invocation only — `digismith:bootstrap`'s own Step 0 (reused as-is by
 `digismith:adopt`) is where a stale pointer actually gets corrected, this
-skill doesn't rewrite `.digismith/profile` itself.
+skill doesn't rewrite the profile itself.
 
 Otherwise, only folders named in that profile's `standards` list are
 eligible for matching in every scenario (1-4) below — an empty list
@@ -70,10 +70,10 @@ auto-include check below, not to this profile gate.
 
 ### Step 0.5: Voice Gate
 
-Read `.digismith/preferences.yml`'s `technical_voice` and
+Read the `technical_voice` and
 `conversation_voice` keys (via `digismith:preferences`' `get` operation, or
 `scripts/voice.ts --action status` — either resolves the same values). A
-missing or malformed value reads as `on`, same as `digismith:preferences`'
+missing value, or a read that fails because `.digismith/config.yml` does not parse, reads as `on`, same as `digismith:preferences`'
 own missing-key disposition — never an error, never a reason to skip this
 gate.
 
@@ -270,7 +270,7 @@ augments the brief, it doesn't gate dispatch.
 
 | Step | Action |
 |---|---|
-| 0 | Profile gate: `.digismith/profile` present → only its `standards` list's folders are eligible below; missing → unchanged, all folders eligible |
+| 0 | Profile gate: profile present (Step 0 rule) → only its `standards` list's folders are eligible below; missing → unchanged, all folders eligible |
 | 0.5 | Voice gate: read `technical_voice`/`conversation_voice` (default `on` if unset); whichever is `on` auto-includes in Scenario 1 only, no suggestion prompt |
 | 1 | Read `standards/index.yml`, stop if missing (except Scenario 4 — proceed without standards instead) |
 | 2 | Detect scenario (1-4), ask if ambiguous |

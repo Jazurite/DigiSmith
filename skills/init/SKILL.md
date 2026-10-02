@@ -34,11 +34,11 @@ directly instead.
 
 ### Step 0: Already-Initialized Check
 
-`.digismith/profile` is repo-level config, chosen once and persisted in the
+The profile is repo-level config, chosen once and persisted in the
 original checkout for as long as DigiSmith is used in this repo (see
 `digismith:bootstrap` Step 0) — its mere presence means "this repo has a
 profile," not "this specific ticket is done." Don't short-circuit on it
-alone.
+alone. A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 Check, in order:
 
@@ -46,17 +46,17 @@ Check, in order:
    `git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed
    's@^origin/@@'` resolves to; fall back to checking for a local `main`
    or `master` branch if that fails) → always fall through to Step 1,
-   regardless of whether `.digismith/profile` exists here. The profile
-   file living in the original checkout is expected and correct at this
+   regardless of whether a profile is present here. The profile
+   living in the original checkout is expected and correct at this
    point — `digismith:bootstrap`'s own Step 0 reads it without re-asking
    when Step 1 dispatches there.
-2. **Not on the base branch, and `.digismith/profile` is present**: derive
+2. **Not on the base branch, and a profile is present**: derive
    `<slug>` from the current branch name — strip a leading `<Key>__`
    prefix if it matches (regex `^([A-Z]+-\d+)__`), otherwise use the
    branch name as-is. Check whether `.digismith/docs/<slug>/plan.md`
    exists.
    - **Exists** → this worktree was already fully set up by DigiSmith for
-     this specific ticket. Read the profile's one-line content as
+     this specific ticket. Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as
      `<name>` and report plainly:
 
      ```
@@ -67,10 +67,10 @@ Check, in order:
      Stop here — no re-running detection, no re-relocating docs, no
      further questions. Same posture as `git init` on an existing repo: a
      notice, not a cascade.
-   - **Doesn't exist** → the profile file is present (inherited from the
+   - **Doesn't exist** → a profile is present (inherited from the
      original checkout, or copied in by an earlier partial run) but this
      specific ticket hasn't been set up yet. Continue to Step 1.
-3. **Not on the base branch, `.digismith/profile` absent** → continue to
+3. **Not on the base branch, no profile present** → continue to
    Step 1.
 
 (If the user's actual request was "switch this repo's profile to X"
@@ -111,7 +111,7 @@ Never guess between `digismith:bootstrap` and `digismith:adopt` when detection i
 
 ## Error Handling
 
-- **`.digismith/profile` present, not on the base branch, and
+- **A profile present, not on the base branch, and
   `.digismith/docs/<slug>/plan.md` exists for this branch's slug** → see
   Step 0; always stops there except for an explicit profile-switch request,
   which routes straight to `digismith:bootstrap`. Profile present but on the

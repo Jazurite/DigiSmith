@@ -17,8 +17,10 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Save plans to:**
 
+A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+
 - **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
-  `"name": "digismith"`, or `.digismith/profile` is present) — `.digismith/docs/<slug>/plan.md`
+  `"name": "digismith"`, or a profile is present) — `.digismith/docs/<slug>/plan.md`
   instead of this skill's own default location. Format is unchanged — plans stay Markdown.
 
   **Path:** reuse the exact resolved path `brainstorming` already established earlier in this

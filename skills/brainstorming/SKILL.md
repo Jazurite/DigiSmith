@@ -114,8 +114,10 @@ digraph brainstorming {
 
 **Documentation:**
 
+A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+
 - **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
-  `"name": "digismith"`, or `.digismith/profile` is present) — write the validated design to
+  `"name": "digismith"`, or a profile is present) — write the validated design to
   `.digismith/docs/<slug>/design.html` instead of this skill's own default location, using the
   exact HTML shell below (reuse the `<style>` block byte-for-byte, filling in `{{TITLE}}`,
   `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s per the spec's own content):

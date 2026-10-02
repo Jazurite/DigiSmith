@@ -33,11 +33,11 @@ don't fabricate URLs.
 
 ### Step 0: Profile Pre-Check
 
-Check for `.digismith/profile` in the repo the PR was opened in.
+Check for a profile in the repo the PR was opened in. A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 **Missing** → unchanged, existing behavior; continue to Step 1.
 
-**Present** → read its one-line content as the active profile name.
+**Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as the active profile name.
 Locate DigiSmith's own repo — same rule `digismith:inject-standards`
 uses for `standards/`: is the current working directory itself the
 DigiSmith repo (`.claude-plugin/plugin.json` with
@@ -45,7 +45,7 @@ DigiSmith repo (`.claude-plugin/plugin.json` with
 DigiSmith's repo path this session and remember it. Never read
 `profiles/` under a plugin cache path — a stale, version-locked
 snapshot. Read `profiles/<name>.yml` there. No matching file → treat as stale; proceed
-as if `.digismith/profile` were missing — continue to Step 1.
+as if no profile were present — continue to Step 1.
 
 Otherwise, if that profile's `ephemeral` field is `false`, stop here:
 report one line — "skipping ephemeral capture — `<name>` profile" — and
@@ -168,7 +168,7 @@ and the Theme Editor URL. Nothing is written to a file or to JIRA.
 
 | Step | Action |
 |---|---|
-| 0 | Profile pre-check: `.digismith/profile` present and its `ephemeral` is `false` → report one line and stop; otherwise (missing, stale, or `ephemeral: true`) continue |
+| 0 | Profile pre-check: profile present (Step 0 rule) and its `ephemeral` is `false` → report one line and stop; otherwise (missing, stale, or `ephemeral: true`) continue |
 | 1 | Resolve `<Key>` from branch name; ask if it doesn't match |
 | 2 | `gh pr view --json number` for the current branch; stop if none found |
 | 3 | Poll `gh pr checks` for the named check's `bucket` (ignore its exit code), ~30–60s interval, 20-min timeout |
