@@ -17,7 +17,7 @@ first consumer: `finishing-a-development-branch`'s saved finish-option check
 
 - **Automatically**, by any consuming skill that needs to read or write a
   preference for the repo currently being worked in. A consuming skill never
-  parses `.digismith/preferences.yml` itself; it always goes through this
+  parses `.digismith/config.yml` (or its old `.digismith/preferences.yml` fallback) itself; it always goes through this
   skill's operations below.
 - **Directly**, on explicit user request: "what's my preference for `<key>`
   in this repo", "set my preference for `<key>` to `<value>`", "clear my
@@ -82,11 +82,13 @@ is the common case. Locate DigiSmith's own repo the same way
 
 Then invoke all three operations using that resolved path (absolute, or the
 cwd-relative path if step 1 above applied) — never a bare relative path
-assumed to work from any cwd. The `.digismith/preferences.yml` file itself
-is unaffected by this: it still lives relative to whichever repo the
-preference belongs to (the repo currently being worked in), via `--path` or
-the script's cwd-relative default when the caller's own cwd is already that
-repo — only the script's own invocation path needs to be absolute.
+assumed to work from any cwd. The `.digismith/config.yml` file itself (or
+its old `.digismith/preferences.yml` fallback) lives in the repo the
+preference belongs to, not necessarily the caller's own cwd: pass
+`--dir <target-repo>/.digismith` explicitly whenever the caller's own cwd
+isn't already that repo. `preferences.ts` reads only `--dir`, so omitting
+it defaults to `.digismith` relative to the caller's own cwd, silently
+targeting the wrong repo.
 
 ### `get`
 
