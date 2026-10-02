@@ -2,10 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import { ConfigError } from "./config-parse.ts";
+import { HEADER } from "./config-write.ts";
 import {
   DEFAULT_DIR,
   MIGRATE_COMMIT_MESSAGE,
+  formatMigrateReport,
+  migrate,
   readConfig,
   readLegacyPreferences,
   readLegacyProfile,
@@ -154,5 +158,188 @@ describe("resolve", () => {
     write("profile", "digismith\n");
     write("preferences.yml", Buffer.from([0xff]));
     expect(resolve("profile", dir)?.value).toBe("digismith");
+  });
+});
+
+function git(cwd: string, ...args: string[]): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout;
+}
+
+function initRepo(root: string): void {
+  fs.mkdirSync(root, { recursive: true });
+  git(root, "init", "-q");
+  git(root, "config", "user.email", "test@example.com");
+  git(root, "config", "user.name", "Test");
+  fs.writeFileSync(path.join(root, "README.md"), "base\n");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", "base");
+}
+
+const OLD_PREFS = "# DigiSmith-managed. Settings decided through live interaction, not hand-authored.\nfinish_option: merge_locally\nclear_context: no\n";
+
+describe("migrate", () => {
+  beforeEach(setUpTmp);
+  afterEach(tearDownTmp);
+
+  it("reports nothing to migrate when no old file exists", () => {
+    const report = migrate(dir);
+    expect(report).toEqual({ moved: [], added: [], conflicts: [], commit: null });
+    expect(formatMigrateReport(report, dir)).toEqual(["config: nothing to migrate"]);
+  });
+
+  it("merges both untracked old files into config.yml and moves them aside", () => {
+    write("profile", "digismith\n");
+    write("preferences.yml", OLD_PREFS);
+
+    const report = migrate(dir);
+
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(
+      `${HEADER}\nprofile: digismith\n\npreferences:\n  finish_option: merge_locally\n  clear_context: no\n`,
+    );
+    expect(fs.existsSync(path.join(dir, "profile"))).toBe(false);
+    expect(fs.readFileSync(path.join(dir, "profile.migrated"), "utf8")).toBe("digismith\n");
+    expect(fs.readFileSync(path.join(dir, "preferences.yml.migrated"), "utf8")).toBe(OLD_PREFS);
+    expect(report).toEqual({
+      moved: ["profile", "preferences.yml"],
+      added: ["profile", "preferences.finish_option", "preferences.clear_context"],
+      conflicts: [],
+      commit: null,
+    });
+  });
+
+  it("keeps a config.yml value on conflict and reports it", () => {
+    write("config.yml", "profile: emma\n");
+    write("profile", "digismith\n");
+
+    const report = migrate(dir);
+
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe("profile: emma\n");
+    expect(report.conflicts).toEqual([{ key: "profile", kept: "emma", old: "digismith", file: "profile" }]);
+    expect(fs.existsSync(path.join(dir, "profile.migrated"))).toBe(true);
+  });
+
+  it("reports no conflict and writes nothing when the values are equal", () => {
+    write("config.yml", "profile: digismith\n");
+    write("profile", "digismith\n");
+
+    const report = migrate(dir);
+
+    expect(report.conflicts).toEqual([]);
+    expect(report.added).toEqual([]);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe("profile: digismith\n");
+  });
+
+  it("skips a file that is already moved aside and migrates the other one", () => {
+    write("profile.migrated", "digismith\n");
+    write("preferences.yml", "finish_option: pr\n");
+
+    const report = migrate(dir);
+
+    expect(report.moved).toEqual(["preferences.yml"]);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(`${HEADER}\n\npreferences:\n  finish_option: pr\n`);
+  });
+
+  it("finishes a run that stopped between the two renames", () => {
+    write("profile", "digismith\n");
+    write("preferences.yml", OLD_PREFS);
+    migrate(dir);
+    fs.renameSync(path.join(dir, "preferences.yml.migrated"), path.join(dir, "preferences.yml"));
+
+    const report = migrate(dir);
+
+    expect(report.moved).toEqual(["preferences.yml"]);
+    expect(report.conflicts).toEqual([]);
+    expect(fs.existsSync(path.join(dir, "preferences.yml.migrated"))).toBe(true);
+  });
+
+  it("stops and changes nothing when an original and its .migrated copy both exist", () => {
+    write("profile", "digismith\n");
+    write("profile.migrated", "old\n");
+
+    expect(() => migrate(dir)).toThrow("both exist");
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+    expect(fs.readFileSync(path.join(dir, "profile"), "utf8")).toBe("digismith\n");
+  });
+
+  it("stops and changes nothing when an old file is not valid UTF-8", () => {
+    write("profile", "digismith\n");
+    write("preferences.yml", Buffer.from([0xff]));
+
+    expect(() => migrate(dir)).toThrow("not valid UTF-8");
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
+  });
+
+  it("prints commit commands for both moved files when git tracks them", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    dir = path.join(repo, ".digismith");
+    write("profile", "digismith\n");
+    write("preferences.yml", OLD_PREFS);
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "old files");
+
+    const report = migrate(dir);
+
+    expect(report.commit).toEqual([
+      "git add .digismith/config.yml .digismith/profile .digismith/profile.migrated .digismith/preferences.yml .digismith/preferences.yml.migrated",
+      'git commit -m "chore(config): migrate to .digismith/config.yml"',
+    ]);
+  });
+
+  it("prints commit commands for only the moved file", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    dir = path.join(repo, ".digismith");
+    write("profile", "digismith\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "old profile");
+
+    expect(migrate(dir).commit).toEqual([
+      "git add .digismith/config.yml .digismith/profile .digismith/profile.migrated",
+      'git commit -m "chore(config): migrate to .digismith/config.yml"',
+    ]);
+  });
+
+  it("stops in a linked worktree and names the main checkout", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    fs.mkdirSync(path.join(repo, ".digismith"));
+    fs.writeFileSync(path.join(repo, ".digismith", "profile"), "digismith\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "old profile");
+    const wt = path.join(tmpDir, "wt");
+    git(repo, "worktree", "add", "-q", "-b", "wt", wt);
+    dir = path.join(wt, ".digismith");
+
+    expect(() => migrate(dir)).toThrow(
+      `this worktree still has .digismith/profile or preferences.yml. Run migrate in the main checkout ${fs.realpathSync(repo)}, then remove or recreate this worktree`,
+    );
+    expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+  });
+
+  it("formats a full report with a conflict and commit commands", () => {
+    const lines = formatMigrateReport(
+      {
+        moved: ["profile", "preferences.yml"],
+        added: ["preferences.finish_option"],
+        conflicts: [{ key: "profile", kept: "emma", old: "digismith", file: "profile" }],
+        commit: ["git add a", 'git commit -m "m"'],
+      },
+      ".digismith",
+    );
+    expect(lines).toEqual([
+      "config: migrated .digismith/profile, .digismith/preferences.yml into .digismith/config.yml",
+      "config: added preferences.finish_option",
+      'config: conflict on profile: kept "emma" from config.yml, the old value "digismith" stays in profile.migrated',
+      "config: moved aside profile -> profile.migrated, preferences.yml -> preferences.yml.migrated",
+      "config: if a branch from before this migration changes an old file, apply that change again with set",
+      "config: commit needed:",
+      "  git add a",
+      '  git commit -m "m"',
+    ]);
   });
 });
