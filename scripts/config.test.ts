@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -8,12 +8,16 @@ import { HEADER } from "./config-write.ts";
 import {
   DEFAULT_DIR,
   MIGRATE_COMMIT_MESSAGE,
+  checkWrite,
+  clearKey,
   formatMigrateReport,
+  main,
   migrate,
   readConfig,
   readLegacyPreferences,
   readLegacyProfile,
   resolve,
+  setKey,
 } from "./config.ts";
 
 let tmpDir: string;
@@ -341,5 +345,177 @@ describe("migrate", () => {
       "  git add a",
       '  git commit -m "m"',
     ]);
+  });
+});
+
+describe("setKey / clearKey", () => {
+  beforeEach(setUpTmp);
+  afterEach(tearDownTmp);
+
+  it("writes config.yml when no old file exists", () => {
+    expect(checkWrite(dir)).toEqual({ kind: "write" });
+    const result = setKey("profile", "emma", dir);
+    expect(result.migration).toBeNull();
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(`${HEADER}\nprofile: emma\n`);
+  });
+
+  it("leaves no temporary file behind", () => {
+    setKey("profile", "emma", dir);
+    expect(fs.readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  it("migrates untracked old files first, then writes", () => {
+    write("profile", "digismith\n");
+    expect(checkWrite(dir)).toEqual({ kind: "migrate" });
+
+    const result = setKey("preferences.finish_option", "pr", dir);
+
+    expect(result.migration?.moved).toEqual(["profile"]);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(
+      `${HEADER}\nprofile: digismith\n\npreferences:\n  finish_option: pr\n`,
+    );
+  });
+
+  it("does not let a cleared key come back through the fallback", () => {
+    write("preferences.yml", "finish_option: pr\n");
+
+    clearKey("preferences.finish_option", dir);
+
+    expect(resolve("preferences.finish_option", dir)).toBeUndefined();
+    expect(fs.existsSync(path.join(dir, "preferences.yml.migrated"))).toBe(true);
+  });
+
+  it("validates the value before it migrates anything", () => {
+    write("profile", "digismith\n");
+    expect(() => setKey("role", `'a" #`, dir)).toThrow("contains both quote types");
+    expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
+  });
+
+  it("stops in a main checkout where git tracks an old file, and changes nothing", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    dir = path.join(repo, ".digismith");
+    write("profile", "digismith\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "old profile");
+
+    const check = checkWrite(dir);
+    expect(check.kind).toBe("stop");
+    expect(() => setKey("role", "worker", dir)).toThrow(ConfigError);
+    try {
+      setKey("role", "worker", dir);
+    } catch (err) {
+      const message = (err as Error).message;
+      expect(message).toContain(`git tracks ${path.join(dir, "profile")}`);
+      expect(message).toContain("--action migrate --dir");
+      expect(message).toContain("  git add .digismith/config.yml .digismith/profile .digismith/profile.migrated");
+      expect(message).toContain('  git commit -m "chore(config): migrate to .digismith/config.yml"');
+    }
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
+  });
+
+  it("stops in a linked worktree that still has an old file, and changes nothing", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    fs.mkdirSync(path.join(repo, ".digismith"));
+    fs.writeFileSync(path.join(repo, ".digismith", "profile"), "digismith\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "old profile");
+    const wt = path.join(tmpDir, "wt");
+    git(repo, "worktree", "add", "-q", "-b", "wt", wt);
+    dir = path.join(wt, ".digismith");
+
+    expect(() => clearKey("preferences.finish_option", dir)).toThrow("Run migrate in the main checkout");
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+  });
+
+  it("writes in a linked worktree that has no old file", () => {
+    const repo = path.join(tmpDir, "repo");
+    initRepo(repo);
+    const wt = path.join(tmpDir, "wt");
+    git(repo, "worktree", "add", "-q", "-b", "wt", wt);
+    dir = path.join(wt, ".digismith");
+
+    setKey("preferences.finish_option", "pr", dir);
+
+    expect(resolve("preferences.finish_option", dir)?.value).toBe("pr");
+  });
+
+  it("clear is a no-op when config.yml does not exist", () => {
+    clearKey("profile", dir);
+    expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+  });
+});
+
+describe("main (CLI)", () => {
+  let originalArgv: string[];
+  let logs: string[];
+  let errors: string[];
+
+  beforeEach(() => {
+    setUpTmp();
+    originalArgv = process.argv;
+    logs = [];
+    errors = [];
+    vi.spyOn(console, "log").mockImplementation((msg: string) => void logs.push(msg));
+    vi.spyOn(console, "error").mockImplementation((msg: string) => void errors.push(msg));
+  });
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+    tearDownTmp();
+  });
+
+  function run(...args: string[]): void {
+    process.argv = ["node", "config.ts", ...args, "--dir", dir];
+    main();
+  }
+
+  it("prints unset for a missing key", () => {
+    run("--action", "get", "--key", "profile");
+    expect(logs).toEqual(["unset"]);
+  });
+
+  it("sets, gets and clears a key", () => {
+    run("--action", "set", "--key", "profile", "--value", "emma");
+    run("--action", "get", "--key", "profile");
+    run("--action", "clear", "--key", "profile");
+    expect(logs).toEqual(["config: set profile=emma", "emma", "config: cleared profile"]);
+  });
+
+  it("prints each array item on its own line", () => {
+    write("config.yml", "urls:\n  - a\n  - b\n");
+    run("--action", "get", "--key", "urls");
+    expect(logs).toEqual(["a", "b"]);
+  });
+
+  it("prints the migration lines before the set confirmation", () => {
+    write("profile", "digismith\n");
+    run("--action", "set", "--key", "role", "--value", "worker");
+    expect(logs[0]).toBe(`config: migrated ${path.join(dir, "profile")} into ${path.join(dir, "config.yml")}`);
+    expect(logs[logs.length - 1]).toBe("config: set role=worker");
+  });
+
+  it("runs migrate", () => {
+    run("--action", "migrate");
+    expect(logs).toEqual(["config: nothing to migrate"]);
+  });
+
+  it("fails clearly on a missing action, a missing key, an unknown action and a parse error", () => {
+    run();
+    run("--action", "get");
+    run("--action", "list");
+    write("config.yml", "oops\n");
+    run("--action", "get", "--key", "profile");
+    expect(errors).toEqual([
+      "config: failed (missing required flag: --action)",
+      "config: failed (missing required flag: --key)",
+      "config: failed (unknown action: list)",
+      `config: failed (${path.join(dir, "config.yml")} line 1: expected 'key: value')`,
+    ]);
+    expect(process.exitCode).toBe(1);
   });
 });

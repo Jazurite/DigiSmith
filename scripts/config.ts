@@ -3,8 +3,9 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ConfigError, parseConfig, type ConfigValue } from "./config-parse.ts";
-import { setInText } from "./config-write.ts";
+import { clearInText, formatScalar, setInText, splitKey } from "./config-write.ts";
 import { resolveMainRoot } from "./lineage-handoff.ts";
+import { parseArgs, requireArgs } from "./cli-args.ts";
 
 export const DEFAULT_DIR = ".digismith";
 export const CONFIG_FILE = "config.yml";
@@ -205,4 +206,93 @@ export function formatMigrateReport(report: MigrateReport, dir = DEFAULT_DIR): s
     for (const command of report.commit) lines.push(`  ${command}`);
   }
   return lines;
+}
+
+export type WriteCheck = { kind: "write" } | { kind: "migrate" } | { kind: "stop"; message: string };
+export type WriteResult = { migration: MigrateReport | null };
+
+export function checkWrite(dir = DEFAULT_DIR): WriteCheck {
+  const present = LEGACY_FILES.filter((file) => fs.existsSync(path.join(dir, file)));
+  if (present.length === 0) return { kind: "write" };
+  const root = checkoutRoot(dir);
+  if (isLinkedWorktree(root)) return { kind: "stop", message: worktreeMessage(root) };
+  const tracked = present.filter((file) => isTracked(root, path.join(path.resolve(dir), file)));
+  if (tracked.length === 0) return { kind: "migrate" };
+  const message = [
+    `git tracks ${tracked.map((file) => path.join(dir, file)).join(", ")}, so this write needs a migration commit first. Run these in ${root}, then try again:`,
+    `  ${migrateCommand(dir)}`,
+    ...commitCommands(dir, present).map((command) => `  ${command}`),
+  ].join("\n");
+  return { kind: "stop", message };
+}
+
+function prepareWrite(dir: string): MigrateReport | null {
+  const check = checkWrite(dir);
+  if (check.kind === "stop") throw new ConfigError(check.message);
+  return check.kind === "migrate" ? migrate(dir) : null;
+}
+
+export function setKey(key: string, value: string, dir = DEFAULT_DIR): WriteResult {
+  splitKey(key);
+  formatScalar(value);
+  const migration = prepareWrite(dir);
+  const file = path.join(dir, CONFIG_FILE);
+  writeAtomic(file, setInText(readTextIfPresent(file) ?? "", key, value, file));
+  return { migration };
+}
+
+export function clearKey(key: string, dir = DEFAULT_DIR): WriteResult {
+  splitKey(key);
+  const migration = prepareWrite(dir);
+  const file = path.join(dir, CONFIG_FILE);
+  const text = readTextIfPresent(file);
+  if (text !== undefined) {
+    const next = clearInText(text, key, file);
+    if (next !== text) writeAtomic(file, next);
+  }
+  return { migration };
+}
+
+export function main(): void {
+  const args = parseArgs(process.argv.slice(2));
+  const dir = args.dir ?? DEFAULT_DIR;
+  try {
+    requireArgs(args, ["action"]);
+    switch (args.action) {
+      case "get": {
+        requireArgs(args, ["key"]);
+        const hit = resolve(args.key, dir);
+        if (!hit) console.log("unset");
+        else if (Array.isArray(hit.value)) for (const item of hit.value) console.log(item);
+        else console.log(hit.value);
+        return;
+      }
+      case "set": {
+        requireArgs(args, ["key", "value"]);
+        const { migration } = setKey(args.key, args.value, dir);
+        if (migration) for (const line of formatMigrateReport(migration, dir)) console.log(line);
+        console.log(`config: set ${args.key}=${args.value}`);
+        return;
+      }
+      case "clear": {
+        requireArgs(args, ["key"]);
+        const { migration } = clearKey(args.key, dir);
+        if (migration) for (const line of formatMigrateReport(migration, dir)) console.log(line);
+        console.log(`config: cleared ${args.key}`);
+        return;
+      }
+      case "migrate":
+        for (const line of formatMigrateReport(migrate(dir), dir)) console.log(line);
+        return;
+      default:
+        throw new ConfigError(`unknown action: ${args.action}`);
+    }
+  } catch (err) {
+    console.error(`config: failed (${(err as Error).message})`);
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.filename === process.argv[1]) {
+  main();
 }
