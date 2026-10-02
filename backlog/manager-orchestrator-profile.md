@@ -1,19 +1,38 @@
-# Maestro profile: one Desktop session supervises herdr worker agents
+# Maestro role: one Desktop session supervises herdr worker agents
 
 **Status:** Proposal for Jack's review (2026-10-02). No design, no code. Confirmed live on
 2026-09-29 (DGS-122, DGS-123) and on 2026-10-02 (EMKT-791, EMKT-810).
 
-**Map item:** clan **O: Profiling**, new lineage **O.2: Tailoring** (Jack, 2026-10-02; ClickUp list
-`1301150000002907`). ClickUp ticket: **DGS-139** (`Profile` = Maestro, linked to DGS-110 and DGS-127). O.0 (Foundation) owns the profile mechanism. O.1 (Preferences Store) owns
-per-repo settings. O.2 owns the tailoring of each profile: `digismith`, `emma`, `jazurite`,
-`personal`, and now `maestro` (Jack, 2026-10-02). This item is O.2's first build. It depends on clan B: Agentic: it reuses
-`packages/workbox` from DGS-127 and continues the DGS-110 orchestrator work (DGS-121, DGS-122,
-DGS-123).
+**Map item:** clan **O: Profiling**, lineage **O.3: Roles** (Jack, 2026-10-02; ClickUp list
+`1301150000002911`). ClickUp ticket: **DGS-139**, linked to DGS-110 and DGS-127. It was filed in
+O.2: Tailoring first and moved to O.3 the same day, when maestro became a role. It depends on clan
+B: Agentic: it reuses `packages/workbox` from DGS-127 and continues the DGS-110 orchestrator work
+(DGS-121, DGS-122, DGS-123).
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude
 session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro:
 [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md). The Desktop session
 "Digi Smith maestro orchestration" took the same role on 2026-10-02.
+
+## Decision: two axes, profile and role (Jack, 2026-10-02)
+
+This decision replaces "maestro is a fifth profile". Where sections below still say
+`profiles/maestro.yml` or "the maestro profile", they are history.
+
+- **Profile:** which org's behavior applies: `digismith`, `emma`, `jazurite`, `personal`. It does not
+  change. O.0 owns the mechanism, and O.2 owns the tailoring of each profile.
+- **Role:** what the session does. Like Kubernetes: the maestro is the control plane (the
+  "master"), and the workers are the nodes.
+  - **maestro:** a Desktop session opened in `~/.digismith-depot/maestro/`. It supervises herdr
+    workers.
+  - **worker:** a terminal session in a herdr pane, started by a maestro. It never sees the role
+    question, because the maestro sets its role at start (`DIGISMITH_MAESTRO` in its environment).
+  - **solo:** Jack's direct sessions, which are neither.
+- **Lineage O.3: Roles** owns the role question at session start and the setup for each role.
+- The session-start prompt asks for the role once per folder, through the profile mechanism.
+- To settle in the design: where the role is stored (for example `.digismith/role` beside
+  `.digismith/profile`), which profile the maestro folder has (it manages more than one org), and
+  whether the ClickUp `Profile` option "Maestro" goes (DGS-139 still carries that value).
 
 ## What's wrong
 
@@ -33,7 +52,7 @@ problems:
 - The runbook's worker table is kept by hand. It was stale after the herdr session split (w7 in
   `default` became w4 in `DigiSmith`).
 
-## A profile today belongs to a repo, not to a session
+## A profile today belongs to a repo, not to a session (history: see the two-axes decision)
 
 `.digismith/profile` selects one of `profiles/*.yml` (`digismith`, `emma`, `jazurite`,
 `personal`) for the whole repo. That file sets standards, ticket mode and offload. The maestro
@@ -45,7 +64,7 @@ Jack sees `maestro` as one more profile next to the four that exist (2026-10-02)
 there:
 
 - **A. A maestro home folder (closest to "one more profile").** The maestro session runs in
-  its own folder, for example `/root/Workspace/Maestro`, with `.digismith/profile` set to
+  its own folder, `~/.digismith-depot/maestro/` (decided 2026-10-02), with `.digismith/profile` set to
   `maestro`. `profiles/maestro.yml` becomes a real profile, like the other four. The DigiSmith repo
   keeps `digismith`. Cost: the maestro's own notes and runbook move to that folder. When the maestro
   edits DigiSmith files (backlog, runbook), it works in another repo, like any other session.
@@ -190,20 +209,58 @@ of offload servers for single tasks. It is a different shape from long-lived tic
    Maestro), on the O: Profiling folder (`79f7fb3e-a2ea-4f63-a6aa-d37475cbd850`, created through the
    Frontdoor API). This build is DGS-139, with `Profile` = Maestro. It links to DGS-110 and DGS-127.
    They are links, not dependencies, because the order with DGS-127 is still open (question 5).
-2. **Name.** `maestro` (this session's title), `manager` (the retro's word), or
-   `orchestrator`?
-3. **Activation.** Option A, a maestro home folder with a real `maestro` profile (recommended),
-   or option B, a session role on top of the repo profile? If A: which folder?
-4. **Toolkit form.** Tested TypeScript commands in `packages/workbox` (proposed), or prose
-   commands in the skill only?
-5. **Order with DGS-127.** Build the Sol review package first, then add the worker operations?
-   Or build the worker operations first?
-6. **RAM limit** for `start`. Today 1.5 GB is available with four Emma workers live.
-7. **One maestro at a time?** On 2026-10-02, "Main" and this session both acted as maestro. Should
-   the roster record its maestro, and should a second maestro be refused?
-8. **Who pushes?** The maestro decides every normal push. Should the worker run the push after
-   the maestro approves, or should the maestro run it?
+2. **Name. Answered 2026-10-02: `maestro`** (Jack). So: the role `maestro`, `digismith:maestro` and
+   `DIGISMITH_MAESTRO`. The ClickUp lineage B.0 is also
+   named "Maestro" (offload dispatch, old map letter K). It gets a new name: DGS-140.
+3. **Activation. Answered 2026-10-02 (Jack):**
+   - **Option A**, a maestro home folder. Later the same day maestro became a role, not a profile
+     (see the two-axes decision), so there is no `profiles/maestro.yml`.
+   - **Bound by working folder.** The maestro is a Desktop session opened in that folder. The
+     profile is read from the session's working folder (`process.cwd()` in
+     `scripts/session-init.ts`), not from the git repo, so the binding survives `/clear`, resume and
+     restarts. Binding by session ID (lost on `/clear`) and by title (the hook cannot see titles)
+     were rejected.
+   - **Global folder: `~/.digismith-depot/maestro/`**, outside any repo, like `~/.claude`. It sits in
+     the global folder DigiSmith already has, next to `.env`, the `workbox.json` roster and `captures/`.
+   - **Picker at session start.** Today the first-use picker runs only inside `digismith:init`
+     (`bootstrap` Step 0), and a maestro never runs `init` in its home folder. New: when a session
+     opens in a folder with no `.digismith/profile`, DigiSmith asks for a profile once, maestro
+     included. A "not a DigiSmith folder" answer is remembered, so the picker asks only once.
+   - **No ticket repo can become a maestro.** First solved with a `home_only: true` field in
+     `profiles/maestro.yml`. Under the two-axes decision this is automatic: the ticket-work picker
+     lists profiles, and maestro is not a profile.
+   - **The folder holds only live state:** the worker roster (live workers only), the runbook and
+     the maestro's own handoff note. Worker briefs, designs, plans and reports stay in the worker's
+     repo. Retro findings go to DigiSmith's `backlog/`. `captures/` is emptied right after the token
+     import. `archive/<date>-<slug>/` has an age limit and a `prune` step that lists the old folders;
+     Jack runs the delete.
+4. **Toolkit form. Answered 2026-10-02 (Jack): staged.**
+   - **Build 1:** the maestro role itself. That is the role mechanism, the session-start role
+     question, the `digismith:maestro` playbook skill, the brief template and the worker banner. The
+     herdr commands are prose in the skill for now.
+   - **Build 2:** tested `dg workbox` commands (TypeScript, Vitest, per `toolchain.yml`) replace
+     the prose, starting with the ones that hurt most: `read`, `start`, `prompt`.
+5. **Order with DGS-127. Follows from 4:** build 1 does not need DGS-127. Build 2 builds on
+   `packages/workbox`: after DGS-127 if that has shipped, or build 2 creates the package itself.
+6. **RAM limit** for `start`: moved to build 2, where `start` is built. Today 1.5 GB is available
+   with four Emma workers live.
+7. **More than one maestro? Answered 2026-10-02 (Jack): one maestro per herdr session.**
+   - `claims.json` in the maestro folder records, per herdr session (`DigiSmith`, `emma`), which
+     maestro holds it. A maestro can hold more than one. A herdr session has at most one maestro.
+     A maestro prompts only the workers in its own herdr sessions.
+   - A claim is keyed by the Desktop session ID (`get_session self`). That ID survives `/clear`; the
+     CLI session ID that the hook sees does not.
+   - A stale claim (the holder is no longer running, per `list_sessions`) can be taken over after
+     Jack confirms.
+   - One handoff note per claimed herdr session (`.digismith/docs/<herdr session>/handoff.md` in the
+     maestro folder), so two maestros never overwrite each other's note.
+8. **Who pushes? Answered 2026-10-02 (Jack): the worker, on approval.** The maestro says
+   "approved: push". The worker runs its own DigiSmith flow: push, draft PR,
+   `capture-ephemeral-url`, then a JIRA draft with `generate-comment`, and it stops there. The
+   maestro shows Jack the draft and posts it. The worker's finishing chain stays intact, and the
+   worker never posts externally.
 
 ## Why not applied yet
 
-Needs Jack's review of this proposal, then a brainstorm on the open questions, then a design.
+All 8 questions were answered on 2026-10-02 in the brainstorm (Desktop session "Digi Smith maestro
+orchestration"). Next: approaches and the design for build 1, then a plan.
