@@ -201,6 +201,19 @@ describe("main (CLI)", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("set prints the migration report before the confirmation when it migrates an old preferences.yml", () => {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "preferences.yml"), "technical_voice: off\n");
+    process.argv = [
+      "node", "voice.ts", "--action", "set", "--axis", "conversation", "--value", "off", "--dir", dir,
+    ];
+    main();
+    expect(logs[0]).toContain("config: migrated");
+    expect(logs[logs.length - 1]).toBe("voice: set conversation=off");
+    expect(resolveVoice("technical", dir)).toBe("off");
+    expect(resolveVoice("conversation", dir)).toBe("off");
+  });
+
   it("status fails clearly on a config.yml parse error", () => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "config.yml"), "oops\n");

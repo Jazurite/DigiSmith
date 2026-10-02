@@ -1,5 +1,6 @@
 import { getPreference, setPreference, DEFAULT_DIR } from "./preferences.ts";
 import { parseArgs, requireArgs } from "./cli-args.ts";
+import { formatMigrateReport, type WriteResult } from "./config.ts";
 
 export const AXES = ["technical", "conversation"] as const;
 export type Axis = (typeof AXES)[number];
@@ -33,8 +34,8 @@ export function resolveAllVoices(dir: string): Record<Axis, VoiceValue> {
   return result;
 }
 
-export function setVoice(axis: Axis, value: VoiceValue, dir: string): void {
-  setPreference(AXIS_KEY[axis], value, dir);
+export function setVoice(axis: Axis, value: VoiceValue, dir: string): WriteResult {
+  return setPreference(AXIS_KEY[axis], value, dir);
 }
 
 export function main(): void {
@@ -67,7 +68,8 @@ export function main(): void {
           process.exitCode = 1;
           return;
         }
-        setVoice(args.axis, args.value, dir);
+        const result = setVoice(args.axis, args.value, dir);
+        if (result.migration) for (const line of formatMigrateReport(result.migration, dir)) console.log(line);
         console.log(`voice: set ${args.axis}=${args.value}`);
         return;
       }
