@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Centralized DigiSmith config file</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Centralized DigiSmith config file</h1>
+  <div class="meta">
+    <span>Date: 2026-10-02</span>
+    <span>Map item: A.2: Configuration (DGS-141)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#context">Context and decisions</a></li>
+    <li><a href="#file">The file and its parser</a></li>
+    <li><a href="#rw">Reading, writing, and the fallback</a></li>
+    <li><a href="#migrate">Migrate</a></li>
+    <li><a href="#callers">Callers and skills</a></li>
+    <li><a href="#tests">Tests and done</a></li>
+    <li><a href="#scope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="context">
+<h2>1. Context and decisions</h2>
+<p>Per-folder DigiSmith state is in two files of different shapes. <code>.digismith/profile</code> is one line. <code>.digismith/preferences.yml</code> is flat <code>key: value</code>. The maestro role (DGS-139, O.3) adds a third setting, <code>role</code>. This ticket puts all per-folder settings in one file. The settings stay with their owners: profile (O.0), role (O.3), preference keys (O.1), voices (T).</p>
+<div class="table-wrap"><table>
+<tr><th>Question</th><th>Decision (Jack, 2026-10-02)</th></tr>
+<tr><td>File name and format</td><td><code>.digismith/config.yml</code>, YAML, one level of headings. Read by a hand-written parser with no library, so the plugin cache (no <code>node_modules</code>) stays safe.</td></tr>
+<tr><td>Global layer</td><td>Later. The reader keeps an ordered list of layers, so a global layer is a one-line addition.</td></tr>
+<tr><td>Old files</td><td>Readable through a fallback until a follow-up removal ticket. <code>migrate</code> runs on the main checkout. Old worktrees keep the fallback until they are removed.</td></tr>
+<tr><td>Flat or nested</td><td>Top-level keys plus one level of headings, addressed as <code>heading.key</code>.</td></tr>
+<tr><td>SessionStart hook</td><td><code>scripts/session-init.ts</code> reads the profile through the shared reader. Its output stays the same.</td></tr>
+<tr><td>Approach</td><td>New <code>scripts/config.ts</code>. <code>preferences.ts</code> becomes a thin wrapper. Skills read the YAML file directly with one shared sentence.</td></tr>
+<tr><td>Auto-commit</td><td>No commit on the base branch. This ticket's branch migrates DigiSmith's own repo as part of the feature.</td></tr>
+</table></div>
+</section>
+
+<section id="file">
+<h2>2. The file and its parser</h2>
+<p>One <code>.digismith/config.yml</code> per checkout. Example:</p>
+<pre><code># DigiSmith config for this checkout. Edit by hand or through digismith:preferences.
+profile: digismith
+role: worker
+finish_option: merge_locally
+ssh_key: /root/.ssh/jazurite_github
+
+maestro:
+  poll_interval: 60
+  watch_sessions:
+    - DigiSmith
+    - emma</code></pre>
+
+<h3>Grammar</h3>
+<div class="table-wrap"><table>
+<tr><th>Line</th><th>Example</th><th>Result</th></tr>
+<tr><td>Blank line or <code>#</code> comment</td><td><code># note</code></td><td>Ignored</td></tr>
+<tr><td>Top-level key</td><td><code>profile: digismith</code></td><td><code>profile</code> → <code>"digismith"</code></td></tr>
+<tr><td>Heading: <code>key:</code> with no value, next significant line is <code>key: value</code> indented 2 spaces</td><td><code>maestro:</code></td><td>Opens section <code>maestro</code></td></tr>
+<tr><td>Key in a section, exactly 2 spaces</td><td><code>&nbsp;&nbsp;poll_interval: 60</code></td><td><code>maestro.poll_interval</code> → <code>"60"</code></td></tr>
+<tr><td>Array: <code>key:</code> with no value, next significant line is <code>- item</code> indented 2 spaces (top level) or 4 spaces (in a section)</td><td><code>&nbsp;&nbsp;- https://a.com</code></td><td><code>key</code> → <code>["https://a.com"]</code></td></tr>
+</table></div>
+<p>A "significant line" is a line that is not blank and not a comment.</p>
+
+<h3>Rules</h3>
+<ul>
+  <li>Keys match <code>[a-z0-9_]+</code>. All current keys match.</li>
+  <li>Every value is a string. The parser does no type conversion, so <code>no</code> and <code>08</code> stay text. The key's owner converts a value when it must.</li>
+  <li>A value that starts with <code>"</code> or <code>'</code> runs to the matching closing quote. Everything inside is part of the value, <code> #</code> included. After the closing quote, only spaces or a <code> #</code> comment can follow.</li>
+  <li>Escape sequences are not supported. <code>\</code> is a literal character. A value that contains one quote type uses the other quote type.</li>
+  <li>An unquoted inline comment starts at <code> #</code> (space, then <code>#</code>), so <code>https://x.com/#a</code> stays whole.</li>
+  <li>The parser removes a trailing CR on each line (CRLF files, DGS-116) and a leading UTF-8 BOM.</li>
+</ul>
+
+<h3>Errors</h3>
+<p>The parser stops with <code>config.yml line &lt;n&gt;: &lt;reason&gt;</code> for:</p>
+<ul>
+  <li>a tab in the indentation, or an indent other than 2 or 4 spaces where allowed</li>
+  <li>a second level of headings</li>
+  <li>an indented line with no heading or array above it</li>
+  <li>an unindented <code>- item</code> under a key (the message names the required indent)</li>
+  <li>a <code>key:</code> with no value and no indented line after it (empty heading or array)</li>
+  <li>flow syntax (<code>[a, b]</code>, <code>{a: b}</code>) or a block scalar (<code>|</code>, <code>&gt;</code>)</li>
+  <li>text after a closing quote that is not a comment</li>
+  <li>a duplicate key</li>
+  <li>a key that does not match <code>[a-z0-9_]+</code></li>
+</ul>
+<p>The parser returns <code>Map&lt;string, string | string[]&gt;</code>, keyed by top-level names and <code>heading.key</code> paths.</p>
+</section>
+
+<section id="rw">
+<h2>3. Reading, writing, and the fallback</h2>
+<p><code>scripts/config.ts</code> exports these functions. Each takes the <code>.digismith</code> folder, default <code>.digismith</code> under the current folder.</p>
+<ul>
+  <li><code>readConfig(dir)</code>: parse <code>config.yml</code>. A missing file gives an empty map.</li>
+  <li><code>resolve(key, dir)</code>: return <code>{ value, source }</code>, or <code>undefined</code>.</li>
+  <li><code>setKey(key, value, dir)</code> and <code>clearKey(key, dir)</code>.</li>
+  <li><code>migrate(dir)</code>: see section 4.</li>
+</ul>
+
+<h3>Read order (per key, first hit wins)</h3>
+<ol>
+  <li><code>.digismith/config.yml</code></li>
+  <li>The old files. <code>profile</code> comes from <code>.digismith/profile</code>, read as <code>readProfile</code> reads it today: strict UTF-8, trimmed, empty means unset. Every other key comes from <code>.digismith/preferences.yml</code>, read with the same parser (today's flat file is valid in the subset).</li>
+</ol>
+<p><code>source</code> names the file that supplied the value.</p>
+
+<h3>Writes</h3>
+<ul>
+  <li>Writes go only to <code>config.yml</code>.</li>
+  <li><strong>In-place edit.</strong> The writer keeps comments, blank lines and key order. <code>set</code> on an existing key replaces only its value and keeps its inline comment. A new top-level key goes after the last top-level key, before the first heading. A new <code>section.key</code> goes at the end of its section. A missing section gets its heading at the end of the file. <code>clear</code> removes the key's line, and its item lines for an array. A heading with no keys left is removed.</li>
+  <li><strong>New file header:</strong> <code># DigiSmith config for this checkout. Edit by hand or through digismith:preferences.</code></li>
+  <li><strong>Quoting.</strong> Plain when safe. Double quotes when the value is empty, has a leading or trailing space, starts with a quote, or contains <code> #</code>. Single quotes when the value contains <code>"</code>. A value with both quote types is an error.</li>
+  <li><code>set</code> writes scalars only. Arrays are edited by hand until a key needs them.</li>
+  <li><strong>Atomic.</strong> Each write goes to <code>.digismith/.config.yml.&lt;pid&gt;.tmp</code>, then a rename moves it to <code>config.yml</code>. A crash or two sessions writing at once never leaves a half-written file. With two writes at the same time, the last rename wins.</li>
+  <li><strong>Writes migrate first.</strong> In a main checkout that still has an old file, <code>setKey</code> and <code>clearKey</code> run <code>migrate</code> before they write. Without this, a <code>clear</code> would let the old value come back through the fallback. The output reports the migration and, where git tracks the old files, <code>commit needed</code>.</li>
+  <li><strong>Linked worktree guard.</strong> In a linked worktree (<code>git rev-parse --git-common-dir</code> differs from <code>--git-dir</code>) that still has an old file, <code>setKey</code> and <code>clearKey</code> stop and change nothing: <code>config: failed (this worktree still has .digismith/profile or preferences.yml. Run migrate in the main checkout &lt;path&gt;, then remove or recreate this worktree)</code>. Reads still work. A folder outside a git repo counts as a main checkout. The hook never writes, so it makes no git call.</li>
+</ul>
+
+<h3><code>preferences.ts</code> and <code>voice.ts</code></h3>
+<p><code>preferences.ts</code> becomes a thin wrapper over <code>config.ts</code>. It keeps <code>get</code>, <code>set</code>, <code>clear</code> and the <code>unset</code> output, and adds <code>migrate</code>. <code>--path</code> is replaced by <code>--dir</code> (the <code>.digismith</code> folder). Only <code>preferences.test.ts</code>, <code>voice.test.ts</code> and the <code>digismith:preferences</code> SKILL.md use <code>--path</code>. <code>voice.ts</code> keeps its API and reads through the wrapper.</p>
+</section>
+
+<section id="migrate">
+<h2>4. Migrate</h2>
+<pre><code>node --experimental-strip-types &lt;digismith&gt;/scripts/config.ts --action migrate [--dir &lt;.digismith folder&gt;]</code></pre>
+<p>All checks run before any change, so a stop leaves the folder unchanged.</p>
+<ol>
+  <li>In a linked worktree: stop with the guard message from section 3.</li>
+  <li>Classify each old file on its own:
+    <div class="table-wrap"><table>
+      <tr><th>Original</th><th><code>.migrated</code> copy</th><th>Action</th></tr>
+      <tr><td>present</td><td>absent</td><td>Migrate it</td></tr>
+      <tr><td>absent</td><td>present</td><td>Skip (already moved)</td></tr>
+      <tr><td>present</td><td>present</td><td>Stop</td></tr>
+      <tr><td>absent</td><td>absent</td><td>Nothing to do</td></tr>
+    </table></div>
+    If no file needs migration, print <code>config: nothing to migrate</code> and exit 0.</li>
+  <li>Read <code>config.yml</code> (if present) and each old file to migrate. Add each old key that <code>config.yml</code> does not have, through the in-place writer, <code>profile</code> first. A key in both files with different values: <code>config.yml</code> wins, the output lists the conflict, and the old value stays in the <code>.migrated</code> copy.</li>
+  <li>Write <code>config.yml</code> atomically.</li>
+  <li>Rename each migrated file: <code>profile</code> → <code>profile.migrated</code>, <code>preferences.yml</code> → <code>preferences.yml.migrated</code>. The removal ticket deletes the <code>.migrated</code> copies.</li>
+  <li>Report the keys moved, conflicts, and files moved aside. Where git tracks the old files, print <code>commit needed</code> and the commands from the box below. <code>migrate</code> never commits.</li>
+</ol>
+<p><strong>Recovery.</strong> A crash between any two steps is safe. A rerun skips files already moved, finds equal values in both places, and finishes the rest.</p>
+
+<div class="callout">
+<p><strong>Commit commands printed where git tracks the old files</strong> (they stage only the three paths, never other untracked files in <code>.digismith/</code>):</p>
+<pre><code>git add .digismith/config.yml .digismith/profile .digismith/profile.migrated .digismith/preferences.yml .digismith/preferences.yml.migrated
+git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
+<p>The printed <code>git add</code> lists only the old files that this run moved.</p>
+</div>
+
+<h3>Where migrate runs</h3>
+<ul>
+  <li><strong><code>bootstrap</code> and <code>adopt</code> Step 0</strong>, in the main checkout, before any worktree exists. They test whether git tracks an old file with <code>git ls-files --error-unmatch</code>.
+    <ul>
+      <li>Not tracked (gitignored or untracked <code>.digismith/</code>, as in the Emma repos): run <code>migrate</code>. This is a plain file move.</li>
+      <li>Tracked: do not migrate. Print the <code>migrate</code> command and the commit commands above, keep reading through the fallback, and continue the ticket flow.</li>
+    </ul></li>
+  <li><strong>Directly</strong>, through <code>digismith:preferences</code> ("migrate this repo's config").</li>
+  <li><strong>DigiSmith's own repo, in this ticket's branch, by hand.</strong> DigiSmith is the only known repo that tracks <code>.digismith/</code>. The branch is a linked worktree, so the guard blocks the command there. The plan adds <code>.digismith/config.yml</code> and runs <code>git mv</code> on the two old files to <code>*.migrated</code>, in a normal commit that merges with the branch. A test checks that the committed <code>config.yml</code> equals the output of <code>migrate</code> run on the <code>.migrated</code> files.</li>
+</ul>
+
+<h3>Pre-migration worktrees</h3>
+<p>New worktrees start from a migrated main checkout. Only worktrees that existed before the migration keep the old files: <code>shared-credential-resolver</code>, and <code>add-dg-clickup-create-list-create-folder</code> (a detached HEAD at <code>3c6f562</code>, already in main). Neither changes the old files. If a pre-migration branch changes <code>preferences.yml</code> and merges later, git's rename detection puts the change on <code>preferences.yml.migrated</code>, where nothing reads it. The <code>migrate</code> output says to apply such changes again with <code>set</code>.</p>
+</section>
+
+<section id="callers">
+<h2>5. Callers and skills</h2>
+
+<h3>Scripts</h3>
+<ul>
+  <li><code>session-init.ts</code>: <code>readProfile</code> becomes <code>resolve("profile")</code>. <code>buildBanner</code> takes the <code>.digismith</code> folder. On a parse error, the hook prints one line, <code>DigiSmith: warning: .digismith/config.yml line &lt;n&gt;: &lt;reason&gt;</code>, skips the profile and voice banner, still prints the attribution line and the lineage pointer, and exits 0.</li>
+  <li><code>voice-init.ts</code>: reads through the default <code>.digismith</code> folder.</li>
+  <li><code>model_offload.ts</code>: <code>readProfileProvider</code> resolves <code>profile</code> through <code>config.ts</code>. Its <code>--profile-path .digismith/profile</code> flag becomes <code>--dir .digismith</code>. The only caller, <code>report-implementation</code> SKILL.md line 346, changes with it.</li>
+  <li><code>preferences.ts</code>: wrapper plus <code>migrate</code> (section 3).</li>
+  <li><code>toolchain.ts</code>: no change.</li>
+</ul>
+
+<h3>The profile rule</h3>
+<p>Each of these 7 skills replaces its own <code>.digismith/profile</code> check with this exact sentence, word for word: <code>init</code>, <code>capture-ephemeral-url</code>, <code>inject-standards</code>, <code>jira-progress-write-back</code>, <code>report-implementation</code>, <code>brainstorming</code>, <code>writing-plans</code>.</p>
+<div class="callout">
+<p>Read <code>profile</code> from <code>.digismith/config.yml</code>, or from <code>.digismith/profile</code> when <code>config.yml</code> or its <code>profile</code> key is missing (A.2 fallback).</p>
+</div>
+<p>The removal ticket finds every copy with <code>grep -rn "(A.2 fallback)" skills</code>. Where <code>config.yml</code> cannot be read, a skill handles it the way it handles a stale profile today.</p>
+
+<h3>Other skills</h3>
+<ul>
+  <li><code>bootstrap</code>: Step 0 gets the migrate check (section 4). First use writes <code>profile</code> through <code>config.ts set</code>. Steps 2.6 and 2.8 become one copy step: each of <code>config.yml</code>, <code>profile</code> and <code>preferences.yml</code> that exists in the main checkout but not in the worktree is copied in. Never <code>git add -f</code>.</li>
+  <li><code>adopt</code>: Step 0 gets the same migrate check. Step 5 gets the same copy step.</li>
+  <li><code>preferences</code>: the Storage section describes <code>config.yml</code>, the grammar and the fallback. Add the <code>migrate</code> operation and <code>--dir</code>.</li>
+  <li><code>offload-implementer</code>, <code>voice</code>, <code>toolchain</code>: update only their mentions of the old paths.</li>
+</ul>
+</section>
+
+<section id="tests">
+<h2>6. Tests and done</h2>
+<h3>New: <code>scripts/config.test.ts</code></h3>
+<ul>
+  <li>Parser: one case per grammar row and per error (with line number), CRLF, BOM, <code> #</code> inside quotes, <code>#</code> inside a URL.</li>
+  <li>Reader: layer order, <code>source</code>, old <code>profile</code> read (trimmed, empty, invalid UTF-8).</li>
+  <li>Writer: comments kept, insertion points, empty heading removed, quoting choices, the both-quotes error, no <code>.tmp</code> file left after a write.</li>
+  <li>Worktree guard against a real temporary repo with <code>git worktree add</code>.</li>
+  <li><code>migrate</code>: the four file states, conflicts, rerun after a partial run, tracked-file message with the exact <code>git add</code> paths.</li>
+  <li>Repo migration: the committed <code>.digismith/config.yml</code> equals the output of <code>migrate</code> on the <code>.migrated</code> files.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+  <li><code>preferences.test.ts</code>, <code>voice.test.ts</code>: <code>--dir</code>, same outputs.</li>
+  <li><code>session-init.test.ts</code>: banner from <code>config.yml</code>, banner from the old file, parse-error warning with the rest of the output intact.</li>
+  <li><code>model_offload</code> tests: <code>--dir</code>.</li>
+</ul>
+<h3>Baseline and definition of done</h3>
+<p>Baseline, <code>pnpm test</code> on the untouched branch at <code>a9fc18e</code>: 587 tests, 585 pass, 2 fail (DGS-117).</p>
+<ul>
+  <li><code>packages/cli/src/depot/process-lifecycle.test.ts</code> › starts a real process, tracks its confirmed PID and port, reuses it, then stops it</li>
+  <li><code>packages/cli/src/index.e2e.test.ts</code> › --help exits 0 with a single Usage line and a properly-closed colorized Domains header</li>
+</ul>
+<p><strong>Done:</strong> no failure other than these two, and every new and changed test passes.</p>
+</section>
+
+<section id="scope">
+<h2>7. Out of scope</h2>
+<ul>
+  <li>The global layer (<code>~/.digismith-depot/config.yml</code>).</li>
+  <li>The <code>role</code> key's meaning and the maestro settings (DGS-139).</li>
+  <li>Removing the fallback and the <code>.migrated</code> copies (follow-up ticket).</li>
+  <li>Migrating the Emma or Soveron checkouts: <code>bootstrap</code> does that at their next ticket start.</li>
+  <li><code>profiles/*.yml</code> and <code>toolchain.yml</code>: definitions and global defaults, unchanged.</li>
+  <li>Writing arrays through <code>set</code>.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/A/A.2/centralized-digismith-config-file/design.html</footer>
+
+</body>
+</html>
