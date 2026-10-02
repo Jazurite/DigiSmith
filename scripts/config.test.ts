@@ -50,6 +50,14 @@ function tearDownTmp(): void {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
+function snapshotDir(target: string): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+  for (const name of fs.readdirSync(target)) {
+    snapshot[name] = fs.readFileSync(path.join(target, name), "utf8");
+  }
+  return snapshot;
+}
+
 describe("constants", () => {
   it("locks the default folder and the migration commit message", () => {
     expect(DEFAULT_DIR).toBe(".digismith");
@@ -492,6 +500,7 @@ describe("setKey / clearKey", () => {
     write("profile", "digismith\n");
     git(repo, "add", "-A");
     git(repo, "commit", "-q", "-m", "old profile");
+    const before = snapshotDir(dir);
 
     const check = checkWrite(dir);
     expect(check.kind).toBe("stop");
@@ -507,6 +516,7 @@ describe("setKey / clearKey", () => {
     }
     expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
     expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
+    expect(snapshotDir(dir)).toEqual(before);
   });
 
   it("stops in a linked worktree that still has an old file, and changes nothing", () => {
@@ -519,9 +529,11 @@ describe("setKey / clearKey", () => {
     const wt = path.join(tmpDir, "wt");
     git(repo, "worktree", "add", "-q", "-b", "wt", wt);
     dir = path.join(wt, ".digismith");
+    const before = snapshotDir(dir);
 
     expect(() => clearKey("preferences.finish_option", dir)).toThrow("Run migrate in the main checkout");
     expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
+    expect(snapshotDir(dir)).toEqual(before);
   });
 
   it("writes in a linked worktree that has no old file", () => {
