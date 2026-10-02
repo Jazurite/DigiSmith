@@ -52,10 +52,16 @@ plan on re-reading these files from inside a worktree Step 4 might attach.
 Run `digismith:bootstrap`'s Step 0 exactly, treating the repo currently
 being worked in the same way `digismith:bootstrap` would. This resolves
 (or, on first use in this repo, picks via the same `AskUserQuestion` flow)
-the active profile and ensures `.digismith/profile` exists with the chosen
-name. The resolved profile's `ticket`, `ephemeral`, `standards`,
+the active profile and ensures a profile is present with the chosen name,
+in `.digismith/config.yml`. A profile is present when
+`.digismith/config.yml` has a `profile` key, or when `.digismith/profile`
+exists (A.2 fallback). Read `profile` from `.digismith/config.yml`, or
+from `.digismith/profile` when `config.yml` or its `profile` key is
+missing (A.2 fallback). The resolved profile's `ticket`, `ephemeral`, `standards`,
 `reporting`, and `logging` fields are now available for
 the rest of this process, exactly as they would be for `digismith:bootstrap`.
+It also runs bootstrap's old-config-file check (migrate where git does
+not track the old files, commands only where it does).
 
 Then run `digismith:bootstrap`'s Step 0.5 exactly — invoke
 `digismith:depot`'s `ensure` operation, then, if `ticket: true`, check
@@ -124,25 +130,19 @@ its own worktree.
 
 ### Step 5: Write Config Into the Worktree
 
-**Profile.** If Step 2 resolved/wrote `.digismith/profile` somewhere other
-than the worktree Step 4 left you in (e.g. Step 4 just attached a new
-worktree), copy the file in now: a plain file copy, never `git add`, never
-`git add -f`, never a commit — mirrors `digismith:bootstrap` Step 2.6
-exactly, same reasoning (a worktree checks out only committed files).
-
-**Preferences.** If the original checkout (wherever Step 2 ran) has a
-`.digismith/preferences.yml` and Step 4 attached a worktree other than that
-checkout, copy it in now the same way: a plain file copy, never `git add`,
-never `git add -f`, never a commit. Absent in the original checkout →
-nothing to copy, not an error — no preferences have been set for this repo
-yet.
+**Config files.** Copy each of `.digismith/config.yml`,
+`.digismith/profile` and `.digismith/preferences.yml` that exists in the
+checkout Step 2 ran in but not in the worktree Step 4 left you in: a plain
+file copy, never `git add`, never `git add -f`, never a commit — mirrors
+`digismith:bootstrap` Step 2.6 exactly, same reasoning (a worktree checks
+out only committed files).
 
 **Ticket docs.** If Step 3 wrote (or moved) `.digismith/docs/<slug>/ticket.md`
 somewhere other than the worktree Step 4 left you in — i.e. Step 4 attached a
 brand-new worktree rather than you already being inside an isolated one — copy
 that entire `.digismith/docs/<slug>/` folder into the worktree now: a plain
 file copy, never `git add`, never `git add -f`, never a commit. Same reasoning
-as the profile copy above — a worktree checks out only committed files, so a
+as the config copy above — a worktree checks out only committed files, so a
 folder written moments ago in a different directory would otherwise simply not
 exist here. When Step 4 found you already inside an isolated worktree, there's
 nothing to copy — Step 3 already wrote directly into it.
@@ -343,6 +343,6 @@ it triggers off the dispatch itself, not off which entry point produced it.
 | 2 | Resolve profile and ensure the DigiSmith runtime clone — run `digismith:bootstrap` Step 0, then Step 0.5 (including its `ticket: true` Jira credential check), then Step 0.6 (SSH key preference), then Step 0.7 (voice preferences), exactly |
 | 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
-| 5 | Copy `.digismith/profile`, `.digismith/preferences.yml` (if the original checkout has one), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
+| 5 | Copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` (each when present), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
 | 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/` |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |

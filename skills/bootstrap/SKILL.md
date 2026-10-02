@@ -26,10 +26,32 @@ you want to start work on a ticket, invoke `digismith:init` instead.
 
 ### Step 0: Resolve Profile
 
-Check for `.digismith/profile` in the repo currently being worked in
-(never DigiSmith's own repo).
+Check for a profile in the repo currently being worked in (never
+DigiSmith's own repo). A profile is present when `.digismith/config.yml`
+has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
-**Present** → read its one-line content as the active profile name.
+**Old config files.** If `.digismith/profile` or `.digismith/preferences.yml`
+exists here, check each one with `git ls-files --error-unmatch -- <file>`
+(exit 0 means git tracks it). Locate DigiSmith's own repo the same way
+`digismith:preferences` does under Operations.
+
+- **Git tracks neither** (gitignored, untracked, or not a git repo) → run
+  `node --experimental-strip-types <digismith-repo>/scripts/config.ts --action migrate`
+  here and show its output. This is a plain file move, never a commit.
+  If the command fails (for example, this is a linked worktree), show its
+  message and continue on the fallback.
+- **Git tracks one or both** → do not migrate, and never commit on the
+  base branch. Tell the user to run, in this checkout: the same
+  `config.ts --action migrate` command, then
+  `git add .digismith/config.yml` plus each moved old path and its
+  `.migrated` path, then
+  `git commit -m "chore(config): migrate to .digismith/config.yml"`.
+  Continue the ticket flow. The old files stay readable through the
+  fallback.
+
+**Present** → Read `profile` from `.digismith/config.yml`, or from
+`.digismith/profile` when `config.yml` or its `profile` key is missing
+(A.2 fallback). Use that value as the active profile name.
 Validate it against `profiles/<name>.yml` (see Locating DigiSmith's Repo
 below) — no matching file → treat as stale, fall through to the
 first-use flow below instead of guessing.
@@ -57,10 +79,13 @@ first-use flow below instead of guessing.
 4. If the user declines to pick (see Error Handling), stop here —
    explain a profile is required to proceed. Don't create a branch or
    worktree.
-5. Write the chosen profile's `name` field, and only that, as the sole
-   line of `.digismith/profile` in the repo being worked in.
+5. Write the chosen profile's `name` field with
+   `node --experimental-strip-types <digismith-repo>/scripts/config.ts --action set --key profile --value <name>`.
+   It goes to `.digismith/config.yml`. If the command stops because git
+   tracks an old config file, show its message and stop: this checkout
+   must be migrated first.
 
-**`.digismith/profile` is config, not generated docs output.** It sits
+**`.digismith/config.yml` is config, not generated docs output.** It sits
 *beside* `.digismith/docs/`, not inside it, and it is deliberately
 outside `digismith:jira-intake`'s per-repo commit-vs-gitignore choice —
 that choice governs the docs this pipeline *generates* (`ticket.md`,
@@ -71,7 +96,7 @@ consequences:
 - **Never force-add it.** In a repo whose `.gitignore` carries a bare
   `.digismith/` line — whether `digismith:jira-intake` appended it, or it
   predates this feature entirely — that entry is a prefix match, so it
-  covers `.digismith/profile` too, not just `.digismith/docs/`. Plain
+  covers `.digismith/config.yml` too, not just `.digismith/docs/`. Plain
   `git add` would hard-fail there and `git add -f` would override a
   choice the user deliberately made. Don't do either. Where `.digismith/`
   is *not* ignored, committing this file along with the rest of the work
@@ -81,7 +106,7 @@ consequences:
   working directory the work actually happens in.** Step 2 creates a
   *worktree*, and `git worktree add` checks out only committed files —
   the same hazard Step 1 documents below for `ticket.md`. Untracked or
-  gitignored, `.digismith/profile` will not appear inside that new
+  gitignored, `.digismith/config.yml` will not appear inside that new
   worktree on its own, so **Step 2.6 copies it in explicitly**. Skipping
   that copy is not cosmetic: `digismith:inject-standards`,
   `digismith:capture-ephemeral-url`, and `digismith:report-implementation`
@@ -116,8 +141,9 @@ it here instead of proceeding to Step 1: validate `X` against
 ticket/ephemeral/standards/reporting/logging/model_offload_provider/task_offload_provider/task_offload_runner
 change, and how) via `AskUserQuestion` — call out a `logging` flip
 explicitly, since it silently turns session-transcript capture into
-DigiSmith's own repo on or off — and on confirmation overwrite
-`.digismith/profile` with the new name. This is `bootstrap`'s own
+DigiSmith's own repo on or off — and on confirmation run
+`config.ts --action set --key profile --value <X>` (same command as item
+5). This is `bootstrap`'s own
 job done at this point — don't fall through into Step 1's ticket flow
 unless the user's original request was also to start work.
 
@@ -130,7 +156,7 @@ this step does not run — there is no ticket work to prepare for. Skip
 straight past it in that case, same as if it didn't exist.
 
 Otherwise, invoke `digismith:depot`'s `ensure` operation. This is
-unrelated to `.digismith/profile` (Step 0) or to the repo currently
+unrelated to `.digismith/config.yml` (Step 0) or to the repo currently
 being worked in — `depot` always targets the same fixed, machine-wide
 `~/.digismith-depot/repo`, regardless of which consumer repo `bootstrap` is
 running in.
@@ -146,7 +172,7 @@ the same failure inside `jira-progress-write-back` or any other
 package-dependent skill, just later and less clearly — surfacing it now,
 at ticket-start, is strictly better.
 
-Unlike `.digismith/profile` (Step 2.6) and `.digismith/telemetry-marker`
+Unlike `.digismith/config.yml` (Step 2.6) and `.digismith/telemetry-marker`
 (Step 2.7), `~/.digismith-depot/repo` needs **no per-worktree copy step**. It
 lives outside every repo and worktree entirely, shared machine-wide — once
 `ensure` has run successfully anywhere on this machine, every later
@@ -203,8 +229,8 @@ continue to Step 1 regardless (mirrors Step 0.5's own non-blocking
 disposition for a declined Jira credential prompt).
 
 This preference is never written to `~/.gitconfig` or `~/.ssh/config` —
-it lives only in this repo's own `.digismith/preferences.yml`, exactly
-where H's existing worktree-propagation copy step (sub-step 8 of Step 2)
+it lives only in this repo's own `.digismith/config.yml` (under
+`preferences:`), exactly where the worktree copy step (sub-step 6 of Step 2)
 already carries it into every future worktree with no new code needed
 here.
 
@@ -225,8 +251,8 @@ default and must be asked once), both voice axes default to `on` and need
 no first-use question.
 
 This step needs no worktree-propagation step of its own beyond what
-sub-step 8 of Step 2 already does — `technical_voice`/`conversation_voice`
-live in the same `.digismith/preferences.yml` that sub-step already copies.
+sub-step 6 of Step 2 already does — `technical_voice`/`conversation_voice`
+live in the same `.digismith/config.yml` that sub-step 6 already copies.
 
 ### Step 1: Get a Real Ticket
 
@@ -282,7 +308,7 @@ run" — which is the condition Step 2.7 keys off.
 Then: if the active profile's `logging` field is `true`, write a marker
 recording where telemetry capture should resume from once this ticket's
 build finishes. If `logging` is `false`, absent, or there is no
-`.digismith/profile` at all, skip the rest of this step entirely — no
+profile present at all, skip the rest of this step entirely — no
 marker is written, and nothing about the rest of this skill changes.
 
 Still in the original checkout, **before Step 2 creates or attaches any
@@ -409,26 +435,23 @@ what Step 2's new sub-step 7 below makes possible.
    (`git branch -m <actual-name> <Key>__<slug>`) before continuing to 2.6.
    Steps 2.3 and 2.4 key off this exact name on future runs, so a
    silently-altered name breaks reuse and collision detection.
-6. **Make `.digismith/profile` visible inside the worktree.** Whichever
-   of 2.3 or 2.5 produced the worktree you're now in — reused, freshly
-   attached, or freshly created — check whether
-   `<worktree-path>/.digismith/profile` exists and names the profile Step
-   0 resolved. If it's missing or names something else, copy the file
-   there from the checkout Step 0 read or wrote it in: a plain file copy
-   (creating `<worktree-path>/.digismith/` first if it isn't there),
-   **not** `git add`, **not** `git add -f`, **not** a commit. If the
-   source file isn't reachable for any reason, just write a fresh
-   one-line `.digismith/profile` in the worktree containing the resolved
-   profile name — that name is a single word you're already carrying from
-   Step 0. This is required in
-   every repo, not just gitignored ones: a worktree checks out only
-   committed files, so a `.digismith/profile` that was written moments
-   ago in Step 0 and never committed is simply absent there — and in a
-   repo whose `.gitignore` carries a bare `.digismith/` line it could
-   never arrive by git at all, in this session or any future one. Do this
-   **before** Step 3 hands off; see Step 0's "config, not generated docs
-   output" note for why a missing file here silently unwinds profiling
-   for the whole build.
+6. **Make the config files visible inside the worktree.** Whichever of
+   2.3 or 2.5 produced the worktree you're now in, copy each of
+   `.digismith/config.yml`, `.digismith/profile` and
+   `.digismith/preferences.yml` that exists in the checkout Step 0 ran in
+   but not in `<worktree-path>/.digismith/`: a plain file copy (create
+   `<worktree-path>/.digismith/` first if needed), **not** `git add`,
+   **not** `git add -f`, **not** a commit. A worktree checks out only
+   committed files, and in a repo whose `.gitignore` carries a bare
+   `.digismith/` line these files never arrive by git at all. If no
+   profile is present in the worktree after the copy, run
+   `config.ts --action set --key profile --value <name>` from inside it.
+   If that command stops (the worktree guard: this worktree still has an
+   old `.digismith/profile` or `.digismith/preferences.yml` that the copy
+   just brought in), show its message and continue — the worktree keeps
+   reading the profile through the fallback, same as any other
+   pre-migration worktree. Do this **before** Step 3 hands off: a missing
+   profile silently turns profiling off for the whole build.
 7. **Make `.digismith/telemetry-marker` visible inside the worktree, if
    logging is on.** If Step 1.5 wrote `.digismith/telemetry-marker` in
    the original checkout, copy it into
@@ -446,18 +469,9 @@ what Step 2's new sub-step 7 below makes possible.
    `digismith:telemetry` — which reads it later, from inside this same
    worktree, once the build finishes — would silently find nothing to
    capture.
-8. **Make `.digismith/preferences.yml` visible inside the worktree, if one
-   exists.** Whichever of 2.3 or 2.5 produced the worktree you're now in,
-   check whether the original checkout (the directory Step 0 ran in) has a
-   `.digismith/preferences.yml`. **Present** → copy it into
-   `<worktree-path>/.digismith/preferences.yml` if it isn't already there: a
-   plain file copy, **not** `git add`, **not** `git add -f`, **not** a
-   commit — same reasoning as sub-step 6's profile copy, a worktree checks
-   out only committed files. **Absent** → nothing to copy; no preferences
-   have been set for this repo yet, which is not an error (see
-   `digismith:preferences`'s own Error Handling — a missing file simply
-   reads as every key being unset). Do this before Step 3 hands off, same as
-   sub-steps 6 and 7.
+8. **`.digismith/preferences.yml`.** Nothing more to do: sub-step 6
+   already copies it with the other config files when the original
+   checkout still has one.
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -497,20 +511,24 @@ not re-invoke or duplicate any part of that chain yourself.
 - **User declines to pick a profile on first use** → stop after
   explaining a profile is required to proceed. Don't create a branch or
   worktree.
-- **`.digismith/profile` names a profile with no matching
+- **The profile names a profile with no matching
   `profiles/<name>.yml`** → treat as stale, re-run the first-use picker
   rather than guessing.
+- **Git tracks an old config file in the original checkout** → don't
+  migrate and don't commit on the base branch. Show the user the migrate
+  and commit commands (Step 0), and continue the ticket flow on the
+  fallback.
 - **`ticket: true` but Jira credentials are missing/incomplete, and the
   user declines to provide them at Step 0.5** → don't block ticket
   creation. Note plainly that Jira write-back will fail until
   `~/.digismith-depot/.env` is set up, and continue to Step 1 regardless — the
   same eventual failure `jira-progress-write-back` Step 2 documents, just
   surfaced earlier without becoming a new hard stop.
-- **`.digismith/profile` absent inside the worktree Step 2 produced** →
-  expected, not an error: a worktree checks out only committed files.
-  Copy it in from the original checkout (Step 2.6). Never resolve this
-  with `git add -f` — the repo's `.digismith/` gitignore choice, if it
-  has one, stands.
+- **Config files absent inside the worktree Step 2 produced** → expected,
+  not an error: a worktree checks out only committed files. Copy them in
+  from the original checkout (Step 2.6). Never resolve this with
+  `git add -f` — the repo's `.digismith/` gitignore choice, if it has one,
+  stands.
 - **`logging: true` but no transcript directory or `.jsonl` file found**
   (`~/.claude/projects/<encoded-cwd>/` doesn't exist, or is empty) → skip
   the *write* half of Step 1.5, silently. No marker is written; the rest
@@ -525,20 +543,16 @@ not re-invoke or duplicate any part of that chain yourself.
   didn't happen, `digismith:telemetry` will simply find nothing to
   capture later — same non-blocking disposition as the missing-transcript
   case above.
-- **`.digismith/preferences.yml` absent inside the worktree Step 2
-  produced** → expected when no preference has ever been set for this repo;
-  not an error. Copy it in from the original checkout (sub-step 8) when
-  present there. Never resolve this with `git add -f`.
 
 ## Quick Reference
 
 | Step | Action |
 |---|---|
-| 0 | Resolve `.digismith/profile` (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
+| 0 | Run the old-config-file check, then resolve the profile from `.digismith/config.yml` (fallback rule in Step 0) (or run first-use picker / handle an explicit profile switch) — it's config, not generated docs output: never `git add -f` it, and it must be physically present wherever work happens (Step 2.6 copies it into the worktree) |
 | 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails. Then, if `ticket: true`, `check-credentials` — bootstrap via `AskUserQuestion` if incomplete; declining doesn't block, just defers the failure to write-back time |
-| 0.6 | Skipped under the same condition as 0.5. Otherwise, check `digismith:preferences` for a saved `ssh_key`; if unset, ask once which SSH key file to use for this repo and store the answer via `set` — never written to `~/.gitconfig`/`~/.ssh/config`, only to `.digismith/preferences.yml` |
+| 0.6 | Skipped under the same condition as 0.5. Otherwise, check `digismith:preferences` for a saved `ssh_key`; if unset, ask once which SSH key file to use for this repo and store the answer via `set` — never written to `~/.gitconfig`/`~/.ssh/config`, only to `.digismith/config.yml` under `preferences:` |
 | 0.7 | Skipped under the same condition as 0.5/0.6. Otherwise, read `technical_voice`/`conversation_voice` via `digismith:preferences` (default `on` if unset) and announce whichever is `on` inline — no prompt, unlike 0.6 |
 | 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
-| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/profile`, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run), and **2.8** copy `.digismith/preferences.yml` if the original checkout has one — all three plain file copies, never `git add -f` |
+| 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` when present, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run) — all three plain file copies, never `git add -f` |
 | 3 | Invoke `digismith:brainstorming` directly, passing the already-derived slug plus the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there once it reports its design doc written |
