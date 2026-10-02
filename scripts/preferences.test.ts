@@ -2,151 +2,97 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import {
-  DEFAULT_PREFERENCES_PATH,
-  readPreferences,
-  getPreference,
-  setPreference,
-  clearPreference,
-  main,
-} from "./preferences.ts";
+import { HEADER } from "./config-write.ts";
+import { DEFAULT_DIR, clearPreference, getPreference, main, setPreference } from "./preferences.ts";
 
-describe("DEFAULT_PREFERENCES_PATH", () => {
-  it("locks the documented default path", () => {
-    expect(DEFAULT_PREFERENCES_PATH).toBe(".digismith/preferences.yml");
+let tmpDir: string;
+let dir: string;
+let configPath: string;
+
+beforeEach(() => {
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
+  dir = path.join(tmpDir, ".digismith");
+  configPath = path.join(dir, "config.yml");
+  process.env.GIT_CEILING_DIRECTORIES = fs.realpathSync.native(path.dirname(tmpDir));
+});
+
+afterEach(() => {
+  delete process.env.GIT_CEILING_DIRECTORIES;
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+function write(name: string, content: string): void {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, name), content);
+}
+
+describe("DEFAULT_DIR", () => {
+  it("locks the documented default folder", () => {
+    expect(DEFAULT_DIR).toBe(".digismith");
   });
 });
 
-describe("readPreferences / getPreference", () => {
-  let tmpDir: string;
-  let prefsPath: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
+describe("getPreference", () => {
+  it("returns undefined when nothing is set", () => {
+    expect(getPreference("finish_option", dir)).toBeUndefined();
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  it("reads preferences.<key> from config.yml", () => {
+    write("config.yml", "preferences:\n  finish_option: merge_locally\n");
+    expect(getPreference("finish_option", dir)).toBe("merge_locally");
   });
 
-  it("returns an empty map for a missing file", () => {
-    expect(readPreferences(prefsPath)).toEqual(new Map());
-    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
+  it("falls back to the flat key in the old preferences.yml", () => {
+    write("preferences.yml", "finish_option: pr\n");
+    expect(getPreference("finish_option", dir)).toBe("pr");
   });
 
-  it("reads a flat key/value pair, ignoring the header comment", () => {
-    fs.writeFileSync(
-      prefsPath,
-      "# DigiSmith-managed. Settings decided through live interaction, not hand-authored.\nfinish_option: merge_locally\n",
-    );
-    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
-  });
-
-  it("strips an inline comment", () => {
-    fs.writeFileSync(prefsPath, "finish_option: merge_locally   # set via first-run prompt\n");
-    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
-  });
-
-  it("unwraps a quoted value", () => {
-    fs.writeFileSync(prefsPath, 'finish_option: "merge_locally"\n');
-    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
-  });
-
-  it("returns unset for a key that was never set", () => {
-    fs.writeFileSync(prefsPath, "finish_option: merge_locally\n");
-    expect(getPreference("some_other_key", prefsPath)).toBeUndefined();
-  });
-
-  it("treats a non-UTF-8 file as unset rather than throwing", () => {
-    fs.writeFileSync(prefsPath, Buffer.from([0x66, 0x3a, 0xff, 0xfe]));
-    expect(() => getPreference("finish_option", prefsPath)).not.toThrow();
-    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
-  });
-
-  it("skips a line with no colon", () => {
-    fs.writeFileSync(prefsPath, "not a valid line\nfinish_option: merge_locally\n");
-    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
+  it("ignores a top-level key of the same name in config.yml", () => {
+    write("config.yml", "finish_option: pr\n");
+    expect(getPreference("finish_option", dir)).toBeUndefined();
   });
 });
 
-describe("setPreference", () => {
-  let tmpDir: string;
-  let prefsPath: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
-    prefsPath = path.join(tmpDir, "nested", "preferences.yml");
+describe("setPreference / clearPreference", () => {
+  it("writes the key under the preferences heading", () => {
+    setPreference("finish_option", "merge_locally", dir);
+    expect(fs.readFileSync(configPath, "utf8")).toBe(`${HEADER}\n\npreferences:\n  finish_option: merge_locally\n`);
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  it("updates in place and keeps other keys", () => {
+    setPreference("finish_option", "merge_locally", dir);
+    setPreference("ssh_key", "/k", dir);
+    setPreference("finish_option", "pr", dir);
+    expect(getPreference("finish_option", dir)).toBe("pr");
+    expect(getPreference("ssh_key", dir)).toBe("/k");
   });
 
-  it("creates the file (and parent directory) with the header comment when none existed", () => {
-    setPreference("finish_option", "merge_locally", prefsPath);
-    const content = fs.readFileSync(prefsPath, "utf8");
-    expect(content).toBe(
-      "# DigiSmith-managed. Settings decided through live interaction, not hand-authored.\nfinish_option: merge_locally\n",
-    );
+  it("clears a key and leaves the others", () => {
+    setPreference("finish_option", "pr", dir);
+    setPreference("ssh_key", "/k", dir);
+    clearPreference("finish_option", dir);
+    expect(getPreference("finish_option", dir)).toBeUndefined();
+    expect(getPreference("ssh_key", dir)).toBe("/k");
   });
 
-  it("updates an existing key in place, preserving other keys", () => {
-    setPreference("finish_option", "merge_locally", prefsPath);
-    setPreference("some_other_key", "abc", prefsPath);
-    setPreference("finish_option", "pr", prefsPath);
-
-    expect(getPreference("finish_option", prefsPath)).toBe("pr");
-    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
-  });
-});
-
-describe("clearPreference", () => {
-  let tmpDir: string;
-  let prefsPath: string;
-
-  beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
+  it("clear is a no-op when no file exists", () => {
+    clearPreference("finish_option", dir);
+    expect(fs.existsSync(configPath)).toBe(false);
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it("removes a set key", () => {
-    setPreference("finish_option", "merge_locally", prefsPath);
-    clearPreference("finish_option", prefsPath);
-    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
-  });
-
-  it("leaves other keys untouched", () => {
-    setPreference("finish_option", "merge_locally", prefsPath);
-    setPreference("some_other_key", "abc", prefsPath);
-    clearPreference("finish_option", prefsPath);
-    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
-  });
-
-  it("is a no-op when the key was never set", () => {
-    setPreference("some_other_key", "abc", prefsPath);
-    clearPreference("finish_option", prefsPath);
-    expect(getPreference("some_other_key", prefsPath)).toBe("abc");
-  });
-
-  it("is a no-op when the file doesn't exist", () => {
-    expect(() => clearPreference("finish_option", prefsPath)).not.toThrow();
-    expect(fs.existsSync(prefsPath)).toBe(false);
+  it("migrates an untracked old preferences.yml before it writes", () => {
+    write("preferences.yml", "ssh_key: /k\n");
+    const result = setPreference("finish_option", "pr", dir);
+    expect(result.migration?.moved).toEqual(["preferences.yml"]);
+    expect(getPreference("ssh_key", dir)).toBe("/k");
+    expect(fs.existsSync(path.join(dir, "preferences.yml.migrated"))).toBe(true);
   });
 });
 
 describe("main (CLI)", () => {
-  let tmpDir: string;
-  let prefsPath: string;
   let originalArgv: string[];
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-prefs-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
     originalArgv = process.argv;
   });
 
@@ -154,87 +100,73 @@ describe("main (CLI)", () => {
     process.argv = originalArgv;
     process.exitCode = 0;
     vi.restoreAllMocks();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  function run(...args: string[]): void {
+    process.argv = ["node", "preferences.ts", ...args, "--dir", dir];
+    main();
+  }
 
   it('prints "unset" for a get on a key that was never set', () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "get", "--path", prefsPath];
-
-    main();
-
+    run("--key", "finish_option", "--action", "get");
     expect(logSpy).toHaveBeenCalledWith("unset");
   });
 
   it("writes the value and prints a confirmation for set", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    process.argv = [
-      "node",
-      "preferences.ts",
-      "--key",
-      "finish_option",
-      "--action",
-      "set",
-      "--value",
-      "merge_locally",
-      "--path",
-      prefsPath,
-    ];
-
-    main();
-
+    run("--key", "finish_option", "--action", "set", "--value", "merge_locally");
     expect(logSpy).toHaveBeenCalledWith("preferences: set finish_option=merge_locally");
-    expect(getPreference("finish_option", prefsPath)).toBe("merge_locally");
+    expect(getPreference("finish_option", dir)).toBe("merge_locally");
   });
 
   it("prints the set value back on a subsequent get", () => {
-    setPreference("finish_option", "pr", prefsPath);
+    setPreference("finish_option", "pr", dir);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "get", "--path", prefsPath];
-
-    main();
-
+    run("--key", "finish_option", "--action", "get");
     expect(logSpy).toHaveBeenCalledWith("pr");
   });
 
   it("clears a key and prints a confirmation", () => {
-    setPreference("finish_option", "pr", prefsPath);
+    setPreference("finish_option", "pr", dir);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "clear", "--path", prefsPath];
-
-    main();
-
+    run("--key", "finish_option", "--action", "clear");
     expect(logSpy).toHaveBeenCalledWith("preferences: cleared finish_option");
-    expect(getPreference("finish_option", prefsPath)).toBeUndefined();
+    expect(getPreference("finish_option", dir)).toBeUndefined();
+  });
+
+  it("runs migrate without --key", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    run("--action", "migrate");
+    expect(logSpy).toHaveBeenCalledWith("config: nothing to migrate");
   });
 
   it("fails clearly when --value is missing for a set action", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "set", "--path", prefsPath];
-
-    main();
-
+    run("--key", "finish_option", "--action", "set");
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith("preferences: failed (missing required flag: --value)");
   });
 
   it("fails clearly when a required flag is missing", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--action", "get", "--path", prefsPath];
-
-    main();
-
+    run("--action", "get");
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith("preferences: failed (missing required flag: --key)");
   });
 
   it("fails clearly on an unknown action", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    process.argv = ["node", "preferences.ts", "--key", "finish_option", "--action", "list", "--path", prefsPath];
-
-    main();
-
+    run("--key", "finish_option", "--action", "list");
     expect(process.exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith("preferences: failed (unknown action: list)");
+  });
+
+  it("fails clearly on a config.yml parse error", () => {
+    write("config.yml", "oops\n");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    run("--key", "finish_option", "--action", "get");
+    expect(process.exitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(`preferences: failed (${configPath} line 1: expected 'key: value')`);
   });
 });

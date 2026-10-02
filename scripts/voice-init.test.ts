@@ -25,13 +25,13 @@ describe("voiceInit", () => {
   });
 
   it("returns only the on axis when one is turned off", async () => {
-    setVoice("technical", "off", ".digismith/preferences.yml");
+    setVoice("technical", "off", ".digismith");
     await expect(voiceInit()).resolves.toBe("conversation");
   });
 
   it("returns null when both axes are off", async () => {
-    setVoice("technical", "off", ".digismith/preferences.yml");
-    setVoice("conversation", "off", ".digismith/preferences.yml");
+    setVoice("technical", "off", ".digismith");
+    setVoice("conversation", "off", ".digismith");
     await expect(voiceInit()).resolves.toBeNull();
   });
 });

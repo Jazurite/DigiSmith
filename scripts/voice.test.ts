@@ -12,6 +12,11 @@ import {
   main,
 } from "./voice.ts";
 
+function writeConfig(dir: string, body: string): void {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "config.yml"), `preferences:\n${body}`);
+}
+
 describe("AXES / isAxis", () => {
   it("lists exactly the two known axes", () => {
     expect(AXES).toEqual(["technical", "conversation"]);
@@ -37,11 +42,11 @@ describe("standardForAxis", () => {
 
 describe("resolveVoice / resolveAllVoices", () => {
   let tmpDir: string;
-  let prefsPath: string;
+  let dir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-voice-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
+    dir = path.join(tmpDir, ".digismith");
   });
 
   afterEach(() => {
@@ -49,40 +54,46 @@ describe("resolveVoice / resolveAllVoices", () => {
   });
 
   it("defaults both axes to on when the file doesn't exist", () => {
-    expect(resolveVoice("technical", prefsPath)).toBe("on");
-    expect(resolveVoice("conversation", prefsPath)).toBe("on");
-    expect(resolveAllVoices(prefsPath)).toEqual({ technical: "on", conversation: "on" });
+    expect(resolveVoice("technical", dir)).toBe("on");
+    expect(resolveVoice("conversation", dir)).toBe("on");
+    expect(resolveAllVoices(dir)).toEqual({ technical: "on", conversation: "on" });
   });
 
   it("reads an explicit off", () => {
-    fs.writeFileSync(prefsPath, "technical_voice: off\n");
-    expect(resolveVoice("technical", prefsPath)).toBe("off");
-    expect(resolveVoice("conversation", prefsPath)).toBe("on");
+    writeConfig(dir, "  technical_voice: off\n");
+    expect(resolveVoice("technical", dir)).toBe("off");
+    expect(resolveVoice("conversation", dir)).toBe("on");
   });
 
   it("reads an explicit on", () => {
-    fs.writeFileSync(prefsPath, "conversation_voice: on\n");
-    expect(resolveVoice("conversation", prefsPath)).toBe("on");
+    writeConfig(dir, "  conversation_voice: on\n");
+    expect(resolveVoice("conversation", dir)).toBe("on");
   });
 
   it("treats any value other than the literal off as on", () => {
-    fs.writeFileSync(prefsPath, "technical_voice: maybe\n");
-    expect(resolveVoice("technical", prefsPath)).toBe("on");
+    writeConfig(dir, "  technical_voice: maybe\n");
+    expect(resolveVoice("technical", dir)).toBe("on");
   });
 
   it("keeps the two axes independent", () => {
-    fs.writeFileSync(prefsPath, "technical_voice: off\nconversation_voice: off\n");
-    expect(resolveAllVoices(prefsPath)).toEqual({ technical: "off", conversation: "off" });
+    writeConfig(dir, "  technical_voice: off\n  conversation_voice: off\n");
+    expect(resolveAllVoices(dir)).toEqual({ technical: "off", conversation: "off" });
+  });
+
+  it("still reads an old flat preferences.yml", () => {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "preferences.yml"), "technical_voice: off\n");
+    expect(resolveVoice("technical", dir)).toBe("off");
   });
 });
 
 describe("setVoice", () => {
   let tmpDir: string;
-  let prefsPath: string;
+  let dir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-voice-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
+    dir = path.join(tmpDir, ".digismith");
   });
 
   afterEach(() => {
@@ -90,29 +101,29 @@ describe("setVoice", () => {
   });
 
   it("writes technical_voice under its own preference key", () => {
-    setVoice("technical", "off", prefsPath);
-    expect(fs.readFileSync(prefsPath, "utf8")).toContain("technical_voice: off");
+    setVoice("technical", "off", dir);
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toContain("technical_voice: off");
   });
 
   it("writes conversation_voice under its own preference key, independently", () => {
-    setVoice("technical", "off", prefsPath);
-    setVoice("conversation", "off", prefsPath);
-    const content = fs.readFileSync(prefsPath, "utf8");
+    setVoice("technical", "off", dir);
+    setVoice("conversation", "off", dir);
+    const content = fs.readFileSync(path.join(dir, "config.yml"), "utf8");
     expect(content).toContain("technical_voice: off");
     expect(content).toContain("conversation_voice: off");
   });
 
   it("round-trips through resolveVoice", () => {
-    setVoice("conversation", "off", prefsPath);
-    expect(resolveVoice("conversation", prefsPath)).toBe("off");
-    setVoice("conversation", "on", prefsPath);
-    expect(resolveVoice("conversation", prefsPath)).toBe("on");
+    setVoice("conversation", "off", dir);
+    expect(resolveVoice("conversation", dir)).toBe("off");
+    setVoice("conversation", "on", dir);
+    expect(resolveVoice("conversation", dir)).toBe("on");
   });
 });
 
 describe("main (CLI)", () => {
   let tmpDir: string;
-  let prefsPath: string;
+  let dir: string;
   let originalArgv: string[];
   let logs: string[];
   let errors: string[];
@@ -121,7 +132,7 @@ describe("main (CLI)", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-voice-test-"));
-    prefsPath = path.join(tmpDir, "preferences.yml");
+    dir = path.join(tmpDir, ".digismith");
     originalArgv = process.argv;
     logs = [];
     errors = [];
@@ -140,7 +151,7 @@ describe("main (CLI)", () => {
   });
 
   it("status prints both axes as on by default", () => {
-    process.argv = ["node", "voice.ts", "--action", "status", "--path", prefsPath];
+    process.argv = ["node", "voice.ts", "--action", "status", "--dir", dir];
     main();
     expect(logs).toEqual([
       "technical-voice: ON (global/ste100-writing)",
@@ -149,24 +160,24 @@ describe("main (CLI)", () => {
   });
 
   it("status reflects an off axis with no standard name", () => {
-    fs.writeFileSync(prefsPath, "technical_voice: off\n");
-    process.argv = ["node", "voice.ts", "--action", "status", "--path", prefsPath];
+    writeConfig(dir, "  technical_voice: off\n");
+    process.argv = ["node", "voice.ts", "--action", "status", "--dir", dir];
     main();
     expect(logs[0]).toBe("technical-voice: OFF");
   });
 
   it("set writes the preference and confirms", () => {
     process.argv = [
-      "node", "voice.ts", "--action", "set", "--axis", "technical", "--value", "off", "--path", prefsPath,
+      "node", "voice.ts", "--action", "set", "--axis", "technical", "--value", "off", "--dir", dir,
     ];
     main();
     expect(logs).toEqual(["voice: set technical=off"]);
-    expect(resolveVoice("technical", prefsPath)).toBe("off");
+    expect(resolveVoice("technical", dir)).toBe("off");
   });
 
   it("set rejects an unknown axis", () => {
     process.argv = [
-      "node", "voice.ts", "--action", "set", "--axis", "emotional", "--value", "off", "--path", prefsPath,
+      "node", "voice.ts", "--action", "set", "--axis", "emotional", "--value", "off", "--dir", dir,
     ];
     main();
     expect(errors[0]).toContain("unknown axis: emotional");
@@ -176,7 +187,7 @@ describe("main (CLI)", () => {
 
   it("set rejects an invalid value", () => {
     process.argv = [
-      "node", "voice.ts", "--action", "set", "--axis", "technical", "--value", "maybe", "--path", prefsPath,
+      "node", "voice.ts", "--action", "set", "--axis", "technical", "--value", "maybe", "--dir", dir,
     ];
     main();
     expect(errors[0]).toContain('invalid value: maybe');
@@ -184,9 +195,18 @@ describe("main (CLI)", () => {
   });
 
   it("set without required flags fails clearly", () => {
-    process.argv = ["node", "voice.ts", "--action", "set", "--path", prefsPath];
+    process.argv = ["node", "voice.ts", "--action", "set", "--dir", dir];
     main();
     expect(errors[0]).toContain("failed");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("status fails clearly on a config.yml parse error", () => {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "config.yml"), "oops\n");
+    process.argv = ["node", "voice.ts", "--action", "status", "--dir", dir];
+    main();
+    expect(errors).toEqual([`voice: failed (${path.join(dir, "config.yml")} line 1: expected 'key: value')`]);
     expect(process.exitCode).toBe(1);
   });
 });
