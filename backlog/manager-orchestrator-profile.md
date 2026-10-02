@@ -30,9 +30,16 @@ This decision replaces "maestro is a fifth profile". Where sections below still 
   - **solo:** Jack's direct sessions, which are neither.
 - **Lineage O.3: Roles** owns the role question at session start and the setup for each role.
 - The session-start prompt asks for the role once per folder, through the profile mechanism.
-- To settle in the design: where the role is stored (for example `.digismith/role` beside
-  `.digismith/profile`), which profile the maestro folder has (it manages more than one org), and
-  whether the ClickUp `Profile` option "Maestro" goes (DGS-139 still carries that value).
+- **The role is stored in `.digismith/role`** (Jack, 2026-10-02): a one-line file beside
+  `.digismith/profile`, per folder, read by the session-start hook the same way. Workers need no
+  file: their role comes from `DIGISMITH_MAESTRO` in their environment.
+- **The maestro folder's profile is `jazurite`** (Jack, 2026-10-02), Jack's own org. Choosing
+  "maestro" at the session-start prompt writes `.digismith/role` = `maestro` and, when the folder
+  has no profile yet, `.digismith/profile` = `jazurite`.
+- **The session-start prompt asks only for the role** (maestro or solo), once per folder with no
+  `.digismith/role`. The profile picker stays in `digismith:init` as today, for solo folders.
+- **The ClickUp `Profile` option "Maestro" goes** (Jack, 2026-10-02). DGS-139's value was cleared
+  through the public API. Jack deletes the option itself in the ClickUp UI.
 
 ## What's wrong
 
@@ -204,11 +211,11 @@ of offload servers for single tasks. It is a different shape from long-lived tic
 
 ## Open questions for Jack
 
-1. **ClickUp. Answered 2026-10-02.** The O.2: Tailoring list exists. Its tickets carry a `Profile`
-   drop-down custom field with one option per profile (DigiSmith / Emma / Jazurite / Personal /
-   Maestro), on the O: Profiling folder (`79f7fb3e-a2ea-4f63-a6aa-d37475cbd850`, created through the
-   Frontdoor API). This build is DGS-139, with `Profile` = Maestro. It links to DGS-110 and DGS-127.
-   They are links, not dependencies, because the order with DGS-127 is still open (question 5).
+1. **ClickUp. Answered 2026-10-02.** O.2: Tailoring tickets carry a `Profile` drop-down custom field
+   with one option per profile (DigiSmith / Emma / Jazurite / Personal), on the O: Profiling folder
+   (`79f7fb3e-a2ea-4f63-a6aa-d37475cbd850`, created through the Frontdoor API). Its "Maestro" option
+   goes, because maestro is a role. This build is DGS-139 in O.3: Roles, with `Profile` empty. It
+   links to DGS-110 and DGS-127: links, not dependencies (see question 5).
 2. **Name. Answered 2026-10-02: `maestro`** (Jack). So: the role `maestro`, `digismith:maestro` and
    `DIGISMITH_MAESTRO`. The ClickUp lineage B.0 is also
    named "Maestro" (offload dispatch, old map letter K). It gets a new name: DGS-140.
