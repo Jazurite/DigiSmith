@@ -127,15 +127,19 @@ export function worktreeMessage(root: string): string {
   return `this worktree still has .digismith/profile or preferences.yml. Run migrate in the main checkout ${resolveMainRoot(root)}, then remove or recreate this worktree`;
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
 export function migrateCommand(dir: string): string {
-  return `node --experimental-strip-types ${SCRIPT_PATH} --action migrate --dir ${dir}`;
+  return `node --experimental-strip-types ${shellQuote(SCRIPT_PATH)} --action migrate --dir ${shellQuote(path.resolve(dir))}`;
 }
 
 export function commitCommands(dir: string, moved: string[]): string[] {
   const root = checkoutRoot(dir);
   const rel = (file: string) => path.relative(root, path.join(path.resolve(dir), file)).split(path.sep).join("/");
   const paths = [rel(CONFIG_FILE), ...moved.flatMap((file) => [rel(file), rel(file + MIGRATED_SUFFIX)])];
-  return [`git add ${paths.join(" ")}`, `git commit -m "${MIGRATE_COMMIT_MESSAGE}"`];
+  return [`git add ${paths.map(shellQuote).join(" ")}`, `git commit -m ${shellQuote(MIGRATE_COMMIT_MESSAGE)}`];
 }
 
 export type MigrateConflict = { key: string; kept: ConfigValue; old: ConfigValue; file: string };

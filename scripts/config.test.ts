@@ -10,9 +10,11 @@ import {
   MIGRATE_COMMIT_MESSAGE,
   checkWrite,
   clearKey,
+  commitCommands,
   formatMigrateReport,
   main,
   migrate,
+  migrateCommand,
   readConfig,
   readLegacyPreferences,
   readLegacyProfile,
@@ -288,8 +290,8 @@ describe("migrate", () => {
     const report = migrate(dir);
 
     expect(report.commit).toEqual([
-      "git add .digismith/config.yml .digismith/profile .digismith/profile.migrated .digismith/preferences.yml .digismith/preferences.yml.migrated",
-      'git commit -m "chore(config): migrate to .digismith/config.yml"',
+      "git add '.digismith/config.yml' '.digismith/profile' '.digismith/profile.migrated' '.digismith/preferences.yml' '.digismith/preferences.yml.migrated'",
+      "git commit -m 'chore(config): migrate to .digismith/config.yml'",
     ]);
   });
 
@@ -302,8 +304,8 @@ describe("migrate", () => {
     git(repo, "commit", "-q", "-m", "old profile");
 
     expect(migrate(dir).commit).toEqual([
-      "git add .digismith/config.yml .digismith/profile .digismith/profile.migrated",
-      'git commit -m "chore(config): migrate to .digismith/config.yml"',
+      "git add '.digismith/config.yml' '.digismith/profile' '.digismith/profile.migrated'",
+      "git commit -m 'chore(config): migrate to .digismith/config.yml'",
     ]);
   });
 
@@ -345,6 +347,39 @@ describe("migrate", () => {
       "  git add a",
       '  git commit -m "m"',
     ]);
+  });
+});
+
+describe("migrateCommand / commitCommands", () => {
+  beforeEach(setUpTmp);
+  afterEach(tearDownTmp);
+
+  it("migrateCommand resolves a relative --dir to an absolute, quoted path", () => {
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      const command = migrateCommand(".digismith");
+      expect(command).toContain(`--dir '${path.join(fs.realpathSync(tmpDir), ".digismith")}'`);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
+  it("quotes a directory path that contains a space", () => {
+    const spacedDir = path.join(tmpDir, "has space", ".digismith");
+    fs.mkdirSync(spacedDir, { recursive: true });
+    const command = migrateCommand(spacedDir);
+    expect(command).toContain(`--dir '${spacedDir}'`);
+  });
+
+  it("shell-quotes every path in commitCommands", () => {
+    const repo = path.join(tmpDir, "has space", "repo");
+    fs.mkdirSync(path.join(repo, ".digismith"), { recursive: true });
+    const commands = commitCommands(path.join(repo, ".digismith"), ["profile"]);
+    expect(commands[0]).toBe(
+      "git add '.digismith/config.yml' '.digismith/profile' '.digismith/profile.migrated'",
+    );
+    expect(commands[1]).toBe("git commit -m 'chore(config): migrate to .digismith/config.yml'");
   });
 });
 
@@ -408,8 +443,8 @@ describe("setKey / clearKey", () => {
       const message = (err as Error).message;
       expect(message).toContain(`git tracks ${path.join(dir, "profile")}`);
       expect(message).toContain("--action migrate --dir");
-      expect(message).toContain("  git add .digismith/config.yml .digismith/profile .digismith/profile.migrated");
-      expect(message).toContain('  git commit -m "chore(config): migrate to .digismith/config.yml"');
+      expect(message).toContain("  git add '.digismith/config.yml' '.digismith/profile' '.digismith/profile.migrated'");
+      expect(message).toContain("  git commit -m 'chore(config): migrate to .digismith/config.yml'");
     }
     expect(fs.existsSync(path.join(dir, "config.yml"))).toBe(false);
     expect(fs.existsSync(path.join(dir, "profile"))).toBe(true);
