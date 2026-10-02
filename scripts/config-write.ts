@@ -75,6 +75,9 @@ export function clearInText(text: string, key: string, label = "config.yml"): st
   lines.splice(entry.line, entry.lastLine - entry.line + 1);
   const heading = section === null ? undefined : doc.sections.get(section);
   const lastInSection = heading && ![...doc.entries.keys()].some((k) => k !== key && k.startsWith(`${section}.`));
-  if (heading && lastInSection) lines.splice(heading.line, 1);
+  if (heading && lastInSection) {
+    const blankAbove = heading.line > 0 && lines[heading.line - 1].trim() === "";
+    lines.splice(blankAbove ? heading.line - 1 : heading.line, blankAbove ? 2 : 1);
+  }
   return joinLines(lines);
 }

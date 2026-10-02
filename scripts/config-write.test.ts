@@ -150,4 +150,8 @@ describe("clearInText", () => {
     const text = "a: 1\r\n";
     expect(clearInText(text, "b")).toBe(text);
   });
+
+  it("removes an orphaned blank separator left above a removed heading", () => {
+    expect(clearInText("p: 1\n\ns:\n  a: 1\nt: 2\n", "s.a")).toBe("p: 1\nt: 2\n");
+  });
 });
