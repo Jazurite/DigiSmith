@@ -19,7 +19,7 @@ function readUtf8Strict(filePath: string): string {
 }
 
 // Same "colon, then strip inline comment, then strip matching quotes" line
-// shape as scripts/preferences.ts's parseFieldValue — not imported from
+// shape as scripts/model_offload.ts's parseFieldValue — not imported from
 // there, that script is a separate concern; this is a local equivalent
 // scoped to the one file this script reads, same convention that file
 // itself documents.

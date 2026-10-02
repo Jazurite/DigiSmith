@@ -143,8 +143,8 @@ across every worktree of this repo — not per-worktree isolated, despite
 being reached from inside one.
 
 This is local machine config, the same class of file as
-`.digismith/profile`/`.digismith/telemetry-marker` (see `MEMORY.md`'s
-"`.digismith/profile` is config, not generated docs output" convention),
+`.digismith/config.yml`/`.digismith/telemetry-marker` (see
+`digismith:bootstrap` Step 0's "config, not generated docs output" note),
 guaranteed to stay out of any commit because `info/exclude` is never
 part of the repo's tracked tree at all — unlike `.gitignore`, there's no
 file here that could ride along in a diff. Read `$EXCLUDE_FILE`'s

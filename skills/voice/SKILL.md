@@ -27,7 +27,7 @@ keys directly in their own steps, rather than invoking this skill.
 Same repo-resolution rule every other skill here uses: is the current
 working directory itself the DigiSmith repo (`.claude-plugin/plugin.json`
 with `"name": "digismith"`)? Use it directly. Otherwise ask the user for
-DigiSmith's repo path this session and remember it. `.digismith/preferences.yml`
+DigiSmith's repo path this session and remember it. `.digismith/config.yml`
 itself still lives in the repo currently being worked on — the same
 cwd-relative default `digismith:preferences` documents.
 
@@ -72,7 +72,8 @@ right away, not just at the next `bootstrap`/`inject-standards` trigger.
 |---|---|
 | Unknown axis | `voice.ts` reports it and lists the two valid axes — relay that message, don't guess a fix. |
 | Value other than `on`/`off` | Same — relay the script's own error listing valid values. |
-| `.digismith/preferences.yml` missing or malformed | Both axes read as `on` (existing store's own missing-key-defaults-safely behavior) — not an error. |
+| `.digismith/config.yml` missing, or a voice key unset | Both axes read as `on` — not an error. |
+| `.digismith/config.yml` does not parse | `voice.ts` fails with the file and line — relay that message, don't guess a fix. |
 
 ## Quick Reference
 

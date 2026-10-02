@@ -137,7 +137,7 @@ Jazurite (no ticket, no standards, no ephemeral, transcript capture on);
 reserved specifically for DigiSmith's own repo working on itself, so its
 own dogfooding sessions build the same corpus every other DigiSmith-driven
 project does. The answer is
-remembered in `.digismith/profile` in that repo, so you're only asked
+remembered in `.digismith/config.yml` in that repo, so you're only asked
 once. To change it later, just say "switch this repo's profile to
 personal" (or "jazurite", or "digismith") — it'll state exactly what
 turns on or off and confirm before writing.
@@ -215,7 +215,7 @@ Already mid-stream instead? `adopt` reaches the same
 | A worktree already exists for this ticket | Switches into it. No duplicate ever gets created. |
 | A branch exists for this ticket but its worktree was removed | Reattaches a worktree to the existing branch instead of failing. |
 | Branch name collides with someone else's unrelated ticket | Asks you via a direct question before doing anything. Never silently reuses it. |
-| The current worktree already has `.digismith/profile`, on a non-base branch with a matching `.digismith/docs/<slug>/plan.md` | `init` reports "already initialized" and stops — no re-processing, no questions. Otherwise (base branch, or no matching plan.md yet) it falls through to normal detection. |
+| The current worktree already has a profile, on a non-base branch with a matching `.digismith/docs/<slug>/plan.md` | `init` reports "already initialized" and stops — no re-processing, no questions. Otherwise (base branch, or no matching plan.md yet) it falls through to normal detection. |
 | `jira-intake` itself can't proceed (no JIRA tool and you decline to paste, or pasted content's too sparse) | Stops wherever `jira-intake` stopped — not a new failure mode, just respects its own gate. |
 
 ## Current Scope

@@ -26,7 +26,7 @@ decided.
 ## Storage
 
 `toolchain.yml` at DigiSmith's own repo root — global to Jack, not per
-consuming repo (unlike `.digismith/preferences.yml`, map item H, which is
+consuming repo (unlike `.digismith/config.yml`, map item H, which is
 per-repo project config; these are Jack's own standing choices). Flat
 domain/value pairs, plain-text, no YAML library:
 

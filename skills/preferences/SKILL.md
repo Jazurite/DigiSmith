@@ -1,6 +1,6 @@
 ---
 name: preferences
-description: Read, write, or clear a small per-repo setting persisted in `.digismith/preferences.yml` — general infrastructure any DigiSmith skill can call into (starting with `finishing-a-development-branch`'s saved finish-option check, map item H.1) or that Jack can invoke directly ("what's my preference for X in this repo", "set my preference for X to Y", "clear my preference for X in this repo"). Not for enumerating/listing every preference set for a repo — no known use case yet.
+description: Read, write, or clear a small per-repo setting persisted under the `preferences:` heading of `.digismith/config.yml` — general infrastructure any DigiSmith skill can call into (starting with `finishing-a-development-branch`'s saved finish-option check, map item H.1) or that Jack can invoke directly ("what's my preference for X in this repo", "set my preference for X to Y", "clear my preference for X in this repo"). Not for enumerating/listing every preference set for a repo — no known use case yet.
 ---
 
 # Preferences
@@ -28,21 +28,41 @@ first consumer: `finishing-a-development-branch`'s saved finish-option check
 
 ## Storage
 
-`.digismith/preferences.yml`, sibling to `.digismith/profile`, one per
-consumer repo (DigiSmith's own repo included, no special-casing). Flat
-key/value pairs, plain-text, no YAML library:
+`.digismith/config.yml`, one per checkout (DigiSmith's own repo included,
+no special-casing). Preference keys live under the `preferences:` heading.
+The top level holds only the identity keys `profile` and `role`, which
+belong to other skills:
 
 ```
-# DigiSmith-managed. Settings decided through live interaction, not hand-authored.
-finish_option: merge_locally
+# DigiSmith config for this checkout. Edit by hand or through digismith:preferences.
+profile: digismith
+
+preferences:
+  finish_option: merge_locally
+  ssh_key: /root/.ssh/jazurite_github
 ```
 
-Per-repo scope only — no separate global-to-you tier, no per-profile tier.
-Same commit disposition as `.digismith/profile`: where a repo's `.digismith/`
+This skill's operations keep the bare key names: `--key finish_option`
+reads and writes `preferences.finish_option`.
+
+The file is a YAML subset read by a hand-written parser with no library:
+top-level `key: value` lines, one level of headings with keys indented
+exactly 2 spaces, string arrays as `- item` lines, and `#` comments. Every
+value is a string. Anything outside the subset fails with
+`<file> line <n>: <reason>`.
+
+**Old files (A.2).** A checkout that is not migrated yet still has
+`.digismith/preferences.yml` (flat `key: value`) and `.digismith/profile`.
+Reads fall back to them one key at a time. A write in such a checkout
+migrates it first when git does not track the old files, and stops with
+the migrate and commit commands when git does. In a linked worktree that
+still has an old file, a write stops and asks you to migrate the main
+checkout.
+
+Per-checkout scope only — no global tier yet. Where a repo's `.digismith/`
 isn't gitignored, committing this file along with the rest of the work is
-fine; where it is, it's written but never force-added. This skill never runs
-`git add`/`git commit`/`git add -f` itself — committing (or not) is left
-entirely to whatever flow eventually commits the surrounding work.
+fine; where it is, it's written but never force-added. This skill never
+runs `git add`/`git commit`/`git add -f` itself.
 
 ## Operations
 
@@ -74,9 +94,7 @@ repo — only the script's own invocation path needs to be absolute.
 node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action get
 ```
 
-Prints the value on stdout, or the literal `unset` if the key was never set,
-the file doesn't exist, or the file couldn't be parsed. Never errors over a
-missing or malformed file.
+Prints the value on stdout, or the literal `unset` if the key was never set or no file exists. If `.digismith/config.yml` does not parse, it fails with `preferences: failed (<file> line <n>: <reason>)` and exit 1.
 
 ### `set`
 
@@ -84,10 +102,7 @@ missing or malformed file.
 node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action set --value <value>
 ```
 
-Writes `<key>: <value>` into `.digismith/preferences.yml`, creating the file
-(with the header comment) and its parent directory if either doesn't exist
-yet, and preserving every other key already set. Prints
-`preferences: set <key>=<value>` on success.
+Writes `<value>` to `preferences.<key>` in `.digismith/config.yml`, creating the file (with the header comment), its folder and the `preferences:` heading when needed. It edits in place, so other keys, comments and order stay. If a migration ran first, its report lines print before the confirmation.
 
 ### `clear`
 
@@ -98,40 +113,42 @@ node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <k
 Removes `<key>` if present; a no-op (not an error) if the key was never set
 or the file doesn't exist. Prints `preferences: cleared <key>` either way.
 
-`--path <path>` overrides the default `.digismith/preferences.yml` on any of
-the three operations — the general way to point at a specific repo's
-preferences file whenever the caller's own cwd doesn't already resolve to
-that repo; a normal invocation from inside the repo being worked in never
-needs it.
+`--dir <folder>` points every operation at a specific `.digismith` folder
+when the caller's own cwd isn't the repo being worked in. A normal
+invocation from inside that repo never needs it.
+
+### `migrate`
+
+```bash
+node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --action migrate
+```
+
+Merges `.digismith/profile` and `.digismith/preferences.yml` into
+`.digismith/config.yml` and moves them aside to `*.migrated`. Run it in the
+main checkout, never a linked worktree. It never commits. Where git tracks
+the old files, it prints the exact `git add` and `git commit` commands.
 
 ## Worktree Propagation
 
-Copying `.digismith/preferences.yml` into a freshly created worktree is
-`digismith:bootstrap` Step 2 (sub-step 8) and `digismith:adopt` Step 5's job
-(alongside their existing `.digismith/profile` copy) — this skill has no
-worktree-creation logic of its own and is never invoked as part of that
-copy.
+Copying `.digismith/config.yml` (and any old `.digismith/profile` or `.digismith/preferences.yml`) into a freshly created worktree is `digismith:bootstrap` Step 2 (sub-step 6) and `digismith:adopt` Step 5's job — this skill has no worktree-creation logic of its own.
 
 ## Error Handling
 
 | Case | Disposition |
 |---|---|
-| `.digismith/preferences.yml` missing | Every key reads as `unset`; not an error. |
-| File present but malformed/unparseable (e.g. non-UTF-8) | Treated as `unset`, same as missing. Never crashes the caller. |
-| `get` on a key that was never set | Returns `unset`, not an error. |
-| `clear` on a key that was never set | Silent no-op; still reports `preferences: cleared <key>` (never `unset`, never an error). |
-| `set` invoked without `--value` | Fails clearly (`preferences: failed (missing required flag: --value)`), exit 1. Never silently sets an empty string. |
-| Target path gitignored in this repo | Write still succeeds; committing is simply skipped by whatever flow would otherwise commit it. Never force-added. |
+| `.digismith/config.yml` and the old files missing | Every key reads as `unset`; not an error. |
+| `.digismith/config.yml` does not parse, or is not UTF-8 | Fails with `preferences: failed (<file> line <n>: <reason>)` or `(<file>: not valid UTF-8)`, exit 1. Relay the message; don't guess a fix. |
+| Write in a linked worktree that still has an old file | Fails and names the main checkout to migrate. Nothing changes. |
+| Write where git tracks an old file | Fails and prints the migrate and commit commands. Nothing changes. |
 
 ## Out of Scope
 
-- A global-to-you preference tier spanning all repos — considered,
-  explicitly declined in favor of per-repo-only.
+- A global-to-you tier spanning all repos — deferred. `scripts/config.ts` keeps an ordered layer list so one can be added later.
 - Enumerating/listing all preferences set for a repo — no concrete need yet
   (YAGNI); add only when one shows up.
 - Any git add/commit logic — this skill only ever reads and writes the file;
-  committing (or not) is left entirely to the surrounding flow, same as
-  `.digismith/profile`.
+  committing (or not) is left entirely to the surrounding flow, same as the rest of
+  `.digismith/config.yml`.
 - Migrating any `profiles/*.yml` field into this store — those remain
   DigiSmith-repo-side, hand-authored, per-profile-class config; this store
   is per-individual-repo, dynamically written through live interaction.
@@ -143,6 +160,7 @@ copy.
 | `get` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action get` | Prints the value, or `unset` |
 | `set` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action set --value <value>` | Writes the key, creating the file/parent dir if needed; prints confirmation |
 | `clear` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action clear` | Removes the key if present (no-op otherwise); prints confirmation |
+| `migrate` | `node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --action migrate` | Merges the old files into `config.yml` and moves them aside; prints commit commands where git tracks them |
 
 `<digismith-repo>` is the path resolved under Operations above — never a
 bare relative path.
