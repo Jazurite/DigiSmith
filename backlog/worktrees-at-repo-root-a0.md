@@ -64,3 +64,12 @@ worktrees depend on a mechanism that DigiSmith does not clean up.
 ## Why not applied yet
 
 Filed during an unrelated brainstorm. Needs its own `digismith:brainstorming` pass.
+
+
+## New sighting 2026-10-02 (EMKT-810)
+
+In fresh clones of shopify-template-ph and -kr, the native worktree tool created the branch as
+`worktree-EMKT-810__ph-kr-adjust-bundle-details-slider-cart` (an added `worktree-` prefix; the
+worker renamed it back), and placed worktrees under `.claude/worktrees/`. That path is not
+gitignored in the market repos, so the main checkout shows `.claude/` as untracked. Source:
+[manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).
