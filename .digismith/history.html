@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-09-29</span>
+    <span>Last updated: 2026-10-02</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1382,6 +1382,12 @@
       <div class="date">2026-09-29</div>
       <h4>Parallel Dispatch to Two herdr Agents (DGS-123)</h4>
       <p>The orchestrator gave two herdr agents a task each at the same moment and collected both results without mixing them up. Jack keeps the B clan to one worker at a time and no new workspace, so the second agent was a temporary one in a second tab of the same workspace, closed in the cleanup. Both tasks went out through <code>herdr agent prompt</code> in the same second. The B.2 worker made a read-only change map for DGS-114, and the temporary agent checked DGS-102's scope. They finished 40 seconds and 1 minute 45 seconds later, each result under its own header in its own pane. The orchestrator spot-checked 11 citations against HEAD, and all matched. The test turned up two facts about Claude Code 2.1.283. Auto mode is now the default permission mode, so a new session starts in auto mode unless it is switched: the orchestrator started the temporary agent and switched it to manual mode, with read-only tools only. And a session in a different permission mode holds cross-session messages for approval, so tasks go in through herdr and results are read from the pane. RAM is spent per agent, not per workspace. Jack did nothing by hand, and the classifier blocked nothing. No code shipped and there is no <code>report.html</code>, so this entry is written by hand.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-02</div>
+      <h4>Centralized DigiSmith Config File</h4>
+      <p>This ticket puts every per-folder DigiSmith setting into one <code>.digismith/config.yml</code>. One shared reader reads it, and falls back to the old <code>.digismith/profile</code> and <code>.digismith/preferences.yml</code> files. Three new modules in <code>scripts/</code> do the work: <code>config-parse.ts</code> parses a small YAML subset with no library, <code>config-write.ts</code> edits the file text in place, and <code>config.ts</code> reads layers (the new file, then the old files), writes atomically, guards writes in worktrees and tracked checkouts, migrates the old files, and exposes a CLI. <code>preferences.ts</code> becomes a thin wrapper that maps bare preference keys to <code>preferences.&lt;key&gt;</code>. The SessionStart hook, <code>model_offload.ts</code>, and 12 skills now read through the new reader. See <a href="docs/A/A.2/centralized-digismith-config-file/design.html">design</a>, <a href="docs/A/A.2/centralized-digismith-config-file/plan.md">plan</a>, and <a href="docs/A/A.2/centralized-digismith-config-file/report.html">report</a>.</p>
     </div>
 
   </div>
