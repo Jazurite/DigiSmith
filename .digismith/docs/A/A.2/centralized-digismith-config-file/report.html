@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Centralized DigiSmith Config File — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — merged</span>
+  <h1>Centralized DigiSmith Config File — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-02</span>
+    <span>Map item: <strong>A.2</strong></span>
+    <span>Commit range: <code>3873042..a55c9b5</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>This ticket puts every per-folder DigiSmith setting into one <code>.digismith/config.yml</code>. One shared reader reads it, and falls back to the old <code>.digismith/profile</code> and <code>.digismith/preferences.yml</code> files. Three new modules in <code>scripts/</code> do the work: <code>config-parse.ts</code> parses a small YAML subset with no library, <code>config-write.ts</code> edits the file text in place, and <code>config.ts</code> reads layers (the new file, then the old files), writes atomically, guards writes in worktrees and tracked checkouts, migrates the old files, and exposes a CLI. <code>preferences.ts</code> becomes a thin wrapper that maps bare preference keys to <code>preferences.&lt;key&gt;</code>. The SessionStart hook, <code>model_offload.ts</code>, and 12 skills now read through the new reader.</p>
+  <p>Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (12 tasks, each dispatched to a fresh implementer subagent and independently reviewed), with 2 fix rounds, across Tasks 9 and 11. A separate whole-branch review (external, by Sol/OpenCode) found 10 further findings after the build finished. All 10 are fixed and re-reviewed clean before this merge — see Final Review &amp; Fix below.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the <a href="plan.md">implementation plan</a>.</p>
+  <div class="callout">
+    <strong>Note on this report's own provenance:</strong> the per-task SDD ledger
+    (<code>.sdd-workspace/progress.md</code>) that normally feeds this report was lost when the
+    branch's worktree was removed during <code>digismith:finishing-a-development-branch</code> —
+    it is gitignored scratch, and this skill's own trigger point (before that deletion) was missed
+    this run. This report was reconstructed by hand afterward, from the plan file, <code>git
+    log</code>, and the controller session's own verified record of every task, review, and fix
+    round. Nothing in it is invented; the per-task detail below matches what was reported live,
+    turn by turn, during the build.
+  </div>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>YAML-subset parser</h4><p><code>parseConfig</code>/<code>parseConfigDocument</code> read <code>.digismith/config.yml</code>'s grammar: top-level keys, one level of headings, arrays, comments, and errors with exact line numbers.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>In-place text writer</h4><p><code>setInText</code>/<code>clearInText</code> edit the file in place, keeping comments, key order, and quoting rules intact.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Layered reader with the fallback</h4><p><code>resolve()</code> reads <code>config.yml</code> first, then falls back to the old <code>.digismith/profile</code> and <code>.digismith/preferences.yml</code> files, per key.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4><code>migrate</code> and its report</h4><p><code>migrate()</code> merges the old files into <code>config.yml</code>, moves them aside to <code>*.migrated</code>, and reports what it did.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Guarded writes and the CLI</h4><p><code>setKey</code>/<code>clearKey</code> stop in a tracked checkout or a linked worktree that still has an old file; <code>config.ts</code>'s CLI exposes <code>get</code>/<code>set</code>/<code>clear</code>/<code>migrate</code>.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4><code>preferences.ts</code> wrapper and voice scripts</h4><p><code>preferences.ts</code> becomes a thin wrapper over <code>config.ts</code>; <code>voice.ts</code> and <code>voice-init.ts</code> read through the new <code>.digismith</code> folder.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>SessionStart hook</h4><p>The hook reads the profile through <code>resolve()</code>, and warns instead of failing on a config parse error.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4><code>model_offload.ts</code></h4><p>Reads the profile through <code>resolve()</code>; its CLI flag is now <code>--dir</code>, not <code>--profile-path</code>.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Profile rules in the reading skills</h4><p>7 skills read <code>profile</code> through <code>config.yml</code> with the old-file fallback, in one exact sentence pair.</p></div>
+    <div class="card"><span class="tag">Task 10</span><h4><code>bootstrap</code> and <code>adopt</code> migrate flow</h4><p>Both skills migrate untracked old files automatically, print commands for tracked ones, and copy <code>config.yml</code> into new worktrees.</p></div>
+    <div class="card"><span class="tag">Task 11</span><h4>Storage docs</h4><p><code>digismith:preferences</code>, <code>voice</code>, <code>toolchain</code>, <code>offload-implementer</code>, and the README now describe <code>config.yml</code>, not the old files.</p></div>
+    <div class="card"><span class="tag">Task 12</span><h4>Full suite against the baseline</h4><p>Confirms no regression: the same 2 pre-existing failures, every new and changed test passing.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. YAML-subset parser</td><td>Parser + types</td><td class="status-ok">Approved, clean</td><td>BOM check used a literal invisible character instead of <code>﻿</code> escape (fixed in Task 2, not deferred)</td></tr>
+    <tr><td>2. In-place text writer</td><td>Writer functions</td><td class="status-ok">Approved, clean</td><td>Clearing the last remaining key returns <code>"\n"</code> instead of <code>""</code> — cosmetic, inherited from the brief's own prescribed code</td></tr>
+    <tr><td>3. Layered reader with the fallback</td><td><code>resolve()</code> and legacy readers</td><td class="status-ok">Approved, clean</td><td>None</td></tr>
+    <tr><td>4. <code>migrate</code> and its report</td><td><code>migrate()</code>, <code>formatMigrateReport</code></td><td class="status-ok">Approved, clean</td><td><code>migrateCommand</code> had no direct unit test of its own (closed by the whole-branch review's Finding 2 test); <code>commitCommands</code>' <code>rel()</code> helper recomputes <code>path.resolve(dir)</code> per loop iteration (trivial)</td></tr>
+    <tr><td>5. Guarded writes and the CLI</td><td><code>checkWrite</code>, <code>setKey</code>, <code>clearKey</code>, CLI</td><td class="status-ok">Approved, clean</td><td>None</td></tr>
+    <tr><td>6. <code>preferences.ts</code> wrapper and voice scripts</td><td>Wrapper + <code>voice.ts</code>/<code>voice-init.ts</code> rewiring</td><td class="status-ok">Approved, clean</td><td>Implementer flagged an unrelated test-isolation concern (a full unfiltered suite run once appeared to touch a real tracked file); investigated after merge, not reproducible — see Final Review &amp; Fix</td></tr>
+    <tr><td>7. SessionStart hook</td><td><code>readProfile</code>/<code>buildBanner</code> rewiring</td><td class="status-ok">Approved, clean</td><td>None</td></tr>
+    <tr><td>8. <code>model_offload.ts</code></td><td><code>readProfileProvider</code>/<code>offload</code> rewiring</td><td class="status-ok">Approved, clean</td><td>None</td></tr>
+    <tr><td>9. Profile rules in the reading skills</td><td>P/R sentence pair in 7 skills</td><td class="status-fixed">Approved after 1 fix round</td><td>None (the one finding — a sentence placed inline instead of its own paragraph — was fixed, not deferred)</td></tr>
+    <tr><td>10. <code>bootstrap</code>/<code>adopt</code> migrate flow</td><td>Migrate check, profile write, one copy step</td><td class="status-ok">Approved, clean</td><td>"all three plain file copies" wording went stale after a 4th copy was added (fixed later by the whole-branch review's Finding 10)</td></tr>
+    <tr><td>11. Storage docs</td><td>5 skill files + README updated</td><td class="status-fixed">Approved after 1 fix round</td><td><code>skills/preferences/SKILL.md</code> lines ~20/~85 kept stale <code>preferences.yml</code>/<code>--path</code> wording (fixed later by the whole-branch review's Finding 9)</td></tr>
+    <tr><td>12. Full suite against the baseline</td><td>Verified 737 tests, 735 pass, 2 fail (pre-existing)</td><td class="status-ok">Confirmed by the controller (no independent reviewer dispatched for this task)</td><td>None</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: an external whole-branch review (Sol, via OpenCode) ran after Task 12 and found 10 findings (3 Important, 7 Minor). All 10 are fixed and independently re-reviewed clean before this merge, across 2 fix commits/batches.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>clearInText</code> on an array deleted standalone comments and blank lines between the opener and its items</td><td>Fixed (<span class="sha">f0335e9</span>): removes only the opener and the actual item lines now</td></tr>
+    <tr><td>Important</td><td><code>migrateCommand</code>/<code>commitCommands</code> printed a caller-relative, unquoted <code>--dir</code> and paths</td><td>Fixed (<span class="sha">5842bd0</span>): resolves to an absolute path and shell-quotes every path, including the script path and commit message</td></tr>
+    <tr><td>Minor</td><td><code>migrate</code> never created <code>config.yml</code> when the only legacy file moved was empty or comment-only</td><td>Fixed (<span class="sha">64a2aba</span>): writes a header-only <code>config.yml</code> when nothing was added and none exists yet</td></tr>
+    <tr><td>Minor</td><td><code>voice.ts</code>'s <code>setVoice</code> silently discarded the migration report</td><td>Fixed (<span class="sha">e9f85b2</span>): now returns it, and <code>main()</code> prints it before the confirmation</td></tr>
+    <tr><td>Minor</td><td>The design doc's quoting rule disagreed with the already-approved code</td><td>Fixed (<span class="sha">c0266b9</span>): design doc updated to match; no code changed</td></tr>
+    <tr><td>Minor</td><td>The 9 profile-reading skills never said what to do when <code>config.yml</code> can't be read or parsed</td><td>Fixed (<span class="sha">5431ba7</span>): one identical sentence added to all 9, routing to each skill's own stale-profile handling</td></tr>
+    <tr><td>Important</td><td>The atomic-write test could not tell <code>writeAtomic</code> apart from a non-atomic implementation</td><td>Fixed (<span class="sha">c999c25</span>): added real failure-injection tests for the temp-file write and the rename</td></tr>
+    <tr><td>Minor</td><td>The write-guard tests only checked specific files, not that nothing else changed</td><td>Fixed (<span class="sha">5a6b589</span>): snapshot-and-compare, by name and by byte, added to both guard tests</td></tr>
+    <tr><td>Important</td><td><code>skills/preferences/SKILL.md</code> still named the old <code>preferences.yml</code> path and a <code>--path</code> flag that never existed</td><td>Fixed (<span class="sha">18d49a2</span>): rewritten for <code>config.yml</code> and the real <code>--dir</code> flag, with an explicit warning about the wrong-repo risk</td></tr>
+    <tr><td>Minor</td><td><code>bootstrap</code>'s Quick Reference row said "all three plain file copies," stale once a 4th copy existed</td><td>Fixed (<span class="sha">ff674f3</span>): now says "all plain file copies"</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">68b4577</span> feat(config): add a YAML-subset parser for config.yml</li>
+    <li><span class="sha">61bd76c</span> feat(config): add an in-place writer for config.yml</li>
+    <li><span class="sha">898198d</span> feat(config): add the layered config reader with the old-file fallback</li>
+    <li><span class="sha">fd28492</span> feat(config): add migrate for the old profile and preferences files</li>
+    <li><span class="sha">60f3e2f</span> feat(config): add guarded writes and the config CLI</li>
+    <li><span class="sha">178cb31</span> refactor(preferences): store preferences under the preferences heading in config.yml</li>
+    <li><span class="sha">d14c96d</span> refactor(session-init): read the profile through the shared config reader</li>
+    <li><span class="sha">d1f3a95</span> refactor(model-offload): read the profile through the shared config reader</li>
+    <li><span class="sha">baa7559</span> docs(skills): read the profile from config.yml with the A.2 fallback</li>
+    <li><span class="sha">1cf90db</span> docs(skills): give init's A.2 presence sentence its own paragraph</li>
+    <li><span class="sha">cea9abb</span> docs(bootstrap): migrate old config files and copy config.yml into worktrees</li>
+    <li><span class="sha">53a1eef</span> docs(preferences): describe config.yml storage and the migrate operation</li>
+    <li><span class="sha">f8098e0</span> docs(preferences): restore the error-handling rows and set confirmation sentence</li>
+    <li><span class="sha">c0266b9</span> docs(config): align the design doc's quoting rule with the approved code</li>
+    <li><span class="sha">f0335e9</span> fix(config-write): keep comments and blank lines when clearing an array</li>
+    <li><span class="sha">5842bd0</span> fix(config): make migrate commands absolute and shell-quoted</li>
+    <li><span class="sha">64a2aba</span> fix(config): create config.yml when migrating an empty legacy file</li>
+    <li><span class="sha">e9f85b2</span> fix(voice): report a migration before the set confirmation</li>
+    <li><span class="sha">c999c25</span> test(config): prove writeAtomic is actually atomic</li>
+    <li><span class="sha">5a6b589</span> test(config): prove the write guards change nothing</li>
+    <li><span class="sha">5431ba7</span> docs(skills): handle an unreadable config.yml like a stale profile</li>
+    <li><span class="sha">18d49a2</span> docs(preferences): name config.yml instead of the old preferences.yml path</li>
+    <li><span class="sha">ff674f3</span> docs(bootstrap): fix the plain-file-copies count in Quick Reference</li>
+    <li><span class="sha">a55c9b5</span> chore: bump plugin version</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/A/A.2/centralized-digismith-config-file/report.html</footer>
+
+</body>
+</html>
