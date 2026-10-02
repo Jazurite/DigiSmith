@@ -44,10 +44,9 @@
 | `scripts/model_offload.ts` (+ test) | Modify | Profile through `resolve`, `--dir` |
 | `scripts/toolchain.ts` | Modify | One stale comment only |
 | 12 `skills/*/SKILL.md`, `README.md` | Modify | Profile rules, copy step, migrate check, storage docs |
-| `.digismith/config.yml` | Create (Task 12) | This repo's own migrated config |
-| `.digismith/profile`, `.digismith/preferences.yml` | `git mv` (Task 12) | To `*.migrated` |
+| `.digismith/config.yml`, `.digismith/profile`, `.digismith/preferences.yml` | Unchanged | DigiSmith's own repo migrates in the follow-up ticket DGS-142; this branch keeps reading through the fallback |
 
-Task order matters. Task 12 (repo migration) runs last. The plugin cache that runs this session still has the old skills and hook, and they read `.digismith/profile`. Moving that file earlier would turn profiling off for the rest of this build.
+Task order matters within each group, but this branch never migrates DigiSmith's own repo (see Rollout note) — that move is DGS-142's job.
 
 ---
 
@@ -2515,8 +2514,12 @@ Step 2:
    `.digismith/` line these files never arrive by git at all. If no
    profile is present in the worktree after the copy, run
    `config.ts --action set --key profile --value <name>` from inside it.
-   Do this **before** Step 3 hands off: a missing profile silently turns
-   profiling off for the whole build.
+   If that command stops (the worktree guard: this worktree still has an
+   old `.digismith/profile` or `.digismith/preferences.yml` that the copy
+   just brought in), show its message and continue — the worktree keeps
+   reading the profile through the fallback, same as any other
+   pre-migration worktree. Do this **before** Step 3 hands off: a missing
+   profile silently turns profiling off for the whole build.
 ```
 
 - Replace the whole of sub-step 8 with:
@@ -2710,99 +2713,7 @@ git commit -m "docs(preferences): describe config.yml storage and the migrate op
 
 ---
 
-### Task 12: Migrate DigiSmith's own repo (last)
-
-**Files:**
-- Create: `.digismith/config.yml`
-- `git mv`: `.digismith/profile` → `.digismith/profile.migrated`, `.digismith/preferences.yml` → `.digismith/preferences.yml.migrated`
-- Test: `scripts/config.test.ts` (append)
-
-This branch is a linked worktree, so `config.ts --action migrate` stops here by design. Do the migration by hand. The test proves the result equals what `migrate` produces.
-
-**Interfaces:**
-- Consumes: `migrate` (Task 4).
-
-- [ ] **Step 1: Write the failing test**
-
-Add `import { fileURLToPath } from "node:url";` to the imports of `scripts/config.test.ts`, then append:
-
-```ts
-describe("repo migration", () => {
-  beforeEach(setUpTmp);
-  afterEach(tearDownTmp);
-
-  it("the committed .digismith/config.yml equals migrate's output for the .migrated files", () => {
-    const repoDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".digismith");
-    write("profile", fs.readFileSync(path.join(repoDir, "profile.migrated")));
-    write("preferences.yml", fs.readFileSync(path.join(repoDir, "preferences.yml.migrated")));
-
-    migrate(dir);
-
-    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(
-      fs.readFileSync(path.join(repoDir, "config.yml"), "utf8"),
-    );
-  });
-});
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `pnpm vitest run scripts/config.test.ts -t "repo migration"`
-Expected: FAIL with `ENOENT` on `profile.migrated`.
-
-- [ ] **Step 3: Migrate by hand**
-
-```bash
-git mv .digismith/profile .digismith/profile.migrated
-git mv .digismith/preferences.yml .digismith/preferences.yml.migrated
-cat .digismith/profile.migrated .digismith/preferences.yml.migrated
-```
-
-Expected output of `cat`:
-
-```
-digismith
-# DigiSmith-managed. Settings decided through live interaction, not hand-authored.
-finish_option: merge_locally
-clear_context: no
-ssh_key: /root/.ssh/jazurite_github
-```
-
-If the output differs, stop and report it: the content below assumes these exact values.
-
-Create `.digismith/config.yml` with exactly this content (one trailing newline):
-
-```yaml
-# DigiSmith config for this checkout. Edit by hand or through digismith:preferences.
-profile: digismith
-
-preferences:
-  finish_option: merge_locally
-  clear_context: no
-  ssh_key: /root/.ssh/jazurite_github
-```
-
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `pnpm vitest run scripts/config.test.ts -t "repo migration"`
-Expected: PASS.
-
-Run: `node --experimental-strip-types scripts/preferences.ts --key finish_option --action get`
-Expected: `merge_locally`.
-
-Run: `node --experimental-strip-types scripts/session-init.ts`
-Expected: the output contains `DigiSmith: profile=digismith, voices=technical+conversation`.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add .digismith/config.yml .digismith/profile .digismith/profile.migrated .digismith/preferences.yml .digismith/preferences.yml.migrated scripts/config.test.ts
-git commit -m "chore(config): migrate to .digismith/config.yml"
-```
-
----
-
-### Task 13: Full suite against the baseline
+### Task 12: Full suite against the baseline
 
 - [ ] **Step 1: Run the full suite**
 
@@ -2817,4 +2728,4 @@ Write the totals (files, tests, passed, failed) and the two failure names into t
 
 ## Rollout note
 
-After this branch merges, DigiSmith's main checkout has `.digismith/config.yml` and no `.digismith/profile`. The plugin cache keeps the old skills and hook until the next plugin release reaches each machine. Until then, sessions in DigiSmith's repo show no `profile=` banner, and old skills read "no profile". Consumer repos (Emma, Soveron) are not affected: their old files stay in place until `bootstrap` from the new release migrates them.
+This branch does not migrate DigiSmith's own repo. `.digismith/profile` and `.digismith/preferences.yml` stay in place here, and every reader in this branch reaches them through the fallback, so old and new plugin versions keep working side by side. DigiSmith's own migration (the committed `.digismith/config.yml`, `git mv` of the two old files to `*.migrated`, and its own test that the result equals `migrate`'s output) is the follow-up ticket DGS-142 (A.2: Configuration). Consumer repos (Emma, Soveron) are unaffected either way: their old files stay in place until `bootstrap` from a release carrying this branch migrates them.

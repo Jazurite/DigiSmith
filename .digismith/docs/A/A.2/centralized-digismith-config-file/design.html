@@ -95,7 +95,7 @@
 <tr><td>Key layout</td><td>The top level holds only the identity keys <code>profile</code> and <code>role</code>. Preference keys live under a <code>preferences:</code> heading, addressed as <code>preferences.&lt;key&gt;</code>. <code>digismith:preferences</code> keeps the bare key names.</td></tr>
 <tr><td>SessionStart hook</td><td><code>scripts/session-init.ts</code> reads the profile through the shared reader. Its output stays the same.</td></tr>
 <tr><td>Approach</td><td>New <code>scripts/config.ts</code>. <code>preferences.ts</code> becomes a thin wrapper. Skills read the YAML file directly with one shared sentence.</td></tr>
-<tr><td>Auto-commit</td><td>No commit on the base branch. This ticket's branch migrates DigiSmith's own repo as part of the feature.</td></tr>
+<tr><td>Auto-commit</td><td>No commit on the base branch. DigiSmith's own repo migrates in the follow-up ticket DGS-142 (A.2: Configuration), not in this branch.</td></tr>
 </table></div>
 </section>
 
@@ -244,7 +244,7 @@ git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
       <li>Tracked: do not migrate. Print the <code>migrate</code> command and the commit commands above, keep reading through the fallback, and continue the ticket flow.</li>
     </ul></li>
   <li><strong>Directly</strong>, through <code>digismith:preferences</code> ("migrate this repo's config").</li>
-  <li><strong>DigiSmith's own repo, in this ticket's branch, by hand.</strong> DigiSmith is the only known repo that tracks <code>.digismith/</code>. The branch is a linked worktree, so the guard blocks the command there. The plan adds <code>.digismith/config.yml</code> (<code>profile</code> at the top level, the three current keys under <code>preferences:</code>) and runs <code>git mv</code> on the two old files to <code>*.migrated</code>, in a normal commit that merges with the branch. A test checks that the committed <code>config.yml</code> equals the output of <code>migrate</code> run on the <code>.migrated</code> files.</li>
+  <li><strong>DigiSmith's own repo, by hand, in a follow-up ticket (DGS-142, A.2: Configuration).</strong> DigiSmith is the only known repo that tracks <code>.digismith/</code>. This branch is itself a linked worktree, so the guard blocks the <code>migrate</code> command here, and Jack's rollout decision keeps DigiSmith's own repo unmigrated through this branch: <code>.digismith/profile</code> and <code>.digismith/preferences.yml</code> stay in place, read through the fallback, so old and new plugin versions keep working side by side. DGS-142 adds <code>.digismith/config.yml</code> (<code>profile</code> at the top level, the three current keys under <code>preferences:</code>) and runs <code>git mv</code> on the two old files to <code>*.migrated</code>, in a normal commit, with a test that the committed <code>config.yml</code> equals the output of <code>migrate</code> run on the <code>.migrated</code> files.</li>
 </ul>
 
 <h3>Pre-migration worktrees</h3>
@@ -324,6 +324,7 @@ git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
   <li>The global layer (<code>~/.digismith-depot/config.yml</code>).</li>
   <li>The <code>role</code> key's meaning and the maestro settings (DGS-139).</li>
   <li>Removing the fallback and the <code>.migrated</code> copies (follow-up ticket).</li>
+  <li>Migrating DigiSmith's own repo: deferred to the follow-up ticket DGS-142 (A.2: Configuration), so this branch's own fallback stays exercised and old and new plugin versions keep working side by side.</li>
   <li>Migrating the Emma or Soveron checkouts: <code>bootstrap</code> does that at their next ticket start.</li>
   <li><code>profiles/*.yml</code> and <code>toolchain.yml</code>: definitions and global defaults, unchanged.</li>
   <li>Writing arrays through <code>set</code>.</li>
