@@ -30,9 +30,24 @@ This decision replaces "maestro is a fifth profile". Where sections below still 
   - **solo:** Jack's direct sessions, which are neither.
 - **Lineage O.3: Roles** owns the role question at session start and the setup for each role.
 - The session-start prompt asks for the role once per folder, through the profile mechanism.
-- **The role is stored in `.digismith/role`** (Jack, 2026-10-02): a one-line file beside
-  `.digismith/profile`, per folder, read by the session-start hook the same way. Workers need no
-  file: their role comes from `DIGISMITH_MAESTRO` in their environment.
+- **The role is stored in the centralized config file, key `role`** (DGS-141, O: Profiling
+  Pavilion). A one-line `.digismith/role` file beside `.digismith/profile` was decided first, then
+  replaced the same day, when Jack asked for one config file instead of one file for each setting.
+  DGS-141 comes first, so no `.digismith/role` file ever exists.
+- **The session-start hook stays unchanged** (Jack, 2026-10-02). The role logic goes into
+  `digismith:init`: it resolves the role (worker from the maestro's setup, then the config's
+  `role`, then a first-use question), before today's "already initialized" check.
+- **No new maestro skill** (Jack, 2026-10-02). Existing skills read the role and change their
+  behavior, the way `inject-standards`, `capture-ephemeral-url` and `jira-progress-write-back` read
+  the profile today. Examples: `jira-progress-write-back` drafts only for a worker; `finishing-a-
+  development-branch` stops a worker for the maestro's approval before a push. Open: where the
+  maestro-only know-how (starting workers, the herdr commands, claims) lives. Candidates:
+  `digismith:depot` (it owns the VPS and herdr session CLI) or `digismith:using-superpowers`
+  (loaded first in every session).
+- **Reopened: where the maestro sits** (Jack, 2026-10-02). Either the DigiSmith main checkout
+  (every session opened there is a maestro; solo work happens in `.worktrees/`; workers get
+  `role: worker` in their worktrees; the `b-agentic` slot moves into a worktree), or a separate
+  folder such as `~/.digismith-depot/maestro/`.
 - **The maestro folder's profile is `jazurite`** (Jack, 2026-10-02), Jack's own org. Choosing
   "maestro" at the session-start prompt writes `.digismith/role` = `maestro` and, when the folder
   has no profile yet, `.digismith/profile` = `jazurite`.
