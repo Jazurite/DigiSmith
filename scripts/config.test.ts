@@ -22,6 +22,15 @@ import {
   setKey,
 } from "./config.ts";
 
+// vi.spyOn(fs, "writeFileSync"/"renameSync") cannot redefine these properties: Vitest/Vite's SSR
+// transform freezes the "node:fs" namespace object that `import * as fs` binds to, both here and
+// inside config.ts. vi.mock replaces the module itself instead, so it works for both importers.
+// Every other fs function passes through to the real implementation untouched.
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), renameSync: vi.fn(actual.renameSync) };
+});
+
 let tmpDir: string;
 let dir: string;
 
@@ -424,6 +433,28 @@ describe("setKey / clearKey", () => {
 
   it("leaves no temporary file behind", () => {
     setKey("profile", "emma", dir);
+    expect(fs.readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  it("leaves the previous config.yml untouched and no .tmp file when the temp-file write fails", () => {
+    setKey("profile", "emma", dir);
+    const before = fs.readFileSync(path.join(dir, "config.yml"), "utf8");
+    vi.mocked(fs.writeFileSync).mockImplementationOnce(() => {
+      throw new Error("disk full");
+    });
+    expect(() => setKey("role", "worker", dir)).toThrow("disk full");
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(before);
+    expect(fs.readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  it("leaves the previous config.yml untouched and no .tmp file when the rename fails", () => {
+    setKey("profile", "emma", dir);
+    const before = fs.readFileSync(path.join(dir, "config.yml"), "utf8");
+    vi.mocked(fs.renameSync).mockImplementationOnce(() => {
+      throw new Error("permission denied");
+    });
+    expect(() => setKey("role", "worker", dir)).toThrow("permission denied");
+    expect(fs.readFileSync(path.join(dir, "config.yml"), "utf8")).toBe(before);
     expect(fs.readdirSync(dir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
