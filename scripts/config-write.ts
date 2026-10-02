@@ -72,7 +72,15 @@ export function clearInText(text: string, key: string, label = "config.yml"): st
   const entry = doc.entries.get(key);
   if (!entry) return text;
   const lines = [...doc.lines];
-  lines.splice(entry.line, entry.lastLine - entry.line + 1);
+  if (entry.isArray) {
+    const itemIndent = section === null ? 2 : 4;
+    const itemPrefix = " ".repeat(itemIndent) + "-";
+    for (let i = entry.lastLine; i >= entry.line; i--) {
+      if (i === entry.line || lines[i].startsWith(itemPrefix)) lines.splice(i, 1);
+    }
+  } else {
+    lines.splice(entry.line, entry.lastLine - entry.line + 1);
+  }
   const heading = section === null ? undefined : doc.sections.get(section);
   const lastInSection = heading && ![...doc.entries.keys()].some((k) => k !== key && k.startsWith(`${section}.`));
   if (heading && lastInSection) {

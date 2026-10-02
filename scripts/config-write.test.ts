@@ -154,4 +154,14 @@ describe("clearInText", () => {
   it("removes an orphaned blank separator left above a removed heading", () => {
     expect(clearInText("p: 1\n\ns:\n  a: 1\nt: 2\n", "s.a")).toBe("p: 1\nt: 2\n");
   });
+
+  it("keeps a standalone comment between array items when clearing the array", () => {
+    expect(clearInText("urls:\n  - a\n# keep this\n  - b\nprofile: emma\n", "urls")).toBe(
+      "# keep this\nprofile: emma\n",
+    );
+  });
+
+  it("keeps a comment between the opener and the first item, for an array inside a section", () => {
+    expect(clearInText("s:\n  list:\n# note\n    - a\n  k: 1\n", "s.list")).toBe("s:\n# note\n  k: 1\n");
+  });
 });
