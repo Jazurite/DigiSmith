@@ -19,7 +19,7 @@ export type ConfigDocument = {
 export const KEY_PATTERN = /^[a-z0-9_]+$/;
 
 export function splitConfigLines(text: string): string[] {
-  const body = text.startsWith("﻿") ? text.slice(1) : text;
+  const body = text.startsWith("\ufeff") ? text.slice(1) : text;
   const lines = body.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
   return lines;
