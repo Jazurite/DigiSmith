@@ -2,20 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOCS_DIR_PATH, listNotes, resolveMainRoot } from "./lineage-handoff.ts";
+import { DEFAULT_DIR, resolve } from "./config.ts";
+import { ConfigError } from "./config-parse.ts";
 
-export const DEFAULT_PROFILE_PATH = ".digismith/profile";
 export const VOICE_INIT_FILENAME = "voice-init.ts";
 
-export function readProfile(filePath: string): string | undefined {
-  let raw: Buffer;
-  try {
-    raw = fs.readFileSync(filePath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-    throw err;
-  }
-  const content = new TextDecoder("utf-8", { fatal: true }).decode(raw).trim();
-  return content || undefined;
+export function readProfile(dir: string): string | undefined {
+  const value = resolve("profile", dir)?.value;
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 export function isDigismithRepoRoot(pluginJsonPath: string): boolean {
@@ -57,8 +51,8 @@ export function formatBanner(profile: string, voiceSummary: string | null): stri
   return `DigiSmith: ${parts.join(", ")}`;
 }
 
-export async function buildBanner(profilePath: string, voiceInitPath: string): Promise<string | null> {
-  const profile = readProfile(profilePath);
+export async function buildBanner(dir: string, voiceInitPath: string): Promise<string | null> {
+  const profile = readProfile(dir);
   if (profile === undefined) return null;
   const voiceSummary = await loadVoiceSummary(voiceInitPath);
   return formatBanner(profile, voiceSummary);
@@ -77,14 +71,15 @@ export async function main(): Promise<void> {
     process.exitCode = 1;
   }
   try {
-    const banner = await buildBanner(
-      path.join(process.cwd(), DEFAULT_PROFILE_PATH),
-      path.join(scriptDir, VOICE_INIT_FILENAME),
-    );
+    const banner = await buildBanner(DEFAULT_DIR, path.join(scriptDir, VOICE_INIT_FILENAME));
     if (banner) console.log(banner);
   } catch (err) {
-    console.error(`session-init: failed (${(err as Error).message})`);
-    process.exitCode = 1;
+    if (err instanceof ConfigError) {
+      console.log(`DigiSmith: warning: ${err.message}`);
+    } else {
+      console.error(`session-init: failed (${(err as Error).message})`);
+      process.exitCode = 1;
+    }
   }
 }
 

@@ -4,7 +4,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
-  DEFAULT_PROFILE_PATH,
   VOICE_INIT_FILENAME,
   readProfile,
   loadVoiceSummary,
@@ -15,12 +14,9 @@ import {
   isDigismithRepoRoot,
 } from "./session-init.ts";
 import { resolveMainRoot } from "./lineage-handoff.ts";
+import { ConfigError } from "./config-parse.ts";
 
 describe("constants", () => {
-  it("locks the documented default profile path", () => {
-    expect(DEFAULT_PROFILE_PATH).toBe(".digismith/profile");
-  });
-
   it("locks the documented voice-init filename", () => {
     expect(VOICE_INIT_FILENAME).toBe("voice-init.ts");
   });
@@ -28,34 +24,40 @@ describe("constants", () => {
 
 describe("readProfile", () => {
   let tmpDir: string;
-  let profilePath: string;
+  let dir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    profilePath = path.join(tmpDir, "profile");
+    dir = path.join(tmpDir, ".digismith");
+    fs.mkdirSync(dir);
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("returns undefined for a missing file", () => {
-    expect(readProfile(profilePath)).toBeUndefined();
+  it("returns undefined when no profile is set", () => {
+    expect(readProfile(dir)).toBeUndefined();
   });
 
-  it("returns the trimmed content of an existing file", () => {
-    fs.writeFileSync(profilePath, "emma\n");
-    expect(readProfile(profilePath)).toBe("emma");
+  it("reads profile from config.yml", () => {
+    fs.writeFileSync(path.join(dir, "config.yml"), "profile: emma\n");
+    expect(readProfile(dir)).toBe("emma");
   });
 
-  it("returns undefined for a whitespace-only file", () => {
-    fs.writeFileSync(profilePath, "   \n");
-    expect(readProfile(profilePath)).toBeUndefined();
+  it("falls back to the trimmed content of .digismith/profile", () => {
+    fs.writeFileSync(path.join(dir, "profile"), "emma\n");
+    expect(readProfile(dir)).toBe("emma");
   });
 
-  it("throws on a genuine read error other than a missing file", () => {
-    fs.writeFileSync(profilePath, Buffer.from([0xff, 0xfe]));
-    expect(() => readProfile(profilePath)).toThrow();
+  it("returns undefined for a whitespace-only old profile file", () => {
+    fs.writeFileSync(path.join(dir, "profile"), "   \n");
+    expect(readProfile(dir)).toBeUndefined();
+  });
+
+  it("throws a ConfigError for an old profile file that is not UTF-8", () => {
+    fs.writeFileSync(path.join(dir, "profile"), Buffer.from([0xff, 0xfe]));
+    expect(() => readProfile(dir)).toThrow(ConfigError);
   });
 });
 
@@ -199,12 +201,13 @@ describe("buildLineagePointer", () => {
 
 describe("buildBanner", () => {
   let tmpDir: string;
-  let profilePath: string;
+  let dir: string;
   let voiceInitPath: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-init-test-"));
-    profilePath = path.join(tmpDir, "profile");
+    dir = path.join(tmpDir, ".digismith");
+    fs.mkdirSync(dir);
     voiceInitPath = path.join(tmpDir, "voice-init.ts");
   });
 
@@ -213,21 +216,21 @@ describe("buildBanner", () => {
   });
 
   it("returns null when there's no profile", async () => {
-    expect(await buildBanner(profilePath, voiceInitPath)).toBeNull();
+    expect(await buildBanner(dir, voiceInitPath)).toBeNull();
   });
 
   it("returns the profile-only banner when voice-init.ts doesn't exist", async () => {
-    fs.writeFileSync(profilePath, "emma\n");
-    expect(await buildBanner(profilePath, voiceInitPath)).toBe("DigiSmith: profile=emma");
+    fs.writeFileSync(path.join(dir, "config.yml"), "profile: emma\n");
+    expect(await buildBanner(dir, voiceInitPath)).toBe("DigiSmith: profile=emma");
   });
 
   it("includes the voice summary when voice-init.ts resolves one", async () => {
-    fs.writeFileSync(profilePath, "emma\n");
+    fs.writeFileSync(path.join(dir, "config.yml"), "profile: emma\n");
     fs.writeFileSync(
       voiceInitPath,
       "export default async function (): Promise<string | null> { return 'conversational'; }\n",
     );
-    expect(await buildBanner(profilePath, voiceInitPath)).toBe("DigiSmith: profile=emma, voices=conversational");
+    expect(await buildBanner(dir, voiceInitPath)).toBe("DigiSmith: profile=emma, voices=conversational");
   });
 });
 
@@ -268,9 +271,32 @@ describe("main (CLI)", () => {
     expect(logSpy).toHaveBeenCalledWith("DigiSmith: profile=emma, voices=technical+conversation");
   });
 
-  it("surfaces a stderr warning and a non-zero exit code on an unexpected read error", async () => {
+  it("prints the banner from config.yml", async () => {
     fs.mkdirSync(path.join(tmpDir, ".digismith"));
-    fs.writeFileSync(path.join(tmpDir, ".digismith", "profile"), Buffer.from([0xff, 0xfe]));
+    fs.writeFileSync(path.join(tmpDir, ".digismith", "config.yml"), "profile: emma\n");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await main();
+
+    expect(logSpy).toHaveBeenCalledWith("DigiSmith: profile=emma, voices=technical+conversation");
+  });
+
+  it("prints one warning line and exits 0 on a config.yml parse error", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".digismith"));
+    fs.writeFileSync(path.join(tmpDir, ".digismith", "config.yml"), "profile digismith\n");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await main();
+
+    expect(logSpy).toHaveBeenCalledWith(
+      "DigiSmith: warning: .digismith/config.yml line 1: expected 'key: value'",
+    );
+    expect(logSpy.mock.calls.flat().some((line) => String(line).startsWith("DigiSmith: profile="))).toBe(false);
+    expect(process.exitCode).not.toBe(1);
+  });
+
+  it("keeps a stderr failure and exit code 1 for an error that is not a config error", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".digismith", "config.yml"), { recursive: true });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await main();
@@ -279,22 +305,22 @@ describe("main (CLI)", () => {
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("session-init: failed"));
   });
 
-  it("still prints the attribution reminder when buildBanner throws, in DigiSmith's own repo", async () => {
+  it("still prints the attribution reminder and the lineage pointer on a config error", async () => {
     fs.mkdirSync(path.join(tmpDir, ".claude-plugin"));
     fs.writeFileSync(
       path.join(tmpDir, ".claude-plugin", "plugin.json"),
       JSON.stringify({ name: "digismith", version: "1.0.0" }),
     );
-    fs.mkdirSync(path.join(tmpDir, ".digismith"));
+    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
     fs.writeFileSync(path.join(tmpDir, ".digismith", "profile"), Buffer.from([0xff, 0xfe]));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await main();
 
     expect(logSpy).toHaveBeenCalledWith("DigiSmith: no AI attribution in commits or PRs — no exceptions");
-    expect(process.exitCode).toBe(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("session-init: failed"));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("DigiSmith: lineage handoff notes in"));
+    expect(logSpy).toHaveBeenCalledWith("DigiSmith: warning: .digismith/profile: not valid UTF-8");
+    expect(process.exitCode).not.toBe(1);
   });
 
   it("prints the attribution reminder in DigiSmith's own repo even with no profile", async () => {
