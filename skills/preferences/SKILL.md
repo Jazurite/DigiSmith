@@ -102,7 +102,7 @@ Prints the value on stdout, or the literal `unset` if the key was never set or n
 node --experimental-strip-types <digismith-repo>/scripts/preferences.ts --key <key> --action set --value <value>
 ```
 
-Writes `<value>` to `preferences.<key>` in `.digismith/config.yml`, creating the file (with the header comment), its folder and the `preferences:` heading when needed. It edits in place, so other keys, comments and order stay. If a migration ran first, its report lines print before the confirmation.
+Writes `<value>` to `preferences.<key>` in `.digismith/config.yml`, creating the file (with the header comment), its folder and the `preferences:` heading when needed. It edits in place, so other keys, comments and order stay. If a migration ran first, its report lines print before the confirmation. Prints `preferences: set <key>=<value>` on success.
 
 ### `clear`
 
@@ -140,6 +140,10 @@ Copying `.digismith/config.yml` (and any old `.digismith/profile` or `.digismith
 | `.digismith/config.yml` does not parse, or is not UTF-8 | Fails with `preferences: failed (<file> line <n>: <reason>)` or `(<file>: not valid UTF-8)`, exit 1. Relay the message; don't guess a fix. |
 | Write in a linked worktree that still has an old file | Fails and names the main checkout to migrate. Nothing changes. |
 | Write where git tracks an old file | Fails and prints the migrate and commit commands. Nothing changes. |
+| `get` on a key that was never set | Returns `unset`, not an error. |
+| `clear` on a key that was never set | Silent no-op; still reports `preferences: cleared <key>` (never `unset`, never an error). |
+| `set` invoked without `--value` | Fails clearly (`preferences: failed (missing required flag: --value)`), exit 1. Never silently sets an empty string. |
+| Target path gitignored in this repo | Write still succeeds; committing is simply skipped by whatever flow would otherwise commit it. Never force-added. |
 
 ## Out of Scope
 

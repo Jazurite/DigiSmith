@@ -97,7 +97,7 @@ used by this skill's own test suite, but it's not the only purpose.
 ## Out of Scope
 
 - A per-repo override tier — these are Jack's own defaults, not project
-  config, unlike map item H's `.digismith/preferences.yml`.
+  config, unlike map item H's `.digismith/config.yml`.
 - A single-key `get` operation — the store stays small and is always read as
   a unit via `list`; add one only if a real need for it shows up.
 - Any trigger point beyond `digismith:brainstorming` — deferred, see
