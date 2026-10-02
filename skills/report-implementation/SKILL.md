@@ -343,7 +343,7 @@ instruction line: "Substitute each `{{PLACEHOLDER}}` with the labeled
 value above exactly — escaping is already applied, don't re-escape;
 return only the complete HTML document, nothing else." Run:
 `node scripts/model_offload.ts --prompt-file <prompt-file>
---profile-path .digismith/profile`. On exit 0, use its stdout as
+--dir .digismith`. On exit 0, use its stdout as
 `report.html`'s content verbatim — the script already validated it's a
 complete, fully-substituted HTML document and exits non-zero if it isn't
 — and skip the manual substitution below, continuing straight to Step 4.

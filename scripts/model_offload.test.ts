@@ -31,8 +31,9 @@ describe("readProfileProvider", () => {
     profileYml = join(tempRepoDir, "profiles", "digismith.yml");
     writeFileSync(profileYml, "name: digismith\nmodel_offload_provider: chutes\n");
 
-    pointerFile = join(tempRepoDir, "profile-pointer");
-    writeFileSync(pointerFile, "digismith");
+    pointerFile = join(tempRepoDir, ".digismith");
+    mkdirSync(pointerFile);
+    writeFileSync(join(pointerFile, "profile"), "digismith");
 
     originalCwd = process.cwd();
     process.chdir(tempRepoDir);
@@ -44,7 +45,7 @@ describe("readProfileProvider", () => {
   });
 
   it("returns null for a missing pointer file", () => {
-    expect(readProfileProvider("/nonexistent/path/profile")).toBeNull();
+    expect(readProfileProvider("/nonexistent/path/.digismith")).toBeNull();
   });
 
   it("returns the field value when present", () => {
@@ -64,6 +65,17 @@ describe("readProfileProvider", () => {
   it("unwraps a quoted value", () => {
     writeFileSync(profileYml, 'name: digismith\nmodel_offload_provider: "chutes"\n');
     expect(readProfileProvider(pointerFile)).toBe("chutes");
+  });
+
+  it("reads the profile from config.yml", () => {
+    writeFileSync(join(pointerFile, "profile"), "other");
+    writeFileSync(join(pointerFile, "config.yml"), "profile: digismith\n");
+    expect(readProfileProvider(pointerFile)).toBe("chutes");
+  });
+
+  it("returns null when config.yml does not parse", () => {
+    writeFileSync(join(pointerFile, "config.yml"), "oops\n");
+    expect(readProfileProvider(pointerFile)).toBeNull();
   });
 
   it("handles an indented, quoted value with a trailing comment", () => {
@@ -113,8 +125,9 @@ describe("offload", () => {
     mkdirSync(join(tempRepoDir, "profiles"), { recursive: true });
     profileYml = join(tempRepoDir, "profiles", "digismith.yml");
     writeFileSync(profileYml, "name: digismith\nmodel_offload_provider: chutes\n");
-    profilePath = join(tempRepoDir, "profile-pointer");
-    writeFileSync(profilePath, "digismith");
+    profilePath = join(tempRepoDir, ".digismith");
+    mkdirSync(profilePath);
+    writeFileSync(join(profilePath, "config.yml"), "profile: digismith\n");
     originalCwd = process.cwd();
     process.chdir(tempRepoDir);
 

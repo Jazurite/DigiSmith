@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, requireArgs } from "./cli-args.ts";
+import { resolve } from "./config.ts";
 import { resolveProvider } from "./providers/registry.ts";
 import type { GatewayProvider } from "./providers/types.ts";
 
@@ -43,12 +44,11 @@ export function parseFieldValue(line: string): string {
   return beforeComment.trim().replace(/^['"]+|['"]+$/g, "");
 }
 
-export function readProfileProvider(profilePath: string): string | null {
-  if (!isFile(profilePath)) return null;
-
-  let profileName: string;
+export function readProfileProvider(dir: string): string | null {
+  let profileName: string | undefined;
   try {
-    profileName = readUtf8Strict(profilePath).trim();
+    const value = resolve("profile", dir)?.value;
+    profileName = typeof value === "string" ? value : undefined;
   } catch {
     return null;
   }
@@ -179,8 +179,8 @@ export function hasExpectedHtmlShape(content: string): boolean {
 
 export type OffloadResult = [string | null, string];
 
-export async function offload(prompt: string, profilePath: string): Promise<OffloadResult> {
-  const providerName = readProfileProvider(profilePath);
+export async function offload(prompt: string, dir: string): Promise<OffloadResult> {
+  const providerName = readProfileProvider(dir);
   const provider = providerName ? resolveProvider(providerName) : undefined;
 
   if (!provider) {
@@ -232,7 +232,7 @@ export async function main(): Promise<void> {
     return;
   }
 
-  const profilePath = args["profile-path"] ?? ".digismith/profile";
+  const dir = args.dir ?? ".digismith";
 
   let prompt: string;
   try {
@@ -245,7 +245,7 @@ export async function main(): Promise<void> {
     return;
   }
 
-  const [content, status] = await offload(prompt, profilePath);
+  const [content, status] = await offload(prompt, dir);
   console.error(status);
 
   if (content === null) {
