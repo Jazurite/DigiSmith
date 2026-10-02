@@ -92,6 +92,7 @@
 <tr><td>Global layer</td><td>Later. The reader keeps an ordered list of layers, so a global layer is a one-line addition.</td></tr>
 <tr><td>Old files</td><td>Readable through a fallback until a follow-up removal ticket. <code>migrate</code> runs on the main checkout. Old worktrees keep the fallback until they are removed.</td></tr>
 <tr><td>Flat or nested</td><td>Top-level keys plus one level of headings, addressed as <code>heading.key</code>.</td></tr>
+<tr><td>Key layout</td><td>The top level holds only the identity keys <code>profile</code> and <code>role</code>. Preference keys live under a <code>preferences:</code> heading, addressed as <code>preferences.&lt;key&gt;</code>. <code>digismith:preferences</code> keeps the bare key names.</td></tr>
 <tr><td>SessionStart hook</td><td><code>scripts/session-init.ts</code> reads the profile through the shared reader. Its output stays the same.</td></tr>
 <tr><td>Approach</td><td>New <code>scripts/config.ts</code>. <code>preferences.ts</code> becomes a thin wrapper. Skills read the YAML file directly with one shared sentence.</td></tr>
 <tr><td>Auto-commit</td><td>No commit on the base branch. This ticket's branch migrates DigiSmith's own repo as part of the feature.</td></tr>
@@ -103,23 +104,36 @@
 <p>One <code>.digismith/config.yml</code> per checkout. Example:</p>
 <pre><code># DigiSmith config for this checkout. Edit by hand or through digismith:preferences.
 profile: digismith
-role: worker
-finish_option: merge_locally
-ssh_key: /root/.ssh/jazurite_github
+role: worker                 # illustration only: DGS-139 decides the role key
 
-maestro:
+preferences:
+  finish_option: merge_locally
+  clear_context: no
+  ssh_key: /root/.ssh/jazurite_github
+  technical_voice: on
+  conversation_voice: on
+
+maestro:                     # illustration only: DGS-139 decides any maestro block
   poll_interval: 60
   watch_sessions:
     - DigiSmith
     - emma</code></pre>
+<p>The <code>role</code> line and the <code>maestro</code> block show the grammar only. Their keys and values belong to DGS-139 and are not decided here.</p>
+
+<h3>Key layout</h3>
+<ul>
+  <li>The top level holds only the identity keys: <code>profile</code> (O.0) and <code>role</code> (O.3).</li>
+  <li>Preference keys (O.1, T) live under the <code>preferences:</code> heading: <code>preferences.finish_option</code>, <code>preferences.clear_context</code>, <code>preferences.ssh_key</code>, <code>preferences.technical_voice</code>, <code>preferences.conversation_voice</code>.</li>
+  <li>The parser does not enforce this layout. It is the convention that <code>migrate</code>, the writer and the wrapper follow.</li>
+</ul>
 
 <h3>Grammar</h3>
 <div class="table-wrap"><table>
 <tr><th>Line</th><th>Example</th><th>Result</th></tr>
 <tr><td>Blank line or <code>#</code> comment</td><td><code># note</code></td><td>Ignored</td></tr>
 <tr><td>Top-level key</td><td><code>profile: digismith</code></td><td><code>profile</code> → <code>"digismith"</code></td></tr>
-<tr><td>Heading: <code>key:</code> with no value, next significant line is <code>key: value</code> indented 2 spaces</td><td><code>maestro:</code></td><td>Opens section <code>maestro</code></td></tr>
-<tr><td>Key in a section, exactly 2 spaces</td><td><code>&nbsp;&nbsp;poll_interval: 60</code></td><td><code>maestro.poll_interval</code> → <code>"60"</code></td></tr>
+<tr><td>Heading: <code>key:</code> with no value, next significant line is <code>key: value</code> indented 2 spaces</td><td><code>preferences:</code></td><td>Opens section <code>preferences</code></td></tr>
+<tr><td>Key in a section, exactly 2 spaces</td><td><code>&nbsp;&nbsp;finish_option: merge_locally</code></td><td><code>preferences.finish_option</code> → <code>"merge_locally"</code></td></tr>
 <tr><td>Array: <code>key:</code> with no value, next significant line is <code>- item</code> indented 2 spaces (top level) or 4 spaces (in a section)</td><td><code>&nbsp;&nbsp;- https://a.com</code></td><td><code>key</code> → <code>["https://a.com"]</code></td></tr>
 </table></div>
 <p>A "significant line" is a line that is not blank and not a comment.</p>
@@ -155,15 +169,16 @@ maestro:
 <p><code>scripts/config.ts</code> exports these functions. Each takes the <code>.digismith</code> folder, default <code>.digismith</code> under the current folder.</p>
 <ul>
   <li><code>readConfig(dir)</code>: parse <code>config.yml</code>. A missing file gives an empty map.</li>
-  <li><code>resolve(key, dir)</code>: return <code>{ value, source }</code>, or <code>undefined</code>.</li>
+  <li><code>resolve(key, dir)</code>: return <code>{ value, source }</code>, or <code>undefined</code>. <code>key</code> is the full address, for example <code>profile</code> or <code>preferences.finish_option</code>.</li>
   <li><code>setKey(key, value, dir)</code> and <code>clearKey(key, dir)</code>.</li>
   <li><code>migrate(dir)</code>: see section 4.</li>
 </ul>
+<p>CLI: <code>config.ts --action get|set|clear|migrate [--key &lt;full key&gt;] [--value &lt;v&gt;] [--dir &lt;.digismith folder&gt;]</code>. <code>bootstrap</code> writes the profile with <code>--key profile</code>.</p>
 
 <h3>Read order (per key, first hit wins)</h3>
 <ol>
   <li><code>.digismith/config.yml</code></li>
-  <li>The old files. <code>profile</code> comes from <code>.digismith/profile</code>, read as <code>readProfile</code> reads it today: strict UTF-8, trimmed, empty means unset. Every other key comes from <code>.digismith/preferences.yml</code>, read with the same parser (today's flat file is valid in the subset).</li>
+  <li>The old files. <code>profile</code> comes from <code>.digismith/profile</code>, read as <code>readProfile</code> reads it today: strict UTF-8, trimmed, empty means unset. Each <code>preferences.&lt;key&gt;</code> comes from the top-level <code>&lt;key&gt;</code> in <code>.digismith/preferences.yml</code>, read with the same parser (today's flat file is valid in the subset). No other key has an old source.</li>
 </ol>
 <p><code>source</code> names the file that supplied the value.</p>
 
@@ -175,12 +190,21 @@ maestro:
   <li><strong>Quoting.</strong> Plain when safe. Double quotes when the value is empty, has a leading or trailing space, starts with a quote, or contains <code> #</code>. Single quotes when the value contains <code>"</code>. A value with both quote types is an error.</li>
   <li><code>set</code> writes scalars only. Arrays are edited by hand until a key needs them.</li>
   <li><strong>Atomic.</strong> Each write goes to <code>.digismith/.config.yml.&lt;pid&gt;.tmp</code>, then a rename moves it to <code>config.yml</code>. A crash or two sessions writing at once never leaves a half-written file. With two writes at the same time, the last rename wins.</li>
-  <li><strong>Writes migrate first.</strong> In a main checkout that still has an old file, <code>setKey</code> and <code>clearKey</code> run <code>migrate</code> before they write. Without this, a <code>clear</code> would let the old value come back through the fallback. The output reports the migration and, where git tracks the old files, <code>commit needed</code>.</li>
-  <li><strong>Linked worktree guard.</strong> In a linked worktree (<code>git rev-parse --git-common-dir</code> differs from <code>--git-dir</code>) that still has an old file, <code>setKey</code> and <code>clearKey</code> stop and change nothing: <code>config: failed (this worktree still has .digismith/profile or preferences.yml. Run migrate in the main checkout &lt;path&gt;, then remove or recreate this worktree)</code>. Reads still work. A folder outside a git repo counts as a main checkout. The hook never writes, so it makes no git call.</li>
 </ul>
 
+<h3>Writes when an old file still exists</h3>
+<p>A write must not leave an old value that comes back through the fallback after a <code>clear</code>. <code>setKey</code> and <code>clearKey</code> therefore check the checkout first:</p>
+<div class="table-wrap"><table>
+<tr><th>Checkout</th><th>Action</th></tr>
+<tr><td>No old file</td><td>Write.</td></tr>
+<tr><td>Main checkout, old file not tracked by git (gitignored or untracked), or a folder outside a git repo</td><td>Run <code>migrate</code>, then write. The output reports the migration.</td></tr>
+<tr><td>Main checkout, git tracks an old file</td><td>Stop and change nothing. Print the <code>migrate</code> command and the commit commands from section 4, the same as <code>bootstrap</code> does. This follows Jack's no-auto-commit decision.</td></tr>
+<tr><td>Linked worktree (<code>git rev-parse --git-common-dir</code> differs from <code>--git-dir</code>) with an old file</td><td>Stop and change nothing: <code>config: failed (this worktree still has .digismith/profile or preferences.yml. Run migrate in the main checkout &lt;path&gt;, then remove or recreate this worktree)</code>.</td></tr>
+</table></div>
+<p>Reads work in every case. The hook never writes, so it makes no git call. A <code>--key profile</code> write in a tracked checkout with old files stops too. <code>bootstrap</code> then reports the commands and stops its first-use flow until the checkout is migrated.</p>
+
 <h3><code>preferences.ts</code> and <code>voice.ts</code></h3>
-<p><code>preferences.ts</code> becomes a thin wrapper over <code>config.ts</code>. It keeps <code>get</code>, <code>set</code>, <code>clear</code> and the <code>unset</code> output, and adds <code>migrate</code>. <code>--path</code> is replaced by <code>--dir</code> (the <code>.digismith</code> folder). Only <code>preferences.test.ts</code>, <code>voice.test.ts</code> and the <code>digismith:preferences</code> SKILL.md use <code>--path</code>. <code>voice.ts</code> keeps its API and reads through the wrapper.</p>
+<p><code>preferences.ts</code> becomes a thin wrapper over <code>config.ts</code>. It keeps <code>get</code>, <code>set</code>, <code>clear</code> and the <code>unset</code> output, and adds <code>migrate</code>. It keeps the bare key names: <code>--key finish_option</code> reads and writes <code>preferences.finish_option</code>. <code>voice.ts</code> and every other caller stay unchanged. <code>--path</code> is replaced by <code>--dir</code> (the <code>.digismith</code> folder). Only <code>preferences.test.ts</code>, <code>voice.test.ts</code> and the <code>digismith:preferences</code> SKILL.md use <code>--path</code>. <code>voice.ts</code> keeps its API and reads through the wrapper.</p>
 </section>
 
 <section id="migrate">
@@ -198,7 +222,7 @@ maestro:
       <tr><td>absent</td><td>absent</td><td>Nothing to do</td></tr>
     </table></div>
     If no file needs migration, print <code>config: nothing to migrate</code> and exit 0.</li>
-  <li>Read <code>config.yml</code> (if present) and each old file to migrate. Add each old key that <code>config.yml</code> does not have, through the in-place writer, <code>profile</code> first. A key in both files with different values: <code>config.yml</code> wins, the output lists the conflict, and the old value stays in the <code>.migrated</code> copy.</li>
+  <li>Read <code>config.yml</code> (if present) and each old file to migrate. Add each old key that <code>config.yml</code> does not have, through the in-place writer: <code>profile</code> as a top-level key, and each <code>preferences.yml</code> key <code>&lt;key&gt;</code> as <code>preferences.&lt;key&gt;</code> under the <code>preferences:</code> heading, in the old file's order. Comments in the old files are not carried over. They stay in the <code>.migrated</code> copies. A key in both files with different values: <code>config.yml</code> wins, the output lists the conflict, and the old value stays in the <code>.migrated</code> copy.</li>
   <li>Write <code>config.yml</code> atomically.</li>
   <li>Rename each migrated file: <code>profile</code> → <code>profile.migrated</code>, <code>preferences.yml</code> → <code>preferences.yml.migrated</code>. The removal ticket deletes the <code>.migrated</code> copies.</li>
   <li>Report the keys moved, conflicts, and files moved aside. Where git tracks the old files, print <code>commit needed</code> and the commands from the box below. <code>migrate</code> never commits.</li>
@@ -206,10 +230,10 @@ maestro:
 <p><strong>Recovery.</strong> A crash between any two steps is safe. A rerun skips files already moved, finds equal values in both places, and finishes the rest.</p>
 
 <div class="callout">
-<p><strong>Commit commands printed where git tracks the old files</strong> (they stage only the three paths, never other untracked files in <code>.digismith/</code>):</p>
+<p><strong>Commit commands printed where git tracks the old files</strong> (they stage only <code>config.yml</code> and the old paths that this run moved, never other untracked files in <code>.digismith/</code>):</p>
 <pre><code>git add .digismith/config.yml .digismith/profile .digismith/profile.migrated .digismith/preferences.yml .digismith/preferences.yml.migrated
 git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
-<p>The printed <code>git add</code> lists only the old files that this run moved.</p>
+<p>This box shows the case where both old files moved. When only one file moved, the printed <code>git add</code> lists <code>config.yml</code> and that file's two paths.</p>
 </div>
 
 <h3>Where migrate runs</h3>
@@ -220,7 +244,7 @@ git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
       <li>Tracked: do not migrate. Print the <code>migrate</code> command and the commit commands above, keep reading through the fallback, and continue the ticket flow.</li>
     </ul></li>
   <li><strong>Directly</strong>, through <code>digismith:preferences</code> ("migrate this repo's config").</li>
-  <li><strong>DigiSmith's own repo, in this ticket's branch, by hand.</strong> DigiSmith is the only known repo that tracks <code>.digismith/</code>. The branch is a linked worktree, so the guard blocks the command there. The plan adds <code>.digismith/config.yml</code> and runs <code>git mv</code> on the two old files to <code>*.migrated</code>, in a normal commit that merges with the branch. A test checks that the committed <code>config.yml</code> equals the output of <code>migrate</code> run on the <code>.migrated</code> files.</li>
+  <li><strong>DigiSmith's own repo, in this ticket's branch, by hand.</strong> DigiSmith is the only known repo that tracks <code>.digismith/</code>. The branch is a linked worktree, so the guard blocks the command there. The plan adds <code>.digismith/config.yml</code> (<code>profile</code> at the top level, the three current keys under <code>preferences:</code>) and runs <code>git mv</code> on the two old files to <code>*.migrated</code>, in a normal commit that merges with the branch. A test checks that the committed <code>config.yml</code> equals the output of <code>migrate</code> run on the <code>.migrated</code> files.</li>
 </ul>
 
 <h3>Pre-migration worktrees</h3>
@@ -239,18 +263,31 @@ git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
   <li><code>toolchain.ts</code>: no change.</li>
 </ul>
 
-<h3>The profile rule</h3>
-<p>Each of these 7 skills replaces its own <code>.digismith/profile</code> check with this exact sentence, word for word: <code>init</code>, <code>capture-ephemeral-url</code>, <code>inject-standards</code>, <code>jira-progress-write-back</code>, <code>report-implementation</code>, <code>brainstorming</code>, <code>writing-plans</code>.</p>
+<h3>The profile rules</h3>
+<p>Skills test whether a profile exists and read its name. After migration <code>.digismith/profile</code> is gone, so a test for that file alone would turn profiling off without a warning. Two exact sentences replace both kinds of check. Each skill copies them word for word.</p>
 <div class="callout">
-<p>Read <code>profile</code> from <code>.digismith/config.yml</code>, or from <code>.digismith/profile</code> when <code>config.yml</code> or its <code>profile</code> key is missing (A.2 fallback).</p>
+<p><strong>Presence:</strong> A profile is present when <code>.digismith/config.yml</code> has a <code>profile</code> key, or when <code>.digismith/profile</code> exists (A.2 fallback).</p>
+<p><strong>Read:</strong> Read <code>profile</code> from <code>.digismith/config.yml</code>, or from <code>.digismith/profile</code> when <code>config.yml</code> or its <code>profile</code> key is missing (A.2 fallback).</p>
 </div>
-<p>The removal ticket finds every copy with <code>grep -rn "(A.2 fallback)" skills</code>. Where <code>config.yml</code> cannot be read, a skill handles it the way it handles a stale profile today.</p>
+<div class="table-wrap"><table>
+<tr><th>Skill</th><th>Where</th><th>Presence</th><th>Read</th></tr>
+<tr><td><code>init</code></td><td>Step 0 branches 2 and 3, Error Handling</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>bootstrap</code></td><td>Step 0 present/missing first-use branch</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>adopt</code></td><td>Step 2 profile check</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>capture-ephemeral-url</code></td><td>Step 0 profile pre-check</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>inject-standards</code></td><td>Step 0 profile gate</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>jira-progress-write-back</code></td><td>Step 0 profile pre-check</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>report-implementation</code></td><td>Prerequisites and Step 1</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>brainstorming</code></td><td>"DigiSmith-tracked work" test</td><td>yes</td><td>no</td></tr>
+<tr><td><code>writing-plans</code></td><td>"DigiSmith-tracked work" test</td><td>yes</td><td>no</td></tr>
+</table></div>
+<p>The plan confirms each location with <code>grep -rn ".digismith/profile" skills</code>. The removal ticket finds every copy with <code>grep -rn "(A.2 fallback)" skills</code>. Where <code>config.yml</code> cannot be read, a skill handles it the way it handles a stale profile today.</p>
 
 <h3>Other skills</h3>
 <ul>
-  <li><code>bootstrap</code>: Step 0 gets the migrate check (section 4). First use writes <code>profile</code> through <code>config.ts set</code>. Steps 2.6 and 2.8 become one copy step: each of <code>config.yml</code>, <code>profile</code> and <code>preferences.yml</code> that exists in the main checkout but not in the worktree is copied in. Never <code>git add -f</code>.</li>
+  <li><code>bootstrap</code>: Step 0 gets the migrate check (section 4). First use writes <code>profile</code> through <code>config.ts --action set --key profile</code>. Steps 2.6 and 2.8 become one copy step: each of <code>config.yml</code>, <code>profile</code> and <code>preferences.yml</code> that exists in the main checkout but not in the worktree is copied in. Never <code>git add -f</code>.</li>
   <li><code>adopt</code>: Step 0 gets the same migrate check. Step 5 gets the same copy step.</li>
-  <li><code>preferences</code>: the Storage section describes <code>config.yml</code>, the grammar and the fallback. Add the <code>migrate</code> operation and <code>--dir</code>.</li>
+  <li><code>preferences</code>: the Storage section describes <code>config.yml</code>, the <code>preferences:</code> heading, the grammar and the fallback. Its operations keep the bare key names. Add the <code>migrate</code> operation and <code>--dir</code>.</li>
   <li><code>offload-implementer</code>, <code>voice</code>, <code>toolchain</code>: update only their mentions of the old paths.</li>
 </ul>
 </section>
@@ -260,15 +297,15 @@ git commit -m "chore(config): migrate to .digismith/config.yml"</code></pre>
 <h3>New: <code>scripts/config.test.ts</code></h3>
 <ul>
   <li>Parser: one case per grammar row and per error (with line number), CRLF, BOM, <code> #</code> inside quotes, <code>#</code> inside a URL.</li>
-  <li>Reader: layer order, <code>source</code>, old <code>profile</code> read (trimmed, empty, invalid UTF-8).</li>
+  <li>Reader: layer order, <code>source</code>, old <code>profile</code> read (trimmed, empty, invalid UTF-8), and the old <code>preferences.yml</code> key <code>&lt;key&gt;</code> resolved as <code>preferences.&lt;key&gt;</code>.</li>
   <li>Writer: comments kept, insertion points, empty heading removed, quoting choices, the both-quotes error, no <code>.tmp</code> file left after a write.</li>
-  <li>Worktree guard against a real temporary repo with <code>git worktree add</code>.</li>
-  <li><code>migrate</code>: the four file states, conflicts, rerun after a partial run, tracked-file message with the exact <code>git add</code> paths.</li>
+  <li>The four write cases in section 3 (no old file, untracked old file, tracked old file, linked worktree), against a real temporary repo with <code>git worktree add</code>. The two stop cases change no file.</li>
+  <li><code>migrate</code>: the four file states, old preference keys written under <code>preferences:</code> in order, <code>profile</code> at the top level, conflicts, rerun after a partial run, tracked-file message with the exact <code>git add</code> paths for one and for two moved files.</li>
   <li>Repo migration: the committed <code>.digismith/config.yml</code> equals the output of <code>migrate</code> on the <code>.migrated</code> files.</li>
 </ul>
 <h3>Changed</h3>
 <ul>
-  <li><code>preferences.test.ts</code>, <code>voice.test.ts</code>: <code>--dir</code>, same outputs.</li>
+  <li><code>preferences.test.ts</code>, <code>voice.test.ts</code>: <code>--dir</code>, same outputs. A bare <code>--key finish_option</code> reads and writes <code>preferences.finish_option</code>.</li>
   <li><code>session-init.test.ts</code>: banner from <code>config.yml</code>, banner from the old file, parse-error warning with the rest of the output intact.</li>
   <li><code>model_offload</code> tests: <code>--dir</code>.</li>
 </ul>
