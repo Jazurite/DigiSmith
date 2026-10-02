@@ -17,7 +17,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Save plans to:**
 
-A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile.
 
 - **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
   `"name": "digismith"`, or a profile is present) — `.digismith/docs/<slug>/plan.md`

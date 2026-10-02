@@ -51,7 +51,7 @@ exists here, check each one with `git ls-files --error-unmatch -- <file>`
 
 **Present** → Read `profile` from `.digismith/config.yml`, or from
 `.digismith/profile` when `config.yml` or its `profile` key is missing
-(A.2 fallback). Use that value as the active profile name.
+(A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name.
 Validate it against `profiles/<name>.yml` (see Locating DigiSmith's Repo
 below) — no matching file → treat as stale, fall through to the
 first-use flow below instead of guessing.

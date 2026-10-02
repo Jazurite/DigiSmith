@@ -58,7 +58,7 @@ Check, in order:
    branch name as-is. Check whether `.digismith/docs/<slug>/plan.md`
    exists.
    - **Exists** → this worktree was already fully set up by DigiSmith for
-     this specific ticket. Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as
+     this specific ticket. Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as
      `<name>` and report plainly:
 
      ```

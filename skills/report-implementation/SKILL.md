@@ -57,7 +57,7 @@ profile in the repo currently being worked in (never DigiSmith's own
 repo, which only hosts this skill). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
 
 - **Missing** → proceed exactly as today; this gate does nothing.
-- **Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). Use that value as the active profile name,
+- **Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name,
   then locate DigiSmith's own repo — same rule
   `digismith:inject-standards` uses for `standards/`: is the current
   working directory itself the DigiSmith repo
