@@ -85,6 +85,7 @@
     <li><a href="#chars">9. Non-ASCII characters: build and parse rules</a></li>
     <li><a href="#dgs159">10. Input list for DGS-159</a></li>
     <li><a href="#open">11. Open items</a></li>
+    <li><a href="#brief">12. The brief template</a></li>
   </ol>
 </nav>
 
@@ -370,6 +371,64 @@
     <tr><td>How the maestro merges same-named material from two workers</td><td>Out of this design's scope by
       Jack's own instruction — <code>backlog/maestro-merges-worker-material.md</code> covers it.</td></tr>
   </table></div>
+</section>
+
+<section id="brief">
+  <h2>12. The brief template</h2>
+  <p>Generalized from the two real specimens on disk: <code>.digismith/docs/E/E.3/brief.md</code> and
+  <code>.digismith/docs/E/E.4/brief.md</code>. The maestro always writes the brief; a worker never writes its
+  own. It lives at <code>.digismith/sessions/&lt;agent-name&gt;/brief.md</code> (section 3) and stays
+  git-excluded, same treatment as today's <code>handoff.md</code> pattern.</p>
+  <p>Required sections, in order, with no section skipped:</p>
+  <ol>
+    <li><strong>Title and intro.</strong> <code># Brief: &lt;TICKET-KEY&gt; &lt;short name&gt;</code>, then one
+      paragraph: who sent it (the maestro, naming its own Desktop session), when (UTC+7, UTC in brackets), the
+      worker's identity (its ticket key), its herdr agent name, its herdr session, its account, and its board
+      folder path. When the ticket runs two or more workers (section 5), the intro also names this worker's own
+      nested folder, <code>worker-&lt;agent-name&gt;/</code>.</li>
+    <li><strong>"You have a maestro"</strong> — standing collaboration rules, copied verbatim every time, never
+      paraphrased:
+      <pre><code>- A maestro supervises you. It answers routine questions. Jack answers the design questions,
+  in your pane or through the maestro.
+- Ask your questions as plain text at the end of your turn, one at a time. Do not use
+  AskUserQuestion forms: the maestro reads your pane, and a form is hard to read and answer
+  from outside.
+- Stop at every checkpoint below. Wait for "approved" before you continue.
+- Never post externally: no ClickUp, JIRA or Teams writes. The maestro does those.
+- Never push or merge until the maestro sends "approved: push".
+- Never delete a file permanently. Move it aside and report the path.
+- Never read or print a token. Work in a worktree under .worktrees/, not in the main checkout.
+- You keep no state across tickets: no handoff note, no resume. When you stop, report to the
+  maestro (see Report, below) and wait. The maestro closes you.
+- Write short, plain sentences (the repo's technical voice).</code></pre>
+    </li>
+    <li><strong>Goal.</strong> The ticket id and ClickUp list, the exact command to read it, and the scope —
+      ticket-specific.</li>
+    <li><strong>Context</strong> (optional, included only when there is one). Whatever the maestro already
+      decided, or explicitly has not, so the worker does not re-litigate or assume — named to fit the ticket
+      ("Decided so far," "Vocabulary," "Interim rules"), not a fixed heading.</li>
+    <li><strong>Sources to read first.</strong> A ticket-specific reading list.</li>
+    <li><strong>Checkpoints.</strong> A numbered list. "After the sources: tell the maestro what you read, what
+      is unclear, and your first question" is always the first one.</li>
+    <li><strong>Report.</strong> What the worker owes the maestro when it stops — at a checkpoint, or at the
+      end of the ticket — since the worker keeps no state once its workspace closes:
+      <pre><code>- Result: what you did, in one or two sentences.
+- Commit(s): the short hash and message of anything you committed.
+- Comment ids: any ClickUp/JIRA comment ids you asked the maestro to post (you never post
+  them yourself).
+- Files: what you wrote or changed, as paths.
+- Open questions: anything still unresolved, so the maestro can carry it forward. If it is
+  not in this report, it does not exist once your workspace closes.</code></pre>
+    </li>
+    <li><strong>Standing limits.</strong> Copied verbatim every time:
+      <pre><code>- If a call is blocked, stop and tell the maestro what was blocked. Do not rename the call,
+  split it, or send it to another agent to get around the block.
+- Memory is tight: check free -h before assuming headroom for another worker.
+- Times in UTC+7 first, UTC in brackets. Read date before you write a time.</code></pre>
+    </li>
+  </ol>
+  <p>This closes the long-standing "what does a worker report back" question: the Report section above is the
+  answer, baked into every brief from here on rather than re-asked per ticket.</p>
 </section>
 
 <footer>DigiSmith · .digismith/docs/E/E.3/worker-maestro-conventions/design.html</footer>
