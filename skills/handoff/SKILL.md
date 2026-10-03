@@ -99,8 +99,11 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
 ## Write Mode
 
 1. Resolve the note.
-2. If the current note exists, read it; if only the fallback note exists (path from
-   `--action path`), read that one. Carry forward only what is still true, typically
+2. A worker the maestro started with a brief writes no note: if this session's first message
+   told it to read a brief file, say so and stop. Otherwise, if the current note exists, read
+   it; if only the fallback note exists (path from `--action path`), read that one, and say it
+   came from the fallback, because the `_unlettered` note is shared and may belong to another
+   session. Carry forward only what is still true and belongs to this session, typically
    open problems not yet solved and decisions that still hold.
 3. Compose the note (see Note Format). Sources: this conversation; any plan ledger or
    `progress.md` for status (cross-check it, do not restate status from memory). For the header,
@@ -173,8 +176,8 @@ not available (plain CLI, no desktop app), tell the human partner to run `/clear
 ## Resume Mode
 
 1. Resolve the note.
-2. If it does not exist, say "No handoff note for this session at `<current path>`." (and the
-   fallback path, when one was tried) and stop. Do not read another session's note instead.
+2. If it does not exist, say "No handoff note for this session" and name every path tried (the
+   current path for a safe name, the fallback path when one was tried) and stop. Do not read another session's note instead.
 3. Read it. If the header has `main @ <sha>`, run
    `git -C <main-root> rev-list --count <sha>..HEAD` and report how many commits `main` has
    gained since the note. Skip this if the SHA is missing or unknown.

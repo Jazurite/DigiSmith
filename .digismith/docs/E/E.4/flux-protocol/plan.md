@@ -704,6 +704,8 @@ git commit -m "docs(handoff): find the maestro's note under .digismith/sessions 
 
 **3. Consistency:** the trigger word is `Arise` in Tasks 1, 3 and the template; the question text is "kicker open? flux now?" in Tasks 1 and 3; the Task 2 clause text equals design section 8's wording; the step IDs W1 to W3, S0 to S6 and M1 to M7 match the design.
 
+**Shipped differently from the text above (review polish).** The skill's tracked-path check uses `git --literal-pathspecs ls-files`, as the script does. A blank or whitespace title goes to step 5 (ask), not to the fallback. A worker started with a brief writes no note (Write step 2). A fallback note read for a safe name is reported as such, because the `_unlettered` note is shared.
+
 ## Execution handoff
 
 Do not start until the maestro sends "approved" for this plan (checkpoint 3). Part A has four tasks, so the writing-plans rule picks subagent-driven development, but the maestro's own rule (a worker builds, a maestro does not run builds itself) and the untracked runbook in Task 3 mean the maestro may prefer inline execution by this worker. The maestro decides at approval.
