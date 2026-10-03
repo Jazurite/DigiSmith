@@ -287,13 +287,14 @@ Rules:
 6. **The maestro keeps its seat:** a Desktop session on `dev0`. Running it as a herdr agent is ruled out (Jack). Only
    workers choose an account.
 
-#### Names (interim, until DGS-158)
+#### Names (worker names decided by Jack 2026-10-03 22:08 UTC+7; folders interim until DGS-158)
 
 Everything in the protocol that names a session, a workspace, an agent or a folder is in this block, so it changes in one
-place. Interim, from Jack's answers of 2026-10-03 21:38 UTC+7 [14:38Z]:
+place. The worker names are Jack's decision of 2026-10-03 22:08 UTC+7 [15:08Z]; the folders are still interim:
 
-- `<label>` (the worker's Claude session title and the workspace label): `DGS-<n> <short name>`, for example `DGS-154 Flux`.
-- Agent name: `dgs-<n>`. When one ticket has two workers, add a short word (`dgs-154-review`).
+- `<label>` (the worker's Claude session title and the workspace label): `<KEY> ⚚ <short name>` (the ⚚ is U+269A), for example
+  `DGS-158 ⚚ Ticket-based naming`.
+- `<agent>` (the herdr agent name): `<key>` in lowercase, for example `dgs-158`.
 - The maestro's own sessions keep their names (`DigiSmith`, `Emma`, `Soveron`). Never rename a maestro session.
 - `<docs folder>`, where the brief tells the worker to write its design, plan and report: `.digismith/docs/<Clan>/<Clan.N>/`.
 - `<brief path>`: the maestro's choice, for example `<docs folder>/brief.md`; named in the first prompt (S5).
