@@ -30,7 +30,7 @@ and "focus on the backlog for convention of worker / maestro first, can circle b
 
 The maestro's first pick was: worker names `DGS-<n> <short name>` (agent `dgs-<n>`), the docs folder named in the brief by the
 nested clan convention (`.digismith/docs/<Clan>/<Clan.N>/`), and the brief as a git-excluded `brief.md` in that folder. The
-worker names are kept as a starting point. The nested clan folders are dropped: the working files move to `.digismith/board/`
+worker names were replaced by Jack's decision below. The nested clan folders are dropped: the working files move to `.digismith/board/`
 (ticket files) and `.digismith/sessions/` (session files).
 
 ## Direction (Jack, 2026-10-03), layout still to design
@@ -41,6 +41,9 @@ worker names are kept as a starting point. The nested clan folders are dropped: 
 - The ticket key comes from its tracker: DGS-nnn (ClickUp), and the EMKT-nnn style keys of JIRA.
 - The folder name is the ticket key, an em dash (U+2014) with no spaces, then the title as a slug (Jack, 2026-10-03 21:59 UTC+7):
   `.digismith/board/DGS-158—ticket-based-naming-architecture/`.
+- Worker names (Jack, 2026-10-03 22:07 UTC+7 [15:07Z]): session title and workspace label `<KEY> ⚚ <short name>` (the ⚚ is U+269A),
+  for example `DGS-158 ⚚ Ticket-based naming`. Herdr agent name: the key in lowercase, for example `dgs-158`. Maestro sessions keep
+  their names. Open: a short word added to the agent name when one ticket has two workers (`dgs-154-comment`).
 - ClickUp's clan folders and lists stay as they are. The change is only for the `.digismith` folder in git (Jack, 22:00 UTC+7).
 - No ticket, no work: every idea gets a ticket first, so the `backlog/` files become tickets. Moving them is DGS-159.
 
