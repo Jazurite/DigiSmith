@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", start fresh, or clear context — writes this lineage's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume", "Arise" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
+description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", start fresh, or clear context — writes this session's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume", "Arise" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
 ---
 
 # Handoff
@@ -8,15 +8,21 @@ description: Use when the user asks to hand off, wrap up, checkpoint, "save wher
 ## Overview
 
 The last stage of DigiSmith's ticket workflow, and a checkpoint you can take at any time. Each
-lineage keeps one living note that says where the lineage stands now:
+maestro session keeps one living note that says where the session stands now:
 
 ```
-.digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.1: Primitives"  → A/A.1
-.digismith/docs/<Clan>/handoff.md              title "K: Maestro"       → K
-.digismith/docs/_unlettered/handoff.md         any other title
+.digismith/sessions/<session-name>/note.md     title "DigiSmith"        → DigiSmith  (current)
+.digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.1: Primitives"  → A/A.1      (fallback)
+.digismith/docs/<Clan>/handoff.md              title "K: Maestro"       → K          (fallback)
+.digismith/docs/_unlettered/handoff.md         any other title          (fallback)
 ```
 
-Every handoff rewrites the whole note. The next session of the lineage finds it from its own
+The first line is the convention of DGS-158. The three fallback lines are the old clan and
+lineage notes: the script, the SessionStart line and the exclude patterns still know only those
+until DGS-159 migrates them, so this skill text and `scripts/lineage-handoff.ts` differ on
+purpose. The fallback keeps existing notes working.
+
+Every handoff rewrites the whole note. The next session with the same name finds it from its own
 session title. Keep it short: the code, plan, and report carry the rest.
 
 Two modes:
@@ -25,7 +31,7 @@ Two modes:
   was asked for. **End-of-ticket mode** is write mode called by
   `digismith:finishing-a-development-branch` Step 7; it adds the cleanup round below and lets
   the `clear_context` preference decide the clear.
-- **Resume**: read this lineage's note, show where it stands and the candidate next steps, and ask which one to take. A resume never starts work.
+- **Resume**: read this session's note, show where it stands and the candidate next steps, and ask which one to take. A resume never starts work.
 
 ## Invoked By
 
@@ -39,7 +45,9 @@ Two modes:
   session's own key (from its title, same mapping as the Overview table) is among the keys the
   line lists. Otherwise ignore the line silently: no lookup, no mention of it. Also ignore it
   in a worker the maestro started with a brief (its first message tells it to read a brief
-  file): a worker has no note and no resume.
+  file): a worker has no note and no resume. That line is built by the script and lists only
+  fallback notes: a note at `.digismith/sessions/<session-name>/note.md` is found by "resume" or
+  "Arise", not by that line.
 
 ## The Script
 
@@ -55,25 +63,41 @@ node --experimental-strip-types <digismith-root>/scripts/lineage-handoff.ts --ac
 
 Wrap the title in single quotes, and write any `'` inside it as `'\''`.
 
-Run them from the repo being worked in: its main checkout or any of its worktrees. The script
-resolves the main checkout itself, so the note always lands in the main checkout's
-`.digismith/docs/`. `<main-root>` below is the note path up to `/.digismith/docs/`.
+The script only knows the fallback paths. `<main-root>` is the main checkout (the script
+resolves it for the fallback; for the current path use
+`git rev-parse --path-format=absolute --git-common-dir` and take its parent directory).
+
+Run them from the repo being worked in: its main checkout or any of its worktrees. The fallback
+note lands in the main checkout's `.digismith/docs/`, the current note in its
+`.digismith/sessions/`.
 
 ## Resolve the Note
 
-1. Call `mcp__ccd_session_mgmt__get_session` with `session_id: "self"` and read `title`.
-2. Run `--action path --title '<title>'`. The printed absolute path is this session's note. If it
-   fails because that path is tracked by git, stop: tell the human partner the note path holds a
-   file committed to git that this skill did not write, and do not read or write it.
-3. If the path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
-4. If `get_session` fails or there is no title, run `--action list` and ask which lineage this is,
-   offering the listed keys (e.g. `A.1`). Pass the answer as a title (e.g. listed key `A/A.1` →
-   `--title 'A.1:'`). Do not guess: a wrong key overwrites another lineage's note.
+1. Call `mcp__ccd_session_mgmt__get_session` with `session_id: "self"` and read `title`; that is
+   the session name.
+2. If the name is one safe path segment (non-empty, no `/` or `\`, not `.` or `..`, and not a
+   lineage-key title matching `^\s*[A-Z](\.\d+)?\s*(:|$)`, like "A.1: Primitives" or "K:
+   Maestro"), the current note path is `<main-root>/.digismith/sessions/<name>/note.md`. If git
+   tracks that path (`git -C <main-root> ls-files --error-unmatch -- <relative path>` exits 0),
+   stop: tell the human partner a file committed to git sits there which this skill did not
+   write, and do not read or write it.
+3. Write mode writes to the current path. Resume mode reads the current note if it exists, and
+   otherwise falls back: run `--action path --title '<title>'` and use that old note if it
+   exists. If that command fails because the fallback path is tracked by git, stop and tell the
+   human partner the same, and do not read or write it.
+4. If the name is not one safe path segment (or it is a lineage-key title), use the fallback path
+   from `--action path` for both modes, exactly as before, with the same stop if git tracks it.
+   If that path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
+5. If `get_session` fails or there is no title, run `--action list`, list the folders under
+   `.digismith/sessions/` that hold a `note.md`, and ask which session this is. Pass an answer
+   that is a fallback key as before (`A/A.1` → `--title 'A.1:'`). Do not guess: a wrong name
+   overwrites another session's note.
 
 ## Write Mode
 
 1. Resolve the note.
-2. If the note already exists, read it. Carry forward only what is still true, typically
+2. If the current note exists, read it; if only the fallback note exists (path from
+   `--action path`), read that one. Carry forward only what is still true, typically
    open problems not yet solved and decisions that still hold.
 3. Compose the note (see Note Format). Sources: this conversation; any plan ledger or
    `progress.md` for status (cross-check it, do not restate status from memory). For the header,
@@ -82,16 +106,19 @@ resolves the main checkout itself, so the note always lands in the main checkout
    - Sweep the conversation for unresolved threads: a pending question, a task mentioned but not
      started, something asked to be revisited.
    - Check each item that applies here:
-     - DigiSmith's own repo (`.claude-plugin/plugin.json` names `digismith`): the lineage's row
+     - DigiSmith's own repo (`.claude-plugin/plugin.json` names `digismith`): this session's row
        in `MEMORY.md` records this ticket.
      - The ticket is a ClickUp task (a `DGS-` key): its progress comment for this checkpoint is
        posted.
-     - Something was filed under another lineage: that lineage's session got a pointer message.
+     - Something was filed for another session: that session got a pointer message.
    - Put every open thread and every missing item under Open problems, one line each. Do not do
      the chores themselves.
-5. Run `--action ensure-excluded --title '<title>'`.
-6. Write the whole note to the resolved path. If the write fails, report it, do not clear, and
-   stop.
+5. For the fallback path, run `--action ensure-excluded --title '<title>'` as before. For the
+   current path, run `git -C <main-root> check-ignore -q --no-index <relative path>`; if it is
+   not ignored, say in the reply that the path is not git-excluded here yet (DGS-159 adds the
+   pattern) and that it must not be committed.
+6. Create the parent folder of the current path, then write the whole note to the resolved path.
+   If the write fails, report it, do not clear, and stop.
 7. Show the note in the reply.
 8. Decide whether to clear (next section).
 
@@ -143,8 +170,8 @@ not available (plain CLI, no desktop app), tell the human partner to run `/clear
 ## Resume Mode
 
 1. Resolve the note.
-2. If it does not exist, say "No handoff note for this lineage at `<path>`." and stop. Do not read
-   another lineage's note instead.
+2. If it does not exist, say "No handoff note for this session at `<current path>`." (and, for a
+   fallback title, the fallback path) and stop. Do not read another session's note instead.
 3. Read it. If the header has `main @ <sha>`, run
    `git -C <main-root> rev-list --count <sha>..HEAD` and report how many commits `main` has
    gained since the note. Skip this if the SHA is missing or unknown.
@@ -155,7 +182,7 @@ not available (plain CLI, no desktop app), tell the human partner to run `/clear
 ## Note Format
 
 ```markdown
-# <one line: what this lineage is doing>
+# <one line: what this session is doing>
 Updated <UTC time, e.g. 2026-09-26T10:40Z> · branch <current branch> · main @ <short sha>
 
 ## Done
@@ -181,7 +208,7 @@ The first line is always the H1 title. Exactly these four sections, in this orde
 | "The ticket's done, they'd obviously want a fresh start" | Only an explicit ask or a saved `yes` clears. Never infer it. |
 | "I'll clear now and summarize after" | The clear drops everything after this turn. Summary first, clear last. |
 | "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. The only exception is the yes to "kicker open? flux now?", which skips the gate but still does not clear here (Check Gate). |
-| "The title has no prefix; I can tell the lineage from the work" | A wrong key overwrites another lineage's note. An unmatched title goes to `_unlettered`; no title means ask. |
+| "The title has no prefix; I can tell the session from the work" | A wrong name overwrites another session's note. A title that is not one safe name goes through the fallback; no title means ask. |
 | "I'll append today's work under the old note" | Rewrite the whole note. Carry forward only what is still true. |
 | "The write failed, but I'll clear anyway" | The note is the only state that survives the clear. No note, no clear. |
 | "Resume found a note, so I'll start on Next" | Ask first. Days may have passed, and another session may have moved things. |

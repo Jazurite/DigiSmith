@@ -381,7 +381,7 @@ follow-up.
 If this session is a worker started with a brief, skip this step: no handoff note, no cleanup
 round, no clear question. The maestro closes the worker.
 
-Invoke `digismith:handoff` in end-of-ticket mode. It writes this lineage's handoff note, runs the
+Invoke `digismith:handoff` in end-of-ticket mode. It writes this session's handoff note (the maestro's `.digismith/sessions/<session-name>/note.md`, with the old lookup as a fallback, see that skill), runs the
 end-of-ticket cleanup round, and decides whether to clear this session using the repo's
 `clear_context` preference. This skill does nothing further after that.
 
