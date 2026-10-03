@@ -1,7 +1,7 @@
 # C: Platform: a lineage for the load balancer (name open: Accounts or Billing)
 
-**Status:** Open, Jack (2026-10-03). Migration ticket: **DGS-152** (Town Hall). No ClickUp list yet. Lists cannot be renamed from the CLI (DGS-137), so the name must be
-settled before the list is created.
+**Status:** Settled, Jack (2026-10-03): **Accounts**. The list `C.3: Accounts` (`1301150000002956`) exists and DGS-144 moved
+in the same day. Migration ticket: **DGS-152** (Town Hall). The text below is the reasoning that led to the choice.
 
 **Decision (Jack, 2026-10-03):** the load balancer (DGS-144, the subscription load balancer) moves to C: Platform. It leaves
 B.2. Jack still has to choose the lineage name. The new lineage would be `C.3`, after `C.0: Pavilion`, `C.1: Workbox` and

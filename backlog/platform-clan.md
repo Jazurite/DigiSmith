@@ -2,8 +2,10 @@
 
 **Status:** Created in ClickUp 2026-10-03 (Jack). Migration ticket: **DGS-152** (Town Hall). Folder `1301150000002449`, lists `C.0: Pavilion` (`1301150000002950`),
 `C.1: Workbox` (`1301150000002951`), `C.2: CLI` (`1301150000002952`) and `C.3: Accounts` (`1301150000002956`, Jack picked the
-name the same day). The lists have no description yet: the CLI
-cannot set one. Paste the drafts below, or use `dg clickup update-list` (DGS-137) when it exists. No ticket has moved in.
+name the same day). The four descriptions were set on 2026-10-03 with
+`dg clickup update-list` (DGS-137), from the drafts below. The same day the tickets moved in with `dg clickup move-task`
+(DGS-76): DGS-144 into C.3, DGS-106, DGS-107, DGS-109, DGS-131 and DGS-151 into C.1, and DGS-117 into C.2. DGS-153 was
+filed in C.1. Town Hall also got its name back (`Town Hall (` to `Town Hall`).
 
 **Rule (Jack, 2026-10-03):** lineage 0 of every clan is the Pavilion. For C that is `C.0: Pavilion`. The older clans
 (A, B, D, O) keep a separate "Pavilion" list and their own `.0` lineages (`A.0: Primitives`, `B.0: Maestro`,

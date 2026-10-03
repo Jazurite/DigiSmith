@@ -24,7 +24,9 @@ and most of them were not his to answer.
   `feedback_maestro-checkpoint-reviews`. Only decisions that are Jack's go to him: the approval rules in the maestro
   playbook (force-push, merge, live-theme change, Teams post, global theme-setting value, JIRA drafts, permanent
   deletes), scope and money, and anything the maestro cannot judge.
-- What stays in the maestro: backlog notes, runbook edits, ClickUp bookkeeping, handoffs, reviews, and answering workers.
+- What stays in the maestro: backlog notes, runbook edits, ClickUp bookkeeping, handoffs, and answering workers. Reviews do
+  not stay: Jack (2026-10-03) said the orchestrator only gives orders, so a review goes to a worker or a herdr pane (see the
+  2026-10-03 addition in `mcp-orchestration-architecture-xvk.md`).
 
 ## Enforcement options, not yet decided
 
