@@ -1,8 +1,9 @@
 # Rearchitect the naming conventions: ticket-based, `.digismith/board` and `.digismith/sessions` (was: conventions for the worker and the maestro)
 
-**Status:** Idea, Jack's call (2026-10-03). No design yet. ClickUp: **DGS-158** (list E.3: Conventions, created 2026-10-03
-21:41 UTC+7; its name and description still say "Worker and maestro conventions" and need an update). A worker (`dgs-158`)
-brainstorms the design.
+**Status:** Idea, Jack's call (2026-10-03). No design yet. ClickUp: **DGS-158** "Ticket-based naming architecture" (list E.3:
+Conventions, created 2026-10-03 21:41 UTC+7 as "Worker and maestro conventions", renamed 22:01). A worker (`dgs-158`)
+brainstorms the design. Follow-up: **DGS-159** moves the old `.digismith/docs/` content and the `backlog/` files to the new
+layout. This item is the convention only.
 
 **Scope change (Jack, 2026-10-03 21:50 UTC+7 [14:50Z]):** "We'll rearchitect the naming conventions for everything. Remove the
 clan and lineage naming conventions and migrate to a ticket-based system. Now the working files stay at `.digismith/board`.
@@ -38,6 +39,10 @@ worker names are kept as a starting point. The nested clan folders are dropped: 
 - `.digismith/sessions/` holds the files about sessions: the maestro, the workers and any other session. The Workbox runbook
   (`workbox.md`) already lives there.
 - The ticket key comes from its tracker: DGS-nnn (ClickUp), and the EMKT-nnn style keys of JIRA.
+- The folder name is the ticket key, an em dash (U+2014) with no spaces, then the title as a slug (Jack, 2026-10-03 21:59 UTC+7):
+  `.digismith/board/DGS-158—ticket-based-naming-architecture/`.
+- ClickUp's clan folders and lists stay as they are. The change is only for the `.digismith` folder in git (Jack, 22:00 UTC+7).
+- No ticket, no work: every idea gets a ticket first, so the `backlog/` files become tickets. Moving them is DGS-159.
 
 ## Open questions for the design
 
@@ -52,9 +57,6 @@ worker names are kept as a starting point. The nested clan folders are dropped: 
 - Docs folders for tickets with no lineage letter, and for one-off workers.
 - The limit stop: does it stay an exception that reuses the pane and the session (`--resume`)?
 - The names of the maestro sessions, and one maestro for each herdr session.
-- Does removing the clan naming reach ClickUp (the A to E folders and lists, such as E.3: Conventions)?
-- Where do ideas with no tracker key go (today they are files in `backlog/`), and does `backlog/` stay?
-- Migration of the old `.digismith/docs/` content (about 70 flat and nested folders): part of this ticket, or a follow-up?
 - Whether a worker's brief belongs to the ticket (`board`) or to the session (`sessions`).
 - What changes in the skills and scripts that read the lineage key or pick a docs folder from the map letter: the handoff skill,
   `scripts/session-init.ts`, `init`, `bootstrap`, `adopt`, `brainstorming`, `writing-plans`, `report-implementation`,
