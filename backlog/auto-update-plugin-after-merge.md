@@ -2,8 +2,7 @@
 
 **Status:** Idea, Jack's call (2026-10-03 22:24 UTC+7 [15:24Z]): "Update the plugin so my session has the new skill clauses. This
 should be done automatically next time, add backlog." Rewritten at 22:27 UTC+7 [15:27Z] after the root cause was found. No design
-yet. ClickUp: no ticket yet. Under "no ticket, no work" this item needs one: ask Jack for the list (candidates: C.1 Workbox, A.3
-Lifecycle Hooks).
+yet. ClickUp: **DGS-161** (list A.3: Lifecycle Hooks, created 2026-10-03 22:37 UTC+7 [15:37Z] with Jack's yes).
 
 **Source:** the merge of Flux build 1 (DGS-154, 2026-10-03).
 
