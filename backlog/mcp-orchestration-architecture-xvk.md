@@ -496,3 +496,47 @@ demanded a failing scenario for each finding. One run is not proof in general. R
   `.sdd-workspace/` inside the docs folder. The prompt must give the exact paths of such files.
 - **Workspace IDs.** The design still names `w6`. After the 2026-10-02 split into named herdr sessions,
   it is `w3` in session `DigiSmith`, and every herdr command needs `--session DigiSmith`.
+
+## 2026-10-03 addition — the maestro did work instead of giving orders (DGS-76, DGS-137)
+
+**Status: evidence, one session. Feedback from Jack.** The maestro ran two builds in parallel and then did the
+review work itself. It is the same failure as DGS-146, one step later in the flow.
+
+**What happened.**
+- The maestro dispatched two workers on the `jack` account: `a-system` for DGS-76 (`dg clickup move-task`) and
+  `b-agentic` for DGS-137 (`dg clickup update-list`). Both are lineage D.3. That part followed the rule: the workers ran
+  `digismith:init`, and the maestro answered their gate questions in their panes.
+- For the whole-branch review, the maestro did the work. It created a herdr workspace and started the Sol reviewer
+  server. It denied `--output` in the reviewer config. It wrote two review prompts and started both
+  `opencode run --attach` reviews as background shell tasks of the Desktop session, not in a herdr pane. It did not
+  open the watch tab.
+- It also ran a Monitor poll loop (`herdr agent get` every 5 seconds) to see worker status. herdr has its own
+  `agent wait` and `pane wait-output`.
+- Jack stopped the reviews ("skip Sol for now, we will implement the workflow in its ticket"). Then he saw the
+  background tasks: "You are supposed to not do anything, just give out orders."
+
+**Jack's rule (2026-10-03).** The orchestrator decides, orders, answers workers and keeps the notes. It does not do
+the work. A review, a server, a test run or any long job goes to a worker or to a herdr pane, where Jack can see it
+and attach to it.
+
+**Why it happened (maestro's assessment).**
+- There is no cheap dispatch for a review. It took six manual steps: server, config, prompts, runs, waiting and reading
+  the answer. `dg workbox review` does not exist yet, so doing it inline looked cheaper (same cause as DGS-146).
+- The DGS-146 backlog file lists "reviews" under "What stays in the maestro". That contradicts Jack's rule.
+
+**What it means for the DGS-127 and DGS-131 builds.**
+- The caller of `review` is a worker or a reviewer pane. It is never the maestro's own shell.
+- The review run lives in a herdr pane or tab, with the watch tab, so Jack can attach.
+- The step "verify every finding" needs an owner that is not the maestro. It should not be the implementer either, who
+  would grade its own work. Open: a second worker, or a reviewer role.
+- Waiting uses `herdr agent wait` or `pane wait-output` inside a worker or the CLI, not a maestro poll loop. A message
+  into the Desktop session still needs one process there. Open: how to do that without a poll.
+- Open: whether live ClickUp writes (the Town Hall rename, the C.0 to C.3 descriptions, the ticket moves) are work for
+  a worker. Jack ordered the first ones directly.
+
+**Left behind.** The two stopped runs left partial event files in `~/.digismith-depot/reviews/`. The two prompts
+(`dgs-137-branch-review-prompt.md`, `dgs-76-branch-review-prompt.md`) are reusable. The hardened reviewer config is
+`~/.digismith-depot/opencode-reviewer.json`. The Sol server is stopped.
+
+**To fix.** `backlog/maestro-delegates-builds-to-workers.md` should drop "reviews" from "What stays in the maestro".
+Not edited yet.
