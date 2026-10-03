@@ -30,7 +30,9 @@ Jack was asked these five on 2026-10-03. Only the first is settled.
 2. **What "load" means.** v1 counts herdr workers only, per herdr session. It does not see the Desktop maestro or Jack's
    own use of a seat on another device. The plan counts the `DigiSmith` session and the `emma` session separately,
    although both draw on the same seats. Options: a base weight per account, a count across all sessions, or usage-based
-   v2 (no data source for setup-token logins yet).
+   v2. The v2 data source exists since 2026-10-03: Claude Code's status line gets `rate_limits` (5h and weekly used
+   percentage and reset time) with a setup-token login too. The by-hand probe is in the Workbox runbook ("Reading usage")
+   and `~/.digismith-depot/usage-probe/`.
 3. **Limit stops.** The maestro marks an account exhausted by hand with `exhaust`. A worker that hits its limit idles
    until someone notices. Option: detect "You've hit your session limit" when the maestro reads the pane.
 4. **Token path.** The pane reads `~/.config/claude-accounts/<name>.token` itself, so only the path crosses herdr and the
