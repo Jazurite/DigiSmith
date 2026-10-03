@@ -94,7 +94,7 @@
   <p>A flux is the cycle that renews a session. It has two flavors because the two kinds of session end differently:</p>
   <div class="cards">
     <div class="card"><span class="tag">Procedure</span><h4>Worker flux</h4>
-      <p>A herdr CLI worker writes its handoff, exits, and its workspace is closed. There is no resume.</p></div>
+      <p>A herdr CLI worker exits and its workspace is closed. A worker has no handoff note and no resume: the maestro already holds the result.</p></div>
     <div class="card"><span class="tag">Procedure</span><h4>Maestro flux</h4>
       <p>The Desktop maestro cannot exit and restart. It clears itself, a kicker session wakes it with the word <code>Arise</code>, and it shows Jack a list.</p></div>
   </div>
@@ -119,8 +119,8 @@
   <h2>3. Rules of the protocol</h2>
   <ol>
     <li><strong>No resume starts any work.</strong> <em>Decided</em> (Jack, 2026-10-03 17:58 UTC+7). "Continue with Next" no longer exists anywhere. A resume reads the note, shows a short list, and asks Jack.</li>
-    <li><strong>A worker is not resumed.</strong> <em>Decided.</em> It is deleted at the flux. The only resume is the maestro's.</li>
-    <li><strong>No exit and no clear before the note exists.</strong> <em>Proposed</em> (the skill already says "no note, no clear"). In the worker flux the maestro checks that the note file exists and is dated today before it exits the agent.</li>
+    <li><strong>A worker has no handoff note and no resume.</strong> <em>Decided</em> (Jack, 2026-10-03 21:30 UTC+7). It starts from the maestro's brief and nothing else, and it is deleted at the flux. Its only identity is the ticket number (DGS-XXX), not a lineage. The only resume is the maestro's.</li>
+    <li><strong>No clear before the maestro's note exists.</strong> <em>Proposed</em> (the skill already says "no note, no clear"). It applies to the maestro flux only, because a worker has no note.</li>
     <li><strong>Nothing runs in the background at a clear or an exit.</strong> <em>Proposed</em>, from the failed subagent kicker: <code>clear_session</code> killed a background subagent about 1 s after the turn ended (exit 137, 2026-10-03 17:45 UTC+7).</li>
     <li><strong>A kick is not an approval.</strong> <em>Proposed</em>, from the harness notice in the A' test: a peer message cannot grant escalation. <code>Arise</code> therefore only asks for a read-only list and never carries a go.</li>
     <li><strong>The maestro keeps its seat.</strong> <em>Decided.</em> It runs as a Desktop session on <code>dev0</code>. Running it as a herdr agent is ruled out. Only workers choose an account.</li>
@@ -130,16 +130,14 @@
 
 <section id="worker">
   <h2>4. Worker flux</h2>
-  <p>Used when a worker finishes a ticket or must switch lineage. No <code>/clear</code>, no reused pane. <em>Decided</em> (Jack, 2026-10-03): the workspace is closed, and this replaces the reusable slot (DGS-121, DGS-126).</p>
+  <p>Used when a worker finishes its ticket. No <code>/clear</code>, no reused pane, no handoff note, no resume. <em>Decided</em> (Jack, 2026-10-03): the workspace is closed, which replaces the reusable slot (DGS-121, DGS-126); and a worker has no handoff (Jack, 21:30 UTC+7). The maestro already holds the result (the worker's report, the PR, the ClickUp ticket), so nothing is written for the next worker.</p>
   <div class="table-wrap"><table>
     <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
-    <tr><td>W1</td><td>Write the handoff note with <code>digismith:handoff</code> (manual write, no clear). Skip it when the note is shared with another live session: the write would overwrite theirs.</td><td>Worker</td><td>Conversation, plan ledger</td><td><code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/handoff.md</code></td></tr>
-    <tr><td>W2</td><td>Check that the note exists and is dated today.</td><td>Maestro</td><td>The note file</td><td>Nothing</td></tr>
-    <tr><td>W3</td><td>Exit the agent: <code>herdr --session DigiSmith agent prompt &lt;agent&gt; "/exit"</code>.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
-    <tr><td>W4</td><td>Close the workspace: <code>herdr --session DigiSmith workspace close &lt;ws&gt;</code>. The idle shell and its memory go.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
-    <tr><td>W5</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
+    <tr><td>W1</td><td>Exit the agent: <code>herdr --session DigiSmith agent prompt &lt;agent&gt; "/exit"</code>.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
+    <tr><td>W2</td><td>Close the workspace: <code>herdr --session DigiSmith workspace close &lt;ws&gt;</code>. The idle shell and its memory go.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
+    <tr><td>W3</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
   </table></div>
-  <p>The worker flux has no Check Gate, because it does no clear. Jack's second requirement (cleanup) is W3 and W4. <em>Open:</em> a limit stop (<code>--resume &lt;session id&gt;</code> in the same pane) is an exception to "no reused pane"; the runbook keeps it as the Emergency flux until Jack says if it stays (see open items).</p>
+  <p>The worker flux has no Check Gate, because it does no clear and writes no note. Jack's second requirement (cleanup) is W1 and W2. <em>Open:</em> a limit stop (<code>--resume &lt;session id&gt;</code> in the same pane) is an exception to "no reused pane"; the runbook keeps it as the Emergency flux until Jack says if it stays (see open items).</p>
 </section>
 
 <section id="start">
@@ -147,16 +145,20 @@
   <p>Part of the protocol (Jack, 2026-10-03): every new ticket gets a new workspace and a new agent.</p>
   <div class="table-wrap"><table>
     <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
-    <tr><td>S0</td><td>Write the brief for the worker.</td><td>Maestro</td><td>Ticket, lineage note</td><td><code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/brief.md</code></td></tr>
+    <tr><td>S0</td><td>Write the brief for the worker. It is everything the worker gets: the ticket number (DGS-XXX), the goal, the sources to read, the rules, the checkpoints.</td><td>Maestro</td><td>Ticket, the maestro's own picture</td><td>The brief file (the maestro chooses the path; S5 names it)</td></tr>
     <tr><td>S1</td><td>Choose the account with "The rule" (usage probe, headroom, workers in use, last assigned).</td><td>Maestro</td><td>Usage probe, account matrix</td><td>Nothing</td></tr>
-    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" --no-focus</code>. The label starts with the key, so no later rename is needed (the old step 6 goes).</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
+    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "&lt;label&gt;" --no-focus</code>. The label is set when the workspace is created, so no later rename is needed (the old step 6 goes). <em>Open:</em> the label text (see open items).</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
     <tr><td>S3</td><td>Load the account in the new pane: <code>claude-account use &lt;name&gt; &amp;&amp; eval "$(claude-account env)" &amp;&amp; claude-account status</code>. Check that the pane prints the expected account.</td><td>Maestro</td><td>Pane output (never a token)</td><td>Nothing</td></tr>
-    <tr><td>S4</td><td><code>agent start &lt;agent&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "&lt;key&gt;: &lt;ticket&gt; &lt;short name&gt;"</code>. A fresh session, no <code>--resume</code>.</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
-    <tr><td>S5</td><td>First prompt: "Read &lt;brief path&gt; and follow it." <em>Open:</em> whether the worker also reads its lineage note (see below).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
+    <tr><td>S4</td><td><code>agent start &lt;agent&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "&lt;name&gt;"</code>. A fresh session, no <code>--resume</code>. <em>Open:</em> the agent and session names (see open items).</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
+    <tr><td>S5</td><td>First prompt: "Read &lt;brief path&gt; and follow it." Nothing else: no lineage key, no note, no "resume lineage" (the old step 5 goes).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
     <tr><td>S6</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
   </table></div>
-  <p><strong>Agent name.</strong> <em>Proposed:</em> a new worker reuses its clan's agent name (for example <code>e-methodology</code>), because the old agent is gone after W3 and W4. The maestro's roster addresses stay stable, and no rename step is needed.</p>
-  <div class="callout"><strong>Open (Jack): the worker-start gap.</strong> Does a new worker start from the brief only, or from the brief plus its lineage note? Two facts bear on it. First, today's skill auto-resumes a session whose key is listed on the SessionStart line, so a new worker whose title matches a note would read it and show a list without being told. Second, the old runbook step 5 sent "resume lineage &lt;key&gt;", which no longer fits "a worker has no resume". Variant 1, brief only: the skill's SessionStart trigger must not fire for workers (the A.1 change grows by one clause). Variant 2, brief plus note: S5 names the note path as context, the SessionStart trigger stays, and the worker still waits for its brief's first instruction (the resume shows a list and asks, it starts nothing). Nothing else in the design depends on the answer.</div>
+  <div class="callout"><strong>Decided (Jack, 2026-10-03 21:30 UTC+7): the worker-start gap.</strong> "The worker starts from a brief which is sent down by the maestro only. It does not care which lineage the ticket comes from, it only cares about the ticket number (DGS-XXX). There is no resume and no handoff for a worker." The design takes variant 1, brief only. Consequences:
+    <ul>
+      <li>A worker's only identity is the ticket number. No lineage key and no lineage-note lookup.</li>
+      <li>The SessionStart trigger that reads a note and shows a list must not fire for a worker. The skill carries a clause for it (section 8).</li>
+      <li>The old runbook rule to name a worker's session and workspace "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" with the key first existed so the note lookup worked. That reason is gone; what the names become is open (section 13).</li>
+    </ul></div>
 </section>
 
 <section id="maestro">
@@ -197,7 +199,7 @@ archive_session or delete_session, and do nothing except these steps.
     <li><strong>Resume Mode step 4:</strong> replace "State Done and Next in a few lines, then ask 'Continue with &lt;Next&gt;?'" with: state Done in a few lines, show Next and the open problems as a short numbered list of candidates, and ask which one Jack wants. Start nothing. This applies to every resume, not only the maestro's (<em>decided</em> by Jack's rule: no resume starts work).</li>
     <li><strong>Rationalizations:</strong> the row "Resume found a note, so I'll start on Next" stays true and needs no change.</li>
     <li><strong>Check Gate:</strong> unchanged until Jack answers M3.</li>
-    <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): changed only if Jack picks variant 1 of the worker-start gap.</li>
+    <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): add a clause, <em>proposed</em>: ignore the line in a worker started by the maestro with a brief (its first message tells it to read a brief), because a worker has no note and no resume. If the worker's title carries no lineage key, the existing key-match rule already ignores the line; the clause keeps the rule true whatever the names become.</li>
     <li><strong><code>scripts/session-init.ts</code>:</strong> unchanged (<em>proposed</em>). The pointer line says "or say resume", and <code>Arise</code> comes from the kicker or from Jack, who knows it from the runbook.</li>
   </ul>
 </section>
@@ -206,20 +208,20 @@ archive_session or delete_session, and do nothing except these steps.
   <h2>9. The runbook spec</h2>
   <p>The runbook becomes the spec. Work to do on <code>.digismith/sessions/workbox.md</code> (on disk, untracked):</p>
   <ol>
-    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W5) and the start of a ticket (S0 to S6) in section 4 and 5 form, with the owner, reads and writes of each step.</li>
+    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start.</li>
     <li>Keep Steps 8 and 9 as the maestro wrote them, with four corrections: M1 says how the kicker is told and that Jack must open it before the clear; M3 names the Check Gate and who runs it, and the gate comes before the arming (M4); the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
-    <li>Fold Step 10 (Cleanup) into W3 and W4 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
+    <li>Fold Step 10 (Cleanup) into W1 and W2 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
     <li>Add the kicker instruction (section 7) as a template.</li>
     <li>Keep the Emergency flux (limit stop), marked as an exception until Jack decides.</li>
   </ol>
-  <p>The two of Jack's requirements map to M6 (auto-resume of the maestro) and W3 and W4 (cleanup).</p>
+  <p>The two of Jack's requirements map to M6 (auto-resume of the maestro) and W1 and W2 (cleanup).</p>
 </section>
 
 <section id="fail">
   <h2>10. Failure modes</h2>
   <div class="table-wrap"><table>
     <tr><th>What goes wrong</th><th>What happens</th><th>Recovery</th></tr>
-    <tr><td>The note write fails (M1, W1)</td><td>No clear, no exit.</td><td>Report it and stop (the skill's rule).</td></tr>
+    <tr><td>The maestro's note write fails (M1)</td><td>No clear, no exit.</td><td>Report it and stop (the skill's rule).</td></tr>
     <tr><td>The kick is lost or held for approval</td><td>The cleared maestro sits idle.</td><td>Jack types <code>Arise</code>.</td></tr>
     <tr><td>The clear is dropped (a message arrived before the turn ended)</td><td>The kicker sees an idle maestro and sends <code>Arise</code> into the old context. Harmless: the maestro says it did not clear.</td><td>Run M5 again.</td></tr>
     <tr><td>Jack says no at the Check Gate</td><td>The kicker was never armed and waits for KICK. The maestro keeps its context.</td><td>Jack deletes the kicker (M8).</td></tr>
@@ -242,11 +244,10 @@ archive_session or delete_session, and do nothing except these steps.
 <section id="out">
   <h2>12. Out of scope: build 2</h2>
   <ul>
-    <li><code>dg workbox</code> automating W3, W4 and S1 to S6 (DGS-151). Its <code>start --account</code> removes the race between <code>claude-account use</code> and <code>eval "$(claude-account env)"</code> when two workers start at once.</li>
+    <li><code>dg workbox</code> automating W1, W2 and S1 to S6 (DGS-151). Its <code>start --account</code> removes the race between <code>claude-account use</code> and <code>eval "$(claude-account env)"</code> when two workers start at once.</li>
     <li>The kicker as a herdr CLI worker (untested), archiving or reusing the kicker instead of deleting it, and <code>notify_when_idle</code> as the wait.</li>
     <li>The idle sweep (DGS-153), usage monitoring, and the guardrail for maestro approvals (DGS-155).</li>
     <li>E.2 (stage-order enforcement). Not built now.</li>
-    <li>A worker that ends through <code>digismith:finishing-a-development-branch</code> Step 7 is asked the clear question by the skill and answers no. Not worth a skill change in build 1.</li>
   </ul>
 </section>
 
@@ -254,11 +255,14 @@ archive_session or delete_session, and do nothing except these steps.
   <h2>13. Open items</h2>
   <div class="table-wrap"><table>
     <tr><th>Item</th><th>Whose</th><th>Blocks</th></tr>
-    <tr><td>Worker-start gap: brief only, or brief plus lineage note (section 5)</td><td>Jack</td><td>The text of S5 and one clause of the skill change. Not the design.</td></tr>
     <tr><td>Check Gate in the maestro flux: does Jack check the maestro's note before the clear (M3)</td><td>Jack</td><td>The text of M3 and of the skill's Check Gate. Until then the gate is unchanged.</td></tr>
+    <tr><td><strong>Names of a worker's session, agent and workspace.</strong> The old rule "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;", key first, served the note lookup, which no longer applies to workers. Candidates: ticket number first ("DGS-154 Flux"), or keep the lineage key for the roster only. Today's agent name (<code>e-methodology</code>) is also lineage-based. The maestro's own session must keep its name.</td><td>Jack</td><td>S2 and S4 text, the runbook's roster table, and the memory rule "Rename herdr workers per ticket".</td></tr>
+    <tr><td><strong>A long ticket when the context runs out.</strong> A worker has no note, so a worker flux in the middle of a ticket loses its state. What protects it? Candidates: auto-compact only; the plan ledger / <code>progress.md</code> and ClickUp comments as the only carried state; a limit-stop <code>--resume</code> keeps the conversation but covers a limit, not context exhaustion.</td><td>Jack</td><td>Nothing in build 1 if auto-compact alone is accepted. Otherwise one more rule in the worker flux.</td></tr>
+    <tr><td><code>digismith:finishing-a-development-branch</code> Step 7 calls the handoff in end-of-ticket mode, so a worker would write a note at the end of a ticket and be asked the clear question. That contradicts "no handoff for a worker".</td><td>Jack (a skill outside this design)</td><td>Whether the skill change in section 8 grows by one clause there, or a worker simply skips Step 7.</td></tr>
+    <tr><td>Where a worker's docs (design, plan, report) go when it has no lineage: <code>digismith:brainstorming</code> derives the folder from the map item letter, and the brief now carries only the ticket.</td><td>Jack</td><td>Text of the brief template, not the flux.</td></tr>
     <tr><td>Does the limit stop stay as a reused-pane exception</td><td>Jack</td><td>One paragraph of the runbook.</td></tr>
-    <tr><td>Allow rules for <code>herdr workspace create</code> and <code>workspace close</code> in the maestro's permissions</td><td>Jack (the guardrail is his, DGS-155)</td><td>W4 and S2 run by the maestro; until then Jack allows each call.</td></tr>
-    <tr><td>Agent name reused per clan; kicker template in the runbook; kicker 15-minute limit; <code>session-init.ts</code> unchanged</td><td>Proposed, Jack can overrule</td><td>Nothing.</td></tr>
+    <tr><td>Allow rules for <code>herdr workspace create</code> and <code>workspace close</code> in the maestro's permissions</td><td>Jack (the guardrail is his, DGS-155)</td><td>W2 and S2 run by the maestro; until then Jack allows each call.</td></tr>
+    <tr><td>Kicker template in the runbook; kicker 15-minute limit; <code>session-init.ts</code> unchanged; the SessionStart clause in section 8</td><td>Proposed, Jack can overrule</td><td>Nothing.</td></tr>
   </table></div>
 </section>
 
