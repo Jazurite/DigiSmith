@@ -1408,6 +1408,16 @@
       <p>This work adds <code>dg clickup move-task</code>. The command changes the home List of a ClickUp task through ClickUp's public API v3. <code>ClickUpClient.moveTask</code> sends a <code>PUT</code> request to an absolute v3 URL. This reuses the existing axios instance, with its v2 base URL, shared <code>Authorization</code> header and shared rate limiter, so no second instance is necessary. The command follows the <code>create-list</code> pattern: a <code>createMoveTaskCommand(clientFactory)</code> factory, JSON on stdout, and <code>clickup move-task: &lt;message&gt;</code> on stderr with exit code 1. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (2 tasks, executed directly in this session, each with a self-check before moving on). See <a href="docs/D/D.3/add-dg-clickup-move-task-command/design.html">design</a>, <a href="docs/D/D.3/add-dg-clickup-move-task-command/plan.md">plan</a>, and <a href="docs/D/D.3/add-dg-clickup-move-task-command/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-03</div>
+      <h4>Ticket-Based Naming Architecture</h4>
+      <p>The naming convention itself: the ticket as the unit, <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>
+  for a ticket's work, <code>.digismith/sessions/&lt;session-name&gt;/{note,brief}.md</code> for session state,
+  the worker and maestro naming rules, the splitting-a-ticket rules, and the brief template — all in
+  <code>.digismith/docs/E/E.3/worker-maestro-conventions/design.html</code>. No code and no file moves: DGS-159
+  carries those out against this document as its spec (design section 10). See <a href="docs/E/E.3/worker-maestro-conventions/design.html">design</a>, <a href="docs/E/E.3/worker-maestro-conventions/plan.md">plan</a>, and <a href="docs/E/E.3/worker-maestro-conventions/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
