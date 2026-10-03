@@ -15,8 +15,12 @@ B.2. Jack still has to choose the lineage name. The new lineage would be `C.3`, 
 - **Billing** (Jack's alternative). It is about money: plans and seats, Team extra usage, an Anthropic API key on Console
   billing, TokenReply spend, and cost per ticket. DGS-144's Step 0 fallback touched it, and the token counter (K.4) would
   be its first fit. It does not decide which login a worker uses.
-- **Capacity** (set aside). It covered seats, usage and RAM. The RAM gate is a "refuse to start a worker" check, so it
-  belongs in C.1 Workbox instead.
+- **Capacity** (Jack, 2026-10-03: a submodule of C.3, not the lineage name). The maestro's first idea covered seats, usage
+  and limit stops. The RAM gate is a "refuse to start a worker" check, so it belongs in C.1 Workbox instead.
+
+If C.3 is "Accounts", the submodules could be Capacity (seats, usage, limit stops) and, later, Billing (cost). Jack has not
+said how a submodule is shown in ClickUp. D.3 groups its tickets under milestones named in the list description, which is
+one model.
 
 It may also be two lineages: `C.3: Accounts` now and `C.4: Billing` when cost tracking becomes real work. Jack has not
 decided.
