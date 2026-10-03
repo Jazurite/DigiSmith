@@ -1402,6 +1402,12 @@
       <p>Add <code>dg clickup update-list</code> so a ClickUp List can be renamed and given a description from the CLI, through ClickUp's public API. The client gets one new method, <code>updateList</code>, with its write-body and response types. A new command file, modeled on <code>update-task.ts</code>, checks its flags before it creates a client. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (2 tasks, executed directly in this session, each with a self-check before moving on). See <a href="docs/D/D.3/add-dg-clickup-update-list-command/design.html">design</a>, <a href="docs/D/D.3/add-dg-clickup-update-list-command/plan.md">plan</a>, and <a href="docs/D/D.3/add-dg-clickup-update-list-command/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-03</div>
+      <h4>dg clickup move-task</h4>
+      <p>This work adds <code>dg clickup move-task</code>. The command changes the home List of a ClickUp task through ClickUp's public API v3. <code>ClickUpClient.moveTask</code> sends a <code>PUT</code> request to an absolute v3 URL. This reuses the existing axios instance, with its v2 base URL, shared <code>Authorization</code> header and shared rate limiter, so no second instance is necessary. The command follows the <code>create-list</code> pattern: a <code>createMoveTaskCommand(clientFactory)</code> factory, JSON on stdout, and <code>clickup move-task: &lt;message&gt;</code> on stderr with exit code 1. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:executing-plans</code> (2 tasks, executed directly in this session, each with a self-check before moving on). See <a href="docs/D/D.3/add-dg-clickup-move-task-command/design.html">design</a>, <a href="docs/D/D.3/add-dg-clickup-move-task-command/plan.md">plan</a>, and <a href="docs/D/D.3/add-dg-clickup-move-task-command/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
