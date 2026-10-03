@@ -67,7 +67,7 @@
   <div class="meta">
     <span>Date: 2026-10-03</span>
     <span>Map item: E.4 Workflows (ClickUp DGS-154, Kind: Protocol)</span>
-    <span>Status: approved by Jack on 2026-10-03 21:53 UTC+7 [14:53Z] (checkpoint 2). Items marked interim stay open until DGS-158 (the ticket-based naming and folders) lands.</span>
+    <span>Status: approved by Jack on 2026-10-03 21:53 UTC+7 [14:53Z] (checkpoint 2). DGS-158 (the ticket-based naming and folders) merged on 2026-10-03 and settled every interim item.</span>
   </div>
 </header>
 
@@ -113,7 +113,7 @@
     <tr><td><strong>Decided</strong></td><td>Jack decided it (date given). Not reopened here.</td></tr>
     <tr><td><strong>Proposed</strong></td><td>My recommendation. Jack can overrule it at the design review.</td></tr>
     <tr><td><strong>Open</strong></td><td>Jack's to decide. The design shows each variant and picks none.</td></tr>
-    <tr><td><strong>Interim</strong></td><td>Approved to build on as written, but it depends on clan, lineage or docs-folder naming. It is revisited when DGS-158 lands. The plan marks every such task "after DGS-158".</td></tr>
+    <tr><td><strong>Interim</strong> (past)</td><td>Items that were interim depended on clan, lineage or docs-folder naming. DGS-158 settled them all, so none remain.</td></tr>
   </table></div>
 </section>
 
@@ -148,19 +148,19 @@
   <p>Part of the protocol (Jack, 2026-10-03): every new ticket gets a new workspace and a new agent.</p>
   <div class="table-wrap"><table>
     <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
-    <tr><td>S0</td><td>Write the brief for the worker. It is everything the worker gets: the ticket number (DGS-XXX), the goal, the sources to read, the rules, the checkpoints, and the docs folder (<strong>interim</strong>, see the backlog item): <code>.digismith/docs/&lt;Clan&gt;/&lt;Clan.N&gt;/</code>, where the worker writes its design, plan and report.</td><td>Maestro</td><td>Ticket, the maestro's own picture</td><td>The brief file (the maestro chooses the path, <strong>interim</strong> until DGS-158; S5 names it)</td></tr>
+    <tr><td>S0</td><td>Write the brief for the worker. It is everything the worker gets: the ticket number (DGS-XXX), the goal, the sources to read, the rules, the checkpoints, and the board folder: <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code> (nested <code>worker-&lt;agent&gt;/</code> when a ticket has two workers; the maestro merges and removes them), where the worker writes its design, plan and report.</td><td>Maestro</td><td>Ticket, the maestro's own picture</td><td>The brief file, <code>.digismith/sessions/&lt;agent&gt;/brief.md</code>, written to the template in the E.3 design section 12 (S5 names it)</td></tr>
     <tr><td>S1</td><td>Choose the account with "The rule" (usage probe, headroom, workers in use, last assigned).</td><td>Maestro</td><td>Usage probe, account matrix</td><td>Nothing</td></tr>
-    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "DGS-&lt;n&gt; &lt;short name&gt;" --no-focus</code> (for example "DGS-154 Flux"). The label is set when the workspace is created, so no later rename is needed (the old step 6 goes). <strong>Interim</strong>, see the backlog item.</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
+    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "&lt;KEY&gt; ⚚ &lt;short name&gt;" --no-focus</code> (for example "DGS-154 ⚚ Flux"). The label is set when the workspace is created, so no later rename is needed (the old step 6 goes).</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
     <tr><td>S3</td><td>Load the account in the new pane: <code>claude-account use &lt;name&gt; &amp;&amp; eval "$(claude-account env)" &amp;&amp; claude-account status</code>. Check that the pane prints the expected account.</td><td>Maestro</td><td>Pane output (never a token)</td><td>Nothing</td></tr>
-    <tr><td>S4</td><td><code>agent start dgs-&lt;n&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "DGS-&lt;n&gt; &lt;short name&gt;"</code>. A fresh session, no <code>--resume</code>. The agent name is <code>dgs-&lt;n&gt;</code>, with a short word added when one ticket has two workers. <strong>Interim</strong>, see the backlog item. The maestro's own sessions keep their names.</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
-    <tr><td>S5</td><td>First prompt: "Read &lt;brief path&gt; and follow it." Nothing else: no lineage key, no note, no "resume lineage" (the old step 5 goes).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
+    <tr><td>S4</td><td><code>agent start &lt;key&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "&lt;KEY&gt; ⚚ &lt;short name&gt;"</code>. A fresh session, no <code>--resume</code>. The agent is the lowercase key (<code>dgs-154</code>), with a short word added when one ticket has two workers. The maestro's own sessions keep their names.</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
+    <tr><td>S5</td><td>First prompt: "Read <code>.digismith/sessions/&lt;agent&gt;/brief.md</code> and follow it." Nothing else: no note, no resume (the old step 5 goes).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
     <tr><td>S6</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
   </table></div>
   <div class="callout"><strong>Decided (Jack, 2026-10-03 21:30 UTC+7): the worker-start gap.</strong> "The worker starts from a brief which is sent down by the maestro only. It does not care which lineage the ticket comes from, it only cares about the ticket number (DGS-XXX). There is no resume and no handoff for a worker." The design takes variant 1, brief only. Consequences:
     <ul>
-      <li>A worker's only identity is the ticket number. No lineage key and no lineage-note lookup.</li>
+      <li>A worker's only identity is the ticket number. No clan or lineage naming and no note lookup.</li>
       <li>The SessionStart trigger that reads a note and shows a list must not fire for a worker. The skill carries a clause for it (section 8).</li>
-      <li>The old runbook rule to name a worker's session and workspace "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" with the key first existed so the note lookup worked. That reason is gone. The interim names above (ticket number first) replace it until the conventions are designed.</li>
+      <li>The old runbook rule to name a worker's session and workspace "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" with the key first existed so the note lookup worked. That reason is gone. The names are now decided by DGS-158 (<code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code>, agent <code>&lt;key&gt;</code>).</li>
     </ul></div>
 </section>
 
@@ -197,7 +197,7 @@ archive_session or delete_session, and do nothing except these steps.
   <ul>
     <li><strong>Desktop session (route A').</strong> Chosen. It passed on 2026-10-03 17:32 to 17:34 UTC+7 (DGS-154 comment <code>1301150000057188</code>). Cost: Jack opens it, pastes the instruction and deletes it.</li>
     <li><strong>Background subagent.</strong> Failed. <code>clear_session</code> kills it: a command in it ended with exit 137 about 1 s after the turn ended (17:45 UTC+7, comment <code>1301150000057204</code>).</li>
-    <li><strong>Node <code>setInterval</code> process</strong> (spike, 2026-10-03, <code>.digismith/docs/E/E.4/node-kicker-spike/</code>, script <code>kicker.mjs</code>). Detection works: <code>/root/.claude/sessions/&lt;pid&gt;.json</code> shows status busy or idle, <code>hostSessionId</code>, and a <code>sessionId</code> that changes at a clear (the spike worker verified its own file). Delivery is unproven: the session's Unix socket speaks an undocumented, versioned protocol, and <code>claude --resume --print</code> may lock against the live process. Not pursued.</li>
+    <li><strong>Node <code>setInterval</code> process</strong> (spike, 2026-10-03, <code>.digismith/docs/E/E.4/node-kicker-spike/</code> (it moves with DGS-159's file moves), script <code>kicker.mjs</code>). Detection works: <code>/root/.claude/sessions/&lt;pid&gt;.json</code> shows status busy or idle, <code>hostSessionId</code>, and a <code>sessionId</code> that changes at a clear (the spike worker verified its own file). Delivery is unproven: the session's Unix socket speaks an undocumented, versioned protocol, and <code>claude --resume --print</code> may lock against the live process. Not pursued.</li>
     <li><strong>Still untested:</strong> a herdr CLI worker as the kicker, and <code>notify_when_idle</code> as the wait. Both are build 2 candidates, not part of this design.</li>
   </ul>
 </section>
@@ -210,21 +210,21 @@ archive_session or delete_session, and do nothing except these steps.
     <li><strong>Resume Mode step 4:</strong> replace "State Done and Next in a few lines, then ask 'Continue with &lt;Next&gt;?'" with: state Done in a few lines, show Next and the open problems as a short numbered list of candidates, and ask which one Jack wants. Start nothing. This applies to every resume, not only the maestro's (<em>decided</em> by Jack's rule: no resume starts work).</li>
     <li><strong>Rationalizations:</strong> the row "Resume found a note, so I'll start on Next" stays true and needs no change.</li>
     <li><strong>Check Gate:</strong> the gate stays for an ordinary handoff and clear. The maestro flux has none (Jack, 21:33), so the skill needs a clause, <em>proposed</em>: "when the human partner's message is a yes to your own question 'kicker open? flux now?', skip the Check Gate: write the note, show it, and go on to the kick and the clear." No signal word is needed (Jack, 21:44): the maestro's own question and Jack's yes are the signal. The gate for every other clear, including a "hand off and clear" Jack types himself, is unchanged. Without the clause the skill's own gate would stop the maestro flux at M3.</li>
-    <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): add a clause, <em>proposed</em>: ignore the line in a worker started by the maestro with a brief (its first message tells it to read a brief), because a worker has no note and no resume. If the worker's title carries no lineage key, the existing key-match rule already ignores the line; the clause keeps the rule true whatever the names become.</li>
+    <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): add a clause, <em>proposed</em>: ignore the line in a worker started by the maestro with a brief (its first message tells it to read a brief), because a worker has no note and no resume. A worker's title (<code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code>) carries a ticket key, never a lineage key, so the existing key-match rule already ignores the line; the clause keeps it true whatever the names become.</li>
     <li><strong><code>scripts/session-init.ts</code>:</strong> unchanged (<em>proposed</em>). The pointer line says "or say resume", and <code>Arise</code> comes from the kicker or from Jack, who knows it from the runbook.</li>
   </ul>
   <h3>Named change: <code>digismith:finishing-a-development-branch</code> Step 7</h3>
   <p><em>Decided</em> (Jack, 2026-10-03 21:38 UTC+7): the handoff flow is removed for a worker. File: <code>skills/finishing-a-development-branch/SKILL.md</code>, Step 7 "Hand Off" (line 375). It is one clause, plus a matching half-sentence in the Quick Reference note at line 398:</p>
   <pre><code>If this session is a worker started with a brief, skip this step: no handoff
 note, no cleanup round, no clear question. The maestro closes the worker.</code></pre>
-  <p>The cleanup round that end-of-ticket mode ran for a worker (the progress comment posted, the <code>MEMORY.md</code> row, pointers to other lineages) becomes part of the maestro's close-out of the ticket, since the maestro holds the result. Steps 1 to 6 of the skill and Option 3 are untouched.</p>
+  <p>The cleanup round that end-of-ticket mode ran for a worker (the progress comment posted, the <code>MEMORY.md</code> row, pointers to the sessions that something was filed for) becomes part of the maestro's close-out of the ticket, since the maestro holds the result. Steps 1 to 6 of the skill and Option 3 are untouched.</p>
 </section>
 
 <section id="runbook">
   <h2>9. The runbook spec</h2>
   <p>The runbook becomes the spec. Work to do on <code>.digismith/sessions/workbox.md</code> (on disk, untracked):</p>
   <ol>
-    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start. Use the interim names (<code>DGS-&lt;n&gt; &lt;short name&gt;</code>, agent <code>dgs-&lt;n&gt;</code>) in the roster table and mark them interim, see the backlog item.</li>
+    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start. Use the decided names (<code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code>, agent <code>&lt;key&gt;</code>) in the roster table and the live-workers list.</li>
     <li>Keep Steps 8 and 9 as the maestro wrote them, with these corrections: add the question "kicker open? flux now?" and the kicker instruction before the note (M1, M2), so the kicker is open before the arming; drop the gate (Jack: no gate) and the signal words; the arming and the clear are two turns (M3, M4); the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
     <li>Fold Step 10 (Cleanup) into W1 and W2 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
     <li>Add the kicker instruction (section 7) and the "kicker options tested" paragraph as a template and a note.</li>
@@ -252,7 +252,7 @@ note, no cleanup round, no clear question. The maestro closes the worker.</code>
   <h2>11. How build 1 is checked</h2>
   <ul>
     <li>The skill text is reviewed against Jack's rule: no sentence left that starts work on a resume, and no "Continue with Next".</li>
-    <li>The existing tests for the lineage script and the SessionStart line stay green (<code>scripts/lineage-handoff.test.ts</code>, <code>scripts/session-init.test.ts</code>); neither is expected to change in build 1 (the lineage-key lookup they cover may change after DGS-158).</li>
+    <li>The existing tests for the lineage script and the SessionStart line (<code>scripts/lineage-handoff.test.ts</code>, <code>scripts/session-init.test.ts</code>) stay green and are not changed in Part B; DGS-159 changes the scripts and their tests.</li>
     <li>A live run of the maestro flux with Jack present (a Desktop kicker, M1 to M7) shows that <code>Arise</code> produces a list and not an action. This needs Jack and the maestro, so the maestro runs it after the build.</li>
     <li>The finishing skill is read to confirm a worker started with a brief skips Step 7 and that Option 1, Option 2 and Option 3 behave as before for a session that is not such a worker.</li>
     <li>The runbook is checked by reading it against the tables in sections 4 to 6: every step has an owner, reads and writes.</li>
@@ -271,12 +271,13 @@ note, no cleanup round, no clear question. The maestro closes the worker.</code>
 
 <section id="open">
   <h2>13. Open and interim items</h2>
-  <p>Jack's answers of 2026-10-03 21:38 UTC+7 closed four items (names, a long ticket, <code>finishing-a-development-branch</code> Step 7, where a worker's docs go). Some of them are <strong>interim</strong>: they hold until the conventions item (<code>backlog/worker-and-maestro-conventions.md</code>, list E.3: Conventions, commit 635f0e8) is designed. At 21:53 UTC+7 [14:53Z] Jack widened that item (DGS-158) to remove the clan and lineage naming and move to a ticket-based system: ticket files (design, report) under <code>.digismith/board</code>, and maestro, worker and other sessions under <code>.digismith/sessions/</code>. Jack approved this design the same minute and said not to redesign the interim items now.</p>
+  <p>Jack's answers of 2026-10-03 21:38 UTC+7 closed four items (names, a long ticket, <code>finishing-a-development-branch</code> Step 7, where a worker's docs go). Some of them are <strong>interim</strong>: they hold until the conventions item (<code>backlog/worker-and-maestro-conventions.md</code>, list E.3: Conventions, commit 635f0e8) is designed. At 21:53 UTC+7 [14:53Z] Jack widened that item (DGS-158) to remove the clan and lineage naming and move to a ticket-based system: ticket files (design, report) under <code>.digismith/board</code>, and maestro, worker and other sessions under <code>.digismith/sessions/</code>. Jack approved this design the same minute and said not to redesign the interim items now. DGS-158 merged on 2026-10-03 and settled the interim items.</p>
   <div class="table-wrap"><table>
     <tr><th>Item</th><th>State</th><th>Whose</th></tr>
-    <tr><td>Names of a worker's session, workspace and agent: <code>DGS-&lt;n&gt; &lt;short name&gt;</code> and <code>dgs-&lt;n&gt;</code></td><td><strong>Interim</strong>, see the backlog item</td><td>The conventions item</td></tr>
-    <tr><td>Where a worker's docs go: the folder the brief names, <code>.digismith/docs/&lt;Clan&gt;/&lt;Clan.N&gt;/</code></td><td><strong>Interim</strong>, see the backlog item</td><td>The conventions item</td></tr>
-    <tr><td>Where the brief file lives, and where the maestro's note is written and read (the path from its session title, the skill's lineage-key lookup, and the SessionStart key-match rule)</td><td><strong>Interim</strong>, follows DGS-158 (<code>.digismith/board</code>, <code>.digismith/sessions/</code>)</td><td>DGS-158</td></tr>
+    <tr><td>Names of a worker's session, workspace and agent: <code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code> and <code>&lt;key&gt;</code></td><td>Decided (DGS-158)</td><td>DGS-158</td></tr>
+    <tr><td>Where a worker's docs go: <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code></td><td>Decided (DGS-158)</td><td>DGS-158</td></tr>
+    <tr><td>Where the brief file lives: <code>.digismith/sessions/&lt;agent&gt;/brief.md</code></td><td>Decided (DGS-158)</td><td>DGS-158</td></tr>
+    <tr><td>Where the maestro's note is written and read: <code>.digismith/sessions/&lt;session-name&gt;/note.md</code></td><td>Decided (DGS-158). The skill text is updated in Part B Task 7 with the old clan and lineage lookup kept as a fallback; the script, the SessionStart line, their tests and <code>.git/info/exclude</code> follow in DGS-159, so until then the skill text and <code>scripts/lineage-handoff.ts</code> differ</td><td>DGS-158</td></tr>
     <tr><td>A long ticket: auto-compact only, the maestro holds the state and splits the work</td><td>Decided</td><td>Jack</td></tr>
     <tr><td>The handoff flow removed for a worker in <code>finishing-a-development-branch</code> Step 7</td><td>Decided; one clause (section 8)</td><td>Jack</td></tr>
     <tr><td>The flux signal: no words. The maestro asks "kicker open? flux now?" and Jack's yes is the signal; the skill clause (section 8) keys on that yes.</td><td>Decided (Jack, 2026-10-03 21:44 UTC+7)</td><td>Jack</td></tr>
