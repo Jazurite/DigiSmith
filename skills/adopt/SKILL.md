@@ -55,9 +55,9 @@ being worked in the same way `digismith:bootstrap` would. This resolves
 the active profile and ensures a profile is present with the chosen name,
 in `.digismith/config.yml`. A profile is present when
 `.digismith/config.yml` has a `profile` key, or when `.digismith/profile`
-exists (A.2 fallback). Read `profile` from `.digismith/config.yml`, or
+exists (A.4 fallback). Read `profile` from `.digismith/config.yml`, or
 from `.digismith/profile` when `config.yml` or its `profile` key is
-missing (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. The resolved profile's `ticket`, `ephemeral`, `standards`,
+missing (A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. The resolved profile's `ticket`, `ephemeral`, `standards`,
 `reporting`, and `logging` fields are now available for
 the rest of this process, exactly as they would be for `digismith:bootstrap`.
 It also runs bootstrap's old-config-file check (migrate where git does

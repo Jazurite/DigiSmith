@@ -41,14 +41,14 @@ still validate the target exists.
 
 Check for a profile in the repo currently being worked in
 (the repo whose code this invocation is about — never DigiSmith's own
-repo, which is only where `standards/` and `profiles/` themselves live). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+repo, which is only where `standards/` and `profiles/` themselves live). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.4 fallback).
 
 **Missing** → unchanged, existing behavior: every folder in
 `standards/index.yml` is eligible for matching in Steps 4-6, including
 the Step 3 Shopify-repo-layer heuristic exactly as it works today. Skip
 the rest of this step.
 
-**Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name.
+**Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name.
 Locate DigiSmith's own repo — same rule already used above under
 "Locating the Standards Library": is the current working directory
 itself the DigiSmith repo (`.claude-plugin/plugin.json` with

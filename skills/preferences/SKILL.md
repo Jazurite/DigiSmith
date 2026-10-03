@@ -51,7 +51,7 @@ exactly 2 spaces, string arrays as `- item` lines, and `#` comments. Every
 value is a string. Anything outside the subset fails with
 `<file> line <n>: <reason>`.
 
-**Old files (A.2).** A checkout that is not migrated yet still has
+**Old files (A.4).** A checkout that is not migrated yet still has
 `.digismith/preferences.yml` (flat `key: value`) and `.digismith/profile`.
 Reads fall back to them one key at a time. A write in such a checkout
 migrates it first when git does not track the old files, and stops with

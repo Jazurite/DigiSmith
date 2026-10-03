@@ -109,19 +109,19 @@ describe("parseReport", () => {
 
   it("extracts a three-segment slug from a clan/lineage/slug report path", () => {
     const dir = makeTmpDir("update-history-test-");
-    const slugDir = path.join(dir, ".digismith", "docs", "A", "A.0", "lineage-handoff");
+    const slugDir = path.join(dir, ".digismith", "docs", "A", "A.1", "lineage-handoff");
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Lineage Handoff", mapItem: "A.0", date: "2026-09-26", summary: "Moved the handoff." });
+    writeReportFixture(reportPath, { title: "Lineage Handoff", mapItem: "A.1", date: "2026-09-26", summary: "Moved the handoff." });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed).toEqual({
       featureTitle: "Lineage Handoff",
-      mapItem: "A.0",
+      mapItem: "A.1",
       date: "2026-09-26",
       summary: "Moved the handoff.",
-      slug: "A/A.0/lineage-handoff",
+      slug: "A/A.1/lineage-handoff",
     });
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -352,14 +352,14 @@ describe("findChangedReports", () => {
       initHistoryFixtureRepo(dir);
       const baseSha = revParseHead(dir);
 
-      const reportPath = path.join(dir, ".digismith", "docs", "A", "A.0", "lineage-handoff", "report.html");
+      const reportPath = path.join(dir, ".digismith", "docs", "A", "A.1", "lineage-handoff", "report.html");
       fs.mkdirSync(path.dirname(reportPath), { recursive: true });
       writeReportFixture(reportPath);
       spawnSync("git", ["add", "-A"], { cwd: dir });
       spawnSync("git", ["commit", "-q", "-m", "add nested report"], { cwd: dir });
       const headSha = revParseHead(dir);
 
-      expect(findChangedReports(baseSha, headSha, dir)).toEqual([".digismith/docs/A/A.0/lineage-handoff/report.html"]);
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([".digismith/docs/A/A.1/lineage-handoff/report.html"]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }

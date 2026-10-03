@@ -7,11 +7,14 @@ name the same day). The four descriptions were set on 2026-10-03 with
 (DGS-76): DGS-144 into C.3, DGS-106, DGS-107, DGS-109, DGS-131 and DGS-151 into C.1, and DGS-117 into C.2. DGS-153 was
 filed in C.1. Town Hall also got its name back (`Town Hall (` to `Town Hall`).
 
-**Rule (Jack, 2026-10-03):** lineage 0 of every clan is the Pavilion. For C that is `C.0: Pavilion`. The older clans
-(A, B, D, O) keep a separate "Pavilion" list and their own `.0` lineages (`A.0: Primitives`, `B.0: Maestro`,
-`D.0: Foundation`, `O.0: Foundation`). Renumbering them would break session titles, handoff paths (`.digismith/docs/A/A.0/`)
-and docs, so decide that separately. The Town Hall list description still says "Each clan folder has its own Pavilion
-list": update it when the rule is applied to every clan.
+**Rule (Jack, 2026-10-03):** lineage 0 of every clan is the Pavilion. For C that is `C.0: Pavilion`. Clan A applied
+the rule on 2026-10-03: `A.0: Pavilion` now exists, and the old A lineages were renumbered (`A.0: Primitives` is now
+`A.1`, `A.1: Lifecycle Hooks` is now `A.3`, `A.2: Configuration` is now `A.4`, and `A.2: Protocols` is new). The handoff
+folders moved with them (`.digismith/docs/A/A.1/` and `.digismith/docs/A/A.4/`). B, D and O still keep a separate
+"Pavilion" list and their own unnumbered Pavilion with `.0` lineages (`B.0: Maestro`, `D.0: Foundation`,
+`O.0: Foundation`). Renumbering them would break session titles, handoff paths and docs, so decide that separately. The
+Town Hall list description still says "Each clan folder has its own Pavilion list": update it when the rule is applied
+to every clan.
 
 ## What C: Platform is
 

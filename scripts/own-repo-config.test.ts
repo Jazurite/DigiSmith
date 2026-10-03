@@ -7,7 +7,7 @@ import { HEADER } from "./config-write.ts";
 import { CONFIG_FILE, MIGRATED_SUFFIX, migrate, readConfig, resolve } from "./config.ts";
 
 // DGS-142: DigiSmith's own repo moved from .digismith/profile and .digismith/preferences.yml to
-// .digismith/config.yml. The ticket that drops the A.2 fallback also deletes this file and the
+// .digismith/config.yml. The ticket that drops the A.4 fallback also deletes this file and the
 // *.migrated copies it reads.
 const REPO_DIR = fileURLToPath(new URL("../.digismith", import.meta.url));
 const OLD_FILES = ["profile", "preferences.yml"];

@@ -69,8 +69,8 @@ describe("constants", () => {
 
 describe("parseLineageKey", () => {
   it.each([
-    ["A.0: Primitives", { clan: "A", lineage: "A.0" }],
-    ["A.1: Life  Cycle Hook", { clan: "A", lineage: "A.1" }],
+    ["A.1: Primitives", { clan: "A", lineage: "A.1" }],
+    ["A.3: Life  Cycle Hook", { clan: "A", lineage: "A.3" }],
     ["  D.3 : ClickUp Channel", { clan: "D", lineage: "D.3" }],
     ["A.12: Two digits", { clan: "A", lineage: "A.12" }],
     ["K: Maestro", { clan: "K" }],
@@ -86,7 +86,7 @@ describe("parseLineageKey", () => {
     "W.4.1: nested number",
     "EMKT-756: consumer ticket",
     "AB: two letters",
-    "A.0 no colon",
+    "A.1 no colon",
     "",
   ])("returns null for %j", (title) => {
     expect(parseLineageKey(title)).toBeNull();
@@ -95,7 +95,7 @@ describe("parseLineageKey", () => {
 
 describe("noteRelPath", () => {
   it("nests a lineage under its clan", () => {
-    expect(noteRelPath({ clan: "A", lineage: "A.0" })).toBe(".digismith/docs/A/A.0/handoff.md");
+    expect(noteRelPath({ clan: "A", lineage: "A.1" })).toBe(".digismith/docs/A/A.1/handoff.md");
   });
 
   it("puts a clan-level note directly in the clan folder", () => {
@@ -148,16 +148,16 @@ describe("listNotes", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
     writeNote(main, ".digismith/docs/K/handoff.md");
-    writeNote(main, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(main, ".digismith/docs/A/A.1/handoff.md");
     writeNote(main, ".digismith/docs/_unlettered/handoff.md");
-    expect(listNotes(main)).toEqual(["A/A.0", "K", "_unlettered"]);
+    expect(listNotes(main)).toEqual(["A/A.1", "K", "_unlettered"]);
   });
 
   it("ignores handoff.md deeper than the lineage level and other files", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
-    writeNote(main, ".digismith/docs/A/A.0/lineage-handoff/handoff.md");
-    writeNote(main, ".digismith/docs/A/A.0/design.html", "<html></html>");
+    writeNote(main, ".digismith/docs/A/A.1/lineage-handoff/handoff.md");
+    writeNote(main, ".digismith/docs/A/A.1/design.html", "<html></html>");
     expect(listNotes(main)).toEqual([]);
   });
 
@@ -167,8 +167,8 @@ describe("listNotes", () => {
     writeNote(main, ".digismith/docs/K/handoff.md");
     git(main, "add", "-A");
     git(main, "commit", "-q", "-m", "commit a note");
-    writeNote(main, ".digismith/docs/A/A.0/handoff.md");
-    expect(listNotes(main)).toEqual(["A/A.0"]);
+    writeNote(main, ".digismith/docs/A/A.1/handoff.md");
+    expect(listNotes(main)).toEqual(["A/A.1"]);
   });
 
   it("lists notes outside git without filtering", () => {
@@ -210,8 +210,8 @@ describe("ensureExcluded", () => {
     initRepo(main);
     const excludePath = path.join(main, ".git", "info", "exclude");
 
-    expect(ensureExcluded(main, ".digismith/docs/A/A.0/handoff.md")).toBe("added");
-    expect(ensureExcluded(main, ".digismith/docs/A/A.0/handoff.md")).toBe("already-ignored");
+    expect(ensureExcluded(main, ".digismith/docs/A/A.1/handoff.md")).toBe("added");
+    expect(ensureExcluded(main, ".digismith/docs/A/A.1/handoff.md")).toBe("already-ignored");
 
     const lines = fs.readFileSync(excludePath, "utf8").split("\n");
     expect(lines.filter((line) => line === EXCLUDE_PATTERN)).toHaveLength(1);
@@ -239,7 +239,7 @@ describe("ensureExcluded", () => {
   it("is idempotent when the note is tracked by git", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
-    const relPath = ".digismith/docs/A/A.0/handoff.md";
+    const relPath = ".digismith/docs/A/A.1/handoff.md";
     writeNote(main, relPath);
     git(main, "add", "-A");
     git(main, "commit", "-q", "-m", "commit note");
@@ -259,9 +259,9 @@ describe("CLI", () => {
     initRepo(main);
     const wt = path.join(tmpDir, "wt");
     git(main, "worktree", "add", "-q", "-b", "wt", wt);
-    const suffix = path.join(".digismith", "docs", "A", "A.0", "handoff.md");
+    const suffix = path.join(".digismith", "docs", "A", "A.1", "handoff.md");
 
-    const result = runCli(wt, "--action", "path", "--title", "A.0: Primitives");
+    const result = runCli(wt, "--action", "path", "--title", "A.1: Primitives");
 
     expect(result.status).toBe(0);
     const printed = result.stdout.trim();
@@ -272,13 +272,13 @@ describe("CLI", () => {
   it("--action path fails when the resolved note is tracked by git", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
-    const relPath = ".digismith/docs/A/A.0/handoff.md";
+    const relPath = ".digismith/docs/A/A.1/handoff.md";
     writeNote(main, relPath);
     git(main, "add", "-A");
     git(main, "commit", "-q", "-m", "commit note");
     const absPath = path.join(resolveMainRoot(main), ...relPath.split("/"));
 
-    const result = runCli(main, "--action", "path", "--title", "A.0: Primitives");
+    const result = runCli(main, "--action", "path", "--title", "A.1: Primitives");
 
     expect(result.status).toBe(1);
     expect(result.stdout).toBe("");
@@ -288,13 +288,13 @@ describe("CLI", () => {
   it("--action list prints one key per line", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
-    writeNote(main, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(main, ".digismith/docs/A/A.1/handoff.md");
     writeNote(main, ".digismith/docs/K/handoff.md");
 
     const result = runCli(main, "--action", "list");
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.0", "K"]);
+    expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.1", "K"]);
   });
 
   it("--action ensure-excluded prints the result", () => {

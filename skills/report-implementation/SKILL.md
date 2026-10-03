@@ -54,10 +54,10 @@ Step 2 parses.
 
 The active profile must also have reporting turned on. Check for a
 profile in the repo currently being worked in (never DigiSmith's own
-repo, which only hosts this skill). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+repo, which only hosts this skill). A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.4 fallback).
 
 - **Missing** → proceed exactly as today; this gate does nothing.
-- **Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name,
+- **Present** → Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name,
   then locate DigiSmith's own repo — same rule
   `digismith:inject-standards` uses for `standards/`: is the current
   working directory itself the DigiSmith repo
@@ -102,7 +102,7 @@ to a subagent that can't ask.
      (`.digismith/docs/<feature-slug>/report.html` and so on), so a two-segment slug
      reconstructs the correct nested path with no further changes needed anywhere else here.
    - **Exactly three (the lineage case)** → `<feature-slug>` is all three segments, joined by
-     `/`. E.g. `.digismith/docs/A/A.0/lineage-handoff/plan.md` → `A/A.0/lineage-handoff`.
+     `/`. E.g. `.digismith/docs/A/A.1/lineage-handoff/plan.md` → `A/A.1/lineage-handoff`.
      Preserve both slashes, as in the nested case.
    - **None of these (the plan lives somewhere else)** → the parent directory name is
      *not* a slug and must not be used as one. This happens when a plan
@@ -210,7 +210,7 @@ the plan file, the ledger, and `git` alone:
   blank.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
   parent directory name in the flat case, the segments joined by `/` in the nested and lineage
-  cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.0/lineage-handoff`), or the slug parsed out of its
+  cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.1/lineage-handoff`), or the slug parsed out of its
   filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
   a bare container directory like `plans`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from

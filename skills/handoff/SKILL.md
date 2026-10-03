@@ -11,7 +11,7 @@ The last stage of DigiSmith's ticket workflow, and a checkpoint you can take at 
 lineage keeps one living note that says where the lineage stands now:
 
 ```
-.digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.0: Primitives"  → A/A.0
+.digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.1: Primitives"  → A/A.1
 .digismith/docs/<Clan>/handoff.md              title "K: Maestro"       → K
 .digismith/docs/_unlettered/handoff.md         any other title
 ```
@@ -65,8 +65,8 @@ resolves the main checkout itself, so the note always lands in the main checkout
    file committed to git that this skill did not write, and do not read or write it.
 3. If the path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
 4. If `get_session` fails or there is no title, run `--action list` and ask which lineage this is,
-   offering the listed keys (e.g. `A.0`). Pass the answer as a title (e.g. listed key `A/A.0` →
-   `--title 'A.0:'`). Do not guess: a wrong key overwrites another lineage's note.
+   offering the listed keys (e.g. `A.1`). Pass the answer as a title (e.g. listed key `A/A.1` →
+   `--title 'A.1:'`). Do not guess: a wrong key overwrites another lineage's note.
 
 ## Write Mode
 

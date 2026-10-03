@@ -64,7 +64,7 @@ function configLayer(key: string, dir: string): Resolved | undefined {
   return value === undefined ? undefined : { value, source: path.join(dir, CONFIG_FILE) };
 }
 
-// A.2 fallback: the old files, until the follow-up removal ticket.
+// A.4 fallback: the old files, until the follow-up removal ticket.
 function legacyLayer(key: string, dir: string): Resolved | undefined {
   if (key === "profile") {
     const value = readLegacyProfile(dir);

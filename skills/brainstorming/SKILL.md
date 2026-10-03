@@ -114,7 +114,7 @@ digraph brainstorming {
 
 **Documentation:**
 
-A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile.
+A profile is present when `.digismith/config.yml` has a `profile` key, or when `.digismith/profile` exists (A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile.
 
 - **DigiSmith-tracked work** (current working directory has `.claude-plugin/plugin.json` with
   `"name": "digismith"`, or a profile is present) — write the validated design to

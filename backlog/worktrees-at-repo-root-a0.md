@@ -1,4 +1,4 @@
-# Own worktree mechanism at `.worktrees/`, sunset `using-git-worktrees` (A.0)
+# Own worktree mechanism at `.worktrees/`, sunset `using-git-worktrees` (A.1)
 
 **Status:** Not applied. Jack's call, 2026-09-26:
 
@@ -9,10 +9,10 @@
 - New worktrees go to `.worktrees/<branch>` at the repo root, created with plain
   `git worktree add`.
 
-Filed under lineage **A.0** (Primitives, clan A) as ClickUp **DGS-86**.
+Filed under lineage **A.1** (Primitives, clan A) as ClickUp **DGS-86**.
 
 **Source:** Raised mid-brainstorm on the lineage-handoff build
-(`.digismith/docs/A/A.0/lineage-handoff/design.html`). That build still runs in a native worktree,
+(`.digismith/docs/A/A.1/lineage-handoff/design.html`). That build still runs in a native worktree,
 `.claude/worktrees/lineage-handoff`, and it is not moved.
 
 ## Why

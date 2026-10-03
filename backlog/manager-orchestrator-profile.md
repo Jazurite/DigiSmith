@@ -30,7 +30,7 @@ This decision replaces "maestro is a fifth profile". Where sections below still 
   - **solo:** Jack's direct sessions, which are neither.
 - **Lineage O.3: Roles** owns the role question at session start and the setup for each role.
 - The session-start prompt asks for the role once per folder, through the profile mechanism.
-- **The role is stored in the centralized config file, key `role`** (DGS-141, A.2:
+- **The role is stored in the centralized config file, key `role`** (DGS-141, A.4:
   Configuration in the A: System clan). A one-line `.digismith/role` file beside `.digismith/profile` was decided first, then
   replaced the same day, when Jack asked for one config file instead of one file for each setting.
   DGS-141 comes first, so no `.digismith/role` file ever exists.

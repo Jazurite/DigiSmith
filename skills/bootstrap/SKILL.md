@@ -28,7 +28,7 @@ you want to start work on a ticket, invoke `digismith:init` instead.
 
 Check for a profile in the repo currently being worked in (never
 DigiSmith's own repo). A profile is present when `.digismith/config.yml`
-has a `profile` key, or when `.digismith/profile` exists (A.2 fallback).
+has a `profile` key, or when `.digismith/profile` exists (A.4 fallback).
 
 **Old config files.** If `.digismith/profile` or `.digismith/preferences.yml`
 exists here, check each one with `git ls-files --error-unmatch -- <file>`
@@ -51,7 +51,7 @@ exists here, check each one with `git ls-files --error-unmatch -- <file>`
 
 **Present** → Read `profile` from `.digismith/config.yml`, or from
 `.digismith/profile` when `config.yml` or its `profile` key is missing
-(A.2 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name.
+(A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as the active profile name.
 Validate it against `profiles/<name>.yml` (see Locating DigiSmith's Repo
 below) — no matching file → treat as stale, fall through to the
 first-use flow below instead of guessing.

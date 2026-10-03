@@ -31,7 +31,7 @@ Cloned: 2026-08-20
   `refs/digismith/post-finish/<feature-branch>/{base,head}` right after `git merge` and deletes
   both pins after the `post-finish` hooks fire; `fire-lifecycle-hook.md` gained the "Merge-range
   pins" contract those hooks read.
-  **Further diverged by DGS-85** (2026-09-26, lineage A.0): Step 7 no longer writes
+  **Further diverged by DGS-85** (2026-09-26, lineage A.1): Step 7 no longer writes
   `.digismith/sessions/` handoffs or clears the session itself. It hands off to the new native
   `digismith:handoff` skill, which owns the per-lineage handoff note and the `clear_context`
   preference.

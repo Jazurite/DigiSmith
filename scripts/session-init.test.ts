@@ -177,10 +177,10 @@ describe("buildLineagePointer", () => {
   });
 
   it("names every note in one line", () => {
-    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
     writeNote(tmpDir, ".digismith/docs/K/handoff.md");
     expect(buildLineagePointer(tmpDir)).toBe(
-      `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.0, K — read the one matching your session title (get_session self), or say "resume"`,
+      `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.1, K — read the one matching your session title (get_session self), or say "resume"`,
     );
   });
 
@@ -189,12 +189,12 @@ describe("buildLineagePointer", () => {
     initRepo(main);
     const wt = path.join(tmpDir, "wt");
     spawnSync("git", ["worktree", "add", "-q", "-b", "wt", wt], { cwd: main });
-    writeNote(main, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(main, ".digismith/docs/A/A.1/handoff.md");
     writeNote(wt, ".digismith/docs/K/handoff.md");
     const mainRoot = resolveMainRoot(wt);
 
     expect(buildLineagePointer(mainRoot)).toBe(
-      `DigiSmith: lineage handoff notes in ${path.join(mainRoot, ".digismith", "docs")}: A/A.0 — read the one matching your session title (get_session self), or say "resume"`,
+      `DigiSmith: lineage handoff notes in ${path.join(mainRoot, ".digismith", "docs")}: A/A.1 — read the one matching your session title (get_session self), or say "resume"`,
     );
   });
 });
@@ -311,7 +311,7 @@ describe("main (CLI)", () => {
       path.join(tmpDir, ".claude-plugin", "plugin.json"),
       JSON.stringify({ name: "digismith", version: "1.0.0" }),
     );
-    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
     fs.writeFileSync(path.join(tmpDir, ".digismith", "profile"), Buffer.from([0xff, 0xfe]));
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -337,13 +337,13 @@ describe("main (CLI)", () => {
   });
 
   it("prints the lineage pointer even with no .digismith/profile", async () => {
-    writeNote(tmpDir, ".digismith/docs/A/A.0/handoff.md");
+    writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await main();
 
     expect(logSpy).toHaveBeenCalledWith(
-      `DigiSmith: lineage handoff notes in ${path.join(process.cwd(), ".digismith", "docs")}: A/A.0 — read the one matching your session title (get_session self), or say "resume"`,
+      `DigiSmith: lineage handoff notes in ${path.join(process.cwd(), ".digismith", "docs")}: A/A.1 — read the one matching your session title (get_session self), or say "resume"`,
     );
   });
 
