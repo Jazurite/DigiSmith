@@ -70,6 +70,8 @@
   </div>
 </header>
 
+<div class="callout"><strong>Deferred 2026-10-03 (Jack):</strong> dg workbox is a separate package <code>packages/workbox</code>, not <code>packages/cli</code>. File paths below that say <code>packages/cli/src/workbox</code> must move to <code>packages/workbox</code> when this is built later. Build ticket: see <code>backlog/dg-workbox-package.md</code>.</div>
+
 <nav class="toc">
   <h2>Contents</h2>
   <ol>
@@ -90,7 +92,7 @@
   <h2>Goal and scope</h2>
   <p>Spread herdr worker load across the Claude subscription seats on the VPS (today <code>jack</code> and <code>dev0</code>, a third seat planned). The balancer chooses the account when a worker starts. That is a cold-cache point, so the choice costs no re-read. Each pane loads its own account. The VPS-wide default account stays unchanged.</p>
   <p>Step 0 of the ticket (pooling the seats under Anthropic's terms) was approved by Jack on 2026-10-03.</p>
-  <p>This build is the first slice of DGS-139 build 2: a new <code>dg workbox</code> command group in <code>packages/cli/src/workbox/</code> with <code>start</code>, <code>list</code>, <code>stop</code> and <code>exhaust</code>, the roster file, and the v1 assignment algorithm. Jack chose this scope (account-aware core in <code>packages/cli</code>) on 2026-10-03, over a separate <code>packages/workbox</code> package and over a balancer-only build.</p>
+  <p>This build is the first slice of DGS-139 build 2: a new <code>dg workbox</code> command group in <code>packages/cli/src/workbox/</code> with <code>start</code>, <code>list</code>, <code>stop</code> and <code>exhaust</code>, the roster file, and the v1 assignment algorithm. The maestro chose this scope (account-aware core in <code>packages/cli</code>) on 2026-10-03, over a separate <code>packages/workbox</code> package and over a balancer-only build. Jack's later decision is the separate package (see the banner above).</p>
 </section>
 
 <section id="findings">

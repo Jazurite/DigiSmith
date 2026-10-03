@@ -1,5 +1,7 @@
 # Subscription Load Balancer (dg workbox) Implementation Plan
 
+> **Deferred 2026-10-03 (Jack): dg workbox is a separate package packages/workbox, not packages/cli. File paths below that say packages/cli/src/workbox must move to packages/workbox when this is built later. Build ticket: see backlog/dg-workbox-package.md.**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a `dg workbox` command group (`start`, `list`, `stop`, `exhaust`) that starts a herdr worker on the least-loaded Claude subscription account and records the assignment in a roster file.
