@@ -74,20 +74,23 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
 ## Resolve the Note
 
 1. Call `mcp__ccd_session_mgmt__get_session` with `session_id: "self"` and read `title`; that is
-   the session name.
+   the session name. If the call fails or the title is empty or blank, go to step 5.
 2. If the name is one safe path segment (non-empty, no `/` or `\`, not `.` or `..`, and not a
    lineage-key title matching `^\s*[A-Z](\.\d+)?\s*(:|$)`, like "A.1: Primitives" or "K:
    Maestro"), the current note path is `<main-root>/.digismith/sessions/<name>/note.md`. If git
-   tracks that path (`git -C <main-root> ls-files --error-unmatch -- <relative path>` exits 0),
+   tracks that path (`git -C <main-root> --literal-pathspecs ls-files --error-unmatch -- <relative path>` exits 0),
    stop: tell the human partner a file committed to git sits there which this skill did not
    write, and do not read or write it.
 3. Write mode writes to the current path. Resume mode reads the current note if it exists, and
    otherwise falls back: run `--action path --title '<title>'` and use that old note if it
    exists. If that command fails because the fallback path is tracked by git, stop and tell the
-   human partner the same, and do not read or write it.
-4. If the name is not one safe path segment (or it is a lineage-key title), use the fallback path
-   from `--action path` for both modes, exactly as before, with the same stop if git tracks it.
-   If that path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
+   human partner the same, and do not read or write it. Write mode has the same stop whenever it
+   runs `--action path`. A fallback note found for a safe name may belong to another session
+   (the `_unlettered` note is shared), so say where it came from when showing it.
+4. If the title is not blank but is not one safe path segment (or it is a lineage-key title), use
+   the fallback path from `--action path` for both modes, exactly as before, with the same stop if
+   git tracks it. If that path is under `_unlettered`, say so in the reply, so a wrong title is
+   noticed.
 5. If `get_session` fails or there is no title, run `--action list`, list the folders under
    `.digismith/sessions/` that hold a `note.md`, and ask which session this is. Pass an answer
    that is a fallback key as before (`A/A.1` → `--title 'A.1:'`). Do not guess: a wrong name
@@ -170,8 +173,8 @@ not available (plain CLI, no desktop app), tell the human partner to run `/clear
 ## Resume Mode
 
 1. Resolve the note.
-2. If it does not exist, say "No handoff note for this session at `<current path>`." (and, for a
-   fallback title, the fallback path) and stop. Do not read another session's note instead.
+2. If it does not exist, say "No handoff note for this session at `<current path>`." (and the
+   fallback path, when one was tried) and stop. Do not read another session's note instead.
 3. Read it. If the header has `main @ <sha>`, run
    `git -C <main-root> rev-list --count <sha>..HEAD` and report how many commits `main` has
    gained since the note. Skip this if the SHA is missing or unknown.
