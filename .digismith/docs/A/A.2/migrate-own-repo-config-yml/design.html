@@ -121,10 +121,14 @@
   <h2>The migration test</h2>
   <ul>
     <li>Copy the committed <code>*.migrated</code> files into a temp dir (not a git repo), restore the old names, run
-    <code>migrate</code>, and assert that its <code>config.yml</code> equals the committed one.</li>
-    <li>Against the real repo: <code>resolve("profile")</code> returns <code>digismith</code>, and
-    <code>finish_option</code>, <code>clear_context</code> and <code>ssh_key</code> resolve to the values in the
-    <code>.migrated</code> files, from <code>config.yml</code> and not from the fallback.</li>
+    <code>migrate</code>, and assert that its <code>config.yml</code> equals a pinned literal. The inputs are frozen, so
+    this guards <code>migrate</code> and the <code>.migrated</code> files.</li>
+    <li>Against the real repo: the live <code>config.yml</code> carries every key the migration produced, and
+    <code>profile</code>, <code>finish_option</code>, <code>clear_context</code> and <code>ssh_key</code> resolve from
+    <code>config.yml</code> and not from the fallback.</li>
+    <li>The test does not compare values in the live <code>config.yml</code>. <code>digismith:preferences</code> can
+    change them later with a legitimate <code>set</code>, and a test that fails after one would be wrong. This replaces
+    the first draft's "live file equals <code>migrate</code>'s output" (refined while planning, 2026-10-03).</li>
     <li>The ticket that removes the fallback and the <code>.migrated</code> copies also deletes this test.</li>
   </ul>
 </section>
