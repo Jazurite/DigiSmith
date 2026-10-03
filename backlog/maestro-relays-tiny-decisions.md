@@ -41,6 +41,35 @@ Jack (2026-10-03): a task that needs a delete is approved by Jack only, so it is
 blocks one, Jack picks the way out. On 2026-10-03 he chose to start an OpenCode session for the delete (OpenCode has no
 Claude Code classifier), after first offering to do it himself in the ClickUp UI.
 
+## Guardrail: approval within limits (Jack, 2026-10-03)
+
+Jack wants to give the maestro the approval privilege, as long as it stays inside a guardrail. He rejected renaming
+the verbs (for example "CR" and "DE") to get past the classifier: that hides the action from Jack and from the
+classifier on purpose. The guardrail is open, in plain words, and it is Jack's. The ClickUp ticket is DGS-155 (E.4).
+
+Action classes (a draft):
+
+| Class | Examples | Who approves |
+|---|---|---|
+| Read | pane reads, `get-task`, listings | nobody |
+| Write, reversible | create a ticket, rename a list, set a field value | the maestro, one log line |
+| Write, destructive | delete a list, a task or a file, force-push | Jack each time, unless the script is pre-approved (below) |
+| Credential use outside the CLI | the Frontdoor script, any token | Jack, after a dry run, unless pre-approved |
+| Agent hop | send an action to another agent | only for a pre-approved script |
+
+How a pre-approved action works:
+
+1. Pre-approved scripts live in one directory (for example `~/.digismith-depot/approved/`). Jack reviews a script once,
+   when it enters the directory.
+2. Each script is built the same way: preconditions inside it that stop it without a write (name, folder, 0 tasks),
+   a dry run by default, a read-back after, and no token in the output.
+3. Jack writes one permission rule that allows only that directory. This is the part only Jack can do: the classifier
+   accepts his rule, not the maestro's word.
+4. The maestro may approve and run any script in that directory, or tell a worker or an OpenCode session to run it.
+   Anything outside the directory goes to Jack each time.
+5. Each run leaves one line: what ran, which approved script, the result.
+6. Limits that no script may cross: no token output, no merge or force-push, nothing sent outside (Teams, JIRA).
+
 ## Open
 
 - Where it is enforced: the maestro playbook, the role definition (O.3), or the maestro protocol in A.2.
