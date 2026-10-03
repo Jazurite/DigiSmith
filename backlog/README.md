@@ -86,5 +86,5 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [Theme access token setup without Claude handling the token](theme-access-token-setup.md) — toml without password, `.git/info/exclude`, hidden-input one-liner
 - [Theme Check: recommended config against a baseline](theme-check-recommended-baseline.md) — the repo config `extends: :nothing` reports nothing useful
 - [Manager triage: rerun a failed CI job once](manager-ci-rerun-triage.md) — PH E2E flake on PR #664 passed on rerun
-- [Enforce: the maestro delegates ticket builds to workers](maestro-delegates-builds-to-workers.md) — DGS-142 built inline sent every gate to Jack; role gate in the skills plus a cheap dispatch command (DGS-149)
+- [Enforce: the maestro delegates ticket builds to workers](maestro-delegates-builds-to-workers.md) — DGS-142 built inline sent every gate to Jack; role gate in the skills plus a cheap dispatch command (DGS-146)
 - [Execution approach: choose by parallelism and context, not task count](execution-approach-parallelism-and-context.md) — 11 sequential tasks that share context should be one subagent, not 11; derive the shape from each task's Files and a Depends on line (DGS-148)

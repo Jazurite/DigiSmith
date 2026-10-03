@@ -1,7 +1,7 @@
 # Execution approach: choose by parallelism and context, not by task count
 
 **Status:** Idea, Jack's request (2026-10-03). No design yet. ClickUp: **DGS-148** (Town Hall, because the B clan is not
-synced to ClickUp yet), related to DGS-149 and DGS-139. DGS-147 was the same ticket in the wrong list (B.0: Maestro). It
+synced to ClickUp yet), related to DGS-146 and DGS-139. DGS-147 was the same ticket in the wrong list (B.0: Maestro). It
 is marked as moved, and Jack archives it.
 
 **Source:** Live session 2026-10-03, DGS-142. `digismith:writing-plans` chose inline execution for a 2-task plan.
