@@ -1,6 +1,6 @@
 # C: Platform clan, and the Pavilion-is-lineage-0 rule
 
-**Status:** Created in ClickUp 2026-10-03 (Jack). Folder `1301150000002449`, lists `C.0: Pavilion` (`1301150000002950`),
+**Status:** Created in ClickUp 2026-10-03 (Jack). Migration ticket: **DGS-152** (Town Hall). Folder `1301150000002449`, lists `C.0: Pavilion` (`1301150000002950`),
 `C.1: Workbox` (`1301150000002951`) and `C.2: CLI` (`1301150000002952`). The lists have no description yet: the CLI
 cannot set one. Paste the drafts below, or use `dg clickup update-list` (DGS-137) when it exists. No ticket has moved in.
 

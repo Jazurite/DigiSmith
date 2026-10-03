@@ -1,6 +1,6 @@
 # C: Platform: a lineage for the load balancer (name open: Accounts or Billing)
 
-**Status:** Open, Jack (2026-10-03). No ClickUp list yet. Lists cannot be renamed from the CLI (DGS-137), so the name must be
+**Status:** Open, Jack (2026-10-03). Migration ticket: **DGS-152** (Town Hall). No ClickUp list yet. Lists cannot be renamed from the CLI (DGS-137), so the name must be
 settled before the list is created.
 
 **Decision (Jack, 2026-10-03):** the load balancer (DGS-144, the subscription load balancer) moves to C: Platform. It leaves
