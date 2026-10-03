@@ -4,7 +4,7 @@
 
 **Goal:** Turn the approved Flux design into build 1: two small skill changes (`digismith:handoff`, `digismith:finishing-a-development-branch`) and the runbook rewritten as the Flux protocol spec.
 
-**Architecture:** The protocol lives in the untracked runbook `.digismith/sessions/workbox.md` as owner-per-step tables (worker flux W1 to W3, start of a ticket S0 to S6, maestro flux M1 to M7, kicker template). The two tracked skill edits only carry what must be true for every user: a resume shows a list and asks, `Arise` is a resume word, a worker started with a brief writes no handoff, and the maestro's flux-now yes skips the Check Gate. Every clan, lineage or docs-folder dependency is isolated in one runbook block ("Names (interim)") and in Part B, so the DGS-158 follow-up is small and nothing waits on it.
+**Architecture:** The protocol lives in the untracked runbook `.digismith/sessions/workbox.md` as owner-per-step tables (worker flux W1 to W3, start of a ticket S0 to S6, maestro flux M1 to M7, kicker template). The two tracked skill edits only carry what must be true for every user: a resume shows a list and asks, `Arise` is a resume word, a worker started with a brief writes no handoff, and the maestro's flux-now yes skips the Check Gate. Every clan, lineage or docs-folder dependency is isolated in one runbook block ("Names") and in Part B, so the DGS-158 follow-up is small and nothing waits on it.
 
 **Tech Stack:** Markdown skill files, a plain Markdown runbook, git, Vitest (`pnpm test`) for regression only. No code changes in Part A.
 
@@ -19,7 +19,7 @@
 
 | What | Single place | Task |
 |---|---|---|
-| Worker label, agent name, docs folder, brief path, spec path, spike path | the runbook block "Names (interim)"; every other runbook step says `<label>`, `<agent>`, `<docs folder>`, `<brief path>` | 3 |
+| Worker label, agent name, docs folder, brief path, spec path, spike path | the runbook block "Names"; every other runbook step says `<label>`, `<agent>`, `<docs folder>`, `<brief path>` | 3 |
 | The maestro's note path and the session-title lookup | not written anywhere in Part A: `digismith:handoff` resolves them through `scripts/lineage-handoff.ts`, and the runbook steps M3 and M6 only say "write the note / resume with `digismith:handoff`" | 1, 3 |
 | Clan and lineage words in skill text | none added by Part A. The two skill edits name no clan, no lineage key and no folder | 1, 2 |
 | The design's own paths | the footer and the interim rows of section 13 | 5 |
@@ -46,7 +46,7 @@
 | `skills/finishing-a-development-branch/SKILL.md` | yes | Step 7 skip clause for a worker started with a brief, Quick Reference half-sentence | 2 |
 | `.digismith/sessions/workbox.md` | no (untracked) | Flux definition, "When to choose", the "Switch lineage or ticket" block becomes the Flux protocol, the Notes bullet | 3 |
 | `.digismith/docs/E/E.4/flux-protocol/design.html` | yes | Path and name updates | 5 (after DGS-158) |
-| `.digismith/sessions/workbox.md` | no | "Names (interim)" block, roster names, brief location | 6 (after DGS-158) |
+| `.digismith/sessions/workbox.md` | no | "Names" block, roster names, brief location | 6 (after DGS-158) |
 | `skills/handoff/SKILL.md`, `scripts/lineage-handoff.ts`, `scripts/session-init.ts` and their tests | yes | Note location and lookup | 7 (after DGS-158) |
 
 ---
@@ -251,7 +251,7 @@ git commit -m "docs(finishing): a worker started with a brief skips the Step 7 h
 
 **Interfaces:**
 - Consumes: the `Arise` word and the "kicker open? flux now?" question from Task 1; the Step 7 skip from Task 2.
-- Produces: the runbook sections "Flux protocol", "Names (interim)" (the only block that names a worker, a label or a docs folder; Task 6 rewrites it), the worker flux W1-W3, the start of a ticket S0-S6, the maestro flux M1-M7, the kicker template.
+- Produces: the runbook sections "Flux protocol", "Names" (the only block that names a worker, a label or a docs folder; Task 6 rewrites the folder bullets), the worker flux W1-W3, the start of a ticket S0-S6, the maestro flux M1-M7, the kicker template.
 
 - [ ] **Step 1: Re-read the lines about to change**
 
@@ -265,11 +265,11 @@ Create the scratch file with exactly this content (outer fence is `~~~~` because
 ~~~~markdown
 ### Flux protocol (DGS-154, Kind: Protocol; design approved by Jack 2026-10-03 21:53 UTC+7 [14:53Z])
 
-Spec: the design file named in "Names (interim)". A flux renews a session. Two flavors: the **worker flux** (a
+Spec: the design file named in "Names". A flux renews a session. Two flavors: the **worker flux** (a
 worker exits and its workspace closes) and the **maestro flux** (the Desktop maestro clears itself and a kicker wakes it).
 The **start of a ticket** is part of the protocol. `digismith:handoff` (A.1) is the Primitive the maestro flux shares.
 Every step has one owner. `<agent>`, `<pane>` and `<ws>` are the worker's address in the roster table above, for example
-`dgs-158`, `wC:p1`, `wC`. `<label>`, `<agent>`, `<docs folder>` and `<brief path>` come from "Names (interim)" and
+`dgs-158`, `wC:p1`, `wC`. `<label>`, `<agent>`, `<docs folder>` and `<brief path>` come from "Names" and
 nowhere else; no step below spells a name or a folder out.
 
 Rules:
@@ -398,7 +398,7 @@ archive_session or delete_session, and do nothing except these steps.
   [10:45Z], comment `1301150000057204`).
 - **Node `setInterval` process (spike):** detection works through `/root/.claude/sessions/<pid>.json` (status busy or
   idle, `hostSessionId`, a `sessionId` that changes at a clear). Delivery is unproven: the session's Unix socket speaks an
-  undocumented versioned protocol, and `claude --resume --print` may lock against the live process. Not pursued. Files: the spike folder in "Names (interim)".
+  undocumented versioned protocol, and `claude --resume --print` may lock against the live process. Not pursued. Files: the spike folder in "Names".
 - **Not tested:** `notify_when_idle` as the wait, a herdr CLI worker as the kicker, and a kick that arrives while the
   maestro still runs (the queued clear would be dropped). These are build 2 candidates.
 ~~~~
@@ -500,7 +500,7 @@ with
 
 Run, from `/root/Workspace/Jazurite/DigiSmith`:
 `grep -c "^- \*\*W[123]\.\|^- \*\*S[0-6]\.\|^- \*\*M[1-7]\." .digismith/sessions/workbox.md`
-Expected: `16` (W1 to W3, S0 to S6, M1 to M7).
+Expected: `17` (W1 to W3 = 3, S0 to S6 = 7, M1 to M7 = 7).
 
 `grep -n "resume lineage\|Continue with Next\|three flux points\|Step 10\|Check Gate waits" .digismith/sessions/workbox.md`
 Expected: only the Notes line from Step 7 (which says the old kick is gone) and historical lines in the roster table (for example the line 33 "Superseded ... Step 10" note). No instruction still tells the maestro to use any of these. If a live instruction remains, fix it.
@@ -594,10 +594,10 @@ git commit -m "docs(flux): update the design to the DGS-158 names and folders"
 - Modify (untracked, never commit): `/root/Workspace/Jazurite/DigiSmith/.digismith/sessions/workbox.md`
 
 **Interfaces:**
-- Consumes: DGS-158's design; Task 3's "Names (interim)" block.
+- Consumes: DGS-158's design; Task 3's "Names" block.
 - Produces: the runbook with final names.
 
-- [ ] **Step 1: Rewrite the "Names (interim)" block**
+- [ ] **Step 1: Rewrite the "Names" block**
 
 It is the only block in the protocol that names a label, an agent or a folder (see Task 3). Replace its bullets with the DGS-158 values and rename the heading to "Names". Where the DGS-158 outcome moves ticket files to `.digismith/board` and sessions to `.digismith/sessions/`, update the brief location (S0, S5) and the docs folder wording.
 
@@ -641,7 +641,7 @@ The new note location, the title lookup and the SessionStart line are DGS-158's 
 **1. Spec coverage** (design section → task):
 - 3 Rules → Task 3 (the six runbook rules); the skill rules in Tasks 1 and 2.
 - 4 Worker flux → Task 3 (W1 to W3), Task 2 (Step 7).
-- 5 Start of a ticket → Task 3 (S0 to S6); the naming parts are isolated in "Names (interim)" and finalised in Tasks 5 and 6.
+- 5 Start of a ticket → Task 3 (S0 to S6); the naming parts are isolated in "Names" and finalised in Tasks 5 and 6.
 - 6 Maestro flux → Task 3 (M1 to M7, Order, Fallback), Task 1 (Check Gate exception, Clear Decision).
 - 7 Kicker instruction and options tested → Task 3.
 - 8 The A.1 skill change → Task 1 (all six bullets except the lookup), Task 2, Task 7 (the lookup).
