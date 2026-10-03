@@ -378,6 +378,9 @@ place. If your platform provides a workspace-exit tool, use it.
 deliberate deferral, not completion, the same distinction Step 4.5 already draws for its own
 follow-up.
 
+If this session is a worker started with a brief, skip this step: no handoff note, no cleanup
+round, no clear question. The maestro closes the worker.
+
 Invoke `digismith:handoff` in end-of-ticket mode. It writes this lineage's handoff note, runs the
 end-of-ticket cleanup round, and decides whether to clear this session using the repo's
 `clear_context` preference. This skill does nothing further after that.
@@ -395,8 +398,8 @@ Steps 3.5/4.5 can skip this menu entirely when a `finish_option`
 preference is already saved for the repo — see those steps for the full
 logic.
 
-Step 7 (after Options 1/2 only) hands off to `digismith:handoff`, which owns
-the `clear_context` preference.
+Step 7 (after Options 1/2 only, and not in a worker started with a brief) hands off to
+`digismith:handoff`, which owns the `clear_context` preference.
 
 ## Common Rationalizations
 
