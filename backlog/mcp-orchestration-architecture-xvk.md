@@ -449,3 +449,50 @@ Milestone subtasks:
 - DGS-124: this idea.
 
 Runbook: `.digismith/sessions/workbox.md`.
+
+## 2026-10-02 addition — the first Sol whole-branch review on a real ticket (DGS-141)
+
+**Status: evidence, one run.** The maestro (Desktop session "Digi Smith maestro orchestration") ran Sol by
+hand, as DGS-127 will automate it, on the finished DGS-141 branch (centralized `.digismith/config.yml`, 27
+commits, 33 files). The worker was `a-system` in herdr session `DigiSmith`, pane `w5:p1`.
+
+**Setup used.**
+- Reviewer workspace `opencode-sol` is now `w3` in herdr session `DigiSmith` (it was `w6` in `default`).
+  Server: `opencode serve --hostname 127.0.0.1 --port 4097` in `w3:p1`, started by the pane's own shell,
+  which reads `TOKENREPLY_API_KEY` from `~/.digismith-depot/.env`. Watch tab `w3:p2`: `opencode attach`.
+- `~/.digismith-depot/opencode-reviewer.json`, loaded with `OPENCODE_CONFIG`, adds `gpt-6-sol`,
+  `gpt-6-luna` and `gpt-6-astra` to the TokenReply provider and a read-only `reviewer` agent: edits and
+  web fetches denied, shell denied except `git show`, `git diff`, `git log`, `git grep` and `git status`.
+  The global `~/.config/opencode/opencode.json` (which holds the API key) was not changed.
+  `opencode debug agent reviewer` confirmed the resolved rules.
+- Grade extra-complex: `tokenreply/gpt-6-astra`. TokenReply accepted the model.
+- Prompt: `~/.digismith-depot/reviews/dgs-141-branch-review-prompt.md`. Answer:
+  `~/.digismith-depot/reviews/dgs-141-branch-review.md`.
+
+**Result.** 20 minutes 21 seconds, 43 tool calls, about 305k input and 6.8k output tokens. Verdict "ready
+after fixes", with 8 findings (3 important, 5 minor), plus a verdict on each of the 5 minor items the build
+had deferred. The maestro verified each one in the code: 7 were real, and 1 was a stale sentence in the
+design, not a code bug. The worker's own per-task Claude reviews had passed every task (Task 3 with zero
+findings), and the maestro had reviewed Tasks 1 and 2 and missed one of the 7 (clearing an array also
+deleted the comments between its items). All 10 resulting fixes were made, and the suite stayed at the
+baseline (748 tests, 746 pass, the 2 known DGS-117 failures).
+
+**Conclusion (maestro and Jack, 2026-10-02).** On this branch Sol was the best reviewer. Probable causes:
+a fresh model family, the whole branch at once with the approved design as the spec, and a prompt that
+demanded a failing scenario for each finding. One run is not proof in general. Recommendation:
+- Make Sol the default whole-branch reviewer (DGS-127).
+- Consider Sol for per-task reviews too: it is cheap on TokenReply and saves Claude subscription quota.
+- Keep the maestro verifying every finding before it reaches the worker.
+
+**Findings for the DGS-127 build.**
+- **Compaction.** The run reached the 200k context limit set in the reviewer config, and OpenCode
+  compacted the session. The real answer was text part 3 of 6. Parts 4 to 6 were the compaction summary,
+  OpenCode's automatic "continue" prompt and a closing line. `extractAnswer` must not take the last text
+  part: take the longest text part that ends with a verdict, or the last text part before a compaction.
+  Raise the models' context limit in the reviewer config to the real window.
+- **Read-only gap.** `git diff --output=<file>` and `git log --output=<file>` can write a file, and the
+  `git diff*` and `git log*` allow rules let them through. Deny `--output` explicitly.
+- **Gitignored files.** Sol could not find the worker's ledger, which sits in a gitignored
+  `.sdd-workspace/` inside the docs folder. The prompt must give the exact paths of such files.
+- **Workspace IDs.** The design still names `w6`. After the 2026-10-02 split into named herdr sessions,
+  it is `w3` in session `DigiSmith`, and every herdr command needs `--session DigiSmith`.
