@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flux Protocol</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">draft for design review</span>
+  <h1>Flux Protocol</h1>
+  <div class="meta">
+    <span>Date: 2026-10-03</span>
+    <span>Map item: E.4 Workflows (ClickUp DGS-154, Kind: Protocol)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#what">What Flux is</a></li>
+    <li><a href="#tags">How to read the decisions</a></li>
+    <li><a href="#rules">Rules of the protocol</a></li>
+    <li><a href="#worker">Worker flux</a></li>
+    <li><a href="#start">Start of a ticket</a></li>
+    <li><a href="#maestro">Maestro flux</a></li>
+    <li><a href="#kicker">The kicker instruction</a></li>
+    <li><a href="#skill">The A.1 skill change</a></li>
+    <li><a href="#runbook">The runbook spec</a></li>
+    <li><a href="#fail">Failure modes</a></li>
+    <li><a href="#verify">How build 1 is checked</a></li>
+    <li><a href="#out">Out of scope: build 2</a></li>
+    <li><a href="#open">Open items</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+  <h2>1. What Flux is</h2>
+  <p>A flux is the cycle that renews a session. It has two flavors because the two kinds of session end differently:</p>
+  <div class="cards">
+    <div class="card"><span class="tag">Procedure</span><h4>Worker flux</h4>
+      <p>A herdr CLI worker writes its handoff, exits, and its workspace is closed. There is no resume.</p></div>
+    <div class="card"><span class="tag">Procedure</span><h4>Maestro flux</h4>
+      <p>The Desktop maestro cannot exit and restart. It clears itself, a kicker session wakes it with the word <code>Arise</code>, and it shows Jack a list.</p></div>
+  </div>
+  <p>Flux is a <strong>Protocol</strong> (Jack, 2026-10-03). The worker flux, the start of a ticket and the maestro flux are the Procedures inside it. <code>digismith:handoff</code> (A.1) is the Primitive they share.</p>
+  <h3>Scope: build 1 and build 2</h3>
+  <p>Jack chose build order (a) on 2026-10-03. <strong>Build 1</strong> is three things done together, so they stay consistent: the runbook as the spec, the kicker instruction text, and the A.1 skill change. <strong>Build 2</strong> is the tooling that automates the worker steps (DGS-151, <code>dg workbox</code>) and is not part of this design.</p>
+  <p>The runbook <code>.digismith/sessions/workbox.md</code> stays untracked (Jack's rule): it is edited on disk and never committed. Only the skill change and this design are committed.</p>
+</section>
+
+<section id="tags">
+  <h2>2. How to read the decisions</h2>
+  <p>Every choice below carries one tag, so Jack can see what is his and what is mine.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Tag</th><th>Meaning</th></tr>
+    <tr><td><strong>Decided</strong></td><td>Jack decided it (date given). Not reopened here.</td></tr>
+    <tr><td><strong>Proposed</strong></td><td>My recommendation. Jack can overrule it at the design review.</td></tr>
+    <tr><td><strong>Open</strong></td><td>Jack's to decide. The design shows each variant and picks none.</td></tr>
+  </table></div>
+</section>
+
+<section id="rules">
+  <h2>3. Rules of the protocol</h2>
+  <ol>
+    <li><strong>No resume starts any work.</strong> <em>Decided</em> (Jack, 2026-10-03 17:58 UTC+7). "Continue with Next" no longer exists anywhere. A resume reads the note, shows a short list, and asks Jack.</li>
+    <li><strong>A worker is not resumed.</strong> <em>Decided.</em> It is deleted at the flux. The only resume is the maestro's.</li>
+    <li><strong>No exit and no clear before the note exists.</strong> <em>Proposed</em> (the skill already says "no note, no clear"). In the worker flux the maestro checks that the note file exists and is dated today before it exits the agent.</li>
+    <li><strong>Nothing runs in the background at a clear or an exit.</strong> <em>Proposed</em>, from the failed subagent kicker: <code>clear_session</code> killed a background subagent about 1 s after the turn ended (exit 137, 2026-10-03 17:45 UTC+7).</li>
+    <li><strong>A kick is not an approval.</strong> <em>Proposed</em>, from the harness notice in the A' test: a peer message cannot grant escalation. <code>Arise</code> therefore only asks for a read-only list and never carries a go.</li>
+    <li><strong>The maestro keeps its seat.</strong> <em>Decided.</em> It runs as a Desktop session on <code>dev0</code>. Running it as a herdr agent is ruled out. Only workers choose an account.</li>
+    <li><strong>Every step has one owner</strong> (worker, maestro, Jack or kicker) and names what it reads and writes. A skill, a hook or <code>dg workbox</code> can then run a step later.</li>
+  </ol>
+</section>
+
+<section id="worker">
+  <h2>4. Worker flux</h2>
+  <p>Used when a worker finishes a ticket or must switch lineage. No <code>/clear</code>, no reused pane. <em>Decided</em> (Jack, 2026-10-03): the workspace is closed, and this replaces the reusable slot (DGS-121, DGS-126).</p>
+  <div class="table-wrap"><table>
+    <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
+    <tr><td>W1</td><td>Write the handoff note with <code>digismith:handoff</code> (manual write, no clear). Skip it when the note is shared with another live session: the write would overwrite theirs.</td><td>Worker</td><td>Conversation, plan ledger</td><td><code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/handoff.md</code></td></tr>
+    <tr><td>W2</td><td>Check that the note exists and is dated today.</td><td>Maestro</td><td>The note file</td><td>Nothing</td></tr>
+    <tr><td>W3</td><td>Exit the agent: <code>herdr --session DigiSmith agent prompt &lt;agent&gt; "/exit"</code>.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
+    <tr><td>W4</td><td>Close the workspace: <code>herdr --session DigiSmith workspace close &lt;ws&gt;</code>. The idle shell and its memory go.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
+    <tr><td>W5</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
+  </table></div>
+  <p>The worker flux has no Check Gate, because it does no clear. Jack's second requirement (cleanup) is W3 and W4. <em>Open:</em> a limit stop (<code>--resume &lt;session id&gt;</code> in the same pane) is an exception to "no reused pane"; the runbook keeps it as the Emergency flux until Jack says if it stays (see open items).</p>
+</section>
+
+<section id="start">
+  <h2>5. Start of a ticket</h2>
+  <p>Part of the protocol (Jack, 2026-10-03): every new ticket gets a new workspace and a new agent.</p>
+  <div class="table-wrap"><table>
+    <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
+    <tr><td>S0</td><td>Write the brief for the worker.</td><td>Maestro</td><td>Ticket, lineage note</td><td><code>.digismith/docs/&lt;Clan&gt;/&lt;Lineage&gt;/brief.md</code></td></tr>
+    <tr><td>S1</td><td>Choose the account with "The rule" (usage probe, headroom, workers in use, last assigned).</td><td>Maestro</td><td>Usage probe, account matrix</td><td>Nothing</td></tr>
+    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" --no-focus</code>. The label starts with the key, so no later rename is needed (the old step 6 goes).</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
+    <tr><td>S3</td><td>Load the account in the new pane: <code>claude-account use &lt;name&gt; &amp;&amp; eval "$(claude-account env)" &amp;&amp; claude-account status</code>. Check that the pane prints the expected account.</td><td>Maestro</td><td>Pane output (never a token)</td><td>Nothing</td></tr>
+    <tr><td>S4</td><td><code>agent start &lt;agent&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "&lt;key&gt;: &lt;ticket&gt; &lt;short name&gt;"</code>. A fresh session, no <code>--resume</code>.</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
+    <tr><td>S5</td><td>First prompt: "Read &lt;brief path&gt; and follow it." <em>Open:</em> whether the worker also reads its lineage note (see below).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
+    <tr><td>S6</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
+  </table></div>
+  <p><strong>Agent name.</strong> <em>Proposed:</em> a new worker reuses its clan's agent name (for example <code>e-methodology</code>), because the old agent is gone after W3 and W4. The maestro's roster addresses stay stable, and no rename step is needed.</p>
+  <div class="callout"><strong>Open (Jack): the worker-start gap.</strong> Does a new worker start from the brief only, or from the brief plus its lineage note? Two facts bear on it. First, today's skill auto-resumes a session whose key is listed on the SessionStart line, so a new worker whose title matches a note would read it and show a list without being told. Second, the old runbook step 5 sent "resume lineage &lt;key&gt;", which no longer fits "a worker has no resume". Variant 1, brief only: the skill's SessionStart trigger must not fire for workers (the A.1 change grows by one clause). Variant 2, brief plus note: S5 names the note path as context, the SessionStart trigger stays, and the worker still waits for its brief's first instruction (the resume shows a list and asks, it starts nothing). Nothing else in the design depends on the answer.</div>
+</section>
+
+<section id="maestro">
+  <h2>6. Maestro flux</h2>
+  <p>Only the maestro uses <code>clear_session</code>, on <code>self</code>, effective when its turn ends. Route A' passed on 2026-10-03 17:32 to 17:34 UTC+7 (DGS-154 comment <code>1301150000057188</code>): a Desktop kicker session woke the maestro. The subagent kicker failed (comment <code>1301150000057204</code>) and is dropped. <em>Decided</em> (Jack, 2026-10-03 17:48): the kicker is a Desktop session that Jack opens and deletes by hand.</p>
+  <div class="table-wrap"><table>
+    <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
+    <tr><td>M1</td><td>Write the maestro's handoff note with <code>digismith:handoff</code>. Make sure nothing runs in the background (no subagent, background command, monitor or scheduled wake-up). Print the kicker instruction with the maestro's own session id filled in (from <code>get_session self</code>).</td><td>Maestro</td><td>Conversation, tickets, live workers</td><td>The note; the instruction text on screen</td></tr>
+    <tr><td>M2</td><td>Open a new Desktop session (the kicker) and paste the instruction. No tool can start a session.</td><td>Jack</td><td>The printed instruction</td><td>The kicker session</td></tr>
+    <tr><td>M3</td><td><strong>Check Gate.</strong> <em>Open (Jack):</em> does Jack check the note and say ok before the clear, as every clear does today? Until he decides, the skill's gate is unchanged: "Fix anything, or say ok to clear."</td><td>Jack</td><td>The note</td><td>Corrections, if any</td></tr>
+    <tr><td>M4</td><td>Arm the kicker, after the gate: <code>send_message</code> "KICK" to it and end the turn. The kicker's "armed" reply starts the turn that clears. Arming before the gate would let the kicker see the idle maestro that waits for Jack's ok.</td><td>Maestro</td><td>Kicker session id (list of sessions)</td><td>One message</td></tr>
+    <tr><td>M5</td><td>Say the final summary and the note path, then call <code>clear_session</code> on <code>self</code> as the very last action of the turn. The app may ask Jack to approve the call.</td><td>Maestro</td><td>Nothing</td><td>The clear</td></tr>
+    <tr><td>M6</td><td>Poll <code>get_session</code> on the maestro every 10 s. After 3 checks in a row with <code>isRunning</code> false, <code>send_message</code> "Arise". Report the send time and result.</td><td>Kicker</td><td>Maestro session state</td><td>One message</td></tr>
+    <tr><td>M7</td><td><strong>Arise: resume.</strong> The message is the first input of the cleared session. The maestro runs <code>digismith:handoff</code> in resume mode, then does its own refresh: fetch the latest <code>main</code>, rebuild the in-progress picture (tickets, tasks, live workers), show a summarized list of candidate next tasks, and stop. Jack chooses. It never acts on the note's Next alone.</td><td>Maestro</td><td>Its note, <code>main</code>, ClickUp, herdr</td><td>Nothing</td></tr>
+    <tr><td>M8</td><td>Delete the kicker (<code>delete_session</code> shows Jack an approval card in every permission mode, so a flux cannot do it alone; he accepted the cost).</td><td>Jack</td><td>Nothing</td><td>Removes the kicker</td></tr>
+  </table></div>
+  <p><strong>Fallback:</strong> if the kick is lost or held, Jack types <code>Arise</code> in the maestro and gets the same list. Jack's first requirement (something other than Jack types the resume text) is M6.</p>
+</section>
+
+<section id="kicker">
+  <h2>7. The kicker instruction</h2>
+  <p><em>Proposed:</em> the template lives in the runbook (untracked), next to the maestro steps. It is Workbox operations for Jack's VPS, not a feature of the plugin that ships to everyone. The maestro fills in its session id at M1.</p>
+  <pre><code>You are the kicker for a maestro flux. Never call clear_session, stop_session,
+archive_session or delete_session, and do nothing except these steps.
+1. Wait for the message KICK, then reply "armed".
+2. Poll get_session on session &lt;MAESTRO_SESSION_ID&gt; every 10 s. When isRunning is
+   false on 3 checks in a row, send_message to that session with exactly: Arise
+   If 15 minutes pass with no idle session, stop and report "no clear seen".
+3. Report the result line and the send time (UTC+7, UTC in brackets). Then stop.</code></pre>
+  <p>Changes from the A' test text: the wake-up is <code>Arise</code> alone (the test sent "resume. Continue with Next"), and the 15-minute limit is new (<em>proposed</em>). <code>notify_when_idle</code> is still untested, so polling stays.</p>
+</section>
+
+<section id="skill">
+  <h2>8. The A.1 skill change</h2>
+  <p>The only tracked change besides this design. It is small because the maestro-specific work (fetch <code>main</code>, workers, tickets) stays in the runbook, not in a skill that ships to every user. File: <code>skills/handoff/SKILL.md</code>.</p>
+  <ul>
+    <li><strong>Description and Invoked By:</strong> add <code>Arise</code> as a resume trigger, next to "resume" and "pick up where we left off".</li>
+    <li><strong>Resume Mode step 4:</strong> replace "State Done and Next in a few lines, then ask 'Continue with &lt;Next&gt;?'" with: state Done in a few lines, show Next and the open problems as a short numbered list of candidates, and ask which one Jack wants. Start nothing. This applies to every resume, not only the maestro's (<em>decided</em> by Jack's rule: no resume starts work).</li>
+    <li><strong>Rationalizations:</strong> the row "Resume found a note, so I'll start on Next" stays true and needs no change.</li>
+    <li><strong>Check Gate:</strong> unchanged until Jack answers M3.</li>
+    <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): changed only if Jack picks variant 1 of the worker-start gap.</li>
+    <li><strong><code>scripts/session-init.ts</code>:</strong> unchanged (<em>proposed</em>). The pointer line says "or say resume", and <code>Arise</code> comes from the kicker or from Jack, who knows it from the runbook.</li>
+  </ul>
+</section>
+
+<section id="runbook">
+  <h2>9. The runbook spec</h2>
+  <p>The runbook becomes the spec. Work to do on <code>.digismith/sessions/workbox.md</code> (on disk, untracked):</p>
+  <ol>
+    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W5) and the start of a ticket (S0 to S6) in section 4 and 5 form, with the owner, reads and writes of each step.</li>
+    <li>Keep Steps 8 and 9 as the maestro wrote them, with four corrections: M1 says how the kicker is told and that Jack must open it before the clear; M3 names the Check Gate and who runs it, and the gate comes before the arming (M4); the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
+    <li>Fold Step 10 (Cleanup) into W3 and W4 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
+    <li>Add the kicker instruction (section 7) as a template.</li>
+    <li>Keep the Emergency flux (limit stop), marked as an exception until Jack decides.</li>
+  </ol>
+  <p>The two of Jack's requirements map to M6 (auto-resume of the maestro) and W3 and W4 (cleanup).</p>
+</section>
+
+<section id="fail">
+  <h2>10. Failure modes</h2>
+  <div class="table-wrap"><table>
+    <tr><th>What goes wrong</th><th>What happens</th><th>Recovery</th></tr>
+    <tr><td>The note write fails (M1, W1)</td><td>No clear, no exit.</td><td>Report it and stop (the skill's rule).</td></tr>
+    <tr><td>The kick is lost or held for approval</td><td>The cleared maestro sits idle.</td><td>Jack types <code>Arise</code>.</td></tr>
+    <tr><td>The clear is dropped (a message arrived before the turn ended)</td><td>The kicker sees an idle maestro and sends <code>Arise</code> into the old context. Harmless: the maestro says it did not clear.</td><td>Run M5 again.</td></tr>
+    <tr><td>Jack says no at the Check Gate</td><td>The kicker was never armed and waits for KICK. The maestro keeps its context.</td><td>Jack deletes the kicker (M8).</td></tr>
+    <tr><td>The kicker sees the maestro idle between "armed" and the turn that clears</td><td>It could send <code>Arise</code> before the clear (harmless, as in the row above) or count idle too soon.</td><td>The live run (section 11) checks the timing. If it shows a gap, the kicker also waits for the maestro to run once after "armed".</td></tr>
+    <tr><td>Background work running at the clear</td><td>It is killed (proven).</td><td>Rule 4: M1 checks first.</td></tr>
+    <tr><td>The kicker holds the maestro's session id wrongly</td><td>It polls a wrong session and never sends.</td><td>The 15-minute limit; Jack types <code>Arise</code>.</td></tr>
+  </table></div>
+</section>
+
+<section id="verify">
+  <h2>11. How build 1 is checked</h2>
+  <ul>
+    <li>The skill text is reviewed against Jack's rule: no sentence left that starts work on a resume, and no "Continue with Next".</li>
+    <li>The existing tests for the lineage script and the SessionStart line stay green (<code>scripts/lineage-handoff.test.ts</code>, <code>scripts/session-init.test.ts</code>); neither is expected to change.</li>
+    <li>A live run of the maestro flux with Jack present (a Desktop kicker, M1 to M8) shows that <code>Arise</code> produces a list and not an action. This needs Jack and the maestro, so the maestro runs it after the build.</li>
+    <li>The runbook is checked by reading it against the tables in sections 4 to 6: every step has an owner, reads and writes.</li>
+  </ul>
+</section>
+
+<section id="out">
+  <h2>12. Out of scope: build 2</h2>
+  <ul>
+    <li><code>dg workbox</code> automating W3, W4 and S1 to S6 (DGS-151). Its <code>start --account</code> removes the race between <code>claude-account use</code> and <code>eval "$(claude-account env)"</code> when two workers start at once.</li>
+    <li>The kicker as a herdr CLI worker (untested), archiving or reusing the kicker instead of deleting it, and <code>notify_when_idle</code> as the wait.</li>
+    <li>The idle sweep (DGS-153), usage monitoring, and the guardrail for maestro approvals (DGS-155).</li>
+    <li>E.2 (stage-order enforcement). Not built now.</li>
+    <li>A worker that ends through <code>digismith:finishing-a-development-branch</code> Step 7 is asked the clear question by the skill and answers no. Not worth a skill change in build 1.</li>
+  </ul>
+</section>
+
+<section id="open">
+  <h2>13. Open items</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Item</th><th>Whose</th><th>Blocks</th></tr>
+    <tr><td>Worker-start gap: brief only, or brief plus lineage note (section 5)</td><td>Jack</td><td>The text of S5 and one clause of the skill change. Not the design.</td></tr>
+    <tr><td>Check Gate in the maestro flux: does Jack check the maestro's note before the clear (M3)</td><td>Jack</td><td>The text of M3 and of the skill's Check Gate. Until then the gate is unchanged.</td></tr>
+    <tr><td>Does the limit stop stay as a reused-pane exception</td><td>Jack</td><td>One paragraph of the runbook.</td></tr>
+    <tr><td>Allow rules for <code>herdr workspace create</code> and <code>workspace close</code> in the maestro's permissions</td><td>Jack (the guardrail is his, DGS-155)</td><td>W4 and S2 run by the maestro; until then Jack allows each call.</td></tr>
+    <tr><td>Agent name reused per clan; kicker template in the runbook; kicker 15-minute limit; <code>session-init.ts</code> unchanged</td><td>Proposed, Jack can overrule</td><td>Nothing.</td></tr>
+  </table></div>
+</section>
+
+<footer>DigiSmith · .digismith/docs/E/E.4/flux-protocol/design.html</footer>
+
+</body>
+</html>
