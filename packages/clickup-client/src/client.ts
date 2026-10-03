@@ -11,6 +11,8 @@ import type {
   ClickUpListDetail,
   ClickUpListSummary,
   ClickUpListsResponse,
+  ClickUpListWriteBody,
+  ClickUpUpdatedList,
   ClickUpTask,
   ClickUpTasksResponse,
   ClickUpTaskType,
@@ -143,6 +145,10 @@ export class ClickUpClient {
 
   createListInSpace(spaceId: string, name: string): Promise<ClickUpListSummary> {
     return this.post<ClickUpListSummary>(`/space/${spaceId}/list`, { data: { name } });
+  }
+
+  updateList(listId: string, body: ClickUpListWriteBody): Promise<ClickUpUpdatedList> {
+    return this.put<ClickUpUpdatedList>(`/list/${listId}`, { data: body });
   }
 
   async setCustomField(taskId: string, fieldId: string, value: unknown): Promise<void> {

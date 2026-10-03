@@ -237,6 +237,18 @@ export interface ClickUpTaskWriteBody {
   priority?: number;
 }
 
+export interface ClickUpListWriteBody {
+  name?: string;
+  content?: string;
+}
+
+/** Response shape from PUT /list/{list_id}; only the fields the CLI relies on. */
+export interface ClickUpUpdatedList {
+  id: string;
+  name: string;
+  content?: string;
+}
+
 /** Response shape from POST /task/{task_id}/attachment. */
 export interface ClickUpAttachment {
   id: string;

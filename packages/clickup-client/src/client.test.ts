@@ -260,6 +260,21 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(list).toEqual({ id: "l2", name: "Folderless List" });
   });
 
+  it("updateList() PUTs the body to the list endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "l1", name: "Town Hall", content: "- scope" } });
+
+    const list = await client.updateList("l1", { name: "Town Hall", content: "- scope" });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/list/l1",
+      params: undefined,
+      data: { name: "Town Hall", content: "- scope" },
+    });
+    expect(list).toEqual({ id: "l1", name: "Town Hall", content: "- scope" });
+  });
+
   it("setCustomField() POSTs { value } to the field endpoint", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });
