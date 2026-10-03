@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket-Based Naming Architecture</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Ticket-Based Naming Architecture</h1>
+  <div class="meta">
+    <span>Date: 2026-10-03</span>
+    <span>Map item: E.3 Conventions (ClickUp DGS-158) — the last build filed under the clan/map-letter system, which this design retires for the repo's own files</span>
+    <span>Status: approved by Jack, 2026-10-03 (checkpoint 2)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#what">1. What changes, and why</a></li>
+    <li><a href="#board">2. Board: a ticket's working files</a></li>
+    <li><a href="#sessions">3. Sessions: files about a session</a></li>
+    <li><a href="#names">4. Session and worker names</a></li>
+    <li><a href="#split">5. Splitting a ticket across workers</a></li>
+    <li><a href="#oneoff">6. The one-off worker, resolved</a></li>
+    <li><a href="#resume">7. The maestro's note and resume list</a></li>
+    <li><a href="#deliverable">8. This ticket's own deliverable</a></li>
+    <li><a href="#chars">9. Non-ASCII characters: build and parse rules</a></li>
+    <li><a href="#dgs159">10. Input list for DGS-159</a></li>
+    <li><a href="#open">11. Open items</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+  <h2>1. What changes, and why</h2>
+  <p>Jack's direction (2026-10-03): drop the clan letters, the lineage keys, and the map-item letters as a naming
+  convention for the repo's own files. The ticket is the unit instead. A ticket's key comes from its tracker —
+  <code>DGS-nnn</code> on ClickUp, <code>EMKT-nnn</code> on JIRA, the same <code>&lt;PREFIX&gt;-&lt;number&gt;</code>
+  shape for any future tracker.</p>
+  <p>This reaches only the repo's own naming of files and folders under <code>.digismith/</code>. ClickUp's own clan
+  folders and lists (A: Primitives through E: Methodology, and their sub-lists such as E.3: Conventions) stay exactly
+  as they are — confirmed by Jack. The source of this change is the Flux design (DGS-154, E.4), whose own worker and
+  maestro conventions were left as an interim pick pending this ticket; this design is what Flux now builds against.</p>
+  <p>Two folders replace the old, single, flat <code>.digismith/docs/&lt;slug&gt;/</code> convention (and its
+  letter-nested variant, G.3, formally superseded by this design):</p>
+  <div class="cards">
+    <div class="card"><span class="tag">Ticket-keyed</span><h4><code>.digismith/board/</code></h4>
+      <p>A ticket's working files: design, plan, report, and the rest. One folder per ticket.</p></div>
+    <div class="card"><span class="tag">Session-keyed</span><h4><code>.digismith/sessions/</code></h4>
+      <p>Files about a running session: the maestro's note, a worker's brief. Never ticket-keyed, because a maestro
+      outlives any one ticket.</p></div>
+  </div>
+</section>
+
+<section id="board">
+  <h2>2. Board: a ticket's working files</h2>
+  <p>Folder: <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code> — the ticket key, an em dash
+  (U+2014, no surrounding spaces), then the title as a slug. Example:
+  <code>.digismith/board/DGS-158—ticket-based-naming-architecture/</code>. The format is decided (Jack, 2026-10-03);
+  section 9 covers the character-level risks and the build/parse rules.</p>
+  <p>Contents keep today's file set and shape, role-named, no date prefix: <code>ticket.md</code> (when the active
+  profile tracks one), <code>design.html</code>, <code>plan.md</code>, <code>report.html</code>. Commit-vs-gitignore
+  stays a per-repo choice, same mechanism as today (<code>digismith:jira-intake</code>'s
+  <code>git check-ignore</code> check), now pointed at <code>.digismith/board/</code> instead of
+  <code>.digismith/docs/</code>.</p>
+  <p><strong>One folder per ticket, not one per build.</strong> This drops the old per-build numbering (G.3)
+  outright — the ticket key already identifies the unit of work uniquely, so a ticket too big for one worker splits
+  by ClickUp subtask or by worker (section 5), never by a new folder number. If a shipped ticket is reopened later
+  and a new plan or report would collide with the old one, the new file takes a numeric suffix only on that
+  collision (<code>plan-2.md</code>) — the same pattern already used once by hand for an earlier addendum, now
+  written down instead of improvised.</p>
+  <p>A one-off slice of a larger ticket (one comment, one spike) writes no new board folder of its own — see
+  section 6.</p>
+</section>
+
+<section id="sessions">
+  <h2>3. Sessions: files about a session</h2>
+  <p><code>.digismith/sessions/</code> holds two kinds of file, by who the file is about — never by ticket:</p>
+  <ul>
+    <li><strong>The runbook</strong> (<code>workbox.md</code>): shared, cross-session operating notes. Unchanged:
+      flat, at <code>.digismith/sessions/workbox.md</code>, git-excluded.</li>
+    <li><strong>Per-session folders</strong>, named by the session's own name — a worker's herdr agent name, or a
+      maestro's Desktop session name:
+      <ul>
+        <li><code>.digismith/sessions/&lt;session-name&gt;/note.md</code> — the maestro's own handoff note
+          (replaces <code>.digismith/docs/&lt;Clan&gt;/handoff.md</code>). Only the maestro writes one; a worker
+          never does (Flux, decided 2026-10-03: a worker has no handoff note and no resume).</li>
+        <li><code>.digismith/sessions/&lt;session-name&gt;/brief.md</code> — the maestro's brief for a worker,
+          written before the worker is dispatched.</li>
+      </ul>
+    </li>
+  </ul>
+  <p>The brief lives here, not in <code>board/</code>, for three reasons: it instructs a <em>session</em>, not a
+  ticket's output; when one ticket splits across two workers (section 5), each worker needs its own brief while
+  sharing one board folder, which a ticket-keyed brief location would collide on; and it already carries the same
+  git-exclude treatment <code>handoff.md</code> has today. Both filenames stay git-excluded.</p>
+</section>
+
+<section id="names">
+  <h2>4. Session and worker names</h2>
+  <p><em>Decided</em> (Jack, 2026-10-03), replacing the earlier interim rule:</p>
+  <div class="table-wrap"><table>
+    <tr><th>Role</th><th>Session title / workspace label</th><th>Herdr agent name</th></tr>
+    <tr><td>Worker</td><td><code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code> — key in capitals, a space, U+269A, a space,
+      a short name. Example: <code>DGS-158 ⚚ Ticket-based naming</code>.</td>
+      <td><code>&lt;key&gt;</code> lowercased, e.g. <code>dgs-158</code>. A short word is appended when a ticket
+      runs two or more workers (section 5): <code>dgs-154-comment</code>.</td></tr>
+    <tr><td>Maestro</td><td>Keeps its existing name (<code>DigiSmith</code>, <code>Emma</code>, <code>Soveron</code>
+      — one per herdr session). Never ticket-keyed: a maestro spans many tickets.</td><td>n/a — the maestro is a
+      Desktop session, not a herdr agent.</td></tr>
+  </table></div>
+  <p>⚚ was already live in herdr workspace labels before this design (<code>workbox.md</code>, since 2026-09-29) and
+  has worked across herdr, SSH, and Claude session titles — this reuses a character already proven on this stack,
+  not a new risk.</p>
+</section>
+
+<section id="split">
+  <h2>5. Splitting a ticket across workers</h2>
+  <p><em>Decided</em> (Jack, 2026-10-03):</p>
+  <ol>
+    <li>Two or more workers on one ticket: each writes only inside its own nested folder,
+      <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/worker-&lt;agent-name&gt;/</code> — the nested folder's name
+      is the worker's own herdr agent session name (the stable address), e.g. <code>worker-dgs-154</code> or
+      <code>worker-dgs-154-comment</code>.</li>
+    <li>When the ticket finishes, the maestro sums and merges all workers' material into one set directly in the
+      ticket folder (one <code>design.html</code>, one <code>plan.md</code>, one <code>report.html</code>). Workers
+      never merge. How the maestro merges material that collides on filename is a separate item,
+      <code>backlog/maestro-merges-worker-material.md</code> (Jack) — not designed here.</li>
+    <li>One worker on a ticket: no nested folder. It writes directly in the ticket folder.</li>
+  </ol>
+  <p>After the merge is checked, the maestro removes the nested <code>worker-&lt;agent-name&gt;/</code> folders — not
+  keeps them. Proposed safe order, so nothing is lost for good:</p>
+  <ul>
+    <li><strong>When the active profile commits board files</strong> (today's per-repo choice, unchanged): commit
+      the nested folders as they stand → merge into the ticket folder's top level → check the merged set → commit
+      the merged set → remove the nested folders → commit the removal. Every byte survives in git history even
+      though the working tree ends up with one clean set.</li>
+    <li><strong>When the active profile gitignores board files:</strong> that history safety net does not exist, so
+      removal is truly permanent. <em>Open for Jack</em> (section 11): either the merge step always archives the
+      nested folders somewhere durable first, or this case accepts the same loss-on-delete risk any other
+      gitignored file already carries.</li>
+  </ul>
+  <p><strong>Principle: workers do not know about each other.</strong> A worker only knows what its own brief
+  tells it. The maestro is the only party that sees the whole ticket, so it alone:</p>
+  <ul>
+    <li>names each worker's nested folder in that worker's own brief
+      (<code>.digismith/sessions/&lt;agent-name&gt;/brief.md</code>), and</li>
+    <li>sorts out any earlier top-level files itself — moving a first worker's pre-existing top-level files into its
+      own <code>worker-&lt;agent-name&gt;/</code> folder — before a second worker starts, so neither worker ever has
+      to reason about the other's existence.</li>
+  </ul>
+</section>
+
+<section id="oneoff">
+  <h2>6. The one-off worker, resolved</h2>
+  <p>"No ticket, no work" (Jack, 2026-10-03) removes the old open question — which ticket number a one-off worker
+  (a comment poster, a spike) carries — outright. Every dispatched worker carries exactly one ticket key: its own,
+  if the work is that ticket's own work, or its parent ticket's key, if the work is a one-off slice of larger work
+  already underway. There is no longer a worker with no ticket at all: if the work is worth a dispatch, it is worth
+  a ticket first, even a one-line one.</p>
+  <p>A one-off slice of a larger ticket writes no new board folder. It works inside its parent ticket's existing
+  board folder (as its own nested <code>worker-&lt;agent-name&gt;/</code> folder, per section 5, since it is — by
+  definition — an additional worker on a ticket that already has material), or writes nothing to <code>board/</code>
+  at all if its output is only a ClickUp comment.</p>
+</section>
+
+<section id="resume">
+  <h2>7. The maestro's note and resume list</h2>
+  <p>The note (<code>.digismith/sessions/&lt;session-name&gt;/note.md</code>) keeps
+  <code>digismith:handoff</code>'s existing Done / Decisions / Next / Open-problems shape — only its path moves,
+  from <code>.digismith/docs/&lt;Clan&gt;/handoff.md</code>.</p>
+  <p>The resume list's own behavior — show candidate next tasks, show in-progress tickets/tasks/workers, ask Jack,
+  never continue alone — is already decided separately
+  (<code>[[project_maestro-resume-trigger]]</code>). The exact field shape of each candidate row (ticket key, title,
+  status, which worker if any) is Flux's (DGS-154) own concern once this naming lands, not a new design surface this
+  ticket needs to add. Flagging it here so it is not silently dropped, not designing it in this document.</p>
+</section>
+
+<section id="deliverable">
+  <h2>8. This ticket's own deliverable</h2>
+  <p>Jack's scope split (2026-10-03): "158 build the convention, 159 modify the code and move the files." DGS-158's
+  own deliverable is this document — the rules for ticket keys, folder names, session names, and the brief template
+  (section 10 names the template), with the reasoning behind each. No code is written and no file is moved by this
+  ticket; DGS-159 does both.</p>
+  <p><strong>Where this document lives.</strong> Mechanically, it is still written to the <em>current</em>
+  convention's path — <code>.digismith/docs/E/E.3/worker-maestro-conventions/design.html</code> — because DGS-158
+  changes no code: the old convention is what is actually in effect until DGS-159 ships. Once DGS-159 runs, this
+  document migrates into <code>.digismith/board/DGS-158—ticket-based-naming-architecture/design.html</code>, becoming
+  the first real example of the convention it defines.</p>
+  <p><strong>Who reads it:</strong> DGS-159's worker, as the spec to build and migrate against; any future skill
+  author touching a docs or session path; Jack or a future maestro revisiting the convention. A short pointer to this
+  document is proposed as a new bullet in <code>MEMORY.md</code>'s "Conventions" section — the same precedent the
+  unified docs convention and G.3 both set when they shipped — flagged as a proposal, not yet confirmed (section
+  11), since it touches a file DGS-159 also has reason to edit for other reasons.</p>
+</section>
+
+<section id="chars">
+  <h2>9. Non-ASCII characters: build and parse rules</h2>
+  <h3>Board folder name — em dash (U+2014)</h3>
+  <div class="table-wrap"><table>
+    <tr><th>Risk</th><th>Where it bites</th><th>Handling</th></tr>
+    <tr><td>Typing it — no keyboard key for U+2014</td><td>Manual folder creation</td>
+      <td>Folders are never hand-typed. One shared module builds the name (see below); a thin
+      <code>dg board path &lt;key&gt; &lt;title&gt;</code> command gives a human a copy-pasteable result when
+      needed.</td></tr>
+    <tr><td>Windows: legacy codepages (cp1252/437) can mangle non-ASCII when a script does byte I/O instead of
+      UTF-8</td><td>Any Windows-side consumer repo — this repo's own VPS is UTF-8-only and Windows-retired
+      (<code>[[project_vps-single-source-of-truth]]</code>)</td>
+      <td>Every script reads and writes the name as UTF-8 explicitly (Node does this by default); never pass it
+      through a codepage-sensitive shell builtin.</td></tr>
+    <tr><td>macOS: HFS+/APFS Unicode normalization (NFD) vs. Linux's raw bytes (NFC)</td>
+      <td>Cross-machine sync — low risk here (VPS-only), relevant for other repos</td>
+      <td>The shared module normalizes to NFC before writing. U+2014 has no decomposed form, so this risk is really
+      about the slug's own characters, not the dash itself.</td></tr>
+    <tr><td>git's path quoting: <code>core.quotepath=true</code> (default) escapes any byte ≥0x80 in
+      <code>git status</code>/<code>git diff</code> output as octal, and naive line-splitting of that output
+      breaks</td><td><code>git status</code>, any script scanning board folders</td>
+      <td>Set <code>core.quotepath=false</code> in this repo so paths print as real UTF-8. Independently, every
+      script parses git output with <code>-z</code> (NUL-terminated), never by line-splitting, as defense in
+      depth.</td></tr>
+    <tr><td>Tools or regexes that assume ASCII-only path segments</td>
+      <td><code>update-history.ts</code>'s <code>parseReport()</code>, <code>lineage-handoff.ts</code>, any
+      slug-format validator</td>
+      <td>Splitting happens once, in one place (see below); downstream code only ever sees the already-split
+      <code>key</code>/<code>slug</code> strings, which stay plain ASCII.</td></tr>
+    <tr><td>Em dash (—) vs. hyphen (-) vs. en dash (–) look alike in narrow fonts; a human retyping the name may
+      substitute a hyphen out of habit</td><td>Manual lookups, copy-paste, re-derivation</td>
+      <td>The parser fails loudly if no U+2014 is found in the string, rather than silently guessing a different
+      separator.</td></tr>
+    <tr><td>Case: tracker keys should compare case-insensitively but store canonically</td><td>Lookup by ticket
+      key</td><td>The builder always uppercases the key going in; the parser uppercases before comparing.</td></tr>
+    <tr><td>Sort order: directory-listing sort ≠ ticket creation order (<code>DGS-10</code> sorts before
+      <code>DGS-9</code>), and U+2014 sorts after all ASCII in byte order</td>
+      <td>Any tool listing board folders chronologically</td>
+      <td>Never rely on directory-listing order for ticket order; sort on the parsed numeric part of the key when
+      order matters.</td></tr>
+  </table></div>
+  <p><strong>Build and parse</strong> (one shared module, proposed location <code>scripts/board-path.ts</code>):</p>
+  <ul>
+    <li><strong>Build:</strong> <code>folderName(key, title) = `${key.toUpperCase()}—${slugify(title)}`</code> —
+      <code>slugify</code> is the existing deterministic algorithm (lowercase, drop filler words, non-alphanumeric
+      runs collapse to a single ASCII hyphen, truncate to ~40 characters at a word boundary). That algorithm only
+      ever emits ASCII hyphens, so the slug can never contain U+2014 itself — a hard constraint on the algorithm,
+      not a new one.</li>
+    <li><strong>Parse:</strong> split the folder name at the <em>first</em> U+2014. Before it: the key, validated
+      against <code>^[A-Z]+-\d+$</code> case-normalized. After it: the slug, untouched. Because the slug can never
+      contain an em dash, first-occurrence splitting is unambiguous.</li>
+    <li>Every consumer (the handoff skill, <code>session-init.ts</code>, <code>writing-plans</code>,
+      <code>report-implementation</code>, <code>update-history.ts</code>) imports this module's
+      <code>buildFolderName</code>/<code>parseFolderName</code> rather than re-deriving the split.</li>
+  </ul>
+  <h3>Session title / workspace label — ⚚ (U+269A)</h3>
+  <p>A different surface than the folder-name risks above: titles and labels, not filesystem paths.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Risk</th><th>Where it bites</th><th>Handling</th></tr>
+    <tr><td><code>skills/handoff/SKILL.md</code>'s title-to-path matching reads the session title verbatim (via
+      <code>get_session</code>)</td><td>Resolving which note or brief a session owns</td>
+      <td>The match only needs the <code>&lt;KEY&gt;</code> prefix before the first space — the parser splits on
+      the first space, same "split on the known separator, ignore the rest" approach as the board-path parser, so
+      it never needs to understand ⚚ itself.</td></tr>
+    <tr><td>Any tool that reads or displays the title and assumes ASCII (an older terminal, a log viewer, a
+      non-UTF-8 CI step)</td><td>herdr sidebar, pane titles, session listings</td>
+      <td>Precedent already proven: ⚚ already ships in herdr workspace labels today (<code>workbox.md</code>, since
+      2026-09-29) and has worked across herdr, SSH, and Claude session titles — no new risk, carrying forward a
+      character already live on this stack.</td></tr>
+    <tr><td>A title used as a filename or path component</td><td>Not done today, and not proposed here</td>
+      <td>A session title is never parsed into a filesystem path; only the <code>&lt;KEY&gt;</code> prefix is ever
+      extracted from it, for the session-name lookups in section 3.</td></tr>
+  </table></div>
+  <p>A sibling module, proposed location <code>scripts/session-path.ts</code>, builds and parses
+  <code>.digismith/sessions/&lt;session-name&gt;/{note,brief}.md</code> the same way.</p>
+</section>
+
+<section id="dgs159">
+  <h2>10. Input list for DGS-159</h2>
+  <p>DGS-159 ("Ticket-based naming: modify the code and move the files") takes everything below. None of it is
+  built by DGS-158.</p>
+  <ul>
+    <li>Implement <code>scripts/board-path.ts</code> (build/parse <code>&lt;key&gt;—&lt;slug&gt;</code>) and
+      <code>scripts/session-path.ts</code> (build/parse <code>&lt;session-name&gt;/{note,brief}.md</code>), per
+      section 9's rules.</li>
+    <li>Update: <code>skills/handoff/SKILL.md</code> (title-to-path matching, split on the first space before the
+      key), <code>scripts/lineage-handoff.ts</code> and its test, <code>scripts/session-init.ts</code> and its test,
+      <code>skills/bootstrap</code>, <code>skills/adopt</code>, <code>skills/init</code>,
+      <code>skills/brainstorming</code>, <code>skills/writing-plans</code>, <code>skills/report-implementation</code>,
+      <code>skills/finishing-a-development-branch</code>, <code>skills/jira-intake</code>,
+      <code>skills/generate-comment</code>, <code>skills/offload-implementer</code>,
+      <code>skills/teams-pr-review-notification</code>, <code>skills/telemetry</code>, <code>skills/voice</code>,
+      <code>skills/depot</code>, <code>scripts/config.ts</code>.</li>
+    <li>Update <code>.git/info/exclude</code>: drop the old <code>handoff.md</code>/<code>brief.md</code> patterns,
+      add <code>.digismith/board/**</code> (commit-vs-gitignore stays a per-repo choice, unchanged mechanism) and
+      <code>.digismith/sessions/**/note.md</code>, <code>.digismith/sessions/**/brief.md</code>.</li>
+    <li>Convert the <code>backlog/</code> files into tickets; remove the files.</li>
+    <li>Move the ~70 existing <code>.digismith/docs/</code> folders (flat and <code>&lt;Letter&gt;.&lt;N&gt;-slug</code>
+      nested) into <code>.digismith/board/&lt;ticket-key&gt;—&lt;slug&gt;/</code> — each needs a ticket key,
+      including pre-ClickUp work that may never have had one.</li>
+    <li>Re-point <code>update-history.ts</code>'s <code>parseReport()</code> to the new path shape.</li>
+    <li>Decide what happens to <code>MEMORY.md</code>'s clan-letter repo-map table (freeze as historical record, or
+      restructure) — separate from the one new Conventions bullet proposed in section 8.</li>
+  </ul>
+</section>
+
+<section id="open">
+  <h2>11. Open items</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Item</th><th>State</th></tr>
+    <tr><td>Nested-folder removal safety when the active profile gitignores board files (section 5) — no git
+      history to fall back on</td><td>Open. Needs Jack's call: always archive first, or accept the same risk any
+      other gitignored file already carries.</td></tr>
+    <tr><td>Whether the new <code>MEMORY.md</code> Conventions bullet (section 8) is written by DGS-158 or folded
+      into DGS-159's own <code>MEMORY.md</code> work</td><td>Open. Proposed as DGS-158's (it is content, not code),
+      not yet confirmed.</td></tr>
+    <tr><td>How the maestro merges same-named material from two workers</td><td>Out of this design's scope by
+      Jack's own instruction — <code>backlog/maestro-merges-worker-material.md</code> covers it.</td></tr>
+  </table></div>
+</section>
+
+<footer>DigiSmith · .digismith/docs/E/E.3/worker-maestro-conventions/design.html</footer>
+
+</body>
+</html>
