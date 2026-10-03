@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", start fresh, or clear context — writes this lineage's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
+description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", start fresh, or clear context — writes this lineage's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume", "Arise" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
 ---
 
 # Handoff
@@ -25,19 +25,21 @@ Two modes:
   was asked for. **End-of-ticket mode** is write mode called by
   `digismith:finishing-a-development-branch` Step 7; it adds the cleanup round below and lets
   the `clear_context` preference decide the clear.
-- **Resume**: read this lineage's note and pick the work back up.
+- **Resume**: read this lineage's note, show where it stands and the candidate next steps, and ask which one to take. A resume never starts work.
 
 ## Invoked By
 
 - The human partner, at any time:
   - write: "hand off", "handoff", "wrap up", "save where we are", "checkpoint"
   - write, then clear: "hand off and clear", "start fresh", "clear context"
-  - resume: "resume", "pick up where we left off"
+  - resume: "resume", "Arise", "pick up where we left off"
 - `digismith:finishing-a-development-branch` Step 7, after Option 1 or Option 2 (write,
   end-of-ticket mode).
 - A `SessionStart` line `DigiSmith: lineage handoff notes in ...` — resume, but only when this
   session's own key (from its title, same mapping as the Overview table) is among the keys the
-  line lists. Otherwise ignore the line silently: no lookup, no mention of it.
+  line lists. Otherwise ignore the line silently: no lookup, no mention of it. Also ignore it
+  in a worker the maestro started with a brief (its first message tells it to read a brief
+  file): a worker has no note and no resume.
 
 ## The Script
 
@@ -96,7 +98,8 @@ resolves the main checkout itself, so the note always lands in the main checkout
 ## Clear Decision
 
 **Manual run:** clear only if this message asked for it ("hand off and clear", "start fresh",
-"clear context"). Otherwise stop after showing the note.
+"clear context"), or it is the human partner's yes to your own question "kicker open? flux
+now?" (see the exception under Check Gate). Otherwise stop after showing the note.
 
 **End-of-ticket mode:** invoke `digismith:preferences`' `get` operation for key `clear_context`.
 
@@ -114,6 +117,12 @@ resolves the main checkout itself, so the note always lands in the main checkout
 
 Every clear waits for the human partner to check the note. End the turn with the note shown and:
 "Fix anything, or say ok to clear."
+
+**One exception:** when the message you are answering is the human partner's yes to your own
+question "kicker open? flux now?", skip the gate. Write the note, show it, and go on to the
+clear without waiting for ok. The question and the yes are the signal; no other wording
+counts, and every other clear, including a "hand off and clear" the human partner types,
+keeps the gate.
 
 On the next message:
 
@@ -136,8 +145,9 @@ not available (plain CLI, no desktop app), tell the human partner to run `/clear
 3. Read it. If the header has `main @ <sha>`, run
    `git -C <main-root> rev-list --count <sha>..HEAD` and report how many commits `main` has
    gained since the note. Skip this if the SHA is missing or unknown.
-4. State Done and Next in a few lines, then ask "Continue with <Next>?" Do not start it without a
-   go: days may have passed, and another session may have moved things.
+4. State Done in a few lines. Show Next and the open problems as a short numbered list of
+   candidates, and ask which one to take. Start nothing before the answer: days may have
+   passed, and another session may have moved things.
 
 ## Note Format
 
@@ -167,7 +177,7 @@ The first line is always the H1 title. Exactly these four sections, in this orde
 |--------|---------|
 | "The ticket's done, they'd obviously want a fresh start" | Only an explicit ask or a saved `yes` clears. Never infer it. |
 | "I'll clear now and summarize after" | The clear drops everything after this turn. Summary first, clear last. |
-| "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. |
+| "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. The only exception is the yes to "kicker open? flux now?" (Check Gate). |
 | "The title has no prefix; I can tell the lineage from the work" | A wrong key overwrites another lineage's note. An unmatched title goes to `_unlettered`; no title means ask. |
 | "I'll append today's work under the old note" | Rewrite the whole note. Carry forward only what is still true. |
 | "The write failed, but I'll clear anyway" | The note is the only state that survives the clear. No note, no clear. |
