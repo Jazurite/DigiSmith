@@ -13,7 +13,7 @@
 ## How this plan is split
 
 - **Part A (Tasks 1 to 4): build now, with the interim names and paths from the design. Nothing waits on DGS-158** (Jack, 2026-10-03 21:59 UTC+7 [14:59Z]: "keep Flux running, do not wait for DGS-158").
-- **Part B (Tasks 5 to 7): marked "after DGS-158". It is the list of what the DGS-158 follow-up must change, not a gate.** It is kept small on purpose: every path, name and note lookup lives in few places.
+- **Part B (Tasks 5 to 7): built after DGS-158 merged (2026-10-03, origin/main 088cee9), on branch `flux-ticket-names`.** Task 7 is the smaller cut (A) the maestro approved at 22:53 UTC+7: skill text only.
 
 **Where the names and paths live (so the follow-up stays small):**
 
@@ -45,9 +45,9 @@
 | `skills/handoff/SKILL.md` | yes | `Arise`, resume shows a list and asks, SessionStart worker clause, Check Gate exception | 1 |
 | `skills/finishing-a-development-branch/SKILL.md` | yes | Step 7 skip clause for a worker started with a brief, Quick Reference half-sentence | 2 |
 | `.digismith/sessions/workbox.md` | no (untracked) | Flux definition, "When to choose", the "Switch lineage or ticket" block becomes the Flux protocol, the Notes bullet | 3 |
-| `.digismith/docs/E/E.4/flux-protocol/design.html` | yes | Path and name updates | 5 (after DGS-158) |
-| `.digismith/sessions/workbox.md` | no | "Names" block, roster names, brief location | 6 (after DGS-158) |
-| `skills/handoff/SKILL.md`, `scripts/lineage-handoff.ts`, `scripts/session-init.ts` and their tests | yes | Note location and lookup | 7 (after DGS-158) |
+| `.digismith/docs/E/E.4/flux-protocol/design.html` | yes | Path and name updates | 5 |
+| `.digismith/sessions/workbox.md` | no | "Names" block, board folder, brief location | 6 |
+| `skills/handoff/SKILL.md`, `skills/finishing-a-development-branch/SKILL.md` | yes | The maestro's note location, old lookup kept as a fallback (skill text only; scripts, tests and exclude stay for DGS-159) | 7 |
 
 ---
 
@@ -554,87 +554,135 @@ Report to the maestro: the baseline and final test lines, the grep results, the 
 
 ---
 
-# Part B: after DGS-158 (follow-up checklist, not a gate)
+# Part B: the DGS-158 names and paths (convention merged 2026-10-03, origin/main 088cee9)
 
-DGS-158 (Jack, 21:53 UTC+7 [14:53Z]) moves to ticket-based naming: ticket files under `.digismith/board`, maestro, worker and other sessions under `.digismith/sessions/`. **Part A does not wait for it** (Jack, 21:59 UTC+7 [14:59Z]). Part B lists what the DGS-158 follow-up must change after Part A has shipped with the interim names. Each task is small because Part A put every name and path in one place. Do Part B when DGS-158's design is approved, as its own follow-up change.
+DGS-158 is merged. The convention is `.digismith/docs/E/E.3/worker-maestro-conventions/design.html` (sections 2 to 5 and 12) and its `report.html`. Decided there:
 
-### Task 5 (after DGS-158): Update the design to the new names and paths
+- Board folder: `.digismith/board/<KEY>—<slug>/` (`<KEY>`, one U+2014 em dash, no spaces, `<slug>`). One folder per ticket. When a ticket has two or more workers, each works in a nested `worker-<agent name>/` folder; the maestro merges and removes them (DGS-160 holds the merge details).
+- Session files (git-excluded): `.digismith/sessions/<session-name>/note.md` (the maestro's own note, only a maestro writes one) and `.digismith/sessions/<session-name>/brief.md` (the maestro's brief for a worker; the folder is named by the worker's agent name). The runbook `.digismith/sessions/workbox.md` stays flat.
+- Worker title and workspace label: `<KEY> ⚚ <short name>` (U+269A), for example `DGS-154 ⚚ Flux`. Worker agent: `<key>` in lowercase (for example `dgs-154`), with a short word added when one ticket has two workers. A maestro keeps its name (DigiSmith, Emma, Soveron).
+- Brief template: design section 12.
+
+**Scope (maestro, 2026-10-03 22:49 and 22:53 UTC+7):** DGS-159 owns `scripts/board-path.ts`, `scripts/session-path.ts`, the sweep of skills, scripts and tests, `.git/info/exclude` and the file moves. Part B changes none of that and adds no module. Task 7 is the smaller cut (A): skill text only.
+
+### Task 5: Update the design to the DGS-158 names and paths
 
 **Files:**
 - Modify: `.digismith/docs/E/E.4/flux-protocol/design.html`
 
-**Interfaces:**
-- Consumes: DGS-158's approved design (the worker name, the docs folder, the brief location, the note location).
-- Produces: a design whose interim items are final. Tasks 6 and 7 follow it.
+- [ ] **Step 1: List the sites**
 
-- [ ] **Step 1: List every site that names a clan, lineage or docs folder**
+Run: `grep -n "Clan\|lineage\|Lineage\|docs/E\|dgs-<\|short name\|nterim" .digismith/docs/E/E.4/flux-protocol/design.html`
 
-Run: `grep -n "Clan\|lineage\|Lineage\|docs/E\|E\.4\|E\.3\|dgs-<\|short name\|handoff\.md" .digismith/docs/E/E.4/flux-protocol/design.html`
-Expected sites (from the design review of 2026-10-03): the footer path; S0 (docs folder); S2 and S4 (label, agent name); S5 and the callout under it ("no lineage key", "which lineage"); section 7 (the spike path); section 8 (the skill's key-match rule, the SessionStart clause, the cleanup-round "pointers to other lineages"); section 9 item 1; section 11 (the lineage tests); section 13 (the interim rows and the E.3 reference).
+- [ ] **Step 2: Edit each site (exact values)**
 
-- [ ] **Step 2: Rewrite each site to the DGS-158 outcome**
+Read the convention first (E.3 design sections 2 to 5 and 12). Then:
 
-Replace each interim value with the decided one, change every "interim" tag on it to "decided (DGS-158)", and update the Status line in the header. Leave the protocol steps W1 to W3, S1 to S4, S6 and M1 to M7 unchanged unless DGS-158's outcome changes their commands.
+1. Header Status line (about line 70): say the design was approved 2026-10-03 21:53 UTC+7 [14:53Z] and that DGS-158 (merged 2026-10-03) settled every interim item; drop "Items marked interim stay open".
+2. The "Interim" legend row (about line 116): turn it into a past-tense line: items that were interim were settled by DGS-158; none remain.
+3. S0 (about line 151): the board folder is `.digismith/board/<KEY>—<slug>/` (nested `worker-<agent>/` when a ticket has two workers; the maestro merges and removes them); the brief is `.digismith/sessions/<agent>/brief.md`, written to the template in the E.3 design section 12. Remove both "interim" tags.
+4. S2 (about line 153): label `<KEY> ⚚ <short name>`, example "DGS-154 ⚚ Flux". Remove the interim tag.
+5. S4 (about line 155): `agent start <key> --kind claude --pane <pane> --timeout 120000 -- --name "<KEY> ⚚ <short name>"`; the agent is the lowercase key (`dgs-154`), with a short word added when one ticket has two workers. Remove the interim tag.
+6. S5 (about line 156): "Read `.digismith/sessions/<agent>/brief.md` and follow it." Keep "no note, no resume" but drop "no lineage key" and "resume lineage" wording that names the old scheme only as a removed step.
+7. The callout (about lines 159 to 164): keep Jack's quote. Bullet "No lineage key and no lineage-note lookup" becomes "No clan or lineage naming and no note lookup". Rewrite the bullet about the old `<key>: <ticket> <name>` naming so it ends with: the names are now decided by DGS-158 (`<KEY> ⚚ <short name>`, agent `<key>`).
+8. Section 7 spike path (about line 200): keep the path `.digismith/docs/E/E.4/node-kicker-spike/` and add "(it moves with DGS-159's file moves)".
+9. Section 8 (about lines 213 and 220): the SessionStart clause stays, reworded: a worker's title `<KEY> ⚚ <short name>` carries a ticket key, never a lineage key, so the existing key-match rule already ignores the line; the clause keeps it true whatever the names become. In the cleanup-round sentence, "pointers to other lineages" becomes "pointers to the sessions that something was filed for".
+10. Section 9 item 1 (about line 227): the roster and live-workers use the decided names `<KEY> ⚚ <short name>` and `<key>`; remove "interim".
+11. Section 11 (about line 255): say the script and SessionStart tests stay green and are not changed in Part B; DGS-159 changes the scripts and their tests.
+12. Section 13 (about lines 274 to 279): add one sentence to the intro that DGS-158 merged on 2026-10-03 and settled the interim items. Change the three interim rows to "Decided (DGS-158)": the names (`<KEY> ⚚ <short name>`, `<key>`), the docs folder (`.digismith/board/<KEY>—<slug>/`), and the brief file (`.digismith/sessions/<agent>/brief.md`). Split the note row: "Where the maestro's note is written and read: `.digismith/sessions/<session-name>/note.md`", state "Decided (DGS-158). The skill text is updated in Part B Task 7 with the old clan and lineage lookup kept as a fallback; the script, the SessionStart line, their tests and `.git/info/exclude` follow in DGS-159, so until then the skill text and `scripts/lineage-handoff.ts` differ".
+13. Leave the footer path and the Map-item line unchanged. Leave the protocol steps W1 to W3, S1, S3, S6 and M1 to M7 unchanged.
 
 - [ ] **Step 3: Verify and commit**
 
-Run: `grep -n "interim\|Interim" .digismith/docs/E/E.4/flux-protocol/design.html`
-Expected: no remaining item that DGS-158 settled.
+Run: `grep -n "nterim" .digismith/docs/E/E.4/flux-protocol/design.html` Expected: only past-tense mentions (the legend row and the section 13 intro). The section count is unchanged: `grep -c "<section"` gives the same number before and after.
 
 ```bash
 git add .digismith/docs/E/E.4/flux-protocol/design.html
 git commit -m "docs(flux): update the design to the DGS-158 names and folders"
 ```
 
----
-
-### Task 6 (after DGS-158): Update the runbook names and locations
+### Task 6: Update the runbook names and locations
 
 **Files:**
-- Modify (untracked, never commit): `/root/Workspace/Jazurite/DigiSmith/.digismith/sessions/workbox.md`
+- Modify (untracked, never commit, never `git add`): `/root/Workspace/Jazurite/DigiSmith/.digismith/sessions/workbox.md`
 
-**Interfaces:**
-- Consumes: DGS-158's design; Task 3's "Names" block.
-- Produces: the runbook with final names.
+- [ ] **Step 1: Back up, re-read, then edit**
 
-- [ ] **Step 1: Rewrite the "Names" block**
+Copy the file to `.digismith/sessions/.old/workbox.md.before-dgs158-flux-2026-10-03` (create nothing else). Re-read the exact lines just before each edit (the maestro and other workers edit this file). Do not touch the maestro's table rows or any history row.
 
-It is the only block in the protocol that names a label, an agent or a folder (see Task 3). Replace its bullets with the DGS-158 values and rename the heading to "Names". Where the DGS-158 outcome moves ticket files to `.digismith/board` and sessions to `.digismith/sessions/`, update the brief location (S0, S5) and the docs folder wording.
+- [ ] **Step 2: The "Names" block (about lines 219 to 233)**
 
-- [ ] **Step 2: Update the tables that carry names**
+Heading: `#### Names (Jack, 2026-10-03; decided by DGS-158)`. Rewrite the intro line and the bullets:
+- `<label>`: `<KEY> ⚚ <short name>` (example `DGS-154 ⚚ Flux`), the worker's Claude session title and the workspace label.
+- `<agent>`: the lowercase key (`dgs-154`), a short word added when one ticket has two workers. The maestro's own sessions keep their names (DigiSmith, Emma, Soveron).
+- `<board folder>` (replaces `<docs folder>`): `.digismith/board/<KEY>—<slug>/` (U+2014 em dash, no spaces), where the brief tells the worker to write its design, plan and report. A ticket with two workers gets nested `worker-<agent>/` folders; the maestro merges and removes them (DGS-160).
+- `<brief path>`: `.digismith/sessions/<agent>/brief.md`, named in the first prompt (S5). The brief follows the template in the E.3 design section 12.
+- Keep the Flux spec path and the spike path bullets as they are, and add that both move with DGS-159's file moves.
+- Keep the note: the maestro's own note is `.digismith/sessions/<session-name>/note.md`, written and read by `digismith:handoff`.
 
-Update the roster (slot) table, the live-workers table and any "Last assigned" text that uses `<key>: <ticket> <name>`-style names, to the DGS-158 form, for workers started from now on. Leave the history rows as they were.
+- [ ] **Step 3: The protocol bullets**
 
-- [ ] **Step 3: Verify**
+Replace `<docs folder>` with `<board folder>` everywhere it appears in the flux text (the intro line that lists the placeholders, about line 201; S0, about line 258). In S0 say the brief is written to `<brief path>`. In S5 keep "No lineage key, no note, no resume lineage" only as "no note, no resume".
 
-Run: `grep -n "Clan\.N\|<Clan>\|resume lineage\|interim" .digismith/sessions/workbox.md`
-Expected: no live instruction still uses the interim names. No commit: the runbook stays untracked.
+- [ ] **Step 4: Tables and text that carry names**
 
----
+For workers started from now on, add one line under the roster and the live-workers table (not inside them) saying new workers use the Names block's label and agent. Do not rewrite history rows. If a "Last assigned" or similar text instructs the old `<key>: <ticket> <name>` form, update that instruction.
 
-### Task 7 (after DGS-158): The note location and lookup in `digismith:handoff`
+- [ ] **Step 5: Verify**
+
+Run: `grep -n "Clan\.N\|<Clan>\|<docs folder>\|resume lineage\|interim until" .digismith/sessions/workbox.md`
+Expected: no live instruction still uses the interim names (history rows may keep them). Run `diff` against the backup and report the summary. No commit.
+
+### Task 7: The maestro's note location in `digismith:handoff` (cut A, skill text only)
 
 **Files:**
-- Modify: `skills/handoff/SKILL.md` (Overview note-path table, Invoked By SessionStart key-match, The Script, Resolve the Note, Resume Mode step 2, Rationalizations title row, the cleanup-round line "that lineage's session got a pointer message"); `skills/finishing-a-development-branch/SKILL.md` (Step 7 sentence "writes this lineage's handoff note")
-- Modify (only if DGS-158 changes them): `scripts/lineage-handoff.ts`, `scripts/session-init.ts`
-- Test (only if the scripts change): `scripts/lineage-handoff.test.ts`, `scripts/session-init.test.ts`
+- Modify: `skills/handoff/SKILL.md`, `skills/finishing-a-development-branch/SKILL.md` (Step 7)
+- Not touched: `scripts/*`, their tests, `.git/info/exclude`, any new module (DGS-159)
 
-**Interfaces:**
-- Consumes: DGS-158's decisions on where the maestro's note and other sessions' notes live (under `.digismith/sessions/`), and whether a session title still maps to a key.
-- Produces: the maestro's note location that M3 writes and M6 reads.
+**Rule to write into the skill.** A session's name is its title (`get_session self`). The new note is `<main-root>/.digismith/sessions/<name>/note.md`, where `<main-root>` is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`. The new path applies only when `<name>` is one safe path segment: not empty, no `/` or `\`, not `.` or `..`, and not a lineage-key title (matching `^\s*[A-Z](\.\d+)?\s*(:|$)`, like "A.1: Primitives" or "K: Maestro"). Every other title keeps the old lookup through `scripts/lineage-handoff.ts` unchanged. The convention never turns a title into a path except for a maestro's own session name, so this guard is the one rule the convention does not spell out.
 
-- [ ] **Step 1: Write the exact steps when DGS-158's design is approved**
+- [ ] **Step 1: Edit `skills/handoff/SKILL.md`**
 
-The new note location, the title lookup and the SessionStart line are DGS-158's decisions, so this task is a checklist of what changes, with the exact edits written then, in the format of Tasks 1 and 2 (failing test first for any script change, then the change, then the commit). Part A ships without it: the maestro's note keeps working with today's lookup.
+1. Front matter `description`: "writes this lineage's living handoff note" becomes "writes this session's living handoff note".
+2. Overview: "Each lineage keeps one living note that says where the lineage stands now:" becomes "Each maestro session keeps one living note that says where the session stands now:" and the code block becomes:
 
-- [ ] **Step 2: Items to settle in that follow-up**
+```
+.digismith/sessions/<session-name>/note.md     title "DigiSmith"        → DigiSmith  (current)
+.digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.1: Primitives"  → A/A.1      (fallback)
+.digismith/docs/<Clan>/handoff.md              title "K: Maestro"       → K          (fallback)
+.digismith/docs/_unlettered/handoff.md         any other title          (fallback)
+```
 
-- Where the maestro's note is written and read, and what its filename is (M3 and M6 depend on it).
-- Whether a session title still maps to a key, or the note is found another way; the SessionStart line `DigiSmith: lineage handoff notes in ...` and the "or say resume" wording in `scripts/session-init.ts` (line 29); the SessionStart worker clause added in Task 1.
-- Whether `lineage-handoff.ts --action path|ensure-excluded|list` keeps its three actions.
-- The exclude pattern `.digismith/docs/**/handoff.md` in `.git/info/exclude`, if the notes move.
+   Follow it with: "The first line is the convention of DGS-158. The three fallback lines are the old clan and lineage notes: the script, the SessionStart line and the exclude patterns still know only those until DGS-159 migrates them, so this skill text and `scripts/lineage-handoff.ts` differ on purpose. The fallback keeps existing notes working."
+   Replace "The next session of the lineage finds it from its own session title." with "The next session with the same name finds it from its own session title." In the Resume mode bullet, "this lineage's note" becomes "this session's note".
+3. Invoked By, SessionStart bullet: append "That line is built by the script and lists only fallback notes: a note at `.digismith/sessions/<session-name>/note.md` is found by "resume" or "Arise", not by that line."
+4. The Script: after the three commands add "The script only knows the fallback paths. `<main-root>` is the main checkout (the script resolves it for the fallback; for the current path use `git rev-parse --path-format=absolute --git-common-dir` and take its parent directory)." Replace the last sentence about notes landing in `.digismith/docs/` with: "The fallback note lands in the main checkout's `.digismith/docs/`, the current note in its `.digismith/sessions/`."
+5. Resolve the Note, rewritten:
+   1. Call `mcp__ccd_session_mgmt__get_session` with `session_id: "self"` and read `title`; that is the session name.
+   2. If the name is one safe path segment (the rule above), the current note path is `<main-root>/.digismith/sessions/<name>/note.md`. If git tracks that path (`git -C <main-root> ls-files --error-unmatch -- <relative path>` exits 0), stop and tell the human partner that a committed file sits there which this skill did not write, and do not read or write it.
+   3. Write mode writes to the current path. Resume mode reads the current note if it exists, and otherwise falls back: run `--action path --title '<title>'` and use that old note if it exists.
+   4. If the name is not one safe path segment (or it is a lineage-key title), use the fallback path from `--action path` for both modes, exactly as before. If that path is under `_unlettered`, say so in the reply, so a wrong title is noticed.
+   5. If `get_session` fails or there is no title, run `--action list`, list the folders under `.digismith/sessions/` that hold a `note.md`, and ask which session this is. Pass an answer that is a fallback key as before (`A/A.1` → `--title 'A.1:'`). Do not guess: a wrong name overwrites another session's note.
+6. Write Mode step 2: "If the note already exists, read it" becomes "If the current note exists, read it; if only the fallback note exists, read that one". Step 4 cleanup line: "Something was filed under another lineage: that lineage's session got a pointer message." becomes "Something was filed for another session: that session got a pointer message." Step 5: for the fallback path run `--action ensure-excluded` as before; for the current path run `git -C <main-root> check-ignore -q --no-index <relative path>` and, if it is not ignored, say in the reply that the path is not git-excluded here yet (DGS-159 adds the pattern) and that it must not be committed. Step 6: create the parent folder of the current path before writing.
+7. Resume Mode step 2: "No handoff note for this session at `<current path>`." (and, for a fallback title, the fallback path), "Do not read another session's note instead."
+8. Note Format first comment line: "what this lineage is doing" becomes "what this session is doing".
+9. Rationalizations row about the title: excuse "The title has no prefix; I can tell the session from the work", reality "A wrong name overwrites another session's note. A title that is not one safe name goes through the fallback; no title means ask."
+
+- [ ] **Step 2: Edit `skills/finishing-a-development-branch/SKILL.md` Step 7**
+
+"It writes this lineage's handoff note" becomes "It writes this session's handoff note (the maestro's `.digismith/sessions/<session-name>/note.md`, with the old lookup as a fallback, see that skill)".
+
+- [ ] **Step 3: Verify and commit**
+
+Run: `grep -n "lineage" skills/handoff/SKILL.md skills/finishing-a-development-branch/SKILL.md` Expected: the word remains only in the fallback wording. Run `pnpm install --frozen-lockfile` once, then `pnpm test`. Expected: 777 passed, the same 2 known failures (index.e2e.test.ts --help Usage line; process-lifecycle.test.ts real process PID).
+
+```bash
+git add skills/handoff/SKILL.md skills/finishing-a-development-branch/SKILL.md
+git commit -m "docs(handoff): find the maestro's note under .digismith/sessions with the old lookup as a fallback"
+```
 
 ---
+
 
 ## Self-Review
 
