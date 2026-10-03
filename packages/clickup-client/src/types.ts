@@ -249,6 +249,24 @@ export interface ClickUpUpdatedList {
   content?: string;
 }
 
+/** One entry of `status_mappings` for the v3 move-task call. Both values are status ids. */
+export interface ClickUpMoveTaskStatusMapping {
+  source_status: string;
+  destination_status: string;
+}
+
+/** Optional body for PUT /api/v3/workspaces/{ws}/tasks/{task}/home_list/{list}. */
+export interface ClickUpMoveTaskOptions {
+  status_mappings?: ClickUpMoveTaskStatusMapping[];
+  move_custom_fields?: boolean;
+  custom_fields_to_move?: string[];
+}
+
+/** Response shape from the v3 move-task call. */
+export interface ClickUpMoveTaskResponse {
+  data: { task_id: string; new_list_id: string };
+}
+
 /** Response shape from POST /task/{task_id}/attachment. */
 export interface ClickUpAttachment {
   id: string;

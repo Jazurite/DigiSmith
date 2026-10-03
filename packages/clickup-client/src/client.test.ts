@@ -215,6 +215,45 @@ describe("ClickUpClient domain write/read methods", () => {
     });
   });
 
+  it("moveTask() PUTs the options to the absolute v3 home_list URL", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({
+      data: { data: { task_id: "14zcebru2p7", new_list_id: "1301150000002300" } },
+    });
+
+    const result = await client.moveTask("14zcebru2p7", "1301150000002300", {
+      move_custom_fields: true,
+      status_mappings: [{ source_status: "s1", destination_status: "s2" }],
+    });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "https://api.clickup.com/api/v3/workspaces/5738747/tasks/14zcebru2p7/home_list/1301150000002300",
+      params: undefined,
+      data: {
+        move_custom_fields: true,
+        status_mappings: [{ source_status: "s1", destination_status: "s2" }],
+      },
+    });
+    expect(result).toEqual({
+      data: { task_id: "14zcebru2p7", new_list_id: "1301150000002300" },
+    });
+  });
+
+  it("moveTask() sends an empty body when no options are given", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { data: { task_id: "t1", new_list_id: "l1" } } });
+
+    await client.moveTask("t1", "l1");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "https://api.clickup.com/api/v3/workspaces/5738747/tasks/t1/home_list/l1",
+      params: undefined,
+      data: {},
+    });
+  });
+
   it("createFolder() POSTs the name to the space folder endpoint", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: { id: "f1", name: "New Folder", hidden: false } });

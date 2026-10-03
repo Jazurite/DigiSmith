@@ -12,6 +12,8 @@ import type {
   ClickUpListSummary,
   ClickUpListsResponse,
   ClickUpListWriteBody,
+  ClickUpMoveTaskOptions,
+  ClickUpMoveTaskResponse,
   ClickUpUpdatedList,
   ClickUpTask,
   ClickUpTasksResponse,
@@ -22,6 +24,7 @@ import type {
 import { RateLimiter } from "./rate-limiter.ts";
 
 const BASE_URL = "https://api.clickup.com/api/v2";
+const BASE_URL_V3 = "https://api.clickup.com/api/v3";
 const RATE_LIMIT = 100; // requests
 const RATE_WINDOW_SEC = 60;
 
@@ -133,6 +136,18 @@ export class ClickUpClient {
 
   async deleteTask(taskId: string): Promise<void> {
     await this.delete(`/task/${taskId}`);
+  }
+
+  /** Changes the task's home List. v3 URL is absolute, so it overrides axios's v2 baseURL. */
+  moveTask(
+    taskId: string,
+    listId: string,
+    options: ClickUpMoveTaskOptions = {},
+  ): Promise<ClickUpMoveTaskResponse> {
+    return this.put<ClickUpMoveTaskResponse>(
+      `${BASE_URL_V3}/workspaces/${this.teamId}/tasks/${taskId}/home_list/${listId}`,
+      { data: options },
+    );
   }
 
   createFolder(spaceId: string, name: string): Promise<ClickUpCreatedFolder> {
