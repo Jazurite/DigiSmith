@@ -1,7 +1,7 @@
 # The maestro merges the material of several workers on one ticket
 
-**Status:** Idea, Jack's call (2026-10-03 22:16 UTC+7 [15:16Z]: "We'll another backlog"). No design yet. ClickUp: no ticket yet.
-Under "no ticket, no work" this item needs one. Proposed list: E.4: Workflows (a maestro procedure).
+**Status:** Idea, Jack's call (2026-10-03 22:16 UTC+7 [15:16Z]: "We'll another backlog"). No design yet. ClickUp: **DGS-160** (list
+E.4: Workflows, created 2026-10-03 22:19 UTC+7 [15:19Z]). Under "no ticket, no work" every item has a ticket.
 
 **Source:** the DGS-158 design (ticket-based naming architecture), the open points about two workers on one ticket.
 
