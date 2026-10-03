@@ -37,6 +37,10 @@ external writes the "relay" still needs one of: Jack's own message in the worker
 script, or Jack doing the write himself. The maestro must not route around the denial, for example by running the same
 delete from its own session. A tiny-decision rule covers questions, not classifier blocks.
 
+Jack (2026-10-03): a task that needs a delete is approved by Jack only, so it is never a tiny decision. When the classifier
+blocks one, Jack picks the way out. On 2026-10-03 he chose to start an OpenCode session for the delete (OpenCode has no
+Claude Code classifier), after first offering to do it himself in the ClickUp UI.
+
 ## Open
 
 - Where it is enforced: the maestro playbook, the role definition (O.3), or the maestro protocol in A.2.
