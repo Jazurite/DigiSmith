@@ -67,6 +67,7 @@
   <div class="meta">
     <span>Date: 2026-10-03</span>
     <span>Map item: E.4 Workflows (ClickUp DGS-154, Kind: Protocol)</span>
+    <span>Status: on hold. Jack wants the worker and maestro conventions designed first (<code>backlog/worker-and-maestro-conventions.md</code>, E.3) and will come back to this design.</span>
   </div>
 </header>
 
@@ -85,7 +86,7 @@
     <li><a href="#fail">Failure modes</a></li>
     <li><a href="#verify">How build 1 is checked</a></li>
     <li><a href="#out">Out of scope: build 2</a></li>
-    <li><a href="#open">Open items</a></li>
+    <li><a href="#open">Open and interim items</a></li>
   </ol>
 </nav>
 
@@ -100,7 +101,7 @@
   </div>
   <p>Flux is a <strong>Protocol</strong> (Jack, 2026-10-03). The worker flux, the start of a ticket and the maestro flux are the Procedures inside it. <code>digismith:handoff</code> (A.1) is the Primitive they share.</p>
   <h3>Scope: build 1 and build 2</h3>
-  <p>Jack chose build order (a) on 2026-10-03. <strong>Build 1</strong> is three things done together, so they stay consistent: the runbook as the spec, the kicker instruction text, and the A.1 skill change. <strong>Build 2</strong> is the tooling that automates the worker steps (DGS-151, <code>dg workbox</code>) and is not part of this design.</p>
+  <p>Jack chose build order (a) on 2026-10-03. <strong>Build 1</strong> is three things done together, so they stay consistent: the runbook as the spec, the kicker instruction text, and two small skill changes (A.1 <code>digismith:handoff</code> and <code>digismith:finishing-a-development-branch</code>). <strong>Build 2</strong> is the tooling that automates the worker steps (DGS-151, <code>dg workbox</code>) and is not part of this design.</p>
   <p>The runbook <code>.digismith/sessions/workbox.md</code> stays untracked (Jack's rule): it is edited on disk and never committed. Only the skill change and this design are committed.</p>
 </section>
 
@@ -120,6 +121,7 @@
   <ol>
     <li><strong>No resume starts any work.</strong> <em>Decided</em> (Jack, 2026-10-03 17:58 UTC+7). "Continue with Next" no longer exists anywhere. A resume reads the note, shows a short list, and asks Jack.</li>
     <li><strong>A worker has no handoff note and no resume.</strong> <em>Decided</em> (Jack, 2026-10-03 21:30 UTC+7). It starts from the maestro's brief and nothing else, and it is deleted at the flux. Its only identity is the ticket number (DGS-XXX), not a lineage. The only resume is the maestro's.</li>
+    <li><strong>The maestro holds all the state; a worker's context is protected by auto-compact only.</strong> <em>Decided</em> (Jack, 2026-10-03 21:38 UTC+7). A ticket that is too big for one worker is split by the maestro between workers. No note, ledger or extra rule carries a worker's state.</li>
     <li><strong>No clear before the maestro's note exists.</strong> <em>Proposed</em> (the skill already says "no note, no clear"). It applies to the maestro flux only, because a worker has no note.</li>
     <li><strong>Nothing runs in the background at a clear or an exit.</strong> <em>Proposed</em>, from the failed subagent kicker: <code>clear_session</code> killed a background subagent about 1 s after the turn ended (exit 137, 2026-10-03 17:45 UTC+7).</li>
     <li><strong>A kick is not an approval.</strong> <em>Proposed</em>, from the harness notice in the A' test: a peer message cannot grant escalation. <code>Arise</code> therefore only asks for a read-only list and never carries a go.</li>
@@ -137,7 +139,7 @@
     <tr><td>W2</td><td>Close the workspace: <code>herdr --session DigiSmith workspace close &lt;ws&gt;</code>. The idle shell and its memory go.</td><td>Maestro</td><td>Roster table</td><td>Nothing</td></tr>
     <tr><td>W3</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
   </table></div>
-  <p>The worker flux has no Check Gate, because it does no clear and writes no note. Jack's second requirement (cleanup) is W1 and W2. <em>Open:</em> a limit stop (<code>--resume &lt;session id&gt;</code> in the same pane) is an exception to "no reused pane"; the runbook keeps it as the Emergency flux until Jack says if it stays (see open items).</p>
+  <p>If a ticket is too big for one worker, the maestro splits the work between workers (<em>decided</em>, rule 3). The worker flux has no Check Gate, because it does no clear and writes no note. Jack's second requirement (cleanup) is W1 and W2. <em>Open:</em> a limit stop (<code>--resume &lt;session id&gt;</code> in the same pane) is an exception to "no reused pane"; the runbook keeps it as the Emergency flux until Jack says if it stays (see open items).</p>
 </section>
 
 <section id="start">
@@ -145,11 +147,11 @@
   <p>Part of the protocol (Jack, 2026-10-03): every new ticket gets a new workspace and a new agent.</p>
   <div class="table-wrap"><table>
     <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
-    <tr><td>S0</td><td>Write the brief for the worker. It is everything the worker gets: the ticket number (DGS-XXX), the goal, the sources to read, the rules, the checkpoints.</td><td>Maestro</td><td>Ticket, the maestro's own picture</td><td>The brief file (the maestro chooses the path; S5 names it)</td></tr>
+    <tr><td>S0</td><td>Write the brief for the worker. It is everything the worker gets: the ticket number (DGS-XXX), the goal, the sources to read, the rules, the checkpoints, and the docs folder (<strong>interim</strong>, see the backlog item): <code>.digismith/docs/&lt;Clan&gt;/&lt;Clan.N&gt;/</code>, where the worker writes its design, plan and report.</td><td>Maestro</td><td>Ticket, the maestro's own picture</td><td>The brief file (the maestro chooses the path; S5 names it)</td></tr>
     <tr><td>S1</td><td>Choose the account with "The rule" (usage probe, headroom, workers in use, last assigned).</td><td>Maestro</td><td>Usage probe, account matrix</td><td>Nothing</td></tr>
-    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "&lt;label&gt;" --no-focus</code>. The label is set when the workspace is created, so no later rename is needed (the old step 6 goes). <em>Open:</em> the label text (see open items).</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
+    <tr><td>S2</td><td><code>herdr --session DigiSmith workspace create --cwd &lt;repo&gt; --label "DGS-&lt;n&gt; &lt;short name&gt;" --no-focus</code> (for example "DGS-154 Flux"). The label is set when the workspace is created, so no later rename is needed (the old step 6 goes). <strong>Interim</strong>, see the backlog item.</td><td>Maestro</td><td>Nothing</td><td>New workspace</td></tr>
     <tr><td>S3</td><td>Load the account in the new pane: <code>claude-account use &lt;name&gt; &amp;&amp; eval "$(claude-account env)" &amp;&amp; claude-account status</code>. Check that the pane prints the expected account.</td><td>Maestro</td><td>Pane output (never a token)</td><td>Nothing</td></tr>
-    <tr><td>S4</td><td><code>agent start &lt;agent&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "&lt;name&gt;"</code>. A fresh session, no <code>--resume</code>. <em>Open:</em> the agent and session names (see open items).</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
+    <tr><td>S4</td><td><code>agent start dgs-&lt;n&gt; --kind claude --pane &lt;pane&gt; --timeout 120000 -- --name "DGS-&lt;n&gt; &lt;short name&gt;"</code>. A fresh session, no <code>--resume</code>. The agent name is <code>dgs-&lt;n&gt;</code>, with a short word added when one ticket has two workers. <strong>Interim</strong>, see the backlog item. The maestro's own sessions keep their names.</td><td>Maestro</td><td>Nothing</td><td>New agent</td></tr>
     <tr><td>S5</td><td>First prompt: "Read &lt;brief path&gt; and follow it." Nothing else: no lineage key, no note, no "resume lineage" (the old step 5 goes).</td><td>Maestro</td><td>Nothing</td><td>Nothing</td></tr>
     <tr><td>S6</td><td>Update the roster, live-workers and account tables.</td><td>Maestro</td><td>Tables</td><td>Runbook tables (untracked)</td></tr>
   </table></div>
@@ -157,7 +159,7 @@
     <ul>
       <li>A worker's only identity is the ticket number. No lineage key and no lineage-note lookup.</li>
       <li>The SessionStart trigger that reads a note and shows a list must not fire for a worker. The skill carries a clause for it (section 8).</li>
-      <li>The old runbook rule to name a worker's session and workspace "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" with the key first existed so the note lookup worked. That reason is gone; what the names become is open (section 13).</li>
+      <li>The old runbook rule to name a worker's session and workspace "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;" with the key first existed so the note lookup worked. That reason is gone. The interim names above (ticket number first) replace it until the conventions are designed.</li>
     </ul></div>
 </section>
 
@@ -201,7 +203,7 @@ archive_session or delete_session, and do nothing except these steps.
 
 <section id="skill">
   <h2>8. The A.1 skill change</h2>
-  <p>The only tracked change besides this design. It is small because the maestro-specific work (fetch <code>main</code>, workers, tickets) stays in the runbook, not in a skill that ships to every user. File: <code>skills/handoff/SKILL.md</code>.</p>
+  <p>Two tracked skill changes besides this design. Both are small because the maestro-specific work (fetch <code>main</code>, workers, tickets) stays in the runbook, not in a skill that ships to every user. First, <code>skills/handoff/SKILL.md</code>:</p>
   <ul>
     <li><strong>Description and Invoked By:</strong> add <code>Arise</code> as a resume trigger, next to "resume" and "pick up where we left off".</li>
     <li><strong>Resume Mode step 4:</strong> replace "State Done and Next in a few lines, then ask 'Continue with &lt;Next&gt;?'" with: state Done in a few lines, show Next and the open problems as a short numbered list of candidates, and ask which one Jack wants. Start nothing. This applies to every resume, not only the maestro's (<em>decided</em> by Jack's rule: no resume starts work).</li>
@@ -210,13 +212,18 @@ archive_session or delete_session, and do nothing except these steps.
     <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): add a clause, <em>proposed</em>: ignore the line in a worker started by the maestro with a brief (its first message tells it to read a brief), because a worker has no note and no resume. If the worker's title carries no lineage key, the existing key-match rule already ignores the line; the clause keeps the rule true whatever the names become.</li>
     <li><strong><code>scripts/session-init.ts</code>:</strong> unchanged (<em>proposed</em>). The pointer line says "or say resume", and <code>Arise</code> comes from the kicker or from Jack, who knows it from the runbook.</li>
   </ul>
+  <h3>Named change: <code>digismith:finishing-a-development-branch</code> Step 7</h3>
+  <p><em>Decided</em> (Jack, 2026-10-03 21:38 UTC+7): the handoff flow is removed for a worker. File: <code>skills/finishing-a-development-branch/SKILL.md</code>, Step 7 "Hand Off" (line 375). It is one clause, plus a matching half-sentence in the Quick Reference note at line 398:</p>
+  <pre><code>If this session is a worker started with a brief, skip this step: no handoff
+note, no cleanup round, no clear question. The maestro closes the worker.</code></pre>
+  <p>The cleanup round that end-of-ticket mode ran for a worker (the progress comment posted, the <code>MEMORY.md</code> row, pointers to other lineages) becomes part of the maestro's close-out of the ticket, since the maestro holds the result. Steps 1 to 6 of the skill and Option 3 are untouched.</p>
 </section>
 
 <section id="runbook">
   <h2>9. The runbook spec</h2>
   <p>The runbook becomes the spec. Work to do on <code>.digismith/sessions/workbox.md</code> (on disk, untracked):</p>
   <ol>
-    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start.</li>
+    <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start. Use the interim names (<code>DGS-&lt;n&gt; &lt;short name&gt;</code>, agent <code>dgs-&lt;n&gt;</code>) in the roster table and mark them interim, see the backlog item.</li>
     <li>Keep Steps 8 and 9 as the maestro wrote them, with four corrections: M1 says how the kicker is told and that Jack must open it before the arming; M1 and M3 drop the gate (Jack: no gate) and M2 includes "tell the maestro the kicker is ready"; the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
     <li>Fold Step 10 (Cleanup) into W1 and W2 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
     <li>Add the kicker instruction (section 7) and the "kicker options tested" paragraph as a template and a note.</li>
@@ -246,6 +253,7 @@ archive_session or delete_session, and do nothing except these steps.
     <li>The skill text is reviewed against Jack's rule: no sentence left that starts work on a resume, and no "Continue with Next".</li>
     <li>The existing tests for the lineage script and the SessionStart line stay green (<code>scripts/lineage-handoff.test.ts</code>, <code>scripts/session-init.test.ts</code>); neither is expected to change.</li>
     <li>A live run of the maestro flux with Jack present (a Desktop kicker, M1 to M7) shows that <code>Arise</code> produces a list and not an action. This needs Jack and the maestro, so the maestro runs it after the build.</li>
+    <li>The finishing skill is read to confirm a worker started with a brief skips Step 7 and that Option 1, Option 2 and Option 3 behave as before for a session that is not such a worker.</li>
     <li>The runbook is checked by reading it against the tables in sections 4 to 6: every step has an owner, reads and writes.</li>
   </ul>
 </section>
@@ -261,17 +269,18 @@ archive_session or delete_session, and do nothing except these steps.
 </section>
 
 <section id="open">
-  <h2>13. Open items</h2>
+  <h2>13. Open and interim items</h2>
+  <p>Jack's answers of 2026-10-03 21:38 UTC+7 closed four items (names, a long ticket, <code>finishing-a-development-branch</code> Step 7, where a worker's docs go). Two of them are <strong>interim</strong>: they hold until the conventions item (<code>backlog/worker-and-maestro-conventions.md</code>, list E.3: Conventions, commit 635f0e8) is designed, and this design is revisited after that.</p>
   <div class="table-wrap"><table>
-    <tr><th>Item</th><th>Whose</th><th>Blocks</th></tr>
-    <tr><td><strong>The words of the flux signal.</strong> Jack's answer on the Check Gate was "when the signal is clear then just handoff", but no word is set. The skill clause (section 8) and M1 need one that cannot be mistaken for an ordinary "hand off and clear", which keeps its gate.</td><td>Jack</td><td>The text of the skill clause and of M1. Not the design.</td></tr>
-    <tr><td><strong>Names of a worker's session, agent and workspace.</strong> The old rule "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;", key first, served the note lookup, which no longer applies to workers. Candidates: ticket number first ("DGS-154 Flux"), or keep the lineage key for the roster only. Today's agent name (<code>e-methodology</code>) is also lineage-based. The maestro's own session must keep its name.</td><td>Jack</td><td>S2 and S4 text, the runbook's roster table, and the memory rule "Rename herdr workers per ticket".</td></tr>
-    <tr><td><strong>A long ticket when the context runs out.</strong> A worker has no note, so a worker flux in the middle of a ticket loses its state. What protects it? Candidates: auto-compact only; the plan ledger / <code>progress.md</code> and ClickUp comments as the only carried state; a limit-stop <code>--resume</code> keeps the conversation but covers a limit, not context exhaustion.</td><td>Jack</td><td>Nothing in build 1 if auto-compact alone is accepted. Otherwise one more rule in the worker flux.</td></tr>
-    <tr><td><code>digismith:finishing-a-development-branch</code> Step 7 calls the handoff in end-of-ticket mode, so a worker would write a note at the end of a ticket and be asked the clear question. That contradicts "no handoff for a worker".</td><td>Jack (a skill outside this design)</td><td>Whether the skill change in section 8 grows by one clause there, or a worker simply skips Step 7.</td></tr>
-    <tr><td>Where a worker's docs (design, plan, report) go when it has no lineage: <code>digismith:brainstorming</code> derives the folder from the map item letter, and the brief now carries only the ticket.</td><td>Jack</td><td>Text of the brief template, not the flux.</td></tr>
-    <tr><td>Does the limit stop stay as a reused-pane exception</td><td>Jack</td><td>One paragraph of the runbook.</td></tr>
-    <tr><td>Allow rules for <code>herdr workspace create</code> and <code>workspace close</code> in the maestro's permissions</td><td>Jack (the guardrail is his, DGS-155)</td><td>W2 and S2 run by the maestro; until then Jack allows each call.</td></tr>
-    <tr><td>Kicker template in the runbook; kicker 15-minute limit; <code>session-init.ts</code> unchanged; the SessionStart clause in section 8</td><td>Proposed, Jack can overrule</td><td>Nothing.</td></tr>
+    <tr><th>Item</th><th>State</th><th>Whose</th></tr>
+    <tr><td>Names of a worker's session, workspace and agent: <code>DGS-&lt;n&gt; &lt;short name&gt;</code> and <code>dgs-&lt;n&gt;</code></td><td><strong>Interim</strong>, see the backlog item</td><td>The conventions item</td></tr>
+    <tr><td>Where a worker's docs go: the folder the brief names, <code>.digismith/docs/&lt;Clan&gt;/&lt;Clan.N&gt;/</code></td><td><strong>Interim</strong>, see the backlog item</td><td>The conventions item</td></tr>
+    <tr><td>A long ticket: auto-compact only, the maestro holds the state and splits the work</td><td>Decided</td><td>Jack</td></tr>
+    <tr><td>The handoff flow removed for a worker in <code>finishing-a-development-branch</code> Step 7</td><td>Decided; one clause (section 8)</td><td>Jack</td></tr>
+    <tr><td>The words of the flux signal. Jack's answer on the Check Gate was "when the signal is clear then just handoff", but no word is set. The skill clause (section 8) and M1 need one that cannot be mistaken for an ordinary "hand off and clear", which keeps its gate.</td><td>Open. Blocks the text of M1 and the clause, not the design.</td><td>Jack (the maestro takes it to him)</td></tr>
+    <tr><td>Does the limit stop stay as a reused-pane exception</td><td>Open. One paragraph of the runbook.</td><td>Jack</td></tr>
+    <tr><td>Allow rules for <code>herdr workspace create</code> and <code>workspace close</code> in the maestro's permissions</td><td>Open. Until then Jack allows each call (W2, S2).</td><td>Jack (the guardrail is his, DGS-155)</td></tr>
+    <tr><td>Kicker template in the runbook; kicker 15-minute limit; <code>session-init.ts</code> unchanged; the SessionStart clause in section 8</td><td>Proposed, Jack can overrule</td><td>Jack</td></tr>
   </table></div>
 </section>
 
