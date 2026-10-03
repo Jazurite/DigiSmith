@@ -99,6 +99,7 @@ spec/report already uses:
     <li><a href="#delivered">What Was Delivered</a></li>
     <li><a href="#build">Build Process</a></li>
     <li><a href="#merge">Commits</a></li>
+    <li><a href="#followups">Follow-ups</a></li>
   </ol>
 </nav>
 
@@ -136,6 +137,15 @@ spec/report already uses:
     <li><span class="sha">511f290</span> feat(clickup-client): add updateList for PUT /list/{id}</li>
     <li><span class="sha">640041a</span> feat(cli): add dg clickup update-list command</li>
     </ul>
+</section>
+
+<section id="followups">
+  <h2>Follow-ups</h2>
+  <ul>
+    <li>Two tests fail on <code>main</code> and on this branch: <code>process-lifecycle.test.ts</code> (netstat PID check) and the colorized <code>--help</code> check in <code>index.e2e.test.ts</code>. DGS-117 tracks both. This build did not touch them.</li>
+    <li><code>--description</code> on <code>create-list</code> was skipped. <code>create-list</code> followed by <code>update-list</code> does the same job.</li>
+    <li>No live ClickUp call ran. The first live write, probably the Town Hall rename, needs the maestro's approval.</li>
+  </ul>
 </section>
 
 <footer>DigiSmith · .digismith/docs/D/D.3/add-dg-clickup-update-list-command/report.html</footer>
