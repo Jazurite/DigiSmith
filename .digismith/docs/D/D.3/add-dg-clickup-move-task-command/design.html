@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dg clickup move-task (DGS-76)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>dg clickup move-task (DGS-76)</h1>
+  <div class="meta">
+    <span>Date: 2026-10-03</span>
+    <span>Map item: D.3 (ClickUp Channel)</span>
+    <span>Ticket: DGS-76, ClickUp task 14zcebru2jx</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal</a></li>
+    <li><a href="#client">Client</a></li>
+    <li><a href="#command">Command</a></li>
+    <li><a href="#tests">Tests</a></li>
+    <li><a href="#parallel">Parallel work with DGS-137</a></li>
+    <li><a href="#live">Live check</a></li>
+    <li><a href="#out-of-scope">Out of scope and follow-ups</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+  <h2>Goal</h2>
+  <p>Add <code>dg clickup move-task</code>. It changes the home List of a ClickUp task through ClickUp's public API v3. The v2 <code>update-task</code> call cannot do this (it fails with 400 <code>TASK_035</code>). No Frontdoor session is needed. The stored <code>CLICKUP_API_TOKEN</code> authenticates the call.</p>
+  <p>The public API was chosen over Frontdoor on 2026-09-26. Frontdoor stays only as a reference if the two ever behave differently.</p>
+  <p>The v3 route was proven live on 2026-09-26. It moved DGS-78 (<code>14zcebru2p7</code>) from Pavilion into B.1 with body <code>{"move_custom_fields": true}</code>. The response was <code>{"data":{"task_id":"14zcebru2p7","new_list_id":"1301150000002300"}}</code>, and the status was kept.</p>
+</section>
+
+<section id="client">
+  <h2>Client (<code>packages/clickup-client</code>)</h2>
+  <ul>
+    <li>Add <code>ClickUpClient.moveTask(taskId, listId, options = {})</code>. It sends <code>PUT https://api.clickup.com/api/v3/workspaces/${teamId}/tasks/${taskId}/home_list/${listId}</code>.</li>
+    <li>The v3 URL is absolute, so axios ignores its <code>/api/v2</code> base URL for this call. The client keeps one axios instance. The <code>Authorization</code> header and the rate limiter stay shared. The workspace id is the existing <code>CLICKUP_TEAM_ID</code>.</li>
+    <li>Add the type <code>ClickUpMoveTaskOptions</code> in snake_case, like <code>ClickUpTaskWriteBody</code>:
+      <ul>
+        <li><code>status_mappings?: { source_status: string; destination_status: string }[]</code> (by status id, for a destination List that lacks the task's current status)</li>
+        <li><code>move_custom_fields?: boolean</code></li>
+        <li><code>custom_fields_to_move?: string[]</code> (stays in the type, but the command does not expose it)</li>
+      </ul>
+    </li>
+    <li>Add the type <code>ClickUpMoveTaskResponse</code> as <code>{ data: { task_id: string; new_list_id: string } }</code>.</li>
+    <li>The method returns the raw response body, like the other methods. An empty options object sends <code>{}</code>.</li>
+    <li>For a task in multiple Lists, only the home List changes. This is ClickUp's behavior, and the client does not change it.</li>
+  </ul>
+</section>
+
+<section id="command">
+  <h2>Command (<code>packages/cli/src/clickup/move-task.ts</code>)</h2>
+<pre><code>dg clickup move-task --task &lt;id&gt; --list &lt;id&gt;
+    [--status-map &lt;srcStatusId&gt;=&lt;dstStatusId&gt;]...
+    [--move-custom-fields]</code></pre>
+  <ul>
+    <li>The command follows the <code>create-list</code> pattern: <code>createMoveTaskCommand(clientFactory = createClient)</code>, JSON output on stdout, and <code>clickup move-task: &lt;message&gt;</code> on stderr with exit code 1 on failure.</li>
+    <li><code>--task</code> and <code>--list</code> are required. An empty or whitespace-only value fails before any client call.</li>
+    <li><code>--status-map</code> repeats. Each value splits on the first <code>=</code>. A value with no <code>=</code>, or an empty side, fails before any client call.</li>
+    <li><code>--move-custom-fields</code> is a boolean flag. It sets <code>move_custom_fields: true</code>. The command never sends the field when the flag is absent.</li>
+    <li>Register the command in <code>packages/cli/src/clickup/index.ts</code>. Add one line to <code>packages/cli/README.md</code>.</li>
+  </ul>
+</section>
+
+<section id="tests">
+  <h2>Tests</h2>
+  <p>All tests use mocks. No test calls real ClickUp.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Layer</th><th>Cases</th></tr>
+    <tr><td>Client (<code>client.test.ts</code>)</td><td>PUT method; absolute v3 URL with the team id, task id and list id; options sent as the body; <code>{}</code> sent when no options are given; response body returned.</td></tr>
+    <tr><td>Command (<code>move-task.test.ts</code>)</td><td>Flags parse into the right <code>moveTask</code> call; repeated <code>--status-map</code>; <code>--move-custom-fields</code> on and off; empty <code>--task</code>; empty <code>--list</code>; malformed <code>--status-map</code>; client failure sets exit code 1.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="parallel">
+  <h2>Parallel work with DGS-137</h2>
+  <p>A second worker builds <code>dg clickup update-list</code> (DGS-137) at the same time, in its own worktree. Both builds touch the client package and <code>packages/cli/src/clickup/index.ts</code>. Edits stay additive:</p>
+  <ul>
+    <li><code>moveTask</code> goes right after <code>deleteTask</code> in <code>client.ts</code>. Its types go right after <code>ClickUpTaskWriteBody</code> in <code>types.ts</code>.</li>
+    <li>The command registers after <code>updateTaskCommand</code> in <code>index.ts</code>.</li>
+    <li>Whoever finishes second rebases on main.</li>
+  </ul>
+  <p>Both builds are lineage D.3 and share <code>.digismith/docs/D/D.3/handoff.md</code>. Each build keeps its own folder: <code>D/D.3/add-dg-clickup-move-task-command/</code> here, and <code>D/D.3/add-dg-clickup-update-list-command/</code> for DGS-137. When this build writes the handoff, it reads the existing note first and carries forward the other worker's entries.</p>
+</section>
+
+<section id="live">
+  <h2>Live check</h2>
+  <p>The build makes no real ClickUp call. After the build, the worker stops and reports to the maestro. The maestro names the live move. The worker does not assume a ticket or a target List.</p>
+</section>
+
+<section id="out-of-scope">
+  <h2>Out of scope and follow-ups</h2>
+  <ul>
+    <li><code>--custom-field</code> on the command (<code>custom_fields_to_move</code>). The client type keeps the option. The command can add it later.</li>
+    <li><code>dg clickup move-folder</code> (DGS-75).</li>
+    <li>The Frontdoor <code>PUT /tasks/v2/taskPosition</code> call.</li>
+  </ul>
+  <div class="callout">
+    <p><strong>Follow-up for the handoff and the report (no ticket):</strong> no ClickUp command prints the response body of a failed call. Axios shows only "Request failed with status code 400". A failed <code>--status-map</code> is hard to debug because of this. The fix belongs in a shared error helper in the client or in <code>lib.ts</code>, not in this command.</p>
+  </div>
+</section>
+
+<footer>DigiSmith · .digismith/docs/D/D.3/add-dg-clickup-move-task-command/design.html</footer>
+
+</body>
+</html>
