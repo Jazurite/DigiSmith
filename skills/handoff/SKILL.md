@@ -98,8 +98,10 @@ resolves the main checkout itself, so the note always lands in the main checkout
 ## Clear Decision
 
 **Manual run:** clear only if this message asked for it ("hand off and clear", "start fresh",
-"clear context"), or it is the human partner's yes to your own question "kicker open? flux
-now?" (see the exception under Check Gate). Otherwise stop after showing the note.
+"clear context"). The human partner's yes to your own question "kicker open? flux now?"
+writes and shows the note without the gate (see the exception under Check Gate), but this
+skill does not clear on it; the flux procedure clears on its next turn. Otherwise stop after
+showing the note.
 
 **End-of-ticket mode:** invoke `digismith:preferences`' `get` operation for key `clear_context`.
 
@@ -119,8 +121,9 @@ Every clear waits for the human partner to check the note. End the turn with the
 "Fix anything, or say ok to clear."
 
 **One exception:** when the message you are answering is the human partner's yes to your own
-question "kicker open? flux now?", skip the gate. Write the note, show it, and go on to the
-clear without waiting for ok. The question and the yes are the signal; no other wording
+question "kicker open? flux now?", skip the gate. Write the note and show it, but do not
+clear: the flux procedure arms the kicker and clears on its next turn, after the kicker
+replies "armed". The question and the yes are the signal; no other wording
 counts, and every other clear, including a "hand off and clear" the human partner types,
 keeps the gate.
 
@@ -177,7 +180,7 @@ The first line is always the H1 title. Exactly these four sections, in this orde
 |--------|---------|
 | "The ticket's done, they'd obviously want a fresh start" | Only an explicit ask or a saved `yes` clears. Never infer it. |
 | "I'll clear now and summarize after" | The clear drops everything after this turn. Summary first, clear last. |
-| "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. The only exception is the yes to "kicker open? flux now?" (Check Gate). |
+| "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. The only exception is the yes to "kicker open? flux now?", which skips the gate but still does not clear here (Check Gate). |
 | "The title has no prefix; I can tell the lineage from the work" | A wrong key overwrites another lineage's note. An unmatched title goes to `_unlettered`; no title means ask. |
 | "I'll append today's work under the old note" | Rewrite the whole note. Carry forward only what is still true. |
 | "The write failed, but I'll clear anyway" | The note is the only state that survives the clear. No note, no clear. |
