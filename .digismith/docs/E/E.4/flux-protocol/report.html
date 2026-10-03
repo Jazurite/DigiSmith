@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flux — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">ready to merge</span>
+  <h1>Flux — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-03</span>
+    <span>Map item: <strong>E.4 Workflows (ClickUp DGS-154)</strong></span>
+    <span>Ticket: DGS-154</span>
+    <span>Part B range: <code>088cee9..b79cbd2</code> (Build 1 merged earlier as <code>e67627f</code>)</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>What this ticket delivered</h2>
+  <p>Flux, the cycle that renews a session, written as a protocol with one owner per step: worker flux (W1 to W3), the start of a ticket (S0 to S6) and maestro flux (M1 to M7). The design and plan are in this folder. Build 1 changed two skills: <code>digismith:handoff</code> now shows a list on resume and asks, accepts "Arise", and lets the maestro's "kicker open? flux now?" yes skip the Check Gate; <code>digismith:finishing-a-development-branch</code> writes no handoff for a worker that started from a brief. Part B brought the design, plan, runbook and the handoff skill into line with the DGS-158 naming convention.</p>
+</section>
+
+<section>
+  <h2>Build 1 (merged earlier, first report here)</h2>
+  <p>Tasks 1 to 4 of the plan: the handoff skill change, the Step 7 worker clause, the runbook rewritten as the Flux protocol, and the verification run. The runbook <code>.digismith/sessions/workbox.md</code> is untracked and git-excluded on purpose, so it is not in any commit. Build 1 merged to main at <code>e67627f</code> and the post-finish hooks ran (version 0.76.0-beta).</p>
+</section>
+
+<section>
+  <h2>Part B: the DGS-158 names (Tasks 5 to 7)</h2>
+  <ul>
+    <li><strong>Task 5, design:</strong> <code>design.html</code> now uses the board folder <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>, the brief at <code>.digismith/sessions/&lt;agent&gt;/brief.md</code>, the worker label <code>&lt;KEY&gt; ⚚ &lt;short name&gt;</code> and the lowercase agent name. The old interim items are now settled and marked as past. Same 13 sections, same W, S and M steps.</li>
+    <li><strong>Task 6, runbook (on disk, untracked):</strong> the Names block, the brief path, S0, S5 and two roster lines follow DGS-158. Backup of the earlier file: <code>.digismith/sessions/.old/workbox.md.before-dgs158-flux-2026-10-03</code>.</li>
+    <li><strong>Task 7, handoff skill text only (cut A):</strong> the maestro's note is <code>.digismith/sessions/&lt;session-name&gt;/note.md</code>, with the session name taken from <code>get_session self</code>. The old clan and lineage lookup stays as a stated fallback, so existing notes keep working. <code>skills/finishing-a-development-branch</code> Step 7 carries the matching lines.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Skill text and script differ until DGS-159</h2>
+  <p>This is deliberate. <code>scripts/lineage-handoff.ts</code>, its tests, the SessionStart line and <code>.git/info/exclude</code> still know only the old <code>.digismith/docs/...</code> paths. So <code>--action path</code>, <code>--action ensure-excluded</code> and <code>--action list</code> serve the fallback only; the SessionStart line lists only fallback notes, so a note at the new path is found by "resume" or "Arise"; and the skill checks the new path with <code>git check-ignore</code> and tells the human when it is not yet excluded. DGS-159 migrates the notes and adds the pattern. The skill text says the same.</p>
+  <p>The convention did not decide one case: a session title used as a folder name. The rule written into the skill: the title is the session name only when it is one safe path segment (not empty or blank, no slash, not <code>.</code> or <code>..</code>, not a lineage-key title like "A.1: Primitives"); any other title uses the old lookup; no title means ask. A worker started with a brief writes no note.</p>
+</section>
+
+<section>
+  <h2>Review and tests</h2>
+  <p>Task 5 and Task 7 each had a task review (Approved; minor wording fixed). The final whole-branch review on the most capable model found no Critical or Important issues and five minor ones. Four were fixed in <code>b79cbd2</code>: a worker writes no note, a fallback note is reported as shared, the resume message names every path tried, and two wording drifts in the design and plan. The fifth, that any safe title becomes a folder because the skill cannot tell a maestro from another session, is closed only for workers; DGS-159 can tighten the rest. Tests: 777 passed and 2 known failures (the <code>--help</code> usage line in <code>index.e2e.test.ts</code> and the process PID check in <code>process-lifecycle.test.ts</code>), the same as on main. No script or test was changed.</p>
+</section>
+
+<section>
+  <h2>Open items carried forward</h2>
+  <ul>
+    <li>DGS-159: shared path modules, the sweep, the exclude pattern, file moves, and moving existing notes to <code>.digismith/sessions/</code>.</li>
+    <li>Whether a maestro should be told apart from any other session by more than its title (see the fifth review minor).</li>
+    <li>Not built here: <code>dg workbox</code> (DGS-151), the E.2 toolchain work, DGS-153 and DGS-155.</li>
+  </ul>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <p>Flux-related commits, oldest first (Build 1 then Part B):</p>
+  <ul class="commit-list">
+    <li><code>2e7544c</code> docs(flux): add the Flux protocol design</li>
+    <li><code>61eea40</code> docs(flux): start a worker from the brief only</li>
+    <li><code>0c32c9a</code> docs(flux): drop the maestro Check Gate and record kicker options</li>
+    <li><code>385330b</code> docs(flux): record interim worker names, docs folder and the Step 7 change</li>
+    <li><code>c937fab</code> docs(flux): use the flux-now question as the signal</li>
+    <li><code>cfbb80d</code> docs(flux): mark the design approved and record the DGS-158 interim items</li>
+    <li><code>e5b11f3</code> docs(flux): add the build 1 plan</li>
+    <li><code>7a8360b</code> docs(handoff): resume shows a list and asks, add Arise and the flux-now gate exception</li>
+    <li><code>ce4a1f6</code> docs(finishing): a worker started with a brief skips the Step 7 handoff</li>
+    <li><code>b778840</code> docs(flux): apply Jack's worker names to the plan</li>
+    <li><code>2baa798</code> docs(flux): fix the step count and the Names block name in the plan</li>
+    <li><code>e67627f</code> docs(handoff): the flux-now yes skips the gate but the clear waits for the kicker</li>
+    <li><code>883aa83</code> docs(flux): update the plan for the DGS-158 names</li>
+    <li><code>0e725d6</code> docs(flux): update the design to the DGS-158 names and folders</li>
+    <li><code>0393f0d</code> docs(flux): settle the interim wording in the design</li>
+    <li><code>d169497</code> docs(handoff): find the maestro's note under .digismith/sessions with the old lookup as a fallback</li>
+    <li><code>c7cc113</code> docs(handoff): tighten the note lookup wording after review</li>
+    <li><code>b79cbd2</code> docs(flux): close the final-review minors in the handoff skill, design and plan</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/docs/E/E.4/flux-protocol/report.html</footer>
+
+</body>
+</html>
