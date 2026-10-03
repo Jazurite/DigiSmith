@@ -1,6 +1,6 @@
 # Enforce: the maestro delegates ticket builds to workers
 
-**Status:** Idea, Jack's rule (2026-10-03). No design yet. ClickUp: **DGS-146** (list O.3: Roles), related to DGS-139,
+**Status:** Idea, Jack's rule (2026-10-03). No design yet. ClickUp: **DGS-149** (Town Hall; moved from DGS-146 in O.3: Roles on 2026-10-03), related to DGS-139,
 DGS-144 and DGS-145.
 
 **Source:** Live session 2026-10-03, DGS-142 (migrate DigiSmith's own repo to `config.yml`). The Desktop maestro
