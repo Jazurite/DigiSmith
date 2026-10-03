@@ -2,8 +2,9 @@
 
 **Status:** Idea, Jack's call (2026-10-03). No design yet. ClickUp: **DGS-158** "Ticket-based naming architecture" (list E.3:
 Conventions, created 2026-10-03 21:41 UTC+7 as "Worker and maestro conventions", renamed 22:01). A worker (`dgs-158`)
-brainstorms the design. Follow-up: **DGS-159** moves the old `.digismith/docs/` content and the `backlog/` files to the new
-layout. This item is the convention only.
+brainstorms the design. Follow-up: **DGS-159** "Ticket-based naming: modify the code and move the files" (Jack, 2026-10-03 22:09 UTC+7 [15:09Z]: "158
+build the convention, 159 modify the code and move the files"). It changes the skills, scripts and modules, and moves the old
+`.digismith/docs/` content and the `backlog/` files to the new layout. This item is the convention only.
 
 **Scope change (Jack, 2026-10-03 21:50 UTC+7 [14:50Z]):** "We'll rearchitect the naming conventions for everything. Remove the
 clan and lineage naming conventions and migrate to a ticket-based system. Now the working files stay at `.digismith/board`.
