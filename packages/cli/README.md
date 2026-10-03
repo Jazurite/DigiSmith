@@ -29,6 +29,7 @@ digismith clickup create-task --list <id> --name <name> [options]  # create a ne
 digismith clickup update-task --task <id> [options]                # update an existing task
 digismith clickup create-folder --name <name>                      # create a new Folder in the DigiSmith space
 digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
+digismith clickup update-list --list <id> [--name <name>] [--description <text> | --description-file <path>]  # rename a List and set its description
 digismith clickup upload-attachment --task <id> --file <path>      # upload a file as an attachment on a task
 
 digismith --version
@@ -67,6 +68,7 @@ this package.
 `clickup` commands read `CLICKUP_API_TOKEN` and `CLICKUP_TEAM_ID` from `~/.digismith-depot/.env`;
 `check-credentials` verifies they're present. `create-folder`, and `create-list` without
 `--folder`, always create in the DigiSmith ClickUp space. `create-list --folder <id>` creates
-the list inside that folder instead.
+the list inside that folder instead. `update-list` sets the description through ClickUp's
+`content` field, so literal `- ` bullet lines stay as written.
 
 Source and design docs: <https://github.com/Jazurite/DigiSmith> (`packages/cli`).
