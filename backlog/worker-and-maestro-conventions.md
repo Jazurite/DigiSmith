@@ -1,7 +1,14 @@
-# Conventions for the worker and the maestro (names, brief, docs location, report, list)
+# Rearchitect the naming conventions: ticket-based, `.digismith/board` and `.digismith/sessions` (was: conventions for the worker and the maestro)
 
-**Status:** Idea, Jack's call (2026-10-03). No design yet. The interim rules below are in force until a design replaces
-them. ClickUp: no ticket yet. The home is list **E.3: Conventions** (doc and naming conventions, map G.3).
+**Status:** Idea, Jack's call (2026-10-03). No design yet. ClickUp: **DGS-158** (list E.3: Conventions, created 2026-10-03
+21:41 UTC+7; its name and description still say "Worker and maestro conventions" and need an update). A worker (`dgs-158`)
+brainstorms the design.
+
+**Scope change (Jack, 2026-10-03 21:50 UTC+7 [14:50Z]):** "We'll rearchitect the naming conventions for everything. Remove the
+clan and lineage naming conventions and migrate to a ticket-based system. Now the working files stay at `.digismith/board`.
+This is where the ticket files live (design, report, ...). For maestro, worker and other sessions live under
+`.digismith/sessions/`." So this item is no longer only about workers and the maestro. The clan letters, the lineage keys and
+the map-item letters stop being a naming convention, and the ticket becomes the unit.
 
 **Source:** Flux design, DGS-154 (E.4), checkpoint 2, 2026-10-03 21:30 UTC+7 [14:30Z]. Jack decided that a worker starts
 from the maestro's brief only, is known by its ticket number only, and has no resume and no handoff. That left four
@@ -18,17 +25,19 @@ and "focus on the backlog for convention of worker / maestro first, can circle b
   and stop asking the clear question). The Flux build carries this clause.
 - The maestro resume shows a list and asks Jack. It never continues alone. There is no check gate before the maestro clears.
 
-## Interim rules (the maestro's pick, 2026-10-03)
+## Interim rules (superseded 2026-10-03 21:50 UTC+7 by the scope change above)
 
-1. **Names.** A worker's Claude session title and its herdr workspace label are `DGS-<n> <short name>`, for example
-   `DGS-154 Flux`. Its herdr agent name is `dgs-<n>`, with a short word added when one ticket has two workers
-   (`dgs-154-comment`). The maestro sessions keep their names (`DigiSmith`, `Emma`, `Soveron`). Workers that already run keep
-   their lineage-based names until they close.
-2. **Docs location.** The maestro names the docs folder in the brief, by the nested convention
-   (`.digismith/docs/<Clan>/<Clan.N>/`, see [docs-convention-letter-nesting.md](docs-convention-letter-nesting.md)). The worker
-   writes its design, plan and report there and does not derive the folder itself.
-3. **Brief.** The brief lives in that docs folder as `brief.md` (git-excluded). It names the ticket, the task, the docs
-   folder, what to report, and the standing limits (never print a token, stop and tell the maestro when a call is blocked).
+The maestro's first pick was: worker names `DGS-<n> <short name>` (agent `dgs-<n>`), the docs folder named in the brief by the
+nested clan convention (`.digismith/docs/<Clan>/<Clan.N>/`), and the brief as a git-excluded `brief.md` in that folder. The
+worker names are kept as a starting point. The nested clan folders are dropped: the working files move to `.digismith/board/`
+(ticket files) and `.digismith/sessions/` (session files).
+
+## Direction (Jack, 2026-10-03), layout still to design
+
+- `.digismith/board/<ticket>/` holds a ticket's working files: design, plan, report and the rest.
+- `.digismith/sessions/` holds the files about sessions: the maestro, the workers and any other session. The Workbox runbook
+  (`workbox.md`) already lives there.
+- The ticket key comes from its tracker: DGS-nnn (ClickUp), and the EMKT-nnn style keys of JIRA.
 
 ## Open questions for the design
 
@@ -43,10 +52,18 @@ and "focus on the backlog for convention of worker / maestro first, can circle b
 - Docs folders for tickets with no lineage letter, and for one-off workers.
 - The limit stop: does it stay an exception that reuses the pane and the session (`--resume`)?
 - The names of the maestro sessions, and one maestro for each herdr session.
+- Does removing the clan naming reach ClickUp (the A to E folders and lists, such as E.3: Conventions)?
+- Where do ideas with no tracker key go (today they are files in `backlog/`), and does `backlog/` stay?
+- Migration of the old `.digismith/docs/` content (about 70 flat and nested folders): part of this ticket, or a follow-up?
+- Whether a worker's brief belongs to the ticket (`board`) or to the session (`sessions`).
+- What changes in the skills and scripts that read the lineage key or pick a docs folder from the map letter: the handoff skill,
+  `scripts/session-init.ts`, `init`, `bootstrap`, `adopt`, `brainstorming`, `writing-plans`, `report-implementation`,
+  `finishing-a-development-branch`, the `.git/info/exclude` patterns, and the unified docs convention in `MEMORY.md`.
+- The Flux design (DGS-154) waits for this: its paths and the maestro's note location follow the new layout.
 
 ## Related
 
 DGS-154 Flux (E.4, the design is on branch `flux-protocol`, not merged), DGS-157 Workbox guidelines (E.4),
 [maestro-delegates-builds-to-workers.md](maestro-delegates-builds-to-workers.md) (DGS-146),
 [maestro-relays-tiny-decisions.md](maestro-relays-tiny-decisions.md), [dg-workbox-package.md](dg-workbox-package.md) (DGS-151),
-[docs-convention-letter-nesting.md](docs-convention-letter-nesting.md) (G.3).
+[docs-convention-letter-nesting.md](docs-convention-letter-nesting.md) (G.3, superseded by this item).
