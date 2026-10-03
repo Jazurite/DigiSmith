@@ -163,19 +163,19 @@
 
 <section id="maestro">
   <h2>6. Maestro flux</h2>
-  <p>Only the maestro uses <code>clear_session</code>, on <code>self</code>, effective when its turn ends. Route A' passed on 2026-10-03 17:32 to 17:34 UTC+7 (DGS-154 comment <code>1301150000057188</code>): a Desktop kicker session woke the maestro. The subagent kicker failed (comment <code>1301150000057204</code>) and is dropped. <em>Decided</em> (Jack, 2026-10-03 17:48): the kicker is a Desktop session that Jack opens and deletes by hand.</p>
+  <p>Only the maestro uses <code>clear_session</code>, on <code>self</code>, effective when its turn ends. <em>Decided</em> (Jack, 2026-10-03 17:48): the kicker is a Desktop session that Jack opens and deletes by hand. <em>Decided</em> (Jack, 21:33): <strong>there is no Check Gate</strong> in the maestro flux: "when the signal is clear then just handoff". When the flux signal comes, the maestro writes its note and goes on to the kick and the clear without waiting for Jack's ok on the note.</p>
   <div class="table-wrap"><table>
     <tr><th>#</th><th>Step</th><th>Owner</th><th>Reads</th><th>Writes</th></tr>
-    <tr><td>M1</td><td>Write the maestro's handoff note with <code>digismith:handoff</code>. Make sure nothing runs in the background (no subagent, background command, monitor or scheduled wake-up). Print the kicker instruction with the maestro's own session id filled in (from <code>get_session self</code>).</td><td>Maestro</td><td>Conversation, tickets, live workers</td><td>The note; the instruction text on screen</td></tr>
-    <tr><td>M2</td><td>Open a new Desktop session (the kicker) and paste the instruction. No tool can start a session.</td><td>Jack</td><td>The printed instruction</td><td>The kicker session</td></tr>
-    <tr><td>M3</td><td><strong>Check Gate.</strong> <em>Open (Jack):</em> does Jack check the note and say ok before the clear, as every clear does today? Until he decides, the skill's gate is unchanged: "Fix anything, or say ok to clear."</td><td>Jack</td><td>The note</td><td>Corrections, if any</td></tr>
-    <tr><td>M4</td><td>Arm the kicker, after the gate: <code>send_message</code> "KICK" to it and end the turn. The kicker's "armed" reply starts the turn that clears. Arming before the gate would let the kicker see the idle maestro that waits for Jack's ok.</td><td>Maestro</td><td>Kicker session id (list of sessions)</td><td>One message</td></tr>
-    <tr><td>M5</td><td>Say the final summary and the note path, then call <code>clear_session</code> on <code>self</code> as the very last action of the turn. The app may ask Jack to approve the call.</td><td>Maestro</td><td>Nothing</td><td>The clear</td></tr>
-    <tr><td>M6</td><td>Poll <code>get_session</code> on the maestro every 10 s. After 3 checks in a row with <code>isRunning</code> false, <code>send_message</code> "Arise". Report the send time and result.</td><td>Kicker</td><td>Maestro session state</td><td>One message</td></tr>
-    <tr><td>M7</td><td><strong>Arise: resume.</strong> The message is the first input of the cleared session. The maestro runs <code>digismith:handoff</code> in resume mode, then does its own refresh: fetch the latest <code>main</code>, rebuild the in-progress picture (tickets, tasks, live workers), show a summarized list of candidate next tasks, and stop. Jack chooses. It never acts on the note's Next alone.</td><td>Maestro</td><td>Its note, <code>main</code>, ClickUp, herdr</td><td>Nothing</td></tr>
-    <tr><td>M8</td><td>Delete the kicker (<code>delete_session</code> shows Jack an approval card in every permission mode, so a flux cannot do it alone; he accepted the cost).</td><td>Jack</td><td>Nothing</td><td>Removes the kicker</td></tr>
+    <tr><td>M1</td><td>On the flux signal, write the maestro's handoff note with <code>digismith:handoff</code> and show it. Make sure nothing runs in the background (no subagent, background command, monitor or scheduled wake-up). Print the kicker instruction with the maestro's own session id filled in (from <code>get_session self</code>) and end the turn.</td><td>Maestro</td><td>Conversation, tickets, live workers</td><td>The note; the instruction text on screen</td></tr>
+    <tr><td>M2</td><td>Open a new Desktop session (the kicker), paste the instruction, and tell the maestro it is ready. No tool can start a session.</td><td>Jack</td><td>The printed instruction</td><td>The kicker session; one message to the maestro</td></tr>
+    <tr><td>M3</td><td>Arm the kicker: <code>send_message</code> "KICK" to it and end the turn. The kicker's "armed" reply starts the next turn.</td><td>Maestro</td><td>Kicker session id (list of sessions)</td><td>One message</td></tr>
+    <tr><td>M4</td><td>On "armed", say the final summary and the note path, then call <code>clear_session</code> on <code>self</code> as the very last action of the turn. The app may ask Jack to approve the call.</td><td>Maestro</td><td>Nothing</td><td>The clear</td></tr>
+    <tr><td>M5</td><td>Poll <code>get_session</code> on the maestro every 10 s. After 3 checks in a row with <code>isRunning</code> false, <code>send_message</code> "Arise". Report the send time and result.</td><td>Kicker</td><td>Maestro session state</td><td>One message</td></tr>
+    <tr><td>M6</td><td><strong>Arise: resume.</strong> The message is the first input of the cleared session. The maestro runs <code>digismith:handoff</code> in resume mode, then does its own refresh: fetch the latest <code>main</code>, rebuild the in-progress picture (tickets, tasks, live workers), show a summarized list of candidate next tasks, and stop. Jack chooses. It never acts on the note's Next alone.</td><td>Maestro</td><td>Its note, <code>main</code>, ClickUp, herdr</td><td>Nothing</td></tr>
+    <tr><td>M7</td><td>Delete the kicker (<code>delete_session</code> shows Jack an approval card in every permission mode, so a flux cannot do it alone; he accepted the cost).</td><td>Jack</td><td>Nothing</td><td>Removes the kicker</td></tr>
   </table></div>
-  <p><strong>Fallback:</strong> if the kick is lost or held, Jack types <code>Arise</code> in the maestro and gets the same list. Jack's first requirement (something other than Jack types the resume text) is M6.</p>
+  <p><strong>Order.</strong> With no gate, the gate-before-arming fix of the first draft is not needed: nothing makes the maestro wait for Jack between the arming and the clear. What stays is that the arming (M3) and the clear (M4) are two turns, because the kicker's "armed" reply is a message, and a message that arrives before a turn ends drops the queued clear. The kicker starts polling only after it sent "armed", which starts the clearing turn. The gap between them is a risk in the failure table.</p>
+  <p><strong>Fallback:</strong> if the kick is lost or held, Jack types <code>Arise</code> in the maestro and gets the same list. Jack's first requirement (something other than Jack types the resume text) is M5. <em>Open:</em> the words of the flux signal (section 13).</p>
 </section>
 
 <section id="kicker">
@@ -189,6 +189,14 @@ archive_session or delete_session, and do nothing except these steps.
    If 15 minutes pass with no idle session, stop and report "no clear seen".
 3. Report the result line and the send time (UTC+7, UTC in brackets). Then stop.</code></pre>
   <p>Changes from the A' test text: the wake-up is <code>Arise</code> alone (the test sent "resume. Continue with Next"), and the 15-minute limit is new (<em>proposed</em>). <code>notify_when_idle</code> is still untested, so polling stays.</p>
+  <h3>Kicker options tested</h3>
+  <p><em>Decided</em> (Jack, 2026-10-03): the kicker is a Desktop session; the Node kicker is not pursued.</p>
+  <ul>
+    <li><strong>Desktop session (route A').</strong> Chosen. It passed on 2026-10-03 17:32 to 17:34 UTC+7 (DGS-154 comment <code>1301150000057188</code>). Cost: Jack opens it, pastes the instruction and deletes it.</li>
+    <li><strong>Background subagent.</strong> Failed. <code>clear_session</code> kills it: a command in it ended with exit 137 about 1 s after the turn ended (17:45 UTC+7, comment <code>1301150000057204</code>).</li>
+    <li><strong>Node <code>setInterval</code> process</strong> (spike, 2026-10-03, <code>.digismith/docs/E/E.4/node-kicker-spike/</code>, script <code>kicker.mjs</code>). Detection works: <code>/root/.claude/sessions/&lt;pid&gt;.json</code> shows status busy or idle, <code>hostSessionId</code>, and a <code>sessionId</code> that changes at a clear (the spike worker verified its own file). Delivery is unproven: the session's Unix socket speaks an undocumented, versioned protocol, and <code>claude --resume --print</code> may lock against the live process. Not pursued.</li>
+    <li><strong>Still untested:</strong> a herdr CLI worker as the kicker, and <code>notify_when_idle</code> as the wait. Both are build 2 candidates, not part of this design.</li>
+  </ul>
 </section>
 
 <section id="skill">
@@ -198,7 +206,7 @@ archive_session or delete_session, and do nothing except these steps.
     <li><strong>Description and Invoked By:</strong> add <code>Arise</code> as a resume trigger, next to "resume" and "pick up where we left off".</li>
     <li><strong>Resume Mode step 4:</strong> replace "State Done and Next in a few lines, then ask 'Continue with &lt;Next&gt;?'" with: state Done in a few lines, show Next and the open problems as a short numbered list of candidates, and ask which one Jack wants. Start nothing. This applies to every resume, not only the maestro's (<em>decided</em> by Jack's rule: no resume starts work).</li>
     <li><strong>Rationalizations:</strong> the row "Resume found a note, so I'll start on Next" stays true and needs no change.</li>
-    <li><strong>Check Gate:</strong> unchanged until Jack answers M3.</li>
+    <li><strong>Check Gate:</strong> the gate stays for an ordinary handoff and clear. The maestro flux has none (Jack, 21:33), so the skill needs a clause, <em>proposed</em>: "when the human partner's message is the flux signal, skip the Check Gate: write the note, show it, and go on to the clear." The gate for every other clear is unchanged. The clause needs the signal's words, which are open (section 13). Without it the skill's own gate would stop the maestro flux at M1.</li>
     <li><strong>SessionStart trigger</strong> (Invoked By, third bullet): add a clause, <em>proposed</em>: ignore the line in a worker started by the maestro with a brief (its first message tells it to read a brief), because a worker has no note and no resume. If the worker's title carries no lineage key, the existing key-match rule already ignores the line; the clause keeps the rule true whatever the names become.</li>
     <li><strong><code>scripts/session-init.ts</code>:</strong> unchanged (<em>proposed</em>). The pointer line says "or say resume", and <code>Arise</code> comes from the kicker or from Jack, who knows it from the runbook.</li>
   </ul>
@@ -209,9 +217,9 @@ archive_session or delete_session, and do nothing except these steps.
   <p>The runbook becomes the spec. Work to do on <code>.digismith/sessions/workbox.md</code> (on disk, untracked):</p>
   <ol>
     <li>Rewrite "Switch lineage or ticket" (old steps 1 to 7) as the worker flux (W1 to W3: exit, close, update tables) and the start of a ticket (S0 to S6) in the table form of sections 4 and 5. Drop the worker's handoff (old step 1), "resume lineage &lt;key&gt;" (old step 5) and the workspace rename (old step 6). The brief is the only start.</li>
-    <li>Keep Steps 8 and 9 as the maestro wrote them, with four corrections: M1 says how the kicker is told and that Jack must open it before the clear; M3 names the Check Gate and who runs it, and the gate comes before the arming (M4); the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
+    <li>Keep Steps 8 and 9 as the maestro wrote them, with four corrections: M1 says how the kicker is told and that Jack must open it before the arming; M1 and M3 drop the gate (Jack: no gate) and M2 includes "tell the maestro the kicker is ready"; the fallback says <code>Arise</code> as well as <code>resume</code>; the wake-up text is <code>Arise</code>.</li>
     <li>Fold Step 10 (Cleanup) into W1 and W2 and mark the reusable-slot section as superseded (it already is, at line 33).</li>
-    <li>Add the kicker instruction (section 7) as a template.</li>
+    <li>Add the kicker instruction (section 7) and the "kicker options tested" paragraph as a template and a note.</li>
     <li>Keep the Emergency flux (limit stop), marked as an exception until Jack decides.</li>
   </ol>
   <p>The two of Jack's requirements map to M6 (auto-resume of the maestro) and W1 and W2 (cleanup).</p>
@@ -223,9 +231,10 @@ archive_session or delete_session, and do nothing except these steps.
     <tr><th>What goes wrong</th><th>What happens</th><th>Recovery</th></tr>
     <tr><td>The maestro's note write fails (M1)</td><td>No clear, no exit.</td><td>Report it and stop (the skill's rule).</td></tr>
     <tr><td>The kick is lost or held for approval</td><td>The cleared maestro sits idle.</td><td>Jack types <code>Arise</code>.</td></tr>
-    <tr><td>The clear is dropped (a message arrived before the turn ended)</td><td>The kicker sees an idle maestro and sends <code>Arise</code> into the old context. Harmless: the maestro says it did not clear.</td><td>Run M5 again.</td></tr>
-    <tr><td>Jack says no at the Check Gate</td><td>The kicker was never armed and waits for KICK. The maestro keeps its context.</td><td>Jack deletes the kicker (M8).</td></tr>
-    <tr><td>The kicker sees the maestro idle between "armed" and the turn that clears</td><td>It could send <code>Arise</code> before the clear (harmless, as in the row above) or count idle too soon.</td><td>The live run (section 11) checks the timing. If it shows a gap, the kicker also waits for the maestro to run once after "armed".</td></tr>
+    <tr><td>The clear is dropped (a message arrived before the turn ended)</td><td>The kicker sees an idle maestro and sends <code>Arise</code> into the old context. Harmless: the maestro says it did not clear.</td><td>Run M4 again.</td></tr>
+    <tr><td>Jack never opens the kicker or never says it is ready (M2)</td><td>The maestro wrote the note but did not arm or clear. It keeps its context.</td><td>Jack opens the kicker later, or says to go on without it and types <code>Arise</code> himself after the clear.</td></tr>
+    <tr><td>The note is wrong and there is no gate</td><td>The cleared maestro lists candidates from a bad note.</td><td>Jack saw the note at M1; he corrects it on disk, or says so after <code>Arise</code>. The old note is not the only source: the maestro also rebuilds the picture from <code>main</code>, tickets and live workers.</td></tr>
+    <tr><td>The kicker sees the maestro idle between "armed" and the turn that clears (M3 to M4)</td><td>It could send <code>Arise</code> before the clear (harmless, as in the row above) or count idle too soon.</td><td>The live run (section 11) checks the timing. If it shows a gap, the kicker also waits for the maestro to run once after "armed".</td></tr>
     <tr><td>Background work running at the clear</td><td>It is killed (proven).</td><td>Rule 4: M1 checks first.</td></tr>
     <tr><td>The kicker holds the maestro's session id wrongly</td><td>It polls a wrong session and never sends.</td><td>The 15-minute limit; Jack types <code>Arise</code>.</td></tr>
   </table></div>
@@ -236,7 +245,7 @@ archive_session or delete_session, and do nothing except these steps.
   <ul>
     <li>The skill text is reviewed against Jack's rule: no sentence left that starts work on a resume, and no "Continue with Next".</li>
     <li>The existing tests for the lineage script and the SessionStart line stay green (<code>scripts/lineage-handoff.test.ts</code>, <code>scripts/session-init.test.ts</code>); neither is expected to change.</li>
-    <li>A live run of the maestro flux with Jack present (a Desktop kicker, M1 to M8) shows that <code>Arise</code> produces a list and not an action. This needs Jack and the maestro, so the maestro runs it after the build.</li>
+    <li>A live run of the maestro flux with Jack present (a Desktop kicker, M1 to M7) shows that <code>Arise</code> produces a list and not an action. This needs Jack and the maestro, so the maestro runs it after the build.</li>
     <li>The runbook is checked by reading it against the tables in sections 4 to 6: every step has an owner, reads and writes.</li>
   </ul>
 </section>
@@ -255,7 +264,7 @@ archive_session or delete_session, and do nothing except these steps.
   <h2>13. Open items</h2>
   <div class="table-wrap"><table>
     <tr><th>Item</th><th>Whose</th><th>Blocks</th></tr>
-    <tr><td>Check Gate in the maestro flux: does Jack check the maestro's note before the clear (M3)</td><td>Jack</td><td>The text of M3 and of the skill's Check Gate. Until then the gate is unchanged.</td></tr>
+    <tr><td><strong>The words of the flux signal.</strong> Jack's answer on the Check Gate was "when the signal is clear then just handoff", but no word is set. The skill clause (section 8) and M1 need one that cannot be mistaken for an ordinary "hand off and clear", which keeps its gate.</td><td>Jack</td><td>The text of the skill clause and of M1. Not the design.</td></tr>
     <tr><td><strong>Names of a worker's session, agent and workspace.</strong> The old rule "&lt;key&gt;: &lt;ticket&gt; &lt;name&gt;", key first, served the note lookup, which no longer applies to workers. Candidates: ticket number first ("DGS-154 Flux"), or keep the lineage key for the roster only. Today's agent name (<code>e-methodology</code>) is also lineage-based. The maestro's own session must keep its name.</td><td>Jack</td><td>S2 and S4 text, the runbook's roster table, and the memory rule "Rename herdr workers per ticket".</td></tr>
     <tr><td><strong>A long ticket when the context runs out.</strong> A worker has no note, so a worker flux in the middle of a ticket loses its state. What protects it? Candidates: auto-compact only; the plan ledger / <code>progress.md</code> and ClickUp comments as the only carried state; a limit-stop <code>--resume</code> keeps the conversation but covers a limit, not context exhaustion.</td><td>Jack</td><td>Nothing in build 1 if auto-compact alone is accepted. Otherwise one more rule in the worker flux.</td></tr>
     <tr><td><code>digismith:finishing-a-development-branch</code> Step 7 calls the handoff in end-of-ticket mode, so a worker would write a note at the end of a ticket and be asked the clear question. That contradicts "no handoff for a worker".</td><td>Jack (a skill outside this design)</td><td>Whether the skill change in section 8 grows by one clause there, or a worker simply skips Step 7.</td></tr>
