@@ -13,7 +13,8 @@ list": update it when the rule is applied to every clan.
 ## What C: Platform is
 
 What DigiSmith runs on and operates with. A: System is how DigiSmith behaves inside a session. D: Depot stays Jack's public
-server and MCP. The load balancer stays in B.2 Router (the router picks a backend per worker, like the model router).
+server and MCP. The load balancer (DGS-144) moves into this clan, in a lineage whose name is still open: see
+[platform-accounts-or-billing-lineage.md](platform-accounts-or-billing-lineage.md).
 
 ## Lineages and what moves in later
 
