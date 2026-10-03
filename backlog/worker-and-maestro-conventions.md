@@ -45,10 +45,12 @@ worker names were replaced by Jack's decision below. The nested clan folders are
 - Worker names (Jack, 2026-10-03 22:07 UTC+7 [15:07Z]): session title and workspace label `<KEY> ⚚ <short name>` (the ⚚ is U+269A),
   for example `DGS-158 ⚚ Ticket-based naming`. Herdr agent name: the key in lowercase, for example `dgs-158`. Maestro sessions keep
   their names.
-- Two workers on one ticket (Jack, 22:11 UTC+7 [15:11Z]): each worker writes in its own nested folder in the ticket folder,
-  `.digismith/board/<KEY>—<slug>/worker-<xxx>/`. When the ticket is finished, the maestro sums and merges all the material into
-  one set. Open: what `<xxx>` is, how the agent names stay unique, what the maestro does with the nested folders after the merge,
-  and what happens when a second worker joins a ticket whose first worker already wrote in the ticket folder.
+- Two workers on one ticket (Jack, 22:11 to 22:16 UTC+7 [15:11Z to 15:16Z]): each worker writes only in its own nested folder in
+  the ticket folder, `.digismith/board/<KEY>—<slug>/worker-<agent session name>/` (for example `worker-dgs-154-comment`); the agent
+  names stay unique with the short-word suffix. The workers do not know about each other. Only the maestro knows: it names each
+  worker's folder in the brief and sorts out any earlier files. When the ticket is finished, the maestro sums and merges all the
+  material into one set, then removes the nested folders. The merge details are
+  [maestro-merges-worker-material.md](maestro-merges-worker-material.md).
 - ClickUp's clan folders and lists stay as they are. The change is only for the `.digismith` folder in git (Jack, 22:00 UTC+7).
 - No ticket, no work: every idea gets a ticket first, so the `backlog/` files become tickets. Moving them is DGS-159.
 
