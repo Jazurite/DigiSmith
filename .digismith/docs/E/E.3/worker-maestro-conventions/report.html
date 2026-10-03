@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ticket-Based Naming Architecture</title>
+<title>Ticket-Based Naming Architecture — Implementation Report</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -63,14 +63,15 @@
 
 <header class="doc-head">
   <span class="badge">shipped</span>
-  <h1>Ticket-Based Naming Architecture — Report</h1>
+  <h1>Ticket-Based Naming Architecture — Implementation Report</h1>
   <div class="meta">
     <span>Date: 2026-10-03</span>
+    <span>Map item: <strong>E.3 Conventions (ClickUp DGS-158)</strong></span>
     <span>Ticket: DGS-158</span>
   </div>
 </header>
 
-<section>
+<section id="summary">
   <h2>What this ticket delivered</h2>
   <p>The naming convention itself: the ticket as the unit, <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>
   for a ticket's work, <code>.digismith/sessions/&lt;session-name&gt;/{note,brief}.md</code> for session state,
