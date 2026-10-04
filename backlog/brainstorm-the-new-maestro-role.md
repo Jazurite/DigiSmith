@@ -16,6 +16,13 @@ definition, and **it blocks DGS-169**.
 - **No kicker.** "We will not keep the kicker, because now we still need a kicker to reset the maestro session." The kicker is the
   workaround for a Desktop maestro that cannot be reset from outside. The new design removes the need, so it is not kept as a fallback.
 - **Observer: agreed.** A client that watches a maestro without disturbing it (read-only: reads panes, never types).
+- **The butler picture (Jack, 2026-10-04, by voice):** each project has one maestro, which acts as the project's **butler**. It manages the
+  project for the end user. The end user uses only an **Operator** (gives orders) or an **Observer** (watches what the butler is doing and
+  why), never a worker directly. **The butler holds all the information, the state.** "Butler" is a candidate name for the maestro role
+  (word choice still open, with the Operator's name). Building the two clients is DGS-174
+  (`backlog/build-observer-and-operator-clients.md`), blocked by this item.
+- **A requirement for this design:** the maestro's state must be kept in one structured place the clients can read (a state file: roster,
+  open questions for the end user, a decision log with a reason each, next steps), not only in prose notes.
 - **Scope:** this item defines the Maestro, the Observer and the Operator. The Scout, the Reviewer and Jack's own role are DGS-171.
 - **One maestro per project (Jack, 2026-10-04, after the question "what is a maestro's unit?"):** "I think we should have one maestro
   for a project." This settles the unit. It needs a definition of "project", which the repo does not have: see DGS-172
@@ -64,6 +71,6 @@ his. A worker may run the sessions (`digismith:brainstorming`), the maestro answ
 
 ## Related
 
-[maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169, blocked by this item), [define-scout-reviewer-and-jack-roles.md](define-scout-reviewer-and-jack-roles.md)
+[maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169, blocked by this item), [build-observer-and-operator-clients.md](build-observer-and-operator-clients.md) (DGS-174, blocked by this item), [define-scout-reviewer-and-jack-roles.md](define-scout-reviewer-and-jack-roles.md)
 (DGS-171, the other roles), [maestro-delegates-builds-to-workers.md](maestro-delegates-builds-to-workers.md) (DGS-146),
 [persistent-worker-pool-k8.md](persistent-worker-pool-k8.md), DGS-154 Flux (rule 6), DGS-156 (methodology vocabulary).
