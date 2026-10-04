@@ -4,17 +4,30 @@ import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "../../../../scripts/cli-args.ts";
 
 // Diffs the pinned merge range only — never `HEAD`, which another session's merge may have
-// moved since this merge landed.
+// moved since this merge landed. Matches both the old flat/nested docs/ shape and the new
+// board/ shape (DGS-159) — until Part 6 empties docs/, a report can land in either.
 export function findChangedReports(baseSha: string, headSha: string, cwd: string = process.cwd()): string[] {
+  // -z: NUL-terminated, unquoted output. A board folder name carries a real em dash (U+2014),
+  // and git's default core.quotepath=true would otherwise octal-escape it in plain
+  // --name-only output, which a naive newline-split then can't turn back into the real path.
   const result = spawnSync(
     "git",
-    ["diff", "--name-only", "--diff-filter=AM", `${baseSha}..${headSha}`, "--", ".digismith/docs/*/report.html"],
+    [
+      "diff",
+      "--name-only",
+      "-z",
+      "--diff-filter=AM",
+      `${baseSha}..${headSha}`,
+      "--",
+      ".digismith/docs/*/report.html",
+      ".digismith/board/*/report.html",
+    ],
     { cwd, encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(`git diff failed for ${baseSha}..${headSha}: ${result.stderr}`);
   }
-  return result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+  return result.stdout.split("\0").filter((line) => line.length > 0);
 }
 
 export interface ParsedReport {
@@ -23,7 +36,11 @@ export interface ParsedReport {
   date: string;
   summary: string;
   slug: string;
+  base: "docs" | "board";
 }
+
+const BOARD_SLUG_PATTERN = /\.digismith\/board\/([^/]+(?:\/[^/]+)?)\/report\.html$/;
+const DOCS_SLUG_PATTERN = /\.digismith\/docs\/((?:[^/]+\/){0,2}[^/]+)\/report\.html$/;
 
 export function parseReport(reportPath: string): ParsedReport {
   const html = fs.readFileSync(reportPath, "utf8");
@@ -49,10 +66,19 @@ export function parseReport(reportPath: string): ParsedReport {
   }
 
   const normalizedPath = reportPath.replace(/\\/g, "/");
-  const slug = /\.digismith\/docs\/((?:[^/]+\/){0,2}[^/]+)\/report\.html$/.exec(normalizedPath)?.[1];
+  // Board first: a board path can never also match the docs pattern (different top-level
+  // folder), so there's no ambiguity to resolve between the two.
+  const boardMatch = BOARD_SLUG_PATTERN.exec(normalizedPath);
+  const docsMatch = boardMatch ? null : DOCS_SLUG_PATTERN.exec(normalizedPath);
+  const slug = boardMatch?.[1] ?? docsMatch?.[1];
   if (!slug) {
-    throw new Error(`Cannot derive slug from report path (expected .digismith/docs/<slug>/report.html, .digismith/docs/<parent>/<slug>/report.html, or .digismith/docs/<clan>/<lineage>/<slug>/report.html): ${reportPath}`);
+    throw new Error(
+      `Cannot derive slug from report path (expected .digismith/board/<key>—<slug>/report.html, ` +
+        `.digismith/board/<key>—<slug>/<part>/report.html, .digismith/docs/<slug>/report.html, ` +
+        `.digismith/docs/<parent>/<slug>/report.html, or .digismith/docs/<clan>/<lineage>/<slug>/report.html): ${reportPath}`,
+    );
   }
+  const base: "docs" | "board" = boardMatch ? "board" : "docs";
 
   return {
     featureTitle: titleMatch[1],
@@ -60,19 +86,20 @@ export function parseReport(reportPath: string): ParsedReport {
     date: dateMatch[1],
     summary: summaryMatch[1].trim(),
     slug,
+    base,
   };
 }
 
-export function buildReferenceLinks(slug: string, cwd: string = process.cwd()): string {
-  const folder = path.join(cwd, ".digismith", "docs", slug);
+export function buildReferenceLinks(slug: string, base: "docs" | "board", cwd: string = process.cwd()): string {
+  const folder = path.join(cwd, ".digismith", base, slug);
   const parts: { label: string; href: string }[] = [];
   if (fs.existsSync(path.join(folder, "design.html"))) {
-    parts.push({ label: "design", href: `docs/${slug}/design.html` });
+    parts.push({ label: "design", href: `${base}/${slug}/design.html` });
   }
   if (fs.existsSync(path.join(folder, "plan.md"))) {
-    parts.push({ label: "plan", href: `docs/${slug}/plan.md` });
+    parts.push({ label: "plan", href: `${base}/${slug}/plan.md` });
   }
-  parts.push({ label: "report", href: `docs/${slug}/report.html` });
+  parts.push({ label: "report", href: `${base}/${slug}/report.html` });
 
   const links = parts.map((p) => `<a href="${p.href}">${p.label}</a>`);
   if (links.length === 1) {
@@ -144,7 +171,7 @@ export function main(): void {
     for (const relPath of changedReports) {
       const absPath = path.join(cwd, relPath);
       const parsed = parseReport(absPath);
-      const links = buildReferenceLinks(parsed.slug, cwd);
+      const links = buildReferenceLinks(parsed.slug, parsed.base, cwd);
       const body = `${parsed.summary} ${links}`;
       eventsHtml.push(buildEventHtml({ date: parsed.date, title: parsed.featureTitle, body }, nl));
       titles.push(parsed.featureTitle);

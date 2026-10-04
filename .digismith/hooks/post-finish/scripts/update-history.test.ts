@@ -82,6 +82,7 @@ describe("parseReport", () => {
       date: "2026-09-11",
       summary: "Built it.",
       slug: "sample-feature",
+      base: "docs",
     });
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -102,6 +103,7 @@ describe("parseReport", () => {
       date: "2026-09-23",
       summary: "Nested the docs.",
       slug: "G/G.3-dynamic-doc-conventions",
+      base: "docs",
     });
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -122,6 +124,7 @@ describe("parseReport", () => {
       date: "2026-09-26",
       summary: "Moved the handoff.",
       slug: "A/A.1/lineage-handoff",
+      base: "docs",
     });
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -187,6 +190,48 @@ describe("parseReport", () => {
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
+
+  it("extracts a one-segment board slug, with base \"board\"", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "board", "DGS-159—ticket-naming-script-layer");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Shared Path Modules", mapItem: "DGS-159", date: "2026-10-04", summary: "Built the modules." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed).toEqual({
+      featureTitle: "Shared Path Modules",
+      mapItem: "DGS-159",
+      date: "2026-10-04",
+      summary: "Built the modules.",
+      slug: "DGS-159—ticket-naming-script-layer",
+      base: "board",
+    });
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("extracts a two-segment board slug (a part subfolder), with base \"board\"", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(
+      dir,
+      ".digismith",
+      "board",
+      "DGS-159—ticket-naming-script-layer",
+      "script-layer",
+    );
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Shared Path Modules", mapItem: "DGS-159", date: "2026-10-04", summary: "Built the modules." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed.slug).toBe("DGS-159—ticket-naming-script-layer/script-layer");
+    expect(parsed.base).toBe("board");
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });
 
 describe("buildReferenceLinks", () => {
@@ -197,7 +242,7 @@ describe("buildReferenceLinks", () => {
     fs.writeFileSync(path.join(slugDir, "design.html"), "");
     fs.writeFileSync(path.join(slugDir, "plan.md"), "");
 
-    const result = buildReferenceLinks("sample-feature", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir);
 
     expect(result).toBe(
       'See <a href="docs/sample-feature/design.html">design</a>, <a href="docs/sample-feature/plan.md">plan</a>, and <a href="docs/sample-feature/report.html">report</a>.',
@@ -212,7 +257,7 @@ describe("buildReferenceLinks", () => {
     fs.mkdirSync(slugDir, { recursive: true });
     fs.writeFileSync(path.join(slugDir, "plan.md"), "");
 
-    const result = buildReferenceLinks("sample-feature", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir);
 
     expect(result).toBe(
       'See <a href="docs/sample-feature/plan.md">plan</a> and <a href="docs/sample-feature/report.html">report</a>.',
@@ -225,9 +270,25 @@ describe("buildReferenceLinks", () => {
     const dir = makeTmpDir("update-history-test-");
     fs.mkdirSync(path.join(dir, ".digismith", "docs", "sample-feature"), { recursive: true });
 
-    const result = buildReferenceLinks("sample-feature", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir);
 
     expect(result).toBe('See <a href="docs/sample-feature/report.html">report</a>.');
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("links a board-based report under board/, not docs/", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slug = "DGS-159—ticket-naming-script-layer";
+    const slugDir = path.join(dir, ".digismith", "board", slug);
+    fs.mkdirSync(slugDir, { recursive: true });
+    fs.writeFileSync(path.join(slugDir, "design.html"), "");
+
+    const result = buildReferenceLinks(slug, "board", dir);
+
+    expect(result).toBe(
+      `See <a href="board/${slug}/design.html">design</a> and <a href="board/${slug}/report.html">report</a>.`,
+    );
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
@@ -399,6 +460,48 @@ describe("findChangedReports", () => {
       spawnSync("git", ["commit", "-q", "-m", "another session's later merge adds a report"], { cwd: dir });
 
       expect(findChangedReports(baseSha, headSha, dir)).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a board/<key>—<slug>/report.html path added since the base commit", () => {
+    const dir = makeTmpDir("update-history-repo-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+
+      const slug = "DGS-159—ticket-naming-script-layer";
+      const reportPath = path.join(dir, ".digismith", "board", slug, "report.html");
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      writeReportFixture(reportPath);
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "add board report"], { cwd: dir });
+      const headSha = revParseHead(dir);
+
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([`.digismith/board/${slug}/report.html`]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns a board/<key>—<slug>/<part>/report.html path (a nested part subfolder)", () => {
+    const dir = makeTmpDir("update-history-repo-");
+    try {
+      initHistoryFixtureRepo(dir);
+      const baseSha = revParseHead(dir);
+
+      const slug = "DGS-159—ticket-naming-script-layer";
+      const reportPath = path.join(dir, ".digismith", "board", slug, "script-layer", "report.html");
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+      writeReportFixture(reportPath);
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "add nested board report"], { cwd: dir });
+      const headSha = revParseHead(dir);
+
+      expect(findChangedReports(baseSha, headSha, dir)).toEqual([
+        `.digismith/board/${slug}/script-layer/report.html`,
+      ]);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
