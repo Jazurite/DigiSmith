@@ -213,14 +213,14 @@ cost of C sitting in Tier 6: until it ships, that handoff stays manual.
 
 - **F's shape** — still undecided: whether design review is present-for-human-review only,
   independent agent critique only, or critique then present. Unaffected by ticket-based naming;
-  decide when Tier 6 gets picked up. No ClickUp ticket yet. See the frozen entry below for the
+  decide when Tier 6 gets picked up. ClickUp DGS-167. See the frozen entry below for the
   original wording.
 - **`{{MAP_ITEM}}` derivation gap** — `report-implementation`'s placeholder has no rule for a
   no-map-letter feature. This belongs to `report-implementation` itself, which a later part of
   DGS-159 updates for ticket-based naming. See the frozen entry below for the original wording.
 - **Shipped-product telemetry** — still undesigned and unscoped. Simplified by ticket-based
-  naming: it needs no map letter at all, just a ClickUp ticket whenever it's wanted (none exists
-  yet). See the frozen entry below for the original wording.
+  naming: it needs no map letter at all, just a ClickUp ticket whenever it's wanted (ClickUp
+  DGS-168). See the frozen entry below for the original wording.
 
 ## Frozen: the clan-letter map (through DGS-157)
 
