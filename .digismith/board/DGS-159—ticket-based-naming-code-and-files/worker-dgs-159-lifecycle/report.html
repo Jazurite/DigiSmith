@@ -80,6 +80,7 @@
     <li><a href="#grep">4. Step 3 grep audit</a></li>
     <li><a href="#tests">5. Test suite and self-checks</a></li>
     <li><a href="#open">6. Open items still waiting on the maestro</a></li>
+    <li><a href="#cli">7. Tasks 7–8: CLI and final-review fixes</a></li>
   </ol>
 </nav>
 
@@ -92,7 +93,10 @@
   tasks (one script task, four skill-text tasks, this closing task) are committed on
   <code>dgs-159-lifecycle</code>. The full test suite passes for every file this unit touched, all
   eleven self-check scenarios from Tasks 2–5 re-trace clean against the final committed text, and
-  the Step 3 grep audit found no unjustified mention of <code>.digismith/docs</code> left behind.</p>
+  the Step 3 grep audit found no unjustified mention of <code>.digismith/docs</code> left behind.
+  Tasks 7–8 then added a small CLI to <code>scripts/board-path.ts</code> and pointed all four skills
+  at it, fixing three findings the final whole-branch review raised; see section 7 for what changed
+  and what stays parked.</p>
 </section>
 
 <section id="tasks">
@@ -220,6 +224,47 @@
       <code>board/</code>.</td></tr>
   </table>
   </div>
+</section>
+
+<section id="cli">
+  <h2>7. Tasks 7–8: CLI and final-review fixes</h2>
+  <p>Task 7 (<code>88a3d1b</code>) added a CLI to <code>scripts/board-path.ts</code> —
+  <code>--action path|find|parse</code>, mirroring <code>scripts/lineage-handoff.ts</code>'s own CLI
+  shape — so a skill can shell out to the script instead of describing its logic in prose. Task 8
+  (<code>f4618da</code>) pointed all four skills (<code>bootstrap</code>, <code>adopt</code>,
+  <code>init</code>, <code>jira-intake</code>) at that CLI, each gaining its own "## The Script"
+  section, and fixed three findings the final whole-branch review raised:</p>
+  <ul>
+    <li><strong>bootstrap's slug/folder-name conflation</strong> (two spots) — a resolved board
+      folder's name was being treated as interchangeable with the ticket's slug; now kept distinct,
+      using the script's <code>--action parse</code> to recover the slug from a folder name when
+      one is needed.</li>
+    <li><strong>init's found-but-no-<code>plan.md</code> fallback gap</strong> — Step 0 item 2 and
+      Step 1 row 2 now explicitly cover "found the folder but no <code>plan.md</code> in it, or
+      nothing printed at all" as one case, falling back to the flat
+      <code>.digismith/docs/&lt;slug&gt;/plan.md</code> check — the interim home for a keyed
+      ticket's <code>plan.md</code> until Part 4 moves <code>digismith:writing-plans</code>'s own
+      output and DGS-164 migrates old keyed tickets.</li>
+    <li><strong>adopt's unnamed rename action</strong> — Step 3.2's branch-slug correction now names
+      the exact script call (<code>--action path --key &lt;key&gt; --slug
+      &lt;branch's-slug&gt;</code>) instead of describing the move in prose only.</li>
+  </ul>
+  <p>Two items stay parked, unchanged by this task: an old keyed <code>docs/</code> ticket re-run
+  through Door 1 can leave two copies behind (the moved board folder and whatever's left in
+  <code>docs/</code>) — DGS-164's own concern, not this plan's. And a handful of residual Quick
+  Reference / Error Handling rows in <code>init</code> and <code>jira-intake</code> still name the
+  raw function (e.g. <code>boardRelPath(key, title)</code>) rather than the CLI action — cosmetic
+  only; no routing logic depends on those rows.</p>
+  <p>Re-verification for this task: the full <code>npx vitest run</code> shows 65/67 test files
+  passing, the same two pre-existing, environment-dependent failures as Task 6
+  (<code>packages/cli/src/index.e2e.test.ts</code>, <code>packages/cli/src/depot/process-lifecycle.test.ts</code>)
+  and no new ones. The Step 2 grep audit
+  (<code>grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md
+  skills/init/SKILL.md skills/jira-intake/SKILL.md</code>) now matches 26 lines (bootstrap 4, adopt
+  11, init 2, jira-intake 9) — every line still classifies as keyless-path, legacy-read fallback, or
+  (init's two lines) the interim Part-4-hasn't-shipped-yet fallback; no unclassified line found.
+  <code>parseReport</code> was re-run against this file both before and after this edit and still
+  returns a valid object without throwing.</p>
 </section>
 
 <footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html</footer>
