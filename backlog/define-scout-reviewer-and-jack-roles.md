@@ -5,6 +5,9 @@ do? Add decouple into another backlog item. This one [DGS-170] focus on Maestro,
 
 **Source:** DGS-170 (the new maestro role). These roles do not block DGS-169 (the maestro in herdr), so they are decoupled from it.
 
+**Note (2026-10-04):** DGS-170 now names the user's role the **Master** and the maestro the head butler. "Jack" below is the Master: DGS-170
+defines who the Master is; this item keeps *what the Master decides and what the maestro may decide alone*.
+
 ## Roles to define
 
 - **Scout.** A worker that only reads (Jack, 2026-10-03: "it should be a scout"): surveys ClickUp, searches the repo, reads a pane. It had

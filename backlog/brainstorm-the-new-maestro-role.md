@@ -1,83 +1,74 @@
-# Brainstorm the new maestro role: Maestro, Observer and Operator (before the maestro moves to herdr)
+# Define the Master and Maestro roles (before the maestro moves to herdr)
 
-**Status:** Idea, Jack's call (2026-10-04 11:2x UTC+7 [04:2xZ]): "we need another backlog item to brainstorm the new role, which must be
-done before this" (before DGS-169, the maestro in herdr). Narrowed at 11:2x UTC+7: "This one focus on Maestro, Observer and Operator";
-Scout, Reviewer and Jack moved to DGS-171. No design yet. ClickUp: **DGS-170** (list O.3: Roles, created 2026-10-04 11:23 UTC+7 [04:23Z],
-task id `14zcebruqtk`).
-
-**Blocked by DGS-172** (what a project is, and the project workflow).
+**Status:** Idea, Jack's call (2026-10-04 11:2x UTC+7): "we need another backlog item to brainstorm the new role, which must be done before
+this" (before DGS-169, the maestro in herdr). Roles named by Jack at 11:39 UTC+7 [04:39Z]. No design yet. ClickUp: **DGS-170** (list O.3: Roles,
+task id `14zcebruqtk`). **Blocked by DGS-172** (what a project is, and the project workflow). **It blocks DGS-169.**
 
 **Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`). He called it "a new role or new way of
-working". Moving the maestro from a Desktop session to a VPS agent only makes sense once the role itself is defined. This item is that
-definition, and **it blocks DGS-169**.
+working". Moving the maestro from a Desktop session to a VPS agent only makes sense once the roles are defined.
 
-## Decided so far (Jack, 2026-10-04)
+## Decided (Jack, 2026-10-04)
 
+- **Master: represents the user.** The end user, in the role of the one who gives the orders.
+- **Maestro: represents the highest rank of servant, a butler.** So "butler" is the picture, not a separate name: the maestro **is** the
+  head butler of a project. The household reads: the Master, then the Maestro (the head butler), then the workers (the servants). The other
+  names that came up (Butler, Master as the maestro's name, Operator, Controller, Orchestrator, Grindstone) are dropped.
+- **One maestro per project.** Not one for the whole system ("a mess"), not one per client or repo. It needs a definition of "project"
+  (DGS-172). The Master decides which projects get a maestro, and starts and stops them.
+- **The maestro holds all the state.** The Master uses only the Master's client (to give orders) or an Observer (to watch), never a worker
+  directly.
 - **No kicker.** "We will not keep the kicker, because now we still need a kicker to reset the maestro session." The kicker is the
-  workaround for a Desktop maestro that cannot be reset from outside. The new design removes the need, so it is not kept as a fallback.
-- **Observer: agreed.** A client that watches a maestro without disturbing it (read-only: reads panes, never types).
-- **The butler picture (Jack, 2026-10-04, by voice):** each project has one maestro, which acts as the project's **butler**. It manages the
-  project for the end user. The end user uses only an **Operator** (gives orders) or an **Observer** (watches what the butler is doing and
-  why), never a worker directly. **The butler holds all the information, the state.** "Butler" is a candidate name for the maestro role
-  (word choice still open, with the Operator's name). Jack, minutes later: "Maybe we could call it Master role." So the name of the maestro
-  role has three candidates: **Maestro** (today), **Butler**, **Master**. Earlier, by voice, he also called it "the master" ("it will attach
-  to the master"). One thing to weigh: "master" is also the old Git branch name and sits next to "main" in our own repos. Settle all the
-  names together in the brainstorm, with the Methodology vocabulary (DGS-156). Building the two clients is DGS-174
-  (`backlog/build-observer-and-operator-clients.md`), blocked by this item.
-- **A requirement for this design:** the maestro's state must be kept in one structured place the clients can read (a state file: roster,
-  open questions for the end user, a decision log with a reason each, next steps), not only in prose notes.
-- **The Observer moved out (Jack, 2026-10-04 11:38 UTC+7): "Forget the observer, put it into another backlog now, just focus on the master
-  and butler."** It is now DGS-175 (`backlog/define-the-observer-role.md`), blocked by this item. This item focuses on the two roles Jack
-  is naming next, the **master** and the **butler**. His message ended at "I've decided the role:", so the decision itself is not
-  recorded yet (see below). The scope line that follows is the earlier one and is superseded.
-- **Scope:** this item defines the Maestro, the Observer and the Operator. The Scout, the Reviewer and Jack's own role are DGS-171.
-- **One maestro per project (Jack, 2026-10-04, after the question "what is a maestro's unit?"):** "I think we should have one maestro
-  for a project." This settles the unit. It needs a definition of "project", which the repo does not have: see DGS-172
-  (`backlog/define-project-and-project-workflow.md`), which **blocks this item**.
-- **How many maestros (Jack, 2026-10-04 11:2x UTC+7):** not one maestro for the whole system ("it would be a mess"), and not one per client
-  (a customer or project such as Emma or Soveron) or per repo. Jack's first answer: the number is decided by the **Operator** (then refined above to one maestro per project; the Operator decides which projects get one). "The Operator is what the
-  client user, me, could do": the Operator is the role of the person at the client (today Jack). They start, attach to, type to and stop
-  maestros, and they decide how many exist. The name of that role is still open (see below). This replaces today's three maestros
-  (`DigiSmith`, `Emma`, `Soveron`), which were one per project.
+  workaround for a Desktop maestro that cannot be reset from outside.
+- **Moved out of this item:** the Observer is DGS-175; building the two clients is DGS-174 (the "Operator" there is the Master's client);
+  the Scout, the Reviewer and "what does Jack do" are DGS-171.
+- **Out of scope:** the maestro's review steps ("another ticket", Jack).
+- **A requirement for this design:** the maestro's state kept in one structured place that a client can read (a state file: the roster, the
+  open questions for the Master, a decision log with a reason each, the next steps), not only in prose notes.
 
-## What to brainstorm
+## To define
 
-- **Maestro.** Today: decides, orders workers, answers their prompts at checkpoints, keeps the notes (runbook, backlog, memory), and does
-  not do the work (DGS-146, "just give out orders"). Does that change? The count is the Operator's call (decided above), so the open
-  question is what a maestro is *for* if it is not a project. What is its job in one sentence, and what is never its job?
-- **Observer.** What it can see (panes, the note, the board). How it attaches (`herdr pane read`, `opencode attach` read-only).
-- **Operator.** The role of the end user at a client (Jack): decides how many maestros exist, starts and stops them, attaches, and types
-  to them. It can be a person or an app acting for the person. One typist at a time? How it takes over from a maestro, and hands back.
-  How it differs from the Observer (read-only).
-- **The name of the typing role is open.** Jack, 2026-10-04 (by voice, unsure): he likes "Operator" a bit but wants to look for a better
-  word. Candidates he said: Operator, Controller, Orchestrator, Grindstone. A note on the last two: "orchestrator" is the word our own notes
-  already use for the maestro ("the Desktop orchestrator"), so it would collide. Settle the name in the brainstorm, with the Methodology
-  vocabulary (DGS-156).
+- **Maestro.** Today: decides, orders workers, answers their prompts at checkpoints, keeps the notes (runbook, backlog, memory), does not do
+  the work (DGS-146, "just give out orders"). Define: its job in one sentence, what is never its job, what it reports to the Master and
+  when, what it may decide alone.
+- **Master.** Who it is (a person, or an app acting for them), what it decides (policy, design approvals, which projects exist), what it
+  never has to do (answer routine worker prompts), and how it takes over from the maestro and hands back. One typist at a time (herdr
+  allows one typing client per pane).
+- **The relation between them:** orders down, reports up, one state held by the maestro.
 
 ## Questions to settle first
 
-- **The unit of a maestro, now that it is not a project.** A goal or workstream the Operator names when starting it ("get DGS-159 to the
-  end", "clean the Workbox")? Does it end when its goal ends, like a worker (a flux that closes it)?
+- **The unit of a maestro** is a project (DGS-172 defines it). Does a maestro end when its project ends, like a worker (a flux that closes
+  it)?
 - **Many maestros, one set of resources.** A ticket has at most one maestro. Two maestros must not brief a worker for the same ticket or
   fight over the account matrix, the free memory, or the runbook. Who holds the registry: the herdr session, the runbook, or ClickUp?
-- **The three maestros we have.** `DigiSmith`, `Emma` and `Soveron` stay until the new design lands. What do they become?
-
-- Where each role lives: a herdr pane, an OpenCode server (`opencode serve` on localhost, reached by an SSH tunnel), a Desktop session, a
+- **The three maestros we have.** `DigiSmith`, `Emma` and `Soveron` (one per project, each with a herdr session of the same name) stay
+  until the new design lands. What do they become?
+- **Where each role lives:** a herdr pane, an OpenCode server (`opencode serve` on localhost, reached by an SSH tunnel), a Desktop session, a
   laptop client.
-- How a maestro is resumed and renewed with no kicker. The Flux protocol (DGS-154) was written for a Desktop maestro; its rule 6 and the
+- **How a maestro is resumed and renewed with no kicker.** The Flux protocol (DGS-154) was written for a Desktop maestro; its rule 6 and the
   "Maestro flux" (M1 to M7) are reopened.
-- Which seat or model the maestro uses (it is fixed on `dev0` today; a TokenReply model spends no seat quota).
-- What state the maestro keeps, and where (its note, the runbook, ClickUp as the source of truth).
-- Two clients typing into one pane: the rule that keeps the Observer from interfering and one Operator at a time.
+- **Which seat or model the maestro uses** (fixed on `dev0` today; a TokenReply model spends no seat quota).
+- **What state it keeps, and where** (its note, the runbook, ClickUp as the source of truth).
 
 ## Output
 
-A design in the ticket's board folder: the three roles with a definition, rights and one example each, the resume path with no kicker,
-and a recommendation for DGS-169's shape (herdr agent, OpenCode server, or both). Brainstormed with Jack, since the design questions are
-his. A worker may run the sessions (`digismith:brainstorming`), the maestro answers the routine ones.
+A design in the ticket's board folder: the two roles with a definition, rights and one example each, the resume path with no kicker, the
+state file, and a recommendation for DGS-169's shape (herdr agent, OpenCode server, or both). Brainstormed with Jack, since the design
+questions are his. A worker may run the sessions (`digismith:brainstorming`), the maestro answers the routine ones.
+
+## Log of Jack's statements (kept for the record)
+
+- 11:2x: "we need another backlog item to brainstorm the new role, which must be done before this"; no kicker; Observer agreed; the typing
+  role's name open (Operator, Controller, Orchestrator, Grindstone).
+- 11:2x: the maestro count "should not be per client or repo", decided by the operator, "what the client user, me, could do". Then, after
+  the question "what is a maestro's unit?": "one maestro for a project". Then: each project has one maestro, "a butler to manage our
+  project for the end user"; the end user uses only a client; the butler holds all state. "Maybe we could call it Master role."
+- 11:3x: "Forget the observer, put it into another backlog now, just focus on the master and butler. I've decided the role:" followed by
+  "Master: represent the user. Maestro: represent the highest rank of servant, a butler."
 
 ## Related
 
-[maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169, blocked by this item), [build-observer-and-operator-clients.md](build-observer-and-operator-clients.md) (DGS-174, blocked by this item), [define-scout-reviewer-and-jack-roles.md](define-scout-reviewer-and-jack-roles.md)
-(DGS-171, the other roles), [maestro-delegates-builds-to-workers.md](maestro-delegates-builds-to-workers.md) (DGS-146),
-[persistent-worker-pool-k8.md](persistent-worker-pool-k8.md), DGS-154 Flux (rule 6), DGS-156 (methodology vocabulary).
+[maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169, blocked by this item), [define-the-observer-role.md](define-the-observer-role.md)
+(DGS-175), [build-observer-and-operator-clients.md](build-observer-and-operator-clients.md) (DGS-174), [define-scout-reviewer-and-jack-roles.md](define-scout-reviewer-and-jack-roles.md)
+(DGS-171), [define-project-and-project-workflow.md](define-project-and-project-workflow.md) (DGS-172), [maestro-delegates-builds-to-workers.md](maestro-delegates-builds-to-workers.md)
+(DGS-146), [persistent-worker-pool-k8.md](persistent-worker-pool-k8.md), DGS-154 Flux (rule 6), DGS-156 (methodology vocabulary).

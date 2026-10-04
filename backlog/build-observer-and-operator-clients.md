@@ -9,6 +9,9 @@ No design yet. ClickUp: **DGS-174** (list C.1: Workbox, created 2026-10-04 11:30
 end user never talks to workers. They use a client: an **Observer** (watch) or an **Operator** (give orders). The butler holds all
 state. **Blocked by DGS-170** (the roles must be defined first), and it needs the project defined (DGS-172).
 
+**Naming (Jack, 2026-10-04):** the user's role is the **Master** (DGS-170), so the "Operator" client below is the **Master's client**. The
+maestro is the project's head butler.
+
 ## What the clients are for
 
 - **Observer (read-only).** Shows what the maestro is doing now **and why**: the current focus, the roster of workers and their status, what
