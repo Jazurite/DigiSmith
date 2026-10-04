@@ -112,8 +112,9 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
    - Sweep the conversation for unresolved threads: a pending question, a task mentioned but not
      started, something asked to be revisited.
    - Check each item that applies here:
-     - DigiSmith's own repo (`.claude-plugin/plugin.json` names `digismith`): this session's row
-       in `MEMORY.md` records this ticket.
+     - DigiSmith's own repo (`.claude-plugin/plugin.json` names `digismith`): `.digismith/history.html`
+       records this ticket (the history hook writes it from the ticket's `report.html`; a ticket
+       with no report has no entry, which is a gap to list).
      - The ticket is a ClickUp task (a `DGS-` key): its progress comment for this checkpoint is
        posted.
      - Something was filed for another session: that session got a pointer message.
