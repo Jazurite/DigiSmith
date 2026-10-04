@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-159 Part 1+2: Shared Path Modules and the Script Layer</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>DGS-159 Part 1+2: Shared Path Modules and the Script Layer</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: no map letter — ticket-based naming (DGS-159) retires map letters for new work</span>
+    <span>Status: awaiting approval</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#what">1. What this unit is</a></li>
+    <li><a href="#board">2. scripts/board-path.ts</a></li>
+    <li><a href="#session">3. scripts/session-path.ts</a></li>
+    <li><a href="#bridge">4. lineage-handoff.ts and session-init.ts: no functional change</a></li>
+    <li><a href="#exclude">5. .git/info/exclude: a conflict with the spec, flagged for approval</a></li>
+    <li><a href="#testing">6. Testing</a></li>
+    <li><a href="#out">7. Explicitly out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="what">
+  <h2>1. What this unit is</h2>
+  <p>The maestro split DGS-159 ("Ticket-based naming: modify the code and move the files") into seven
+  dependency-ordered parts. This is Parts 1+2 together: the two new shared path modules the rest of DGS-159
+  depends on, and finishing the half of the script layer Flux Part B deliberately left alone when it updated
+  <code>skills/handoff/SKILL.md</code>'s text to read the current note first and fall back to the old clan/lineage
+  path.</p>
+  <p>Spec source: <code>.digismith/docs/E/E.3/worker-maestro-conventions/design.html</code>, approved by Jack
+  2026-10-03 — sections 2, 3, 4, and 9 for the path rules, section 10 for this ticket's own input list.</p>
+</section>
+
+<section id="board">
+  <h2>2. scripts/board-path.ts</h2>
+  <p>Builds and parses the board folder name <code>&lt;KEY&gt;—&lt;slug&gt;</code> (section 2), per section 9's
+  build/parse rules. No existing code implements the slug algorithm today — <code>digismith:jira-intake</code>
+  describes it only in prose, for an LLM to follow by hand. This module is the first time it's codified.</p>
+  <pre><code>export function slugify(title: string): string
+// lowercase; drop whole-word fillers (a, an, the, on, to, of, for, in);
+// collapse remaining non-alphanumeric runs to one ASCII hyphen;
+// truncate to ~40 chars at a word boundary; never leave a trailing
+// filler word or hyphen. Same algorithm jira-intake's prose already
+// describes (Step 3.1) — codified here as the first real implementation,
+// not a second one.
+
+export function buildFolderName(key: string, title: string): string
+// `${key.toUpperCase()}—${slugify(title)}`.normalize("NFC")
+// (NFC is a no-op while slugify only ever emits ASCII — defensive per
+// section 9, in case a future slugify revision keeps more of the title.)
+
+export type ParsedFolderName = { key: string; slug: string }
+export function parseFolderName(name: string): ParsedFolderName
+// Split at the FIRST U+2014. No em dash found → throw (section 9: "fails
+// loudly if no U+2014 is found, rather than silently guessing a
+// different separator"). Key validated against /^[A-Z]+-\d+$/ after
+// uppercasing; slug returned untouched (it can never itself contain an
+// em dash, so first-occurrence splitting is unambiguous).
+
+export function boardRelPath(key: string, title: string): string
+// `.digismith/board/${buildFolderName(key, title)}`</code></pre>
+  <p>No caller inside this unit — Parts 3/4/6 wire it into <code>writing-plans</code>,
+  <code>report-implementation</code>, <code>update-history.ts</code>, and the file moves. Section 9's risk table
+  also proposes a thin <code>dg board path &lt;key&gt; &lt;title&gt;</code> CLI command for a human copy-pasteable
+  result. No board folder exists yet (Part 6 hasn't run), so nothing needs that command today — proposing to
+  defer it to whichever part first creates a real board folder, rather than building a CLI surface with no
+  caller. Flagging this as a scope call I'm making, not a Jack-level policy question — easy to revisit.</p>
+</section>
+
+<section id="session">
+  <h2>3. scripts/session-path.ts</h2>
+  <p>The sibling module section 9 names directly: builds and parses
+  <code>.digismith/sessions/&lt;session-name&gt;/{note,brief}.md</code>.</p>
+  <pre><code>export const SESSIONS_DIR_PATH = ".digismith/sessions"
+
+export function isSafeSessionName(name: string): boolean
+// non-empty, no "/" or "\", not "." or "..". Centralizes the "safe path
+// segment" check skills/handoff/SKILL.md's prose already applies by
+// hand (Resolve the Note, step 2) — same rule, one place, so a future
+// script consumer doesn't re-derive it slightly differently.
+
+export function noteRelPath(sessionName: string): string
+export function briefRelPath(sessionName: string): string
+// `${SESSIONS_DIR_PATH}/${sessionName}/note.md` / `/brief.md`</code></pre>
+  <p>Same no-caller-yet situation as board-path.ts: the handoff skill's prose currently builds this same path by
+  simple string concatenation inline, not by importing a function — plain Markdown read by an LLM has no import
+  statement. This module exists for the first programmatic consumer (a future script, or a skill that gains a
+  real code step) rather than for the skill text, which doesn't need to change for this.</p>
+</section>
+
+<section id="bridge">
+  <h2>4. lineage-handoff.ts and session-init.ts: no functional change</h2>
+  <p>I expected to find a behavior gap here and didn't. Re-reading the current
+  <code>skills/handoff/SKILL.md</code> text closely: the SessionStart banner (built by
+  <code>session-init.ts</code>'s <code>buildLineagePointer</code>) is deliberately
+  <strong>fallback-only, permanently</strong> — not an interim state this unit needs to close. The skill text
+  says so directly: "That line is built by the script and lists only fallback notes: a note at
+  <code>.digismith/sessions/&lt;session-name&gt;/note.md</code> is found by 'resume' or 'Arise', not by that
+  line." A current-convention note is never meant to appear in that banner; it's found by direct session-title
+  match instead. <code>scripts/lineage-handoff.ts</code>'s <code>listNotes</code>/<code>parseLineageKey</code>
+  already implement exactly the fallback-only behavior this calls for — no rewrite needed.</p>
+  <p>Planned, light-touch changes only:</p>
+  <ul>
+    <li><code>lineage-handoff.ts</code>: a short top-of-file comment stating the fallback-only scope is
+      deliberate and permanent (not a migration gap), pointing at <code>session-path.ts</code> as the sibling for
+      current paths — so a future reader doesn't "fix" it into doing double duty.</li>
+    <li><code>session-init.ts</code>: same kind of comment on <code>buildLineagePointer</code>. No change to its
+      logic or output.</li>
+    <li>Both existing test files (<code>lineage-handoff.test.ts</code>, <code>session-init.test.ts</code>) stay
+      green, unmodified — Flux Part B's design already called this out directly (design section 9 of the
+      flux-protocol doc: "not changed in Part B; DGS-159 changes the scripts and their tests" — read as "touches
+      if there's something to touch," which here is just the comment, so no test changes follow from a comment).</li>
+  </ul>
+</section>
+
+<section id="exclude">
+  <h2>5. .git/info/exclude: a conflict with the spec, flagged for approval</h2>
+  <p>Design section 10's bullet: "drop the old <code>handoff.md</code>/<code>brief.md</code> patterns, add
+  <code>.digismith/board/**</code> ... and <code>.digismith/sessions/**/note.md</code>,
+  <code>.digismith/sessions/**/brief.md</code>." Checked this repo's actual
+  <code>.git/info/exclude</code> and found three problems with applying it literally, right now:</p>
+  <ul>
+    <li><strong>The sessions patterns are already redundant.</strong> <code>.digismith/sessions/</code> is
+      already excluded as a whole directory (one line, already in the file). Adding
+      <code>.digismith/sessions/**/note.md</code> and <code>.../brief.md</code> on top does nothing new.</li>
+    <li><strong>Dropping the old fallback patterns now is premature and unsafe.</strong> Six real
+      <code>handoff.md</code> files are live fallback notes today (<code>A/A.4</code>, <code>B</code>,
+      <code>B/B.2</code>, <code>D/D.3</code>, <code>E/E.4</code>, <code>_unlettered</code>). They're excluded by
+      <code>.digismith/docs/**/handoff.md</code> right now. Dropping that pattern before Part 6 migrates or moves
+      those six files would make them show up as untracked, "ready to add" content in the main checkout — a real
+      risk, not a theoretical one, and squarely the kind of thing the brief tells me not to touch this unit
+      ("do not move or edit .digismith/sessions/DigiSmith/note.md," and more generally the file moves are Part
+      6's job).</li>
+    <li><strong><code>.digismith/board/**</code> would silently change this repo's own commit choice.</strong>
+      Confirmed live: <code>git check-ignore -q .digismith/docs/_unlettered/...</code> exits 1 — this repo does
+      not gitignore its own docs folder; every ticket's <code>design.html</code>/<code>plan.md</code>/
+      <code>report.html</code> is committed. Section 2 says board/ keeps "the same mechanism as today
+      (commit-vs-gitignore stays a per-repo choice)" — for DigiSmith's own repo, that choice is "commit it."
+      Blanket-adding <code>.digismith/board/**</code> here would reverse that silently, and would land Part 6's
+      own migrated files as gitignored by accident.</li>
+  </ul>
+  <p><strong>Recommendation:</strong> no change to <code>.git/info/exclude</code> in this unit. Revisit the old
+  fallback patterns exactly when Part 6 migrates or removes the six <code>handoff.md</code> files (drop the
+  pattern only once nothing needs it), and treat <code>.digismith/board/**</code> as something Part 6 decides
+  per this repo's existing per-repo choice (committed, matching <code>docs/</code> today) rather than something
+  this unit adds pre-emptively. This is the one point in this design I'm flagging for explicit sign-off rather
+  than just proceeding on — it reverses part of what section 10 literally says to do.</p>
+</section>
+
+<section id="testing">
+  <h2>6. Testing</h2>
+  <p>Vitest, matching every existing <code>scripts/*.test.ts</code> (real temp git repos via
+  <code>fs.mkdtempSync</code> + <code>spawnSync("git", ...)</code>, not mocked git).</p>
+  <ul>
+    <li><code>board-path.test.ts</code>: slug determinism (same title twice → same slug), filler-word dropping,
+      truncation at a word boundary with no trailing hyphen/filler, uppercase-key round trip, parse failure on a
+      hyphen or en dash substituted for the em dash, parse success split at the <em>first</em> em dash when a
+      slug happens to contain one some other way (defense in depth, even though slugify can't produce one),
+      case-insensitive key matching.</li>
+    <li><code>session-path.test.ts</code>: safe-name acceptance/rejection (empty, <code>.</code>, <code>..</code>,
+      a name containing <code>/</code> or <code>\</code>), note/brief path shape for a plain name and for a name
+      with spaces and <code>⚚</code> (confirms section 4's worker titles don't need special-casing — only the
+      agent name, already plain, is ever used as <code>&lt;session-name&gt;</code>).</li>
+  </ul>
+</section>
+
+<section id="out">
+  <h2>7. Explicitly out of scope</h2>
+  <p>Per the maestro's split: no skill-text rewrites beyond the two comments in section 4 above, no
+  <code>MEMORY.md</code> changes, no moving any of the 87 <code>.digismith/docs/</code> folders or the six live
+  <code>handoff.md</code> fallback notes, no <code>backlog/</code> conversion, no touching
+  <code>.digismith/sessions/DigiSmith/note.md</code>. Parts 3–7 wait on Jack's policy answers.</p>
+</section>
+
+<footer>DigiSmith · .digismith/docs/_unlettered/ticket-naming-script-layer/design.html</footer>
+
+</body>
+</html>
