@@ -1486,6 +1486,31 @@
   <code>pgrep</code>, no process-name matching. No sibling test shares this leak shape. See <a href="board/DGS-180—process-lifecycle-test-leaks-its-dummy/worker-dgs-180/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-04</div>
+      <h4>DGS-159 Part 4: Path-Mention Skills</h4>
+      <p>This unit finishes applying the ticket-based naming convention (DGS-158) to the skills and
+  the hook that Parts 1–3/5/6 left out. <code>report-implementation</code> folds its old
+  <code>{{MAP_ITEM}}</code>/<code>{{TICKET_KEY_META}}</code> fields into one always-rendered
+  <code>{{TICKET}}</code> field (a real key, or the literal <code>n/a</code> for keyless work —
+  map letters play no role in this field in any case) and gains a board-folder case in its slug
+  and target-folder derivation. <code>brainstorming</code> and <code>writing-plans</code> each
+  gain a keyed-ticket branch that resolves an existing board folder before falling back to
+  building one fresh; their own keyless logic is untouched. <code>generate-comment</code> reads
+  whichever path <code>report-implementation</code> actually resolved. One line in
+  <code>adopt</code>'s HTML shell gets the same <code>{{TICKET}}</code> value, and
+  <code>update-history.ts</code>'s <code>parseReport</code> now accepts a new
+  <code>Ticket:</code> report line while still accepting the legacy <code>Map item:</code> line
+  for old reports. One TDD script task (the hook parser) landed first, so every later task that
+  starts emitting <code>Ticket:</code> lands on a parser that already accepts it. Followed the
+  full Superpowers process: brainstorming → spec → writing-plans →
+  <code>digismith:subagent-driven-development</code> (9 tasks, each dispatched to a fresh
+  implementer subagent and independently reviewed) → a final whole-branch review, plus 4 fix
+  round(s) before merge (one each on Tasks 2 and 5, one final-review fix wave covering 10
+  findings, and one post-merge-review fix for a real bug Jack found: a board-folder plan's ticket
+  key must not depend on <code>ticket.md</code> or the profile's <code>ticket</code> field). See <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths/design.html">design</a>, <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths/plan.md">plan</a>, and <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
