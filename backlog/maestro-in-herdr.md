@@ -41,9 +41,11 @@ What B gives that option A (a Claude Code maestro in a herdr pane) does not:
 
 What B costs:
 
-- **The model.** The maestro reviews designs and decides at checkpoints. `kimi-k3` is unproven for that, and it had tool-calling faults
-  through the Claude Code runner (`backlog/tokenreply-kimi-k3-tool-calling-failure.md`). OpenCode's own runner may be fine, as Jack's test
-  showed.
+- **The model.** `kimi-k3` is unproven as a maestro, and it had tool-calling faults through the Claude Code runner
+  (`backlog/tokenreply-kimi-k3-tool-calling-failure.md`). OpenCode's own runner may be fine, as Jack's test showed. **Out of scope here (Jack,
+  2026-10-04 11:3x UTC+7): the maestro's review steps** (reading designs, plans and diffs at checkpoints, independent reviews). "Don't
+  worry about it, it'll be tackled by another ticket." The closest existing tickets are DGS-127 (Sol as the default reviewer) and DGS-167
+  (design review shape). The spike does not judge a model on reviewing.
 - **The DigiSmith plugin.** Skills, hooks (the SessionStart banner, the post-finish hooks) and the Skill tool are a Claude Code plugin.
   Whether OpenCode loads them (it can read Claude-style skills) is untested.
 - **Security.** `opencode serve` gives whoever reaches it an agent with a shell on the VPS, with the TokenReply key loaded. Never use
