@@ -89,6 +89,21 @@ to a subagent that can't ask.
 1. **Plan file** — the same plan file the just-finished run executed,
    normally `.digismith/docs/<feature-slug>/plan.md`. Derive
    `<feature-slug>` from that file's path, **guarded**:
+   - **Check first: does the path start with `.digismith/board/`?**
+     - **Yes** — the folder immediately after `board/` must be a real board folder name; validate
+       it with `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action parse --name '<that folder name>'`
+       (a parse failure here is a real error: stop and report it, don't fall through to the docs
+       logic below). `<target folder>` is simply the plan file's own parent directory —
+       `dirname(plan.md)` — whether that's the board folder itself (a flat ticket,
+       `.digismith/board/<KEY>—<slug>/plan.md`) or a nested worker folder inside it
+       (`.digismith/board/<KEY>—<slug>/worker-<agent>/plan.md` — this very ticket's own shape).
+       No segment-counting needed either way: whatever directory the plan sits in **is** the
+       target folder. `<feature-slug>` for this case is that same `<target folder>`'s path
+       relative to `.digismith/`, e.g. `board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths`
+       — used only for the footer/commit-message text below, nothing parses it structurally the
+       way the docs case's slug gets parsed.
+     - **No** — fall through to the existing `.digismith/docs/` segment-counting logic below,
+       unchanged (flat / nested / lineage / the `docs/superpowers/plans/` filename fallback).
    - **Check first:** how many path segments sit between `.digismith/docs/` and `plan.md`?
    - **Exactly one (the flat case)** → `<feature-slug>` is that single parent directory
      name. Read it straight off the path; don't re-derive it from content.
@@ -137,7 +152,7 @@ apply to this run.
 
 5. **Ticket key (optional):** using the same `<feature-slug>` already
    derived above, check whether
-   `.digismith/docs/<feature-slug>/ticket.md` exists and has a
+   `<target folder>/ticket.md` exists and has a
    `**Key:**` line. If so, note that key for Step 2a. Then check for
    a profile in the repo currently being worked in (the same
    repo `<feature-slug>` lives in) — Prerequisites already resolved this
@@ -198,16 +213,11 @@ the plan file, the ledger, and `git` alone:
   Implementation Plan` → `Capture Ephemeral URL (M)`.
 - **`{{DATE}}`** — today's date in ISO `YYYY-MM-DD`: the date this report
   is generated, not the plan's date.
-- **`{{MAP_ITEM}}`** — the map-item letter/number in `{{FEATURE_TITLE}}`'s
-  own parenthetical. E.g. `Capture Ephemeral URL (M)` → `M`.
-- **`{{TICKET_KEY_META}}`** — from Step 1.5: if a ticket key survived
-  that step's profile gate, this is literally
-  `<span>Ticket: <strong><Key></strong></span>` with the real key
-  substituted (escaped per Step 2f, though a JIRA key like `EMKT-9001`
-  never actually needs it). If no key survived (no `ticket.md`, no
-  `**Key:**` line in it, or the active profile has `ticket: false`),
-  this is the empty string — the span is omitted entirely, not rendered
-  blank.
+- **`{{TICKET}}`** — from Step 1.5: the ticket key if one survived that step's profile gate
+  (no title-parenthetical parsing any more — map letters are gone for this field, in every
+  case, including a title that still happens to carry one). If no key survived (no
+  `ticket.md`, no `**Key:**` line in it, or the active profile has `ticket: false`), this is
+  the literal string `n/a`. Always rendered — never the empty string, never omitted.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
   parent directory name in the flat case, the segments joined by `/` in the nested and lineage
   cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.1/lineage-handoff`), or the slug parsed out of its
@@ -443,8 +453,7 @@ spec/report already uses:
   <h1>{{FEATURE_TITLE}} — Implementation Report</h1>
   <div class="meta">
     <span>Date: {{DATE}}</span>
-    <span>Map item: <strong>{{MAP_ITEM}}</strong></span>
-    {{TICKET_KEY_META}}
+    <span>Ticket: <strong>{{TICKET}}</strong></span>
     <span>Commit range: <code>{{MERGE_BASE_SHORT}}..{{HEAD_SHORT}}</code></span>
   </div>
 </header>
@@ -559,8 +568,8 @@ rendered empty.
 
 ### Step 4: Write and Commit
 
-1. Target path: `.digismith/docs/<feature-slug>/report.html`, using the
-   slug from Step 1 — normally the same folder as that feature's `plan.md`
+1. Target path: `<target folder>/report.html`, using the `<target folder>`
+   Step 1 resolved (board or docs) — normally the same folder as that feature's `plan.md`
    and `design.html`, e.g. plan
    `.digismith/docs/capture-ephemeral-url/plan.md` → report
    `.digismith/docs/capture-ephemeral-url/report.html`. (In Step 1's
@@ -577,7 +586,7 @@ rendered empty.
    consumer repos and `git add` would hard-fail there ("Use -f if you
    really want to add them"):
    ```bash
-   git check-ignore -q .digismith/docs/<feature-slug>/report.html
+   git check-ignore -q <target folder>/report.html
    ```
    Read the exit code, not the (empty) output: **0 = ignored**, **1 = not
    ignored**. Exit code 1 is a normal, expected answer meaning "this path
@@ -585,15 +594,15 @@ rendered empty.
    error.
    - **Ignored (exit 0)** → the report is written but **not** committed.
      Say so plainly: the report was written to
-     `.digismith/docs/<feature-slug>/report.html` but not committed,
+     `<target folder>/report.html` but not committed,
      because this repo's `.digismith/docs/` is gitignored — matching the
      choice already made for this repo. Do **not** re-ask the
      commit-vs-gitignore question, and do **not** override it with
      `git add -f`.
    - **Not ignored (exit 1)** → commit as normal:
      ```bash
-     git add .digismith/docs/<feature-slug>/report.html
-     git commit -m "docs: add <feature> (<map-item>) implementation report"
+     git add <target folder>/report.html
+     git commit -m "docs: add <feature> (<ticket>) implementation report"
      ```
 
 ### Step 5: Hand Back
@@ -655,7 +664,7 @@ ledger type; this skill's job still just ends here.
 | Step | Action |
 |---|---|
 | 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
-| 2 | Derive header placeholders including the optional `{{TICKET_KEY_META}}` (2a) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 2 | Derive header placeholders including the optional `{{TICKET}}` (2a) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
-| 4 | Write to `.digismith/docs/<feature-slug>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
+| 4 | Write to `<target folder>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |
