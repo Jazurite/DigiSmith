@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   BOARD_DIR_PATH,
   slugify,
@@ -178,5 +180,99 @@ describe("findBoardFolderBySlug", () => {
     makeBoardFolder("DGS-2—shared-slug");
     makeBoardFolder("DGS-10—shared-slug");
     expect(findBoardFolderBySlug("shared-slug", tmpDir)).toBe("DGS-10—shared-slug");
+  });
+});
+
+const SCRIPT_PATH = fileURLToPath(new URL("./board-path.ts", import.meta.url));
+
+function real(p: string): string {
+  return fs.realpathSync.native(p);
+}
+
+function git(cwd: string, ...args: string[]) {
+  return spawnSync("git", args, { cwd, encoding: "utf8" });
+}
+
+function initRepo(dir: string): void {
+  fs.mkdirSync(dir, { recursive: true });
+  git(dir, "init", "-q");
+  git(dir, "config", "user.email", "test@example.com");
+  git(dir, "config", "user.name", "Test");
+  fs.writeFileSync(path.join(dir, "README.md"), "base\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "base commit");
+}
+
+function runCli(cwd: string, ...args: string[]) {
+  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
+}
+
+describe("CLI", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-cli-test-"));
+    process.env.GIT_CEILING_DIRECTORIES = real(path.dirname(tmpDir));
+    initRepo(tmpDir);
+  });
+
+  afterEach(() => {
+    delete process.env.GIT_CEILING_DIRECTORIES;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  describe("--action path", () => {
+    it("prints boardRelPath's result given --key and --title, with a real em dash", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-159", "--title", "Fix cart drawer padding");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(`${BOARD_DIR_PATH}/DGS-159—fix-cart-drawer-padding`);
+    });
+
+    it("prints boardRelPathForSlug's result given --key and --slug, without re-slugifying", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-161", "--slug", "plugin-update-after-merge");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(`${BOARD_DIR_PATH}/DGS-161—plugin-update-after-merge`);
+    });
+
+    it("fails loudly on an empty-slug title, matching buildFolderName", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-1", "--title", "To Of For");
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("cannot build a board folder name");
+    });
+  });
+
+  describe("--action find", () => {
+    it("prints the matching folder name when one exists, regardless of key", () => {
+      fs.mkdirSync(path.join(tmpDir, ...BOARD_DIR_PATH.split("/"), "DGS-161—plugin-update-after-merge"), { recursive: true });
+      const result = runCli(tmpDir, "--action", "find", "--slug", "plugin-update-after-merge");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("DGS-161—plugin-update-after-merge");
+    });
+
+    it("prints nothing and exits 0 when no folder matches the slug", () => {
+      const result = runCli(tmpDir, "--action", "find", "--slug", "nothing-here");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("");
+    });
+  });
+
+  describe("--action parse", () => {
+    it("prints the key then the slug on two lines", () => {
+      const result = runCli(tmpDir, "--action", "parse", "--name", "DGS-159—fix-cart-drawer-padding");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim().split(/\r?\n/)).toEqual(["DGS-159", "fix-cart-drawer-padding"]);
+    });
+
+    it("fails loudly on a name with no em dash", () => {
+      const result = runCli(tmpDir, "--action", "parse", "--name", "DGS-159-fix-cart-drawer-padding");
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("no em dash (U+2014) found");
+    });
+  });
+
+  it("fails loudly on an unknown action", () => {
+    const result = runCli(tmpDir, "--action", "bogus");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('unknown --action "bogus"');
   });
 });

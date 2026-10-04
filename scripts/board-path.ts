@@ -1,5 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { parseArgs, requireArgs } from "./cli-args.ts";
+import { resolveMainRoot } from "./lineage-handoff.ts";
 
 // Builds and parses `.digismith/board/<KEY>—<slug>/` folder names (em dash, U+2014).
 // Spec: .digismith/docs/E/E.3/worker-maestro-conventions/design.html, sections 2 and 9.
@@ -106,4 +108,46 @@ export function findBoardFolderBySlug(slug: string, mainRoot: string): string | 
     if (parsed.slug === slug) return name;
   }
   return undefined;
+}
+
+export function main(): void {
+  const args = parseArgs(process.argv.slice(2));
+  try {
+    requireArgs(args, ["action"]);
+    switch (args.action) {
+      case "path": {
+        requireArgs(args, ["key"]);
+        if (args.title !== undefined) {
+          console.log(boardRelPath(args.key, args.title));
+        } else {
+          requireArgs(args, ["slug"]);
+          console.log(boardRelPathForSlug(args.key, args.slug));
+        }
+        break;
+      }
+      case "find": {
+        requireArgs(args, ["slug"]);
+        const mainRoot = resolveMainRoot(process.cwd());
+        const found = findBoardFolderBySlug(args.slug, mainRoot);
+        if (found !== undefined) console.log(found);
+        break;
+      }
+      case "parse": {
+        requireArgs(args, ["name"]);
+        const parsed = parseFolderName(args.name);
+        console.log(parsed.key);
+        console.log(parsed.slug);
+        break;
+      }
+      default:
+        throw new Error(`unknown --action "${args.action}" — expected path, find, or parse`);
+    }
+  } catch (err) {
+    console.error(`board-path: ${(err as Error).message}`);
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.filename === process.argv[1]) {
+  main();
 }
