@@ -6,6 +6,12 @@ yet. ClickUp: **DGS-161** (list A.3: Lifecycle Hooks, created 2026-10-03 22:37 U
 
 **Source:** the merge of Flux build 1 (DGS-154, 2026-10-03).
 
+**Update 2026-10-04 (DGS-161 merged as `3fce80d`):** points 1 and 4 are fixed (hook 02 runs `claude plugin update`; hooks 01 and 03 push
+with the default git config). Point 3 is half done: the cache flush is gone, and no old version folder is deleted. Point 5 is a step in
+the runbook's "Merge order for a worker". Point 2 is answered by the live test: `/reload-plugins` refreshes a running worker pane and
+the Desktop maestro (Jack types it there) without a restart. The rest, and the safe signal for the flush, continue in
+[reload-plugins-after-merge.md](reload-plugins-after-merge.md).
+
 ## What happened
 
 - The automation already exists. `finishing-a-development-branch` Option 1 fires the post-finish hooks
