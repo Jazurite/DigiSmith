@@ -1116,7 +1116,13 @@ text. Same HTML shell as `design.html` (byte-for-byte `<style>` block), summariz
 `board-path.ts` functions, the key-already-evident fix in bootstrap and adopt, jira-intake's
 keyed-vs-keyless target path and the Door-2-upgrade-as-move behavior, init's slug-based resolution,
 the Step 3 grep audit's result, and the open items from the design (branch naming, DGS-164's scope)
-still waiting on the maestro.
+still waiting on the maestro. Also record this one confirmed design note so a future reader
+doesn't re-open it: the Step 3.3 "already tracked" check intentionally combines
+`.digismith/board/` and `.digismith/docs/` even though the "ignored" check is target-only (section
+6 of the design) — the commit-vs-gitignore decision is per repo, not per folder (the stored answer
+is a single bare `.digismith/` line covering both), so tracked files in either folder correctly
+mean the repo already chose "committed," and splitting the tracked-check per folder would just
+reintroduce the redundant question this check was written to avoid.
 
 **The post-finish history hook parses this file — satisfy its exact markup** (learned from the
 Part 5 merge, so this unit's own merge doesn't fail the same way):
