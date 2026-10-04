@@ -9,6 +9,9 @@ project**. That needs a definition of "project", and the repo has none. **It blo
 
 ## What exists today (checked 2026-10-04)
 
+- **A project as practiced today** (Jack, 2026-10-04): a name, a Git repository (or a vault) and a dedicated herdr session, with a Desktop
+  maestro of the same name. Written up in DGS-173 (`backlog/document-the-current-project-workflow.md`), an input to this item. The profile
+  bullet below is only part of it.
 - **A ticket workflow, not a project workflow.** `init` to `bootstrap` or `adopt`, then `brainstorming`, `writing-plans`, execution,
   `finishing-a-development-branch`, and the handoff. It runs per ticket.
 - **An informal maestro playbook**, in the untracked Workbox runbook and in the maestro's memory: brief a worker, answer at checkpoints,
@@ -49,6 +52,6 @@ post-merge steps (verify, reload, close the worker). 6. Close: a project report,
 
 ## Related
 
-[brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, blocked by this item),
+[document-the-current-project-workflow.md](document-the-current-project-workflow.md) (DGS-173, an input), [brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, blocked by this item),
 [maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169), [worker-and-maestro-conventions.md](worker-and-maestro-conventions.md) (DGS-158),
 [maestro-merges-worker-material.md](maestro-merges-worker-material.md) (DGS-160), DGS-154 Flux, DGS-156.
