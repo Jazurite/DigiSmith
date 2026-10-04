@@ -305,7 +305,7 @@ it didn't:
     <h1>{{TITLE}}</h1>
     <div class="meta">
       <span>Date: {{DATE}}</span>
-      <span>Map item: {{MAP_ITEM}}</span>
+      <span>Ticket: {{TICKET}}</span>
     </div>
   </header>
 
@@ -323,6 +323,8 @@ it didn't:
   </body>
   </html>
   ```
+
+  `{{TICKET}}` is the real ticket key when Step 3 resolved one, `n/a` when it didn't.
 
   Respect the gitignore check before committing: `git check-ignore -q
   <target folder>/design.html` (literally `.digismith/board/<KEY>—<slug>/design.html` or
