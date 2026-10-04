@@ -21,6 +21,37 @@ separate kicker."
 - A herdr worker could not wake the Desktop maestro (the kicker run on 2026-10-04: "No agent named 'DigiSmith' is reachable"). Both
   sides being herdr agents may change that. Untested.
 
+## Option B: an OpenCode server as the persistent maestro (Jack, 2026-10-04 11:20 UTC+7, from an OpenCode answer)
+
+Jack pasted OpenCode's own description of the pattern: a persistent backend on the VPS (`opencode serve` or `opencode web`), and a thin
+client on the local machine (`opencode attach <url>`, or `opencode run --attach <url> "<prompt>"` for one command). The sessions, files,
+tools and context stay on the VPS. When the local TUI exits, the session lives on.
+
+Checked on this VPS (OpenCode 1.18.34): `opencode attach <url>` takes `--session <id>`, `--continue`, `--fork`, and basic auth
+(`--username`, `--password`, or `OPENCODE_SERVER_USERNAME` and `OPENCODE_SERVER_PASSWORD`). `opencode serve` listens on `127.0.0.1` unless
+told otherwise. We already run this shape for the Sol reviewer (`opencode serve --hostname 127.0.0.1 --port 4097` in a herdr pane, and an
+`opencode attach` watch tab).
+
+What B gives that option A (a Claude Code maestro in a herdr pane) does not:
+
+- **Native Observer and Operator.** Any number of clients attach to one session. `opencode run --attach <url> --session <id> "Arise"` is a
+  headless kick, so there is no kicker and no `/clear` by tool.
+- **No Claude seat quota.** The maestro would run on TokenReply (`kimi-k3` and `kimi-k2.7` were active in Jack's screenshot). This session
+  has used most of the `dev0` 5-hour window (73% at 11:09 UTC+7).
+
+What B costs:
+
+- **The model.** The maestro reviews designs and decides at checkpoints. `kimi-k3` is unproven for that, and it had tool-calling faults
+  through the Claude Code runner (`backlog/tokenreply-kimi-k3-tool-calling-failure.md`). OpenCode's own runner may be fine, as Jack's test
+  showed.
+- **The DigiSmith plugin.** Skills, hooks (the SessionStart banner, the post-finish hooks) and the Skill tool are a Claude Code plugin.
+  Whether OpenCode loads them (it can read Claude-style skills) is untested.
+- **Security.** `opencode serve` gives whoever reaches it an agent with a shell on the VPS, with the TokenReply key loaded. Never use
+  `--hostname 0.0.0.0` on a public address. Keep `127.0.0.1`, set `OPENCODE_SERVER_PASSWORD`, and reach it through an SSH tunnel
+  (`ssh -L 4096:127.0.0.1:4096`) and `opencode attach http://localhost:4096` from the desktop.
+
+A mixed shape is possible too: the OpenCode server as the multi-client hub, with the model chosen per task.
+
 ## What it would change
 
 - **No kicker.** A maestro in herdr is cleared or restarted like a worker (exit, start again with its note, `Arise`), by a script or by
@@ -43,7 +74,7 @@ separate kicker."
 
 ## A spike (when memory allows)
 
-A throwaway maestro in herdr `default` that reads the runbook and the maestro note (read-only) and proves five things: it takes
+A throwaway maestro (option A: a Claude Code agent in herdr `default`; option B: an OpenCode session on a localhost-only `opencode serve`) that reads the runbook and the maestro note (read-only) and proves five things: it takes
 `/reload-plugins` and a restart from outside, it exchanges messages with workers, the Desktop app attaches and detaches without
 disturbing it, its note and `Arise` resume it after an exit, and the account can be chosen at start. Keep the Desktop maestro until it
 passes.
