@@ -1,64 +1,57 @@
 # Define the Maestro role: the project's head butler
 
-**Status:** Idea, split out of DGS-170 by Jack (2026-10-04 11:40 UTC+7 [04:40Z]): "Decouple the maestro change to another ticket. 170 fully
-focus on the Master role." No design yet. ClickUp: **DGS-176** (list O.3: Roles, created 2026-10-04 11:40 UTC+7 [04:40Z], task id `14zcebruqu3`).
-DGS-172 (what a project is) is **decided**, so this item is unblocked. **It blocks DGS-169** (the maestro in herdr).
+**Status:** Design decided by Jack (2026-10-04 12:19 UTC+7 [05:19Z]): "Yes" to the seven defaults in the DGS-176 brainstorm. The item is the design
+record. Split out of DGS-170 at 11:40 UTC+7: "Decouple the maestro change to another ticket." ClickUp: **DGS-176** (list O.3: Roles, task id
+`14zcebruqu3`). DGS-172 (what a project is) is decided and done. **It blocks DGS-169** (the maestro in herdr), which carries the build.
 
-**Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`) and the role discussion in DGS-170. The
-maestro is the part that changes: where it lives, how many there are, how it is reset, what state it holds.
+**Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`) and the role discussion in DGS-170. The roles
+are a household: the Master (the user, DGS-170), the **Maestro** (the head butler), the workers (the servants).
 
-## Decided (Jack, 2026-10-04)
+## The Maestro role (decided, Jack, 2026-10-04)
 
-- **Maestro: the highest rank of servant, a butler.** The head butler of a project. The household reads: the Master (the user, DGS-170),
-  then the Maestro, then the workers (the servants). "Butler" is the picture, not a second name.
-- **A project can have only one maestro** (Jack, 12:16 UTC+7, DGS-172). A project is the long-lived thing (`DigiSmith`, `Emma`, `Soveron`) with a
-  name, its repos or vaults, one tracker, a dedicated herdr session and exactly one maestro, recorded in a registry; the start command
-  refuses a second. A goal is a parent ticket inside a project and gets no maestro. See `backlog/define-project-and-project-workflow.md`.
-- **One maestro per project.** Not one for the whole system ("a mess"), not one per client or repo. It needs a definition of "project"
-  (DGS-172). The Master decides which projects get a maestro (DGS-170).
-- **The maestro holds all the state.** The Master uses only a client to give orders (the Master's client, DGS-174) or an Observer to watch
-  (DGS-175), never a worker directly.
-- **No kicker.** "We will not keep the kicker, because now we still need a kicker to reset the maestro session." The kicker is the
-  workaround for a Desktop maestro that cannot be reset from outside.
-- **Persistent on the VPS, started by a command** (Jack's answers on DGS-170, 2026-10-04): a Master's session attaches to a persistent
-  maestro on the VPS; there can be several Masters (anyone with the SSH key); a maestro is started by a `dg` command.
-- **A requirement for this design:** the state kept in one structured place that a client can read (a state file: the roster, the open
-  questions for the Master, a decision log with a reason each, the next steps), not only in prose notes.
-- **Out of scope:** the maestro's review steps ("another ticket", Jack). The Scout, the Reviewer and what the Master decides are DGS-171.
+1. **Its job.** The maestro runs one project for the Masters. It turns their orders into tickets and worker briefs, answers the workers'
+   routine questions, verifies reviews and merges, and keeps the project's state. It does not do the work itself (DGS-146).
+   **Never:** write the code or builds itself, act on an order that did not come from a Master, or widen its own permissions.
+2. **What it reports.** It keeps a **structured state file**: the roster, the questions waiting for the Masters, a decision log that names
+   which Master gave each order, and the next steps. An Observer (DGS-175) reads it. It asks a Master only for decisions that are the
+   Master's, and summarizes at the end of each ticket.
+3. **What it decides alone:** routine worker prompts, review verdicts it has verified, merge orders within the guardrail, the ClickUp
+   backlog-task and description rules. **Not alone:** policy, design approvals, a new project, deletions, ClickUp status changes and
+   comments. Those stay the Master's (detail in DGS-171).
+4. **Lifetime.** It lives as long as its project. It is renewed by a flux (note, restart, `Arise`), run by a `dg` command. **No kicker.**
+5. **Where it lives.** A Claude Code agent in a herdr pane first. That keeps the DigiSmith plugin and Claude's quality, and the maestro can
+   already be reloaded and restarted from outside (`herdr agent prompt`). An OpenCode session is the later experiment (DGS-169, option B).
+6. **The three maestros we have** (`DigiSmith`, `Emma`, `Soveron`) become the maestros of their three projects. They stay Desktop sessions
+   until the persistent form works. A pilot comes first: a throwaway project, then `Soveron` (a vault, low risk), then `Emma`, and
+   `DigiSmith` last.
+7. **The live risk, accepted:** a typed order in a pane cannot be told from a worker's `herdr agent prompt` (every process on the VPS is
+   root). Jack accepts it for now, as he accepted the SSH key (DGS-170), with one guard: **escalating actions** (a push to a shared branch,
+   ClickUp writes beyond routine, deletions) wait for a stronger channel (DGS-177: Tailscale, or a signed order).
 
-## To define
+## The guard, made concrete (the maestro's reading of 6 and 7, to be confirmed)
 
-- **Its job** in one sentence, and what is never its job. Today it decides, orders workers, answers their prompts at checkpoints, keeps the
-  notes (runbook, backlog, memory), and does not do the work (DGS-146, "just give out orders"). Does any of that change?
-- **What it reports to the Master, and when,** and what it may decide alone.
-- **Its lifetime.** Does it end when its project ends, like a worker (a flux that closes it)?
-- **Its state:** what it holds, where (the state file, its note, the runbook, ClickUp as the source of truth), and who may read it.
+The maestro offered "until then they go through the Desktop approval card". That card exists only for a **Desktop** session. A pane has no
+human-only channel: a permission prompt in a pane is answered by typed keys, which a worker could also type. So a persistent maestro in a
+pane **cannot safely carry escalating actions yet**. The consequence for the order in point 6: a persistent maestro goes live only for a
+project where an escalating action is low-risk (the throwaway project, then `Soveron`). `Emma` and `DigiSmith` stay Desktop maestros until
+DGS-177's stronger channel exists. This is stricter than Jack's "yes" strictly requires, and he can loosen it.
 
-## Questions to settle first
+## Handed to other items
 
-- **Many maestros, one set of VPS resources.** DGS-172 settled the ownership: every ticket belongs to one project and a project has one
-  maestro, so two maestros never brief a worker for one ticket. What the projects still share is VPS-wide: the Claude seats, the memory,
-  the roster of workers (DGS-151). Who arbitrates when two maestros want the last memory or the same seat?
-- **The three maestros we have.** `DigiSmith`, `Emma` and `Soveron` (one per project, each with a herdr session of the same name) stay
-  until the new design lands. What do they become?
-- **Where it lives:** a herdr pane, an OpenCode server (`opencode serve` on localhost, reached by an SSH tunnel), a Desktop session.
-- **How it is resumed and renewed with no kicker.** The Flux protocol (DGS-154) was written for a Desktop maestro; its rule 6 and the
-  "Maestro flux" (M1 to M7) are reopened.
-- **Where an order comes from (provenance), when the maestro runs in a pane.** The Desktop maestro tells a user turn from a peer message
-  and an app approval card from a worker's text. In a herdr pane `herdr agent prompt` is typed input, and any process on the VPS can send
-  it. The Master's identity (DGS-170: the SSH-key holder, maybe signed orders) has to reach the maestro in a way a worker cannot fake.
-- **Several Masters attached to one maestro.** The typing rule: a herdr pane has one typing client at a time; an OpenCode session takes
-  several clients. The decision log records **which Master** gave each order (a label the client sends, or one authorized key per Master).
-  A "stop" order that halts the maestro at its next safe point (a proposal, not yet Jack's).
-- **The command that starts a maestro** (a `dg` command; its name and home, `dg workbox` DGS-151 or another). It creates the herdr session
-  named after the project and starts the maestro with the project's brief and note, replacing the manual steps of DGS-173.
-- **Which seat or model it uses** (fixed on `dev0` today; a TokenReply model spends no seat quota).
+- **DGS-169 (the build):** the shape is a Claude Code agent in a herdr pane first; several Masters can attach (a herdr pane allows one typing
+  client at a time, an OpenCode session takes several); the `dg` start, stop, renew and list commands and the project registry (DGS-172,
+  DGS-151); the state file's format and place; the pilot order.
+- **DGS-177:** the stronger channel for escalating actions, and the non-root maestro.
+- **DGS-171:** what the Master decides and never has to do.
+- **DGS-175 and DGS-174:** the Observer and the clients that read the state file.
 
-## Output
+## Still open, build-level (not blocking this design)
 
-A design in the ticket's board folder: the Maestro role with a definition, rights and an example, the resume path with no kicker, the state
-file, and a recommendation for DGS-169's shape (herdr agent, OpenCode server, or both). Brainstormed with Jack, since the design questions
-are his. A worker may run the sessions (`digismith:brainstorming`), the maestro answers the routine ones.
+- Which seat or model a maestro uses. Default, not yet confirmed: Claude Code, the seat chosen at start by the quota rule (the start command
+  takes the account), a TokenReply model later for mechanical maestros.
+- A "stop" order that halts the maestro at its next safe point (a proposal, not yet Jack's).
+- The command's name and home (`dg workbox`, DGS-151, or a sibling).
+- Who arbitrates when two maestros want the last memory or the same seat: the VPS-wide roster (DGS-151).
 
 ## Log of Jack's statements (kept for the record)
 
@@ -66,6 +59,7 @@ are his. A worker may run the sessions (`digismith:brainstorming`), the maestro 
   maestro, "a butler to manage our project for the end user", who "holds all the information, the state".
 - 11:5x: "Master: represent the user. Maestro: represent the highest rank of servant, a butler."
 - Then: "Decouple the maestro change to another ticket. 170 fully focus on the Master role."
+- 12:19: "Yes" to the seven defaults. DGS-172 closed.
 
 ## Related
 

@@ -62,6 +62,13 @@ The maestro is **persistent on the VPS** and a Master's session **attaches** to 
 the shape must support several clients: a herdr pane allows one typing client at a time, an OpenCode session takes several. A maestro is
 started by a `dg` command.
 
+## Shape decided (Jack's "Yes" on DGS-176, 2026-10-04)
+
+A **Claude Code agent in a herdr pane first** (option A); an OpenCode session is the later experiment (option B). The first persistent maestro
+goes live only for a project where an escalating action is low-risk: a throwaway project, then `Soveron`. `Emma` and `DigiSmith` stay
+Desktop maestros until DGS-177's stronger channel exists (a pane has no human-only approval channel). This item carries the build: the
+`dg` start, stop, renew and list commands, the project registry (DGS-172), the state file, and the pilot. See `backlog/define-the-maestro-role.md`.
+
 ## What it would change
 
 - **No kicker.** A maestro in herdr is cleared or restarted like a worker (exit, start again with its note, `Arise`), by a script or by
