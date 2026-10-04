@@ -30,6 +30,10 @@ fresh eyes per task rather than inline execution.
 - Every change in Tasks 2–5 fires only on the keyed branch of that skill's flow. The keyless
   branch (`ticket: false`, genuinely no key supplied) gets **zero edits** anywhere in this plan —
   verify this explicitly in each task's self-check, not just assume it.
+- Tasks 2–5 change only the lines the keyed path actually needs — never drop a sentence that
+  wasn't about the path convention just because it sits next to one that was. Each of these tasks
+  has its own diff-review step for exactly this: every removed line must have a replacement that
+  does the same job for the keyed path, and no unrelated sentence may simply vanish.
 - `scripts/board-path.ts`'s already-shipped `buildFolderName`, `boardRelPath`, and
   `parseFolderName` are not touched — signatures, behavior, and tests stay exactly as Part 1+2
   merged them. Task 1 only *adds* two functions.
@@ -126,6 +130,14 @@ describe("findBoardFolderBySlug", () => {
     makeBoardFolder("DGS-1—real-ticket");
     expect(findBoardFolderBySlug("real-ticket", tmpDir)).toBe("DGS-1—real-ticket");
   });
+
+  it("returns the first match in sorted order when two folders share a slug", () => {
+    // readdir's own order is not defined — sorting first makes this deterministic regardless.
+    // Lexicographically, "DGS-10—..." sorts before "DGS-2—..." ('1' < '2' at the fifth byte).
+    makeBoardFolder("DGS-2—shared-slug");
+    makeBoardFolder("DGS-10—shared-slug");
+    expect(findBoardFolderBySlug("shared-slug", tmpDir)).toBe("DGS-10—shared-slug");
+  });
 });
 ```
 
@@ -161,12 +173,15 @@ export function boardRelPathForSlug(key: string, slug: string): string {
 // whatever key (if any) the branch name carries. DigiSmith's own repo already has this today:
 // branch "plugin-update-after-merge" (no key) against folder "DGS-161—plugin-update-after-merge"
 // (keyed). Reconstructing the folder name from the branch's own key would miss that folder.
+// Entries are sorted before scanning: readdir's own order is not defined, so if two folders ever
+// shared one slug, scanning raw readdir order would be nondeterministic — sorting first means it
+// always resolves to the same one (the first match in sorted order), every time.
 export function findBoardFolderBySlug(slug: string, mainRoot: string): string | undefined {
   const dir = path.join(mainRoot, ...BOARD_DIR_PATH.split("/"));
   let entries: string[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true })
-      .filter((e) => e.isDirectory()).map((e) => e.name);
+      .filter((e) => e.isDirectory()).map((e) => e.name).sort();
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw err;
@@ -310,17 +325,24 @@ New text:
    No key yet (a fresh Door 2 draft, or any repo with none supplied) →
    `.digismith/docs/<slug>/ticket.md`, exactly as before this ticket —
    `docs/` is that ticket's real, permanent home, not a holding pen.
+   Either way, the target is in the repo currently being worked in —
+   never DigiSmith's own repo, which only hosts this skill, not the
+   tickets it processes.
 3. **Commit-vs-gitignore, decided once per repo:** before writing for the
-   first time in this repo, ask git itself whether the ticket-file
-   folders are already ignored — check both, since either one may be the
-   one actually in use in this repo:
+   first time in this repo, ask git itself whether this write's own
+   target folder is already ignored — the board folder when a key is in
+   hand, the docs folder when it isn't. Check only that one target, never
+   the other: a repo can ignore one and still track the other.
 
    ```bash
-   git check-ignore -q .digismith/board/ || git check-ignore -q .digismith/docs/
+   git check-ignore -q .digismith/board/   # when a key is in hand
+   git check-ignore -q .digismith/docs/    # when there is no key
    ```
 
-   Read the **exit code** of that combined check, not any output: **0 =
-   ignored**, **1 = not ignored**. `git check-ignore` is authoritative
+   Read the **exit code**, not the (empty) output: **0 = ignored**,
+   **1 = not ignored**. Exit code 1 is a normal, expected answer meaning
+   "this path is not ignored" — it is *not* a command failure, so don't
+   treat it as an error or retry it. `git check-ignore` is authoritative
    where a text match isn't: it correctly resolves a bare `.digismith`
    (no trailing slash), wildcard patterns, negations (`!`), comments,
    nested `.gitignore` files deeper in the tree, `.git/info/exclude`, and
@@ -329,9 +351,17 @@ New text:
 
    Branch on the result:
    - **Ignored (exit 0)** → write gitignored, proceed, no question asked.
-   - **Not ignored (exit 1), and nothing under either folder is tracked by
-     git in this repo** → ask once via `AskUserQuestion` ("commit this
-     repo's DigiSmith docs, or keep them local-only?").
+   - **Not ignored (exit 1), and nothing under *either* folder is tracked
+     by git in this repo** → ask once via `AskUserQuestion` ("commit this
+     repo's DigiSmith docs, or keep them local-only?"). This "already
+     tracked" check always looks at both folders together, regardless of
+     which one this write targets — an earlier decision recorded under
+     either folder still answers the question for both:
+
+     ```bash
+     git ls-files .digismith/board/ .digismith/docs/
+     ```
+
      - If **gitignored** is chosen, append the entry to this repo's
        `.gitignore` — safely, never by rewriting the file:
        1. If `.gitignore` doesn't exist at all, create it containing the
@@ -350,20 +380,20 @@ New text:
        in this repo, covering `board/` and `docs/` alike (one bare
        `.digismith/` line is a prefix match over the whole tree).
      - If **committed** is chosen, do nothing further; the entry's
-       continued absence is itself the remembered "committed" signal.
+       continued absence is itself the remembered "committed" signal. Note
+       that choosing "committed" doesn't itself commit anything — it just
+       means the file is left tracked-and-not-ignored, so it becomes part
+       of whatever commit the user (or a later skill) makes normally.
    - **Not ignored (exit 1), but either folder already has files tracked
      by git in this repo** → an earlier write already happened and was
      committed without adding a `.gitignore` entry; treat as "committed",
      don't ask again. Confirm tracked-ness with git, not with directory
-     existence:
-     ```bash
-     git ls-files .digismith/board/ .digismith/docs/
-     ```
-     Non-empty output → genuinely committed, don't ask. **Empty output
-     while either directory nevertheless exists on disk** (e.g. an aborted
-     earlier run left untracked files behind) → that's not evidence of a
-     prior decision at all; fall back to the "ask once" branch above
-     rather than silently assuming "committed".
+     existence — same `git ls-files .digismith/board/ .digismith/docs/`
+     command as above. Non-empty output → genuinely committed, don't ask.
+     **Empty output while either directory nevertheless exists on disk**
+     (e.g. an aborted earlier run left untracked files behind) → that's
+     not evidence of a prior decision at all; fall back to the "ask once"
+     branch above rather than silently assuming "committed".
 4. Check for an existing file at the target path first — see Handling
    Existing Files below — before writing.
 5. Write the file in the Ticket Template shape.
@@ -437,10 +467,10 @@ New:
 
 ```markdown
 | 3.1–3.2 | Derive the slug; target path is `boardRelPath(key, title)` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
-| 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q .digismith/board/ \|\| git check-ignore -q .digismith/docs/` — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under either → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + `git ls-files .digismith/board/ .digismith/docs/` non-empty → treat as committed, don't ask |
+| 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q` on this write's own target only (`.digismith/board/` when keyed, `.digismith/docs/` otherwise — never the other one) — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under **either** folder (`git ls-files .digismith/board/ .digismith/docs/` empty) → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + that same `ls-files` non-empty → treat as committed, don't ask |
 ```
 
-- [ ] **Step 4: Self-check against three scenarios**
+- [ ] **Step 4: Self-check against four scenarios**
 
 Trace each through the new text and confirm the resulting path and action:
 
@@ -458,8 +488,27 @@ Trace each through the new text and confirm the resulting path and action:
    `docs/fix-cart-drawer/` → "Blank/absent, found under docs/" row → move
    `.digismith/docs/fix-cart-drawer/` to `.digismith/board/DGS-200—fix-cart-drawer/` in its
    entirety, then fill in Key/URL/Story Points on the moved file.
+4. **A repo gitignores only `.digismith/docs/` via a specific line (no bare `.digismith/`
+   prefix), and nothing under `board/` is ignored or tracked yet.** A keyed Door 1 write → target
+   is `board/` → Step 3.3 checks `git check-ignore -q .digismith/board/` specifically → exit 1 (not
+   ignored, since only `docs/` has a rule) → check `git ls-files .digismith/board/ .digismith/docs/`
+   → empty (docs/ was never committed, only ignored) → ask once via `AskUserQuestion`. Confirms the
+   old combined `board/ || docs/` check (which would have wrongly reported "ignored" here, since
+   `docs/` alone satisfied it) no longer misfires — the probe now answers for the folder this write
+   actually targets.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Diff review — confirm no unrelated line was dropped**
+
+Run `git diff -- skills/jira-intake/SKILL.md` and read every removed line. For each one, point to
+the replacement line that does the same job for the keyed path. Confirm these three sentences —
+present in the file before this task, not removed by the design — are still there, verbatim or
+adapted: "in the repo currently being worked in — never DigiSmith's own repo, which only hosts this
+skill, not the tickets it processes"; "Exit code 1 is a normal, expected answer ... it is *not* a
+command failure, so don't treat it as an error or retry it"; "Note that choosing "committed" doesn't
+itself commit anything ...". Any other removed sentence with no replacement doing its job is a bug —
+fix it before Step 6.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add skills/jira-intake/SKILL.md
@@ -619,7 +668,13 @@ New text:
    Step 1.5. Re-read the diff: this branch's text is byte-for-byte what shipped before this task —
    confirms the keyless path got no edit.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Diff review — confirm no unrelated line was dropped**
+
+Run `git diff -- skills/bootstrap/SKILL.md` and read every removed line. For each one, point to the
+replacement line that does the same job for the keyed path. Any removed sentence with no
+replacement doing its job is a bug — fix it before Step 6.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add skills/bootstrap/SKILL.md
@@ -824,7 +879,13 @@ New text:
    `.digismith/docs/<slug>/`, exactly the pre-existing unmodified behavior — confirms the keyless
    path in this skill got no edit either.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Diff review — confirm no unrelated line was dropped**
+
+Run `git diff -- skills/adopt/SKILL.md` and read every removed line. For each one, point to the
+replacement line that does the same job for the keyed path. Any removed sentence with no
+replacement doing its job is a bug — fix it before Step 7.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add skills/adopt/SKILL.md
@@ -998,7 +1059,13 @@ New:
    to the flat `docs/local-cleanup/plan.md` check → exists → report "already initialized" naming
    that folder. Confirms the fallback still serves the permanent keyless case, not just migration.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Diff review — confirm no unrelated line was dropped**
+
+Run `git diff -- skills/init/SKILL.md` and read every removed line. For each one, point to the
+replacement line that does the same job for the keyed path. Any removed sentence with no
+replacement doing its job is a bug — fix it before Step 6.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add skills/init/SKILL.md
@@ -1025,26 +1092,40 @@ Markdown skill files.
 
 - [ ] **Step 2: Re-run every self-check from Tasks 2–5**
 
-Re-trace all nine scenarios listed across Tasks 2–5's self-check steps against the final, committed
+Re-trace all ten scenarios listed across Tasks 2–5's self-check steps against the final, committed
 text (not just the diff as drafted) — confirms nothing drifted across tasks, and that every
 keyless-path claim ("no edit on this branch") still holds once all five tasks are combined.
 
-- [ ] **Step 3: Write `report.html`**
+- [ ] **Step 3: Regression-check every remaining `.digismith/docs` mention**
+
+Run:
+
+```bash
+grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md skills/init/SKILL.md skills/jira-intake/SKILL.md
+```
+
+List every line this prints, and write a one-line reason for each: either it is the keyless path
+(the `docs/<slug>/` shape genuinely stays there, per design section 2), or it is the legacy-read
+fallback (checking `docs/` only after `board/` comes up empty, per design sections 6 and 8). Any
+mention this grep finds that isn't one of those two things is a bug — fix it before Step 4.
+
+- [ ] **Step 4: Write `report.html`**
 
 Run `date` first and use its real output — the shipped file must contain the actual date as plain
 text. Same HTML shell as `design.html` (byte-for-byte `<style>` block), summarizing: the two new
 `board-path.ts` functions, the key-already-evident fix in bootstrap and adopt, jira-intake's
 keyed-vs-keyless target path and the Door-2-upgrade-as-move behavior, init's slug-based resolution,
-and the open items from the design (branch naming, DGS-164's scope) still waiting on the maestro.
+the Step 3 grep audit's result, and the open items from the design (branch naming, DGS-164's scope)
+still waiting on the maestro.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
 git commit -m "docs(ticket-naming): report for DGS-159 Part 3"
 ```
 
-- [ ] **Step 5: Report to the maestro**
+- [ ] **Step 6: Report to the maestro**
 
 State all commit hashes and messages, the files touched, that every task's self-check passed, and
 that no keyless path anywhere in this plan was edited. Do not push: wait for "approved: push"
