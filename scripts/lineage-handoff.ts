@@ -2,6 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "./cli-args.ts";
+import { listNoteSessionNames } from "./session-path.ts";
+
+// This module only ever knows the old clan/lineage fallback convention (DGS-158's own doc still
+// calls it a bridge, kept so the six existing fallback notes stay readable until Part 6 of
+// DGS-159 migrates them). `./session-path.ts` is the sibling for the current convention
+// (.digismith/sessions/<session-name>/note.md) — the CLI's `--action list` and
+// `session-init.ts`'s `buildLineagePointer` both now combine this module's fallback keys with
+// `listNoteSessionNames`'s current ones, but `listNotes` below stays fallback-only on purpose.
 
 export const DOCS_DIR_PATH = ".digismith/docs";
 export const NOTE_FILENAME = "handoff.md";
@@ -124,6 +132,7 @@ export function main(): void {
       }
       case "list": {
         for (const key of listNotes(mainRoot)) console.log(key);
+        for (const name of listNoteSessionNames(mainRoot)) console.log(name);
         break;
       }
       default:

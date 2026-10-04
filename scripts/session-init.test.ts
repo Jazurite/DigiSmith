@@ -184,6 +184,34 @@ describe("buildLineagePointer", () => {
     );
   });
 
+  it("names a current-convention session note on its own, once no fallback notes exist", () => {
+    // The scenario the fallback-only reading would have missed: once Part 6 of DGS-159 moves
+    // the six live handoff.md fallback notes away, listNotes(mainRoot) returns [] — a fresh
+    // maestro must still get pointed at its own sessions/<name>/note.md.
+    writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
+    expect(buildLineagePointer(tmpDir)).toBe(
+      `DigiSmith: session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
+    );
+  });
+
+  it("combines fallback notes and current-convention session notes in one line", () => {
+    writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
+    writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
+    expect(buildLineagePointer(tmpDir)).toBe(
+      `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.1; ` +
+        `session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
+    );
+  });
+
+  it("excludes a worker's brief-only session folder from the session-notes clause", () => {
+    writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
+    fs.mkdirSync(path.join(tmpDir, ".digismith", "sessions", "dgs-161"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".digismith", "sessions", "dgs-161", "brief.md"), "# Brief\n");
+    expect(buildLineagePointer(tmpDir)).toBe(
+      `DigiSmith: session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
+    );
+  });
+
   it("reads the main checkout's notes when resolved from a worktree", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);

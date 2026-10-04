@@ -297,6 +297,19 @@ describe("CLI", () => {
     expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.1", "K"]);
   });
 
+  it("--action list also prints current-convention session names after the fallback keys", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/docs/A/A.1/handoff.md");
+    writeNote(main, ".digismith/sessions/DigiSmith/note.md", "# Note\n");
+    writeNote(main, ".digismith/sessions/dgs-161/brief.md", "# Brief\n");
+
+    const result = runCli(main, "--action", "list");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.1", "DigiSmith"]);
+  });
+
   it("--action ensure-excluded prints the result", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
