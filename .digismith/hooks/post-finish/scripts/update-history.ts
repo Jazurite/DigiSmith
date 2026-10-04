@@ -32,7 +32,7 @@ export function findChangedReports(baseSha: string, headSha: string, cwd: string
 
 export interface ParsedReport {
   featureTitle: string;
-  mapItem: string;
+  ticket: string;
   date: string;
   summary: string;
   slug: string;
@@ -50,9 +50,14 @@ export function parseReport(reportPath: string): ParsedReport {
     throw new Error(`Cannot find FEATURE_TITLE (<h1>...— Implementation Report</h1>) in ${reportPath}`);
   }
 
-  const mapItemMatch = /Map item: <strong>(.+?)<\/strong>/.exec(html);
-  if (!mapItemMatch) {
-    throw new Error(`Cannot find MAP_ITEM (Map item: <strong>...</strong>) in ${reportPath}`);
+  const ticketMatch =
+    /Ticket: <strong>(.+?)<\/strong>/.exec(html) ??
+    /Map item: <strong>(.+?)<\/strong>/.exec(html);
+  if (!ticketMatch) {
+    throw new Error(
+      `Cannot find TICKET (Ticket: <strong>...</strong>) or the legacy MAP_ITEM ` +
+        `(Map item: <strong>...</strong>) in ${reportPath}`,
+    );
   }
 
   const dateMatch = /<span>Date: (.+?)<\/span>/.exec(html);
@@ -82,7 +87,7 @@ export function parseReport(reportPath: string): ParsedReport {
 
   return {
     featureTitle: titleMatch[1],
-    mapItem: mapItemMatch[1],
+    ticket: ticketMatch[1],
     date: dateMatch[1],
     summary: summaryMatch[1].trim(),
     slug,

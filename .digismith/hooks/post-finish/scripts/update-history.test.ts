@@ -19,14 +19,19 @@ function makeTmpDir(prefix: string): string {
 
 function writeReportFixture(dir: string, overrides: Partial<{
   title: string;
-  mapItem: string;
+  ticket: string;
   date: string;
   summary: string;
+  legacy: boolean;
 }> = {}): string {
   const title = overrides.title ?? "Sample Feature (Z)";
-  const mapItem = overrides.mapItem ?? "Z";
+  const ticket = overrides.ticket ?? "Z";
   const date = overrides.date ?? "2026-09-11";
   const summary = overrides.summary ?? "Built the sample feature end to end.";
+  const legacy = overrides.legacy ?? false;
+  const ticketLine = legacy
+    ? `<span>Map item: <strong>${ticket}</strong></span>`
+    : `<span>Ticket: <strong>${ticket}</strong></span>`;
   const html = `<!doctype html>
 <html><head><title>${title} — Implementation Report</title></head>
 <body>
@@ -34,7 +39,7 @@ function writeReportFixture(dir: string, overrides: Partial<{
   <h1>${title} — Implementation Report</h1>
   <div class="meta">
     <span>Date: ${date}</span>
-    <span>Map item: <strong>${mapItem}</strong></span>
+    ${ticketLine}
   </div>
 </header>
 <section id="summary">
@@ -72,13 +77,13 @@ describe("parseReport", () => {
     const slugDir = path.join(dir, ".digismith", "docs", "sample-feature");
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Sample Feature (Z)", mapItem: "Z", date: "2026-09-11", summary: "Built it." });
+    writeReportFixture(reportPath, { title: "Sample Feature (Z)", ticket: "Z", date: "2026-09-11", summary: "Built it.", legacy: true });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed).toEqual({
       featureTitle: "Sample Feature (Z)",
-      mapItem: "Z",
+      ticket: "Z",
       date: "2026-09-11",
       summary: "Built it.",
       slug: "sample-feature",
@@ -93,13 +98,13 @@ describe("parseReport", () => {
     const slugDir = path.join(dir, ".digismith", "docs", "G", "G.3-dynamic-doc-conventions");
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Dynamic Doc Conventions (G.3)", mapItem: "G.3", date: "2026-09-23", summary: "Nested the docs." });
+    writeReportFixture(reportPath, { title: "Dynamic Doc Conventions (G.3)", ticket: "G.3", date: "2026-09-23", summary: "Nested the docs.", legacy: true });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed).toEqual({
       featureTitle: "Dynamic Doc Conventions (G.3)",
-      mapItem: "G.3",
+      ticket: "G.3",
       date: "2026-09-23",
       summary: "Nested the docs.",
       slug: "G/G.3-dynamic-doc-conventions",
@@ -114,13 +119,13 @@ describe("parseReport", () => {
     const slugDir = path.join(dir, ".digismith", "docs", "A", "A.1", "lineage-handoff");
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Lineage Handoff", mapItem: "A.1", date: "2026-09-26", summary: "Moved the handoff." });
+    writeReportFixture(reportPath, { title: "Lineage Handoff", ticket: "A.1", date: "2026-09-26", summary: "Moved the handoff.", legacy: true });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed).toEqual({
       featureTitle: "Lineage Handoff",
-      mapItem: "A.1",
+      ticket: "A.1",
       date: "2026-09-26",
       summary: "Moved the handoff.",
       slug: "A/A.1/lineage-handoff",
@@ -141,13 +146,13 @@ describe("parseReport", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("throws a clear error when the map item marker is missing", () => {
+  it("throws a clear error when neither Ticket nor Map item is present", () => {
     const dir = makeTmpDir("update-history-test-");
     const reportPath = path.join(dir, ".digismith", "docs", "sample-feature", "report.html");
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, "<html><body><h1>X — Implementation Report</h1></body></html>");
 
-    expect(() => parseReport(reportPath)).toThrow("Cannot find MAP_ITEM");
+    expect(() => parseReport(reportPath)).toThrow("Cannot find TICKET");
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
@@ -196,13 +201,13 @@ describe("parseReport", () => {
     const slugDir = path.join(dir, ".digismith", "board", "DGS-159—ticket-naming-script-layer");
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Shared Path Modules", mapItem: "DGS-159", date: "2026-10-04", summary: "Built the modules." });
+    writeReportFixture(reportPath, { title: "Shared Path Modules", ticket: "DGS-159", date: "2026-10-04", summary: "Built the modules.", legacy: true });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed).toEqual({
       featureTitle: "Shared Path Modules",
-      mapItem: "DGS-159",
+      ticket: "DGS-159",
       date: "2026-10-04",
       summary: "Built the modules.",
       slug: "DGS-159—ticket-naming-script-layer",
@@ -223,12 +228,75 @@ describe("parseReport", () => {
     );
     fs.mkdirSync(slugDir, { recursive: true });
     const reportPath = path.join(slugDir, "report.html");
-    writeReportFixture(reportPath, { title: "Shared Path Modules", mapItem: "DGS-159", date: "2026-10-04", summary: "Built the modules." });
+    writeReportFixture(reportPath, { title: "Shared Path Modules", ticket: "DGS-159", date: "2026-10-04", summary: "Built the modules.", legacy: true });
 
     const parsed = parseReport(reportPath);
 
     expect(parsed.slug).toBe("DGS-159—ticket-naming-script-layer/script-layer");
     expect(parsed.base).toBe("board");
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts a new-style Ticket: line for a keyed report", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "board", "DGS-199—some-ticket");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Some Ticket", ticket: "DGS-199", date: "2026-10-05", summary: "Shipped it." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed.ticket).toBe("DGS-199");
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("accepts a new-style Ticket: line with the literal n/a value for keyless work", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "docs", "some-keyless-feature");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "Some Keyless Feature", ticket: "n/a", date: "2026-10-05", summary: "Shipped it." });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed.ticket).toBe("n/a");
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("still accepts a legacy Map item: line with no Ticket: line present at all", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slugDir = path.join(dir, ".digismith", "docs", "an-old-feature");
+    fs.mkdirSync(slugDir, { recursive: true });
+    const reportPath = path.join(slugDir, "report.html");
+    writeReportFixture(reportPath, { title: "An Old Feature (G.3)", ticket: "G.3", date: "2026-08-01", summary: "Shipped it long ago.", legacy: true });
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed.ticket).toBe("G.3");
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("prefers Ticket: over Map item: if a malformed report somehow had both", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const reportPath = path.join(dir, ".digismith", "docs", "both-lines", "report.html");
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    fs.writeFileSync(
+      reportPath,
+      '<html><body><h1>X — Implementation Report</h1>' +
+        '<span>Date: 2026-10-05</span>' +
+        '<span>Ticket: <strong>DGS-1</strong></span>' +
+        '<span>Map item: <strong>Z</strong></span>' +
+        '<section id="summary"><p>Built it.</p></section>' +
+        '</body></html>',
+    );
+
+    const parsed = parseReport(reportPath);
+
+    expect(parsed.ticket).toBe("DGS-1");
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
