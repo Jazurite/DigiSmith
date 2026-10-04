@@ -13,9 +13,12 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
 - **The Master decides which projects get a maestro,** and starts and stops them. One maestro per project (DGS-172 defines "project").
 - **The Master uses only a client or an Observer,** never a worker directly: a client to give orders (the Master's client, DGS-174; it was
   called the "Operator" before the roles were named), or an Observer to watch (DGS-175).
-- **Candidate, not yet decided (Jack, 11:45 UTC+7 [04:45Z]): "I'm the master, so maybe whoever holds the SSH key connection to the VPS, with a
-  password, is classified as Master."** The Master's identity is the holder of the SSH key (and its passphrase) that reaches the VPS. See
-  "Authority" below for what this does and does not protect.
+- **Master identity, decided for now (Jack, 11:53 UTC+7 [04:53Z]): "For 170 we'll rely on the SSH key for now."** The Master is whoever holds
+  the SSH key (and its passphrase) that reaches the VPS. The stronger layers are **deferred**, not dropped: Tailscale, a hardware-backed
+  signing key and signed orders, and a non-root maestro (see "Authority" below and DGS-177, `backlog/harden-access-to-the-vps.md`).
+  A known limit Jack accepts for now: while the maestro is a Desktop session, a worker can reach it only through a labelled peer message
+  that cannot grant escalation, so the SSH key is enough. **This must be revisited before a maestro runs in a pane** (DGS-176, DGS-169),
+  because a typed pane order cannot be told from a worker's `herdr agent prompt`.
 - **The other names are dropped:** Operator, Controller, Orchestrator, Grindstone, Butler (the maestro is the butler), and "Master" as the
   maestro's name.
 
@@ -28,7 +31,7 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
 - **What the Master sees and how it is told:** what the maestro reports to the Master and when (the maestro's side is DGS-176), and the
   Master's own view, the Observer (DGS-175).
 - **The Master's client.** What it needs to do (give an order, answer a question, approve or stop a step); built in DGS-174.
-- **Authority (the SSH-key candidate).** Whoever can SSH in can already do anything on the VPS, so "the holder of the SSH key" is the right
+- **Authority (SSH key decided for now; the layers below are later).** Whoever can SSH in can already do anything on the VPS, so "the holder of the SSH key" is the right
   trust boundary for *reaching* the Master's client: `herdr attach`, the Desktop app over SSH, an `opencode attach` through an SSH tunnel
   (with its server password). It is **necessary but not enough to prove an order is the Master's**, because every process on the VPS runs
   as the same user (root), including every worker. Today a worker can reach the Desktop maestro only through a labelled peer message,
