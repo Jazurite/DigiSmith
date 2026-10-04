@@ -63,7 +63,10 @@ or `.digismith/board/<key>—<slug>/report.html`
 path, or a lineage `<Clan>/<Lineage>/<real-slug>` path under `docs/`, or a `<part>` subfolder
 under a board ticket folder — `parseReport` matches all of them, docs and board alike) — either
 a docs-only change, or a merge that didn't go through `report-implementation` (N) — and nothing
-further happens. A non-zero exit means the script itself failed (a malformed report, or the
+further happens. A report's header must carry either a `Ticket: <strong>…</strong>` line (new
+convention — a real key, or the literal `n/a` for keyless work) or the legacy `Map item:
+<strong>…</strong>` line (old reports, still accepted) — `parseReport` throws, and this hook
+stops, if neither is present. A non-zero exit means the script itself failed (a malformed report, or the
 Timeline section couldn't be located): stop, do not commit, and investigate — a bad append would
 corrupt `history.html` for everyone.
 
