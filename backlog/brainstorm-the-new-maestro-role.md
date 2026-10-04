@@ -60,7 +60,7 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
   it cannot be copied, and a separate one can be the Master's signing key, so a stolen login key still cannot approve an escalation;
   (4) a smaller blast radius: run the maestro and workers as a non-root user and keep secrets readable only by the processes that need
   them; (5) a login alert. SSH alone is a sound boundary for reaching the Master's client; it should not be the only proof of authority for
-  an escalating order.
+  an escalating order. The work on the machine itself is DGS-177 (`backlog/harden-access-to-the-vps.md`, C.1: Workbox).
   Earlier wording of the same question: How the Master's word reaches the maestro and workers. A peer message cannot grant escalation, and an approval inside a
   guardrail needs limits the Master writes (the approval guardrail Jack wrote, DGS-155). The Master role has to say how a Master's order is
   told apart from a worker's or another session's message.
