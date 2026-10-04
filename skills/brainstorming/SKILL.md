@@ -236,10 +236,15 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
     this work was requested) — resolve the **existing** folder first, never reconstruct one:
     `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'`
     against `.digismith/board/`. **Found** → that folder, `<folder>/design.html`. **Not found**
-    (an ad hoc keyed call with no prior `jira-intake` run this session) → compute fresh:
-    `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'`.
-    Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of them as `'\''` — same
-    quoting rule as `jira-intake`'s "The Script".
+    (an ad hoc keyed call with no prior `jira-intake` run this session) → compute fresh. A slug is
+    already in hand from the `find` call just above, so reuse it rather than re-slugifying (not
+    guaranteed idempotent against re-truncation):
+    `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --slug '<slug>'`
+    (`boardRelPathForSlug`, for a caller that already has a final key and slug). Only fall back to
+    `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'`
+    when no slug was derived yet at all (a truly from-scratch ad hoc call with neither slug nor
+    existing folder). Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of them as
+    `'\''` — same quoting rule as `jira-intake`'s "The Script".
 
   **No tracker key** (the existing behavior, unchanged):
 

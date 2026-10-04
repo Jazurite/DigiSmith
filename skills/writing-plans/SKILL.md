@@ -28,11 +28,18 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   re-derive. No resolved path in context (a fully standalone keyed invocation) → the same
   two-step `brainstorming` just ran:
   `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'`
-  against `.digismith/board/` first, falling back to
+  against `.digismith/board/` first. If nothing is found, a slug is already in hand from that
+  `find` call, so reuse it rather than re-slugifying (not guaranteed idempotent against
+  re-truncation):
+  `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --slug '<slug>'`
+  (`boardRelPathForSlug`, for a caller that already has a final key and slug). Only fall back to
   `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'`
-  only if nothing is found. Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of
+  when no slug was derived yet at all (a truly from-scratch ad hoc call with neither slug nor
+  existing folder). Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of
   them as `'\''` — same quoting rule as `jira-intake`'s "The Script". Write `plan.md` into that
   folder, alongside `design.html`.
+
+  **No tracker key** (the existing behavior, unchanged):
 
   **Path:** reuse the exact resolved path `brainstorming` already established earlier in this
   same session — nested `.digismith/docs/<Letter>/<Letter.N>-<slug>/` or

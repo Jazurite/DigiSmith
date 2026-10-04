@@ -152,7 +152,7 @@ describe("parseReport", () => {
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, "<html><body><h1>X — Implementation Report</h1></body></html>");
 
-    expect(() => parseReport(reportPath)).toThrow("Cannot find TICKET");
+    expect(() => parseReport(reportPath)).toThrow(/Cannot find TICKET.*MAP_ITEM/s);
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
@@ -280,7 +280,7 @@ describe("parseReport", () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it("prefers Ticket: over Map item: if a malformed report somehow had both", () => {
+  it("prefers Ticket: over a legacy Map item: line when both are present (the old {{TICKET_KEY_META}} report shape)", () => {
     const dir = makeTmpDir("update-history-test-");
     const reportPath = path.join(dir, ".digismith", "docs", "both-lines", "report.html");
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });

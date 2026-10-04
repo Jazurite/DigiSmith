@@ -229,7 +229,7 @@ it didn't:
   `plan.md`.
 - **Spec, if supplied:** rewrap the content you read into context in Step 1 into the HTML shell
   below at `<target folder>/design.html` (reuse the `<style>` block byte-for-byte, filling in
-  `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s from the supplied spec's own
+  `{{TITLE}}`, `{{DATE}}`, `{{TICKET}}`, and the body `<section>`s from the supplied spec's own
   content). The footer line at the bottom of the shell names whichever target folder actually
   applies — change only that one line, from `<footer>DigiSmith ·
   .digismith/docs/<slug>/design.html</footer>` to `<footer>DigiSmith · <target

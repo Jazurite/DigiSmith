@@ -75,11 +75,10 @@ Only for template type `progress-update`.
 Check whether this session already has a `report.html` from
 `digismith:report-implementation` (**N**) for this same ticket's work.
 **This session already ran N** → reuse the exact `<target folder>/report.html`
-path it resolved, never re-derive. **Standalone invocation, N didn't run this
-session** → resolve the same way N itself does: a tracker key in hand →
-`board-path.ts --action find --slug '<slug>'` against `.digismith/board/`,
-found folder's `report.html`; no key, or not found → the flat
-`.digismith/docs/<slug>/report.html` fallback, unchanged from today.
+path it resolved, never re-derive, then continue below based on whether that
+file exists. **N didn't run this session at all** → treat as "Not present"
+(draft directly from the session's actual work) — do not attempt to
+re-resolve or search for a path that was never established this session.
 
 **Present** → read it and draft 1-4 short bullets
 summarizing the delivered work section, in the same tone as a real

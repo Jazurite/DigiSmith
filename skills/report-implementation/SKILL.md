@@ -14,7 +14,9 @@ written by hand for map item G) into a required step of every
 `digismith:subagent-driven-development` plan's completion. Generates an
 HTML implementation report — what shipped, the per-task review record,
 the final-review findings and how they were resolved, the commit list —
-and commits it to `.digismith/docs/<feature-slug>/`.
+and commits it to the target folder — `.digismith/docs/<feature-slug>/` for a docs-folder plan,
+or the matching `.digismith/board/<KEY>—<slug>/` (or its worker subfolder) for a board-folder
+plan.
 
 ## When to Use
 
@@ -100,8 +102,9 @@ to a subagent that can't ask.
        No segment-counting needed either way: whatever directory the plan sits in **is** the
        target folder. `<feature-slug>` for this case is that same `<target folder>`'s path
        relative to `.digismith/`, e.g. `board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths`
-       — used only for the footer/commit-message text below, nothing parses it structurally the
-       way the docs case's slug gets parsed.
+       — used only for the commit-message text below (the footer now uses `{{TARGET_FOLDER}}`
+       instead, see Step 2a), nothing parses it structurally the way the docs case's slug gets
+       parsed.
      - **No** — fall through to the existing `.digismith/docs/` segment-counting logic below,
        unchanged (flat / nested / lineage / the `docs/superpowers/plans/` filename fallback).
    - **Check first:** how many path segments sit between `.digismith/docs/` and `plan.md`?
@@ -132,7 +135,11 @@ to a subagent that can't ask.
 
    Either way, `<target folder>` (resolved above) is where everything
    downstream reads and writes — report output path (Step 4), the footer,
-   and the sibling spec/plan links. In the fallback case that folder may
+   and the sibling spec/plan links. For the docs branches (flat / nested /
+   lineage / the `docs/superpowers/plans/` filename fallback), `<target folder>` is
+   `.digismith/docs/<feature-slug>/` using the `<feature-slug>` each of those branches defines
+   above — including the fallback case, where it is still `.digismith/docs/<feature-slug>/`,
+   **not** the plan's own literal parent directory (`docs/superpowers/plans/`). In the fallback case that folder may
    not yet contain a `design.html` or `plan.md` at all (they're still at
    their old location); that needs no extra handling — Step 2a's existing
    omit-the-link-if-the-file-isn't-there rule already covers it.
@@ -149,10 +156,21 @@ to a subagent that can't ask.
 If no ledger exists at that path, stop here entirely — this skill doesn't
 apply to this run.
 
-5. **Ticket key (optional):** using the same `<feature-slug>` already
-   derived above, check whether
-   `<target folder>/ticket.md` exists and has a
-   `**Key:**` line. If so, note that key for Step 2a. Then check for
+5. **Ticket key (optional):** check whether `ticket.md` exists and has a
+   `**Key:**` line, reading it from the right folder — this differs by case:
+   - **Board-folder plan:** read it from the board TICKET-ROOT folder — the folder immediately
+     after `.digismith/board/` that Step 1 already validated with
+     `--action parse --name '<that folder name>'` — i.e.
+     `.digismith/board/<that same folder name>/ticket.md`. This is **not** necessarily
+     `<target folder>/ticket.md`: for a nested worker plan
+     (`.digismith/board/<KEY>—<slug>/worker-<agent>/plan.md`), `<target folder>` is the
+     `worker-<agent>` subfolder, but `jira-intake` always writes `ticket.md` at the ticket root,
+     never inside a worker subfolder. Always read it from the ticket root, regardless of how
+     deeply `<target folder>` is nested below it.
+   - **Docs-folder plan:** `<target folder>/ticket.md`, using `<target folder>` as resolved in
+     Step 1 (unchanged from before — the docs case has no nested-worker-subfolder concept).
+
+   If found, note that key for Step 2a. Then check for
    a profile in the repo currently being worked in (the same
    repo `<feature-slug>` lives in) — Prerequisites already resolved this
    same file and its `profiles/<name>.yml` for the `reporting` gate, so
@@ -168,7 +186,8 @@ apply to this run.
    matching file → treat as stale, use the derived key (if any) as-is,
    same as "missing". Otherwise, if that profile's `ticket` field is
    `false`, discard the derived key entirely for Step 2a regardless of
-   whether `ticket.md` had one — the ticket-key meta span is omitted.
+   whether `ticket.md` had one — `{{TICKET}}` is never omitted, it renders the literal `n/a`
+   instead (see 2a).
 
 **For an SDD ledger:** if it has no `Final review (...)` line, don't quietly proceed.
 This skill's trigger condition *is* "the final review just passed," so a
@@ -222,6 +241,10 @@ the plan file, the ledger, and `git` alone:
   cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.1/lineage-handoff`), or the slug parsed out of its
   filename in Step 1's fallback case. E.g. `capture-ephemeral-url`. Never
   a bare container directory like `plans`.
+- `{{TARGET_FOLDER}}`: the full `<target folder>` path resolved in Step 1, including the
+  `.digismith/` prefix — e.g. `.digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths`
+  or `.digismith/docs/capture-ephemeral-url`. Used in the footer (below), which needs the real
+  resolved folder rather than a hardcoded `.digismith/docs/` prefix glued onto `{{FEATURE_SLUG}}`.
 - **`{{MERGE_BASE_SHORT}}` / `{{HEAD_SHORT}}`** — the short hashes from
   Step 1's commit range.
 - `{{SPEC_RELATIVE_LINK}}` / `{{PLAN_RELATIVE_LINK}}`: same folder as the
@@ -493,7 +516,7 @@ spec/report already uses:
   </ul>
 </section>
 
-<footer>DigiSmith · .digismith/docs/{{FEATURE_SLUG}}/{{REPORT_FILENAME}}</footer>
+<footer>DigiSmith · {{TARGET_FOLDER}}/{{REPORT_FILENAME}}</footer>
 
 </body>
 </html>
@@ -594,8 +617,8 @@ rendered empty.
    - **Ignored (exit 0)** → the report is written but **not** committed.
      Say so plainly: the report was written to
      `<target folder>/report.html` but not committed,
-     because this repo's `.digismith/docs/` is gitignored — matching the
-     choice already made for this repo. Do **not** re-ask the
+     because this repo's `.digismith/board/` (or `.digismith/docs/`, whichever applies) is
+     gitignored — matching the choice already made for this repo. Do **not** re-ask the
      commit-vs-gitignore question, and do **not** override it with
      `git add -f`.
    - **Not ignored (exit 1)** → commit as normal:
@@ -649,8 +672,8 @@ ledger type; this skill's job still just ends here.
   container directory name like `plans`.
 - **Target report path is gitignored in this repo** (`git check-ignore -q`
   exits 0) → write the report, skip `git add`/`git commit`, and say
-  plainly that it wasn't committed because this repo's `.digismith/docs/`
-  is gitignored. Not an error, and not a reason to re-ask the
+  plainly that it wasn't committed because this repo's `.digismith/board/`
+  (or `.digismith/docs/`, whichever applies) is gitignored. Not an error, and not a reason to re-ask the
   commit-vs-gitignore question or to force with `-f`. (Exit code 1 from
   that command means "not ignored" — the normal path — not a failure.)
 - **Report file already exists** → ask before overwriting.
@@ -662,7 +685,7 @@ ledger type; this skill's job still just ends here.
 
 | Step | Action |
 |---|---|
-| 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
+| 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename — or, for a board-folder plan, `<target folder>` is `dirname(plan.md)` directly, validated via `board-path.ts --action parse`); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
 | 2 | Derive header placeholders including `{{TICKET}}` (2a, always rendered — real key or `n/a`) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `<target folder>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
