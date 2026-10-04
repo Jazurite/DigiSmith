@@ -9,10 +9,11 @@ description: Use when the user wants to bring a ticket into DigiSmith's workflow
 
 One entry point, two doors, per DigiSmith's philosophy #4. A ticket
 already exists → ingest it (Door 1). No ticket yet, just a need → shape
-one (Door 2). Both converge on the same
-`.digismith/docs/<slug>/ticket.md` shape. `jira-intake` stops once that
-file exists — grounding it in the codebase is **L**, estimating Story
-Points is **J**, both separate later stages.
+one (Door 2). Both converge on the same Ticket Template shape, written to
+`.digismith/board/<KEY>—<slug>/ticket.md` when a real key is in hand or
+`.digismith/docs/<slug>/ticket.md` otherwise (Step 3.2). `jira-intake` stops
+once that file exists — grounding it in the codebase is **L**, estimating
+Story Points is **J**, both separate later stages.
 
 ## When to Use
 
