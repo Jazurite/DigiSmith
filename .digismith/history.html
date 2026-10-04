@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-10-03</span>
+    <span>Last updated: 2026-10-04</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1422,6 +1422,20 @@
       <div class="date">2026-10-03</div>
       <h4>Flux</h4>
       <p>Flux, the cycle that renews a session, written as a protocol with one owner per step: worker flux (W1 to W3), the start of a ticket (S0 to S6) and maestro flux (M1 to M7). The design and plan are in this folder. Build 1 changed two skills: <code>digismith:handoff</code> now shows a list on resume and asks, accepts "Arise", and lets the maestro's "kicker open? flux now?" yes skip the Check Gate; <code>digismith:finishing-a-development-branch</code> writes no handoff for a worker that started from a brief. Part B brought the design, plan, runbook and the handoff skill into line with the DGS-158 naming convention. See <a href="docs/E/E.4/flux-protocol/design.html">design</a>, <a href="docs/E/E.4/flux-protocol/plan.md">plan</a>, and <a href="docs/E/E.4/flux-protocol/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-04</div>
+      <h4>DGS-159 Part 1+2: Shared Path Modules and the Script Layer</h4>
+      <p>This unit builds the two shared path modules the rest of DGS-159 depends on
+  (<code>scripts/board-path.ts</code>, <code>scripts/session-path.ts</code>) and finishes the half
+  of the script layer Flux Part B deliberately left alone: <code>scripts/lineage-handoff.ts</code>
+  and <code>scripts/session-init.ts</code> now know about the current session-note convention, not
+  just the old clan/lineage fallback, and <code>update-history.ts</code> now recognizes a report
+  written to <code>.digismith/board/</code> as well as the old <code>.digismith/docs/</code>
+  shape. Four self-contained changes landed in dependency order, each with its own test file; no
+  separate implementer subagent was dispatched per task — the work was carried out directly,
+  task by task, with a self-check and a full test run after each. See <a href="board/DGS-159—ticket-based-naming-code-and-files/script-layer/design.html">design</a>, <a href="board/DGS-159—ticket-based-naming-code-and-files/script-layer/plan.md">plan</a>, and <a href="board/DGS-159—ticket-based-naming-code-and-files/script-layer/report.html">report</a>.</p>
     </div>
 
   </div>
