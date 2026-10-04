@@ -115,8 +115,11 @@ Then print this reminder plainly:
 > stays stale after that, restart that session instead. For a herdr worker pane:
 > `herdr agent prompt <agent> "/reload-plugins"`. Untested on the Desktop maestro: it is a
 > remote session, and the CLI has a separate message, "/reload-plugins isn't available over a
-> remote connection in this session," that may apply there — treat the maestro's own reload path
-> as unverified until tested separately (see the live test procedure in this ticket's board
+> remote connection in this session," that may apply there. A `clear_session` is a second
+> possible reload path for the maestro — seen once (2026-10-04: a skill loaded post-clear with
+> text that was stale pre-clear), but not proven, since the session could instead have restarted
+> around the same time. Both the maestro's `/reload-plugins` and its `clear_session` path stay
+> unverified until tested separately (see the live test procedure in this ticket's board
 > folder)."
 
 This session's own tools already reflect the change (files are re-read from disk on each use) —
@@ -355,6 +358,31 @@ is actually loading from right now — not what is merely installed on disk.
 5. **Report back** (pass/fail/inconclusive, plus the exact wording of anything unusual) so hook
    02's reminder text (`.digismith/hooks/post-finish/02-plugin-reinstall.md`) can be tightened
    from "try, and restart if stale" to a confirmed statement either way, in a follow-up change.
+
+## Maestro variant: does a clear_session reload the plugin?
+
+New evidence (2026-10-04): after the maestro's own `clear_session` at 07:49 UTC+7 [00:49Z],
+`digismith:handoff` loaded from `.../cache/jazurite/digismith/0.78.0-beta/skills/handoff` with
+its Part B text, while before that clear the maestro still had the old skill text (Jack's
+complaint of 2026-10-03 22:24 UTC+7 [15:24Z]). This suggests a clear reloads the plugin for the
+maestro — but it is not proven: the session could instead have restarted around the same time.
+This variant isolates the question with the same before/after observable as the worker-pane test
+above, run on the maestro itself instead of a herdr pane:
+
+1. **Before any merge.** In the maestro's own session, invoke any skill and note the version in
+   `Base directory for this skill: .../digismith/<version>/skills/...`.
+2. **After the next merge that bumps the version** (this ticket's own merge, or any later one) —
+   with no clear in between — invoke a skill again, the same way. Expect the *old* version still
+   (confirms the maestro doesn't pick up a bump passively, matching the original "restart
+   required" complaint).
+3. **Then clear** (`clear_session` on the maestro itself, per the Flux protocol's own M3/M4) and
+   invoke a skill again. Expect the *new* version if a clear genuinely reloads the plugin for a
+   remote session.
+
+Pass (step 3 shows the new version) is evidence a clear reloads the plugin, though still not
+proof against "it also happened to restart" unless that possibility can be ruled out separately.
+Fail (step 3 still shows the old version) means neither a clear nor passive time alone reloads
+the maestro's plugin, and only a true process restart does.
 ```
 
 - [ ] **Step 2: Verify**
