@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-159 Part 1+2: Shared Path Modules and the Script Layer — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-159 Part 1+2: Shared Path Modules and the Script Layer — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: <strong>no map letter — ticket-based naming (DGS-159) retires map letters for new work</strong></span>
+    <span>Ticket: <strong>DGS-159</strong></span>
+    <span>Commit range: <code>af9b003..a33c606</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#open">Open Questions</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>This unit builds the two shared path modules the rest of DGS-159 depends on
+  (<code>scripts/board-path.ts</code>, <code>scripts/session-path.ts</code>) and finishes the half
+  of the script layer Flux Part B deliberately left alone: <code>scripts/lineage-handoff.ts</code>
+  and <code>scripts/session-init.ts</code> now know about the current session-note convention, not
+  just the old clan/lineage fallback, and <code>update-history.ts</code> now recognizes a report
+  written to <code>.digismith/board/</code> as well as the old <code>.digismith/docs/</code>
+  shape. Four self-contained changes landed in dependency order, each with its own test file; no
+  separate implementer subagent was dispatched per task — the work was carried out directly,
+  task by task, with a self-check and a full test run after each.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>scripts/board-path.ts</h4>
+      <p>Builds and parses <code>&lt;KEY&gt;—&lt;slug&gt;</code> board folder names:
+      <code>slugify</code>, <code>buildFolderName</code>, <code>boardRelPath</code>,
+      <code>parseFolderName</code>.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>scripts/session-path.ts</h4>
+      <p>Builds and parses <code>.digismith/sessions/&lt;name&gt;/{note,brief}.md</code>:
+      <code>isSafeSessionName</code>, <code>noteRelPath</code>, <code>briefRelPath</code>,
+      <code>listNoteSessionNames</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>lineage-handoff.ts + session-init.ts</h4>
+      <p><code>--action list</code> and the SessionStart banner now list current-convention
+      session notes alongside the old fallback keys, closing a real gap between the handoff
+      skill's documented behavior and the shipped script.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>update-history.ts</h4>
+      <p>Recognizes a board-based report (<code>base: "docs" | "board"</code>), and fixes a live
+      em-dash/<code>core.quotepath</code> bug the new board-shaped test surfaced before it shipped.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Implemented directly in this session, task by task, with a full <code>vitest</code> run after
+  each change and a final full-repo run at the end.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Self-check</th></tr>
+    <tr><td>Task 1: board-path.ts</td><td>Build/parse for board folder names</td>
+      <td>17 tests passing, including the em-dash parse-failure and round-trip cases</td></tr>
+    <tr><td>Task 2: session-path.ts</td><td>Build/parse for session note/brief paths</td>
+      <td>19 tests passing, including the brief-only and <code>workbox-archive</code> exclusion cases</td></tr>
+    <tr><td>Task 3: lineage-handoff.ts + session-init.ts</td>
+      <td>Combined fallback + current-convention listing</td>
+      <td>75 tests passing (71 pre-existing, unmodified; 4 new); fallback-only output confirmed
+      byte-for-byte unchanged when no current note exists</td></tr>
+    <tr><td>Task 4: update-history.ts</td><td>board/ pathspec, slug parsing, base-aware links</td>
+      <td>29 tests passing, including the two board-shaped <code>findChangedReports</code> cases
+      that only pass with the <code>-z</code> fix in place</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: the maestro read the code directly (not only the summary) across two review
+  rounds and found one real pre-merge gap and three smaller issues, all fixed before this report.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>Checkpoint 3: the design's original section 4 claimed the
+      SessionStart banner and <code>--action list</code> were deliberately fallback-only
+      forever. The maestro checked <code>skills/handoff/SKILL.md</code>'s own Overview table and
+      its documented <code>--action list</code> behavior against the actual
+      <code>lineage-handoff.ts</code> code and found a real, pre-existing gap: the script has
+      never scanned <code>.digismith/sessions/</code> at all, so once Part 6 moves the six
+      fallback notes away, a fresh maestro would get no pointer to its own note.</td>
+      <td>Fixed — <code>listNoteSessionNames</code> added to <code>session-path.ts</code>;
+      <code>--action list</code> and <code>buildLineagePointer</code> now combine both kinds.
+      Fallback-only output is unchanged when no current note exists, so no existing caller broke.</td></tr>
+    <tr><td>Important</td><td>Checkpoint 4: <code>buildFolderName</code> silently returned
+      <code>"DGS-159—"</code> (a trailing em dash, nothing after it) for a title with no ASCII
+      letters or digits — <code>slugify</code> drops every non-ASCII character and returns an
+      empty string in that case.</td>
+      <td>Fixed — <code>buildFolderName</code> now throws when <code>slugify</code> returns an
+      empty string, with tests for a non-ASCII-only title and an all-filler-word title.</td></tr>
+    <tr><td>Minor</td><td>Checkpoint 4: <code>isSafeSessionName</code>'s comment claimed to
+      centralize "the same rule" as <code>skills/handoff/SKILL.md</code>'s Resolve the Note step
+      2, but the skill also excludes a lineage-key-looking title
+      (<code>^\s*[A-Z](\.\d+)?\s*(:|$)</code>, e.g. <code>"A.1: Primitives"</code>,
+      <code>"K: Maestro"</code>), which the function didn't.</td>
+      <td>Fixed — added the same exclusion, with tests for both of the skill's own examples and a
+      confirmation that a worker's full ⚚ title still passes.</td></tr>
+    <tr><td>Process</td><td>Checkpoint 4: the branch was behind <code>origin/main</code>
+      (<code>af9b003</code>: DGS-161 merged, plugin bumped to 0.79.0-beta), which also touched
+      <code>.digismith/hooks/post-finish/03-history-update.md</code> — the same file this unit's
+      Task 4 edited, in a different hunk (DGS-161's ssh_key block vs. this unit's board/docs
+      pathspec sentence).</td>
+      <td>Rebased onto <code>origin/main</code>; git merged both hunks cleanly with no conflict
+      markers. Re-ran the five touched test files (140/140) and the full suite (822 passed, the
+      same two pre-existing unrelated failures as before the rebase).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="open">
+  <h2>Open Questions</h2>
+  <ul>
+    <li>The handoff skill's step 5 ("<code>get_session</code> fails or there is no title") can now
+      use <code>--action list</code> for both kinds of name, but its output is a bare list with no
+      marker for which kind each entry is. A fallback key such as <code>"B"</code> could collide
+      with a session literally named <code>"B"</code> — not solved here, flagged for Part 4 or
+      later.</li>
+    <li>Parts 3–7 of DGS-159 remain entirely untouched and wait on Jack's policy answers: where a
+      ticket key comes from in a repo with no tracker key at all, the "no ticket, no work" rule for
+      the 92 <code>backlog/</code> files, the safety of moving the 87 existing
+      <code>.digismith/docs/</code> folders and the six live <code>handoff.md</code> fallback
+      notes, and what happens to <code>MEMORY.md</code>'s clan-letter repo-map table.</li>
+  </ul>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">cdf599e</span> docs(ticket-naming): design for DGS-159 Part 1+2 shared path modules</li>
+    <li><span class="sha">bf5ef02</span> docs(ticket-naming): move the Part 1+2 design into its board folder</li>
+    <li><span class="sha">0b4a93c</span> docs(ticket-naming): record the checkpoint-3 corrections in the design</li>
+    <li><span class="sha">bba0054</span> feat(board-path): add build/parse for &lt;KEY&gt;—&lt;slug&gt; board folder names</li>
+    <li><span class="sha">08ab938</span> feat(session-path): add build/parse for session note and brief paths</li>
+    <li><span class="sha">eec9397</span> feat(handoff): list current-convention session notes alongside the fallback ones</li>
+    <li><span class="sha">9638430</span> fix(history): recognize board/ reports and fix em-dash path parsing</li>
+    <li><span class="sha">615e7cc</span> docs(ticket-naming): plan for DGS-159 Part 1+2</li>
+    <li><span class="sha">9b458d6</span> fix(session-path): exclude lineage-key-looking names, matching the handoff skill's rule</li>
+    <li><span class="sha">a33c606</span> fix(board-path): throw on an empty slug instead of building a trailing-dash name</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/script-layer/report.html</footer>
+
+</body>
+</html>
