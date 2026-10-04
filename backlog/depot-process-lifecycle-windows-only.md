@@ -18,8 +18,8 @@ The same file fails `process-lifecycle.test.ts` here (a known failing test), and
 
 ## To do
 
-1. Decide the platform rule: Linux first, with Windows kept working, or Linux only. Ask Jack: Windows is retired, but the CLI is the product other
-   machines may run.
+1. **Platform rule (decided, Jack, 2026-10-04 22:0x UTC+7 [15:0xZ]): Linux first, and keep Windows working.** Both platforms are supported.
+   Linux is the primary one and the acceptance check runs on the VPS; the existing Windows behavior and its tests must not regress.
 2. Replace the three Windows calls with portable ones: liveness with `process.kill(pid, 0)`, stop with `process.kill(-pid)` on a detached process
    group (or `process.kill(pid)`), and the listening-PID check with `ss -ltnp` on Linux (keep `netstat -ano` on Windows) or a connect-to-port probe.
 3. Keep the parsers testable as pure functions: add Linux fixtures (`ss -ltnp` output) beside the Windows ones.
