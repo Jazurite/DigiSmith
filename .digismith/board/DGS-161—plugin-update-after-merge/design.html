@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plugin update after a merge</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Plugin update after a merge</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: A.3 Lifecycle Hooks (ClickUp DGS-161)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#hook02">Hook 02: update command and cache flush</a></li>
+    <li><a href="#reload">The reload step (point 2)</a></li>
+    <li><a href="#test">Live test procedure for Jack</a></li>
+    <li><a href="#sshkey">Hooks 01/03: dropping the ssh_key read</a></li>
+    <li><a href="#runbook">Runbook wording (point 5)</a></li>
+    <li><a href="#outofscope">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>Problem</h2>
+  <p>A merge to <code>main</code> should leave every live Claude Code session running DigiSmith's own
+  plugin at the new version. Today it does not: the <code>post-finish</code> hooks
+  (<code>.digismith/hooks/post-finish/</code>) that are supposed to handle this have five faults, found
+  live during the Flux build 1 merge (DGS-154). ClickUp DGS-161 lists all five; the maestro has decided
+  the fix direction for four of them and asked this ticket to find, document and wire the fifth
+  (the reload step). This design covers hooks 01, 02 and 03 plus the runbook wording — it does not grow
+  past that.</p>
+</section>
+
+<section id="hook02">
+  <h2>Hook 02: update command and cache flush</h2>
+  <h3>Command fix</h3>
+  <p><code>claude plugin install digismith@jazurite --scope user</code> only installs; once a version is
+  already installed it reports "already installed, run update" and does nothing. The fix swaps the verb,
+  keeping the same marketplace-refresh-first shape the hook already has:</p>
+  <pre><code>claude plugin marketplace update jazurite && claude plugin update digismith@jazurite --scope user</code></pre>
+  <p>Confirmed against the installed CLI (v2.1.283): <code>claude plugin update --help</code> takes
+  <code>--scope</code>, and <code>claude plugin marketplace update &lt;name&gt;</code> takes the
+  marketplace name (<code>jazurite</code>), unchanged from today's call.</p>
+
+  <h3>Cache flush: skip it</h3>
+  <p>The flush loop deletes every subdirectory of
+  <code>~/.claude/plugins/cache/jazurite/digismith/</code> except the current version. A session that is
+  still running on an older version loads its skills from that directory — deleting it out from under a
+  live session is the unsafe case point 3 describes. There is no decided signal yet for "no session still
+  uses the old version," so this design removes the flush entirely rather than guessing one. The whole
+  flush block is deleted and replaced with one printed line:</p>
+  <pre><code>Cache flush skipped (old versions stay in ~/.claude/plugins/cache/jazurite/digismith/
+until there's a safe signal that no running session still uses them — see
+backlog/auto-update-plugin-after-merge.md, point 3).</code></pre>
+  <p>No automatic deletion happens anywhere in this hook after this change. Old version directories
+  accumulate until someone clears them by hand or a later ticket defines the signal.</p>
+</section>
+
+<section id="reload">
+  <h2>The reload step (point 2)</h2>
+  <p>Research this ticket did (reading the installed Claude Code CLI binary, v2.1.283, directly, since
+  there is no published doc for this) found two separate things that were being conflated in the backlog
+  write-up:</p>
+  <ul>
+    <li>The CLI has its own self-updater (<code>claude</code> binary/npm package) with a similar-looking
+    banner, "Update installed · Restart to apply" — unrelated to plugins.</li>
+    <li><code>claude plugin update</code>'s own success message is different text: <code>Plugin "X"
+    updated from A to B ... for scope S. Restart to apply changes.</code> This is the one workers
+    actually saw. Its CLI help text literally says "(restart required to apply)".</li>
+    <li>A real, separate local command, <code>/reload-plugins</code>, exists: "Activate pending plugin
+    changes in the current session." The binary's own notification system
+    (<code>plugin-reload-pending</code> / <code>needsRefresh</code>) tracks marketplace-sourced plugins
+    as one of its three categories (inline, synced, marketplace) — this is not limited to the
+    dev-mode "mods" hot-reload feature that most of the <code>/reload-plugins</code> strings describe.
+    <code>/reload-plugins --force</code> also exists, for re-reading when the normal path reports nothing
+    pending.</li>
+  </ul>
+  <p>What is <strong>not</strong> confirmed: whether <code>/reload-plugins</code> actually picks up a real
+  marketplace-plugin version bump in a live session without a restart. The maestro's condition on this
+  design is explicit: the hook text must not assert this as fact. Hook 02's closing reminder changes
+  from</p>
+  <blockquote><em>"Any other Claude Code sessions already running on this machine won't see this update
+  until restarted."</em></blockquote>
+  <p>to:</p>
+  <blockquote><em>"Any other live session on this machine can try <code>/reload-plugins</code> to pick
+  this up without restarting — if the skill text stays stale, restart that session instead. For a herdr
+  worker pane: <code>herdr agent prompt &lt;agent&gt; "/reload-plugins"</code>. Untested on the Desktop
+  maestro — it is a remote session, and the CLI has a separate message,
+  <code>"/reload-plugins isn't available over a remote connection in this session,"</code> that may apply
+  there; treat the maestro's own reload path as unverified until tested separately."</em></blockquote>
+  <p>This wording is provisional. Once Jack runs the live test (below), hook 02's text is tightened to
+  state whatever was actually observed.</p>
+</section>
+
+<section id="test">
+  <h2>Live test procedure for Jack</h2>
+  <p>Jack runs this himself, from the maestro, using this worker's own pane (<code>dgs-161</code>) as the
+  test subject — not a throwaway pane, since memory is tight. This pane's session started before this
+  ticket's own merge bumps the plugin version, so it is a genuine stale-session test with no extra
+  process.</p>
+  <p>Observable: invoking any skill prints <code>Base directory for this skill:
+  &lt;...&gt;/cache/jazurite/digismith/&lt;version&gt;/skills/&lt;name&gt;</code> as the very first line of
+  that skill's output. The version number in that path is a direct, unambiguous read of which cache
+  directory this specific session is actually loading from right now — not what is merely installed on
+  disk.</p>
+  <ol>
+    <li><strong>Before.</strong> After this ticket's merge and hook 02's successful
+    <code>claude plugin update</code> have both happened (so <code>~/.claude/plugins/cache/jazurite/digismith/</code>
+    has a new version directory newer than what this pane loaded at its own start), run:
+    <pre><code>herdr --session DigiSmith agent prompt dgs-161 "Invoke any digismith skill (for example digismith:toolchain with a harmless read-only argument) and report only its first line."</code></pre>
+    Read the pane's reply: the version number in <code>Base directory for this skill: .../digismith/&lt;version&gt;/skills/...</code>
+    should be the <em>old</em> version (this pane's own session-start version) — if it already shows the
+    new version, this pane already picked it up some other way and is not a valid test subject; stop and
+    say so rather than continuing.</li>
+    <li><strong>Reload.</strong> Confirm the pane is idle (not mid-turn) — a plugin change applies only
+    when the current response finishes, per the CLI's own messaging — then send:
+    <pre><code>herdr --session DigiSmith agent prompt dgs-161 "/reload-plugins"</code></pre>
+    Read whatever the pane prints in response (it may be a short status line, or nothing visible if it
+    queues silently).</li>
+    <li><strong>After.</strong> Repeat the exact same skill-invocation prompt from step 1:
+    <pre><code>herdr --session DigiSmith agent prompt dgs-161 "Invoke any digismith skill (for example digismith:toolchain with a harmless read-only argument) and report only its first line."</code></pre>
+    Read the version number again.</li>
+    <li><strong>Pass / fail.</strong>
+      <ul>
+        <li><strong>Pass</strong> — the "after" version is the new version and the "before" version was
+        the old one. <code>/reload-plugins</code> genuinely updates a live session without a restart.</li>
+        <li><strong>Fail</strong> — the "after" version is unchanged. Try
+        <code>herdr --session DigiSmith agent prompt dgs-161 "/reload-plugins --force"</code> once, then
+        repeat step 3. Still unchanged → <code>/reload-plugins</code> does not apply a marketplace plugin
+        version bump in this setup; a restart (closing and reopening the agent) is the only path, same as
+        before this ticket.</li>
+        <li><strong>Inconclusive</strong> — the pane's reply to either command contains wording like "not
+        available over a remote connection" or similar refusal text. Record the exact wording; it means
+        herdr's own pane is being treated as a remote connection by the CLI, which would change this
+        design's assumption that only the Desktop maestro is affected.</li>
+      </ul>
+    </li>
+    <li><strong>Report back</strong> (pass/fail/inconclusive, and the exact wording of anything unusual)
+    so hook 02's reminder text can be tightened from "try, and restart if stale" to a confirmed statement
+    either way, before this worker's pane closes.</li>
+  </ol>
+</section>
+
+<section id="sshkey">
+  <h2>Hooks 01/03: dropping the ssh_key read</h2>
+  <p>Full list of live <code>ssh_key</code> consumers found by grepping the main checkout (historical
+  docs under <code>.digismith/docs/</code>, <code>backlog/</code>, and tests are excluded — they are
+  records of what shipped, not live behavior):</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Role</th><th>Changed by this ticket?</th></tr>
+    <tr><td><code>.digismith/hooks/post-finish/01-version-bump.md</code></td>
+        <td>Reads <code>ssh_key</code> before pushing the version-bump commit.</td>
+        <td><strong>Yes</strong> — the fault this ticket fixes.</td></tr>
+    <tr><td><code>.digismith/hooks/post-finish/03-history-update.md</code></td>
+        <td>Reads <code>ssh_key</code> before pushing the history-update commit.</td>
+        <td><strong>Yes</strong> — same fault, same fix.</td></tr>
+    <tr><td><code>skills/finishing-a-development-branch/SKILL.md</code> (Option 1 and Option 2)</td>
+        <td>Resolves <code>ssh_key</code> via <code>digismith:preferences</code>' <code>get</code> and
+        builds <code>SSH_KEY_PREFIX</code> for the merge-time push and the PR-branch push.</td>
+        <td>No. Not reported as blocked by the classifier; out of scope per the maestro's instruction.</td></tr>
+    <tr><td><code>skills/bootstrap/SKILL.md</code> Step 0.6</td>
+        <td>Asks once per repo which key file to use, stores the answer.</td>
+        <td>No.</td></tr>
+    <tr><td><code>skills/adopt/SKILL.md</code> Step 2</td>
+        <td>Runs bootstrap's Step 0.6 verbatim as part of its own profile/credential resolution.</td>
+        <td>No.</td></tr>
+    <tr><td><code>skills/preferences/SKILL.md</code></td>
+        <td>Documents <code>ssh_key</code> as an example preference key. Not a consumer — no
+        <code>get</code>/<code>set</code> call of its own.</td>
+        <td>No.</td></tr>
+    <tr><td><code>MEMORY.md</code> (H row, H.2 entry)</td>
+        <td>Historical record of what shipped 2026-09-19: lists the two hooks and
+        <code>finishing-a-development-branch</code> as consumers.</td>
+        <td>No — a shipped-history entry is not rewritten after the fact; it will read as slightly stale
+        for the two hooks once this ticket merges, same as any other historical entry whose consumer list
+        changes later. Out of scope for this ticket to edit.</td></tr>
+  </table>
+  </div>
+  <p>Only the two <code>post-finish</code> hooks change. In each, the whole
+  <code>SSH_KEY=$(... preferences.ts --key ssh_key --action get)</code> line and the
+  <code>if/else</code> around the push are deleted, replaced with a plain, unconditional push:</p>
+  <pre><code>git add &lt;files&gt; && \
+git commit -m "&lt;message&gt;" -- &lt;files&gt; && \
+git push origin &lt;base-branch&gt;</code></pre>
+  <p>Each hook file already carries prose immediately below its code block that says what to do if the
+  push is rejected: "stop, report the rejection plainly, and investigate — do not force-push
+  automatically." That prose already satisfies "say plainly and stop if git push fails" — it needs no new
+  wording, since it already covers a failed/rejected push for an agent following these instructions as a
+  skill. One new sentence is added to each hook, directly under the push line, making the behavior change
+  explicit for a future reader:</p>
+  <blockquote><em>"This push always uses the environment's default git/SSH config now, never a configured
+  <code>ssh_key</code> preference. A repo whose default config can't reach the remote will have this push
+  fail here — loudly, per the rejection handling above — rather than silently succeeding through a
+  preference this hook no longer reads."</em></blockquote>
+  <p>This repo's own default config already pushes fine with no key override (confirmed: this is exactly
+  what the worker who hand-ran these hooks after the Flux merge already did, successfully, with a plain
+  <code>git push origin main</code>).</p>
+</section>
+
+<section id="runbook">
+  <h2>Runbook wording (point 5)</h2>
+  <p>The maestro writes this into <code>.digismith/sessions/workbox.md</code> directly (it is untracked;
+  this ticket never edits it). Wording for the worker-merge-order step:</p>
+  <blockquote><em>"After a worker merges to <code>main</code> (Option 1 or 2 of
+  <code>finishing-a-development-branch</code>, or a maestro-ordered hand merge), the merge order must say:
+  fire the post-finish hooks (<code>fire-lifecycle-hook.md</code>). A hand merge that skipped Option 1
+  needs the merge-range pins set by hand first (same doc, 'Merge-range pins') before the hooks can read a
+  range."</em></blockquote>
+</section>
+
+<section id="outofscope">
+  <h2>Out of scope</h2>
+  <ul>
+    <li>A safe signal for when the cache flush can run (point 3's open half) — stays a manual/TODO step,
+    tracked in the existing backlog item.</li>
+    <li>A confirmed, automated reload mechanism for the Desktop maestro's own (remote) session — the live
+    test above only covers a herdr worker pane. If the test comes back needing maestro-specific work,
+    that is a separate ticket, not an expansion of this one.</li>
+    <li>Any change to <code>finishing-a-development-branch</code>, <code>bootstrap</code>, or
+    <code>adopt</code>'s own <code>ssh_key</code> handling.</li>
+    <li>Editing <code>MEMORY.md</code>'s historical H.2 entry.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-161—plugin-update-after-merge/design.html</footer>
+
+</body>
+</html>
