@@ -844,12 +844,55 @@ it didn't:
   applies — change only that one line, from `<footer>DigiSmith ·
   .digismith/docs/<slug>/design.html</footer>` to `<footer>DigiSmith · <target
   folder>/design.html</footer>` (literally `.digismith/board/<KEY>—<slug>/design.html` or
-  `.digismith/docs/<slug>/design.html`). Every other line of the shell, and the gitignore check
-  immediately below it, stays exactly as shipped — just substitute `<target folder>` for whichever
-  path Step 3 resolved wherever this section already says `.digismith/docs/<slug>/design.html`.
+  `.digismith/docs/<slug>/design.html`). Every other line of the shell stays exactly as shipped.
 ```
 
-- [ ] **Step 4: Update Quick Reference rows 3, 5, 6**
+The gitignore check sentence immediately below the shell also names a literal path — it must
+substitute the same way as the footer line, not stay hardcoded to `docs/`. Old text:
+
+```markdown
+  Respect the gitignore check before committing: `git check-ignore -q
+  .digismith/docs/<slug>/design.html` — exit 0 (ignored) → write the file, skip `git
+  add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. No spec supplied
+  → skip `design.html` entirely, not an error.
+```
+
+New text:
+
+```markdown
+  Respect the gitignore check before committing: `git check-ignore -q
+  <target folder>/design.html` (literally `.digismith/board/<KEY>—<slug>/design.html` or
+  `.digismith/docs/<slug>/design.html`) — exit 0 (ignored) → write the file, skip `git
+  add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. No spec supplied
+  → skip `design.html` entirely, not an error.
+```
+
+- [ ] **Step 4: Replace Step 7's hardcoded hand-off path**
+
+Old text:
+
+```markdown
+### Step 7: Hand Off to Build
+
+Invoke `digismith:subagent-driven-development` directly against
+`.digismith/docs/<slug>/plan.md` — `digismith:brainstorming` and
+`digismith:writing-plans` already ran outside DigiSmith for this ticket,
+so they are not invoked here. From this point on,
+```
+
+New text:
+
+```markdown
+### Step 7: Hand Off to Build
+
+Invoke `digismith:subagent-driven-development` directly against
+`<target folder>/plan.md` — `.digismith/board/<KEY>—<slug>/plan.md` when Step 3 resolved a key,
+`.digismith/docs/<slug>/plan.md` otherwise (unchanged) — `digismith:brainstorming` and
+`digismith:writing-plans` already ran outside DigiSmith for this ticket,
+so they are not invoked here. From this point on,
+```
+
+- [ ] **Step 5: Update Quick Reference rows 3, 5, 6**
 
 Old text:
 
@@ -869,23 +912,31 @@ New text:
 | 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into the resolved target folder — `.digismith/board/<KEY>—<slug>/` when Step 3 resolved a key, `.digismith/docs/<slug>/` otherwise |
 ```
 
-- [ ] **Step 5: Self-check against two scenarios**
+- [ ] **Step 6: Self-check against three scenarios**
 
 1. **`ticket: true` repo, Step 1 confirms key `EMKT-9001`.** Step 3 → "Otherwise" branch → Door 1
    with `EMKT-9001` → `.digismith/board/EMKT-9001—<slug>/ticket.md`. Step 6 → target folder is that
-   same board path for `plan.md`/`design.html`. Matches design section 6's adopt card.
+   same board path for `plan.md`/`design.html`, and its gitignore check and Step 7's hand-off both
+   point at that same board path too — not left pointing at `docs/`. Matches design section 6's
+   adopt card.
 2. **`ticket: false` repo (`personal`), Step 1 finds no real key.** Step 3 → first branch →
    derive slug directly, no `ticket.md`. Step 6 → target folder is
    `.digismith/docs/<slug>/`, exactly the pre-existing unmodified behavior — confirms the keyless
-   path in this skill got no edit either.
+   path in this skill got no edit either, including its gitignore check and Step 7's hand-off.
+3. **Re-read Step 6's gitignore-check sentence and Step 7's hand-off sentence specifically** (not
+   just the footer line) — confirm neither still hardcodes `.digismith/docs/<slug>/...` for the
+   keyed case. This is the exact gap a prior pass on this task left behind: the footer line was
+   fixed but the gitignore-check line and Step 7's own path were missed, because the first draft's
+   instruction here was self-contradictory ("stays exactly as shipped" next to "substitute
+   wherever this section says docs/<slug>") rather than naming both target spots explicitly.
 
-- [ ] **Step 6: Diff review — confirm no unrelated line was dropped**
+- [ ] **Step 7: Diff review — confirm no unrelated line was dropped**
 
 Run `git diff -- skills/adopt/SKILL.md` and read every removed line. For each one, point to the
 replacement line that does the same job for the keyed path. Any removed sentence with no
-replacement doing its job is a bug — fix it before Step 7.
+replacement doing its job is a bug — fix it before Step 8.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add skills/adopt/SKILL.md
