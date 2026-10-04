@@ -10,8 +10,9 @@
 # task sequences — plan-scoping removes that failure structurally.
 #
 # Every DigiSmith plan file is literally named plan.md (flat
-# .digismith/docs/<slug>/plan.md or nested
-# .digismith/docs/<Letter>/<Letter>.<N>-<slug>/plan.md), so the plan's own
+# .digismith/docs/<slug>/plan.md, nested .digismith/docs/<Letter>/<Letter>.<N>-<slug>/plan.md,
+# or a keyed .digismith/board/<KEY>—<slug>/plan.md, itself possibly nested one level under a
+# worker subfolder), so the plan's own
 # parent directory is what's unique — nest as <plan_dir>/.sdd-workspace/.
 # For a plan file whose own name already carries the differentiating
 # info (e.g. upstream Superpowers' own default
