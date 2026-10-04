@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-159 Part 3: Ticket Lifecycle Skills — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">for design approval</span>
+  <h1>DGS-159 Part 3: Ticket Lifecycle Skills — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Ticket: DGS-159 (E.3: Conventions), worker dgs-159-lifecycle</span>
+    <span>Scope: skills/bootstrap, skills/adopt, skills/init, skills/jira-intake</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#scope">1. Scope</a></li>
+    <li><a href="#split">2. The key is optional, not forbidden</a></li>
+    <li><a href="#api">3. board-path.ts: a key that may be absent</a></li>
+    <li><a href="#stop">4. ticket: true with no key still stops</a></li>
+    <li><a href="#gate">5. The real gap: a ticket:false repo throwing an available key away</a></li>
+    <li><a href="#skills">6. Per-skill changes</a></li>
+    <li><a href="#open">7. Open items for Jack</a></li>
+    <li><a href="#pathrules">8. Path rules (for Part 4)</a></li>
+  </ol>
+</nav>
+
+<section id="scope">
+  <h2>1. Scope</h2>
+  <p>DGS-159 applies the ticket-based naming convention (DGS-158) to the code and the files. This
+  unit is Part 3: the four skills that start a ticket's work —
+  <code>skills/bootstrap</code>, <code>skills/adopt</code>, <code>skills/init</code>,
+  <code>skills/jira-intake</code> — today write <code>.digismith/docs/&lt;slug&gt;/{ticket,plan,design.html}</code>
+  in any repo, keyed by nothing but a slug. This design moves them to
+  <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>, per the convention at
+  <code>.digismith/docs/E/E.3/worker-maestro-conventions/design.html</code> (sections 2, 6, 9).</p>
+  <p>Out of scope: the nine skills that only mention the path in passing (Part 4), moving any of
+  the ~70 existing <code>.digismith/docs/</code> folders or the <code>backlog/</code> files (other
+  tickets), and <code>MEMORY.md</code> (another worker's ticket).</p>
+</section>
+
+<section id="split">
+  <h2>2. The key is optional, not forbidden</h2>
+  <p><strong>Decided by Jack (checkpoint 1, 2026-10-04):</strong> the board folder shape depends on
+  whether a tracker key is actually in hand for this work, not on the repo's <code>ticket:</code>
+  profile flag alone.</p>
+  <ul>
+    <li><strong>A key is available</strong> — always true for a <code>ticket: true</code> repo
+      (<code>profiles/emma.yml</code>), and true for a <code>ticket: false</code> repo whenever one
+      is supplied anyway (DigiSmith's own repo, <code>profiles/digismith.yml</code>, is
+      <code>ticket: false</code> yet every one of its own tickets, this one included, carries a
+      real DGS key) → the keyed folder, <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>.</li>
+    <li><strong>No key anywhere</strong> — a <code>ticket: false</code> repo with genuinely no
+      tracker involved (<code>personal</code>, <code>jazurite</code>) → the keyless folder,
+      <code>.digismith/board/&lt;slug&gt;/</code>.</li>
+  </ul>
+  <p><strong>Rejected alternative: the folder shape depends only on the profile, never on a
+  supplied key.</strong> Simpler to state (one lookup, no runtime branching on key presence) — but
+  its cost is exactly the case this ticket is run under: DigiSmith's own repo would mechanically
+  derive a bare, keyless slug for every one of its own tickets and discard the real DGS key it
+  already has in hand, even though the key is sitting right there in the request. Jack's own
+  reasoning (checkpoint 1): the convention says the key comes from the tracker, so an available key
+  should be used, not thrown away. Rejected for that reason.</p>
+</section>
+
+<section id="api">
+  <h2>3. board-path.ts: a key that may be absent</h2>
+  <p>No existing caller depends on <code>buildFolderName</code>/<code>boardRelPath</code> yet (Part
+  1+2 shipped the module with tests only). Widening <code>key</code> to
+  <code>string | undefined</code> is therefore additive, not breaking — every existing call site
+  passes a concrete string, which is still valid, and every existing test keeps passing unchanged
+  (verified against <code>scripts/board-path.test.ts</code> line by line below).</p>
+  <pre><code>export function formatFolderName(key: string | undefined, slug: string): string {
+  if (slug === "") throw new Error(`cannot format a board folder name: slug is empty`);
+  const prefix = key === undefined ? "" : `${key.toUpperCase()}${EM_DASH}`;
+  return `${prefix}${slug}`.normalize("NFC");
+}
+
+export function buildFolderName(key: string | undefined, title: string): string {
+  const slug = slugify(title);
+  if (slug === "") {
+    throw new Error(`cannot build a board folder name: title has no slug-able content: ${title}`);
+  }
+  return formatFolderName(key, slug);
+}
+
+export function boardRelPath(key: string | undefined, title: string): string {
+  return `${BOARD_DIR_PATH}/${buildFolderName(key, title)}`;
+}
+
+// For a caller that already has a final slug in hand (init, resolving one from a branch name)
+// rather than a raw title — skips slugify, which a branch-derived slug must never go through
+// again (re-truncation/re-filler-dropping on an already-final slug is not guaranteed idempotent).
+export function boardRelPathForSlug(key: string | undefined, slug: string): string {
+  return `${BOARD_DIR_PATH}/${formatFolderName(key, slug)}`;
+}</code></pre>
+  <p><strong>Parsing.</strong> A legitimate keyless folder name is always pure lowercase —
+  <code>slugify</code> never emits an uppercase character. So an uppercase
+  <code>&lt;PREFIX&gt;-&lt;number&gt;</code>-looking prefix followed by a plain hyphen or en dash,
+  with no em dash anywhere in the name, can never be a real keyless folder — it can only be the
+  exact mistake section 9 already names (a human substituting the wrong dash for a keyed name).
+  That is the one case <code>parseFolderName</code> must still fail loudly on; every other
+  no-em-dash name is a legitimate keyless folder.</p>
+  <pre><code>export type ParsedFolderName = { key: string | undefined; slug: string };
+
+// Matches only an uppercase <PREFIX>-<number> prefix immediately followed by a plain hyphen or
+// en dash — never a lowercase slug segment, since slugify can't produce one of those.
+const KEY_LIKE_PREFIX = /^[A-Z]+-\d+[-–]/;
+
+export function parseFolderName(name: string): ParsedFolderName {
+  const dashIndex = name.indexOf(EM_DASH);
+  if (dashIndex === -1) {
+    if (KEY_LIKE_PREFIX.test(name)) {
+      throw new Error(`no em dash (U+2014) found in board folder name: ${name}`);
+    }
+    return { key: undefined, slug: name };
+  }
+  const rawKey = name.slice(0, dashIndex).toUpperCase();
+  if (!KEY_PATTERN.test(rawKey)) {
+    throw new Error(`board folder name's key part is not <PREFIX>-<number>: ${name}`);
+  }
+  return { key: rawKey, slug: name.slice(dashIndex + EM_DASH.length) };
+}</code></pre>
+  <p>Checked against every existing test in <code>scripts/board-path.test.ts</code>: the two
+  dash-substitution cases (<code>DGS-159-ticket-based-naming</code>,
+  <code>DGS-159–ticket-based-naming</code>) both still throw — both match
+  <code>KEY_LIKE_PREFIX</code>. <code>not-a-key—some-slug</code> still throws on the key-pattern
+  check (it has an em dash, so it never reaches the new branch at all). Every keyed round-trip,
+  case-insensitivity, and multi-em-dash case is untouched — none of them go through the new branch
+  either. A slug such as <code>fix-123-bug</code> does not match <code>KEY_LIKE_PREFIX</code> (the
+  prefix must be uppercase), so it correctly returns <code>{ key: undefined, slug: "fix-123-bug" }</code>
+  rather than a false-positive throw.</p>
+  <p><strong>Considered and rejected: a separate keyless pair</strong>
+  (<code>buildKeylessFolderName</code>/<code>parseKeylessFolderName</code>, fully split from the
+  keyed functions) — avoids widening an already-shipped signature, but doubles the API every future
+  consumer (Part 4, in particular) has to learn and pick between, for no behavioral difference. The
+  optional-key form reads the same decision (is a key in hand or not) as a single branch inside one
+  pair of functions, which is what Part 4 will need to apply across nine more skills without asking
+  this ticket's worker again.</p>
+</section>
+
+<section id="stop">
+  <h2>4. ticket: true with no key still stops</h2>
+  <p>Unchanged — not new code. <code>jira-intake</code> already stops cleanly when Door 1 has
+  neither a JIRA tool nor a pasted answer, and <code>bootstrap</code> Step 1 already stops when
+  the result has no <code>**Key:**</code> line (a Door 2 draft never upgraded). Both checks run
+  before any board folder is touched. This design does not add a new stop condition; it only
+  confirms the existing ones still gate every path that would otherwise reach
+  <code>boardRelPath</code> with no key for a <code>ticket: true</code> repo.</p>
+</section>
+
+<section id="gate">
+  <h2>5. The real gap: a ticket:false repo throwing an available key away</h2>
+  <p>Checked against the actual skill text, not just the profile schema. <code>digismith:adopt</code>
+  Step 1 <em>already</em> asks for the ticket key unconditionally, every time, regardless of the
+  active profile — then Step 3's own <code>ticket: false</code> branch throws it away: "skip
+  straight to deriving the slug directly... No <code>ticket.md</code> gets written." That is
+  precisely section 2's rejected alternative, already live in <code>adopt</code> today. The fix is
+  narrow: Step 3's <code>ticket: false</code> branch gains one check — if Step 1 already confirmed a
+  real key, invoke <code>digismith:jira-intake</code> Door 1 with it (same "already confirmed,
+  don't ask again" call Step 3 already makes for a <code>ticket: true</code> repo) and use the
+  keyed folder; only derive the slug directly and use the keyless folder when Step 1 found no key
+  at all.</p>
+  <p><code>digismith:bootstrap</code> has no equivalent prior step that asks for a key at all under
+  <code>ticket: false</code> — it jumps straight to deriving a slug. The same fix applies, moved
+  earlier: before skipping <code>jira-intake</code>, check whether a real tracker key is already
+  evident from how this work was requested — the user named one, or (DigiSmith's own case) the
+  dispatching context supplied one directly, the way this very ticket's brief named DGS-159. If one
+  is evident, invoke <code>digismith:jira-intake</code> Door 1 with it instead of skipping intake
+  outright; otherwise, unchanged.</p>
+  <p><code>jira-intake</code> itself needs no change to its own door logic — it has never read the
+  <code>ticket:</code> field (confirmed by re-reading its SKILL.md: every "ticket" occurrence there
+  is the English word, not the profile flag). It only needs its <em>target path</em> updated
+  (section 6) — which door ran, and whether that door's output carries a real key, already fully
+  determines keyed-vs-keyless without jira-intake ever consulting the profile.</p>
+</section>
+
+<section id="skills">
+  <h2>6. Per-skill changes</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">bootstrap</span><h4>Step 1, Step 1.5, Step 2</h4>
+      <p>Step 1: add the key-already-evident check above before the <code>ticket: false</code>
+      skip. Step 1.5/telemetry marker: unchanged shape, <code>slug</code> is now the board folder's
+      slug component specifically. Step 2: every <code>.digismith/docs/&lt;slug&gt;/...</code> path
+      becomes <code>boardRelPath(key, title)</code>'s result, resolved once and carried forward
+      (never re-derived from a bare slug later). Branch naming (Step 2's <code>&lt;Key&gt;__&lt;slug&gt;</code>
+      vs. <code>&lt;slug&gt;</code> rule) is untouched — flagged in section 7, not decided here.</p></div>
+    <div class="card"><span class="tag">adopt</span><h4>Step 3, Step 6</h4>
+      <p>Step 3: the narrow fix in section 5 — use the key Step 1 already confirmed instead of
+      discarding it under <code>ticket: false</code>. Step 6 ("Relocate the Docs"): target path
+      becomes the resolved board path instead of <code>.digismith/docs/&lt;slug&gt;/</code>; the
+      HTML shell's footer line and Step 6's own embedded copy both need their literal
+      <code>.digismith/docs/&lt;slug&gt;/design.html</code> string updated to match.</p></div>
+    <div class="card"><span class="tag">init</span><h4>Step 0, Step 1</h4>
+      <p>Never reads <code>ticket:</code> itself — delegates entirely to bootstrap/adopt. Its own
+      branch-name-to-path check (Step 0 item 2, Step 1 rows 2–3) moves from
+      <code>.digismith/docs/&lt;slug&gt;/plan.md</code> to the board path: parse the branch name for
+      a <code>^([A-Z]+-\d+)__</code> prefix (key + slug) or treat the whole name as the slug
+      (keyless), then check <code>boardRelPathForSlug(key, slug)/plan.md</code> — the slug-only
+      join, since a branch name is already final, never re-slugified.</p></div>
+    <div class="card"><span class="tag">jira-intake</span><h4>Step 3, Handling Existing Files</h4>
+      <p>Target path: <code>boardRelPath(key, title)</code> when the ticket being written has a
+      real <code>**Key:**</code> (Door 1, or an upgraded Door 2 draft), <code>boardRelPath(undefined, title)</code>
+      otherwise (a Door 2 draft, or any <code>ticket: false</code> repo with none supplied). The
+      "Blank/absent → Door 1, now has a real key → Upgrade" row in Handling Existing Files changes
+      from an in-place field edit to a folder move: the whole
+      <code>.digismith/board/&lt;slug&gt;/</code> folder (ticket.md and anything already sitting
+      beside it) moves to <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code> — the same
+      move-and-correct idiom <code>digismith:adopt</code> Step 3.2 already uses for its own
+      branch-slug correction. Step 3.3's commit-vs-gitignore probe moves from
+      <code>.digismith/docs/</code> to the repo-wide <code>.digismith/</code> itself (both the
+      <code>git check-ignore -q</code> call and the <code>git ls-files</code> already-tracked
+      check) — flagged as a migration-safety fix in section 7, not merely a path rename.</p></div>
+  </div>
+</section>
+
+<section id="open">
+  <h2>7. Open items for Jack</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Item</th><th>Why it's open</th></tr>
+    <tr><td>Branch naming (<code>bootstrap</code> Step 2): should
+      <code>&lt;Key&gt;__&lt;slug&gt;</code> vs. <code>&lt;slug&gt;</code> alone also follow
+      "a key is available" rather than the strict <code>ticket:</code> flag, for the same reason
+      section 2 gives for the board folder?</td>
+      <td>Out of this ticket's stated scope (docs/board path only) — flagging it rather than
+      silently extending scope or silently leaving an inconsistency. Branch renaming also touches
+      <code>init</code>'s resume detection and worktree reuse, a bigger surface than the docs path
+      alone.</td></tr>
+    <tr><td><code>jira-intake</code>'s commit-vs-gitignore probe moving from
+      <code>.digismith/docs/</code> to <code>.digismith/</code> (section 6)</td>
+      <td>Needed for migration correctness — a repo (DigiSmith's own included) that already decided
+      "committed" under the old <code>docs/</code> path would otherwise look like first-use the
+      moment <code>board/</code> has zero tracked files in it, and get asked the gitignore question
+      again. Flagging as a design-level fix bundled into this ticket's own path rename, since Part 3
+      is the unit touching this exact check anyway.</td></tr>
+    <tr><td>Existing <code>.digismith/docs/</code> Door-2 drafts with no key, written before this
+      design</td><td>Out of scope — DGS-159's own ticket text assigns moving the ~70 existing
+      <code>docs/</code> folders to a separate part (Part 6). This design only changes where new
+      writes land.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="pathrules">
+  <h2>8. Path rules (for Part 4)</h2>
+  <ul>
+    <li><strong>A tracker key is known</strong> (always for <code>ticket: true</code>; for
+      <code>ticket: false</code>, whenever one is supplied anyway) →
+      <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>, via
+      <code>boardRelPath(key, title)</code>, or <code>boardRelPathForSlug(key, slug)</code> when the
+      slug is already final (e.g. read from a branch name).</li>
+    <li><strong>No tracker key is known</strong> (<code>ticket: false</code>, genuinely none
+      supplied) → <code>.digismith/board/&lt;slug&gt;/</code>, via
+      <code>boardRelPath(undefined, title)</code> / <code>boardRelPathForSlug(undefined, slug)</code>.</li>
+    <li><code>ticket.md</code> exists only inside a folder <code>jira-intake</code> actually wrote
+      one into — absent wherever intake was skipped outright (bootstrap's no-key,
+      <code>ticket: false</code> fast path).</li>
+    <li><code>design.html</code>, <code>plan.md</code>, <code>report.html</code> all reuse the one
+      resolved board path, carried forward from wherever it was first resolved — never re-derived
+      from a bare slug partway through a skill chain.</li>
+    <li>A <code>ticket: true</code> repo with no resolvable key stops before any board folder work
+      starts at all (section 4) — the pre-existing <code>jira-intake</code>/<code>bootstrap</code>
+      stop conditions, unchanged.</li>
+    <li><code>parseFolderName(name)</code> returns <code>{ key: string | undefined; slug }</code> —
+      <code>undefined</code> for a genuine keyless folder, never a thrown error for one. It still
+      throws only when the name looks like a keyed name typed with the wrong dash (section 3).</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/design.html</footer>
+
+</body>
+</html>
