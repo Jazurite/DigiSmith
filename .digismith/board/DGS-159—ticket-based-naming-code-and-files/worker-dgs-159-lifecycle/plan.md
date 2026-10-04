@@ -235,7 +235,7 @@ Old text (the whole `### Step 3: Derive the Slug and Write` section):
    the, on, to, of, for, in), replace remaining non-alphanumeric runs with
    a single hyphen, then truncate to ~40 characters at a word boundary —
    never leaving a trailing filler word or hyphen. Example: "Fix cart
-   drawer padding on mobile checkout" -> `fix-cart-drawer-padding-mobile`.
+   drawer padding on mobile checkout" → `fix-cart-drawer-padding-mobile`.
    Determinism matters here: two independent runs for the same feature
    must land on the same slug, or the Handling Existing Files table below
    never fires.
@@ -314,7 +314,7 @@ New text:
    the, on, to, of, for, in), replace remaining non-alphanumeric runs with
    a single hyphen, then truncate to ~40 characters at a word boundary —
    never leaving a trailing filler word or hyphen. Example: "Fix cart
-   drawer padding on mobile checkout" -> `fix-cart-drawer-padding-mobile`.
+   drawer padding on mobile checkout" → `fix-cart-drawer-padding-mobile`.
    Determinism matters here: two independent runs for the same feature
    must land on the same slug, or the Handling Existing Files table below
    never fires.
@@ -1118,14 +1118,36 @@ keyed-vs-keyless target path and the Door-2-upgrade-as-move behavior, init's slu
 the Step 3 grep audit's result, and the open items from the design (branch naming, DGS-164's scope)
 still waiting on the maestro.
 
-- [ ] **Step 5: Commit**
+**The post-finish history hook parses this file — satisfy its exact markup** (learned from the
+Part 5 merge, so this unit's own merge doesn't fail the same way):
+- `<h1>FEATURE TITLE — Implementation Report</h1>` — a real em dash (U+2014) with spaces on both
+  sides, not a plain hyphen.
+- A line containing `Map item: <strong>...</strong>` — write a real value, e.g.
+  `Map item: <strong>DGS-159 Part 3</strong>`. This field is a leftover of the retired clan-letter
+  system; satisfy it as-is here, don't redesign it.
+- `<span>Date: ...</span>` with the real date from the `date` command above.
+- `<section id="summary">` containing at least one `<p>`.
+
+- [ ] **Step 5: Verify the report against the real parser, before committing**
+
+Run:
+
+```bash
+node --experimental-strip-types -e "import('./.digismith/hooks/post-finish/scripts/update-history.ts').then(m=>console.log(m.parseReport(process.argv[1])))" ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
+```
+
+Expected: prints a parsed object, does not throw. If it throws, the markup in Step 4 is wrong —
+fix `report.html` and re-run this check before continuing. This is the same hook that will run at
+merge time; catching a mismatch here avoids a merge-time failure.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
 git commit -m "docs(ticket-naming): report for DGS-159 Part 3"
 ```
 
-- [ ] **Step 6: Report to the maestro**
+- [ ] **Step 7: Report to the maestro**
 
 State all commit hashes and messages, the files touched, that every task's self-check passed, and
 that no keyless path anywhere in this plan was edited. Do not push: wait for "approved: push"
