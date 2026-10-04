@@ -22,6 +22,13 @@ defines who the Master is; this item keeps *what the Master decides and what the
   (permission rule plus a pre-approved script directory) as input.
 - **Worker.** Unchanged (DGS-158: a ticket, a brief, no state). Only restate it next to the others.
 
+## Moved here from DGS-170 (2026-10-04): what the Master decides, and never has to do
+
+DGS-170 settled who the Master is (anyone holding the SSH key, attached to a persistent maestro). The detail of its decisions belongs here:
+policy, design approvals, which projects exist, and the ClickUp writes the maestro may not make. What the Master never has to do: answer
+routine worker prompts, create a ticket for a backlog item (DGS-163). Still to define: which of the Master's decisions several Masters
+share, and whether any Master can approve anything or some approvals need a named Master.
+
 ## Open questions
 
 - Is a Scout a worker kind, or a separate role with its own account and quota rules (it spends little)?

@@ -17,6 +17,8 @@ maestro is the part that changes: where it lives, how many there are, how it is 
   (DGS-175), never a worker directly.
 - **No kicker.** "We will not keep the kicker, because now we still need a kicker to reset the maestro session." The kicker is the
   workaround for a Desktop maestro that cannot be reset from outside.
+- **Persistent on the VPS, started by a command** (Jack's answers on DGS-170, 2026-10-04): a Master's session attaches to a persistent
+  maestro on the VPS; there can be several Masters (anyone with the SSH key); a maestro is started by a `dg` command.
 - **A requirement for this design:** the state kept in one structured place that a client can read (a state file: the roster, the open
   questions for the Master, a decision log with a reason each, the next steps), not only in prose notes.
 - **Out of scope:** the maestro's review steps ("another ticket", Jack). The Scout, the Reviewer and what the Master decides are DGS-171.
@@ -41,6 +43,11 @@ maestro is the part that changes: where it lives, how many there are, how it is 
 - **Where an order comes from (provenance), when the maestro runs in a pane.** The Desktop maestro tells a user turn from a peer message
   and an app approval card from a worker's text. In a herdr pane `herdr agent prompt` is typed input, and any process on the VPS can send
   it. The Master's identity (DGS-170: the SSH-key holder, maybe signed orders) has to reach the maestro in a way a worker cannot fake.
+- **Several Masters attached to one maestro.** The typing rule: a herdr pane has one typing client at a time; an OpenCode session takes
+  several clients. The decision log records **which Master** gave each order (a label the client sends, or one authorized key per Master).
+  A "stop" order that halts the maestro at its next safe point (a proposal, not yet Jack's).
+- **The command that starts a maestro** (a `dg` command; its name and home, `dg workbox` DGS-151 or another). It creates the herdr session
+  named after the project and starts the maestro with the project's brief and note, replacing the manual steps of DGS-173.
 - **Which seat or model it uses** (fixed on `dev0` today; a TokenReply model spends no seat quota).
 
 ## Output

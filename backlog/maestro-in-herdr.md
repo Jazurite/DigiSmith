@@ -56,6 +56,12 @@ What B costs:
 
 A mixed shape is possible too: the OpenCode server as the multi-client hub, with the model chosen per task.
 
+## Direction confirmed (Jack's answers on DGS-170, 2026-10-04)
+
+The maestro is **persistent on the VPS** and a Master's session **attaches** to it. Several Masters (anyone with the SSH key) can attach, so
+the shape must support several clients: a herdr pane allows one typing client at a time, an OpenCode session takes several. A maestro is
+started by a `dg` command.
+
 ## What it would change
 
 - **No kicker.** A maestro in herdr is cleared or restarted like a worker (exit, start again with its note, `Arise`), by a script or by
