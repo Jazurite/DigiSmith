@@ -67,7 +67,8 @@
   <div class="meta">
     <span>Date: 2026-10-04</span>
     <span>Map item: no map letter — ticket-based naming (DGS-159) retires map letters for new work</span>
-    <span>Status: awaiting approval</span>
+    <span>Ticket: DGS-159</span>
+    <span>Status: approved by the maestro 2026-10-04 (checkpoint 3), with three changes — see section 8</span>
   </div>
 </header>
 
@@ -77,10 +78,11 @@
     <li><a href="#what">1. What this unit is</a></li>
     <li><a href="#board">2. scripts/board-path.ts</a></li>
     <li><a href="#session">3. scripts/session-path.ts</a></li>
-    <li><a href="#bridge">4. lineage-handoff.ts and session-init.ts: no functional change</a></li>
+    <li><a href="#bridge">4. lineage-handoff.ts and session-init.ts — corrected at checkpoint 3</a></li>
     <li><a href="#exclude">5. .git/info/exclude: a conflict with the spec, flagged for approval</a></li>
     <li><a href="#testing">6. Testing</a></li>
     <li><a href="#out">7. Explicitly out of scope</a></li>
+    <li><a href="#checkpoint3">8. Checkpoint 3: three changes from the maestro</a></li>
   </ol>
 </nav>
 
@@ -153,28 +155,18 @@ export function briefRelPath(sessionName: string): string
 </section>
 
 <section id="bridge">
-  <h2>4. lineage-handoff.ts and session-init.ts: no functional change</h2>
-  <p>I expected to find a behavior gap here and didn't. Re-reading the current
-  <code>skills/handoff/SKILL.md</code> text closely: the SessionStart banner (built by
-  <code>session-init.ts</code>'s <code>buildLineagePointer</code>) is deliberately
-  <strong>fallback-only, permanently</strong> — not an interim state this unit needs to close. The skill text
-  says so directly: "That line is built by the script and lists only fallback notes: a note at
-  <code>.digismith/sessions/&lt;session-name&gt;/note.md</code> is found by 'resume' or 'Arise', not by that
-  line." A current-convention note is never meant to appear in that banner; it's found by direct session-title
-  match instead. <code>scripts/lineage-handoff.ts</code>'s <code>listNotes</code>/<code>parseLineageKey</code>
-  already implement exactly the fallback-only behavior this calls for — no rewrite needed.</p>
-  <p>Planned, light-touch changes only:</p>
-  <ul>
-    <li><code>lineage-handoff.ts</code>: a short top-of-file comment stating the fallback-only scope is
-      deliberate and permanent (not a migration gap), pointing at <code>session-path.ts</code> as the sibling for
-      current paths — so a future reader doesn't "fix" it into doing double duty.</li>
-    <li><code>session-init.ts</code>: same kind of comment on <code>buildLineagePointer</code>. No change to its
-      logic or output.</li>
-    <li>Both existing test files (<code>lineage-handoff.test.ts</code>, <code>session-init.test.ts</code>) stay
-      green, unmodified — Flux Part B's design already called this out directly (design section 9 of the
-      flux-protocol doc: "not changed in Part B; DGS-159 changes the scripts and their tests" — read as "touches
-      if there's something to touch," which here is just the comment, so no test changes follow from a comment).</li>
-  </ul>
+  <h2>4. lineage-handoff.ts and session-init.ts — corrected at checkpoint 3</h2>
+  <p><strong>This section's original claim ("no functional change") was wrong</strong> and is kept below, struck
+  through in spirit but not in fact, as the record of the mistake — the maestro's correction is section 8.1.
+  I originally read <code>skills/handoff/SKILL.md</code>'s "Invoked By" section ("That line is built by the script
+  and lists only fallback notes ... not by that line") as describing a permanent design, and missed that its own
+  Overview table says the opposite directly: "the script, the SessionStart line and the exclude patterns still
+  know only those until DGS-159 migrates them" — and missed that <code>--action list</code>'s own documented
+  behavior ("list the folders under <code>.digismith/sessions/</code> that hold a <code>note.md</code>") already
+  describes scanning the <em>current</em> convention, which <code>lineage-handoff.ts</code>'s actual
+  <code>listNotes</code> has never done — it only ever scanned <code>.digismith/docs/</code>. That is a real,
+  concrete, pre-existing gap between the documented CLI behavior and the shipped code, not a permanent design
+  choice. See section 8.1 for what's actually built.</p>
 </section>
 
 <section id="exclude">
@@ -230,13 +222,81 @@ export function briefRelPath(sessionName: string): string
 
 <section id="out">
   <h2>7. Explicitly out of scope</h2>
-  <p>Per the maestro's split: no skill-text rewrites beyond the two comments in section 4 above, no
-  <code>MEMORY.md</code> changes, no moving any of the 87 <code>.digismith/docs/</code> folders or the six live
-  <code>handoff.md</code> fallback notes, no <code>backlog/</code> conversion, no touching
-  <code>.digismith/sessions/DigiSmith/note.md</code>. Parts 3–7 wait on Jack's policy answers.</p>
+  <p>Per the maestro's split: no edits to <code>skills/handoff/SKILL.md</code>'s own text (section 8.1 changes
+  only the two scripts behind it), no <code>MEMORY.md</code> changes, no moving any of the 87
+  <code>.digismith/docs/</code> folders or the six live <code>handoff.md</code> fallback notes, no
+  <code>backlog/</code> conversion, no touching <code>.digismith/sessions/DigiSmith/note.md</code>. Parts 3–7 wait
+  on Jack's policy answers.</p>
 </section>
 
-<footer>DigiSmith · .digismith/docs/_unlettered/ticket-naming-script-layer/design.html</footer>
+<section id="checkpoint3">
+  <h2>8. Checkpoint 3: three changes from the maestro</h2>
+  <p>The maestro checked sections 2, 3 and 5 against the repo directly and approved them as written — section 5's
+  recommendation (no <code>.git/info/exclude</code> change this unit) is confirmed correct and carries forward
+  unchanged. Three corrections follow.</p>
+
+  <h3>8.1 Section 4 reversed: the banner and the CLI listing now cover both conventions</h3>
+  <p>The maestro's own check found the concrete evidence section 4 missed: <code>skills/handoff/SKILL.md</code>'s
+  own Overview table already says the script "still know[s] only [the old paths] until DGS-159 migrates them",
+  and its own documented <code>--action list</code> behavior ("list the folders under
+  <code>.digismith/sessions/</code> that hold a <code>note.md</code>") has never matched what
+  <code>lineage-handoff.ts</code>'s <code>listNotes</code> actually scans (<code>.digismith/docs/</code> only).
+  Real risk if left as section 4 originally proposed: once Part 6 moves the six fallback notes away,
+  <code>listNotes</code> returns <code>[]</code> and the SessionStart banner goes silent — a fresh maestro gets no
+  pointer to its own <code>sessions/&lt;name&gt;/note.md</code> at all.</p>
+  <p>Built: <code>session-path.ts</code> gained <code>listNoteSessionNames(mainRoot)</code> — scans immediate
+  subfolders of <code>.digismith/sessions/</code> for ones holding a <code>note.md</code> directly, sorted,
+  skipping dotfile folders. A worker's brief-only folder (<code>dgs-161</code>) and <code>workbox-archive</code>
+  (a dated subfolder sits inside it, not a note, one level too deep) are both excluded by the same "has a
+  <code>note.md</code> directly inside it" check — no special-casing needed for either. <code>lineage-handoff.ts</code>'s
+  <code>main()</code> (<code>--action list</code>) now prints the fallback keys followed by the session names.
+  <code>session-init.ts</code>'s <code>buildLineagePointer</code> now emits up to two clauses — "lineage handoff
+  notes in ...: ..." and "session notes in ...: ..." — joined with "; " when both exist; the fallback-only
+  wording is byte-for-byte what it printed before this change when no current-convention note exists yet, so
+  every existing caller and test keeps working unmodified. <code>skills/handoff/SKILL.md</code>'s own text is
+  unchanged, per the maestro's instruction — its "lists only fallback notes" sentence is now stale prose the
+  skill-text owner will reconcile separately, not something this unit edits.</p>
+
+  <h3>8.2 Section 10 (new): update-history.ts gains board/ support — and a live bug it would have shipped with</h3>
+  <p><code>.digismith/hooks/post-finish/scripts/update-history.ts</code> finds changed reports with the git
+  pathspec <code>.digismith/docs/*/report.html</code> and derives a slug with a docs-only regex; a report written
+  to <code>.digismith/board/</code> was invisible to it. Pulled into this unit per the maestro's instruction:
+  <code>findChangedReports</code> now also matches <code>.digismith/board/*/report.html</code> (git's pathspec
+  glob already crosses <code>/</code> on a single <code>*</code>, confirmed live, so this needed no <code>**</code>
+  magic); <code>parseReport</code> tries a board-shaped slug pattern first
+  (<code>&lt;key&gt;—&lt;slug&gt;[/&lt;part&gt;]</code>) before falling back to the existing docs-shaped one, and
+  returns a new <code>base: "docs" | "board"</code> field; <code>buildReferenceLinks</code> takes that
+  <code>base</code> and builds both the on-disk folder and the history.html href under it instead of always
+  assuming <code>docs/</code>.</p>
+  <p><strong>Writing the board-shaped test surfaced a real, independent bug</strong> this change would otherwise
+  have shipped live: a board folder name contains a real em dash (U+2014, section 9's own build/parse rules), and
+  git's default <code>core.quotepath=true</code> octal-escapes any byte ≥0x80 in plain <code>--name-only</code>
+  output — exactly the risk section 9's own table already named for this exact character, just not yet hit by
+  any caller until this unit's own board-shaped path exercised it. <code>findChangedReports</code>'s existing
+  newline-split then could not turn <code>"...DGS-159\342\200\224ticket.../report.html"</code> back into a real
+  path. Fixed the way section 9 itself prescribes as defense in depth regardless of the repo-level
+  <code>core.quotepath</code> setting: <code>git diff</code> now runs with <code>-z</code> (NUL-terminated,
+  unquoted, real UTF-8 bytes) and the result is split on <code>"\0"</code> instead of <code>"\n"</code>. Verified
+  live before writing the fix (see the test file's own board-shape cases, which failed without it and pass with
+  it). <code>.digismith/hooks/post-finish/03-history-update.md</code>'s own prose is updated to mention the
+  board/ shape alongside docs/, since it was describing this exact pathspec.</p>
+  <p>Deliberately not touched: the <code>Map item: &lt;strong&gt;...&lt;/strong&gt;</code> requirement in
+  <code>parseReport</code>. A real board-based <code>report.html</code> template doesn't exist yet — Part 4/6
+  decide its header shape — so guessing at a second accepted format now would be speculative. DGS-158's own
+  shipped report (still docs-based) already carries both a <code>Map item</code> span and a new
+  <code>Ticket: DGS-158</code> span side by side, which is the precedent this ticket's own <code>report.html</code>
+  follows too (see this file's own header, above).</p>
+
+  <h3>8.3 This document's own move</h3>
+  <p>Relocated from <code>.digismith/docs/_unlettered/ticket-naming-script-layer/design.html</code> to
+  <code>.digismith/board/DGS-159—ticket-based-naming-code-and-files/script-layer/design.html</code> — a nested
+  <code>script-layer/</code> part folder inside DGS-159's own board folder, since this unit is one part of a
+  larger split ticket (section 2's own board-folder convention, applied to itself). Moved via
+  <code>git mv</code> in its own commit, separate from and after the commit that first wrote the file at its old
+  path — the original commit (<code>1468b6b</code>) is untouched, not amended.</p>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/script-layer/design.html</footer>
 
 </body>
 </html>

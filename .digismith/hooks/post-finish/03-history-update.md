@@ -58,9 +58,10 @@ appended twice or not at all. A missing pin stops this hook — see `fire-lifecy
 An `APPENDED <n>: <titles>` result commits `.digismith/history.html` in its own commit — separate
 from the merge commit and from `01`'s bump commit — and pushes it. A `NOTHING (no report in
 range)` result means the pinned range (`base..head`) contained no `.digismith/docs/<slug>/report.html`
+or `.digismith/board/<key>—<slug>/report.html`
 (`<slug>` may itself be a nested `<Letter>/<Letter.N>-<real-slug>` or `_unlettered/<real-slug>`
-path, or a lineage `<Clan>/<Lineage>/<real-slug>` path — `parseReport` matches all of them the
-same way it matches a flat slug) — either
+path, or a lineage `<Clan>/<Lineage>/<real-slug>` path under `docs/`, or a `<part>` subfolder
+under a board ticket folder — `parseReport` matches all of them, docs and board alike) — either
 a docs-only change, or a merge that didn't go through `report-implementation` (N) — and nothing
 further happens. A non-zero exit means the script itself failed (a malformed report, or the
 Timeline section couldn't be located): stop, do not commit, and investigate — a bad append would
