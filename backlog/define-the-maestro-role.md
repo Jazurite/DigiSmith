@@ -2,7 +2,7 @@
 
 **Status:** Idea, split out of DGS-170 by Jack (2026-10-04 11:40 UTC+7 [04:40Z]): "Decouple the maestro change to another ticket. 170 fully
 focus on the Master role." No design yet. ClickUp: **DGS-176** (list O.3: Roles, created 2026-10-04 11:40 UTC+7 [04:40Z], task id `14zcebruqu3`).
-**Blocked by DGS-172** (what a project is, and the project workflow). **It blocks DGS-169** (the maestro in herdr).
+DGS-172 (what a project is) is **decided**, so this item is unblocked. **It blocks DGS-169** (the maestro in herdr).
 
 **Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`) and the role discussion in DGS-170. The
 maestro is the part that changes: where it lives, how many there are, how it is reset, what state it holds.
@@ -11,6 +11,9 @@ maestro is the part that changes: where it lives, how many there are, how it is 
 
 - **Maestro: the highest rank of servant, a butler.** The head butler of a project. The household reads: the Master (the user, DGS-170),
   then the Maestro, then the workers (the servants). "Butler" is the picture, not a second name.
+- **A project can have only one maestro** (Jack, 12:16 UTC+7, DGS-172). A project is the long-lived thing (`DigiSmith`, `Emma`, `Soveron`) with a
+  name, its repos or vaults, one tracker, a dedicated herdr session and exactly one maestro, recorded in a registry; the start command
+  refuses a second. A goal is a parent ticket inside a project and gets no maestro. See `backlog/define-project-and-project-workflow.md`.
 - **One maestro per project.** Not one for the whole system ("a mess"), not one per client or repo. It needs a definition of "project"
   (DGS-172). The Master decides which projects get a maestro (DGS-170).
 - **The maestro holds all the state.** The Master uses only a client to give orders (the Master's client, DGS-174) or an Observer to watch
@@ -33,8 +36,9 @@ maestro is the part that changes: where it lives, how many there are, how it is 
 
 ## Questions to settle first
 
-- **Many maestros, one set of resources.** A ticket has at most one maestro. Two maestros must not brief a worker for the same ticket or
-  fight over the account matrix, the free memory, or the runbook. Who holds the registry: the herdr session, the runbook, or ClickUp?
+- **Many maestros, one set of VPS resources.** DGS-172 settled the ownership: every ticket belongs to one project and a project has one
+  maestro, so two maestros never brief a worker for one ticket. What the projects still share is VPS-wide: the Claude seats, the memory,
+  the roster of workers (DGS-151). Who arbitrates when two maestros want the last memory or the same seat?
 - **The three maestros we have.** `DigiSmith`, `Emma` and `Soveron` (one per project, each with a herdr session of the same name) stay
   until the new design lands. What do they become?
 - **Where it lives:** a herdr pane, an OpenCode server (`opencode serve` on localhost, reached by an SSH tunnel), a Desktop session.

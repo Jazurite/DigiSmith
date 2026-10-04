@@ -1,11 +1,12 @@
 # Define a project and the project workflow
 
-**Status:** Idea, raised by Jack (2026-10-04 11:27 UTC+7 [04:27Z]): "I think we should have one maestro for a project. Do we have a project
-workflow? What defines a project?" No design yet. ClickUp: **DGS-172** (list E.4: Workflows, created 2026-10-04 11:27 UTC+7 [04:27Z], task id `14zcebruqtp`).
+**Status:** Design decided by Jack (2026-10-04 12:16 UTC+7 [05:16Z]): "absolutely spot on about your project definition; one more thing is that one
+project can only have one maestro." Raised 11:27 UTC+7: "I think we should have one maestro for a project. Do we have a project workflow? What
+defines a project?" ClickUp: **DGS-172** (list E.4: Workflows, created 2026-10-04 11:27 UTC+7 [04:27Z], task id `14zcebruqtp`).
 
 **Source:** the DGS-170 brainstorm (the new maestro role). Jack first said the maestro count should not be one for the system, nor one per
 client or repo, and that the Operator decides it. After the question "what is a maestro's unit?", he settled on **one maestro per
-project**. That needs a definition of "project", and the repo has none. **It blocks DGS-176** (the Maestro role; the Master role DGS-170 only needs it lightly).
+project**. That needs a definition of "project", and the repo has none. It **unblocks DGS-176** (the Maestro role).
 
 ## What exists today (checked 2026-10-04)
 
@@ -25,33 +26,52 @@ project**. That needs a definition of "project", and the repo has none. **It blo
   DGS-166). So are Flux (DGS-154) and the plugin refresh (DGS-161, DGS-162). None has a parent ticket, a note or an end condition. DGS-159
   stands in as the parent today.
 
-## A first proposal (to settle with Jack)
+## The project (decided, Jack, 2026-10-04)
 
-A **project** is a named goal with an end, identified by a parent ClickUp ticket (the ticket is the unit, "no ticket, no work"):
+A **project** is the long-lived thing, not a goal with an end: `DigiSmith`, `Emma`, `Soveron`. It has:
 
-- the parent ticket holds the goal, the end condition and the child tickets (ClickUp subtasks or linked tickets);
-- each child follows the existing ticket workflow, with its own worker;
-- one maestro owns the project, keeps one note, and its docs live in the parent's board folder (`.digismith/board/<KEY>—<slug>/`);
-- a project may touch several repos or clients;
-- it closes when its end condition is met: a project report, the maestro's flux, the tables updated.
+1. **A name and its places.** One or more Git repositories or vaults. `Emma` already spans many repos in one herdr session. A repo belongs to
+   exactly one project.
+2. **One tracker,** named by the project: ClickUp (DGS keys) or JIRA (EMKT keys). It is today's `ticket:` setting in the profile.
+3. **A dedicated herdr session** named after the project, holding its worker workspaces and shells.
+4. **Exactly one maestro. A project can only have one maestro** (Jack). The start command refuses to start a second one. A reset or a
+   renewal restarts the same maestro (its note and state), never a second.
 
-## A project workflow (sketch)
+- **Who ends a project:** the Master, by a `dg` command that stops it and archives its notes. Nothing ends automatically.
+- **Goals are parent tickets inside a project,** not projects. "Ticket-based naming" is a goal in the DigiSmith project: a parent ticket
+  with children (DGS-158, DGS-159 and its parts, DGS-164 to DGS-166). It ends. It does not get a maestro.
+- **ClickUp's clans (A to E, O)** are areas inside the DigiSmith project: an index, not projects.
+- **A registry records every project:** one machine-wide file (for example `~/.digismith-depot/projects.yml`) with the name, its places, the
+  tracker, the profile, the herdr session and the maestro. The `dg` start command reads it, and enforces one maestro per project. Because
+  every ticket belongs to exactly one project, and a project has one maestro, no two maestros can brief a worker for the same ticket.
+  What the projects still share is VPS-wide: the Claude seats, the memory, the roster of workers (DGS-151 `dg workbox`).
+- **Vocabulary:** **project** (long-lived) and **goal** (a parent ticket). Whether the Methodology list (DGS-156) types a project workflow as
+  a Process is left to that list.
 
-1. The Operator names the goal. 2. The parent ticket is created (automatically, like a backlog item). 3. A maestro starts with a project
-brief. 4. The maestro splits the goal into tickets and dispatches workers (the existing ticket workflow). 5. Checkpoints, merges, and the
-post-merge steps (verify, reload, close the worker). 6. Close: a project report, the maestro ends, the note is archived.
+## The project workflow (as it will be)
 
-## Open questions
+1. The Master decides a project exists and runs the `dg` command with its name, places and tracker. The registry gets the entry.
+2. The command creates the herdr session named after the project, starts its one maestro with a project brief, and records the maestro.
+3. The maestro works the project's tickets with the existing ticket workflow: workers in workspaces of that herdr session, one per ticket.
+4. A goal is a parent ticket the maestro splits into child tickets and works to its end.
+5. The Master stops the project with a command: the maestro's final note is archived, the herdr session is closed.
 
-- Is a project always a parent ticket with children? What is the smallest project: one ticket?
-- Can a project span repos and clients (an Emma feature across market theme repos, or Soveron and DigiSmith)?
-- Who closes a project: the maestro, the Operator, or a rule (all children done)?
-- How does a project relate to the old clans? Is a clan just a long-lived project, or an index only?
-- Where does the Methodology vocabulary put the word (DGS-156 holds Process, Protocol, Procedure, Primitive)? A project workflow is likely a
-  Process.
+## What changes in the repo
+
+- A registry file and its `dg` commands (start, stop, list): part of `dg workbox` (DGS-151) or a sibling. Not built yet.
+- Today's three projects are written into the registry first: `DigiSmith`, `Emma`, `Soveron` (DGS-173 lists their places).
+- The profile stays per repo. The registry says which profile a repo uses.
+
+## Log of Jack's statements (kept for the record)
+
+- 11:27: "I think we should have one maestro for a project. Do we have a project workflow? What defines a project?"
+- 11:3x: "The current workflow for a project is: you have a name, like DigiSmith, or a Git repository, and a dedicated herdr session."
+- 12:16: "You're absolutely spot on about your project definition; one more thing is that one project can only have one maestro."
+  (The five defaults he confirmed: a project is the long-lived thing; it can span repos; the tracker is named by the project; the Master ends
+  it by a command; it is recorded in one registry.)
 
 ## Related
 
-[document-the-current-project-workflow.md](document-the-current-project-workflow.md) (DGS-173, an input), [brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, blocked by this item),
+[document-the-current-project-workflow.md](document-the-current-project-workflow.md) (DGS-173, an input), [brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, done),
 [maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169), [worker-and-maestro-conventions.md](worker-and-maestro-conventions.md) (DGS-158),
 [maestro-merges-worker-material.md](maestro-merges-worker-material.md) (DGS-160), DGS-154 Flux, DGS-156.
