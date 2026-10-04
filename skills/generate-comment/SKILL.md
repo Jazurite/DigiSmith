@@ -72,9 +72,16 @@ response to the caller that `ste100-writing` couldn't be applied this time.
 
 Only for template type `progress-update`.
 
-Check whether this session already has `.digismith/docs/<slug>/report.html`
-from map item **N** (`digismith:report-implementation`), the same slug
-this ticket's work used. **Present** → read it and draft 1-4 short bullets
+Check whether this session already has a `report.html` from
+`digismith:report-implementation` (**N**) for this same ticket's work.
+**This session already ran N** → reuse the exact `<target folder>/report.html`
+path it resolved, never re-derive. **Standalone invocation, N didn't run this
+session** → resolve the same way N itself does: a tracker key in hand →
+`board-path.ts --action find --slug '<slug>'` against `.digismith/board/`,
+found folder's `report.html`; no key, or not found → the flat
+`.digismith/docs/<slug>/report.html` fallback, unchanged from today.
+
+**Present** → read it and draft 1-4 short bullets
 summarizing the delivered work section, in the same tone as a real
 example:
 
