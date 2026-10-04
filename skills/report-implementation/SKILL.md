@@ -156,38 +156,35 @@ to a subagent that can't ask.
 If no ledger exists at that path, stop here entirely — this skill doesn't
 apply to this run.
 
-5. **Ticket key (optional):** check whether `ticket.md` exists and has a
-   `**Key:**` line, reading it from the right folder — this differs by case:
-   - **Board-folder plan:** read it from the board TICKET-ROOT folder — the folder immediately
-     after `.digismith/board/` that Step 1 already validated with
-     `--action parse --name '<that folder name>'` — i.e.
-     `.digismith/board/<that same folder name>/ticket.md`. This is **not** necessarily
-     `<target folder>/ticket.md`: for a nested worker plan
-     (`.digismith/board/<KEY>—<slug>/worker-<agent>/plan.md`), `<target folder>` is the
-     `worker-<agent>` subfolder, but `jira-intake` always writes `ticket.md` at the ticket root,
-     never inside a worker subfolder. Always read it from the ticket root, regardless of how
-     deeply `<target folder>` is nested below it.
-   - **Docs-folder plan:** `<target folder>/ticket.md`, using `<target folder>` as resolved in
-     Step 1 (unchanged from before — the docs case has no nested-worker-subfolder concept).
+5. **Ticket key (optional):** this splits cleanly by case — a board-folder plan is keyed by
+   definition (Part 3 design, section 8: a folder only exists under `.digismith/board/` because
+   a real key was in hand), so its key never depends on `ticket.md` or on any profile's `ticket`
+   field. A docs-folder plan has no such guarantee, so it keeps the existing `ticket.md`-plus-
+   profile-gate check.
 
-   If found, note that key for Step 2a. Then check for
-   a profile in the repo currently being worked in (the same
-   repo `<feature-slug>` lives in) — Prerequisites already resolved this
-   same file and its `profiles/<name>.yml` for the `reporting` gate, so
-   reuse what you read there rather than re-locating or re-asking. Missing → the derived key (if any)
-   is used as-is in Step 2a. Present → use the profile name Prerequisites read,
-   locate DigiSmith's own repo (same rule
-   `digismith:inject-standards` uses for `standards/`: current working
-   directory has `.claude-plugin/plugin.json` with
-   `"name": "digismith"` → use it directly; otherwise ask the user for
-   the path and remember it; never read `profiles/` under a plugin cache
-   path — a stale, version-locked snapshot), and read
-   `profiles/<name>.yml` there. No
-   matching file → treat as stale, use the derived key (if any) as-is,
-   same as "missing". Otherwise, if that profile's `ticket` field is
-   `false`, discard the derived key entirely for Step 2a regardless of
-   whether `ticket.md` had one — `{{TICKET}}` is never omitted, it renders the literal `n/a`
-   instead (see 2a).
+   - **Board-folder plan:** the key is the first line Step 1's own
+     `--action parse --name '<that folder name>'` call already printed (e.g. `DGS-161` for a
+     `DGS-161—…` folder) — reuse that output directly, don't re-run the command and don't read
+     `ticket.md` at all for this case. This key always survives for Step 2a: the active profile's
+     `ticket` field and any `ticket.md` content are both irrelevant here, including when the
+     profile has `ticket: false` (DigiSmith's own repo, among others) — the folder name itself is
+     the proof a key exists.
+   - **Docs-folder plan:** unchanged from before — check whether `<target folder>/ticket.md`
+     exists and has a `**Key:**` line (`<target folder>` as resolved in Step 1). If found, note
+     that key for Step 2a. Then check for a profile in the repo currently being worked in (the
+     same repo `<feature-slug>` lives in) — Prerequisites already resolved this same file and its
+     `profiles/<name>.yml` for the `reporting` gate, so reuse what you read there rather than
+     re-locating or re-asking. Missing → the derived key (if any) is used as-is in Step 2a.
+     Present → use the profile name Prerequisites read, locate DigiSmith's own repo (same rule
+     `digismith:inject-standards` uses for `standards/`: current working directory has
+     `.claude-plugin/plugin.json` with `"name": "digismith"` → use it directly; otherwise ask the
+     user for the path and remember it; never read `profiles/` under a plugin cache path — a
+     stale, version-locked snapshot), and read `profiles/<name>.yml` there. No matching file →
+     treat as stale, use the derived key (if any) as-is, same as "missing". Otherwise, if that
+     profile's `ticket` field is `false`, discard the derived key entirely for Step 2a regardless
+     of whether `ticket.md` had one — `{{TICKET}}` is never omitted, it renders the literal `n/a`
+     instead (see 2a). This is the only case where `n/a` can happen: a board-folder plan always
+     has a key per the bullet above.
 
 **For an SDD ledger:** if it has no `Final review (...)` line, don't quietly proceed.
 This skill's trigger condition *is* "the final review just passed," so a
@@ -231,11 +228,13 @@ the plan file, the ledger, and `git` alone:
   Implementation Plan` → `Capture Ephemeral URL (M)`.
 - **`{{DATE}}`** — today's date in ISO `YYYY-MM-DD`: the date this report
   is generated, not the plan's date.
-- **`{{TICKET}}`** — from Step 1.5: the ticket key if one survived that step's profile gate
-  (no title-parenthetical parsing any more — map letters are gone for this field, in every
-  case, including a title that still happens to carry one). If no key survived (no
-  `ticket.md`, no `**Key:**` line in it, or the active profile has `ticket: false`), this is
-  the literal string `n/a`. Always rendered — never the empty string, never omitted.
+- **`{{TICKET}}`** — from Step 1.5 (no title-parenthetical parsing any more — map letters are
+  gone for this field, in every case, including a title that still happens to carry one). A
+  board-folder plan always has one: the key Step 1's `--action parse` call already printed,
+  independent of any profile's `ticket` field. A docs-folder plan has one only if it survived
+  that case's `ticket.md`-plus-profile-gate check; otherwise (no `ticket.md`, no `**Key:**` line
+  in it, or the active profile has `ticket: false`) this is the literal string `n/a` — the only
+  case `n/a` can happen. Always rendered — never the empty string, never omitted.
 - `{{FEATURE_SLUG}}`: the slug already derived in Step 1 — the plan file's
   parent directory name in the flat case, the segments joined by `/` in the nested and lineage
   cases (e.g. `G/G.3-dynamic-doc-conventions`, `A/A.1/lineage-handoff`), or the slug parsed out of its
