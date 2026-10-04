@@ -38,6 +38,9 @@ maestro is the part that changes: where it lives, how many there are, how it is 
 - **Where it lives:** a herdr pane, an OpenCode server (`opencode serve` on localhost, reached by an SSH tunnel), a Desktop session.
 - **How it is resumed and renewed with no kicker.** The Flux protocol (DGS-154) was written for a Desktop maestro; its rule 6 and the
   "Maestro flux" (M1 to M7) are reopened.
+- **Where an order comes from (provenance), when the maestro runs in a pane.** The Desktop maestro tells a user turn from a peer message
+  and an app approval card from a worker's text. In a herdr pane `herdr agent prompt` is typed input, and any process on the VPS can send
+  it. The Master's identity (DGS-170: the SSH-key holder, maybe signed orders) has to reach the maestro in a way a worker cannot fake.
 - **Which seat or model it uses** (fixed on `dev0` today; a TokenReply model spends no seat quota).
 
 ## Output

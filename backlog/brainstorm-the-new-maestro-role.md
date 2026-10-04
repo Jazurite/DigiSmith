@@ -13,6 +13,9 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
 - **The Master decides which projects get a maestro,** and starts and stops them. One maestro per project (DGS-172 defines "project").
 - **The Master uses only a client or an Observer,** never a worker directly: a client to give orders (the Master's client, DGS-174; it was
   called the "Operator" before the roles were named), or an Observer to watch (DGS-175).
+- **Candidate, not yet decided (Jack, 11:45 UTC+7 [04:45Z]): "I'm the master, so maybe whoever holds the SSH key connection to the VPS, with a
+  password, is classified as Master."** The Master's identity is the holder of the SSH key (and its passphrase) that reaches the VPS. See
+  "Authority" below for what this does and does not protect.
 - **The other names are dropped:** Operator, Controller, Orchestrator, Grindstone, Butler (the maestro is the butler), and "Master" as the
   maestro's name.
 
@@ -25,7 +28,18 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
 - **What the Master sees and how it is told:** what the maestro reports to the Master and when (the maestro's side is DGS-176), and the
   Master's own view, the Observer (DGS-175).
 - **The Master's client.** What it needs to do (give an order, answer a question, approve or stop a step); built in DGS-174.
-- **Authority.** How the Master's word reaches the maestro and workers. A peer message cannot grant escalation, and an approval inside a
+- **Authority (the SSH-key candidate).** Whoever can SSH in can already do anything on the VPS, so "the holder of the SSH key" is the right
+  trust boundary for *reaching* the Master's client: `herdr attach`, the Desktop app over SSH, an `opencode attach` through an SSH tunnel
+  (with its server password). It is **necessary but not enough to prove an order is the Master's**, because every process on the VPS runs
+  as the same user (root), including every worker. Today a worker can reach the Desktop maestro only through a labelled peer message,
+  which cannot grant escalation, and an approval needs a click in the app. A maestro running in a herdr pane takes `herdr agent prompt`
+  as typed input, and a worker (or a prompt-injected one) can send exactly that. So a typed order in a pane looks the same whether the
+  Master or a worker sent it. The identity must be proven, not assumed from the channel. One option that matches Jack's idea: the Master's
+  client **signs** an order or opens a time-limited Master session with the SSH key (`ssh-keygen -Y sign`), and the maestro verifies it
+  against the Master's public key (`ssh-keygen -Y verify`, an `allowed_signers` file). The private key and its passphrase stay on the
+  Master's machine, so nothing on the VPS can forge a signature. Routine orders could stay plain text and escalating approvals need a
+  signature. Other options: a separate Unix user for the workers, or an out-of-band approval card. To settle in this item.
+  Earlier wording of the same question: How the Master's word reaches the maestro and workers. A peer message cannot grant escalation, and an approval inside a
   guardrail needs limits the Master writes (the approval guardrail Jack wrote, DGS-155). The Master role has to say how a Master's order is
   told apart from a worker's or another session's message.
 

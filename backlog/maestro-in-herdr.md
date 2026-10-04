@@ -73,6 +73,9 @@ A mixed shape is possible too: the OpenCode server as the multi-client hub, with
   which the maestro really needs. Most of its work today is the herdr CLI, ClickUp CLI, git and file reads.
 - **The chat UI.** Notifications, rendered pages and the remote-control app are Desktop features. A terminal attach is plainer.
 - **The Flux protocol.** Section "Maestro flux" (M1 to M7) and rule 6 get rewritten. The Desktop kicker route stays as a fallback.
+- **Who sent an order.** A Desktop maestro can tell the user from a peer message. A pane cannot: `herdr agent prompt` is typed input, and
+  any process on the VPS (root, like every worker) can send it. The Master's identity must be proven, for example by a signed order
+  (see DGS-170, Authority).
 - **Two clients typing into one pane collide.** The Operator needs a lock or a rule: one typist at a time.
 - **Memory.** One Claude process either way, so no extra, unless the Desktop maestro runs while the herdr one is tested.
 
