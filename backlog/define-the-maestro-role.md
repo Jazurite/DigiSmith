@@ -41,7 +41,7 @@ pane **cannot safely carry escalating actions yet**. The consequence for the ord
 project where an escalating action is low-risk (the throwaway project, then `Soveron`). `Emma` and `DigiSmith` stay Desktop maestros until
 DGS-177's stronger channel exists. This is stricter than Jack's "yes" strictly requires, and he can loosen it.
 
-## Autonomy: the 24/7 backlog runner (Jack's use case; mechanics proposed by the maestro, to confirm)
+## Autonomy: the 24/7 backlog runner (Jack's use case; point 3 decided, the rest proposed by the maestro, to confirm)
 
 The job is defined by one split: **does this ticket or action need a Master's opinion, or not?** A ticket that does not is done by the
 maestro and its workers, start to finish, with no one asked. A ticket that does stops, and the maestro waits for an answer. The maestro is
@@ -53,8 +53,8 @@ a runner, not a chat partner, so these mechanics follow:
    and the limits (a quota and memory budget, how many workers at once). **The default is deny:** anything not in the policy needs the
    Master. The first policy is drafted from what Jack has approved so far, and he edits it.
 2. **Every ticket is classified against the policy** before work starts. Unknown or borderline means it needs the Master.
-3. **When a ticket needs the Master, the maestro parks that ticket and continues with the others** (proposal; Jack said "it stops and waits",
-   which could also mean everything stops). The parked ticket goes on the state file's "waiting for a Master" list with the exact question
+3. **When a ticket needs the Master, the maestro parks that ticket and continues with the others** (decided, Jack, 14:29 UTC+7: "park and
+   continue"). The parked ticket goes on the state file's "waiting for a Master" list with the exact question
    and the options, and the Master is told (below). It never guesses past the question and never busy-polls for the answer.
 4. **How a Master hears about it:** the state file (an Observer shows it), and a push message to the Master's device. The channel is open.
 5. **Limits so it can run unattended:** it checks the seats' usage before starting a worker (the quota rule), stays inside the memory
@@ -90,6 +90,7 @@ a ClickUp write beyond the routine rules (status changes, comments) is still the
 - Then: "Decouple the maestro change to another ticket. 170 fully focus on the Master role."
 - 12:19: "Yes" to the seven defaults. DGS-172 closed.
 - 12:21: "We need to add some more definition for the maestro ... it will sometimes run 24/7 to do the backlog ... any ticket that absolutely needs a Master's opinion, it stops and waits for answers; otherwise it could run and decide automatically." (Point 8 and the Autonomy section.)
+- 14:29: "Park and continue." (Autonomy point 3 decided.) Still open: the policy file, and the notification channel.
 
 ## Related
 
