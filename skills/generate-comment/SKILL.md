@@ -143,12 +143,23 @@ Only for template type `investigation-update`.
 Ask the user, via direct conversation, three things, each drafted as its
 own Markdown bullet-list block (1-4 bullets each, never fabricated):
 
-- What's been checked — the `whats-checked` placeholder
-- What's been found — the `whats-found` placeholder
-- What's needed, and from whom — the `needs` placeholder, using the same
-  role/person ask-and-resolve pattern as Step 2's Next Steps (ask who,
-  resolve to a JIRA `accountId`, use the `@[Name](accountId)` mention
-  token, stop and ask directly on no-match or ambiguous match)
+- Root cause — the `root-cause` placeholder. What was checked and what
+  was found, combined into one findings section rather than two separate
+  ones — a bullet may state a check and its result together (e.g. "X was
+  reviewed; it turned out to cause Y") rather than splitting the checking
+  step and the finding into separate bullets in separate sections.
+- Proposed fix — the `proposed-fix` placeholder. The change being made (or
+  proposed) to resolve the root cause just stated — never fabricated;
+  draw it from the actual fix already discussed or designed this session,
+  not a new invention at write-back time.
+- Next steps — the `next-steps` placeholder. What happens next, on both
+  sides: what the reporting side is doing next (e.g. "implementing the
+  fix now", "opening a PR for review"), and anything needed from someone
+  else — folded into this single section rather than kept as a separate
+  "Needs" section. When something is needed from a specific person, use
+  the same role/person ask-and-resolve pattern as Step 2's Next Steps
+  (ask who, resolve to a JIRA `accountId`, use the `@[Name](accountId)`
+  mention token, stop and ask directly on no-match or ambiguous match).
 
 **Stay within the supported Markdown subset** when drafting all three
 bullet groups, the same constraint as Step 2: plain text, `**bold**`,
@@ -262,7 +273,7 @@ itself; that's each caller's own job.
 | 1 | Determine template type — from the caller, or ask |
 | 1.5 | Only for `progress-update`/`investigation-update`. Check `technical_voice` (default `on`); when `on`, apply `ste100-writing` + companions (minus the list/paragraph-limit rules, which the ADF Markdown subset already governs) to Steps 2-3's bullets. Step 4's `ask-line` always stays verbatim |
 | 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots placeholder (always `N/A` for now), today's date |
-| 3 | Investigation Update content: what's checked / found / needed, role/mention resolution, today's date |
+| 3 | Investigation Update content: root cause (checked + found, merged), proposed fix, next steps (own actions + needs, role/mention resolution), today's date |
 | 4 | Teams Review Request content: scope, PR info, reviewer names via `digismith:preferences`, ask line |
 | 5 | Fill the template via `fill-template.ts`, parse the returned JSON |
 | 6 | Return `{markdown, headingPrefix}` to the caller — never post or send |

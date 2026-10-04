@@ -85,12 +85,12 @@ describe("fillTemplate", () => {
   it("fills the real investigation-update.md template end to end", () => {
     const result = fillTemplate(INVESTIGATION_TEMPLATE, {
       date: "9/9",
-      "whats-checked":
-        "- Reviewed Make.com scenario history for the last 48 hours\n- Checked Shopify webhook delivery logs for failed IN fulfillment events",
-      "whats-found":
-        "- Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
-      needs:
-        "- **🔧 Backend Fix Needed >** (@[Linh Van Vu](7ac31de2)) — please confirm whether the schema change was intentional",
+      "root-cause":
+        "- Make.com scenario history and Shopify webhook delivery logs showed failed IN fulfillment events; the webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
+      "proposed-fix":
+        "- Map the renamed field in the Make.com scenario so the market value is read from its new location",
+      "next-steps":
+        "- Implementing the field mapping now\n- **🔧 Backend Fix Needed >** (@[Linh Van Vu](7ac31de2)) — please confirm whether the schema change was intentional",
     });
     expect(result.markdown).toBe(
       [
@@ -98,17 +98,17 @@ describe("fillTemplate", () => {
         "",
         "---",
         "",
-        "#### 🕵️ What's been checked",
+        "#### 🕵️ Root Cause",
         "",
-        "- Reviewed Make.com scenario history for the last 48 hours",
-        "- Checked Shopify webhook delivery logs for failed IN fulfillment events",
+        "- Make.com scenario history and Shopify webhook delivery logs showed failed IN fulfillment events; the webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
         "",
-        "#### 🔎 What's been found",
+        "#### 🛠️ Proposed Fix",
         "",
-        "- Webhook payload schema changed upstream without notice, dropping the market field Make.com's scenario depends on",
+        "- Map the renamed field in the Make.com scenario so the market value is read from its new location",
         "",
-        "#### ❓ Needs",
+        "#### ➡️ Next Steps",
         "",
+        "- Implementing the field mapping now",
         "- **🔧 Backend Fix Needed >** (@[Linh Van Vu](7ac31de2)) — please confirm whether the schema change was intentional",
       ].join("\n"),
     );

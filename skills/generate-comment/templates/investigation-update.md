@@ -2,14 +2,14 @@
 
 ---
 
-#### 🕵️ What's been checked
+#### 🕵️ Root Cause
 
-<whats-checked>
+<root-cause>
 
-#### 🔎 What's been found
+#### 🛠️ Proposed Fix
 
-<whats-found>
+<proposed-fix>
 
-#### ❓ Needs
+#### ➡️ Next Steps
 
-<needs>
+<next-steps>
