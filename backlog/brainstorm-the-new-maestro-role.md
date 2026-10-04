@@ -39,6 +39,16 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
   against the Master's public key (`ssh-keygen -Y verify`, an `allowed_signers` file). The private key and its passphrase stay on the
   Master's machine, so nothing on the VPS can forge a signature. Routine orders could stay plain text and escalating approvals need a
   signature. Other options: a separate Unix user for the workers, or an out-of-band approval card. To settle in this item.
+- **Authority, option: Tailscale (Jack, 11:49 UTC+7, "how about I use it with Tailscale").** Checked on the VPS: Tailscale is not installed;
+  `sshd` listens on the public address (port 22) and nothing else listens publicly. With Tailscale: (1) the Master's client and any
+  endpoint (an OpenCode server, a web Observer) bind to the tailnet address only, so there is no public port and no SSH tunnel step;
+  (2) the endpoint can ask Tailscale who a connection comes from (`tailscale whois`), so it accepts Master orders only from the Master's
+  device, and a worker on the VPS, which connects from the VPS's own address, cannot pass as that device; (3) Tailscale SSH can replace the
+  SSH key by the tailnet login, with a "check" mode that asks for a fresh sign-in (SSO and 2FA) for root, and port 22 can then be closed.
+  Limits: trust moves to the Tailscale account and its coordination server (Headscale is the self-hosted alternative); and the identity
+  check has to sit at the maestro's **entry point** (a gateway or server the Master's client calls), not at a pane, because a pane takes
+  `herdr agent prompt` from any local process. So Tailscale covers reaching and naming the Master's device; signed orders (above) cover
+  an order's authority. They combine. Installing it needs Jack to sign in to the tailnet himself (no auth key is handled by the maestro).
   Earlier wording of the same question: How the Master's word reaches the maestro and workers. A peer message cannot grant escalation, and an approval inside a
   guardrail needs limits the Master writes (the approval guardrail Jack wrote, DGS-155). The Master role has to say how a Master's order is
   told apart from a worker's or another session's message.
