@@ -107,7 +107,6 @@ status_block = (
 )
 
 new_bullet = (
-    "\n"
     "- **Ticket-based board & session convention** (adopted 2026-10-04, DGS-158/DGS-159): tickets are\n"
     "  the unit of work, not clan letters or lineage numbers. See DGS-158's `design.html`, today at\n"
     "  `.digismith/docs/E/E.3/worker-maestro-conventions/` (it moves under DGS-164).\n"
