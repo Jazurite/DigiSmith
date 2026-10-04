@@ -32,16 +32,16 @@ if [ "$UPDATE_STATUS" -ne 0 ]; then
   echo "History update script failed — stop here, do not commit, and investigate." >&2
 fi
 if [[ "$UPDATE_OUTPUT" == APPENDED* ]]; then
-  SSH_KEY=$(node --experimental-strip-types scripts/preferences.ts --key ssh_key --action get)
   git add .digismith/history.html && \
   git commit -m "docs(history): record shipped features" -- .digismith/history.html && \
-  if [ -n "$SSH_KEY" ] && [ "$SSH_KEY" != "unset" ]; then
-    GIT_SSH_COMMAND="ssh -i '$SSH_KEY'" git push origin <base-branch>
-  else
-    git push origin <base-branch>
-  fi
+  git push origin <base-branch>
 fi
 ```
+
+This push always uses the environment's default git/SSH config now, never a configured `ssh_key`
+preference. A repo whose default config can't reach the remote will have this push fail here —
+loudly, per the rejection handling below — rather than silently succeeding through a preference
+this hook no longer reads.
 
 If that push is rejected (the remote moved since Option 1's own push, or since
 `01-version-bump.md`'s own second push): stop, report the rejection plainly, and investigate —
