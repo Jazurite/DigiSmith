@@ -55,23 +55,37 @@ Check, in order:
 2. **Not on the base branch, and a profile is present**: derive
    `<slug>` from the current branch name — strip a leading `<Key>__`
    prefix if it matches (regex `^([A-Z]+-\d+)__`), otherwise use the
-   branch name as-is. Check whether `.digismith/docs/<slug>/plan.md`
-   exists.
-   - **Exists** → this worktree was already fully set up by DigiSmith for
-     this specific ticket. Read `profile` from `.digismith/config.yml`, or from `.digismith/profile` when `config.yml` or its `profile` key is missing (A.4 fallback). If `config.yml` exists but cannot be read or parsed, handle it the same way as a stale profile. Use that value as
-     `<name>` and report plainly:
+   branch name as-is. Find this ticket's folder **by slug**, never by
+   reconstructing a path from the branch's own key — a folder's own key
+   does not have to match the branch's (DigiSmith's own repo already has
+   this: branch `plugin-update-after-merge` against folder
+   `DGS-161—plugin-update-after-merge`). Call
+   `findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts`
+   against `.digismith/board/` first; found → check `plan.md` inside that
+   folder. Not found → fall back to the existing, flat
+   `.digismith/docs/<slug>/plan.md` check (unchanged) — the permanent home
+   for a genuinely keyless ticket, and (until DGS-164) also still the
+   temporary home for an old keyed ticket not yet moved.
+   - **Exists** (either place) → this worktree was already fully set up
+     by DigiSmith for this specific ticket. Read `profile` from
+     `.digismith/config.yml`, or from `.digismith/profile` when
+     `config.yml` or its `profile` key is missing (A.4 fallback). If
+     `config.yml` exists but cannot be read or parsed, handle it the same
+     way as a stale profile. Use that value as
+     `<name>` and report plainly, naming whichever folder actually
+     matched:
 
      ```
      Already initialized for DigiSmith (profile: <name>, docs at
-     .digismith/docs/<slug>/).
+     <matched folder>/).
      ```
 
      Stop here — no re-running detection, no re-relocating docs, no
      further questions. Same posture as `git init` on an existing repo: a
      notice, not a cascade.
-   - **Doesn't exist** → a profile is present (inherited from the
-     original checkout, or copied in by an earlier partial run) but this
-     specific ticket hasn't been set up yet. Continue to Step 1.
+   - **Doesn't exist** (neither place) → a profile is present (inherited
+     from the original checkout, or copied in by an earlier partial run)
+     but this specific ticket hasn't been set up yet. Continue to Step 1.
 3. **Not on the base branch, no profile present** → continue to
    Step 1.
 
@@ -90,15 +104,18 @@ Checked in order — stop and dispatch at the first match:
    if that fails (no remote configured), fall back to checking whether the
    current branch is literally named `main` or `master`. Match → fresh
    start. Invoke `digismith:bootstrap`.
-2. **Already on a feature branch, and `.digismith/docs/<slug>/plan.md`
-   already exists** for the slug implied by the branch name (`<Key>__<slug>`
-   or `<slug>` alone) → normal resume, already covered by `digismith:bootstrap`'s
-   own branch/worktree reuse logic (its Step 2.3). Invoke `digismith:bootstrap`.
-3. **Already on a feature branch, no `.digismith/docs/` for it, but a plan
-   file exists somewhere** — check whether the conversation already named a
-   plan path; if not, ask directly: "Is there a plan already written for
-   this, and if so where?" before concluding none exists. A real answer here
-   → mid-stream. Invoke `digismith:adopt`.
+2. **Already on a feature branch, and a plan file already exists for the
+   slug implied by the branch name** (`<Key>__<slug>` or `<slug>` alone) —
+   checked the same way as Step 0 item 2 above (`findBoardFolderBySlug`
+   against `.digismith/board/` first, then the flat
+   `.digismith/docs/<slug>/plan.md` fallback) → normal resume, already
+   covered by `digismith:bootstrap`'s own branch/worktree reuse logic (its
+   Step 2.3). Invoke `digismith:bootstrap`.
+3. **Already on a feature branch, no matching folder found by that same
+   check, but a plan file exists somewhere** — check whether the
+   conversation already named a plan path; if not, ask directly: "Is there
+   a plan already written for this, and if so where?" before concluding
+   none exists. A real answer here → mid-stream. Invoke `digismith:adopt`.
 4. **On a feature branch, no plan found anywhere** (Step 3's question came
    back negative, or the named path doesn't exist) → ambiguous. Ask via
    `AskUserQuestion`:
@@ -113,12 +130,13 @@ Never guess between `digismith:bootstrap` and `digismith:adopt` when detection i
 
 ## Error Handling
 
-- **A profile present, not on the base branch, and
-  `.digismith/docs/<slug>/plan.md` exists for this branch's slug** → see
-  Step 0; always stops there except for an explicit profile-switch request,
-  which routes straight to `digismith:bootstrap`. Profile present but on the
-  base branch, or off the base branch with no matching `plan.md` → falls
-  through to Step 1 normally, not an error.
+- **A profile present, not on the base branch, and a plan file exists for
+  this branch's slug** (board, matched by slug via
+  `findBoardFolderBySlug`; else the flat `docs/` fallback) → see Step 0;
+  always stops there except for an explicit profile-switch request, which
+  routes straight to `digismith:bootstrap`. Profile present but on the base
+  branch, or off the base branch with no matching plan → falls through to
+  Step 1 normally, not an error.
 - **Detection ambiguous** (Step 1, row 4) → ask via `AskUserQuestion`, never
   guess.
 - **Past dispatch** → whichever of `digismith:bootstrap`/`digismith:adopt` was
@@ -129,5 +147,5 @@ Never guess between `digismith:bootstrap` and `digismith:adopt` when detection i
 
 | Step | Action |
 |---|---|
-| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + `.digismith/docs/<slug>/plan.md` exists for this branch → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
-| 1 | Base branch → `digismith:bootstrap`. Feature branch + `.digismith/docs/<slug>/plan.md` exists → `digismith:bootstrap`. Feature branch + plan exists elsewhere → `digismith:adopt`. Feature branch + no plan anywhere → ask, don't guess |
+| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + a plan file exists for this branch's slug (board, matched by slug via `findBoardFolderBySlug`; else the flat `docs/` fallback) → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
+| 1 | Base branch → `digismith:bootstrap`. Feature branch + a plan file exists for this branch's slug (board first, then `docs/` fallback) → `digismith:bootstrap`. Feature branch + plan exists elsewhere → `digismith:adopt`. Feature branch + no plan anywhere → ask, don't guess |
