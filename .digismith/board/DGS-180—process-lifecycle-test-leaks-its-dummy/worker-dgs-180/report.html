@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-180: Process-Lifecycle Test Leaks Its Dummy Server — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+  @media (max-width: 700px) { nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implemented, 2026-10-04</span>
+  <h1>DGS-180: Process-Lifecycle Test Leaks Its Dummy Server — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: <strong>n/a</strong></span>
+    <span>Scope: packages/cli/src/depot/process-lifecycle.ts, packages/cli/src/depot/process-lifecycle.test.ts</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">1. Summary</a></li>
+    <li><a href="#repro">2. Reproduction and root cause</a></li>
+    <li><a href="#fix">3. The fix</a></li>
+    <li><a href="#proof">4. Proof (TDD, red/green/sanity)</a></li>
+    <li><a href="#siblings">5. Sibling-test check</a></li>
+    <li><a href="#open">6. Open items carried forward</a></li>
+    <li><a href="#merge">7. Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <p>DGS-180 fixed a real process leak in <code>ensureProcess</code>
+  (<code>packages/cli/src/depot/process-lifecycle.ts</code>): when it spawned a detached child and
+  then threw &mdash; because it could not confirm, via <code>netstat</code>, which PID actually
+  owned the port the child reported &mdash; the already-spawned child was left running with no
+  parent and no tracking file pointing at it. On this VPS, every run of the test exercising this
+  path left one orphan behind, matching the 76 found live on the box. The fix kills the exact PID
+  it spawned before rethrowing, so no failure after the spawn (for any reason) can strand a child.
+  A new, platform-agnostic test drives <code>ensureProcess</code> into that failure deterministically
+  (a reported port nobody binds, so no platform's <code>netstat</code> can find an owner) and asserts
+  the spawned PID is dead afterward, using only <code>process.kill(pid, 0)</code> &mdash; no
+  <code>pgrep</code>, no process-name matching. No sibling test shares this leak shape.</p>
+</section>
+
+<section id="repro">
+  <h2>2. Reproduction and root cause</h2>
+  <p>Baseline <code>pgrep -fc 'dummy listenin[g]'</code> was 0. Running
+  <code>process-lifecycle.test.ts</code> once left exactly 1 orphan (parent PID 1), matching the
+  shape of the 76 found on the VPS. The leaking test is
+  <code>ensureProcess / stopProcess against a real child process &gt; starts a real process, tracks
+  its confirmed PID and port, reuses it, then stops it</code>. It throws
+  <code>could not confirm a PID listening on port &lt;N&gt; via netstat</code> &mdash; after the
+  child is already spawned and detached, but before <code>writeTracking</code> runs, so the test's
+  own <code>afterEach</code> (which only removes the temp dir) never learns the child exists.</p>
+  <p>This was <em>not</em> the maestro's original guess (a failed <code>expect</code> before
+  <code>stopProcess</code>) &mdash; <code>ensureProcess</code> itself throws, before any
+  <code>expect</code> runs. Same failure shape though: any throw after the spawn, for any reason,
+  strands the child.</p>
+  <p>Why the file fails in this checkout: by design, not a bug &mdash;
+  <code>.digismith/docs/depot-cli-command-group/plan.md</code> states "Windows is the real target
+  platform... Use only <code>tasklist</code>, <code>taskkill</code>, <code>netstat</code>." On this
+  Linux VPS, <code>tasklist</code>/<code>taskkill</code> are absent entirely, and <code>netstat</code>
+  exists but its Linux output (<code>tcp</code>/<code>LISTEN</code>, no PID column) doesn't match
+  the Windows-shaped parser. This cross-platform gap is out of scope for this ticket and is now
+  tracked separately as DGS-181.</p>
+</section>
+
+<section id="fix">
+  <h2>3. The fix</h2>
+  <p><code>ensureProcess</code> now captures <code>child.pid</code> into a local <code>const pid</code>
+  right after the spawn, wraps the rest of the function (the listening-port wait, the
+  <code>netstat</code> confirmation, <code>writeTracking</code>) in a <code>try/catch</code>, and on
+  any throw calls <code>process.kill(pid, "SIGKILL")</code> (swallowing the error if the child is
+  already gone) before rethrowing the original error. This covers both post-spawn throw points
+  (the 5s "no listening line" timeout and the netstat-confirmation failure) with one wrap, and needs
+  no platform-specific tooling.</p>
+</section>
+
+<section id="proof">
+  <h2>4. Proof (TDD, red/green/sanity)</h2>
+  <p>A new test, <code>kills the process it spawned when it cannot confirm the pid and throws</code>,
+  drives the failure deterministically on any platform: the dummy script reports a listening port of
+  <code>1</code>, a port nothing ever binds, so <code>netstat</code>'s PID confirmation legitimately
+  finds no owner regardless of parser format or host OS. The child writes its own PID to a file at
+  startup (no process-name matching needed), and liveness is checked with
+  <code>process.kill(pid, 0)</code> only.</p>
+  <p>One implementation wrinkle found along the way: a killed process is a zombie &mdash; still
+  "alive" to <code>kill(pid, 0)</code> &mdash; until Node's event loop runs and reaps it. An
+  <code>Atomics.wait</code>-based synchronous sleep blocks that same event loop, so the first version
+  of the liveness poll never went green even with the fix applied. The test's <code>it</code> callback
+  was made <code>async</code> and the poll uses a real <code>await new Promise(r =&gt; setTimeout(r,
+  20))</code>, which actually yields and lets the reap happen. The production fix itself needed no
+  change for this.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Step</th><th>Result</th></tr>
+    <tr><td>Red (new test only, unfixed <code>ensureProcess</code>)</td>
+      <td>Throws the expected message; liveness check stays <code>true</code> &mdash; fails as
+      intended. <code>pgrep -fc</code> stayed 0 before/after (the test's own <code>finally</code>
+      cleans up even while red).</td></tr>
+    <tr><td>Green (fix applied)</td><td>Same throw; spawned PID confirmed dead within the poll,
+      273ms, no stall.</td></tr>
+    <tr><td>Sanity check</td><td>Stashed only the production file (uniquely tagged, confirmed by SHA
+      before reapplying, per the shared-stash-stack rule), reran &mdash; red again, confirming the
+      test genuinely exercises the fix. Reapplied by SHA and dropped the stash.</td></tr>
+    <tr><td>Whole file, once more, fix in place</td><td><code>pgrep -fc 'dummy listenin[g]'</code> 0
+      before &rarr; 0 after. 15 passed, 1 failed (the pre-existing, environment-caused
+      <code>starts a real process...</code> test &mdash; DGS-181, untouched), and that failing test
+      no longer leaks either, since the fix is unconditional at the source.</td></tr>
+    <tr><td>Typecheck</td><td><code>tsc -p tsconfig.build.json --noEmit</code>: zero errors touching
+      either changed file. All reported errors are pre-existing, unrelated missing
+      <code>node_modules</code> links in this worktree (<code>yargs</code>,
+      <code>@digismith/clickup-client</code>, present across the whole package, not caused by this
+      change).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="siblings">
+  <h2>5. Sibling-test check</h2>
+  <p><code>grep -rn "spawn\|setInterval(()=&gt;{}" --include=*.test.ts packages scripts .digismith</code>
+  &mdash; every other hit across the repo is <code>spawnSync</code> (git, node, bash), synchronous and
+  run to completion before the test continues. Only this one test used
+  <code>spawn(..., {detached:true})</code> + <code>unref()</code> plus a script kept alive with
+  <code>setInterval</code>. No sibling leak found; nothing else needed fixing for this shape.</p>
+</section>
+
+<section id="open">
+  <h2>6. Open items carried forward</h2>
+  <p class="callout">Filed to DGS-181 (the maestro is tracking it), found while investigating this
+  ticket, not fixed here: (1) <code>tasklist</code> and <code>taskkill</code> are entirely absent on
+  this VPS, affecting <code>ensureProcess</code>'s reuse-check branch and all of
+  <code>stopProcess</code>. (2) <code>stopProcess</code>'s <code>taskkill</code> call failing with
+  ENOENT is indistinguishable from "the process already exited" (the <code>tasklist</code> fallback
+  check is also missing), so <code>stopProcess</code> can report <code>{stopped: true}</code> on
+  Linux without having actually killed anything.</p>
+</section>
+
+<section id="merge">
+  <h2>7. Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">58c900f</span> fix(depot): kill the child ensureProcess spawned when it fails after the spawn</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-180—process-lifecycle-test-leaks-its-dummy/worker-dgs-180/report.html</footer>
+
+</body>
+</html>
