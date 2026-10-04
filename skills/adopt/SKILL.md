@@ -220,9 +220,7 @@ it didn't:
   applies — change only that one line, from `<footer>DigiSmith ·
   .digismith/docs/<slug>/design.html</footer>` to `<footer>DigiSmith · <target
   folder>/design.html</footer>` (literally `.digismith/board/<KEY>—<slug>/design.html` or
-  `.digismith/docs/<slug>/design.html`). Every other line of the shell, and the gitignore check
-  immediately below it, stays exactly as shipped — just substitute `<target folder>` for whichever
-  path Step 3 resolved wherever this section already says `.digismith/docs/<slug>/design.html`.
+  `.digismith/docs/<slug>/design.html`). Every other line of the shell stays exactly as shipped.
 
   ```html
   <!doctype html>
@@ -313,7 +311,8 @@ it didn't:
   ```
 
   Respect the gitignore check before committing: `git check-ignore -q
-  .digismith/docs/<slug>/design.html` — exit 0 (ignored) → write the file, skip `git
+  <target folder>/design.html` (literally `.digismith/board/<KEY>—<slug>/design.html` or
+  `.digismith/docs/<slug>/design.html`) — exit 0 (ignored) → write the file, skip `git
   add`/commit, never force with `-f`; exit 1 (not ignored) → commit normally. No spec supplied
   → skip `design.html` entirely, not an error.
 - **Relocation target already exists with different content** (e.g. a previous partial
@@ -323,7 +322,8 @@ it didn't:
 ### Step 7: Hand Off to Build
 
 Invoke `digismith:subagent-driven-development` directly against
-`.digismith/docs/<slug>/plan.md` — `digismith:brainstorming` and
+`<target folder>/plan.md` — `.digismith/board/<KEY>—<slug>/plan.md` when Step 3 resolved a key,
+`.digismith/docs/<slug>/plan.md` otherwise (unchanged) — `digismith:brainstorming` and
 `digismith:writing-plans` already ran outside DigiSmith for this ticket,
 so they are not invoked here. From this point on,
 `digismith:inject-standards` Scenario 4 applies exactly as it would for any other
