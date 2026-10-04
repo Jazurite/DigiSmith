@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-159 Part 3: Ticket Lifecycle Skills — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implemented, 2026-10-04</span>
+  <h1>DGS-159 Part 3: Ticket Lifecycle Skills — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: <strong>DGS-159 Part 3</strong></span>
+    <span>Scope: scripts/board-path.ts, skills/bootstrap, skills/adopt, skills/init, skills/jira-intake</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">1. Summary</a></li>
+    <li><a href="#tasks">2. What shipped, by task</a></li>
+    <li><a href="#ruling">3. Confirmed design ruling: the combined tracked-check</a></li>
+    <li><a href="#grep">4. Step 3 grep audit</a></li>
+    <li><a href="#tests">5. Test suite and self-checks</a></li>
+    <li><a href="#open">6. Open items still waiting on the maestro</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <p>DGS-159 Part 3 moves a <strong>keyed</strong> ticket's lifecycle-skill output from
+  <code>.digismith/docs/&lt;slug&gt;/</code> to <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>
+  across the four skills that start a ticket's work — <code>skills/bootstrap</code>,
+  <code>skills/adopt</code>, <code>skills/init</code>, <code>skills/jira-intake</code> — while a
+  keyless ticket keeps using <code>.digismith/docs/&lt;slug&gt;/</code> exactly as before. All six
+  tasks (one script task, four skill-text tasks, this closing task) are committed on
+  <code>dgs-159-lifecycle</code>. The full test suite passes for every file this unit touched, all
+  eleven self-check scenarios from Tasks 2–5 re-trace clean against the final committed text, and
+  the Step 3 grep audit found no unjustified mention of <code>.digismith/docs</code> left behind.</p>
+</section>
+
+<section id="tasks">
+  <h2>2. What shipped, by task</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1 · db58aa5</span><h4>board-path.ts additions</h4>
+      <p><code>boardRelPathForSlug(key, slug)</code> — joins an already-final key and slug without
+      re-slugifying. <code>findBoardFolderBySlug(slug, mainRoot)</code> — finds a keyed ticket's
+      board folder by slug alone, regardless of the folder's own key, sorting entries first for
+      determinism when two folders ever share a slug. Both purely additive — <code>buildFolderName</code>,
+      <code>boardRelPath</code>, <code>parseFolderName</code> untouched.</p></div>
+    <div class="card"><span class="tag">Task 2 · a268f8a</span><h4>jira-intake: keyed-vs-keyless target</h4>
+      <p>Step 3's target path now depends on whether the ticket has a real key —
+      <code>boardRelPath(key, title)</code> when it does, the unchanged
+      <code>.digismith/docs/&lt;slug&gt;/ticket.md</code> when it doesn't. The Handling Existing Files
+      table's "Blank/absent" row changes from an in-place field edit to a folder <strong>move</strong>:
+      a Door 2 draft sitting in <code>docs/&lt;slug&gt;/</code> that gets a real key moves in its
+      entirety to <code>board/&lt;KEY&gt;—&lt;slug&gt;/</code>, then Key/URL/Story Points are filled in
+      on the moved file.</p></div>
+    <div class="card"><span class="tag">Task 3 · 7264c4f</span><h4>bootstrap: key-already-evident</h4>
+      <p>Under <code>ticket: false</code>, Step 1 now checks first whether a real tracker key is
+      already evident (named by the user, or supplied by the dispatching context) before skipping
+      <code>jira-intake</code> outright. Evident → Door 1 with that key, landing on the board. Not
+      evident → unchanged, writes nothing, stays keyless.</p></div>
+    <div class="card"><span class="tag">Task 4 · c728bc1</span><h4>adopt: same fix, plus Step 6/7</h4>
+      <p>Same key-already-evident guard in Step 3, plus Step 6 ("Relocate the Docs") and Step 7's
+      hand-off now branch their target folder on whichever key Step 3 resolved — including the
+      gitignore-check line and the hand-off path itself, both missed in the first draft and fixed in
+      a follow-up commit before this task started.</p></div>
+    <div class="card"><span class="tag">Task 5 · 97e6669</span><h4>init: resolve by slug</h4>
+      <p>The resume check (Step 0 item 2, Step 1 rows 2–3) now calls
+      <code>findBoardFolderBySlug(slug, mainRoot)</code> against <code>.digismith/board/</code> first,
+      falling back to the flat <code>.digismith/docs/&lt;slug&gt;/plan.md</code> check only when
+      nothing matches — never reconstructing a board folder name from the branch's own key, since a
+      folder's own key does not have to match the branch's (DigiSmith's own repo already has this:
+      branch <code>plugin-update-after-merge</code> against folder
+      <code>DGS-161—plugin-update-after-merge</code>).</p></div>
+  </div>
+</section>
+
+<section id="ruling">
+  <h2>3. Confirmed design ruling: the combined tracked-check</h2>
+  <p class="callout"><code>jira-intake</code> Step 3.3's "already tracked" check intentionally
+  combines <code>.digismith/board/</code> and <code>.digismith/docs/</code>
+  (<code>git ls-files .digismith/board/ .digismith/docs/</code>) even though the separate "is this
+  write's own target ignored" check is target-only (<code>git check-ignore -q</code> on just the
+  folder this write is headed to). This is deliberate, not a bug: the commit-vs-gitignore decision
+  is made once per repo, not once per folder — the stored answer is a single bare
+  <code>.digismith/</code> line in <code>.gitignore</code>, which is a prefix match covering both
+  folders at once. Tracked files in either folder therefore correctly mean the repo already chose
+  "committed," and splitting the tracked-check per folder would just reintroduce the redundant
+  question this check was written to avoid. A future reader hitting this asymmetry (one check
+  target-only, the other combined) should read this paragraph rather than re-opening the
+  question.</p>
+</section>
+
+<section id="grep">
+  <h2>4. Step 3 grep audit</h2>
+  <p>Run: <code>grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md
+  skills/init/SKILL.md skills/jira-intake/SKILL.md</code> — 27 lines matched. Every line falls into
+  one of two justified categories (keyless path, or the legacy board-then-docs read fallback),
+  except four pre-existing descriptive lines that predate this ticket and sit outside Tasks 2–5's
+  explicit diff scope (verified byte-identical to <code>main</code>): the <code>jira-intake</code>
+  Overview's "both doors converge on the same <code>docs/</code> shape" sentence, the
+  <code>adopt</code> "Invoked By" sentence ("a plan file that exists outside
+  <code>.digismith/docs/</code>"), and two <code>bootstrap</code> sentences describing
+  <code>config.yml</code>'s location relative to the generated docs. These are loose,
+  slightly-incomplete-but-not-incorrect narrative prose (they still hold true for the keyless case),
+  not routing logic — the actual decision points (Step 3, Handling Existing Files, the Quick
+  Reference tables) all correctly branch on board-vs-docs. Flagged here rather than silently edited,
+  since fixing them would mean reopening a closed task's file outside its stated diff.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Count</th><th>Classification</th></tr>
+    <tr><td><code>skills/jira-intake/SKILL.md</code></td><td>9</td>
+      <td>1 pre-existing Overview sentence (flagged above); 1 keyless-path (Step 3.2, "no key yet");
+      1 keyless-path check-ignore command (Step 3.3); 2 combined tracked-check commands (the
+      confirmed ruling, section 3); 1 legacy-read fallback (Handling Existing Files lookup order);
+      1 Door-2-draft-location mention inside the upgrade-as-move table row (keyless path, pre-move);
+      2 Quick Reference rows naming both the keyed and keyless target (keyless half of each)</td></tr>
+    <tr><td><code>skills/bootstrap/SKILL.md</code></td><td>4</td>
+      <td>2 pre-existing sentences about <code>config.yml</code>'s location (flagged above); 2
+      keyless-path (Step 1's no-key branch, Step 2's slug-derivation no-key branch)</td></tr>
+    <tr><td><code>skills/init/SKILL.md</code></td><td>2</td>
+      <td>2 legacy-read fallback (Step 0 item 2, Step 1 row 2 — both "board first, then the flat
+      docs/ fallback")</td></tr>
+    <tr><td><code>skills/adopt/SKILL.md</code></td><td>12</td>
+      <td>1 pre-existing "Invoked By" sentence (flagged above); 11 keyless-path — each names the
+      keyless half of a now-dual-path sentence (Step 3's no-key branch, Step 5's ticket-docs
+      paragraph, Step 6's target-folder opening/plan bullet/footer-substitution/gitignore-check
+      sentence, Step 7's hand-off sentence, Quick Reference rows 5–6)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="tests">
+  <h2>5. Test suite and self-checks</h2>
+  <p><code>npx vitest run scripts/board-path.test.ts</code> — 24/24 passing, including every
+  pre-existing case. The full-repo <code>npx vitest run</code> shows 2 failing test files
+  (<code>packages/cli/src/index.e2e.test.ts</code>'s colorized-output assertion, and
+  <code>packages/cli/src/depot/process-lifecycle.test.ts</code>'s real-netstat-port assertion) —
+  both pre-existing, environment-dependent, and confirmed untouched by this plan's diff against
+  <code>main</code> (neither file nor the code it exercises was modified by Tasks 1–5).</p>
+  <p>All eleven self-check scenarios across Tasks 2–5 (four in Task 2, two in Task 3, three in Task
+  4, two in Task 5) were re-traced against the final, committed <code>skills/*.md</code> text and
+  passed — the committed text matches what each task's own self-check already confirmed against its
+  diff, with no drift across tasks. No keyless-path branch in any of the four skills carries an edit
+  anywhere in this plan.</p>
+</section>
+
+<section id="open">
+  <h2>6. Open items still waiting on the maestro</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Item</th><th>Status</th></tr>
+    <tr><td>Branch naming (<code>bootstrap</code> Step 2): should <code>&lt;Key&gt;__&lt;slug&gt;</code>
+      vs. <code>&lt;slug&gt;</code> alone also follow "a key is available" the same way the board/docs
+      choice now does?</td>
+      <td>Out of this ticket's scope by design. Filed separately as its own backlog item/ticket,
+      per the design document's section 7.</td></tr>
+    <tr><td>DGS-164's own scope (moving the ~70 existing <code>docs/</code> folders)</td>
+      <td>Not decided here. Per the design's section 2/7: a historical folder that genuinely never
+      had a key stays in <code>docs/</code> permanently, matching new keyless work — only a
+      historical folder that already has a resolvable key is a candidate to move to
+      <code>board/</code>.</td></tr>
+  </table>
+  </div>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html</footer>
+
+</body>
+</html>
