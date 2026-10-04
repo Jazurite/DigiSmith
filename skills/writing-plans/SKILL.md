@@ -26,9 +26,13 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   **A tracker key is in hand:** reuse the exact resolved board folder `brainstorming` already
   established earlier in this same session (this skill runs as its terminal step) — never
   re-derive. No resolved path in context (a fully standalone keyed invocation) → the same
-  two-step `brainstorming` just ran: `board-path.ts --action find --slug '<slug>'` against
-  `.digismith/board/` first, falling back to `--action path --key '<key>' --title '<title>'` only
-  if nothing is found. Write `plan.md` into that folder, alongside `design.html`.
+  two-step `brainstorming` just ran:
+  `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'`
+  against `.digismith/board/` first, falling back to
+  `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'`
+  only if nothing is found. Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of
+  them as `'\''` — same quoting rule as `jira-intake`'s "The Script". Write `plan.md` into that
+  folder, alongside `design.html`.
 
   **Path:** reuse the exact resolved path `brainstorming` already established earlier in this
   same session — nested `.digismith/docs/<Letter>/<Letter.N>-<slug>/` or
