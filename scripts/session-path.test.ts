@@ -38,6 +38,18 @@ describe("isSafeSessionName", () => {
   it("rejects a dotfile-style name", () => {
     expect(isSafeSessionName(".old")).toBe(false);
   });
+
+  it("rejects a lineage-key title with a sub-number and description", () => {
+    expect(isSafeSessionName("A.1: Primitives")).toBe(false);
+  });
+
+  it("rejects a bare clan-letter lineage-key title", () => {
+    expect(isSafeSessionName("K: Maestro")).toBe(false);
+  });
+
+  it("still accepts a worker's full ⚚ title — it only looks like a lineage key if it starts with a single letter, dot/colon, then nothing else", () => {
+    expect(isSafeSessionName("DGS-159 ⚚ Ticket-based naming code")).toBe(true);
+  });
 });
 
 describe("noteRelPath / briefRelPath", () => {
