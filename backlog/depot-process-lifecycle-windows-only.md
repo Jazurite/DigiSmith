@@ -22,6 +22,10 @@ The same file fails `process-lifecycle.test.ts` here (a known failing test), and
    Linux is the primary one and the acceptance check runs on the VPS; the existing Windows behavior and its tests must not regress.
 2. Replace the three Windows calls with portable ones: liveness with `process.kill(pid, 0)`, stop with `process.kill(-pid)` on a detached process
    group (or `process.kill(pid)`), and the listening-PID check with `ss -ltnp` on Linux (keep `netstat -ano` on Windows) or a connect-to-port probe.
+   **A second bug in the same area (found by the DGS-180 worker):** `stopProcess` runs `spawnSync("taskkill", ...)`. On Linux that fails with `ENOENT`,
+   which looks the same as "the process already exited" (a non-zero status, and the `tasklist` fallback is missing too, so it reports "not listed").
+   So `stopProcess` can return `{ stopped: true }` on Linux without having killed anything. Treat a spawn `ENOENT` as an error, not as a stopped
+   process, and cover it with a test.
 3. Keep the parsers testable as pure functions: add Linux fixtures (`ss -ltnp` output) beside the Windows ones.
 4. Run the depot commands on the VPS end to end (`dg depot opencode ensure` and `stop`) as the acceptance check.
 5. Reconcile `process-lifecycle.test.ts` once the real behavior works here (DGS-180 stops the leak first, without this).
