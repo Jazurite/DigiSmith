@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-159 Part 4: Path-Mention Skills — Design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>DGS-159 Part 4: Path-Mention Skills — Design</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Ticket: DGS-159 (E.3: Conventions), worker dgs-159-paths</span>
+    <span>Scope: skills/brainstorming, skills/writing-plans, skills/report-implementation, skills/generate-comment, skills/adopt (one line), .digismith/hooks/post-finish/scripts/update-history.ts</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#scope">1. Scope (checkpoint-1 inventory, approved)</a></li>
+    <li><a href="#decision-a">2. Decision (a): one field, not two</a></li>
+    <li><a href="#decision-b">3. Decision (b): the new report markup</a></li>
+    <li><a href="#decision-c">4. Decision (c): brainstorming/writing-plans keyed path</a></li>
+    <li><a href="#decision-d">5. Decision (d): report-implementation's board-vs-docs read</a></li>
+    <li><a href="#edits">6. Per-file edit list</a></li>
+    <li><a href="#hook">7. The history hook</a></li>
+    <li><a href="#testing">8. Testing</a></li>
+    <li><a href="#open">9. Open items</a></li>
+  </ol>
+</nav>
+
+<section id="scope">
+  <h2>1. Scope (checkpoint-1 inventory, approved)</h2>
+  <p>Five change groups, approved at checkpoint 1: <code>skills/brainstorming/SKILL.md</code>,
+  <code>skills/writing-plans/SKILL.md</code>, <code>skills/report-implementation/SKILL.md</code>
+  (the big one), <code>skills/generate-comment/SKILL.md</code>, and
+  <code>.digismith/hooks/post-finish/scripts/update-history.ts</code> with its test and
+  <code>03-history-update.md</code> — plus one line in <code>skills/adopt/SKILL.md:308</code>
+  (its own <code>{{MAP_ITEM}}</code> span, same value rule as report-implementation; Jack's
+  "do not touch the four lifecycle skills" rule gives way to this one named exception). The
+  stale top comment in <code>skills/subagent-driven-development/scripts/sdd-workspace</code>
+  (describes only the old flat/nested <code>docs/</code> shapes, though its logic already
+  works on any <code>dirname</code>) gets a one-line fix too, same class of staleness.</p>
+  <p>Everything else from the checkpoint-1 inventory — the four lifecycle skills' own
+  keyless/board branches, <code>handoff.md</code>, <code>scripts/config.ts</code>,
+  <code>finishing-a-development-branch</code>, <code>lineage-handoff.ts</code>, and the
+  "Map item <strong>X.Y</strong>" identity labels and historical design-doc citations in
+  <code>offload-implementer</code>, <code>depot</code>, <code>teams-pr-review-notification</code>,
+  <code>generate-comment</code>'s own Overview, <code>voice</code>, and <code>telemetry</code> —
+  stays untouched.</p>
+</section>
+
+<section id="decision-a">
+  <h2>2. Decision (a): one field, not two</h2>
+  <p><strong>Fold.</strong> Today <code>report-implementation</code> carries two separate
+  spans: <code>{{MAP_ITEM}}</code> (mandatory, derived from <code>{{FEATURE_TITLE}}</code>'s
+  own parenthetical, e.g. <code>Capture Ephemeral URL (M)</code> → <code>M</code>) and
+  <code>{{TICKET_KEY_META}}</code> (optional, empty string unless a ticket key survives the
+  profile gate). Once <code>{{MAP_ITEM}}</code> stops being derived from a title parenthetical
+  and instead just becomes the ticket key or <code>n/a</code> (per your item 2), the two fields
+  hold the same value in every case a key exists, and <code>{{TICKET_KEY_META}}</code>'s only
+  remaining job — rendering nothing when there's no key — is exactly what <code>n/a</code> now
+  does instead. Keeping both would mean two spans both saying "DGS-123" (or one saying "n/a" and
+  the other rendering empty, which reads as a contradiction). Folding costs nothing for old
+  reports: they're static HTML, never regenerated, and the hook change (section 7) parses
+  <code>Map item:</code> for those regardless of what new reports do.</p>
+  <p>Net: one mandatory field, replacing both. New name <code>{{TICKET}}</code> (the label
+  changes from "Map item" to "Ticket" — keeping the old label on a field that now holds a
+  ticket key, or the literal text "n/a", would read as a mismatch).</p>
+</section>
+
+<section id="decision-b">
+  <h2>3. Decision (b): the new report markup</h2>
+  <p>Replace this (report-implementation's template, inside <code>.meta</code>):</p>
+  <pre><code>&lt;span&gt;Map item: &lt;strong&gt;{{MAP_ITEM}}&lt;/strong&gt;&lt;/span&gt;
+{{TICKET_KEY_META}}</code></pre>
+  <p>with:</p>
+  <pre><code>&lt;span&gt;Ticket: &lt;strong&gt;{{TICKET}}&lt;/strong&gt;&lt;/span&gt;</code></pre>
+  <p>Value: the ticket key from Step 1.5's existing derivation (<code>ticket.md</code>'s
+  <strong>Key:</strong> line, discarded if the active profile's <code>ticket</code> field is
+  <code>false</code>) when one survives — e.g. <code>&lt;strong&gt;DGS-123&lt;/strong&gt;</code>
+  — otherwise the literal string <code>&lt;strong&gt;n/a&lt;/strong&gt;</code>. Always rendered,
+  never omitted (unlike the old <code>{{TICKET_KEY_META}}</code>, which vanished entirely when
+  empty).</p>
+  <p><strong>adopt's and brainstorming's design.html shells</strong> get the same label and
+  value change, for consistency — a design doc saying "Map item: DGS-123" right after the hook
+  starts expecting a report to say "Ticket: DGS-123" would read as two conventions, not one.
+  Both shells currently render <code>&lt;span&gt;Map item: {{MAP_ITEM}}&lt;/span&gt;</code> (no
+  <code>&lt;strong&gt;</code> — neither file is hook-parsed, so this is cosmetic only). New:
+  <code>&lt;span&gt;Ticket: {{TICKET}}&lt;/span&gt;</code>, same value rule, for the keyed branch
+  only — <strong>the keyless branch keeps "Map item: {{MAP_ITEM}}" and its existing
+  letter-or-reason derivation byte for byte</strong>, since "no change at all" for keyless is a
+  decided rule (Part 3 design, section 8) and nothing here revisits it.</p>
+</section>
+
+<section id="decision-c">
+  <h2>4. Decision (c): brainstorming/writing-plans keyed path</h2>
+  <p><strong>brainstorming</strong> ("After the Design" → DigiSmith-tracked work, <code>SKILL.md:119-251</code>).
+  Before the existing map-letter-or-<code>_unlettered</code> logic, insert a keyed branch:</p>
+  <ul>
+    <li>A tracker key is in hand (passed in by <code>bootstrap</code>/<code>adopt</code>, or
+    already evident from how the work was requested) → resolve the <strong>existing</strong>
+    folder first, never reconstruct one: run
+    <code>board-path.ts --action find --slug &lt;slug&gt;</code> against
+    <code>.digismith/board/</code>. <strong>Found</strong> → that folder,
+    <code>&lt;folder&gt;/design.html</code>. <strong>Not found</strong> (an ad hoc keyed call
+    with no prior <code>jira-intake</code> run this session) → compute fresh with
+    <code>board-path.ts --action path --key &lt;key&gt; --title &lt;title&gt;</code>.</li>
+    <li>No key → the existing logic, untouched: scan <code>.digismith/docs/&lt;Letter&gt;/</code>
+    for map-letter nesting, or <code>.digismith/docs/_unlettered/&lt;slug&gt;/</code>, exactly as
+    today.</li>
+  </ul>
+  <p><code>{{MAP_ITEM}}</code> in the template (line 194) follows decision (b): the keyed branch
+  renders <code>Ticket: {{TICKET}}</code> with the key (always present in this branch — a key
+  that resolved a board folder is never absent); the keyless branch keeps
+  <code>Map item: {{MAP_ITEM}}</code> with its current letter-or-"no map letter — reason" value,
+  unchanged.</p>
+  <p><strong>writing-plans</strong> (<code>SKILL.md:18-40</code>) mirrors this exactly, same
+  "reuse the path <code>brainstorming</code> already resolved this session, never re-derive"
+  rule it already states for the keyless case — now also covering the keyed resolved path.
+  Standalone keyed call with nothing resolved yet this session → the same two-step (find by
+  slug, then <code>path --key --title</code>) brainstorming just ran. No key, no resolved path →
+  existing flat <code>docs/&lt;slug&gt;/plan.md</code> fallback, unchanged.</p>
+</section>
+
+<section id="decision-d">
+  <h2>5. Decision (d): report-implementation's board-vs-docs read</h2>
+  <p>Step 1's job is to find <code>&lt;target folder&gt;</code> from the plan file's own path.
+  Today it only knows the <code>docs/</code> shapes (flat, nested, lineage, or the
+  <code>docs/superpowers/plans/</code> filename fallback) and counts path segments to tell them
+  apart. A board folder needs no such counting: whatever directory the plan file sits in
+  <em>is</em> the target folder, flat or nested — this ticket's own worker folders
+  (<code>worker-dgs-159-paths/</code> beside <code>worker-dgs-159-lifecycle/</code>, etc., all
+  under one <code>DGS-159—…</code> folder) are exactly that nested case, and
+  <code>update-history.ts</code>'s own error message already anticipates a
+  <code>&lt;part&gt;</code> subfolder under a board ticket folder.</p>
+  <p>New Step 1 rule, checked first: plan path starts with <code>.digismith/board/</code> → the
+  folder segment right after <code>board/</code> must parse as a real board folder name
+  (<code>board-path.ts --action parse --name &lt;name&gt;</code> — confirms the key and em dash;
+  a parse failure here is a real error, not a fallback case) and <code>&lt;target folder&gt;</code>
+  is simply <code>dirname(plan.md)</code>, nesting depth included. Otherwise, fall through to the
+  existing <code>docs/</code> segment-counting logic exactly as today — the two bases are
+  mutually exclusive by construction (a plan lives in exactly one place), so there is no real
+  "already exists under both" conflict to resolve; "legacy vs. new" just means "which one
+  pattern this particular plan's path happens to match."</p>
+  <p>Step 1.5's ticket-key read (<code>&lt;target folder&gt;/ticket.md</code>, gated by the
+  active profile's <code>ticket</code> field) and Step 4's write target + gitignore check both
+  generalize to <code>&lt;target folder&gt;</code> the same way — the exact pattern
+  <code>adopt</code> Step 6 already uses for this. Step 4's existing "ask before overwrite" check
+  needs no change beyond that: it already treats "a file already exists at that path" as one
+  case, regardless of which base the path happens to be under.</p>
+  <p>The Step 4 commit message ("docs: add &lt;feature&gt; (&lt;map-item&gt;) implementation
+  report") also branches: board case → <code>(&lt;ticket-key&gt;)</code>; docs case → unchanged,
+  <code>(&lt;map-item&gt;)</code>.</p>
+</section>
+
+<section id="edits">
+  <h2>6. Per-file edit list</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>File</th><th>Change</th></tr>
+    <tr><td><code>skills/brainstorming/SKILL.md</code></td>
+      <td>Insert the keyed branch (decision c) before the existing map-letter logic in "After the
+      Design"; update the template's <code>{{MAP_ITEM}}</code>/<code>Map item:</code> line and
+      footer example for the keyed case only (decision b); keyless untouched.</td></tr>
+    <tr><td><code>skills/writing-plans/SKILL.md</code></td>
+      <td>Insert the keyed branch mirroring brainstorming (decision c); keyless untouched.</td></tr>
+    <tr><td><code>skills/report-implementation/SKILL.md</code></td>
+      <td>Step 1: add the board-folder case ahead of the docs segment-counting logic (decision d).
+      Step 1.5: generalize the <code>ticket.md</code> read path. Step 2a: drop
+      <code>{{TICKET_KEY_META}}</code>'s bullet, replace <code>{{MAP_ITEM}}</code>'s bullet with
+      the ticket-key-or-n/a rule (decision a). Template: the new <code>Ticket:</code> span
+      (decision b). Step 4 + Error Handling + Quick Reference: generalize the write target,
+      gitignore check, and commit message to <code>&lt;target folder&gt;</code> (decision d).</td></tr>
+    <tr><td><code>skills/generate-comment/SKILL.md</code></td>
+      <td>Step 2 (line 75): check whichever path report-implementation actually resolved this
+      session (board or docs) instead of the hardcoded <code>.digismith/docs/&lt;slug&gt;/report.html</code>.
+      Line 16's citation to generate-comment's own (unrelated, pre-existing) design doc stays.</td></tr>
+    <tr><td><code>skills/adopt/SKILL.md:308</code></td>
+      <td>One line: <code>{{MAP_ITEM}}</code> → the same ticket-key-or-n/a value (decision a/b).
+      Nothing else in adopt changes.</td></tr>
+    <tr><td><code>skills/subagent-driven-development/scripts/sdd-workspace</code></td>
+      <td>One line in the top comment: mention the board-folder shape alongside the docs shapes
+      it already describes. No logic change — it already operates on <code>dirname</code>.</td></tr>
+    <tr><td><code>.digismith/hooks/post-finish/scripts/update-history.ts</code> (+ test)</td>
+      <td>See section 7.</td></tr>
+    <tr><td><code>.digismith/hooks/post-finish/03-history-update.md</code></td>
+      <td>Mention the new <code>Ticket: &lt;strong&gt;…&lt;/strong&gt;</code> line alongside the
+      legacy <code>Map item:</code> one, wherever the prose currently names the latter.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="hook">
+  <h2>7. The history hook</h2>
+  <p><code>parseReport</code>'s current rule: throw unless
+  <code>Map item: &lt;strong&gt;…&lt;/strong&gt;</code> is present. New rule: try
+  <code>Ticket: &lt;strong&gt;(.+?)&lt;/strong&gt;</code> first; if absent, try
+  <code>Map item: &lt;strong&gt;(.+?)&lt;/strong&gt;</code>; if neither is present, throw (error
+  message names both forms). <code>ParsedReport</code>'s <code>mapItem: string</code> field
+  renames to <code>ticket: string</code> — nothing downstream reads its value today (it only
+  gates presence), so the rename is a one-module, no-behavior-change cleanup, not a risk; test
+  fixtures rename their <code>mapItem</code> override to <code>ticket</code> and gain a
+  <code>legacy</code> flag choosing which label <code>writeReportFixture</code> emits.</p>
+  <p>New tests: a board-folder report with <code>Ticket: &lt;strong&gt;DGS-…&lt;/strong&gt;</code>
+  parses; a board-folder report with <code>Ticket: &lt;strong&gt;n/a&lt;/strong&gt;</code> parses
+  (keyless ticket:false profile); an old fixture with only <code>Map item:</code> still parses
+  unchanged (regression guard); a report with neither line throws, naming both forms in the
+  message.</p>
+</section>
+
+<section id="testing">
+  <h2>8. Testing</h2>
+  <ul>
+    <li><code>update-history.ts</code>: new/updated unit tests per section 7, run via the
+    project's existing test runner for this file.</li>
+    <li>The four skill files have no executable test suite (they're prose) — verification is
+    the <code>git diff</code> self-check the plan will require per task, plus a dry run of each
+    changed <code>board-path.ts</code> invocation by hand.</li>
+    <li>Before any push: generate a real report.html for this very ticket (keyed case) with the
+    new template and confirm it passes <code>parseReport</code>, per the brief's own
+    "a report must pass the hook" rule.</li>
+  </ul>
+</section>
+
+<section id="open">
+  <h2>9. Open items</h2>
+  <ul>
+    <li>None blocking. The <code>{{TICKET}}</code> rename (from <code>{{MAP_ITEM}}</code>) and
+    the <code>mapItem</code> → <code>ticket</code> field rename are both one-word renames with no
+    behavior change for existing callers; flagging them here only so the plan reviewer sees them
+    named explicitly rather than buried in a diff.</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-paths/design.html</footer>
+
+</body>
+</html>
