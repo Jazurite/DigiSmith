@@ -46,7 +46,11 @@ So a plugin update needs no restart. Before this, the maestro had no path at all
   it is known.
 - Is a reload safe for a worker in the middle of a task, when a skill's text changes under it? Reload at checkpoints, not mid-turn.
 - Emma and Soveron maestros use the same plugin. Does the same typed command work there? Probably, not tested.
-- Can the maestro trigger its own reload (idea 2)?
+- Can the maestro trigger its own reload (idea 2)? Tested 2026-10-04 11:1x UTC+7: no, by the routes it has. `send_message` refuses the
+  current session ("must not be the current session"), and a message from another session arrives as a user turn of plain text, not as a
+  command. `clear_session` is the only session-level call, and it is not a reload. The Skill tool does not run built-in commands. Still
+  open: a plugin hook, a Desktop feature, or a different tool the app may add. Until then Jack types `/reload-plugins` in each Desktop
+  maestro, and the maestro reloads the herdr worker panes itself.
 - Does `clear_session` also reload? The 2026-10-04 07:49 sign was not proof. With `/reload-plugins` working, the answer matters less.
 
 ## Related
