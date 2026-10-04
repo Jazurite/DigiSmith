@@ -46,6 +46,19 @@ describe("buildFolderName", () => {
     const name = buildFolderName("dgs-158", "Ticket-based naming architecture");
     expect(parseFolderName(name)).toEqual({ key: "DGS-158", slug: "ticket-based-naming-architecture" });
   });
+
+  it("throws rather than building a trailing-dash folder name when the title has no slug-able content", () => {
+    // Non-ASCII only: slugify drops every character (none are a-z0-9), leaving an empty slug.
+    expect(() => buildFolderName("dgs-1", "モバイル")).toThrow(
+      "cannot build a board folder name: title has no slug-able content",
+    );
+  });
+
+  it("throws when the title is entirely filler words", () => {
+    expect(() => buildFolderName("dgs-1", "To Of For")).toThrow(
+      "cannot build a board folder name: title has no slug-able content",
+    );
+  });
 });
 
 describe("boardRelPath", () => {

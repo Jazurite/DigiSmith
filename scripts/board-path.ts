@@ -36,9 +36,16 @@ export function slugify(title: string): string {
 }
 
 export function buildFolderName(key: string, title: string): string {
+  const slug = slugify(title);
+  if (slug === "") {
+    // slugify keeps only ASCII letters/digits and drops fillers — a title with none of those
+    // (all non-ASCII, or entirely filler words) produces an empty slug, which would otherwise
+    // silently build "<KEY>—" with nothing after the dash.
+    throw new Error(`cannot build a board folder name: title has no slug-able content: ${title}`);
+  }
   // NFC is a no-op today (slugify only ever emits ASCII) — defensive per section 9, in case a
   // future slugify revision keeps more of the title's own characters.
-  return `${key.toUpperCase()}${EM_DASH}${slugify(title)}`.normalize("NFC");
+  return `${key.toUpperCase()}${EM_DASH}${slug}`.normalize("NFC");
 }
 
 export function boardRelPath(key: string, title: string): string {
