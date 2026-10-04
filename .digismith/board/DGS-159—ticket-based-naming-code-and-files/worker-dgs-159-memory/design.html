@@ -154,8 +154,9 @@ tracked now, see "Where work is tracked now" below.</code></pre>
 
 Tickets, not clan letters, are the unit of work (DGS-158, adopted 2026-10-04). ClickUp is the
 source of truth for what's active and what's planned — this file no longer tracks either. A
-ticket's working files live in `.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/`; session files live in
-`.digismith/sessions/`. No new letter or lineage number gets assigned to anything, ever again.
+ticket's working files live in `.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/`; work with no ticket key
+stays in `.digismith/docs/&lt;slug&gt;/`; session files live in `.digismith/sessions/`. No new letter
+or lineage number gets assigned to anything, ever again.
 Shipped work is recorded automatically in `.digismith/history.html` by the history hook, not by
 hand here. The clan-letter map near the end of this file is a frozen snapshot of everything built
 before this cutover — read it for historical context, never extend it.</code></pre>
