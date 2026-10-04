@@ -66,14 +66,28 @@ governing where `design.html` nests on disk — not report-implementation's repo
 | 4 | An **old** report already on disk, generated before this change | any already-committed report.html | unchanged, e.g. `<span>Map item: <strong>G.3</strong></span>` — never regenerated, never touched by this plan | Task 1 test: `parseReport` on a fixture using only the legacy `Map item: <strong>…</strong>` line (no `Ticket:` line at all) still returns `ticket: "G.3"` |
 | 5 | Neither line present at all | any report.html | n/a — this is an error case | Task 1 test: `parseReport` throws, naming both `TICKET`/`Ticket:` and the legacy `MAP_ITEM`/`Map item:` in the message |
 
-A **separate**, unrelated table governs `brainstorming`'s and `adopt`'s own `design.html` shells
-(Task 3, Task 4) — not hook-parsed, not covered by the rows above:
+A **separate**, unrelated table governs `brainstorming`'s own `design.html` shell (Task 4) — not
+hook-parsed, not covered by the rows above. `brainstorming` genuinely computes a map-letter
+value for its keyless case (the `.digismith/docs/<Letter>/` nesting logic), so that machinery
+stays byte for byte:
 
 | Case | Rendered markup | Why |
 |---|---|---|
 | Keyed | `<span>Ticket: {{TICKET}}</span>` (the resolved ticket key) | New — same value rule as the report.html field, different file |
 | Keyless, has a map letter | `<span>Map item: G.3</span>` | **Unchanged** — the existing letter-derivation stays byte for byte |
 | Keyless, no map letter | `<span>Map item: no map letter — <reason></span>` | **Unchanged** — the existing `_unlettered` fallback text stays byte for byte |
+
+**Correction (post-final-review):** `adopt` (Task 3) does **not** get the same keyless row.
+Unlike `brainstorming`, `adopt` never computed a `{{MAP_ITEM}}` value of its own — it only ever
+carried forward whatever the *supplied* spec already had (it adopts externally-authored specs; it
+has no map-letter-derivation machinery to preserve). So there is no real "existing behavior" for
+a keyless `adopt` invocation to keep byte for byte, and the original ticket's own instruction
+(item 2: "replace it with the ticket key, or `n/a` for keyless work") applies to `adopt` exactly
+as it does to `report-implementation`, with no exception. Task 3's actual implementation —
+`{{TICKET}}`, real key or literal `n/a`, for both branches — is correct as built; this plan's
+earlier claim that adopt's "keyless branch keeps `Map item` byte for byte" (Decision b, design
+section 3) was a misstatement for this file specifically, caught by the final whole-branch
+review. The design doc carries the same correction.
 
 ---
 

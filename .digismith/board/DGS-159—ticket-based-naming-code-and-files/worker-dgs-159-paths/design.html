@@ -145,9 +145,18 @@
   Both shells currently render <code>&lt;span&gt;Map item: {{MAP_ITEM}}&lt;/span&gt;</code> (no
   <code>&lt;strong&gt;</code> — neither file is hook-parsed, so this is cosmetic only). New:
   <code>&lt;span&gt;Ticket: {{TICKET}}&lt;/span&gt;</code>, same value rule, for the keyed branch
-  only — <strong>the keyless branch keeps "Map item: {{MAP_ITEM}}" and its existing
+  only — <strong>brainstorming's keyless branch keeps "Map item: {{MAP_ITEM}}" and its existing
   letter-or-reason derivation byte for byte</strong>, since "no change at all" for keyless is a
   decided rule (Part 3 design, section 8) and nothing here revisits it.</p>
+  <p><strong>Correction (post-final-review): adopt has no keyless row at all.</strong> Unlike
+  brainstorming, adopt never computed its own <code>{{MAP_ITEM}}</code> value — it only ever
+  carried forward whatever the supplied spec already had (it adopts externally-authored specs; it
+  has no map-letter-derivation machinery of its own to preserve). There is no "existing behavior"
+  for a keyless adopt invocation to keep byte for byte, so the original ticket's own item 2
+  ("replace it with the ticket key, or n/a for keyless work") applies to adopt with no exception,
+  exactly as it does to report-implementation — both branches render <code>{{TICKET}}</code>. The
+  sentence above, read as applying to adopt too, was a misstatement caught by the final
+  whole-branch review; it was only ever true of brainstorming.</p>
 </section>
 
 <section id="decision-c">
