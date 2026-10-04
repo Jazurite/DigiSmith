@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEMORY.md restructure (DGS-159 Part 5) — report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">shipped</span>
+  <h1>MEMORY.md restructure (DGS-159 Part 5) — report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-04</span>
+    <span>Map item: no map letter — ticket-based naming (DGS-158) retires map items; this is DGS-159 Part 5</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">1. Summary</a></li>
+    <li><a href="#moved">2. What moved</a></li>
+    <li><a href="#new">3. What is new</a></li>
+    <li><a href="#byte-check">4. Frozen-section byte check</a></li>
+    <li><a href="#handoff">5. The handoff line</a></li>
+    <li><a href="#tickets">6. DGS-167 and DGS-168</a></li>
+    <li><a href="#open">7. Open items for later parts</a></li>
+    <li><a href="#commits">8. Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>1. Summary</h2>
+  <p>DGS-159 Part 5 restructured <code>MEMORY.md</code> at the repo root so it reflects
+  ticket-based naming (DGS-158): the ticket is the unit of work, not clan letters or lineage
+  numbers. Everything already recorded in the old clan-letter map, build order, and open
+  questions stayed word for word, moved into one labelled frozen section. New sections explain
+  where work is tracked now (ClickUp), and one line in <code>skills/handoff/SKILL.md</code> was
+  updated to match. Design and plan were approved at three checkpoints with the maestro and Jack
+  before any edit to <code>MEMORY.md</code> was made.</p>
+</section>
+
+<section id="moved">
+  <h2>2. What moved</h2>
+  <p>The Map (26 rows, A–Y, plus the shared JIRA write-back primitive), Build Order (6 tiers,
+  including its explanatory paragraphs), and the original Open Questions (3 items) moved
+  verbatim — byte for byte, nothing reworded, nothing reordered internally — into one new
+  section, <strong>"Frozen: the clan-letter map (through DGS-157)"</strong>, at the end of the
+  file. Their own headings were demoted from <code>##</code> to <code>###</code> (the only
+  textual change touching them at all — a structural wrapper, not recorded content). Philosophy,
+  Structure, What Superpowers Already Covers, Relationship to <code>2. Career/</code>, and
+  Conventions were not edited (Conventions got one new bullet appended; nothing existing in it
+  changed). The two inline map-letter references inside Relationship to <code>2. Career/</code>
+  (map item <strong>C</strong>, <strong>Tier 6</strong>) and inside Conventions (map items
+  <strong>O</strong>, <strong>P</strong>) were deliberately left alone — they remain resolvable
+  via the frozen section further down the same file.</p>
+</section>
+
+<section id="new">
+  <h2>3. What is new</h2>
+  <ul>
+    <li>A short, dated status block right after the file's (unedited) opening paragraph, pointing
+      at the new orientation section instead of editing the paragraph's own stale clause.</li>
+    <li><strong>"Where work is tracked now"</strong>, placed high in the file, before Philosophy:
+      tickets are the unit of work, ClickUp is the source of truth for what's active and planned,
+      a ticket's files live in <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>, work with
+      no ticket key stays in <code>.digismith/docs/&lt;slug&gt;/</code>, session files live in
+      <code>.digismith/sessions/</code>, and shipped work is recorded automatically in
+      <code>.digismith/history.html</code> by the history hook.</li>
+    <li>One new Conventions bullet pointing at DGS-158's own convention document by ticket key
+      (not a hardcoded path, since another worker is still relocating it).</li>
+    <li><strong>"Open questions (current)"</strong>: the three old open questions restated as
+      live text, each pointing back at its frozen original.</li>
+  </ul>
+</section>
+
+<section id="byte-check">
+  <h2>4. Frozen-section byte check</h2>
+  <p>Verified twice against <code>origin/main</code>'s pre-restructure <code>MEMORY.md</code> (once
+  before the DGS-167/168 follow-up, once after) by slicing the original file's lines 94–127
+  (The map), 131–151 (Build order), and 181–202 (Open questions) and confirming each slice
+  appears verbatim inside the restructured file:</p>
+  <pre><code>The map: MATCH (byte-identical, found verbatim in new file)
+Build order: MATCH (byte-identical, found verbatim in new file)
+Open questions: MATCH (byte-identical, found verbatim in new file)
+
+ALL THREE FROZEN BODIES BYTE-IDENTICAL: True</code></pre>
+  <p>Cross-checked independently with <code>git diff --color-moved=blocks</code>: the only
+  deletions git does not classify as a move are the three demoted heading lines themselves, plus
+  one blank line — zero textual changes inside any frozen body. Jack verified the same result
+  independently against <code>origin/main</code> before approving the push.</p>
+</section>
+
+<section id="handoff">
+  <h2>5. The handoff line</h2>
+  <p><code>skills/handoff/SKILL.md</code> lines 115–116 (the end-of-ticket cleanup checklist)
+  used to read "this session's row in <code>MEMORY.md</code> records this ticket" — a practice
+  this restructure retires, since <code>MEMORY.md</code>'s map is now frozen and gets no new
+  rows. It now reads: "<code>.digismith/history.html</code> records this ticket (the history
+  hook writes it from the ticket's <code>report.html</code>; a ticket with no report has no
+  entry, which is a gap to list)." This report exists specifically so this part's own ticket
+  doesn't fall into that gap.</p>
+</section>
+
+<section id="tickets">
+  <h2>6. DGS-167 and DGS-168</h2>
+  <p>Two of the three restated open questions turned out to be live enough that Jack filed them
+  as real tickets while this part was in flight: <strong>DGS-167</strong> (E.4: Workflows) for
+  F's shape (design review), and <strong>DGS-168</strong> (D.1: Runtime Services) for
+  shipped-product telemetry. Both are now linked by key in "Open questions (current)". The third
+  — the <code>{{MAP_ITEM}}</code> derivation gap — stayed as text, not a ticket, since it belongs
+  to <code>report-implementation</code> itself (see below).</p>
+</section>
+
+<section id="open">
+  <h2>7. Open items for later parts</h2>
+  <ul>
+    <li>The <code>{{MAP_ITEM}}</code> derivation gap (<code>report-implementation</code>'s
+      placeholder has no rule for a no-map-letter feature) belongs to
+      <code>report-implementation</code> itself, which is not touched by this part. A later part
+      of DGS-159 that updates <code>report-implementation</code> for ticket-based naming should
+      pick this up.</li>
+    <li>The new Conventions bullet points at DGS-158's <code>design.html</code> by its current
+      path, <code>.digismith/docs/E/E.3/worker-maestro-conventions/</code>, and notes it "moves
+      under DGS-164." Once that move happens, the path in the live prose goes stale (the pointer
+      is still correct by ticket key, just not by path) — whichever part does that move should
+      confirm whether the bullet's parenthetical needs updating, or whether pointing by key alone
+      was always the more durable choice.</li>
+  </ul>
+</section>
+
+<section id="commits">
+  <h2>8. Commits (branch <code>memory-md-restructure</code>, base <code>main</code> at <code>4f92fcb</code>)</h2>
+  <ul>
+    <li><code>cc7681c</code> — design</li>
+    <li><code>f7c6729</code> — plan</li>
+    <li><code>e9e8ffa</code> — docs fix: keyless work stays in <code>.digismith/docs/</code>, not the board</li>
+    <li><code>2128b2b</code> — restructure <code>MEMORY.md</code></li>
+    <li><code>b02080a</code> — point handoff's <code>MEMORY.md</code> check at <code>history.html</code></li>
+    <li><code>7d2e2b8</code> — record DGS-167/DGS-168 in design.html and plan.md</li>
+    <li><code>9e5f277</code> — link DGS-167/DGS-168 in <code>MEMORY.md</code></li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-memory/report.html</footer>
+
+</body>
+</html>
