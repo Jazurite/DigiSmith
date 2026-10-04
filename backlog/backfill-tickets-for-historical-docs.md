@@ -1,0 +1,37 @@
+# Backfill tickets for the historical `.digismith/docs/` folders, then move them to the board
+
+**Status:** Idea, Jack's call (2026-10-04, answering the DGS-159 split): "The historical 87 docs is for another backlog because we need to
+backfill ticket for them." No design yet. ClickUp: **DGS-164** (list E.3: Conventions, created 2026-10-04 10:16 UTC+7 [03:16Z], task id `14zcebruqt0`).
+
+**Source:** DGS-159 (ticket-based naming: modify the code and move the files), Part 6. DGS-159's Part 6 is limited to the live session
+files. This item takes the rest.
+
+## Scope
+
+- The 87 folders under `.digismith/docs/` (count from the DGS-159 worker, 2026-10-04): about 70 flat slug folders and the nested clan,
+  lineage and letter folders. Each holds a design, a plan, a report or all three.
+- Each folder needs a ticket key (the convention: `.digismith/board/<KEY>—<slug>/`). Many have a ClickUp ticket. Older work
+  predates ClickUp and may never have had a key. Find the ticket by title and date, and create one (the maestro posts it, with Jack's yes)
+  where none exists.
+- Then move each folder with `git mv`, so the git history follows.
+
+## Constraint (Jack, 2026-10-04)
+
+What is already recorded is immutable. `.digismith/history.html` links to `docs/<slug>/design.html`, `plan.md` and `report.html`. A move
+would break those links, and the history page itself must not be rewritten. Find a way that keeps the links working, for example a
+redirect page per moved folder, or leaving the old path in place for any folder that `history.html` links to, or an alias file. Decide
+before the first move.
+
+## Open questions
+
+- The link problem above: which option, and does it apply to `MEMORY.md` links too?
+- How to find a ticket for a folder: by title in ClickUp, by the `ticket.md` inside the folder, or by hand.
+- Which key an old pre-ClickUp folder gets, and which ClickUp list it goes in.
+- Order of work: by clan, by date, or by whether `history.html` links to it.
+- The six folders that hold a live `handoff.md` are Part 6 of DGS-159, not this item.
+
+## Related
+
+[worker-and-maestro-conventions.md](worker-and-maestro-conventions.md) (DGS-158),
+[convert-backlog-files-to-tickets.md](convert-backlog-files-to-tickets.md), DGS-159, the convention design
+`.digismith/docs/E/E.3/worker-maestro-conventions/design.html` (sections 6, 10 and 11).
