@@ -130,12 +130,11 @@ to a subagent that can't ask.
      E.g. `docs/superpowers/plans/2026-08-08-unified-docs-convention-plan.md`
      → `unified-docs-convention` (**not** `plans`).
 
-   Either way, the slug you end up with defines
-   `.digismith/docs/<feature-slug>/` as the target folder for everything
-   downstream — report output path (Step 4), the footer, and the sibling
-   spec/plan links. In the fallback case that folder may not yet contain a
-   `design.html` or `plan.md` at all (they're still at their old location);
-   that needs no extra handling — Step 2a's existing
+   Either way, `<target folder>` (resolved above) is where everything
+   downstream reads and writes — report output path (Step 4), the footer,
+   and the sibling spec/plan links. In the fallback case that folder may
+   not yet contain a `design.html` or `plan.md` at all (they're still at
+   their old location); that needs no extra handling — Step 2a's existing
    omit-the-link-if-the-file-isn't-there rule already covers it.
 2. **Ledger** — the plan's workspace (the directory
    `skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE` resolves to) plus `/progress.md`, in full.
@@ -664,7 +663,7 @@ ledger type; this skill's job still just ends here.
 | Step | Action |
 |---|---|
 | 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
-| 2 | Derive header placeholders including the optional `{{TICKET}}` (2a) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
+| 2 | Derive header placeholders including `{{TICKET}}` (2a, always rendered — real key or `n/a`) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
 | 4 | Write to `<target folder>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |
