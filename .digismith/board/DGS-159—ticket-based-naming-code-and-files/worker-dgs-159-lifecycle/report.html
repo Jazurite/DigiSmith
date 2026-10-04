@@ -81,6 +81,7 @@
     <li><a href="#tests">5. Test suite and self-checks</a></li>
     <li><a href="#open">6. Open items still waiting on the maestro</a></li>
     <li><a href="#cli">7. Tasks 7–8: CLI and final-review fixes</a></li>
+    <li><a href="#find-root-fix">8. Task 10: find's search-root fix (a real bug)</a></li>
   </ol>
 </nav>
 
@@ -96,7 +97,10 @@
   the Step 3 grep audit found no unjustified mention of <code>.digismith/docs</code> left behind.
   Tasks 7–8 then added a small CLI to <code>scripts/board-path.ts</code> and pointed all four skills
   at it, fixing three findings the final whole-branch review raised; see section 7 for what changed
-  and what stays parked.</p>
+  and what stays parked. Task 10 fixed a real bug the maestro found by reading the Task 7 diff
+  directly: <code>--action find</code> was resolving its search root against the main checkout
+  instead of the current working tree, which would have broken <code>init</code>'s own resume check
+  for every in-progress worker ticket; see section 8.</p>
 </section>
 
 <section id="tasks">
@@ -104,10 +108,12 @@
   <div class="cards">
     <div class="card"><span class="tag">Task 1 · db58aa5</span><h4>board-path.ts additions</h4>
       <p><code>boardRelPathForSlug(key, slug)</code> — joins an already-final key and slug without
-      re-slugifying. <code>findBoardFolderBySlug(slug, mainRoot)</code> — finds a keyed ticket's
+      re-slugifying. <code>findBoardFolderBySlug(slug, root)</code> — finds a keyed ticket's
       board folder by slug alone, regardless of the folder's own key, sorting entries first for
       determinism when two folders ever share a slug. Both purely additive — <code>buildFolderName</code>,
-      <code>boardRelPath</code>, <code>parseFolderName</code> untouched.</p></div>
+      <code>boardRelPath</code>, <code>parseFolderName</code> untouched. (Task 10 renamed this second
+      parameter from <code>mainRoot</code> to <code>root</code> and changed what the CLI passes into
+      it — see section 8.)</p></div>
     <div class="card"><span class="tag">Task 2 · a268f8a</span><h4>jira-intake: keyed-vs-keyless target</h4>
       <p>Step 3's target path now depends on whether the ticket has a real key —
       <code>boardRelPath(key, title)</code> when it does, the unchanged
@@ -127,13 +133,17 @@
       gitignore-check line and the hand-off path itself, both missed in the first draft and fixed in
       a follow-up commit before this task started.</p></div>
     <div class="card"><span class="tag">Task 5 · 97e6669</span><h4>init: resolve by slug</h4>
-      <p>The resume check (Step 0 item 2, Step 1 rows 2–3) now calls
-      <code>findBoardFolderBySlug(slug, mainRoot)</code> against <code>.digismith/board/</code> first,
-      falling back to the flat <code>.digismith/docs/&lt;slug&gt;/plan.md</code> check only when
-      nothing matches — never reconstructing a board folder name from the branch's own key, since a
-      folder's own key does not have to match the branch's (DigiSmith's own repo already has this:
-      branch <code>plugin-update-after-merge</code> against folder
-      <code>DGS-161—plugin-update-after-merge</code>).</p></div>
+      <p>The resume check (Step 0 item 2, Step 1 rows 2–3) now calls the script's
+      <code>--action find</code> (<code>findBoardFolderBySlug(slug, root)</code> under the hood)
+      against <code>.digismith/board/</code> first, falling back to the flat
+      <code>.digismith/docs/&lt;slug&gt;/plan.md</code> check only when nothing matches — never
+      reconstructing a board folder name from the branch's own key, since a folder's own key does not
+      have to match the branch's (DigiSmith's own repo already has this: branch
+      <code>plugin-update-after-merge</code> against folder
+      <code>DGS-161—plugin-update-after-merge</code>). Task 10 fixed a real bug here: the search root
+      originally resolved to the <strong>main</strong> checkout, so a worker's own in-progress board
+      folder — which lives only in that worker's own worktree until the ticket merges — was invisible
+      to its own resume check. See section 8.</p></div>
   </div>
 </section>
 
@@ -265,6 +275,41 @@
   (init's two lines) the interim Part-4-hasn't-shipped-yet fallback; no unclassified line found.
   <code>parseReport</code> was re-run against this file both before and after this edit and still
   returns a valid object without throwing.</p>
+</section>
+
+<section id="find-root-fix">
+  <h2>8. Task 10: find's search-root fix (a real bug)</h2>
+  <p>Task 10 (<code>92aebe4</code>, test follow-up <code>45e9e63</code>/<code>4f2d892</code>) fixed a
+  real bug the maestro found by reading <code>scripts/board-path.ts</code>'s Task 7 diff directly,
+  not from a test failure: <code>--action find</code> resolved its search root via
+  <code>resolveMainRoot</code> (<code>scripts/lineage-handoff.ts</code>'s helper for the
+  <strong>main</strong> checkout), when it needed to search the <strong>current</strong> working tree
+  instead. A worker's own board folder lives only inside that worker's own worktree until the ticket
+  merges — confirmed live against this very ticket's own folder, the exact case
+  <code>skills/init/SKILL.md</code>'s resume check already cites by name
+  (<code>DGS-161—plugin-update-after-merge</code>). Searching the main checkout from inside a
+  worktree would silently miss every board folder that worktree itself had just created, including
+  this ticket's own — <code>init</code>'s resume check runs inside a worktree, so this bug would have
+  broken resume for every in-progress worker ticket, not just a hypothetical one.</p>
+  <p>The fix renamed <code>findBoardFolderBySlug</code>'s second parameter from <code>mainRoot</code>
+  to <code>root</code>, added a <code>resolveCurrentRoot</code> helper (<code>git rev-parse
+  --show-toplevel</code>, falling back to the bare cwd when that isn't a git repo), and added a
+  <code>--root</code> CLI override so a test (or an unusual caller) can point it at an arbitrary
+  directory without going through git at all. <code>skills/init/SKILL.md</code> and
+  <code>skills/jira-intake/SKILL.md</code> were updated to state which working tree
+  <code>--action find</code> searches, and both skills' last residual Quick Reference/Error Handling
+  mentions of the raw function name (<code>findBoardFolderBySlug</code>,
+  <code>boardRelPath(key, title)</code>) were replaced with the CLI action name — the same "stays
+  parked, cosmetic only" item Task 9's own report had already flagged.</p>
+  <p>Re-verification for this task (Task 11): <code>npx vitest run scripts/board-path.test.ts</code>
+  — 34/34 passing, including Task 10's two new tests. The Step 2 grep audit
+  (<code>grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md
+  skills/init/SKILL.md skills/jira-intake/SKILL.md</code>) still matches 26 lines across the same
+  four files in the same per-file counts as Task 9 (bootstrap 4, adopt 11, init 2, jira-intake 9) —
+  Task 10 didn't touch a <code>.digismith/docs</code> mention; the only change inside that line set is
+  the raw-function-name swap described above, which doesn't add or remove a
+  <code>.digismith/docs</code> line. <code>parseReport</code> was re-run against this file both before
+  and after this edit and still returns a valid object without throwing.</p>
 </section>
 
 <footer>DigiSmith · .digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html</footer>
