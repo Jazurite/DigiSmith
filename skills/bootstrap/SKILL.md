@@ -256,37 +256,51 @@ live in the same `.digismith/config.yml` that sub-step 6 already copies.
 
 ### Step 1: Get a Real Ticket
 
-Check whether this conversation already produced a
-`.digismith/docs/<slug>/ticket.md` via `digismith:jira-intake` earlier
-this session. If not, invoke `digismith:jira-intake` now.
+Check whether this conversation already produced a ticket file via
+`digismith:jira-intake` earlier this session —
+`.digismith/board/<KEY>—<slug>/ticket.md` if a key was already known, or
+`.digismith/docs/<slug>/ticket.md` otherwise. If not, invoke
+`digismith:jira-intake` now.
 
-**If the active profile's `ticket` field is `false`:** skip invoking
-`digismith:jira-intake` entirely — no `ticket.md` is written. Derive the
-slug directly from the feature description, applying the exact same
-deterministic rule `digismith:jira-intake` Step 3.1 already defines:
-lowercase, drop filler words (a, an, the, on, to, of, for, in), replace
-remaining non-alphanumeric runs with a single hyphen, then truncate to
-~40 characters at a word boundary — never leaving a trailing filler word
-or hyphen. Restated inline here since `digismith:jira-intake` itself
-isn't invoked in this path, not reinvented as a different algorithm. Skip
-the rest of Step 1 (no ticket content to read into context) and go
-straight to Step 1.5.
+**If the active profile's `ticket` field is `false`:** check first whether
+a real tracker key is already evident from how this work was requested —
+the user named one (e.g. "implement DGS-159"), or the dispatching context
+supplied one directly (a maestro's brief naming a key, the way this very
+ticket's own brief named DGS-159).
+
+- **A key is evident** → invoke `digismith:jira-intake` Door 1 with that
+  key already confirmed, the same "already confirmed, don't ask again"
+  shortcut `digismith:adopt` Step 3 uses. Its output lands at
+  `.digismith/board/<KEY>—<slug>/ticket.md` (`boardRelPath(key, title)`
+  from `scripts/board-path.ts`). Continue with the rest of Step 1 below
+  as if `ticket` were `true`.
+- **No key is evident** → skip invoking `digismith:jira-intake` entirely —
+  no `ticket.md` is written. Derive the slug directly from the feature
+  description, applying the exact same deterministic rule
+  `digismith:jira-intake` Step 3.1 already defines: lowercase, drop filler
+  words (a, an, the, on, to, of, for, in), replace remaining
+  non-alphanumeric runs with a single hyphen, then truncate to ~40
+  characters at a word boundary — never leaving a trailing filler word or
+  hyphen. Restated inline here since `digismith:jira-intake` itself isn't
+  invoked in this path, not reinvented as a different algorithm. Skip the
+  rest of Step 1 (no ticket content to read into context) and go straight
+  to Step 1.5. This path is unchanged from before this ticket — it still
+  writes nothing and resolves no board path at all.
 
 If the result has no `**Key:**` line set — it's a Door 2 draft that was
 never upgraded to a real ticket — stop here. See Error Handling. Do not
 create a branch or worktree for a key-less ticket.
 
 Then, still in the original checkout and **before any worktree exists**,
-read the full content of the `.digismith/docs/<slug>/ticket.md` that
-`digismith:jira-intake` just wrote (or that this session already had)
-into your own context now — title, description, acceptance criteria,
-key. A freshly created worktree checks out only what's already committed,
-and `digismith:jira-intake` has just written `ticket.md` — it is not yet
-committed at this point, and in a repo that chose the gitignored option
-it never will be. Either way the effect is the same: `ticket.md` will
-**not** be present inside the worktree Step 2 creates. Carry the content
-you read here forward to Step 3; never plan on re-reading the file from
-inside the new worktree.
+read the full content of the ticket file that `digismith:jira-intake` just
+wrote (or that this session already had) into your own context now —
+title, description, acceptance criteria, key. A freshly created worktree
+checks out only what's already committed, and `digismith:jira-intake` has
+just written `ticket.md` — it is not yet committed at this point, and in a
+repo that chose the gitignored option it never will be. Either way the
+effect is the same: `ticket.md` will **not** be present inside the
+worktree Step 2 creates. Carry the content you read here forward to Step
+3; never plan on re-reading the file from inside the new worktree.
 
 ### Step 1.5: Write Telemetry Marker
 
@@ -382,11 +396,13 @@ what Step 2's new sub-step 7 below makes possible.
 
 ### Step 2: Create the Branch
 
-1. Derive the slug: reuse the folder name `ticket.md` is already
-   sitting in (`.digismith/docs/<slug>/ticket.md`) — that folder name
-   already is the correct slug, produced by `digismith:jira-intake`'s
-   own deterministic slug algorithm. Never re-derive the slug
-   independently from the title.
+1. Derive the slug: reuse the slug `ticket.md` is already sitting under —
+   `.digismith/board/<KEY>—<slug>/ticket.md` when a key was resolved
+   (parse the folder name with `parseFolderName` from
+   `scripts/board-path.ts`), or `.digismith/docs/<slug>/ticket.md` when
+   none was (unchanged). That folder's slug already is the correct one,
+   produced by `digismith:jira-intake`'s own deterministic slug algorithm.
+   Never re-derive the slug independently from the title.
 2. Branch name: if the active profile's `ticket` field is `true`,
    `<Key>__<slug>` — e.g.
    `EMKT-9001__fix-cart-drawer-padding-mobile`, using the ticket's actual
@@ -552,7 +568,7 @@ not re-invoke or duplicate any part of that chain yourself.
 | 0.5 | Skipped if Step 0 stopped at a standalone profile switch. Otherwise, invoke `digismith:depot`'s `ensure` operation — clone `~/.digismith-depot/repo` if missing, no-op otherwise. Fails the whole flow (stop, report, no branch/worktree) if `ensure` fails. Then, if `ticket: true`, `check-credentials` — bootstrap via `AskUserQuestion` if incomplete; declining doesn't block, just defers the failure to write-back time |
 | 0.6 | Skipped under the same condition as 0.5. Otherwise, check `digismith:preferences` for a saved `ssh_key`; if unset, ask once which SSH key file to use for this repo and store the answer via `set` — never written to `~/.gitconfig`/`~/.ssh/config`, only to `.digismith/config.yml` under `preferences:` |
 | 0.7 | Skipped under the same condition as 0.5/0.6. Otherwise, read `technical_voice`/`conversation_voice` via `digismith:preferences` (default `on` if unset) and announce whichever is `on` inline — no prompt, unlike 0.6 |
-| 1 | Get a real ticket if the active profile's `ticket` is `true` (invoke `digismith:jira-intake` if needed, stop if key-less); if `ticket` is `false`, derive the slug directly and skip to Step 1.5; read `.digismith/docs/<slug>/ticket.md`'s full content into context now when it exists — a worktree checks out only committed files, and this one isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
+| 1 | Get a real ticket: `ticket: true` always invokes `digismith:jira-intake` (stop if key-less). `ticket: false` first checks whether a key is already evident — if so, same as `ticket: true`, output at `.digismith/board/<KEY>—<slug>/ticket.md`; if not, derive the slug directly and skip to Step 1.5, writing nothing (unchanged). Read the ticket file's full content into context now when it exists — a worktree checks out only committed files, and it isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` when present, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run) — all plain file copies, never `git add -f` |
 | 3 | Invoke `digismith:brainstorming` directly, passing the already-derived slug plus the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there once it reports its design doc written |
