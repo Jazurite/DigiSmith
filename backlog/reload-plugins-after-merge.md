@@ -1,8 +1,8 @@
 # Use `/reload-plugins` to refresh running sessions after a plugin update
 
 **Status:** Idea, Jack's call (2026-10-04 10:08 UTC+7 [03:08Z]: "OMG this is great findings. Add the backlog to use this new command
-`reload-plugins`"). No design yet. ClickUp: not filed yet. It follows DGS-161 (list A.3: Lifecycle Hooks). Under "no ticket, no work"
-it needs a key before anyone builds it.
+`reload-plugins`"). No design yet. ClickUp: **DGS-162** (list A.3: Lifecycle Hooks, created 2026-10-04 10:12 UTC+7 [03:12Z] with Jack's yes; task id `14zcebruqrw`).
+It follows DGS-161.
 
 **Source:** the DGS-161 live test, 2026-10-04. Test steps and the maestro variant:
 `.digismith/board/DGS-161—plugin-update-after-merge/test-procedure.md`. It settles point 2 and gives a signal for point 3 of
