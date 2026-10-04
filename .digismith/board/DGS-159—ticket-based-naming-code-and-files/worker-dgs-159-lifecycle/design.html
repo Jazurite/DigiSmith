@@ -101,9 +101,9 @@
 
 <section id="split">
   <h2>2. The key is optional, not forbidden</h2>
-  <p><strong>Decided by Jack (checkpoint 1, 2026-10-04):</strong> the board folder shape depends on
-  whether a tracker key is actually in hand for this work, not on the repo's <code>ticket:</code>
-  profile flag alone.</p>
+  <p><strong>Recommended by the maestro at checkpoint 1; Jack confirms at design approval:</strong>
+  the board folder shape depends on whether a tracker key is actually in hand for this work, not on
+  the repo's <code>ticket:</code> profile flag alone.</p>
   <ul>
     <li><strong>A key is available</strong> — always true for a <code>ticket: true</code> repo
       (<code>profiles/emma.yml</code>), and true for a <code>ticket: false</code> repo whenever one
@@ -118,9 +118,10 @@
   supplied key.</strong> Simpler to state (one lookup, no runtime branching on key presence) — but
   its cost is exactly the case this ticket is run under: DigiSmith's own repo would mechanically
   derive a bare, keyless slug for every one of its own tickets and discard the real DGS key it
-  already has in hand, even though the key is sitting right there in the request. Jack's own
-  reasoning (checkpoint 1): the convention says the key comes from the tracker, so an available key
-  should be used, not thrown away. Rejected for that reason.</p>
+  already has in hand, even though the key is sitting right there in the request. The maestro's
+  reasoning at checkpoint 1: the convention says the key comes from the tracker, so an available
+  key should be used, not thrown away. Rejected for that reason, pending Jack's own confirmation of
+  the split at design approval.</p>
 </section>
 
 <section id="api">
@@ -158,7 +159,8 @@ export function boardRelPathForSlug(key: string | undefined, slug: string): stri
   <code>slugify</code> never emits an uppercase character. So an uppercase
   <code>&lt;PREFIX&gt;-&lt;number&gt;</code>-looking prefix followed by a plain hyphen or en dash,
   with no em dash anywhere in the name, can never be a real keyless folder — it can only be the
-  exact mistake section 9 already names (a human substituting the wrong dash for a keyed name).
+  exact mistake the convention's own section 9 already names (a human substituting the wrong dash
+  for a keyed name).
   That is the one case <code>parseFolderName</code> must still fail loudly on; every other
   no-em-dash name is a legitimate keyless folder.</p>
   <pre><code>export type ParsedFolderName = { key: string | undefined; slug: string };
@@ -190,6 +192,36 @@ export function parseFolderName(name: string): ParsedFolderName {
   either. A slug such as <code>fix-123-bug</code> does not match <code>KEY_LIKE_PREFIX</code> (the
   prefix must be uppercase), so it correctly returns <code>{ key: undefined, slug: "fix-123-bug" }</code>
   rather than a false-positive throw.</p>
+  <p><strong>Finding a ticket's board folder by slug alone.</strong> A folder's own key does not
+  have to match whatever key (if any) the branch name carries — DigiSmith's own repo already has
+  this today: branch <code>plugin-update-after-merge</code> (no key) against folder
+  <code>DGS-161—plugin-update-after-merge</code> (keyed). Deriving a key from the branch name and
+  reconstructing the folder path from it (what section 6's first draft proposed for
+  <code>init</code>) would miss that folder entirely. The fix is to resolve by slug, not by
+  reconstructing the name:</p>
+  <pre><code>export function findBoardFolderBySlug(slug: string, mainRoot: string): string | undefined {
+  const dir = path.join(mainRoot, ...BOARD_DIR_PATH.split("/"));
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw err;
+  }
+  for (const name of entries) {
+    let parsed: ParsedFolderName;
+    try {
+      parsed = parseFolderName(name);
+    } catch {
+      continue; // not a board-shaped folder name — skip it, don't fail the whole scan
+    }
+    if (parsed.slug === slug) return name;
+  }
+  return undefined;
+}</code></pre>
+  <p>Lists <code>.digismith/board/</code>, parses every entry (keyed or keyless — one function,
+  section 3 above), and matches on <code>slug</code> alone. Tests land with the plan, not here.</p>
   <p><strong>Considered and rejected: a separate keyless pair</strong>
   (<code>buildKeylessFolderName</code>/<code>parseKeylessFolderName</code>, fully split from the
   keyed functions) — avoids widening an already-shipped signature, but doubles the API every future
@@ -253,11 +285,16 @@ export function parseFolderName(name: string): ParsedFolderName {
       <code>.digismith/docs/&lt;slug&gt;/design.html</code> string updated to match.</p></div>
     <div class="card"><span class="tag">init</span><h4>Step 0, Step 1</h4>
       <p>Never reads <code>ticket:</code> itself — delegates entirely to bootstrap/adopt. Its own
-      branch-name-to-path check (Step 0 item 2, Step 1 rows 2–3) moves from
-      <code>.digismith/docs/&lt;slug&gt;/plan.md</code> to the board path: parse the branch name for
-      a <code>^([A-Z]+-\d+)__</code> prefix (key + slug) or treat the whole name as the slug
-      (keyless), then check <code>boardRelPathForSlug(key, slug)/plan.md</code> — the slug-only
-      join, since a branch name is already final, never re-slugified.</p></div>
+      branch-name-to-path check (Step 0 item 2, Step 1 rows 2–3) still derives <code>&lt;slug&gt;</code>
+      from the branch name the same way as today (strip a leading <code>&lt;Key&gt;__</code> prefix
+      if present, else the whole branch name). It does <strong>not</strong> reconstruct a board
+      folder name from that derivation — the folder's own key does not have to match the branch's
+      (section 3's <code>findBoardFolderBySlug</code> note). Instead: call
+      <code>findBoardFolderBySlug(slug, mainRoot)</code> against <code>.digismith/board/</code>;
+      found → <code>plan.md</code> lives at <code>.digismith/board/&lt;that folder&gt;/plan.md</code>.
+      Not found → fall back to the legacy, flat <code>.digismith/docs/&lt;slug&gt;/plan.md</code>
+      check (today's exact mechanism, unchanged) until the historical folders move (DGS-164).
+      Neither exists → no plan anywhere, same as today.</p></div>
     <div class="card"><span class="tag">jira-intake</span><h4>Step 3, Handling Existing Files</h4>
       <p>Target path: <code>boardRelPath(key, title)</code> when the ticket being written has a
       real <code>**Key:**</code> (Door 1, or an upgraded Door 2 draft), <code>boardRelPath(undefined, title)</code>
@@ -267,37 +304,48 @@ export function parseFolderName(name: string): ParsedFolderName {
       <code>.digismith/board/&lt;slug&gt;/</code> folder (ticket.md and anything already sitting
       beside it) moves to <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code> — the same
       move-and-correct idiom <code>digismith:adopt</code> Step 3.2 already uses for its own
-      branch-slug correction. Step 3.3's commit-vs-gitignore probe moves from
-      <code>.digismith/docs/</code> to the repo-wide <code>.digismith/</code> itself (both the
-      <code>git check-ignore -q</code> call and the <code>git ls-files</code> already-tracked
-      check) — flagged as a migration-safety fix in section 7, not merely a path rename.</p></div>
+      branch-slug correction. Step 3.3's commit-vs-gitignore probe checks <strong>both</strong>
+      ticket-file folders, never the repo-wide <code>.digismith/</code> — that would count
+      unrelated tracked files (<code>config.yml</code>, hooks, session notes) and call a repo
+      "committed" without ever asking:</p>
+      <pre><code># ignored — either path already resolves to gitignored
+git check-ignore -q .digismith/board/ || git check-ignore -q .digismith/docs/
+
+# already tracked — either path has files git already knows about
+git ls-files .digismith/board/ .digismith/docs/</code></pre>
+      <p>This keeps an earlier <code>docs/</code>-era "committed"/"gitignored" decision valid until
+      the historical folders move (DGS-164), and never asks the gitignore question twice. The
+      Handling Existing Files table's own existing-file check (is there already a
+      <code>ticket.md</code> at this slug) gets the same board-then-docs fallback order as
+      <code>init</code>'s plan lookup above — check <code>boardRelPath</code>'s resolved path
+      first, fall back to the legacy flat <code>.digismith/docs/&lt;slug&gt;/ticket.md</code> only
+      if nothing is found under <code>board/</code>.</p></div>
   </div>
+  <p><strong>General read-vs-write rule, all four skills:</strong> every write this design touches
+  goes to <code>.digismith/board/</code> only — nothing new is ever written under
+  <code>.digismith/docs/</code> again. Every place that reads for an <em>existing</em> ticket
+  folder — <code>init</code>'s resume check above, <code>jira-intake</code>'s Handling Existing
+  Files table, <code>adopt</code>'s relocation-collision check (Step 6), and
+  <code>bootstrap</code>'s own-session <code>ticket.md</code> check (Step 1) — checks
+  <code>board/</code> first and falls back to the legacy <code>docs/</code> shape only if nothing
+  is found there, until the historical folders move (DGS-164).</p>
 </section>
 
 <section id="open">
   <h2>7. Open items for Jack</h2>
   <div class="table-wrap">
   <table>
-    <tr><th>Item</th><th>Why it's open</th></tr>
+    <tr><th>Item</th><th>Status</th></tr>
     <tr><td>Branch naming (<code>bootstrap</code> Step 2): should
       <code>&lt;Key&gt;__&lt;slug&gt;</code> vs. <code>&lt;slug&gt;</code> alone also follow
       "a key is available" rather than the strict <code>ticket:</code> flag, for the same reason
       section 2 gives for the board folder?</td>
-      <td>Out of this ticket's stated scope (docs/board path only) — flagging it rather than
-      silently extending scope or silently leaving an inconsistency. Branch renaming also touches
-      <code>init</code>'s resume detection and worktree reuse, a bigger surface than the docs path
-      alone.</td></tr>
-    <tr><td><code>jira-intake</code>'s commit-vs-gitignore probe moving from
-      <code>.digismith/docs/</code> to <code>.digismith/</code> (section 6)</td>
-      <td>Needed for migration correctness — a repo (DigiSmith's own included) that already decided
-      "committed" under the old <code>docs/</code> path would otherwise look like first-use the
-      moment <code>board/</code> has zero tracked files in it, and get asked the gitignore question
-      again. Flagging as a design-level fix bundled into this ticket's own path rename, since Part 3
-      is the unit touching this exact check anyway.</td></tr>
-    <tr><td>Existing <code>.digismith/docs/</code> Door-2 drafts with no key, written before this
-      design</td><td>Out of scope — DGS-159's own ticket text assigns moving the ~70 existing
-      <code>docs/</code> folders to a separate part (Part 6). This design only changes where new
-      writes land.</td></tr>
+      <td>Stays out of this ticket's scope. The maestro is filing it as its own backlog item and
+      ticket rather than folding it into Part 3.</td></tr>
+    <tr><td>Existing <code>.digismith/docs/</code> Door-2 drafts with no key, and the ~70 other
+      existing <code>docs/</code> folders generally</td>
+      <td>Out of scope — DGS-164 moves the historical folders. This design only changes where new
+      writes land; section 6's read-fallback rule covers reads in the meantime.</td></tr>
   </table>
   </div>
 </section>
@@ -305,14 +353,27 @@ export function parseFolderName(name: string): ParsedFolderName {
 <section id="pathrules">
   <h2>8. Path rules (for Part 4)</h2>
   <ul>
-    <li><strong>A tracker key is known</strong> (always for <code>ticket: true</code>; for
+    <li><strong>Writing:</strong> a tracker key is known (always for <code>ticket: true</code>; for
       <code>ticket: false</code>, whenever one is supplied anyway) →
       <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>, via
-      <code>boardRelPath(key, title)</code>, or <code>boardRelPathForSlug(key, slug)</code> when the
-      slug is already final (e.g. read from a branch name).</li>
-    <li><strong>No tracker key is known</strong> (<code>ticket: false</code>, genuinely none
-      supplied) → <code>.digismith/board/&lt;slug&gt;/</code>, via
-      <code>boardRelPath(undefined, title)</code> / <code>boardRelPathForSlug(undefined, slug)</code>.</li>
+      <code>boardRelPath(key, title)</code>, or <code>boardRelPathForSlug(key, slug)</code> when
+      both key and slug are already final (e.g. <code>adopt</code> Step 3, which already confirmed
+      both). No tracker key is known (<code>ticket: false</code>, genuinely none supplied) →
+      <code>.digismith/board/&lt;slug&gt;/</code>, via <code>boardRelPath(undefined, title)</code> /
+      <code>boardRelPathForSlug(undefined, slug)</code>. Nothing is ever newly written under
+      <code>.digismith/docs/</code> again.</li>
+    <li><strong>Resolving an existing ticket's folder</strong> (a resume check, a collision check)
+      — never reconstruct the folder name from a branch name or any other derived key: a folder's
+      own key does not have to match the branch's (section 3). Call
+      <code>findBoardFolderBySlug(slug, mainRoot)</code> against <code>.digismith/board/</code>
+      instead, and match on slug alone.</li>
+    <li><strong>Reading, fallback order:</strong> check <code>.digismith/board/</code> first (via
+      <code>findBoardFolderBySlug</code>); nothing found there → fall back to the legacy, flat
+      <code>.digismith/docs/&lt;slug&gt;/</code> shape (today's unchanged mechanism) until the
+      historical folders move (DGS-164). This applies everywhere an existing ticket folder is read:
+      <code>init</code>'s resume check, <code>jira-intake</code>'s Handling Existing Files table,
+      <code>adopt</code>'s relocation-collision check, <code>bootstrap</code>'s own-session
+      <code>ticket.md</code> check.</li>
     <li><code>ticket.md</code> exists only inside a folder <code>jira-intake</code> actually wrote
       one into — absent wherever intake was skipped outright (bootstrap's no-key,
       <code>ticket: false</code> fast path).</li>
@@ -324,7 +385,10 @@ export function parseFolderName(name: string): ParsedFolderName {
       stop conditions, unchanged.</li>
     <li><code>parseFolderName(name)</code> returns <code>{ key: string | undefined; slug }</code> —
       <code>undefined</code> for a genuine keyless folder, never a thrown error for one. It still
-      throws only when the name looks like a keyed name typed with the wrong dash (section 3).</li>
+      throws only when the name looks like a keyed name typed with the wrong dash (section 3). The
+      commit-vs-gitignore probe (<code>jira-intake</code> Step 3.3) checks both
+      <code>.digismith/board/</code> and <code>.digismith/docs/</code> — never the repo-wide
+      <code>.digismith/</code> — per the exact commands in section 6.</li>
   </ul>
 </section>
 
