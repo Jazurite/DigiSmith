@@ -23,6 +23,13 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   `"name": "digismith"`, or a profile is present) — `.digismith/docs/<slug>/plan.md`
   instead of this skill's own default location. Format is unchanged — plans stay Markdown.
 
+  **A tracker key is in hand:** reuse the exact resolved board folder `brainstorming` already
+  established earlier in this same session (this skill runs as its terminal step) — never
+  re-derive. No resolved path in context (a fully standalone keyed invocation) → the same
+  two-step `brainstorming` just ran: `board-path.ts --action find --slug '<slug>'` against
+  `.digismith/board/` first, falling back to `--action path --key '<key>' --title '<title>'` only
+  if nothing is found. Write `plan.md` into that folder, alongside `design.html`.
+
   **Path:** reuse the exact resolved path `brainstorming` already established earlier in this
   same session — nested `.digismith/docs/<Letter>/<Letter.N>-<slug>/` or
   `.digismith/docs/_unlettered/<slug>/`, per that skill's own Path rule (this skill runs as
