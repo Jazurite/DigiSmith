@@ -18,10 +18,14 @@ When the maestro (or any session) adds a backlog item, it creates the matching C
    to the repo file.
 3. Read the new key back (`custom_id`, for example `DGS-162`) and write it into the item's status line and into the `backlog/README.md`
    index line. Commit the two files and push.
-4. Tell Jack the key and the list in the next message. He can move or discard the ticket. Nothing is hard-deleted.
+4. Tell Jack the key and the list in the next message.
+5. **Keep the description in step (Jack, 2026-10-04: "sync the description, do it automatically next time").** When an item's repo file
+   changes in a way the ticket should show, mirror it into the ClickUp ticket in the same step, without asking. Today that is
+   `~/.digismith-depot/backlog-sync/sync.py backlog/<file>.md`, which reads the task id from the item's status line and sets the ticket's
+   name and description from the file. A `dg backlog sync` command is the durable home for it. He can move or discard the ticket. Nothing is hard-deleted.
 
-This covers creating the task for a new backlog item. It does not cover other ClickUp writes (a status change, a progress comment, a
-rename, a move). Those still need Jack's yes for each write, and a ticket is never hard-deleted.
+This covers creating the task for a new backlog item and keeping its name and description in step with the repo file. It does not cover
+other ClickUp writes (a status change, a progress comment, a move). Those still need Jack's yes for each write, and a ticket is never hard-deleted.
 
 ## Where the knowledge must live
 
