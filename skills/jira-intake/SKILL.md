@@ -69,16 +69,25 @@ ticket already exist, or are we shaping one from a raw need?
    Determinism matters here: two independent runs for the same feature
    must land on the same slug, or the Handling Existing Files table below
    never fires.
-2. Target path: `.digismith/docs/<slug>/ticket.md`, in the repo currently
-   being worked in — never DigiSmith's own repo, which only hosts this
-   skill, not the tickets it processes.
-3. **Commit-vs-gitignore, decided once per repo:** before writing into
-   `.digismith/docs/` in this repo for the first time, ask git itself
-   whether that path is already ignored — don't grep `.gitignore` for a
-   literal string:
+2. **Target path depends on whether this ticket has a real key**, not on
+   the active profile. A real `**Key:**` is set (Door 1 succeeded, or an
+   earlier Door 2 draft is now being upgraded) → `boardRelPath(key, title)`
+   from `scripts/board-path.ts` (`.digismith/board/<KEY>—<slug>/ticket.md`).
+   No key yet (a fresh Door 2 draft, or any repo with none supplied) →
+   `.digismith/docs/<slug>/ticket.md`, exactly as before this ticket —
+   `docs/` is that ticket's real, permanent home, not a holding pen.
+   Either way, the target is in the repo currently being worked in —
+   never DigiSmith's own repo, which only hosts this skill, not the
+   tickets it processes.
+3. **Commit-vs-gitignore, decided once per repo:** before writing for the
+   first time in this repo, ask git itself whether this write's own
+   target folder is already ignored — the board folder when a key is in
+   hand, the docs folder when it isn't. Check only that one target, never
+   the other: a repo can ignore one and still track the other.
 
    ```bash
-   git check-ignore -q .digismith/docs/
+   git check-ignore -q .digismith/board/   # when a key is in hand
+   git check-ignore -q .digismith/docs/    # when there is no key
    ```
 
    Read the **exit code**, not the (empty) output: **0 = ignored**,
@@ -89,13 +98,21 @@ ticket already exist, or are we shaping one from a raw need?
    (no trailing slash), wildcard patterns, negations (`!`), comments,
    nested `.gitignore` files deeper in the tree, `.git/info/exclude`, and
    a global `core.excludesFile` — none of which grepping the root
-   `.gitignore` for `.digismith/` would catch.
+   `.gitignore` for a literal string would catch.
 
    Branch on the result:
    - **Ignored (exit 0)** → write gitignored, proceed, no question asked.
-   - **Not ignored (exit 1), and nothing under `.digismith/docs/` is
-     tracked by git in this repo** → ask once via `AskUserQuestion`
-     ("commit this repo's DigiSmith docs, or keep them local-only?").
+   - **Not ignored (exit 1), and nothing under *either* folder is tracked
+     by git in this repo** → ask once via `AskUserQuestion` ("commit this
+     repo's DigiSmith docs, or keep them local-only?"). This "already
+     tracked" check always looks at both folders together, regardless of
+     which one this write targets — an earlier decision recorded under
+     either folder still answers the question for both:
+
+     ```bash
+     git ls-files .digismith/board/ .digismith/docs/
+     ```
+
      - If **gitignored** is chosen, append the entry to this repo's
        `.gitignore` — safely, never by rewriting the file:
        1. If `.gitignore` doesn't exist at all, create it containing the
@@ -111,27 +128,25 @@ ticket already exist, or are we shaping one from a raw need?
           the repo's `.gitignore`.
 
        Its presence is now the remembered answer for every future session
-       in this repo.
+       in this repo, covering `board/` and `docs/` alike (one bare
+       `.digismith/` line is a prefix match over the whole tree).
      - If **committed** is chosen, do nothing further; the entry's
        continued absence is itself the remembered "committed" signal. Note
        that choosing "committed" doesn't itself commit anything — it just
        means the file is left tracked-and-not-ignored, so it becomes part
        of whatever commit the user (or a later skill) makes normally.
-   - **Not ignored (exit 1), but `.digismith/docs/` already has files
-     tracked by git in this repo** → an earlier write already happened and
-     was committed without adding a `.gitignore` entry; treat as
-     "committed" (matches the existing files' actual state), don't ask
-     again. Confirm tracked-ness with git, not with directory existence:
-     ```bash
-     git ls-files .digismith/docs/
-     ```
-     Non-empty output → genuinely committed, don't ask. **Empty output
-     while the directory nevertheless exists on disk** (e.g. an aborted
-     earlier run left untracked files behind) → that's not evidence of a
-     prior decision at all; fall back to the "ask once" branch above
-     rather than silently assuming "committed".
-4. Check for an existing file at that path first — see Handling Existing
-   Files below — before writing.
+   - **Not ignored (exit 1), but either folder already has files tracked
+     by git in this repo** → an earlier write already happened and was
+     committed without adding a `.gitignore` entry; treat as "committed",
+     don't ask again. Confirm tracked-ness with git, not with directory
+     existence — same `git ls-files .digismith/board/ .digismith/docs/`
+     command as above. Non-empty output → genuinely committed, don't ask.
+     **Empty output while either directory nevertheless exists on disk**
+     (e.g. an aborted earlier run left untracked files behind) → that's
+     not evidence of a prior decision at all; fall back to the "ask once"
+     branch above rather than silently assuming "committed".
+4. Check for an existing file at the target path first — see Handling
+   Existing Files below — before writing.
 5. Write the file in the Ticket Template shape.
 
 ## Ticket Template
@@ -166,15 +181,18 @@ in this environment today.
 
 ## Handling Existing Files at the Target Slug
 
-Before writing, check whether `.digismith/docs/<slug>/ticket.md` already
-exists:
+Before writing, look for an existing ticket file at this slug: call
+`findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts` against
+`.digismith/board/` first (matches regardless of that folder's own key); if
+nothing matches there, fall back to the flat `.digismith/docs/<slug>/ticket.md`
+check (unchanged).
 
 | Existing file's `Key` | Incoming | Action |
 |---|---|---|
-| No existing file | — | Write directly |
+| No existing file (neither location) | — | Write directly, at the target path Step 3.2 resolves |
 | Same as incoming key | Door 1, same key (a re-run) | Confirm before overwriting via `AskUserQuestion` |
 | Different from incoming key | Door 1, different key, same slug (a collision) | Ask whether to disambiguate — append the ticket key to the slug, or choose a different slug — rather than silently overwriting |
-| Blank/absent (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — fill in Key/URL/Story Points on the existing file rather than creating a duplicate or asking about a conflict |
+| Blank/absent, found under `docs/<slug>/` (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — **move** the whole `.digismith/docs/<slug>/` folder (`ticket.md` and anything already sitting beside it) to `.digismith/board/<KEY>—<slug>/` (`boardRelPath(key, title)`), then fill in Key/URL/Story Points on the moved `ticket.md` — the same move-and-correct idiom `digismith:adopt` Step 3.2 already uses for its own branch-slug correction |
 | Any existing file | Door 2 (raw need arrives again at this slug) | Confirm before overwriting via `AskUserQuestion` — same as a Door 1 refresh — regardless of whether the existing file already has a Key set |
 
 ## Error Handling
@@ -190,9 +208,9 @@ exists:
 - **`git check-ignore -q` exits 1** → not an error. It's the normal
   "this path is not ignored" answer; continue into Step 3.3's
   not-ignored branch. (Only exit 0 means ignored.)
-- **`.digismith/docs/` exists on disk but `git ls-files` reports nothing
-  tracked there** → treat it as an aborted earlier run, not as a prior
-  "committed" decision; use the ask-once branch.
+- **Either ticket-file folder exists on disk but `git ls-files` reports
+  nothing tracked there** → treat it as an aborted earlier run, not as a
+  prior "committed" decision; use the ask-once branch.
 
 ## Quick Reference
 
@@ -201,6 +219,6 @@ exists:
 | 1 | Determine the door |
 | 2a | Door 1: get key, detect JIRA tool, fetch or ask for paste |
 | 2b | Door 2: seed from description, ask only what's missing, draft, confirm |
-| 3.1–3.2 | Derive the slug; target path is `.digismith/docs/<slug>/ticket.md`, in the repo being worked in — never DigiSmith's own |
-| 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q .digismith/docs/` — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under `.digismith/docs/` → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + `git ls-files .digismith/docs/` non-empty → treat as committed, don't ask |
+| 3.1–3.2 | Derive the slug; target path is `boardRelPath(key, title)` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
+| 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q` on this write's own target only (`.digismith/board/` when keyed, `.digismith/docs/` otherwise — never the other one) — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under **either** folder (`git ls-files .digismith/board/ .digismith/docs/` empty) → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + that same `ls-files` non-empty → treat as committed, don't ask |
 | 3.4–3.5 | Branch on any existing file at that path (refresh / collision / upgrade / none), then write the ticket |
