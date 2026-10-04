@@ -1917,31 +1917,39 @@ Add this new `it` inside the existing `describe("--action find", ...)` block in
 ```typescript
     it("uses --root directly when given, bypassing git entirely", () => {
       const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-root-test-"));
-      fs.mkdirSync(path.join(rootDir, ...BOARD_DIR_PATH.split("/"), "DGS-5—root-override"), { recursive: true });
       const nonGitCwd = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-nongit-test-"));
+      try {
+        fs.mkdirSync(path.join(rootDir, ...BOARD_DIR_PATH.split("/"), "DGS-5—root-override"), { recursive: true });
 
-      const result = runCli(nonGitCwd, "--action", "find", "--slug", "root-override", "--root", rootDir);
+        const result = runCli(nonGitCwd, "--action", "find", "--slug", "root-override", "--root", rootDir);
 
-      expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe("DGS-5—root-override");
-      fs.rmSync(rootDir, { recursive: true, force: true });
-      fs.rmSync(nonGitCwd, { recursive: true, force: true });
+        expect(result.status).toBe(0);
+        expect(result.stdout.trim()).toBe("DGS-5—root-override");
+      } finally {
+        fs.rmSync(rootDir, { recursive: true, force: true });
+        fs.rmSync(nonGitCwd, { recursive: true, force: true });
+      }
     });
 
     it("finds a board folder that exists only in the current worktree, not the main checkout — the exact DGS-161 case", () => {
       const worktreeDir = path.join(os.tmpdir(), `digismith-board-path-worktree-${process.pid}-${Date.now()}`);
       git(tmpDir, "worktree", "add", "-q", "-b", "feature", worktreeDir);
-      fs.mkdirSync(path.join(worktreeDir, ...BOARD_DIR_PATH.split("/"), "DGS-9—only-in-worktree"), { recursive: true });
+      try {
+        fs.mkdirSync(path.join(worktreeDir, ...BOARD_DIR_PATH.split("/"), "DGS-9—only-in-worktree"), { recursive: true });
 
-      const foundInWorktree = runCli(worktreeDir, "--action", "find", "--slug", "only-in-worktree");
-      expect(foundInWorktree.status).toBe(0);
-      expect(foundInWorktree.stdout.trim()).toBe("DGS-9—only-in-worktree");
+        const foundInWorktree = runCli(worktreeDir, "--action", "find", "--slug", "only-in-worktree");
+        expect(foundInWorktree.status).toBe(0);
+        expect(foundInWorktree.stdout.trim()).toBe("DGS-9—only-in-worktree");
 
-      const foundInMainCheckout = runCli(tmpDir, "--action", "find", "--slug", "only-in-worktree");
-      expect(foundInMainCheckout.status).toBe(0);
-      expect(foundInMainCheckout.stdout.trim()).toBe("");
-
-      git(tmpDir, "worktree", "remove", "-f", worktreeDir);
+        const foundInMainCheckout = runCli(tmpDir, "--action", "find", "--slug", "only-in-worktree");
+        expect(foundInMainCheckout.status).toBe(0);
+        expect(foundInMainCheckout.stdout.trim()).toBe("");
+      } finally {
+        // Always remove the worktree, even if an assertion above throws — otherwise a failing
+        // run leaks a full git checkout under the OS temp dir, and a dangling worktree
+        // registration against `tmpDir` once afterEach deletes it.
+        git(tmpDir, "worktree", "remove", "-f", worktreeDir);
+      }
     });
 ```
 
