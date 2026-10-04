@@ -100,23 +100,37 @@ that's already in hand):
    confirmed in Step 1 directly — it does not need to ask for it again.
    `digismith:jira-intake` fetches the ticket (or asks you to paste it, per
    its own JIRA Detection) and writes
-   `.digismith/board/<KEY>—<its-own-derived-slug>/ticket.md`
-   (`boardRelPath(key, title)` from `scripts/board-path.ts`) using its own
-   Step 3.1 slug algorithm on the fetched title.
+   `.digismith/board/<KEY>—<its-own-derived-slug>/ticket.md` (the script's
+   `--action path --key <key> --title <title>`, see "The Script" below)
+   using its own Step 3.1 slug algorithm on the fetched title.
 2. Check whether the current branch already matches `<Key>__<slug>`. If it
    does, and that slug differs from the slug `digismith:jira-intake` just
    derived, the branch's slug wins — it's already committed to the branch
    name, and `digismith:adopt` never renames a branch. Move
-   `.digismith/board/<KEY>—<its-own-derived-slug>/` to
-   `.digismith/board/<KEY>—<branch's-slug>/` in its entirety (a
-   move-and-correct idiom for handling misplaced files — applied here to
-   correct a misplaced `ticket.md` folder).
+   `.digismith/board/<KEY>—<its-own-derived-slug>/` to the path the
+   script's `--action path --key <key> --slug <branch's-slug>` prints (see
+   "The Script" below) in its entirety (a move-and-correct idiom for
+   handling misplaced files — applied here to correct a misplaced
+   `ticket.md` folder).
 3. If the branch doesn't match `<Key>__<slug>` at all (an off-convention
    name), there's nothing to compare against — use `digismith:jira-intake`'s
    derived slug directly, no correction needed.
 
 Whichever slug (and, on this branch, key) results from this step is used
 for every step below — never re-derived a third way.
+
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --slug '<slug>'
+```
+
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
 
 ### Step 4: Ensure an Isolated Worktree
 

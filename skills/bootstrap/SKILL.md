@@ -271,8 +271,9 @@ ticket's own brief named DGS-159).
 - **A key is evident** → invoke `digismith:jira-intake` Door 1 with that
   key already confirmed, the same "already confirmed, don't ask again"
   shortcut `digismith:adopt` Step 3 uses. Its output lands at
-  `.digismith/board/<KEY>—<slug>/ticket.md` (`boardRelPath(key, title)`
-  from `scripts/board-path.ts`). Continue with the rest of Step 1 below
+  `.digismith/board/<KEY>—<slug>/ticket.md` (the script's
+  `--action path --key <key> --title <title>`, see "The Script" below).
+  Continue with the rest of Step 1 below
   as if `ticket` were `true`.
 - **No key is evident** → skip invoking `digismith:jira-intake` entirely —
   no `ticket.md` is written. Derive the slug directly from the feature
@@ -375,9 +376,11 @@ the pointer — it stays the same wherever the file gets re-homed — so
 the path is a useful first-attempt hint, the session ID is the fallback
 that actually survives the move.
 
-`<slug>` is whichever slug Step 1 just produced — the `ticket.md`
-folder name when `ticket: true`, or the directly-derived slug when
-`ticket: false`. Never re-derive it a third way.
+`<slug>` is whichever slug Step 1 just produced — the slug parsed out of the
+`ticket.md` folder's own name (the script's `--action parse`, second line;
+see "The Script" below) when a key was resolved, or the directly-derived
+slug when none was. Never the raw folder name itself (which carries the
+key prefix for a keyed ticket), and never re-derive it a third way.
 
 If Step 1 resolved a real ticket key (a `**Key:**` line from
 `ticket.md`), append one more line to the same file:
@@ -397,10 +400,10 @@ what Step 2's new sub-step 7 below makes possible.
 ### Step 2: Create the Branch
 
 1. Derive the slug: reuse the slug `ticket.md` is already sitting under —
-   `.digismith/board/<KEY>—<slug>/ticket.md` when a key was resolved
-   (parse the folder name with `parseFolderName` from
-   `scripts/board-path.ts`), or `.digismith/docs/<slug>/ticket.md` when
-   none was (unchanged). That folder's slug already is the correct one,
+   `.digismith/board/<KEY>—<slug>/ticket.md` when a key was resolved (run
+   the script's `--action parse --name <folder name>`, see "The Script"
+   below, and take its second printed line), or `.digismith/docs/<slug>/ticket.md`
+   when none was (unchanged). That folder's slug already is the correct one,
    produced by `digismith:jira-intake`'s own deterministic slug algorithm.
    Never re-derive the slug independently from the title.
 2. Branch name: if the active profile's `ticket` field is `true`,
@@ -492,9 +495,10 @@ what Step 2's new sub-step 7 below makes possible.
 ### Step 3: Hand Off to Brainstorming
 
 From inside that worktree, invoke `digismith:brainstorming`, passing both the slug already
-derived (the `ticket.md` folder name Step 2 reused under `ticket: true`, or the slug Step 1
-derived directly under `ticket: false` — never re-derived a third way; `brainstorming` reuses
-it verbatim rather than re-deriving) and the ticket content **you already read in Step 1** —
+derived (the slug Step 2 parsed out of the `ticket.md` folder's own name when a key was resolved,
+or the slug Step 1 derived directly when none was — never the raw folder name itself, and never
+re-derived a third way; `brainstorming` reuses it verbatim rather than re-deriving) and the ticket
+content **you already read in Step 1** —
 title, description, acceptance criteria — as seed context so it doesn't start cold. Pass the
 content you're carrying; do not try to re-read `ticket.md` from inside the worktree, it isn't
 there (see Step 1).
@@ -506,6 +510,19 @@ context, nothing further is done with it here.
 terminal-step chain into `digismith:writing-plans` and
 `digismith:subagent-driven-development`/`digismith:executing-plans` take over unmodified — do
 not re-invoke or duplicate any part of that chain yourself.
+
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action parse --name '<folder name>'
+```
+
+Wrap `<title>`/`<folder name>` in single quotes, and write any `'` inside either as `'\''`.
 
 ## Error Handling
 

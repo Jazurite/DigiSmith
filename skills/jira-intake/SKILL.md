@@ -72,9 +72,10 @@ ticket already exist, or are we shaping one from a raw need?
    never fires.
 2. **Target path depends on whether this ticket has a real key**, not on
    the active profile. A real `**Key:**` is set (Door 1 succeeded, or an
-   earlier Door 2 draft is now being upgraded) → `boardRelPath(key, title)`
-   from `scripts/board-path.ts` (`.digismith/board/<KEY>—<slug>/ticket.md`).
-   No key yet (a fresh Door 2 draft, or any repo with none supplied) →
+   earlier Door 2 draft is now being upgraded) → run the script's
+   `--action path --key <key> --title <title>` (see "The Script" below;
+   prints `.digismith/board/<KEY>—<slug>/ticket.md`). No key yet (a fresh
+   Door 2 draft, or any repo with none supplied) →
    `.digismith/docs/<slug>/ticket.md`, exactly as before this ticket —
    `docs/` is that ticket's real, permanent home, not a holding pen.
    Either way, the target is in the repo currently being worked in —
@@ -182,10 +183,10 @@ in this environment today.
 
 ## Handling Existing Files at the Target Slug
 
-Before writing, look for an existing ticket file at this slug: call
-`findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts` against
-`.digismith/board/` first (matches regardless of that folder's own key); if
-nothing matches there, fall back to the flat `.digismith/docs/<slug>/ticket.md`
+Before writing, look for an existing ticket file at this slug: run the script's
+`--action find --slug <slug>` (see "The Script" below) against `.digismith/board/`
+first — it matches regardless of that folder's own key; a non-empty result names the
+folder. Nothing printed → fall back to the flat `.digismith/docs/<slug>/ticket.md`
 check (unchanged).
 
 | Existing file's `Key` | Incoming | Action |
@@ -193,8 +194,21 @@ check (unchanged).
 | No existing file (neither location) | — | Write directly, at the target path Step 3.2 resolves |
 | Same as incoming key | Door 1, same key (a re-run) | Confirm before overwriting via `AskUserQuestion` |
 | Different from incoming key | Door 1, different key, same slug (a collision) | Ask whether to disambiguate — append the ticket key to the slug, or choose a different slug — rather than silently overwriting |
-| Blank/absent, found under `docs/<slug>/` (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — **move** the whole `.digismith/docs/<slug>/` folder (`ticket.md` and anything already sitting beside it) to `.digismith/board/<KEY>—<slug>/` (`boardRelPath(key, title)`), then fill in Key/URL/Story Points on the moved `ticket.md` — the same move-and-correct idiom `digismith:adopt` Step 3.2 already uses for its own branch-slug correction |
+| Blank/absent, found under `docs/<slug>/` (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — **move** the whole `.digismith/docs/<slug>/` folder (`ticket.md` and anything already sitting beside it) to the path `--action path --key <key> --title <title>` prints, then fill in Key/URL/Story Points on the moved `ticket.md` — the same move-and-correct idiom `digismith:adopt` Step 3.2 already uses for its own branch-slug correction |
 | Any existing file | Door 2 (raw need arrives again at this slug) | Confirm before overwriting via `AskUserQuestion` — same as a Door 1 refresh — regardless of whether the existing file already has a Key set |
+
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
+```
+
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
 
 ## Error Handling
 

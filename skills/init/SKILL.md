@@ -59,13 +59,16 @@ Check, in order:
    reconstructing a path from the branch's own key — a folder's own key
    does not have to match the branch's (DigiSmith's own repo already has
    this: branch `plugin-update-after-merge` against folder
-   `DGS-161—plugin-update-after-merge`). Call
-   `findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts`
-   against `.digismith/board/` first; found → check `plan.md` inside that
-   folder. Not found → fall back to the existing, flat
+   `DGS-161—plugin-update-after-merge`). Run the script's
+   `--action find --slug <slug>` (see "The Script" below) against
+   `.digismith/board/` first; a folder name printed → check `plan.md`
+   inside that folder. **Found the folder but no `plan.md` in it, or
+   nothing printed at all** → either way, fall back to the existing, flat
    `.digismith/docs/<slug>/plan.md` check (unchanged) — the permanent home
-   for a genuinely keyless ticket, and (until DGS-164) also still the
-   temporary home for an old keyed ticket not yet moved.
+   for a genuinely keyless ticket, and (until Part 4 moves
+   `digismith:writing-plans`'s own output, and until DGS-164 migrates old
+   keyed tickets) also still the real, current home for a keyed ticket's
+   `plan.md` today, even once its `ticket.md` already lives under `board/`.
    - **Exists** (either place) → this worktree was already fully set up
      by DigiSmith for this specific ticket. Read `profile` from
      `.digismith/config.yml`, or from `.digismith/profile` when
@@ -127,6 +130,18 @@ should pick up?
 ```
 
 Never guess between `digismith:bootstrap` and `digismith:adopt` when detection is ambiguous.
+
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
+```
+
+Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`.
 
 ## Error Handling
 
