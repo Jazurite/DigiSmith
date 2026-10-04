@@ -82,36 +82,41 @@ can be declined here.
 
 ### Step 3: Get the Ticket and Resolve the Slug
 
-**If the active profile's `ticket` field is `false`:** skip straight to
-deriving the slug directly from a feature description (ask the user for one
-if it isn't already obvious), applying `digismith:jira-intake` Step 3.1's
-deterministic rule: lowercase, drop filler words (a, an, the, on, to, of,
-for, in), replace remaining non-alphanumeric runs with a single hyphen,
-truncate to ~40 characters at a word boundary. No `ticket.md` gets written.
-Continue to Step 4.
+**If the active profile's `ticket` field is `false` AND Step 1 did not
+confirm a real ticket key:** skip straight to deriving the slug directly
+from a feature description (ask the user for one if it isn't already
+obvious), applying `digismith:jira-intake` Step 3.1's deterministic rule:
+lowercase, drop filler words (a, an, the, on, to, of, for, in), replace
+remaining non-alphanumeric runs with a single hyphen, truncate to ~40
+characters at a word boundary. No `ticket.md` gets written —
+`.digismith/docs/<slug>/` is this work's real, permanent home, same as
+before this ticket. Continue to Step 4.
 
-**Otherwise:**
+**Otherwise** (the active profile's `ticket` field is `true`, or it's
+`false` but Step 1 already confirmed a real key — don't discard a key
+that's already in hand):
 
 1. Invoke `digismith:jira-intake` Door 1, supplying the ticket key already
    confirmed in Step 1 directly — it does not need to ask for it again.
    `digismith:jira-intake` fetches the ticket (or asks you to paste it, per
    its own JIRA Detection) and writes
-   `.digismith/docs/<its-own-derived-slug>/ticket.md` using its own Step 3.1
-   algorithm on the fetched title.
+   `.digismith/board/<KEY>—<its-own-derived-slug>/ticket.md`
+   (`boardRelPath(key, title)` from `scripts/board-path.ts`) using its own
+   Step 3.1 slug algorithm on the fetched title.
 2. Check whether the current branch already matches `<Key>__<slug>`. If it
    does, and that slug differs from the slug `digismith:jira-intake` just
    derived, the branch's slug wins — it's already committed to the branch
    name, and `digismith:adopt` never renames a branch. Move
-   `.digismith/docs/<its-own-derived-slug>/` to
-   `.digismith/docs/<branch's-slug>/` in its entirety (a move-and-correct
-   idiom for handling misplaced files — applied here to correct a misplaced
-   `ticket.md` folder).
+   `.digismith/board/<KEY>—<its-own-derived-slug>/` to
+   `.digismith/board/<KEY>—<branch's-slug>/` in its entirety (a
+   move-and-correct idiom for handling misplaced files — applied here to
+   correct a misplaced `ticket.md` folder).
 3. If the branch doesn't match `<Key>__<slug>` at all (an off-convention
    name), there's nothing to compare against — use `digismith:jira-intake`'s
    derived slug directly, no correction needed.
 
-Whichever slug results from this step is used for every step below —
-never re-derived a third way.
+Whichever slug (and, on this branch, key) results from this step is used
+for every step below — never re-derived a third way.
 
 ### Step 4: Ensure an Isolated Worktree
 
@@ -137,15 +142,17 @@ file copy, never `git add`, never `git add -f`, never a commit — mirrors
 `digismith:bootstrap` Step 2.6 exactly, same reasoning (a worktree checks
 out only committed files).
 
-**Ticket docs.** If Step 3 wrote (or moved) `.digismith/docs/<slug>/ticket.md`
-somewhere other than the worktree Step 4 left you in — i.e. Step 4 attached a
-brand-new worktree rather than you already being inside an isolated one — copy
-that entire `.digismith/docs/<slug>/` folder into the worktree now: a plain
-file copy, never `git add`, never `git add -f`, never a commit. Same reasoning
-as the config copy above — a worktree checks out only committed files, so a
-folder written moments ago in a different directory would otherwise simply not
-exist here. When Step 4 found you already inside an isolated worktree, there's
-nothing to copy — Step 3 already wrote directly into it.
+**Ticket docs.** If Step 3 wrote (or moved) a ticket folder —
+`.digismith/board/<KEY>—<slug>/` when a key was resolved,
+`.digismith/docs/<slug>/` otherwise — somewhere other than the worktree
+Step 4 left you in — i.e. Step 4 attached a brand-new worktree rather than
+you already being inside an isolated one — copy that entire folder into
+the worktree now: a plain file copy, never `git add`, never `git add -f`,
+never a commit. Same reasoning as the config copy above — a worktree
+checks out only committed files, so a folder written moments ago in a
+different directory would otherwise simply not exist here. When Step 4
+found you already inside an isolated worktree, there's nothing to copy —
+Step 3 already wrote directly into it.
 
 **Telemetry marker.** First, unconditionally clear any marker left over from
 a previous ticket in this same checkout, regardless of what the profile
@@ -198,16 +205,24 @@ it in the same way the profile file is copied above — mirrors
 
 ### Step 6: Relocate the Docs
 
-Write the plan (and spec, if one was supplied) from Step 1 directly into `.digismith/docs/`,
-targeting the slug resolved in Step 3:
+Write the plan (and spec, if one was supplied) from Step 1 directly into the target folder — the
+resolved board path when Step 3 resolved a real key, or `.digismith/docs/<slug>/` unchanged when
+it didn't:
 
-- **Plan:** write the content you read into context in Step 1 to
-  `.digismith/docs/<slug>/plan.md`, creating the folder if needed. Format doesn't change — plans
-  are already Markdown. No gitignore check for `plan.md`.
+- **Plan:** write the content you read into context in Step 1 to `<target folder>/plan.md`
+  (`.digismith/board/<KEY>—<slug>/plan.md` or `.digismith/docs/<slug>/plan.md`), creating the
+  folder if needed. Format doesn't change — plans are already Markdown. No gitignore check for
+  `plan.md`.
 - **Spec, if supplied:** rewrap the content you read into context in Step 1 into the HTML shell
-  below at `.digismith/docs/<slug>/design.html` (reuse the `<style>` block byte-for-byte, filling
-  in `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s from the supplied spec's
-  own content):
+  below at `<target folder>/design.html` (reuse the `<style>` block byte-for-byte, filling in
+  `{{TITLE}}`, `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s from the supplied spec's own
+  content). The footer line at the bottom of the shell names whichever target folder actually
+  applies — change only that one line, from `<footer>DigiSmith ·
+  .digismith/docs/<slug>/design.html</footer>` to `<footer>DigiSmith · <target
+  folder>/design.html</footer>` (literally `.digismith/board/<KEY>—<slug>/design.html` or
+  `.digismith/docs/<slug>/design.html`). Every other line of the shell, and the gitignore check
+  immediately below it, stays exactly as shipped — just substitute `<target folder>` for whichever
+  path Step 3 resolved wherever this section already says `.digismith/docs/<slug>/design.html`.
 
   ```html
   <!doctype html>
@@ -291,7 +306,7 @@ targeting the slug resolved in Step 3:
 
   {{BODY_SECTIONS}}
 
-  <footer>DigiSmith · .digismith/docs/<slug>/design.html</footer>
+  <footer>DigiSmith · <target folder>/design.html</footer>
 
   </body>
   </html>
@@ -341,8 +356,8 @@ it triggers off the dispatch itself, not off which entry point produced it.
 |---|---|
 | 1 | Confirm ticket key, plan path (required), spec path (optional); read the plan's (and spec's) full content into context now, before any worktree switch |
 | 2 | Resolve profile and ensure the DigiSmith runtime clone — run `digismith:bootstrap` Step 0, then Step 0.5 (including its `ticket: true` Jira credential check), then Step 0.6 (SSH key preference), then Step 0.7 (voice preferences), exactly |
-| 3 | Get the ticket via `digismith:jira-intake` (skip if `ticket: false`), resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
+| 3 | Get the ticket via `digismith:jira-intake` — skipped only when `ticket: false` **and** no key was already confirmed in Step 1; resolve the slug — branch's own slug wins over `digismith:jira-intake`'s derived one if they differ, moving the ticket.md folder to match |
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
-| 5 | Copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` (each when present), and (if Step 4 attached a new worktree) the `.digismith/docs/<slug>/` folder in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
-| 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into `.digismith/docs/<slug>/` |
+| 5 | Copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` (each when present), and (if Step 4 attached a new worktree) the resolved ticket folder (`.digismith/board/<KEY>—<slug>/` or `.digismith/docs/<slug>/`) in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
+| 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into the resolved target folder — `.digismith/board/<KEY>—<slug>/` when Step 3 resolved a key, `.digismith/docs/<slug>/` otherwise |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |
