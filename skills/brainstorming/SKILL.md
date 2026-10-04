@@ -210,6 +210,15 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   </html>
   ```
 
+  **Header line:** the shell's `<span>Map item: {{MAP_ITEM}}</span>` line above is written
+  literally, unchanged, with its existing letter-or-"no map letter — reason" value, when no
+  tracker key was in hand (the keyless branch below). When a tracker key was in hand (the keyed
+  branch below), that same line instead reads `Ticket: {{TICKET}}`, filled in with the resolved
+  key — always present in this branch, since a key that resolved a folder is never absent. The
+  two labels are alternatives described here in prose, the same way this shell already describes
+  "DigiSmith-tracked" vs. "not tracked" as prose alternatives around one shell; the HTML shell's
+  literal text above is not changed for either branch.
+
   **Slug:** reuse whatever slug the caller already resolved and passed into this invocation
   (e.g. `digismith:bootstrap` derives one before calling this skill, and passes it along) —
   never re-derive independently when one was already given. No slug was passed (a
@@ -222,6 +231,17 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   resolved path (not just the bare slug) is what `digismith:writing-plans` and
   `digismith:report-implementation` both reuse downstream, so carry it forward exactly rather
   than letting a later step re-derive a bare slug and reconstruct a flat path from it.
+
+  - **A tracker key is in hand** (passed in by `bootstrap`/`adopt`, or already evident from how
+    this work was requested) — resolve the **existing** folder first, never reconstruct one:
+    `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'`
+    against `.digismith/board/`. **Found** → that folder, `<folder>/design.html`. **Not found**
+    (an ad hoc keyed call with no prior `jira-intake` run this session) → compute fresh:
+    `node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'`.
+    Wrap `<slug>`/`<key>`/`<title>` in single quotes, `'` inside any of them as `'\''` — same
+    quoting rule as `jira-intake`'s "The Script".
+
+  **No tracker key** (the existing behavior, unchanged):
 
   - **Map item has a letter** (e.g. `G.3`, `U.1`) — nest under that letter: scan
     `.digismith/docs/<Letter>/` on disk for existing `<Letter>.M-*` folders, take `max(M)+1` as
