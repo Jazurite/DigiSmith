@@ -1470,6 +1470,22 @@
   for every in-progress worker ticket; see section 8. See <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/design.html">design</a>, <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/plan.md">plan</a>, and <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-04</div>
+      <h4>DGS-180: Process-Lifecycle Test Leaks Its Dummy Server</h4>
+      <p>DGS-180 fixed a real process leak in <code>ensureProcess</code>
+  (<code>packages/cli/src/depot/process-lifecycle.ts</code>): when it spawned a detached child and
+  then threw &mdash; because it could not confirm, via <code>netstat</code>, which PID actually
+  owned the port the child reported &mdash; the already-spawned child was left running with no
+  parent and no tracking file pointing at it. On this VPS, every run of the test exercising this
+  path left one orphan behind, matching the 76 found live on the box. The fix kills the exact PID
+  it spawned before rethrowing, so no failure after the spawn (for any reason) can strand a child.
+  A new, platform-agnostic test drives <code>ensureProcess</code> into that failure deterministically
+  (a reported port nobody binds, so no platform's <code>netstat</code> can find an owner) and asserts
+  the spawned PID is dead afterward, using only <code>process.kill(pid, 0)</code> &mdash; no
+  <code>pgrep</code>, no process-name matching. No sibling test shares this leak shape. See <a href="board/DGS-180—process-lifecycle-test-leaks-its-dummy/worker-dgs-180/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
