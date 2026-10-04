@@ -26,6 +26,10 @@ definition, and **it blocks DGS-169**.
   (`backlog/build-observer-and-operator-clients.md`), blocked by this item.
 - **A requirement for this design:** the maestro's state must be kept in one structured place the clients can read (a state file: roster,
   open questions for the end user, a decision log with a reason each, next steps), not only in prose notes.
+- **The Observer moved out (Jack, 2026-10-04 11:38 UTC+7): "Forget the observer, put it into another backlog now, just focus on the master
+  and butler."** It is now DGS-175 (`backlog/define-the-observer-role.md`), blocked by this item. This item focuses on the two roles Jack
+  is naming next, the **master** and the **butler**. His message ended at "I've decided the role:", so the decision itself is not
+  recorded yet (see below). The scope line that follows is the earlier one and is superseded.
 - **Scope:** this item defines the Maestro, the Observer and the Operator. The Scout, the Reviewer and Jack's own role are DGS-171.
 - **One maestro per project (Jack, 2026-10-04, after the question "what is a maestro's unit?"):** "I think we should have one maestro
   for a project." This settles the unit. It needs a definition of "project", which the repo does not have: see DGS-172

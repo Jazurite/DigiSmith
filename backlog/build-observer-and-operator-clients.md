@@ -47,6 +47,8 @@ A first prototype needs no new server: the Observer can be built from `herdr pan
 - How does an Operator take over a pane from the maestro and hand it back?
 - Is this a `dg` command, a page, or both? It touches `dg workbox` (DGS-151).
 
+The Observer role itself is defined in DGS-175 (`backlog/define-the-observer-role.md`), split out of DGS-170 on 2026-10-04.
+
 ## Related
 
 [brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170), [define-project-and-project-workflow.md](define-project-and-project-workflow.md)
