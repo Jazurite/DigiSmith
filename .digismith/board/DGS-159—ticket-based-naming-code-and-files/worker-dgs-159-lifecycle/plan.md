@@ -1210,3 +1210,671 @@ git commit -m "docs(ticket-naming): report for DGS-159 Part 3"
 State all commit hashes and messages, the files touched, that every task's self-check passed, and
 that no keyless path anywhere in this plan was edited. Do not push: wait for "approved: push"
 (standing brief rule).
+
+---
+
+### Task 7: `scripts/board-path.ts` — a CLI entry point, in the style of `lineage-handoff.ts`
+
+**Why this task exists.** The final whole-branch review found a real gap: Tasks 2–5's skill text
+tells a model to "call `boardRelPath(...)`" or "call `findBoardFolderBySlug(...)`", but a skill is
+prose a model follows, not code it executes — there is no command line for it to actually run.
+Without one, the model would have to retype `slugify` and the U+2014 em dash by hand, exactly the
+mistake the module exists to prevent. The Part 1+2 design deferred this CLI "to whichever part
+first creates a real board folder" — that is this part.
+
+**Files:**
+- Modify: `scripts/board-path.ts`
+- Modify: `scripts/board-path.test.ts`
+
+**Interfaces:**
+- Consumes: `parseArgs`, `requireArgs` from `./cli-args.ts` (already shipped, used the same way by
+  `scripts/lineage-handoff.ts` and `scripts/config.ts`); `resolveMainRoot` from
+  `./lineage-handoff.ts` (already shipped and already imported this same way by `scripts/config.ts`
+  — no circular import, `lineage-handoff.ts` does not import `board-path.ts`).
+- Produces: a `main()` function and a main-guard, exactly matching
+  `scripts/lineage-handoff.ts`'s own shape. Four actions:
+  - `--action path --key <key> --title <title>` → prints `boardRelPath(key, title)`.
+  - `--action path --key <key> --slug <slug>` → prints `boardRelPathForSlug(key, slug)` (same
+    `path` action, disambiguated by whether `--title` or `--slug` is given).
+  - `--action find --slug <slug>` → prints the folder name `findBoardFolderBySlug` returns, or
+    prints nothing and exits 0 when it returns `undefined`.
+  - `--action parse --name <name>` → prints the parsed key on one line and the slug on the next,
+    or fails loudly (propagates `parseFolderName`'s own thrown error) when the name doesn't parse.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add these imports to the top of `scripts/board-path.test.ts`, alongside the existing ones:
+
+```typescript
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+```
+
+Add this CLI test-fixture scaffolding and `describe` block at the end of the file — it mirrors
+`scripts/lineage-handoff.test.ts`'s own `runCli`/`initRepo`/`real` helpers exactly, since
+`--action find` needs a real git repo to resolve `mainRoot` from:
+
+```typescript
+const SCRIPT_PATH = fileURLToPath(new URL("./board-path.ts", import.meta.url));
+
+function real(p: string): string {
+  return fs.realpathSync.native(p);
+}
+
+function git(cwd: string, ...args: string[]) {
+  return spawnSync("git", args, { cwd, encoding: "utf8" });
+}
+
+function initRepo(dir: string): void {
+  fs.mkdirSync(dir, { recursive: true });
+  git(dir, "init", "-q");
+  git(dir, "config", "user.email", "test@example.com");
+  git(dir, "config", "user.name", "Test");
+  fs.writeFileSync(path.join(dir, "README.md"), "base\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "base commit");
+}
+
+function runCli(cwd: string, ...args: string[]) {
+  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
+}
+
+describe("CLI", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-cli-test-"));
+    process.env.GIT_CEILING_DIRECTORIES = real(path.dirname(tmpDir));
+    initRepo(tmpDir);
+  });
+
+  afterEach(() => {
+    delete process.env.GIT_CEILING_DIRECTORIES;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  describe("--action path", () => {
+    it("prints boardRelPath's result given --key and --title, with a real em dash", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-159", "--title", "Fix cart drawer padding");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(`${BOARD_DIR_PATH}/DGS-159—fix-cart-drawer-padding`);
+    });
+
+    it("prints boardRelPathForSlug's result given --key and --slug, without re-slugifying", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-161", "--slug", "plugin-update-after-merge");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe(`${BOARD_DIR_PATH}/DGS-161—plugin-update-after-merge`);
+    });
+
+    it("fails loudly on an empty-slug title, matching buildFolderName", () => {
+      const result = runCli(tmpDir, "--action", "path", "--key", "dgs-1", "--title", "To Of For");
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("cannot build a board folder name");
+    });
+  });
+
+  describe("--action find", () => {
+    it("prints the matching folder name when one exists, regardless of key", () => {
+      fs.mkdirSync(path.join(tmpDir, ...BOARD_DIR_PATH.split("/"), "DGS-161—plugin-update-after-merge"), { recursive: true });
+      const result = runCli(tmpDir, "--action", "find", "--slug", "plugin-update-after-merge");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("DGS-161—plugin-update-after-merge");
+    });
+
+    it("prints nothing and exits 0 when no folder matches the slug", () => {
+      const result = runCli(tmpDir, "--action", "find", "--slug", "nothing-here");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("");
+    });
+  });
+
+  describe("--action parse", () => {
+    it("prints the key then the slug on two lines", () => {
+      const result = runCli(tmpDir, "--action", "parse", "--name", "DGS-159—fix-cart-drawer-padding");
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim().split(/\r?\n/)).toEqual(["DGS-159", "fix-cart-drawer-padding"]);
+    });
+
+    it("fails loudly on a name with no em dash", () => {
+      const result = runCli(tmpDir, "--action", "parse", "--name", "DGS-159-fix-cart-drawer-padding");
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("no em dash (U+2014) found");
+    });
+  });
+
+  it("fails loudly on an unknown action", () => {
+    const result = runCli(tmpDir, "--action", "bogus");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('unknown --action "bogus"');
+  });
+});
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `npx vitest run scripts/board-path.test.ts`
+Expected: every new CLI test fails (the script has no `main()` yet, so it exits with no output and
+status 0 regardless of the args given, or `node` itself errors depending on how the file currently
+behaves with no main-guard firing) — confirm the specific failure mode before moving on, same
+discipline Task 1 already used.
+
+- [ ] **Step 3: Implement**
+
+Add these two imports at the top of `scripts/board-path.ts`, alongside the existing `fs`/`path`
+imports:
+
+```typescript
+import { parseArgs, requireArgs } from "./cli-args.ts";
+import { resolveMainRoot } from "./lineage-handoff.ts";
+```
+
+Append this at the very end of the file, after `findBoardFolderBySlug`'s closing brace:
+
+```typescript
+
+export function main(): void {
+  const args = parseArgs(process.argv.slice(2));
+  try {
+    requireArgs(args, ["action"]);
+    switch (args.action) {
+      case "path": {
+        requireArgs(args, ["key"]);
+        if (args.title !== undefined) {
+          console.log(boardRelPath(args.key, args.title));
+        } else {
+          requireArgs(args, ["slug"]);
+          console.log(boardRelPathForSlug(args.key, args.slug));
+        }
+        break;
+      }
+      case "find": {
+        requireArgs(args, ["slug"]);
+        const mainRoot = resolveMainRoot(process.cwd());
+        const found = findBoardFolderBySlug(args.slug, mainRoot);
+        if (found !== undefined) console.log(found);
+        break;
+      }
+      case "parse": {
+        requireArgs(args, ["name"]);
+        const parsed = parseFolderName(args.name);
+        console.log(parsed.key);
+        console.log(parsed.slug);
+        break;
+      }
+      default:
+        throw new Error(`unknown --action "${args.action}" — expected path, find, or parse`);
+    }
+  } catch (err) {
+    console.error(`board-path: ${(err as Error).message}`);
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.filename === process.argv[1]) {
+  main();
+}
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `npx vitest run scripts/board-path.test.ts`
+Expected: every test passes, including every pre-existing one from Task 1 (unchanged — confirms
+the CLI is purely additive).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/board-path.ts scripts/board-path.test.ts
+git commit -m "feat(board-path): add a CLI entry point, in the style of lineage-handoff.ts"
+```
+
+---
+
+### Task 8: Point the four skills at the CLI, and fix three findings from the final review
+
+**Why this task exists.** Task 7 gives the four skills a real command to run instead of asking a
+model to "call" a TypeScript function it cannot execute. This task wires that in, the same way
+`skills/handoff/SKILL.md` already points at `scripts/lineage-handoff.ts`'s own CLI: one dedicated
+"The Script" section per skill giving the full invocation once, then every operational mention in
+the body shortened to `--action ...` shorthand that refers back to it. It also fixes three findings
+the final whole-branch review raised directly in the code, verified by the controller first:
+
+- **Important, confirmed:** `skills/bootstrap/SKILL.md`'s Step 1.5 and Step 3 each still say "the
+  slug... the `ticket.md` folder name when `ticket: true`" — true under the old convention, where
+  the folder name and the slug were the same string, but false now for a keyed ticket, where the
+  folder name is `<KEY>—<slug>`, not the bare slug. An agent following this literally would write
+  `DGS-123—some-slug` into the telemetry marker's `slug:` field, or hand that whole string to
+  `digismith:brainstorming` as if it were a slug.
+- **Minor, confirmed, fix now (already-touched file, cheap to fold in):** `skills/init/SKILL.md`'s
+  Step 0 item 2 doesn't say what happens when `findBoardFolderBySlug` finds a board folder but that
+  folder has no `plan.md` inside it (today's real-world case for a keyed `bootstrap` run, since
+  Part 4 hasn't yet moved `digismith:writing-plans`'s own output off `docs/` — a keyed ticket's
+  `plan.md` still lands in `docs/<slug>/` until Part 4 ships). The flat `docs/` fallback must still
+  run in that case, not be skipped because a board folder was found.
+- **Minor, confirmed, fix now (same file, same spot):** `skills/adopt/SKILL.md` Step 3.2's rename
+  (`.digismith/board/<KEY>—<its-own-derived-slug>/` → `.digismith/board/<KEY>—<branch's-slug>/`)
+  is exactly what `boardRelPathForSlug`/the CLI's `path --key --slug` action computes, but the step
+  never names it — worth doing now that the CLI invocation is being added to this same step anyway.
+
+**Parked, not fixed here (confirmed, out of scope):** the final review's other two Minor findings —
+an old keyed ticket still sitting under `docs/<slug>/` from before this convention, re-run through
+Door 1 with the same key, could leave two copies behind (one at `docs/`, a new one at `board/`) —
+and `digismith:adopt` Step 3.2 not naming `boardRelPathForSlug` before this task fixes exactly that
+in the same step. The first is explicitly a DGS-164 migration-era risk (only existing until the
+historical folders move); the second is fixed by this task's own third bullet above.
+
+**Files:**
+- Modify: `skills/bootstrap/SKILL.md`
+- Modify: `skills/adopt/SKILL.md`
+- Modify: `skills/init/SKILL.md`
+- Modify: `skills/jira-intake/SKILL.md`
+
+**Interfaces:**
+- Consumes: Task 7's CLI (`--action path`, `--action find`, `--action parse`).
+
+- [ ] **Step 1: `skills/jira-intake/SKILL.md`**
+
+Old text (Step 3.2's target-path sentence):
+
+```markdown
+2. **Target path depends on whether this ticket has a real key**, not on
+   the active profile. A real `**Key:**` is set (Door 1 succeeded, or an
+   earlier Door 2 draft is now being upgraded) → `boardRelPath(key, title)`
+   from `scripts/board-path.ts` (`.digismith/board/<KEY>—<slug>/ticket.md`).
+   No key yet (a fresh Door 2 draft, or any repo with none supplied) →
+   `.digismith/docs/<slug>/ticket.md`, exactly as before this ticket —
+   `docs/` is that ticket's real, permanent home, not a holding pen.
+   Either way, the target is in the repo currently being worked in —
+   never DigiSmith's own repo, which only hosts this skill, not the
+   tickets it processes.
+```
+
+New text:
+
+```markdown
+2. **Target path depends on whether this ticket has a real key**, not on
+   the active profile. A real `**Key:**` is set (Door 1 succeeded, or an
+   earlier Door 2 draft is now being upgraded) → run the script's
+   `--action path --key <key> --title <title>` (see "The Script" below;
+   prints `.digismith/board/<KEY>—<slug>/ticket.md`). No key yet (a fresh
+   Door 2 draft, or any repo with none supplied) →
+   `.digismith/docs/<slug>/ticket.md`, exactly as before this ticket —
+   `docs/` is that ticket's real, permanent home, not a holding pen.
+   Either way, the target is in the repo currently being worked in —
+   never DigiSmith's own repo, which only hosts this skill, not the
+   tickets it processes.
+```
+
+Old text (Handling Existing Files' opening sentence and the upgrade row):
+
+```markdown
+Before writing, look for an existing ticket file at this slug: call
+`findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts` against
+`.digismith/board/` first (matches regardless of that folder's own key); if
+nothing matches there, fall back to the flat `.digismith/docs/<slug>/ticket.md`
+check (unchanged).
+
+| Existing file's `Key` | Incoming | Action |
+|---|---|---|
+| No existing file (neither location) | — | Write directly, at the target path Step 3.2 resolves |
+| Same as incoming key | Door 1, same key (a re-run) | Confirm before overwriting via `AskUserQuestion` |
+| Different from incoming key | Door 1, different key, same slug (a collision) | Ask whether to disambiguate — append the ticket key to the slug, or choose a different slug — rather than silently overwriting |
+| Blank/absent, found under `docs/<slug>/` (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — **move** the whole `.digismith/docs/<slug>/` folder (`ticket.md` and anything already sitting beside it) to `.digismith/board/<KEY>—<slug>/` (`boardRelPath(key, title)`), then fill in Key/URL/Story Points on the moved `ticket.md` — the same move-and-correct idiom `digismith:adopt` Step 3.2 already uses for its own branch-slug correction |
+| Any existing file | Door 2 (raw need arrives again at this slug) | Confirm before overwriting via `AskUserQuestion` — same as a Door 1 refresh — regardless of whether the existing file already has a Key set |
+```
+
+New text:
+
+```markdown
+Before writing, look for an existing ticket file at this slug: run the script's
+`--action find --slug <slug>` (see "The Script" below) against `.digismith/board/`
+first — it matches regardless of that folder's own key; a non-empty result names the
+folder. Nothing printed → fall back to the flat `.digismith/docs/<slug>/ticket.md`
+check (unchanged).
+
+| Existing file's `Key` | Incoming | Action |
+|---|---|---|
+| No existing file (neither location) | — | Write directly, at the target path Step 3.2 resolves |
+| Same as incoming key | Door 1, same key (a re-run) | Confirm before overwriting via `AskUserQuestion` |
+| Different from incoming key | Door 1, different key, same slug (a collision) | Ask whether to disambiguate — append the ticket key to the slug, or choose a different slug — rather than silently overwriting |
+| Blank/absent, found under `docs/<slug>/` (a Door 2 draft) | Door 1, now has a real key | Upgrade, not a collision — **move** the whole `.digismith/docs/<slug>/` folder (`ticket.md` and anything already sitting beside it) to the path `--action path --key <key> --title <title>` prints, then fill in Key/URL/Story Points on the moved `ticket.md` — the same move-and-correct idiom `digismith:adopt` Step 3.2 already uses for its own branch-slug correction |
+| Any existing file | Door 2 (raw need arrives again at this slug) | Confirm before overwriting via `AskUserQuestion` — same as a Door 1 refresh — regardless of whether the existing file already has a Key set |
+```
+
+Add this new section right before `## Error Handling` (reuse `skills/handoff/SKILL.md`'s own "## The
+Script" section as the template — same note about `<digismith-root>`, same quoting caveat):
+
+````markdown
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
+```
+
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
+````
+
+- [ ] **Step 2: `skills/bootstrap/SKILL.md`**
+
+Old text (Step 2's target-path sub-step, the one referencing `boardRelPath`):
+
+```markdown
+   `.digismith/board/<KEY>—<slug>/ticket.md` (`boardRelPath(key, title)`
+```
+
+New text:
+
+```markdown
+   `.digismith/board/<KEY>—<slug>/ticket.md` (the script's
+   `--action path --key <key> --title <title>`, see "The Script" below;
+```
+
+(Keep reading and preserve whatever this sentence's surrounding words already are on both sides —
+only the parenthetical changes, from naming the function to naming the CLI action.)
+
+Old text (Step 2's slug-derivation sub-step, the one referencing `parseFolderName`):
+
+```markdown
+1. Derive the slug: reuse the slug `ticket.md` is already sitting under —
+   `.digismith/board/<KEY>—<slug>/ticket.md` when a key was resolved
+   (parse the folder name with `parseFolderName` from
+   `scripts/board-path.ts`), or `.digismith/docs/<slug>/ticket.md` when
+   none was (unchanged). That folder's slug already is the correct one,
+   produced by `digismith:jira-intake`'s own deterministic slug algorithm.
+   Never re-derive the slug independently from the title.
+```
+
+New text:
+
+```markdown
+1. Derive the slug: reuse the slug `ticket.md` is already sitting under —
+   `.digismith/board/<KEY>—<slug>/ticket.md` when a key was resolved (run
+   the script's `--action parse --name <folder name>`, see "The Script"
+   below, and take its second printed line), or `.digismith/docs/<slug>/ticket.md`
+   when none was (unchanged). That folder's slug already is the correct one,
+   produced by `digismith:jira-intake`'s own deterministic slug algorithm.
+   Never re-derive the slug independently from the title.
+```
+
+Old text (the Important finding — Step 1.5's slug-identity sentence):
+
+```markdown
+`<slug>` is whichever slug Step 1 just produced — the `ticket.md`
+folder name when `ticket: true`, or the directly-derived slug when
+`ticket: false`. Never re-derive it a third way.
+```
+
+New text:
+
+```markdown
+`<slug>` is whichever slug Step 1 just produced — the slug parsed out of the
+`ticket.md` folder's own name (the script's `--action parse`, second line;
+see "The Script" below) when a key was resolved, or the directly-derived
+slug when none was. Never the raw folder name itself (which carries the
+key prefix for a keyed ticket), and never re-derive it a third way.
+```
+
+Old text (the Important finding — Step 3's slug-identity sentence):
+
+```markdown
+From inside that worktree, invoke `digismith:brainstorming`, passing both the slug already
+derived (the `ticket.md` folder name Step 2 reused under `ticket: true`, or the slug Step 1
+derived directly under `ticket: false` — never re-derived a third way; `brainstorming` reuses
+it verbatim rather than re-deriving) and the ticket content **you already read in Step 1** —
+```
+
+New text:
+
+```markdown
+From inside that worktree, invoke `digismith:brainstorming`, passing both the slug already
+derived (the slug Step 2 parsed out of the `ticket.md` folder's own name when a key was resolved,
+or the slug Step 1 derived directly when none was — never the raw folder name itself, and never
+re-derived a third way; `brainstorming` reuses it verbatim rather than re-deriving) and the ticket
+content **you already read in Step 1** —
+```
+
+Add this new section right after Step 3 (reuse the same template as jira-intake's, above, scoped to
+the one action bootstrap actually uses):
+
+````markdown
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action parse --name '<folder name>'
+```
+
+Wrap `<title>`/`<folder name>` in single quotes, and write any `'` inside either as `'\''`.
+````
+
+- [ ] **Step 3: `skills/adopt/SKILL.md`**
+
+Old text (Step 3's Door-1 write sentence):
+
+```markdown
+1. Invoke `digismith:jira-intake` Door 1, supplying the ticket key already
+   confirmed in Step 1 directly — it does not need to ask for it again.
+   `digismith:jira-intake` fetches the ticket (or asks you to paste it, per
+   its own JIRA Detection) and writes
+   `.digismith/board/<KEY>—<its-own-derived-slug>/ticket.md`
+   (`boardRelPath(key, title)` from `scripts/board-path.ts`) using its own
+   Step 3.1 slug algorithm on the fetched title.
+```
+
+New text:
+
+```markdown
+1. Invoke `digismith:jira-intake` Door 1, supplying the ticket key already
+   confirmed in Step 1 directly — it does not need to ask for it again.
+   `digismith:jira-intake` fetches the ticket (or asks you to paste it, per
+   its own JIRA Detection) and writes
+   `.digismith/board/<KEY>—<its-own-derived-slug>/ticket.md` (the script's
+   `--action path --key <key> --title <title>`, see "The Script" below)
+   using its own Step 3.1 slug algorithm on the fetched title.
+```
+
+Old text (Step 3.2's rename sentence):
+
+```markdown
+2. Check whether the current branch already matches `<Key>__<slug>`. If it
+   does, and that slug differs from the slug `digismith:jira-intake` just
+   derived, the branch's slug wins — it's already committed to the branch
+   name, and `digismith:adopt` never renames a branch. Move
+   `.digismith/board/<KEY>—<its-own-derived-slug>/` to
+   `.digismith/board/<KEY>—<branch's-slug>/` in its entirety (a
+   move-and-correct idiom for handling misplaced files — applied here to
+   correct a misplaced `ticket.md` folder).
+```
+
+New text:
+
+```markdown
+2. Check whether the current branch already matches `<Key>__<slug>`. If it
+   does, and that slug differs from the slug `digismith:jira-intake` just
+   derived, the branch's slug wins — it's already committed to the branch
+   name, and `digismith:adopt` never renames a branch. Move
+   `.digismith/board/<KEY>—<its-own-derived-slug>/` to the path the
+   script's `--action path --key <key> --slug <branch's-slug>` prints (see
+   "The Script" below) in its entirety (a move-and-correct idiom for
+   handling misplaced files — applied here to correct a misplaced
+   `ticket.md` folder).
+```
+
+Add this new section right after Step 3 (same template, scoped to the one action adopt uses):
+
+````markdown
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --title '<title>'
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action path --key '<key>' --slug '<slug>'
+```
+
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
+````
+
+- [ ] **Step 4: `skills/init/SKILL.md`**
+
+Old text (Step 0 item 2's resolution sentence — this is also the Minor finding's own spot):
+
+```markdown
+2. **Not on the base branch, and a profile is present**: derive
+   `<slug>` from the current branch name — strip a leading `<Key>__`
+   prefix if it matches (regex `^([A-Z]+-\d+)__`), otherwise use the
+   branch name as-is. Find this ticket's folder **by slug**, never by
+   reconstructing a path from the branch's own key — a folder's own key
+   does not have to match the branch's (DigiSmith's own repo already has
+   this: branch `plugin-update-after-merge` against folder
+   `DGS-161—plugin-update-after-merge`). Call
+   `findBoardFolderBySlug(slug, mainRoot)` from `scripts/board-path.ts`
+   against `.digismith/board/` first; found → check `plan.md` inside that
+   folder. Not found → fall back to the existing, flat
+   `.digismith/docs/<slug>/plan.md` check (unchanged) — the permanent home
+   for a genuinely keyless ticket, and (until DGS-164) also still the
+   temporary home for an old keyed ticket not yet moved.
+```
+
+New text:
+
+```markdown
+2. **Not on the base branch, and a profile is present**: derive
+   `<slug>` from the current branch name — strip a leading `<Key>__`
+   prefix if it matches (regex `^([A-Z]+-\d+)__`), otherwise use the
+   branch name as-is. Find this ticket's folder **by slug**, never by
+   reconstructing a path from the branch's own key — a folder's own key
+   does not have to match the branch's (DigiSmith's own repo already has
+   this: branch `plugin-update-after-merge` against folder
+   `DGS-161—plugin-update-after-merge`). Run the script's
+   `--action find --slug <slug>` (see "The Script" below) against
+   `.digismith/board/` first; a folder name printed → check `plan.md`
+   inside that folder. **Found the folder but no `plan.md` in it, or
+   nothing printed at all** → either way, fall back to the existing, flat
+   `.digismith/docs/<slug>/plan.md` check (unchanged) — the permanent home
+   for a genuinely keyless ticket, and (until Part 4 moves
+   `digismith:writing-plans`'s own output, and until DGS-164 migrates old
+   keyed tickets) also still the real, current home for a keyed ticket's
+   `plan.md` today, even once its `ticket.md` already lives under `board/`.
+```
+
+Add this new section right after Step 1 (same template, scoped to the one action init uses):
+
+````markdown
+## The Script
+
+`<digismith-root>` is two levels up from this skill's base directory (shown when the skill
+loads). Use this copy, not a path asked from the human partner: the script and this text ship
+together in one plugin version.
+
+```bash
+node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
+```
+
+Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`.
+````
+
+- [ ] **Step 5: Diff review — confirm no unrelated line was dropped, across all four files**
+
+Run `git diff -- skills/bootstrap/SKILL.md skills/adopt/SKILL.md skills/init/SKILL.md skills/jira-intake/SKILL.md`
+and read every removed line in each file. For each one, point to the replacement line that does the
+same job. Any removed sentence with no replacement doing its job is a bug — fix it before Step 6.
+
+- [ ] **Step 6: Self-check against four scenarios**
+
+1. **A keyed Door 1 write (jira-intake).** Trace the new Step 3.2 text: it names the exact CLI
+   invocation, the printed path matches what `boardRelPath("DGS-159", "Fix cart drawer padding")`
+   already returns per Task 1's own tests.
+2. **bootstrap's telemetry marker and brainstorming hand-off, for a keyed ticket with folder
+   `DGS-123—fix-cart-drawer`.** Step 2's slug sub-step now runs `--action parse --name
+   'DGS-123—fix-cart-drawer'`, takes its second line (`fix-cart-drawer`) as `<slug>`. Step 1.5
+   writes `slug: fix-cart-drawer` (not the folder name) into the telemetry marker. Step 3 hands
+   `fix-cart-drawer` to brainstorming (not the folder name either). Confirms the Important finding
+   is actually fixed, not just reworded.
+3. **init resuming on branch `plugin-update-after-merge` where `DGS-161—plugin-update-after-merge`
+   exists under `board/` but has no `plan.md` in it (today's real interim state).** Step 0 item 2 →
+   `--action find --slug plugin-update-after-merge` prints the folder name → check `plan.md` inside
+   it → absent → fall back to `docs/plugin-update-after-merge/plan.md` → (if that exists) report
+   "already initialized" naming the docs folder. Confirms the Minor finding's fix: a found-but-empty
+   board folder no longer silently reports "doesn't exist" when the docs/ fallback would have found
+   it.
+4. **adopt's Step 3.2 rename, key `EMKT-9001`, branch slug `fix-cart-drawer-padding-mobile`.** The
+   new text runs `--action path --key EMKT-9001 --slug fix-cart-drawer-padding-mobile`, which
+   prints `.digismith/board/EMKT-9001—fix-cart-drawer-padding-mobile` — the exact move target the
+   old text described by hand, now computed instead of hand-typed.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add skills/bootstrap/SKILL.md skills/adopt/SKILL.md skills/init/SKILL.md skills/jira-intake/SKILL.md
+git commit -m "feat(ticket-naming): point the four skills at board-path.ts's own CLI"
+```
+
+---
+
+### Task 9: Re-verify after Tasks 7–8
+
+**Files:**
+- Modify: `.digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html`
+
+**Interfaces:**
+- Consumes: Tasks 7–8's commits.
+- Produces: an updated, still-accurate closing report.
+
+- [ ] **Step 1: Run the full repo test suite**
+
+Run: `npx vitest run`
+Expected: unchanged from Task 6's own run, plus Task 7's new CLI tests, all passing.
+
+- [ ] **Step 2: Re-run the Task 6 grep audit**
+
+Run:
+
+```bash
+grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md skills/init/SKILL.md skills/jira-intake/SKILL.md
+```
+
+Classify every line the same way Task 6 did — keyless path, legacy-read fallback, or (new, from
+Task 8's init fix) the interim Part-4-hasn't-shipped-yet fallback. Anything else is a bug.
+
+- [ ] **Step 3: Re-verify `report.html` against the real parser**
+
+Run the same command Task 6 used:
+
+```bash
+node --experimental-strip-types -e "import('./.digismith/hooks/post-finish/scripts/update-history.ts').then(m=>console.log(m.parseReport(process.argv[1])))" ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
+```
+
+Expected: still prints an object, does not throw (Tasks 7–8 don't touch `report.html`'s own
+markup, but re-run this to be sure nothing regressed).
+
+- [ ] **Step 4: Update `report.html`**
+
+Add a short new section (or extend the existing summary) recording: the CLI added in Task 7, the
+four skills now pointing at it, and the three findings from the final whole-branch review that
+this fixed (bootstrap's slug/folder-name conflation, init's found-but-no-plan.md fallback, adopt's
+unnamed rename helper) plus the two that stay parked (an old keyed `docs/` ticket re-run through
+Door 1 — DGS-164's concern; nothing else).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
+git commit -m "docs(ticket-naming): update the report for the CLI and the final-review fixes"
+```
+
+- [ ] **Step 6: Report to the maestro**
+
+Send the final verified list: every finding from the final whole-branch review, the controller's
+own check for each, and whether it was fixed or parked. Do not push: wait for "approved: push".
