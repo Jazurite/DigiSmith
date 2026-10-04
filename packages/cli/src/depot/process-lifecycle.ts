@@ -89,28 +89,38 @@ export function ensureProcess(config: EnsureConfig): { port: number } {
     child.on("error", () => {});
     throw new Error(`could not start "${command}" — not found on PATH`);
   }
+  const pid = child.pid;
   child.unref();
 
-  const deadline = Date.now() + 5000;
-  let port: number | null = null;
-  while (Date.now() < deadline && port === null) {
-    sleepMs(200);
-    const content = fs.existsSync(config.logFile) ? fs.readFileSync(config.logFile, "utf-8") : "";
-    port = parseListeningPort(content);
-  }
-  if (port === null) {
-    const content = fs.existsSync(config.logFile) ? fs.readFileSync(config.logFile, "utf-8") : "";
-    throw new Error(`failed to start — no "listening on" line in ${config.logFile} within 5s\n${content}`);
-  }
+  try {
+    const deadline = Date.now() + 5000;
+    let port: number | null = null;
+    while (Date.now() < deadline && port === null) {
+      sleepMs(200);
+      const content = fs.existsSync(config.logFile) ? fs.readFileSync(config.logFile, "utf-8") : "";
+      port = parseListeningPort(content);
+    }
+    if (port === null) {
+      const content = fs.existsSync(config.logFile) ? fs.readFileSync(config.logFile, "utf-8") : "";
+      throw new Error(`failed to start — no "listening on" line in ${config.logFile} within 5s\n${content}`);
+    }
 
-  const netstat = spawnSync("netstat", ["-ano"], { encoding: "utf-8" });
-  const confirmedPid = parseNetstatPidForPort(netstat.stdout ?? "", port);
-  if (!confirmedPid) {
-    throw new Error(`could not confirm a PID listening on port ${port} via netstat`);
-  }
+    const netstat = spawnSync("netstat", ["-ano"], { encoding: "utf-8" });
+    const confirmedPid = parseNetstatPidForPort(netstat.stdout ?? "", port);
+    if (!confirmedPid) {
+      throw new Error(`could not confirm a PID listening on port ${port} via netstat`);
+    }
 
-  writeTracking(config.trackingFile, { pid: confirmedPid, port });
-  return { port };
+    writeTracking(config.trackingFile, { pid: confirmedPid, port });
+    return { port };
+  } catch (err) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // already gone
+    }
+    throw err;
+  }
 }
 
 export function stopProcess(config: TrackingTarget): { stopped: boolean; error?: string } {

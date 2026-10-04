@@ -12,6 +12,26 @@ import {
   stopProcess,
 } from "./process-lifecycle.ts";
 
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// A killed child is a zombie — still "alive" to kill(pid, 0) — until Node's event loop runs and
+// reaps it. A synchronous (Atomics.wait) sleep blocks that same event loop, so the poll must
+// actually yield via a real timer.
+async function waitUntilDead(pid: number, timeoutMs = 2000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (isAlive(pid) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return !isAlive(pid);
+}
+
 describe("parseListeningPort", () => {
   it("extracts the port from a listening line", () => {
     expect(parseListeningPort("some preamble\nopencode server listening on http://127.0.0.1:54321\n")).toBe(54321);
@@ -134,6 +154,47 @@ describe("ensureProcess / stopProcess against a real child process", () => {
 
     const stopAgain = stopProcess({ label: "dummy", trackingFile });
     expect(stopAgain.stopped).toBe(false);
+  }, 15000);
+
+  it("kills the process it spawned when it cannot confirm the pid and throws", async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-lifecycle-"));
+    const trackingFile = path.join(tmpDir, "tracking.json");
+    const logFile = path.join(tmpDir, "server.log");
+    const pidFile = path.join(tmpDir, "child.pid");
+    // Port 1 is never actually bound, so netstat (on any platform) finds no owner for it and
+    // ensureProcess's PID-confirmation step throws — deterministically, not just on this host.
+    const dummyServerScript =
+      `require("node:fs").writeFileSync(${JSON.stringify(pidFile)},String(process.pid));` +
+      'console.log("dummy listening on http://127.0.0.1:1");' +
+      "setInterval(()=>{},1000);";
+
+    let thrown: unknown;
+    try {
+      ensureProcess({
+        label: "dummy",
+        trackingFile,
+        logFile,
+        spawnCommand: () => ({ command: process.execPath, args: ["-e", dummyServerScript] }),
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    const spawnedPid = fs.existsSync(pidFile) ? Number(fs.readFileSync(pidFile, "utf-8")) : undefined;
+
+    try {
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toMatch(/could not confirm a PID/);
+      expect(spawnedPid).toBeDefined();
+      expect(await waitUntilDead(spawnedPid!)).toBe(true);
+    } finally {
+      if (spawnedPid !== undefined && isAlive(spawnedPid)) {
+        try {
+          process.kill(spawnedPid, "SIGKILL");
+        } catch {
+          // already gone
+        }
+      }
+    }
   }, 15000);
 
   it("throws with the log content when the process never logs a listening line", () => {
