@@ -60,11 +60,24 @@ governing where `design.html` nests on disk — not report-implementation's repo
 
 | # | Case | File | Exact rendered markup | Check |
 |---|---|---|---|---|
-| 1 | Keyed ticket | `report-implementation`'s **new** report.html | `<span>Ticket: <strong>DGS-123</strong></span>` | Task 1 test: `parseReport` on a fixture with this exact line returns `ticket: "DGS-123"` |
+| 1 | Keyed ticket (a board-folder plan) | `report-implementation`'s **new** report.html | `<span>Ticket: <strong>DGS-123</strong></span>`, from the board folder name itself, **independent of `ticket.md` and of any profile's `ticket` field** (correction below) | Task 1 test: `parseReport` on a fixture with this exact line returns `ticket: "DGS-123"` |
 | 2 | Keyless, title still carries an old map-letter parenthetical (e.g. `Foo (G.3)`) | `report-implementation`'s **new** report.html | `<span>Ticket: <strong>n/a</strong></span>` — **identical to row 3**; the letter in the title plays no role in this field any more | Task 1 test: `parseReport` on a fixture with `Ticket: <strong>n/a</strong>` returns `ticket: "n/a"`; Task 2's self-check dry-runs the derivation by hand against a title that does carry `(G.3)` and confirms the rule still yields `n/a`, not `G.3` |
 | 3 | Keyless, no map letter at all | `report-implementation`'s **new** report.html | `<span>Ticket: <strong>n/a</strong></span>` | Same fixture/test as row 2 (the markup is byte-identical) |
 | 4 | An **old** report already on disk, generated before this change | any already-committed report.html | unchanged, e.g. `<span>Map item: <strong>G.3</strong></span>` — never regenerated, never touched by this plan | Task 1 test: `parseReport` on a fixture using only the legacy `Map item: <strong>…</strong>` line (no `Ticket:` line at all) still returns `ticket: "G.3"` |
 | 5 | Neither line present at all | any report.html | n/a — this is an error case | Task 1 test: `parseReport` throws, naming both `TICKET`/`Ticket:` and the legacy `MAP_ITEM`/`Map item:` in the message |
+
+**Correction (post-merge-review, a real bug, not a misstatement):** Task 2's original text (below)
+had Step 1.5 read the ticket key from `ticket.md` and apply the profile's `ticket` gate for
+**every** case, board or docs. That is wrong for a board-folder plan: per the Part 3 design
+(section 8), a folder only exists under `.digismith/board/` because a real key was already in
+hand — it is keyed by definition, with no `ticket.md` or profile check needed to prove it. Under
+the original text, a `ticket: false` profile (DigiSmith's own, among others) would discard that
+key and render `Ticket: n/a` even for a clearly-keyed `DGS-xxx` board folder. The shipped fix
+(commit `d65a22c`): for a board-folder plan, `{{TICKET}}` is the key Step 1's own
+`board-path.ts --action parse` call already printed — independent of `ticket.md` and of the
+profile gate entirely. The docs-folder case is unchanged: it still reads `ticket.md` and applies
+the profile gate, and `n/a` can now only happen there. Row 1 above reflects the fix; rows 2/3 (a
+docs-folder plan) are unaffected, since this bug never touched the docs case.
 
 A **separate**, unrelated table governs `brainstorming`'s own `design.html` shell (Task 4) — not
 hook-parsed, not covered by the rows above. `brainstorming` genuinely computes a map-letter

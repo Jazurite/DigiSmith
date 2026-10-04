@@ -218,6 +218,18 @@
   <p>The Step 4 commit message ("docs: add &lt;feature&gt; (&lt;map-item&gt;) implementation
   report") also branches: board case → <code>(&lt;ticket-key&gt;)</code>; docs case → unchanged,
   <code>(&lt;map-item&gt;)</code>.</p>
+  <p><strong>Correction (post-merge-review, a real bug, not a misstatement):</strong> the sentence
+  above claiming Step 1.5's ticket-key read is "gated by the active profile's <code>ticket</code>
+  field" for every case was wrong for the board branch. A board folder only exists under
+  <code>.digismith/board/</code> because a real key was already in hand (section 8 of the Part 3
+  design) — it is keyed by definition, so its key must never depend on <code>ticket.md</code> or
+  on any profile's <code>ticket</code> field. Under the original text, DigiSmith's own
+  <code>ticket: false</code> profile would have discarded a board folder's own key and rendered
+  <code>Ticket: n/a</code> even for a clearly-keyed <code>DGS-xxx</code> folder. Shipped fix
+  (commit <code>d65a22c</code>): for a board-folder plan, <code>{{TICKET}}</code> is the key Step
+  1's own <code>--action parse</code> call already printed, independent of <code>ticket.md</code>
+  and the profile gate entirely. The profile-gated <code>ticket.md</code> read now applies only to
+  the docs-folder case, which this bug never touched.</p>
 </section>
 
 <section id="edits">
