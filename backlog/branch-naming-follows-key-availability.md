@@ -8,8 +8,8 @@ section 7.
 
 ## What is inconsistent
 
-- Part 3 makes the board folder follow "a tracker key is available": `.digismith/board/<KEY>—<slug>/` when a key is in hand, and
-  `.digismith/board/<slug>/` only when there is none.
+- Part 3 makes the board folder follow "a tracker key is available": `.digismith/board/<KEY>—<slug>/` when a key is in hand. Work with
+  no key stays in `.digismith/docs/<slug>/` (Jack, 2026-10-04: "keyless folders stay in docs"). The board holds keyed tickets only.
 - The branch name still follows the strict `ticket:` profile flag (`digismith:bootstrap` Step 2): `<Key>__<slug>` for a `ticket: true`
   repo, a bare `<slug>` for `ticket: false`. DigiSmith's own repo is `ticket: false` and its tickets carry a DGS key, so a ticket gets a
   keyed folder (`DGS-161—plugin-update-after-merge`) and a keyless branch (`plugin-update-after-merge`).

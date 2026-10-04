@@ -15,6 +15,11 @@ files. This item takes the rest.
   where none exists.
 - Then move each folder with `git mv`, so the git history follows.
 
+## Rule so far (Jack, 2026-10-04)
+
+Work with no ticket key stays in `.digismith/docs/<slug>/`; the board holds keyed tickets only. So this item moves a historical folder
+only once it has a key. A folder that never gets one stays where it is.
+
 ## Constraint (Jack, 2026-10-04)
 
 What is already recorded is immutable. `.digismith/history.html` links to `docs/<slug>/design.html`, `plan.md` and `report.html`. A move
