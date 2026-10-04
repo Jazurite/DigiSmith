@@ -69,6 +69,13 @@ goes live only for a project where an escalating action is low-risk: a throwaway
 Desktop maestros until DGS-177's stronger channel exists (a pane has no human-only approval channel). This item carries the build: the
 `dg` start, stop, renew and list commands, the project registry (DGS-172), the state file, and the pilot. See `backlog/define-the-maestro-role.md`.
 
+## The 24/7 use case (Jack, 2026-10-04, from DGS-176)
+
+The maestro will sometimes run **24/7 on the backlog**: tickets that need no Master's permission it does by itself; a ticket that needs a
+Master's opinion stops and waits for the answer. The build has to support unattended running: a Master-written permission policy
+(default deny), ticket classification, park-and-continue, a waiting-for-Master list and a notification, quota and memory limits,
+automatic renewal by a flux, and a decision log. See the Autonomy section of `backlog/define-the-maestro-role.md`.
+
 ## What it would change
 
 - **No kicker.** A maestro in herdr is cleared or restarted like a worker (exit, start again with its note, `Arise`), by a script or by

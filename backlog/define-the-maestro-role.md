@@ -1,8 +1,7 @@
 # Define the Maestro role: the project's head butler
 
 **Status:** Design decided by Jack (2026-10-04 12:19 UTC+7 [05:19Z]): "Yes" to the seven defaults in the DGS-176 brainstorm. The item is the design
-record. Split out of DGS-170 at 11:40 UTC+7: "Decouple the maestro change to another ticket." ClickUp: **DGS-176** (list O.3: Roles, task id
-`14zcebruqu3`). DGS-172 (what a project is) is decided and done. **It blocks DGS-169** (the maestro in herdr), which carries the build.
+record. Split out of DGS-170 at 11:40 UTC+7: "Decouple the maestro change to another ticket." ClickUp: **DGS-176** (list O.3: Roles, task id `14zcebruqu3`). DGS-172 (what a project is) is decided and done. **It blocks DGS-169** (the maestro in herdr), which carries the build.
 
 **Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`) and the role discussion in DGS-170. The roles
 are a household: the Master (the user, DGS-170), the **Maestro** (the head butler), the workers (the servants).
@@ -28,6 +27,12 @@ are a household: the Master (the user, DGS-170), the **Maestro** (the head butle
    root). Jack accepts it for now, as he accepted the SSH key (DGS-170), with one guard: **escalating actions** (a push to a shared branch,
    ClickUp writes beyond routine, deletions) wait for a stronger channel (DGS-177: Tailscale, or a signed order).
 
+8. **It can run 24/7 on the backlog, by itself** (Jack, 12:21 UTC+7: "the maestro will sometimes run 24/7 to do the backlog; any simple
+   backlog item that doesn't need the Master's permission, it just does; any ticket or task that absolutely needs a Master's opinion, it
+   stops and waits for answers; otherwise most of the time the maestro could run and decide things automatically"). So the maestro is an
+   **autonomous runner inside the limits of what it is permitted to do.** It gives orders, answers its workers, and uses the permissions it has.
+   It stops only at something that needs a Master's opinion, and waits for the answer.
+
 ## The guard, made concrete (the maestro's reading of 6 and 7, to be confirmed)
 
 The maestro offered "until then they go through the Desktop approval card". That card exists only for a **Desktop** session. A pane has no
@@ -35,6 +40,30 @@ human-only channel: a permission prompt in a pane is answered by typed keys, whi
 pane **cannot safely carry escalating actions yet**. The consequence for the order in point 6: a persistent maestro goes live only for a
 project where an escalating action is low-risk (the throwaway project, then `Soveron`). `Emma` and `DigiSmith` stay Desktop maestros until
 DGS-177's stronger channel exists. This is stricter than Jack's "yes" strictly requires, and he can loosen it.
+
+## Autonomy: the 24/7 backlog runner (Jack's use case; mechanics proposed by the maestro, to confirm)
+
+The job is defined by one split: **does this ticket or action need a Master's opinion, or not?** A ticket that does not is done by the
+maestro and its workers, start to finish, with no one asked. A ticket that does stops, and the maestro waits for an answer. The maestro is
+a runner, not a chat partner, so these mechanics follow:
+
+1. **A permission policy the Master writes** (the guardrail Jack already uses: a rule plus pre-approved actions inside limits he writes).
+   It lists what the maestro may do without asking: the classes of ticket (for example docs, backlog hygiene, small fixes with tests),
+   the actions (merge to `main` after tests and verified review, create a backlog ticket, sync a description, close a worker, reload a pane)
+   and the limits (a quota and memory budget, how many workers at once). **The default is deny:** anything not in the policy needs the
+   Master. The first policy is drafted from what Jack has approved so far, and he edits it.
+2. **Every ticket is classified against the policy** before work starts. Unknown or borderline means it needs the Master.
+3. **When a ticket needs the Master, the maestro parks that ticket and continues with the others** (proposal; Jack said "it stops and waits",
+   which could also mean everything stops). The parked ticket goes on the state file's "waiting for a Master" list with the exact question
+   and the options, and the Master is told (below). It never guesses past the question and never busy-polls for the answer.
+4. **How a Master hears about it:** the state file (an Observer shows it), and a push message to the Master's device. The channel is open.
+5. **Limits so it can run unattended:** it checks the seats' usage before starting a worker (the quota rule), stays inside the memory
+   budget, backs off when a limit stop or a failing check repeats, and renews itself by a flux when its context fills. A loop or a
+   repeated failure parks the ticket and asks.
+6. **Everything it decides alone is in the decision log,** with the reason, so a Master can read what happened while it was away.
+
+Cautions from today: the order-provenance risk (point 7) matters more when the maestro runs alone, because no one is watching each step; and
+a ClickUp write beyond the routine rules (status changes, comments) is still the Master's until the policy lists it.
 
 ## Handed to other items
 
@@ -60,11 +89,12 @@ DGS-177's stronger channel exists. This is stricter than Jack's "yes" strictly r
 - 11:5x: "Master: represent the user. Maestro: represent the highest rank of servant, a butler."
 - Then: "Decouple the maestro change to another ticket. 170 fully focus on the Master role."
 - 12:19: "Yes" to the seven defaults. DGS-172 closed.
+- 12:21: "We need to add some more definition for the maestro ... it will sometimes run 24/7 to do the backlog ... any ticket that absolutely needs a Master's opinion, it stops and waits for answers; otherwise it could run and decide automatically." (Point 8 and the Autonomy section.)
 
 ## Related
 
 [brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, the Master role), [maestro-in-herdr.md](maestro-in-herdr.md)
-(DGS-169, blocked by this item), [define-the-observer-role.md](define-the-observer-role.md) (DGS-175),
+(DGS-169, the build; blocked by this item), [define-the-observer-role.md](define-the-observer-role.md) (DGS-175),
 [build-observer-and-operator-clients.md](build-observer-and-operator-clients.md) (DGS-174),
 [define-scout-reviewer-and-jack-roles.md](define-scout-reviewer-and-jack-roles.md) (DGS-171),
 [define-project-and-project-workflow.md](define-project-and-project-workflow.md) (DGS-172),
