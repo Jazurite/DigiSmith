@@ -19,7 +19,10 @@ definition, and **it blocks DGS-169**.
 - **The butler picture (Jack, 2026-10-04, by voice):** each project has one maestro, which acts as the project's **butler**. It manages the
   project for the end user. The end user uses only an **Operator** (gives orders) or an **Observer** (watches what the butler is doing and
   why), never a worker directly. **The butler holds all the information, the state.** "Butler" is a candidate name for the maestro role
-  (word choice still open, with the Operator's name). Building the two clients is DGS-174
+  (word choice still open, with the Operator's name). Jack, minutes later: "Maybe we could call it Master role." So the name of the maestro
+  role has three candidates: **Maestro** (today), **Butler**, **Master**. Earlier, by voice, he also called it "the master" ("it will attach
+  to the master"). One thing to weigh: "master" is also the old Git branch name and sits next to "main" in our own repos. Settle all the
+  names together in the brainstorm, with the Methodology vocabulary (DGS-156). Building the two clients is DGS-174
   (`backlog/build-observer-and-operator-clients.md`), blocked by this item.
 - **A requirement for this design:** the maestro's state must be kept in one structured place the clients can read (a state file: roster,
   open questions for the end user, a decision log with a reason each, next steps), not only in prose notes.
