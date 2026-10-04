@@ -1,3 +1,6 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+
 // Builds and parses `.digismith/board/<KEY>—<slug>/` folder names (em dash, U+2014).
 // Spec: .digismith/docs/E/E.3/worker-maestro-conventions/design.html, sections 2 and 9.
 
@@ -67,4 +70,40 @@ export function parseFolderName(name: string): ParsedFolderName {
   // at the first occurrence is always unambiguous — no need to find the last one.
   const slug = name.slice(dashIndex + EM_DASH.length);
   return { key: rawKey, slug };
+}
+
+// For a caller that already has a final key and slug in hand (init, resolving one from a
+// branch name) rather than a raw title — skips slugify, which an already-final slug must never
+// go through again (re-truncation/re-filler-dropping on it is not guaranteed idempotent).
+export function boardRelPathForSlug(key: string, slug: string): string {
+  return `${BOARD_DIR_PATH}/${key.toUpperCase()}${EM_DASH}${slug}`.normalize("NFC");
+}
+
+// Finds a keyed ticket's board folder by slug alone — a folder's own key does not have to match
+// whatever key (if any) the branch name carries. DigiSmith's own repo already has this today:
+// branch "plugin-update-after-merge" (no key) against folder "DGS-161—plugin-update-after-merge"
+// (keyed). Reconstructing the folder name from the branch's own key would miss that folder.
+// Entries are sorted before scanning: readdir's own order is not defined, so if two folders ever
+// shared one slug, scanning raw readdir order would be nondeterministic — sorting first means it
+// always resolves to the same one (the first match in sorted order), every time.
+export function findBoardFolderBySlug(slug: string, mainRoot: string): string | undefined {
+  const dir = path.join(mainRoot, ...BOARD_DIR_PATH.split("/"));
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory()).map((e) => e.name).sort();
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw err;
+  }
+  for (const name of entries) {
+    let parsed: ParsedFolderName;
+    try {
+      parsed = parseFolderName(name);
+    } catch {
+      continue; // not a board-shaped folder name — skip it, don't fail the whole scan
+    }
+    if (parsed.slug === slug) return name;
+  }
+  return undefined;
 }

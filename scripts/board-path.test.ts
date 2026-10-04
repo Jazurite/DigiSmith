@@ -1,5 +1,16 @@
-import { describe, it, expect } from "vitest";
-import { BOARD_DIR_PATH, slugify, buildFolderName, boardRelPath, parseFolderName } from "./board-path.ts";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import {
+  BOARD_DIR_PATH,
+  slugify,
+  buildFolderName,
+  boardRelPath,
+  parseFolderName,
+  boardRelPathForSlug,
+  findBoardFolderBySlug,
+} from "./board-path.ts";
 
 describe("slugify", () => {
   it("lowercases, drops filler words, and hyphenates", () => {
@@ -107,5 +118,65 @@ describe("parseFolderName", () => {
   it("matches a key case-insensitively", () => {
     expect(parseFolderName("dgs-1—slug").key).toBe("DGS-1");
     expect(parseFolderName("DGS-1—slug").key).toBe("DGS-1");
+  });
+});
+
+describe("boardRelPathForSlug", () => {
+  it("joins a known key and slug without re-slugifying", () => {
+    expect(boardRelPathForSlug("DGS-161", "plugin-update-after-merge")).toBe(
+      `${BOARD_DIR_PATH}/DGS-161—plugin-update-after-merge`,
+    );
+  });
+
+  it("uppercases the key, matching buildFolderName", () => {
+    expect(boardRelPathForSlug("dgs-161", "plugin-update-after-merge")).toBe(
+      `${BOARD_DIR_PATH}/DGS-161—plugin-update-after-merge`,
+    );
+  });
+});
+
+describe("findBoardFolderBySlug", () => {
+  let tmpDir: string;
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-test-"));
+  });
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function makeBoardFolder(name: string): void {
+    fs.mkdirSync(path.join(tmpDir, ...BOARD_DIR_PATH.split("/"), name), { recursive: true });
+  }
+
+  it("finds a keyed folder by slug alone, regardless of the key", () => {
+    // Matches DigiSmith's own repo today: branch "plugin-update-after-merge" (no key) against
+    // folder "DGS-161—plugin-update-after-merge" (keyed) — the slug is the only shared value.
+    makeBoardFolder("DGS-161—plugin-update-after-merge");
+    expect(findBoardFolderBySlug("plugin-update-after-merge", tmpDir)).toBe(
+      "DGS-161—plugin-update-after-merge",
+    );
+  });
+
+  it("returns undefined when no folder matches the slug", () => {
+    makeBoardFolder("DGS-161—plugin-update-after-merge");
+    expect(findBoardFolderBySlug("some-other-slug", tmpDir)).toBeUndefined();
+  });
+
+  it("returns undefined when .digismith/board/ doesn't exist at all", () => {
+    expect(findBoardFolderBySlug("anything", tmpDir)).toBeUndefined();
+  });
+
+  it("skips a non-board-shaped folder name instead of throwing", () => {
+    makeBoardFolder("not-a-board-folder-at-all");
+    makeBoardFolder("DGS-1—real-ticket");
+    expect(findBoardFolderBySlug("real-ticket", tmpDir)).toBe("DGS-1—real-ticket");
+  });
+
+  it("returns the first match in sorted order when two folders share a slug", () => {
+    // readdir's own order is not defined — sorting first makes this deterministic regardless.
+    // Lexicographically, "DGS-10—..." sorts before "DGS-2—..." ('1' < '2' at the fifth byte).
+    makeBoardFolder("DGS-2—shared-slug");
+    makeBoardFolder("DGS-10—shared-slug");
+    expect(findBoardFolderBySlug("shared-slug", tmpDir)).toBe("DGS-10—shared-slug");
   });
 });
