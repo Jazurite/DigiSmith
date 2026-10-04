@@ -1450,6 +1450,26 @@
   before any edit to <code>MEMORY.md</code> was made. See <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-memory/design.html">design</a>, <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-memory/plan.md">plan</a>, and <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-memory/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-04</div>
+      <h4>DGS-159 Part 3: Ticket Lifecycle Skills</h4>
+      <p>DGS-159 Part 3 moves a <strong>keyed</strong> ticket's lifecycle-skill output from
+  <code>.digismith/docs/&lt;slug&gt;/</code> to <code>.digismith/board/&lt;KEY&gt;—&lt;slug&gt;/</code>
+  across the four skills that start a ticket's work — <code>skills/bootstrap</code>,
+  <code>skills/adopt</code>, <code>skills/init</code>, <code>skills/jira-intake</code> — while a
+  keyless ticket keeps using <code>.digismith/docs/&lt;slug&gt;/</code> exactly as before. All six
+  tasks (one script task, four skill-text tasks, this closing task) are committed on
+  <code>dgs-159-lifecycle</code>. The full test suite passes for every file this unit touched, all
+  eleven self-check scenarios from Tasks 2–5 re-trace clean against the final committed text, and
+  the Step 3 grep audit found no unjustified mention of <code>.digismith/docs</code> left behind.
+  Tasks 7–8 then added a small CLI to <code>scripts/board-path.ts</code> and pointed all four skills
+  at it, fixing three findings the final whole-branch review raised; see section 7 for what changed
+  and what stays parked. Task 10 fixed a real bug the maestro found by reading the Task 7 diff
+  directly: <code>--action find</code> was resolving its search root against the main checkout
+  instead of the current working tree, which would have broken <code>init</code>'s own resume check
+  for every in-progress worker ticket; see section 8. See <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/design.html">design</a>, <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/plan.md">plan</a>, and <a href="board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
