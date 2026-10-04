@@ -56,8 +56,8 @@ working". The roles are a household: the **Master** (the user), the **Maestro** 
   (2026-10-04): `permitrootlogin prohibit-password` and root is the only login-capable account, so root is reachable by key only, even
   though `passwordauthentication` is `yes`; `ufw` is active and allows only OpenSSH; `fail2ban` is not installed. So SSH is key-only in
   practice, and the real risk is theft of the private key. A stolen login key is root on the VPS, which also reads every secret held in
-  root-owned files (the TokenReply key, the ClickUp token, the account tokens). Ways to reduce it, cheapest first: (1) set
-  `PasswordAuthentication no`, put a passphrase on the key, keep the private key out of synced folders (MEGA), use `ssh-add -t` timeouts,
+  root-owned files (the TokenReply key, the ClickUp token, the account tokens). Ways to reduce it, cheapest first: (1) put a passphrase on the key (the
+  `PasswordAuthentication no` change was declined by Jack), keep the private key out of synced folders (MEGA), use `ssh-add -t` timeouts,
   and no agent forwarding to hosts you do not trust; (2) Tailscale and close public port 22, so a stolen key is useless from outside the
   tailnet (the attacker also needs an enrolled device and your account); (3) a hardware-backed key (FIDO2, `ed25519-sk`, a touch per use):
   it cannot be copied, and a separate one can be the Master's signing key, so a stolen login key still cannot approve an escalation;

@@ -11,16 +11,18 @@ proves the Master's authority. This item is the **work on the machine** that mak
 ## What is true today (checked on the VPS, 2026-10-04)
 
 - `permitrootlogin prohibit-password`, and root is the only login-capable account: root is reachable by key only.
-- `passwordauthentication yes` (harmless today because no other account can log in, but it should be `no`).
+- `passwordauthentication yes` (harmless today because no other account can log in; Jack declined to change it, see step 1).
 - `ufw` is active and allows only OpenSSH from anywhere. `fail2ban` is not installed. Tailscale is not installed.
 - Every process (the maestro, every worker, every herdr pane) runs as root. Secrets sit in root-owned files: the TokenReply key, the
   ClickUp token, the Claude account tokens. The maestro never reads them (guardrail), but any process running as root can.
 
 ## Steps, cheapest first
 
-1. **Free, now.**
-   - Set `PasswordAuthentication no` in `sshd_config`. Reload (not restart) `sshd` while a second SSH session is open, as a safety net. It
-     changes a shared machine, so it needs Jack's yes.
+1. **Free, now** (the `sshd` change is declined; the rest is advice for Jack's own machine):
+   - ~~Set `PasswordAuthentication no` in `sshd_config`.~~ **Declined by Jack (12:01 UTC+7 on 2026-10-04): "we are not going to do
+     `PasswordAuthentication no`."** It stays `yes`. Root still cannot log in by password (`PermitRootLogin prohibit-password`) and no other
+     account can log in, so nothing changes in practice. Do not propose it again unless something changes (a new login account, or
+     `PermitRootLogin` is touched).
    - A passphrase on the login key. The private key kept out of synced folders (MEGA). `ssh-add -t` timeouts. No agent forwarding to hosts
      Jack does not trust.
 2. **Tailscale and close public port 22.** A stolen key is then useless from outside the tailnet. Endpoints (an OpenCode server, a web
