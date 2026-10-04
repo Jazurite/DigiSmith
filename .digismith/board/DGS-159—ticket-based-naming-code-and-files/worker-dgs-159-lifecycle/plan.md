@@ -1878,3 +1878,359 @@ git commit -m "docs(ticket-naming): update the report for the CLI and the final-
 
 Send the final verified list: every finding from the final whole-branch review, the controller's
 own check for each, and whether it was fixed or parked. Do not push: wait for "approved: push".
+
+---
+
+### Task 10: `--action find` must search the current working tree, not the main checkout
+
+**Why this task exists.** A real bug, found by the maestro reading the Task 7 diff directly: the
+`find` action resolved its search root with `resolveMainRoot(process.cwd())` — the same helper
+`lineage-handoff.ts` uses, which walks to the MAIN checkout (`git-common-dir`'s parent). But a
+worker's own board folder is committed inside that worker's own **worktree**, and does not exist
+in the main checkout until the ticket merges. `digismith:init`'s own Step 0/Step 1 resume check —
+the very thing `find` exists for — runs *inside* a worktree. Confirmed live: this very ticket's
+own worker folder,
+`.digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/`, exists
+only under `.worktrees/dgs-159-lifecycle/`, not in the main checkout. `find`, as shipped by Task 7,
+would have searched the wrong tree from inside that worktree and silently missed it — the exact
+DGS-161 case (branch `plugin-update-after-merge`, folder living in a worker's own worktree) that
+the whole `findBoardFolderBySlug` design exists to get right.
+
+**Files:**
+- Modify: `scripts/board-path.ts`
+- Modify: `scripts/board-path.test.ts`
+- Modify: `skills/init/SKILL.md`
+- Modify: `skills/jira-intake/SKILL.md`
+
+**Interfaces:**
+- Consumes: nothing new.
+- Produces: `findBoardFolderBySlug(slug: string, root: string)` — `root`'s own caller contract
+  changes meaning (the current working tree, not necessarily the main checkout) even though the
+  function's positional signature is otherwise unchanged; a new CLI-only `--root <path>` override
+  flag on `--action find`.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add this new `it` inside the existing `describe("--action find", ...)` block in
+`scripts/board-path.test.ts`, right after its existing two tests:
+
+```typescript
+    it("uses --root directly when given, bypassing git entirely", () => {
+      const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-root-test-"));
+      fs.mkdirSync(path.join(rootDir, ...BOARD_DIR_PATH.split("/"), "DGS-5—root-override"), { recursive: true });
+      const nonGitCwd = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-board-path-nongit-test-"));
+
+      const result = runCli(nonGitCwd, "--action", "find", "--slug", "root-override", "--root", rootDir);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("DGS-5—root-override");
+      fs.rmSync(rootDir, { recursive: true, force: true });
+      fs.rmSync(nonGitCwd, { recursive: true, force: true });
+    });
+
+    it("finds a board folder that exists only in the current worktree, not the main checkout — the exact DGS-161 case", () => {
+      const worktreeDir = path.join(os.tmpdir(), `digismith-board-path-worktree-${process.pid}-${Date.now()}`);
+      git(tmpDir, "worktree", "add", "-q", "-b", "feature", worktreeDir);
+      fs.mkdirSync(path.join(worktreeDir, ...BOARD_DIR_PATH.split("/"), "DGS-9—only-in-worktree"), { recursive: true });
+
+      const foundInWorktree = runCli(worktreeDir, "--action", "find", "--slug", "only-in-worktree");
+      expect(foundInWorktree.status).toBe(0);
+      expect(foundInWorktree.stdout.trim()).toBe("DGS-9—only-in-worktree");
+
+      const foundInMainCheckout = runCli(tmpDir, "--action", "find", "--slug", "only-in-worktree");
+      expect(foundInMainCheckout.status).toBe(0);
+      expect(foundInMainCheckout.stdout.trim()).toBe("");
+
+      git(tmpDir, "worktree", "remove", "-f", worktreeDir);
+    });
+```
+
+Keep every existing test in the file exactly as it is — in particular, the keyless-no-match test
+(`"prints nothing and exits 0 when no folder matches the slug"`) and the em-dash test
+(`"prints boardRelPath's result given --key and --title, with a real em dash"`) stay untouched;
+this task only adds the two tests above.
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `npx vitest run scripts/board-path.test.ts`
+Expected: the two new tests fail — the `--root` flag is silently ignored by today's
+`resolveMainRoot`-based code (so the first new test gets no output, since `nonGitCwd` isn't a git
+repo and `resolveMainRoot` falls back to `cwd` itself, which has no board folder at all — not the
+`rootDir` the test actually wants it to use), and the worktree test fails because `find`, run with
+`cwd` = the worktree, still resolves to the main checkout and doesn't see
+`only-in-worktree` there. Confirm the specific failure before moving on.
+
+- [ ] **Step 3: Implement**
+
+Old text (the top imports):
+
+```typescript
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs, requireArgs } from "./cli-args.ts";
+import { resolveMainRoot } from "./lineage-handoff.ts";
+```
+
+New text:
+
+```typescript
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { spawnSync } from "node:child_process";
+import { parseArgs, requireArgs } from "./cli-args.ts";
+```
+
+Old text (`findBoardFolderBySlug`'s doc comment and signature):
+
+```typescript
+// Finds a keyed ticket's board folder by slug alone — a folder's own key does not have to match
+// whatever key (if any) the branch name carries. DigiSmith's own repo already has this today:
+// branch "plugin-update-after-merge" (no key) against folder "DGS-161—plugin-update-after-merge"
+// (keyed). Reconstructing the folder name from the branch's own key would miss that folder.
+// Entries are sorted before scanning: readdir's own order is not defined, so if two folders ever
+// shared one slug, scanning raw readdir order would be nondeterministic — sorting first means it
+// always resolves to the same one (the first match in sorted order), every time.
+export function findBoardFolderBySlug(slug: string, mainRoot: string): string | undefined {
+  const dir = path.join(mainRoot, ...BOARD_DIR_PATH.split("/"));
+```
+
+New text:
+
+```typescript
+// Finds a keyed ticket's board folder by slug alone — a folder's own key does not have to match
+// whatever key (if any) the branch name carries. DigiSmith's own repo already has this today:
+// branch "plugin-update-after-merge" (no key) against folder "DGS-161—plugin-update-after-merge"
+// (keyed). Reconstructing the folder name from the branch's own key would miss that folder.
+// Entries are sorted before scanning: readdir's own order is not defined, so if two folders ever
+// shared one slug, scanning raw readdir order would be nondeterministic — sorting first means it
+// always resolves to the same one (the first match in sorted order), every time.
+// `root` is the working tree to search — the CURRENT checkout, not necessarily the main one. A
+// worker's own worktree holds its own board folder until the ticket merges; it does not exist in
+// the main checkout before then. Searching the main checkout from inside a worktree would
+// silently miss every folder that worktree itself just created.
+export function findBoardFolderBySlug(slug: string, root: string): string | undefined {
+  const dir = path.join(root, ...BOARD_DIR_PATH.split("/"));
+```
+
+Old text (`main()`'s `find` case):
+
+```typescript
+      case "find": {
+        requireArgs(args, ["slug"]);
+        const mainRoot = resolveMainRoot(process.cwd());
+        const found = findBoardFolderBySlug(args.slug, mainRoot);
+        if (found !== undefined) console.log(found);
+        break;
+      }
+```
+
+New text:
+
+```typescript
+      case "find": {
+        requireArgs(args, ["slug"]);
+        const root = args.root ?? resolveCurrentRoot(process.cwd());
+        const found = findBoardFolderBySlug(args.slug, root);
+        if (found !== undefined) console.log(found);
+        break;
+      }
+```
+
+Add this new helper right before `export function main()`:
+
+```typescript
+// `--root` lets a test (or an unusual caller) point this at an arbitrary directory, bypassing
+// git entirely. Otherwise: the current working tree's own top level — never the main checkout
+// (see findBoardFolderBySlug's own comment above) — falling back to the bare cwd if this
+// directory isn't a git repo at all.
+function resolveCurrentRoot(cwd: string): string {
+  const result = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
+  return result.status === 0 ? result.stdout.trim() : cwd;
+}
+
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `npx vitest run scripts/board-path.test.ts`
+Expected: every test passes, including every pre-existing one (the keyless-no-match and em-dash
+tests among them) — confirms this fix is additive to every other action and every other `find`
+case already covered.
+
+- [ ] **Step 5: Fix the skill text — both "find" skills say which tree they search**
+
+Old text (`skills/init/SKILL.md`'s "## The Script" section, the line right after the bash block):
+
+```markdown
+Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`.
+```
+
+New text:
+
+```markdown
+Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`. `--action find` searches
+the working tree you run it in — this skill always runs inside the worktree Step 2 (or an
+earlier session) already created, so it finds that worktree's own board folder even before the
+ticket merges.
+```
+
+Old text (`skills/jira-intake/SKILL.md`'s "## The Script" section, the line right after its bash
+block):
+
+```markdown
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
+```
+
+New text:
+
+```markdown
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`. `--action find`
+searches the working tree you run it in — `jira-intake` runs in the original checkout, so it
+searches that checkout's own board folder.
+```
+
+- [ ] **Step 6: Fix finding 7 — the remaining raw-function-name mentions**
+
+Old text (`skills/init/SKILL.md` Step 1, row 2):
+
+```markdown
+2. **Already on a feature branch, and a plan file already exists for the
+   slug implied by the branch name** (`<Key>__<slug>` or `<slug>` alone) —
+   checked the same way as Step 0 item 2 above (`findBoardFolderBySlug`
+   against `.digismith/board/` first, then the flat
+   `.digismith/docs/<slug>/plan.md` fallback) → normal resume, already
+   covered by `digismith:bootstrap`'s own branch/worktree reuse logic (its
+```
+
+New text:
+
+```markdown
+2. **Already on a feature branch, and a plan file already exists for the
+   slug implied by the branch name** (`<Key>__<slug>` or `<slug>` alone) —
+   checked the same way as Step 0 item 2 above (the script's `--action find`
+   against `.digismith/board/` first, then the flat
+   `.digismith/docs/<slug>/plan.md` fallback) → normal resume, already
+   covered by `digismith:bootstrap`'s own branch/worktree reuse logic (its
+```
+
+Old text (`skills/init/SKILL.md` Error Handling bullet):
+
+```markdown
+- **A profile present, not on the base branch, and a plan file exists for
+  this branch's slug** (board, matched by slug via
+  `findBoardFolderBySlug`; else the flat `docs/` fallback) → see Step 0;
+```
+
+New text:
+
+```markdown
+- **A profile present, not on the base branch, and a plan file exists for
+  this branch's slug** (board, matched by slug via the script's
+  `--action find`; else the flat `docs/` fallback) → see Step 0;
+```
+
+Old text (`skills/init/SKILL.md` Quick Reference row 0):
+
+```markdown
+| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + a plan file exists for this branch's slug (board, matched by slug via `findBoardFolderBySlug`; else the flat `docs/` fallback) → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
+```
+
+New text:
+
+```markdown
+| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + a plan file exists for this branch's slug (board, matched by slug via the script's `--action find`; else the flat `docs/` fallback) → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
+```
+
+Old text (`skills/jira-intake/SKILL.md` Quick Reference row 3.1–3.2):
+
+```markdown
+| 3.1–3.2 | Derive the slug; target path is `boardRelPath(key, title)` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
+```
+
+New text:
+
+```markdown
+| 3.1–3.2 | Derive the slug; target path is the script's `--action path` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
+```
+
+- [ ] **Step 7: Diff review — confirm no unrelated line was dropped**
+
+Run `git diff -- scripts/board-path.ts scripts/board-path.test.ts skills/init/SKILL.md skills/jira-intake/SKILL.md`
+and read every removed line. For each one, point to the replacement line that does the same job.
+Any removed sentence with no replacement doing its job is a bug — fix it before Step 9.
+
+- [ ] **Step 8: Self-check against the live repo**
+
+Run, from inside this worktree (`.worktrees/dgs-159-lifecycle`):
+
+```bash
+node --experimental-strip-types scripts/board-path.ts --action find --slug ticket-based-naming-code-and-files
+```
+
+Expected: prints `DGS-159—ticket-based-naming-code-and-files` (found in THIS worktree). Then run
+the same command with `cwd` set to the main checkout (`/root/Workspace/Jazurite/DigiSmith`, not
+this worktree) — expected: still finds the top-level ticket folder there too, since that folder
+predates this worker's own sub-folder and was already merged from an earlier part. This doesn't
+prove the fix by itself (both trees happen to agree at this coarse a grain) — the real proof is
+Step 1's worktree-vs-main-checkout test, which creates a folder that exists in ONLY one tree and
+checks both.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add scripts/board-path.ts scripts/board-path.test.ts skills/init/SKILL.md skills/jira-intake/SKILL.md
+git commit -m "fix(board-path): make --action find search the current working tree, not the main checkout"
+```
+
+---
+
+### Task 11: Re-verify after Task 10
+
+**Files:**
+- Modify: `.digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html`
+
+- [ ] **Step 1: Run the full board-path test suite**
+
+Run: `npx vitest run scripts/board-path.test.ts`
+Expected: every test passes, including the two new Task 10 tests and every pre-existing one.
+
+- [ ] **Step 2: Re-run the Task 6/9 grep audit**
+
+Run:
+
+```bash
+grep -n 'digismith/docs' skills/bootstrap/SKILL.md skills/adopt/SKILL.md skills/init/SKILL.md skills/jira-intake/SKILL.md
+```
+
+Classify every line the same way Task 9 did. Nothing in Task 10 touches a `.digismith/docs`
+mention, so this should come back identical to Task 9's own result — confirm that explicitly
+rather than assuming it.
+
+- [ ] **Step 3: Re-verify `report.html` against the real parser**
+
+Run the same command Task 6/9 used:
+
+```bash
+node --experimental-strip-types -e "import('./.digismith/hooks/post-finish/scripts/update-history.ts').then(m=>console.log(m.parseReport(process.argv[1])))" ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
+```
+
+Expected: still prints an object, does not throw.
+
+- [ ] **Step 4: Update `report.html`**
+
+If the existing report describes `find`'s search root anywhere (it may, from Task 9's own update),
+correct it to describe the fixed behavior: the current working tree, not the main checkout. Add a
+short note recording this fix and why it mattered (the DGS-161/worktree case, found by the maestro
+reading the Task 7 diff directly). Keep every load-bearing marker intact — this is an edit, not a
+rewrite.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add ".digismith/board/DGS-159—ticket-based-naming-code-and-files/worker-dgs-159-lifecycle/report.html"
+git commit -m "docs(ticket-naming): update the report for the find-root fix"
+```
+
+- [ ] **Step 6: Report to the maestro**
+
+Send the new commit hashes. Do not push: wait for "approved: push".
