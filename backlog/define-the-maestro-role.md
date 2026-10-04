@@ -65,6 +65,73 @@ a runner, not a chat partner, so these mechanics follow:
 Cautions from today: the order-provenance risk (point 7) matters more when the maestro runs alone, because no one is watching each step; and
 a ClickUp write beyond the routine rules (status changes, comments) is still the Master's until the policy lists it.
 
+## Draft policy v0 for the DigiSmith project (Jack: "Yes, draft the policy file", 14:32 UTC+7)
+
+This is what the maestro may do **without asking**. **The default is: ask.** Anything not listed needs a Master. It is written from what Jack has
+approved so far and from how the maestro has worked today. **Jack edits it; nothing here is in force until he says so.** It will live with
+the project's entry in the registry (DGS-172). The ticket classification uses the ClickUp status `ready` and the field `Pickup` (DGS-179,
+`backlog/clickup-ready-status-and-pickup-field.md`).
+
+```yaml
+policy: maestro-permissions
+project: DigiSmith
+version: 0 (draft by the maestro, 2026-10-04)
+default: ask                       # anything not listed below needs a Master
+
+pickup:                            # which tickets the maestro may start by itself
+  start_only_if:
+    status: ready                  # DGS-179: fully refined and ready to be worked
+    pickup_field: Maestro          # DGS-179: "Pickup" = Maestro (an empty field means Master)
+  never_by_itself:                 # even if the field says Maestro
+    - a new project or a new maestro
+    - a design approval for a feature, a convention or a role
+    - a policy change, or any change to this file
+    - security: sshd, accounts, tailnet, keys, tokens, secrets
+    - deleting any file or any ticket (never hard-delete a ticket)
+    - anything that spends money or leaves the VPS
+
+may_do_without_asking:
+  work:                            # source: Jack's workflow (the maestro orders, workers build)
+    - start a worker for a ticket that qualifies; choose its seat by the quota rule
+    - answer a worker's routine prompt at a checkpoint (scope inside its brief)
+    - read and verify a design, a plan and a diff; verify review findings; order fixes
+    - order a merge to main (escalating, see below) when all hold: tests pass except the known failures, the maestro read the diff, the
+      keyless path is unchanged where promised, and the post-finish hooks are in the order
+    - fire the post-finish hooks; reload idle worker panes; close a finished worker; update the runbook tables
+  records:                         # source: Jack's explicit rules, 2026-10-04
+    - create a ClickUp task for each new backlog item, and keep its name and description in sync with the repo item (DGS-163)
+    - post the progress comment on DGS-159 (DGS-178); no other ticket yet
+    - write the repo notes: backlog items, the runbook, memory, the state file and the decision log
+
+must_ask:                          # a Master decides
+  - any ClickUp status change (including done), any comment not listed above, any move
+  - starting or stopping a project or a maestro
+  - declining or reopening something Jack decided
+  - a decision between designs (only when a Master's taste is needed)
+
+escalating:                        # needs a channel a worker cannot fake (DGS-177); today the Desktop maestro only
+  - a push to main (the merge order), ClickUp writes beyond the list above, any deletion
+  # A persistent maestro in a pane does not do these until DGS-177's stronger channel exists.
+
+limits:
+  workers_at_once: 2               # the VPS has 3.7 GB; check free memory before each start
+  memory: start no worker below 500 MB free; stop starting below 300 MB
+  seat_rule: prefer the seat whose weekly window resets soonest while its 5h window is under 70% used; read usage before each start
+  stop_and_ask_when:
+    - a limit stop twice in a row, or the same check failing three times
+    - a worker blocked on a permission prompt (never answer one)
+    - a ticket needs a Master's opinion (park it, keep the others going)
+
+record: every decision made alone goes in the decision log: what, why, which line of this policy allowed it
+```
+
+**For Jack to decide when he edits it:**
+- The first draft lets the maestro order a merge to `main` after tests and a read diff, because that is how it works today. Keep it, or ask
+  for a Master's word on every merge?
+- `workers_at_once: 2` and the memory floors are my numbers from today's VPS. Change them freely.
+- DGS-159 is the only ticket whose progress comments are automatic. Add others as you decide (DGS-178).
+- Do you want a daily summary written to the state file, even when nothing is waiting?
+
 ## Handed to other items
 
 - **DGS-169 (the build):** the shape is a Claude Code agent in a herdr pane first; several Masters can attach (a herdr pane allows one typing
@@ -90,7 +157,7 @@ a ClickUp write beyond the routine rules (status changes, comments) is still the
 - Then: "Decouple the maestro change to another ticket. 170 fully focus on the Master role."
 - 12:19: "Yes" to the seven defaults. DGS-172 closed.
 - 12:21: "We need to add some more definition for the maestro ... it will sometimes run 24/7 to do the backlog ... any ticket that absolutely needs a Master's opinion, it stops and waits for answers; otherwise it could run and decide automatically." (Point 8 and the Autonomy section.)
-- 14:29: "Park and continue." (Autonomy point 3 decided.) Still open: the policy file, and the notification channel.
+- 14:29: "Park and continue." (Autonomy point 3 decided.) The policy file: drafted (v0) below, Jack edits it. Still open: the notification channel.
 
 ## Related
 
