@@ -27,6 +27,12 @@ would break those links, and the history page itself must not be rewritten. Find
 redirect page per moved folder, or leaving the old path in place for any folder that `history.html` links to, or an alias file. Decide
 before the first move.
 
+## Known risk from DGS-159 Part 3
+
+An old keyed `docs/<slug>/` ticket that is re-run through `jira-intake` Door 1 after the move to the board could leave two copies:
+one in `docs/<slug>/` and one in `board/<KEY>—<slug>/`. It is only possible for a historical ticket that predates the board convention,
+so the backfill and move should come before, or with, any re-run of an old ticket. Found by the Part 3 final review (2026-10-04).
+
 ## Open questions
 
 - The link problem above: which option, and does it apply to `MEMORY.md` links too?
