@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "./cli-args.ts";
-import { resolveMainRoot } from "./lineage-handoff.ts";
 
 // Builds and parses `.digismith/board/<KEY>—<slug>/` folder names (em dash, U+2014).
 // Spec: .digismith/docs/E/E.3/worker-maestro-conventions/design.html, sections 2 and 9.
@@ -88,8 +88,12 @@ export function boardRelPathForSlug(key: string, slug: string): string {
 // Entries are sorted before scanning: readdir's own order is not defined, so if two folders ever
 // shared one slug, scanning raw readdir order would be nondeterministic — sorting first means it
 // always resolves to the same one (the first match in sorted order), every time.
-export function findBoardFolderBySlug(slug: string, mainRoot: string): string | undefined {
-  const dir = path.join(mainRoot, ...BOARD_DIR_PATH.split("/"));
+// `root` is the working tree to search — the CURRENT checkout, not necessarily the main one. A
+// worker's own worktree holds its own board folder until the ticket merges; it does not exist in
+// the main checkout before then. Searching the main checkout from inside a worktree would
+// silently miss every folder that worktree itself just created.
+export function findBoardFolderBySlug(slug: string, root: string): string | undefined {
+  const dir = path.join(root, ...BOARD_DIR_PATH.split("/"));
   let entries: string[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true })
@@ -110,6 +114,15 @@ export function findBoardFolderBySlug(slug: string, mainRoot: string): string | 
   return undefined;
 }
 
+// `--root` lets a test (or an unusual caller) point this at an arbitrary directory, bypassing
+// git entirely. Otherwise: the current working tree's own top level — never the main checkout
+// (see findBoardFolderBySlug's own comment above) — falling back to the bare cwd if this
+// directory isn't a git repo at all.
+function resolveCurrentRoot(cwd: string): string {
+  const result = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
+  return result.status === 0 ? result.stdout.trim() : cwd;
+}
+
 export function main(): void {
   const args = parseArgs(process.argv.slice(2));
   try {
@@ -127,8 +140,8 @@ export function main(): void {
       }
       case "find": {
         requireArgs(args, ["slug"]);
-        const mainRoot = resolveMainRoot(process.cwd());
-        const found = findBoardFolderBySlug(args.slug, mainRoot);
+        const root = args.root ?? resolveCurrentRoot(process.cwd());
+        const found = findBoardFolderBySlug(args.slug, root);
         if (found !== undefined) console.log(found);
         break;
       }

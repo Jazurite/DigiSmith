@@ -109,7 +109,7 @@ Checked in order — stop and dispatch at the first match:
    start. Invoke `digismith:bootstrap`.
 2. **Already on a feature branch, and a plan file already exists for the
    slug implied by the branch name** (`<Key>__<slug>` or `<slug>` alone) —
-   checked the same way as Step 0 item 2 above (`findBoardFolderBySlug`
+   checked the same way as Step 0 item 2 above (the script's `--action find`
    against `.digismith/board/` first, then the flat
    `.digismith/docs/<slug>/plan.md` fallback) → normal resume, already
    covered by `digismith:bootstrap`'s own branch/worktree reuse logic (its
@@ -141,13 +141,16 @@ together in one plugin version.
 node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
 ```
 
-Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`.
+Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`. `--action find` searches
+the working tree you run it in — this skill always runs inside the worktree Step 2 (or an
+earlier session) already created, so it finds that worktree's own board folder even before the
+ticket merges.
 
 ## Error Handling
 
 - **A profile present, not on the base branch, and a plan file exists for
   this branch's slug** (board, matched by slug via
-  `findBoardFolderBySlug`; else the flat `docs/` fallback) → see Step 0;
+  `--action find`; else the flat `docs/` fallback) → see Step 0;
   always stops there except for an explicit profile-switch request, which
   routes straight to `digismith:bootstrap`. Profile present but on the base
   branch, or off the base branch with no matching plan → falls through to
@@ -162,5 +165,5 @@ Wrap `<slug>` in single quotes, and write any `'` inside it as `'\''`.
 
 | Step | Action |
 |---|---|
-| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + a plan file exists for this branch's slug (board, matched by slug via `findBoardFolderBySlug`; else the flat `docs/` fallback) → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
+| 0 | Base branch → always fall through to Step 1 (profile presence here is expected, not a stop condition). Off base branch + profile present + a plan file exists for this branch's slug (board, matched by slug via the script's `--action find`; else the flat `docs/` fallback) → report "already initialized" and stop (profile-switch request → `digismith:bootstrap` directly). Otherwise → fall through to Step 1 |
 | 1 | Base branch → `digismith:bootstrap`. Feature branch + a plan file exists for this branch's slug (board first, then `docs/` fallback) → `digismith:bootstrap`. Feature branch + plan exists elsewhere → `digismith:adopt`. Feature branch + no plan anywhere → ask, don't guess |

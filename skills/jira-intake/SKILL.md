@@ -208,7 +208,9 @@ node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action 
 node --experimental-strip-types <digismith-root>/scripts/board-path.ts --action find --slug '<slug>'
 ```
 
-Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`.
+Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\''`. `--action find`
+searches the working tree you run it in — `jira-intake` runs in the original checkout, so it
+searches that checkout's own board folder.
 
 ## Error Handling
 
@@ -234,6 +236,6 @@ Wrap `<title>`/`<slug>` in single quotes, and write any `'` inside either as `'\
 | 1 | Determine the door |
 | 2a | Door 1: get key, detect JIRA tool, fetch or ask for paste |
 | 2b | Door 2: seed from description, ask only what's missing, draft, confirm |
-| 3.1–3.2 | Derive the slug; target path is `boardRelPath(key, title)` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
+| 3.1–3.2 | Derive the slug; target path is the script's `--action path` when the ticket has a real key, `.digismith/docs/<slug>/ticket.md` otherwise (unchanged) — in the repo being worked in, never DigiSmith's own |
 | 3.3 | Commit-vs-gitignore, decided once per repo: `git check-ignore -q` on this write's own target only (`.digismith/board/` when keyed, `.digismith/docs/` otherwise — never the other one) — exit 0 (ignored) → proceed gitignored; exit 1 (not ignored, *not* an error) + nothing tracked under **either** folder (`git ls-files .digismith/board/ .digismith/docs/` empty) → ask once via `AskUserQuestion`, and if gitignored is chosen safely **append** (never overwrite) `.digismith/` to `.gitignore`, newline-guarded; exit 1 + that same `ls-files` non-empty → treat as committed, don't ask |
 | 3.4–3.5 | Branch on any existing file at that path (refresh / collision / upgrade / none), then write the ticket |
