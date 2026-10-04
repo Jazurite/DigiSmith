@@ -5,7 +5,7 @@ workflow? What defines a project?" No design yet. ClickUp: **DGS-172** (list E.4
 
 **Source:** the DGS-170 brainstorm (the new maestro role). Jack first said the maestro count should not be one for the system, nor one per
 client or repo, and that the Operator decides it. After the question "what is a maestro's unit?", he settled on **one maestro per
-project**. That needs a definition of "project", and the repo has none. **It blocks DGS-170.**
+project**. That needs a definition of "project", and the repo has none. **It blocks DGS-176** (the Maestro role; the Master role DGS-170 only needs it lightly).
 
 ## What exists today (checked 2026-10-04)
 

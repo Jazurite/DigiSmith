@@ -7,7 +7,7 @@ No design yet. ClickUp: **DGS-174** (list C.1: Workbox, created 2026-10-04 11:30
 
 **Source:** the DGS-170 brainstorm (the new maestro role). Jack's picture: one maestro per project acts as the project's **butler**. The
 end user never talks to workers. They use a client: an **Observer** (watch) or an **Operator** (give orders). The butler holds all
-state. **Blocked by DGS-170** (the roles must be defined first), and it needs the project defined (DGS-172).
+state. **Blocked by DGS-170** (the Master role) **and DGS-176** (the Maestro role), and it needs the project defined (DGS-172).
 
 **Naming (Jack, 2026-10-04):** the user's role is the **Master** (DGS-170), so the "Operator" client below is the **Master's client**. The
 maestro is the project's head butler.

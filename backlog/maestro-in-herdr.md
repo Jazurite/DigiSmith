@@ -2,7 +2,7 @@
 
 **Status:** Idea, an exploration by Jack (2026-10-04 11:15 UTC+7 [04:15Z]). No design yet. ClickUp: **DGS-169** (list C.1: Workbox, created 2026-10-04 11:11 UTC+7 [04:11Z], task id `14zcebruqtg`).
 
-**Blocked by DGS-170** (`backlog/brainstorm-the-new-maestro-role.md`): the new role must be brainstormed and defined first (Jack, 2026-10-04).
+**Blocked by DGS-176** (`backlog/define-the-maestro-role.md`, the head butler) and related to DGS-170 (the Master role, `backlog/brainstorm-the-new-maestro-role.md`): the roles must be defined first (Jack, 2026-10-04).
 
 **Source:** Jack, in the DigiSmith maestro session (voice input, so some words are my reading): "I'm exploring a new role or new way of
 working. Right now the maestro is defined as running on the transient local machine, right? How about we move the maestro into the

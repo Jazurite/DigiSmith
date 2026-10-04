@@ -3,7 +3,7 @@
 **Status:** Idea, split out of DGS-170 by Jack (2026-10-04 11:38 UTC+7 [04:38Z]): "Forget the observer, put it into another backlog now, just
 focus on the master and butler." No design yet. ClickUp: **DGS-175** (list O.3: Roles, created 2026-10-04 11:38 UTC+7 [04:38Z], task id `14zcebruqu0`).
 
-**Source:** DGS-170 (the new maestro role). Jack had agreed with the Observer earlier the same day ("agree with observer"). He now wants
+**Source:** DGS-170 (the Master role) and DGS-176 (the Maestro role). Jack had agreed with the Observer earlier the same day ("agree with observer"). He now wants
 DGS-170 to focus on the roles he is naming, the master and the butler, so the Observer is decoupled.
 
 ## What was agreed so far
@@ -23,6 +23,6 @@ DGS-170 to focus on the roles he is naming, the master and the butler, so the Ob
 
 ## Related
 
-[brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-170, blocks this item),
+[brainstorm-the-new-maestro-role.md](brainstorm-the-new-maestro-role.md) (DGS-176, the Maestro role, blocks this item; DGS-170 is the Master role),
 [build-observer-and-operator-clients.md](build-observer-and-operator-clients.md) (DGS-174, the build),
 [maestro-in-herdr.md](maestro-in-herdr.md) (DGS-169), [define-project-and-project-workflow.md](define-project-and-project-workflow.md) (DGS-172).
