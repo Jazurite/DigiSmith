@@ -69,6 +69,37 @@ goes live only for a project where an escalating action is low-risk: a throwaway
 Desktop maestros until DGS-177's stronger channel exists (a pane has no human-only approval channel). This item carries the build: the
 `dg` start, stop, renew and list commands, the project registry (DGS-172), the state file, and the pilot. See `backlog/define-the-maestro-role.md`.
 
+## Direction refined (Jack, 2026-10-04 evening, in the DigiSmith maestro session)
+
+- **The herdr session is the project, and the maestro is a permanent agent in it.** Each project's herdr session (`DigiSmith`, `emma`, `Soveron`)
+  holds one permanent workspace with one agent named exactly **`maestro`** (generic: the session name carries the project, and the ticket-keyed
+  worker names do not apply to a maestro, which has no ticket). Worker workspaces come and go beside it. So "which maestro controls which project"
+  is answered by the session name.
+- **Both the Master and the maestro use OpenCode** (Jack believes Claude Code has no attach). The Master attaches with `opencode attach`. This
+  moves the first-build choice from "a Claude Code agent first, OpenCode later" toward OpenCode. Not yet confirmed as the final choice.
+- **No kicker.** With the maestro in herdr, `herdr agent prompt maestro "..."` reaches it from any shell on the VPS, and `opencode run --attach` is a
+  headless kick. The notification channel is a separate question, discussed later.
+
+## Spike result (DGS-169 spike worker `dgs-169-spike`, 2026-10-04 21:4x to 21:57 UTC+7; report `69e1665`)
+
+Report: `.digismith/board/DGS-169—run-maestro-as-persistent-herdr/worker-dgs-169-spike/report.md`. Verdict: **yes, with limits.** OpenCode 1.18.34, a
+server on `127.0.0.1:4198` with a generated password, one TUI attached, driven only through `herdr`.
+
+- **Works:** `herdr agent start --kind opencode` (ready at once, state read correctly); `herdr agent prompt ... --wait --until done`; `/compact`, `/new` and
+  `/exit` sent through `herdr agent prompt` run as real commands (`--wait` returns an error on `/new` and `/exit`, but they still execute: a driver
+  must ignore it); the new session id comes back in herdr's own JSON (`agent_session.value`); `opencode run --attach ... --session <id>` reaches a chosen
+  session and shows live in the TUI; two clients share one session live and closing one does not disturb the other; the session survives a TUI exit
+  and re-attaches with full history (the herdr agent entry does not survive and is re-created with `agent start ... -- attach <url> --session <id>`).
+- **`/new` is a full wipe, and "Arise" restores nothing.** After `/new` the model had no memory of a secret word from the note. The renewal driver (a
+  script, or `dg`) must read the note and put its content in the prompt it sends after `/new`. This changes the Flux protocol text for a herdr maestro.
+- **A session id goes stale after `/new`.** A driver that caches an id writes into an orphaned session. Re-read the id after every renewal.
+- **Memory is the real constraint.** `opencode serve` 369 MB, rising to 501 MB after about ten turns; each TUI 235 MB, rising to 319 MB. The VPS had 650
+  to 1100 MB available under normal load. A server plus one Operator is about 600 MB or more. Only a 12-minute run: the server's ceiling is unmeasured.
+- **No skills.** OpenCode has no loader for the DigiSmith plugin (read-only look, so not proven). The plugin does not come along.
+- **Not tested:** the `blocked` state for OpenCode, and a longer run for the memory ceiling.
+- **Blocker found on the way (DGS-181):** `dg depot` cannot start or stop an OpenCode server on the Linux VPS, because `process-lifecycle.ts` uses
+  `tasklist`, `taskkill` and a Windows `netstat` parser. Jack's rule: Linux first, keep Windows working. DGS-180 fixed the leak it caused.
+
 ## The 24/7 use case (Jack, 2026-10-04, from DGS-176)
 
 The maestro will sometimes run **24/7 on the backlog**: tickets that need no Master's permission it does by itself; a ticket that needs a
