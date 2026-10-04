@@ -5,6 +5,8 @@ done before this" (before DGS-169, the maestro in herdr). Narrowed at 11:2x UTC+
 Scout, Reviewer and Jack moved to DGS-171. No design yet. ClickUp: **DGS-170** (list O.3: Roles, created 2026-10-04 11:23 UTC+7 [04:23Z],
 task id `14zcebruqtk`).
 
+**Blocked by DGS-172** (what a project is, and the project workflow).
+
 **Source:** Jack's exploration of a persistent maestro (DGS-169, `backlog/maestro-in-herdr.md`). He called it "a new role or new way of
 working". Moving the maestro from a Desktop session to a VPS agent only makes sense once the role itself is defined. This item is that
 definition, and **it blocks DGS-169**.
@@ -15,8 +17,11 @@ definition, and **it blocks DGS-169**.
   workaround for a Desktop maestro that cannot be reset from outside. The new design removes the need, so it is not kept as a fallback.
 - **Observer: agreed.** A client that watches a maestro without disturbing it (read-only: reads panes, never types).
 - **Scope:** this item defines the Maestro, the Observer and the Operator. The Scout, the Reviewer and Jack's own role are DGS-171.
+- **One maestro per project (Jack, 2026-10-04, after the question "what is a maestro's unit?"):** "I think we should have one maestro
+  for a project." This settles the unit. It needs a definition of "project", which the repo does not have: see DGS-172
+  (`backlog/define-project-and-project-workflow.md`), which **blocks this item**.
 - **How many maestros (Jack, 2026-10-04 11:2x UTC+7):** not one maestro for the whole system ("it would be a mess"), and not one per client
-  (a customer or project such as Emma or Soveron) or per repo. The number is decided by the **Operator**. "The Operator is what the
+  (a customer or project such as Emma or Soveron) or per repo. Jack's first answer: the number is decided by the **Operator** (then refined above to one maestro per project; the Operator decides which projects get one). "The Operator is what the
   client user, me, could do": the Operator is the role of the person at the client (today Jack). They start, attach to, type to and stop
   maestros, and they decide how many exist. The name of that role is still open (see below). This replaces today's three maestros
   (`DigiSmith`, `Emma`, `Soveron`), which were one per project.
