@@ -22,6 +22,64 @@ The VPS (Hetzner, `ubuntu-4gb-nbg1-2`) is paid by subscription and Jack cannot k
 - **Whole-day tasks the VPS does:** the maestro sessions (Desktop sessions over SSH today), the herdr sessions (`DigiSmith`, `emma`, `Soveron`), the cron reminders, the OpenCode reviewer (Sol). List them and decide where each lives after the move. The Claude Desktop app reaches the VPS over SSH today; it would reach the MacBook the same way.
 - **Timing question for Jack:** when does the Hetzner subscription end? That date sets how long the move can take, and whether the MacBook must be ready before Black Friday (end of November 2026).
 
+## Migration from the VPS: inventory and plan (maestro, 2026-10-05 08:0x UTC+7 [01:0xZ])
+
+Jack: "we need to come up with a way to migrate the current data from the Hetzner VPS to my MacBook." The maestro ran a **read-only inventory** (sizes and names only; no credential file was opened). Nothing was moved or deleted. The plan below is a proposal; Jack has not approved it yet.
+
+**Urgent, found on the way: the VPS disk is 99% full** (35 of 38 GB, 718 MB free). It can break git writes and workers. About 3.3 GB is regenerable cache (`~/.npm` 1.1 GB, `~/.cache` 2.2 GB, plus the pnpm store). Jack said "check later", so nothing was cleared: ask him again.
+
+### What is on the VPS (measured)
+
+- **No services.** No crontab for root, no custom systemd units, only sshd listening (port 22). The VPS holds files, herdr, Claude sessions and tools, so there is nothing to port except tools and state. (A Claude cron reminder is session-only and not on the machine.)
+- **Sizes** (without `node_modules`): `~/Workspace` 14 GB (15 GB with `.git`), `~/Obsidian` 3.4 GB (5.7 GB with `.git`), `~/.claude` 1.3 GB, `~/.local` 2.7 GB (`share` 3.3 GB), `~/.cache` 2.2 GB, `~/.npm` 1.1 GB, `~/.megaCmd` 498 MB, `~/.nvm` 222 MB, `~/.digismith-depot` 7 MB, `~/.config` 808 KB, `~/.ssh` 32 KB.
+- **Biggest in Workspace:** `Programming/AI` 5.7 GB (`genix` 2.5 GB, `gradion-brain` 2.5 GB, `arsenAI` 393 MB, `LLM-for-RFP` 386 MB), `Programming/Company` 3.2 GB, `Emma/shopify-template-jp` 665 MB, `Emma/shopify-hub` 570 MB, `Programming/Library` 512 MB, `Programming/Experiments` 533 MB, `Emma/_backup-ph-kr-2026-10-02` 421 MB. The DigiSmith repo is 95 MB plus 109 MB of `.worktrees`.
+- **Repos with a GitHub remote:** `Jazurite/DigiSmith` (`git@github.com:Jazurite/DigiSmith.git`) and the Emma repos `shopify-hub`, `shopify-template-jp`, `-kr`, `-in`, `-ph` (host alias `github-emma`, key `~/.ssh/emma`, account `hieu-huynh-emma`). Their unpushed counts were 0 where an upstream is set. A few have 1 to 2 uncommitted files (kr, in, ph). The `_backup-ph-kr-2026-10-02/*.old` copies have 10 dirty files each.
+- **Git repos with NO remote** (the history exists only on the VPS): the Obsidian vaults `Knowpolis` (51 dirty), `Knowpolis/1. Soveron` (38), `Knowpolis/3. DigiSmith` (2), `Housembly` (15), `Knowpolis - Copy` (8), `Knowpolis - Copy/3. Fluxor` (108), plus `gradion-logwork-cli` and the PR review clones (`-pr647-review`, `-pr1050-review`, `-pr193-review`, `-pr625-review`) and `Workspace/.debris/*`. Emma folders such as `storefront` and `shopify-template-ca` arrived without `.git`.
+- **MEGA is already a replication channel** (`mega-sync`): `/root/Workspace` to `/Workspace` (12.43 GB, 246,589 files, **Syncing**, with a warning "Sync issues detected: your syncs have encountered conflicts"), `/root/Obsidian` to `/Obsidian` (5.25 GB, **Synced**), and a leftover test sync `/tmp/cl...t-local` to `/vps-ex...on-test`. Earlier notes say `.git` is **not** synced by MEGA, so MEGA carries working files only and the vault history is not backed up anywhere.
+- **Claude state:** `~/.claude/projects/` has one folder per working path (`-root-Workspace-Jazurite-DigiSmith`, `-root-Obsidian-Knowpolis-1--Soveron`, the five Emma repos, and `-root`). The maestro's memory lives in `…/-root-Workspace-Jazurite-DigiSmith/memory/`.
+
+### What moves, and how
+
+| Item | How |
+|---|---|
+| Code with a GitHub remote | `git clone` on the MacBook (not a copy). First commit and push the dirty files, or save them as a patch. |
+| Untracked repo state: `.digismith/sessions/` (runbook, briefs, notes, worker folders, 4 MB), `.digismith/docs/E/E.4/node-kicker-spike/`, any `.env` | `rsync` over Tailscale (VPS to MacBook). The runbook stays untracked on purpose. |
+| Obsidian vaults with no remote | Best: give each a **private GitHub remote** and push the history before the move. Otherwise `rsync` the `.git` too. MEGA brings the files only. |
+| Big folders (`Programming/*`, 12 GB) | Triage first: what the MacBook needs, and what stays archived in MEGA. MEGA selective sync can carry the rest. |
+| The maestro's memory | Copy the `memory/` folder to the **new path key** Claude derives on the MacBook (for example `-Users-<name>-Workspace-Jazurite-DigiSmith`). The key follows the working path, so the same folder under the old key is not found. |
+| `~/.digismith-depot` (7 MB: the backlog-sync script, usage probe, captures, `.env` with the ClickUp credentials) | Copy the scripts with `rsync`. Create `.env` again on the MacBook, or copy it **directly VPS to MacBook** over Tailscale. Never through chat, MEGA or a commit. |
+| Claude seats (`jack`, `dev0`) | Run `claude setup-token` again for each seat on the MacBook. Do not copy tokens. `claude-account` is a custom Linux script: port it. |
+| SSH keys (`~/.ssh`, including `~/.ssh/emma`) | Generate **new** keys on the MacBook and add the public keys to GitHub (and the Emma account). Do not copy private keys. |
+| OpenCode (`~/.local/share/opencode`, `~/.config/opencode`) | Do not migrate the session database. Log in again (the TokenReply key is in its config: do not copy it blindly). |
+| herdr (`~/.config/herdr`, the `DigiSmith`, `emma`, `Soveron` sessions) | Install herdr on the MacBook and recreate the sessions. The state is not portable. |
+| Regenerable: `~/.npm`, `~/.cache`, `~/.nvm`, the pnpm store, `.worktrees`, `node_modules`, Claude plugin caches | Do not move. Reinstall. |
+| Resume IDs | Do not carry over. A worker has no resume by design. The maestro resumes from its handoff note, and Desktop maestro sessions on the new host start fresh with "Arise". |
+
+### Traps (found in the inventory)
+
+- **Hard-coded `/root/...` paths:** the backlog sync script (`~/.digismith-depot/backlog-sync/sync.py` points at `/root/Workspace/Jazurite/DigiSmith/packages/cli/dist/index.js`), the runbook, briefs, permission rules and skills. Replace with `$HOME` or repo-relative paths before the move. A ticket for this is worth filing.
+- **Claude's per-path memory key** (above).
+- **`claude-account` and the usage probe** are Linux scripts; the status-line rate-limit probe may work on macOS but is untested.
+- **`dg depot` does not work on macOS yet** (DGS-181 must add it; it blocks the move).
+- **The Desktop app** reaches the VPS over SSH today; it must be pointed at the MacBook, and the Desktop maestro sessions stored under `~/.claude/remote` on the VPS do not move.
+- **The vaults' `.git` history exists only on the VPS** (no remote, not synced by MEGA). If the VPS ends first, that history is lost.
+
+### Plan (proposed)
+
+1. **Prep on the VPS (now):** free the disk (caches), commit and push the dirty repos, give each vault a private GitHub remote and push, fix the MEGA conflicts and remove the leftover test sync, remove the `/root` hard-codes, and write down the secrets that must be re-created (not copied).
+2. **Build the Workbox on the MacBook** (after DGS-181 and the office checklist): Tailscale, herdr, claude, pnpm and Node, `dg`, new SSH keys, new seat logins. Clone the repos. `rsync` the small untracked state. Let MEGA bring the large folders.
+3. **Dry run:** run one small ticket end to end on the MacBook (a worker plus the maestro) while the VPS stays live.
+4. **Cutover:** freeze the VPS (no new workers), final push and `rsync`, point the Desktop app and the herdr sessions at the MacBook, update the runbook, memory and `MEMORY.md`.
+5. **Keep the VPS read-only** until the Hetzner subscription ends. Before it ends, take a final archive (a Hetzner snapshot, or a `tar` into MEGA). Verify a restore of one vault before cancelling.
+6. **Back up the MacBook** (it is now the single copy): GitHub for repos, a second disk or cloud bucket for the rest.
+
+### Decisions pending (Jack)
+
+- **Clear the VPS caches now?** (~3.3 GB; the disk is at 99%.) Jack said "check later".
+- **Vault history:** push each vault to a private GitHub repo, or `rsync` the `.git` folders?
+- **Which `Programming/*` folders move** (`genix` and `gradion-brain` are 2.5 GB each) and which stay archived in MEGA?
+- **When the Hetzner subscription ends** (it sets the deadline).
+
 ## Why it can work
 
 - Our work is mostly waiting (Claude Code and OpenCode workers call APIs, plus light git and Node). An Intel MacBook idles at about 5 to 10 W (the maestro's estimate; 8 to 15 W with light load), so fans stay off or quiet and the yearly electricity cost is small. Heat and noise appear only under sustained CPU load (local builds, local models).
