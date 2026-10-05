@@ -125,7 +125,7 @@ The full step-by-step guide is `MAC-SETUP.md` (12 steps, from first boot to a re
 
 - **Vault history:** the Obsidian vaults, `gradion-logwork-cli` and the PR review clones have no remote and MEGA skips `.git`. Jack has not chosen between a private GitHub repo each and archiving the `.git` folders.
 - Uncommitted files in the `-kr`, `-in` and `-ph` repos and the `.old` backup copies (10 each).
-- `.digismith/docs/E/E.4/node-kicker-spike/` is still untracked in DigiSmith.
+- ~~`.digismith/docs/E/E.4/node-kicker-spike/` is still untracked in DigiSmith.~~ Committed as `kicker.mjs` (`d87384a`, 2026-10-05).
 - The disk is still at 99% (about 600 MB free after the archives); the ~3.3 GB of caches are uncleared.
 - The MEGA Workspace sync still reports conflicts, and the leftover test sync is still listed.
 - DGS-181 (`dg depot` on macOS) still blocks the move. The hard-coded `/root/` paths in the depot scripts and runbook are not fixed.
