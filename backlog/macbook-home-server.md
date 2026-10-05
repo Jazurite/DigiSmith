@@ -112,6 +112,8 @@ Jack reset the MacBook ("Workbox") and asked for the VPS state to be archived fo
 
 ### Setup on the MacBook (Jack, by hand; not started)
 
+The full step-by-step guide is `MAC-SETUP.md` (12 steps, from first boot to a reboot test; attached to this ticket and kept in `/root/Workspace/_vps-state/`). The short list:
+
 1. Install Tailscale, MEGA (log in again), herdr, `claude`, Node, pnpm and `dg`.
 2. Clone the repos from GitHub (the Emma repos through `github-emma`). Create the `forge` standard user if the non-admin setup is still wanted.
 3. Recreate the herdr sessions (`DigiSmith`, `emma`, `Soveron`). Their state does not move.
