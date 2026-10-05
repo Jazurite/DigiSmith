@@ -1,6 +1,6 @@
 # The old 2019 Intel MacBook becomes the main machine: setup checklist, the move off the VPS, and limited access for the company MacBook
 
-**Status:** Idea and a checklist for Jack to do by hand. Jack's call (2026-10-05 07:0x UTC+7 [00:0xZ]); the MacBook was made the **main machine** at 07:3x because the Hetzner VPS subscription will not last. No build. ClickUp: **DGS-182** (list C.1: Workbox, created 2026-10-05 07:08 UTC+7 [00:08Z], task id `14zcebrut3b`).
+**Status:** Idea and a checklist for Jack to do by hand. VPS state archived 2026-10-05 (see "Progress: state archived on the VPS"); the setup on the MacBook has not started. Jack's call (2026-10-05 07:0x UTC+7 [00:0xZ]); the MacBook was made the **main machine** at 07:3x because the Hetzner VPS subscription will not last. No build. ClickUp: **DGS-182** (list C.1: Workbox, created 2026-10-05 07:08 UTC+7 [00:08Z], task id `14zcebrut3b`).
 
 **Source:** a consultation in the DigiSmith maestro session. Jack postponed the Mac mini to Black Friday (end of November 2026) because of its cost, and is considering his old MacBook (Intel, 2019) as a home server meanwhile. His worries: heat and noise, running it 24/7, a closed lid, and giving his **company MacBook** only limited access to it. He has not opened the MacBook yet and will do the checks and the setup himself at the office. The advice below is the maestro's, from general knowledge, not tested on his machine. Where the maestro was unsure, the text says so.
 
@@ -79,6 +79,54 @@ Jack: "we need to come up with a way to migrate the current data from the Hetzne
 - **Vault history:** push each vault to a private GitHub repo, or `rsync` the `.git` folders?
 - **Which `Programming/*` folders move** (`genix` and `gradion-brain` are 2.5 GB each) and which stay archived in MEGA?
 - **When the Hetzner subscription ends** (it sets the deadline).
+
+## Progress: state archived on the VPS (maestro, 2026-10-05 11:1x to 11:3x UTC+7 [04:1xZ to 04:3xZ])
+
+Jack reset the MacBook ("Workbox") and asked for the VPS state to be archived for it. Jack decided: MEGA stays the channel for working files, GitHub carries `.git` for repos that have a remote, and the credentials go in **one separate archive** that Jack deletes after the move. Everything below sits in `/root/Workspace/_vps-state/` (outside the repo, so MEGA syncs it with the Workspace folder). No file was opened; the maestro only listed the archive contents.
+
+| File | Size | Holds |
+|---|---|---|
+| `vps-home-state.tar.gz` | 53 MB | `~/.claude/projects` (maestro memory and transcripts, all working paths), `~/.claude/settings.json`, `~/.digismith-depot` (without `.env`, `repo/`, logs), `~/.config/herdr` (sockets skipped) |
+| `vps-small-files.tar.gz` | 5 KB | `~/.bashrc`, `~/.profile`, `~/.gitconfig`, `~/.local/bin/claude-account`, `~/.config/git`, `~/.config/pnpm` |
+| `vps-ssh.tar.gz` (mode 600, **secrets, unencrypted**) | 19 KB | `~/.ssh` (GitHub and Emma keys), `~/.digismith-depot/.env` (ClickUp), `~/.claude/.credentials.json`, `~/.config/opencode` (TokenReply key; no `node_modules`), `~/.config/gh`, `gh_token.env`, `tokenreply.env`, `claude-code.env`, `~/.config/claude-accounts` (both seat tokens) |
+| `unpack.sh` | 3 KB | the script that unpacks all three on the MacBook |
+
+**Left out on purpose:** `~/.claude/remote` (1 GB of Desktop session state), `~/.claude/plugins` (reinstall), `~/.digismith-depot/repo` (re-clone), the OpenCode session database, `~/.cache`, `~/.npm`, `~/.nvm`, `~/.local`, `.worktrees`, `node_modules`.
+
+**The maestro advised against putting the credentials in MEGA** (the earlier plan said "never through MEGA"). Jack decided to do it anyway. The mitigation is the separate archive: delete it from the MEGA cloud as well as the local folder as soon as the MacBook works, and rotate the Claude seat tokens, the `gh` token and the TokenReply key if it stays longer than a day. A passphrase (`openssl enc`) was offered and not taken up.
+
+**`unpack.sh`** (run on the MacBook from the folder with the archives; `--dry-run` changes nothing). It was tested on the VPS against a throwaway home folder (unpack, permissions, the project-folder rename), not on a Mac:
+1. Checks that the three archives exist and are not corrupt.
+2. Copies every existing file the archives would overwrite to `~/.vps-unpack-backup-<timestamp>/`.
+3. Unpacks all three into `~`.
+4. Sets 700 on `~/.ssh`, `~/.config/gh` and `~/.config/claude-accounts`, 600 on their files and on the `.env`, `.credentials.json` and `opencode.json` files, and 755 on `claude-account`.
+5. Deletes the VPS's `~/.ssh/authorized_keys` so the VPS keys cannot log in to the MacBook.
+6. Renames `~/.claude/projects/-root-*` to the new path key (`-Users-<name>-...`; every non-alphanumeric character becomes `-`). It assumes the same `~/Workspace/...` layout; any other layout needs a manual rename of the DigiSmith memory folder.
+7. Lists files that still contain `/root/` paths and prints the next steps. It never deletes the secrets archive.
+
+**Known gaps in the archive**
+- On macOS the Claude login may live in the Keychain, so the copied `.credentials.json` may do nothing. Fall back to `claude setup-token`.
+- `~/.bashrc` and `~/.profile` come from Linux and macOS uses zsh: merge by hand.
+- `claude-account` has four long-string lines that were not read. Look at the script before leaving the archive in MEGA.
+- `opencode.json` may carry Linux paths. Run `npm install` in `~/.config/opencode` to restore `node_modules`.
+
+### Setup on the MacBook (Jack, by hand; not started)
+
+1. Install Tailscale, MEGA (log in again), herdr, `claude`, Node, pnpm and `dg`.
+2. Clone the repos from GitHub (the Emma repos through `github-emma`). Create the `forge` standard user if the non-admin setup is still wanted.
+3. Recreate the herdr sessions (`DigiSmith`, `emma`, `Soveron`). Their state does not move.
+4. Reinstall the Claude plugins.
+5. Run `bash unpack.sh --dry-run`, then `bash unpack.sh`; test `ssh -T git@github.com`, `ssh -T git@github-emma` and `claude`.
+6. Delete `vps-ssh.tar.gz` (MEGA cloud and local) and rotate the tokens as above.
+
+### Still open on the VPS
+
+- **Vault history:** the Obsidian vaults, `gradion-logwork-cli` and the PR review clones have no remote and MEGA skips `.git`. Jack has not chosen between a private GitHub repo each and archiving the `.git` folders.
+- Uncommitted files in the `-kr`, `-in` and `-ph` repos and the `.old` backup copies (10 each).
+- `.digismith/docs/E/E.4/node-kicker-spike/` is still untracked in DigiSmith.
+- The disk is still at 99% (about 600 MB free after the archives); the ~3.3 GB of caches are uncleared.
+- The MEGA Workspace sync still reports conflicts, and the leftover test sync is still listed.
+- DGS-181 (`dg depot` on macOS) still blocks the move. The hard-coded `/root/` paths in the depot scripts and runbook are not fixed.
 
 ## Why it can work
 
