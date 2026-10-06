@@ -34,6 +34,18 @@ profile (clan O: Profiling) picks one. It is not CI/CD: building, testing and sh
 - **A.3 Lifecycle Hooks** stays in A: System. Hooks are session mechanics, not the lifecycle stages.
 - **O: Profiling** keeps the profile. Scripture reads the tracker choice from it.
 
+## Merged backfill tickets and the inventory they leave
+
+Jack closed these Clan Backfill subtasks on 2026-10-06 UTC+7, merged into this ticket (each kept its original description under a "merged into
+DGS-186" note; none was deleted, so any of them can be reopened): DGS-26 (A Intake/creation), DGS-31 (F Design review), DGS-34 (I Reporting),
+DGS-35 (J Estimation), DGS-37 (L Refinement & exploration), DGS-38 (M Ephemeral deploy capture), DGS-39 (N Implementation reporting). B, C, D and E
+(DGS-27 to DGS-30) were not closed: their mapping is still undecided.
+
+The closed tickets do not list their sub-items, so **the first step of the design is an inventory**. For each merged letter, list every historical
+sub-item from `.digismith/history.html` (the entry and its date), `.digismith/docs/<letter>/` (design, plan, report), the `backlog/*.md` files
+and git history. The result is the list of tickets to create in the F lineages, each with its real ship date and docs attached. Do not create any
+ticket before Jack has seen that list.
+
 ## Open questions
 
 1. The letter is decided: **F: Scripture**. The old map letter F was Design review (DGS-31, DGS-167): it becomes part of .5 Review and verification, so DGS-31 maps here instead of getting its own migration.
