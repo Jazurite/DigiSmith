@@ -31,7 +31,7 @@ profile (clan O: Profiling) picks one. It is not CI/CD: building, testing and sh
 - **.4 Build:** `subagent-driven-development`, `executing-plans`, the offload runners, TDD.
 - **.5 Review and verification:** `requesting-code-review`, the Sol reviewer, `verification-before-completion`, and design review (old F, DGS-31 and DGS-167).
 - **.6 Integrate and finish:** `finishing-a-development-branch`, the pull request, the deploy-URL capture (old M).
-- **.7 Report and sync:** `report-implementation`, write-back to the tracker (old I and N, DGS-178), and history.
+- **.7 Report and sync:** `report-implementation`, write-back to the tracker (old I and N, DGS-178). `history.html` is out of scope (see `living-history.md`, DGS-187).
 
 ## Boundaries
 
@@ -57,7 +57,7 @@ ticket before Jack has seen that list.
 
 1. The letter is decided: **F: Scripture**. The old map letter F was Design review (DGS-31, DGS-167): it becomes part of .5 Review and verification, so DGS-31 maps here instead of getting its own migration.
 2. Which old letters merge in: A, I, J, L, M, N, and maybe C (Live work journal) and the old D (Delivery).
-3. Whether `history.html` moves into this clan's .7 (Jack: it should migrate into ClickUp).
+3. Decided 2026-10-06: `history.html` stays out of this clan until the living-history concept (DGS-187) is settled.
 4. Whether DGS-172 and DGS-173 move into the Pavilion.
 
 ## Related
