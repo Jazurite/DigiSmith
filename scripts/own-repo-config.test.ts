@@ -11,7 +11,9 @@ import { CONFIG_FILE, MIGRATED_SUFFIX, migrate, readConfig, resolve } from "./co
 // *.migrated copies it reads.
 const REPO_DIR = fileURLToPath(new URL("../.digismith", import.meta.url));
 const OLD_FILES = ["profile", "preferences.yml"];
-const KEYS = ["profile", "preferences.finish_option", "preferences.clear_context", "preferences.ssh_key"];
+const KEYS = ["profile", "preferences.finish_option", "preferences.clear_context"];
+// DGS-184: ssh_key was dropped from config.yml (a machine path, read by nothing). The frozen copies still carry it.
+const DROPPED_KEYS = ["preferences.ssh_key"];
 
 let tmpDir: string;
 let scratch: string;
@@ -55,6 +57,7 @@ describe("DigiSmith's own repo config (DGS-142)", () => {
     migrateFrozenCopies();
     const live = readConfig(REPO_DIR);
     for (const key of readConfig(scratch).keys()) {
+      if (DROPPED_KEYS.includes(key)) continue;
       expect(live.has(key), `${key} is missing from .digismith/config.yml`).toBe(true);
     }
   });
