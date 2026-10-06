@@ -36,7 +36,7 @@ profile (clan O: Profiling) picks one. It is not CI/CD: building, testing and sh
 ## Boundaries
 
 - **E: Methodology** holds the rules for how we work (standards, conventions, E.4 Workflows). Scripture is the stages a ticket moves through.
-  DGS-172 and DGS-173 (define and document the project workflow) describe this lifecycle: candidates to move to the Scripture Pavilion.
+  DGS-172 and DGS-173 (define and document the project workflow) are about what a project is and its maestro, one level above a ticket's stages, so they stay in E.4 (Jack, 2026-10-06).
 - **DevOps** (future) owns CI/CD pipelines and deploy mechanics. Scripture keeps only the report back to the ticket.
 - **A.3 Lifecycle Hooks** stays in A: System. Hooks are session mechanics, not the lifecycle stages.
 - **O: Profiling** keeps the profile. Scripture reads the tracker choice from it.
@@ -58,7 +58,7 @@ ticket before Jack has seen that list.
 1. The letter is decided: **F: Scripture**. The old map letter F was Design review (DGS-31, DGS-167): it becomes part of .5 Review and verification, so DGS-31 maps here instead of getting its own migration.
 2. Which old letters merge in: A, I, J, L, M, N, and maybe C (Live work journal) and the old D (Delivery).
 3. Decided 2026-10-06: `history.html` stays out of this clan until the living-history concept (DGS-187) is settled.
-4. Whether DGS-172 and DGS-173 move into the Pavilion.
+4. Decided 2026-10-06: DGS-172 and DGS-173 stay in E.4 Workflows.
 
 ## Related
 
