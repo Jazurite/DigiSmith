@@ -5,6 +5,10 @@ import * as path from "node:path";
 import {
   parseListeningPort,
   parseNetstatPidForPort,
+  parseLsofPid,
+  parseSsPidForPort,
+  listenerCommand,
+  isProcessAlive,
   isPidListed,
   readTracking,
   writeTracking,
@@ -66,6 +70,77 @@ describe("parseNetstatPidForPort", () => {
   });
 });
 
+describe("parseLsofPid", () => {
+  it("returns the first pid line", () => {
+    expect(parseLsofPid("48211\n48212\n")).toBe("48211");
+  });
+
+  it("returns null for empty output", () => {
+    expect(parseLsofPid("")).toBeNull();
+  });
+
+  it("ignores non-numeric lines", () => {
+    expect(parseLsofPid("lsof: WARNING: can't stat() fuse\n48211\n")).toBe("48211");
+  });
+});
+
+describe("parseSsPidForPort", () => {
+  const header = "State  Recv-Q Send-Q Local Address:Port Peer Address:Port Process";
+
+  it("finds the pid for an IPv4 listener", () => {
+    const out = [header, 'LISTEN 0      511    127.0.0.1:54321    0.0.0.0:*    users:(("node",pid=1234,fd=18))'].join("\n");
+    expect(parseSsPidForPort(out, 54321)).toBe("1234");
+  });
+
+  it("finds the pid for an IPv6 and a wildcard listener", () => {
+    const v6 = 'LISTEN 0      511    [::1]:54321    [::]:*    users:(("node",pid=77,fd=9))';
+    const star = 'LISTEN 0      511    *:54321    *:*    users:(("node",pid=88,fd=9))';
+    expect(parseSsPidForPort(v6, 54321)).toBe("77");
+    expect(parseSsPidForPort(star, 54321)).toBe("88");
+  });
+
+  it("does not match a longer port that ends the same way", () => {
+    const out = 'LISTEN 0 511 127.0.0.1:154321 0.0.0.0:* users:(("node",pid=5,fd=9))';
+    expect(parseSsPidForPort(out, 54321)).toBeNull();
+  });
+
+  it("returns null when there is no process column", () => {
+    expect(parseSsPidForPort("LISTEN 0 511 127.0.0.1:54321 0.0.0.0:*", 54321)).toBeNull();
+  });
+});
+
+describe("listenerCommand", () => {
+  it("uses lsof on darwin", () => {
+    const c = listenerCommand("darwin", 4000);
+    expect([c.command, ...c.args]).toEqual(["lsof", "-nP", "-iTCP:4000", "-sTCP:LISTEN", "-t"]);
+    expect(c.parse("123\n")).toBe("123");
+  });
+
+  it("uses ss on linux", () => {
+    const c = listenerCommand("linux", 4000);
+    expect([c.command, ...c.args]).toEqual(["ss", "-ltnp"]);
+    expect(c.parse('LISTEN 0 511 127.0.0.1:4000 0.0.0.0:* users:(("node",pid=9,fd=3))')).toBe("9");
+  });
+
+  it("uses netstat on win32", () => {
+    const c = listenerCommand("win32", 4000);
+    expect([c.command, ...c.args]).toEqual(["netstat", "-ano"]);
+    const out = "  TCP    127.0.0.1:4000        0.0.0.0:0              LISTENING       6789";
+    expect(c.parse(out)).toBe("6789");
+  });
+
+  it("treats other platforms like linux", () => {
+    expect(listenerCommand("freebsd", 4000).command).toBe("ss");
+  });
+});
+
+describe("isProcessAlive", () => {
+  it("is true for this process and false for an unused pid", () => {
+    expect(isProcessAlive(String(process.pid))).toBe(true);
+    expect(isProcessAlive("2147483646")).toBe(false);
+  });
+});
+
 describe("isPidListed", () => {
   it("finds the pid in tasklist output", () => {
     const output = '"node.exe","12345","Console","1","20,000 K"';
@@ -108,6 +183,35 @@ describe("tracking file read/write", () => {
     const file = path.join(tmpDir, "tracking.json");
     fs.writeFileSync(file, "not json");
     expect(readTracking(file)).toBeNull();
+  });
+});
+
+describe("stopProcess errors", () => {
+  let tmpDir: string;
+  afterEach(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  // win32 path on a host without taskkill (macOS, Linux): the spawn fails with ENOENT.
+  it.skipIf(process.platform === "win32")(
+    "returns an error and keeps the tracking file when taskkill does not exist (spawn ENOENT)",
+    () => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-lifecycle-"));
+      const trackingFile = path.join(tmpDir, "tracking.json");
+      writeTracking(trackingFile, { pid: "2147483646", port: 1 });
+      const result = stopProcess({ label: "dummy", trackingFile }, "win32");
+      expect(result.stopped).toBe(false);
+      expect(result.error).toMatch(/taskkill/);
+      expect(readTracking(trackingFile)).not.toBeNull();
+    }
+  );
+
+  it("reports stopped when the tracked pid is already gone (posix)", () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "depot-lifecycle-"));
+    const trackingFile = path.join(tmpDir, "tracking.json");
+    writeTracking(trackingFile, { pid: "2147483646", port: 1 });
+    expect(stopProcess({ label: "dummy", trackingFile }, "linux").stopped).toBe(true);
+    expect(readTracking(trackingFile)).toBeNull();
   });
 });
 

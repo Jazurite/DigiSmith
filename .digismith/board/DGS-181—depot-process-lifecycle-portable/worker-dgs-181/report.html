@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-181: Depot Process Lifecycle Portable — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+  @media (max-width: 700px) { nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implemented, awaiting push approval</span>
+  <h1>DGS-181: Depot Process Lifecycle Portable — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-06</span>
+    <span>Map item: <strong>n/a</strong></span>
+    <span>Ticket: DGS-181 (ClickUp 14zcebrurbm, list C.2: CLI)</span>
+    <span>Scope: packages/cli/src/depot/process-lifecycle.ts and its test</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">1. Summary</a></li>
+    <li><a href="#changes">2. What changed</a></li>
+    <li><a href="#tests">3. Test counts</a></li>
+    <li><a href="#acceptance">4. Acceptance on the Mac</a></li>
+    <li><a href="#unverified">5. Not verified</a></li>
+    <li><a href="#notes">6. Notes</a></li>
+    <li><a href="#commits">7. Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <p><code>dg depot</code> can now start and stop a process on macOS and Linux, and the Windows path is unchanged. On the Mac Workbox, <code>dg depot opencode ensure</code> started a real OpenCode server, the listening PID matched the tracking file, and <code>stop</code> left nothing behind. A second bug is fixed too: a spawn <code>ENOENT</code> from <code>taskkill</code> used to look like "already exited", so <code>stopProcess</code> could return <code>stopped: true</code> without killing anything. It now returns an error. Linux and Windows are covered by unit fixtures only.</p>
+</section>
+
+<section id="changes">
+  <h2>2. What changed</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Step</th><th>macOS</th><th>Linux</th><th>Windows</th></tr>
+    <tr><td>Alive?</td><td colspan="3"><code>process.kill(pid, 0)</code>, EPERM counts as alive</td></tr>
+    <tr><td>Listening PID</td><td><code>lsof -nP -iTCP:&lt;port&gt; -sTCP:LISTEN -t</code></td><td><code>ss -ltnp</code></td><td><code>netstat -ano</code> (unchanged)</td></tr>
+    <tr><td>Stop</td><td colspan="2">SIGTERM to the process group, fall back to the PID, wait 2s, then SIGKILL</td><td><code>taskkill /PID /T /F</code> (unchanged)</td></tr>
+    <tr><td>Missing tool (spawn ENOENT)</td><td colspan="3">error, never "stopped"</td></tr>
+  </table></div>
+  <ul>
+    <li><code>process-lifecycle.ts</code>: new pure <code>parseLsofPid</code>, <code>parseSsPidForPort</code>, <code>listenerCommand(platform, port)</code> and <code>isProcessAlive</code>. <code>stopProcess</code> takes an optional <code>platform</code> so tests can drive the Windows branch. The DGS-180 kill-on-failure catch in <code>ensureProcess</code> is unchanged.</li>
+    <li>The stop wait loop treats a zombie (<code>ps -o stat=</code> starts with <code>Z</code>) as gone. A child killed by the same Node process stays a zombie until the event loop runs, and <code>kill(pid, 0)</code> still succeeds on it. The CLI does not need this (ensure and stop are separate processes), but the in-process test does.</li>
+    <li><code>process-lifecycle.test.ts</code>: fixtures for <code>lsof</code> and <code>ss -ltnp</code> (IPv4, IPv6, wildcard, longer-port non-match, no process column), the <code>listenerCommand</code> table, <code>isProcessAlive</code>, the <code>taskkill</code> ENOENT test (win32 branch on a host without <code>taskkill</code>) and an already-gone POSIX stop test. The existing Windows tests are untouched.</li>
+    <li>Not touched: <code>bridge/</code>, <code>opencode/</code>, <code>index.e2e</code>.</li>
+  </ul>
+</section>
+
+<section id="tests">
+  <h2>3. Test counts</h2>
+  <div class="table-wrap"><table>
+    <tr><th></th><th>Files</th><th>Tests</th></tr>
+    <tr><td>Before (main)</td><td>2 failed, 26 passed</td><td>2 failed, 170 passed (172)</td></tr>
+    <tr><td>After</td><td>1 failed, 27 passed</td><td>1 failed, 185 passed (186)</td></tr>
+  </table></div>
+  <p>The one remaining failure is <code>index.e2e</code> (--help colour), a known failure that is not part of this ticket. <code>process-lifecycle.test.ts</code> passes 30 of 30. Leftover dummy children after the run: 0. <code>tsc -p tsconfig.build.json --noEmit</code> is clean.</p>
+</section>
+
+<section id="acceptance">
+  <h2>4. Acceptance on the Mac</h2>
+  <p>macOS 26, Intel, Node 24, OpenCode 1.18.34. Run as <code>node --experimental-strip-types src/index.ts depot opencode ensure|stop</code> with a scratch <code>HOME</code> and XDG dirs, plus a stub credentials script that prints a fake key. The real OpenCode config and credentials were not read.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Step</th><th>Result</th></tr>
+    <tr><td>Before</td><td>3 <code>opencode serve</code> processes already running, 0 OpenCode listeners</td></tr>
+    <tr><td><code>ensure</code></td><td><code>ready on port 4096</code>, tracking file <code>{"pid":"89494","port":4096}</code></td></tr>
+    <tr><td><code>lsof -iTCP:4096 -sTCP:LISTEN</code></td><td><code>opencode 89494 ... 127.0.0.1:4096 (LISTEN)</code>, the same PID as the tracking file</td></tr>
+    <tr><td><code>ps -p 89494</code></td><td>PPID 1, PGID 89494 (leads its own group, so <code>kill(-pid)</code> is valid)</td></tr>
+    <tr><td><code>ensure</code> again</td><td>same port 4096, no second process (reuse)</td></tr>
+    <tr><td><code>stop</code></td><td><code>stopped</code></td></tr>
+    <tr><td>After</td><td>nothing listens on 4096, PID 89494 gone, tracking file removed, 3 <code>opencode serve</code> processes (same count as before)</td></tr>
+    <tr><td><code>stop</code> again</td><td><code>nothing to stop</code></td></tr>
+  </table></div>
+  <p>OpenCode bound port 4096 although <code>--port 0</code> was passed. I did not look into why.</p>
+  <div class="callout">The 3 pre-existing <code>opencode serve</code> processes were not mine and I did not touch them. I only recorded their count, not their PIDs or parents, so I cannot say whose they were. A later <code>ps</code> check shows none, so they exited on their own. Earlier backlog notes say the Sol reviewer starts <code>opencode serve</code> by hand in a herdr pane, which is a likely source, but that is a guess.</div>
+</section>
+
+<section id="unverified">
+  <h2>5. Not verified</h2>
+  <ul>
+    <li>Linux: <code>ss -ltnp</code> parsing and the Linux stop path ran on unit fixtures only. No Linux host was available.</li>
+    <li>Windows: <code>netstat -ano</code> and <code>taskkill</code> behavior is unchanged and covered by the existing fixtures. It was not run on Windows.</li>
+    <li>The bridge commands (<code>dg depot bridge ensure|stop</code>) share the code but were not run.</li>
+    <li>Why OpenCode ignored <code>--port 0</code> and used 4096.</li>
+  </ul>
+</section>
+
+<section id="notes">
+  <h2>6. Notes</h2>
+  <ul>
+    <li>One commit instead of the three the plan listed, because the new tests share one file (approved).</li>
+    <li>If the listener PID is a grandchild and not the group leader, <code>kill(-pid)</code> hits ESRCH and the fallback kills only that PID. For <code>opencode serve</code> they were the same PID.</li>
+    <li>Nothing is pushed. The plan is in <code>worker-dgs-181/plan.md</code>.</li>
+  </ul>
+</section>
+
+<section id="commits">
+  <h2>7. Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">7b1f281</span> fix(cli): make depot process lifecycle portable to macOS and Linux (branch dgs-181-depot-portable, worktree .worktrees/dgs-181)</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · DGS-181 · worker-dgs-181/report.html</footer>
+
+</body>
+</html>
