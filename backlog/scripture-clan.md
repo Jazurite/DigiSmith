@@ -8,6 +8,13 @@ to the ticket tracker", then widened it: "this will be our actual software devel
 Tracker Integration, he chose **Scripture** as the clan's name, an alternative name for the software development lifecycle. "Pipeline" is kept
 free for a future DevOps clan (CI/CD pipelines).
 
+## Vocabulary (Jack, 2026-10-06)
+
+A **letter** is a legacy map letter (the old A to Z in `MEMORY.md` and `history.html`, such as "letter E, the spine"). A **clan** is a clan in
+ClickUp (A: System, B: Agentic, C: Platform, D: Depot, E: Methodology, and this one, F: Scripture). The same character can name both, so say which.
+Letters B, C and D are parked in a future placeholder clan to be distributed later. Letter E (the spine: `init`, `adopt`, stage-order enforcement)
+goes to clan A: System. Letters A, F, I, J, L, M and N fold into clan F: Scripture.
+
 ## What Scripture is
 
 The path a ticket travels from first text to reported delivery, with research as its first step, and the written record that path leaves behind.
