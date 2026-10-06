@@ -1,6 +1,6 @@
 # Scripture: the clan for DigiSmith's software development lifecycle
 
-**Status:** Idea, Jack's call (2026-10-06 UTC+7). Definition only: no ClickUp clan, folder or list exists yet, and no letter is chosen. ClickUp: **DGS-186**
+**Status:** Idea, Jack's call (2026-10-06 UTC+7). Definition only: no ClickUp clan, folder or list exists yet. Letter: **F**, the next after E (Jack, 2026-10-06). ClickUp: **DGS-186**
 (Town Hall, like DGS-152, task id `14zcebrv03m`, created 2026-10-06 UTC+7).
 
 **Source:** Jack, 2026-10-06, while backfilling the clans (DGS-25). He wanted a clan for "the integration of the ticket text and then reporting
@@ -22,7 +22,7 @@ profile (clan O: Profiling) picks one. It is not CI/CD: building, testing and sh
 - **.2 Intake:** ticket text in (`jira-intake`, `init`), refinement and estimation (old A, J, L).
 - **.3 Design and planning:** `brainstorming`, spec, `writing-plans`.
 - **.4 Build:** `subagent-driven-development`, `executing-plans`, the offload runners, TDD.
-- **.5 Review and verification:** `requesting-code-review`, the Sol reviewer, `verification-before-completion`.
+- **.5 Review and verification:** `requesting-code-review`, the Sol reviewer, `verification-before-completion`, and design review (old F, DGS-31 and DGS-167).
 - **.6 Integrate and finish:** `finishing-a-development-branch`, the pull request, the deploy-URL capture (old M).
 - **.7 Report and sync:** `report-implementation`, write-back to the tracker (old I and N, DGS-178), and history.
 
@@ -36,7 +36,7 @@ profile (clan O: Profiling) picks one. It is not CI/CD: building, testing and sh
 
 ## Open questions
 
-1. The clan's letter (A, B, C, D, E, O are used in ClickUp; S is the old Figma visual regression letter and P the old Telemetry letter, both still open).
+1. The letter is decided: **F: Scripture**. The old map letter F was Design review (DGS-31, DGS-167): it becomes part of .5 Review and verification, so DGS-31 maps here instead of getting its own migration.
 2. Which old letters merge in: A, I, J, L, M, N, and maybe C (Live work journal) and the old D (Delivery).
 3. Whether `history.html` moves into this clan's .7 (Jack: it should migrate into ClickUp).
 4. Whether DGS-172 and DGS-173 move into the Pavilion.
