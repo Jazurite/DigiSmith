@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root Paths on the Mac Workbox — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code, pre { background:var(--code-bg); border-radius:4px; } code { padding:0 .25rem; } pre { padding:.7rem; overflow-x:auto; }
+  table { border-collapse:collapse; } td, th { border:1px solid var(--border); padding:.3rem .6rem; text-align:left; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Root Paths on the Mac Workbox — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-06</span>
+    <span>Ticket: <strong>DGS-184</strong></span>
+    <span>Branch: <code>dgs-184-root-paths</code> (<code>20beb3b</code>, then the test commit)</span>
+  </div>
+</header>
+
+<section id="summary">
+  <p>Items 1 to 4 now work on macOS and Linux. The herdr hook, the usage-probe settings and the runbook use this machine's home. The dead <code>ssh_key</code> line is gone from <code>config.yml</code>. Two commits are ready on the branch and nothing is pushed.</p>
+</section>
+
+<section id="changes">
+  <h2>What changed</h2>
+  <ul>
+    <li><strong>Item 1</strong> (<code>~/.claude/settings.json</code>, outside git): <code>herdr integration install claude</code> wrote <code>/Users/workbox/.claude/hooks/herdr-agent-state.sh</code>. I removed the stale <code>/root</code> SessionStart entry. Copy: <code>settings.json.before-dgs-184</code>.</li>
+    <li><strong>Item 2</strong> (<code>~/.digismith-depot/usage-probe/settings.json</code>, outside git): the command is now <code>python3 "$HOME/.digismith-depot/usage-probe/statusline.py"</code>. Copy: <code>settings.json.before-dgs-184</code>. <code>statusline.py</code> and <code>resets-in.py</code> needed no change.</li>
+    <li><strong>Item 3</strong> (tracked): deleted <code>preferences.ssh_key</code> from <code>.digismith/config.yml</code> (option A, approved). Commit <code>fix(config): drop the dead ssh_key preference</code>.</li>
+    <li><strong>Item 3, test</strong> (tracked): <code>scripts/own-repo-config.test.ts</code> read the live <code>ssh_key</code> in two checks, so 2 tests failed. I removed it from <code>KEYS</code> and skipped it in the "carries every key" loop (<code>DROPPED_KEYS</code>). Commit <code>test(config): stop expecting the dropped ssh_key in config.yml</code>. This is outside the "only fixtures read it" assumption: tell me if you prefer to revert item 3.</li>
+    <li><strong>Item 4</strong> (untracked runbook <code>.digismith/sessions/workbox.md</code>, not committed): four <code>/root</code> probe paths became <code>~</code>. Both <code>date -d</code> mentions now give <code>date -r</code> for macOS. A new "macOS" section was added before "Status". The VPS history lines are unchanged. Copy: <code>~/.digismith-depot/workbox.md.before-dgs-184</code>.</li>
+    <li>Item 5 (fixtures with <code>/root/.ssh/...</code>): left alone.</li>
+  </ul>
+</section>
+
+<section id="tests">
+  <h2>Test counts (<code>pnpm test</code>)</h2>
+  <table>
+    <tr><th>Run</th><th>Failed</th><th>Passed</th><th>Failing</th></tr>
+    <tr><td>Before (main)</td><td>2</td><td>844</td><td><code>index.e2e</code> (--help colour), <code>process-lifecycle</code> (DGS-181)</td></tr>
+    <tr><td>After item 3 only</td><td>4</td><td>842</td><td>the same two, plus 2 in <code>own-repo-config.test.ts</code></td></tr>
+    <tr><td>After the test commit</td><td>2</td><td>844</td><td>the same two as before</td></tr>
+    <tr><td>After, <code>FORCE_COLOR=1</code></td><td>1</td><td>845</td><td><code>process-lifecycle</code> only</td></tr>
+  </table>
+  <p>I did not touch <code>index.e2e</code> or <code>process-lifecycle</code>. The "after item 3 only" row is the run before the test fix (a <code>FORCE_COLOR=1</code> run at that point showed 3 failed). The last row is a rerun after the test commit.</p>
+</section>
+
+<section id="acceptance">
+  <h2>Acceptance (Mac, 2026-10-06 ~08:25 UTC+7 [01:25Z])</h2>
+  <ul>
+    <li><code>herdr integration status</code>: claude <code>current (v10)</code>. Before: <code>not installed</code>.</li>
+    <li>New tab in my workspace, <code>claude</code> v2.1.290: the first lines show no SessionStart hook error. I exited it with <code>/exit</code> and closed the tab.</li>
+    <li>Probe: second tab, <code>claude --model claude-haiku-4-5-20251001 --settings "$HOME/.digismith-depot/usage-probe/settings.json"</code> with seat <code>jack</code> (active seat), one prompt. The status line printed <code>probe {...}</code>. <code>out.json</code> keys: <code>at</code>, <code>rate_limits</code>, <code>claude_version</code>. <code>rate_limits</code> keys: <code>five_hour</code> and <code>seven_day</code>, each with <code>resets_at</code> and <code>used_percentage</code>. No token was read or printed.</li>
+    <li>Greps: <code>/root</code> count is 0 in both settings files; <code>ssh_key</code> count is 0 in <code>config.yml</code>.</li>
+  </ul>
+</section>
+
+<section id="not-verified">
+  <h2>Not verified</h2>
+  <ul>
+    <li>Whether herdr's agent status for Claude now updates from the new hook. I only saw that the session starts without an error.</li>
+    <li>Linux. The edits use <code>$HOME</code> and <code>~</code>, but I ran nothing on Linux. Both <code>date</code> forms are in the runbook; I ran only the macOS one.</li>
+    <li>The python <code>time.ctime</code> line in the runbook's macOS section was not run.</li>
+    <li>My shell test of the probe command overwrote the old <code>out.json</code> with fake data (<code>{"x": 1}</code>) before the real probe replaced it. The old file is gone.</li>
+    <li>The opencode integration (outdated, v12 < v13) was left alone as agreed.</li>
+  </ul>
+</section>
+</body>
+</html>
