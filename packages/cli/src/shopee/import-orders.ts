@@ -51,11 +51,11 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
           result = joinOrders(text);
         }
         for (const e of result.errors) console.error(`shopee import-orders: ${e}`);
-        if (!result.hasList) throw new Error("no order list found in the input");
+        if (result.orders.length === 0) throw new Error("no orders found in the input");
         const skipped = result.errors.length;
-        if (argv.json) console.log(formatJson(result.orders, result.missing, skipped));
+        if (argv.json) console.log(formatJson(result.orders, result.missing, skipped, result.skippedEntries));
         else if (argv.csv) console.log(formatCsv(result.orders));
-        else console.log(formatTable(result.orders, result.missing, skipped));
+        else console.log(formatTable(result.orders, result.missing, skipped, result.skippedEntries));
         process.exitCode = 0;
       } catch (err) {
         console.error(`shopee import-orders: ${(err as Error).message}`);

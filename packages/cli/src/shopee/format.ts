@@ -77,17 +77,17 @@ const COLUMNS: Array<[keyof Row, string]> = [
   ["status", "status"],
 ];
 
-export function formatTable(orders: Order[], missing: number, skipped: number): string {
+export function formatTable(orders: Order[], missing: number, skipped: number, skippedEntries = 0): string {
   const data = rows(orders);
   const widths = COLUMNS.map(([k, h]) => Math.max(h.length, ...data.map((r) => r[k].length)));
   const line = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ").trimEnd();
   const out = [line(COLUMNS.map(([, h]) => h)), ...data.map((r) => line(COLUMNS.map(([k]) => r[k])))];
-  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${missing}, skipped blocks: ${skipped}`);
+  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${missing}, skipped blocks: ${skipped}, skipped list entries: ${skippedEntries}`);
   out.push("amounts are in the order currency (VND), converted from Shopee's x100000 integers");
   return out.join("\n");
 }
 
-export function formatJson(orders: Order[], missing: number, skipped: number): string {
+export function formatJson(orders: Order[], missing: number, skipped: number, skippedEntries = 0): string {
   return JSON.stringify(
     {
       orders: orders.map((o) => ({
@@ -100,7 +100,7 @@ export function formatJson(orders: Order[], missing: number, skipped: number): s
         currency: o.currency,
         status: o.statusLabel,
       })),
-      summary: { orders: orders.length, missingDetail: missing, skippedBlocks: skipped },
+      summary: { orders: orders.length, missingDetail: missing, skippedBlocks: skipped, skippedListEntries: skippedEntries },
     },
     null,
     2

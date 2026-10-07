@@ -23,7 +23,7 @@ describe("formatTable", () => {
     expect(out).toContain(MISSING);
   });
   it("prints the counts footer and the money note", () => {
-    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0");
+    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0, skipped list entries: 0");
     expect(out).toContain("x100000");
   });
 });

@@ -35,7 +35,7 @@ describe("shopee import-orders", () => {
   it("reads stdin with - and prints a table", async () => {
     const { out } = await run(["import-orders", "-"]);
     expect(out).toContain("Widget, large");
-    expect(out).toContain("missing detail: 1, skipped blocks: 1");
+    expect(out).toContain("missing detail: 1, skipped blocks: 1, skipped list entries: 0");
     expect(process.exitCode).toBe(0);
   });
 
@@ -103,8 +103,8 @@ describe("shopee import-orders", () => {
     await run(["import-orders", "-"], () => "  ");
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
-    const r = await run(["import-orders", "-"], () => block(1, DETAIL_URL(1), detailBody()));
-    expect(r.err).toContain("no order list found");
+    const r = await run(["import-orders", "-"], () => block(1, "https://shopee.vn/api/v4/other", {}));
+    expect(r.err).toContain("no orders found");
     expect(process.exitCode).toBe(1);
   });
 

@@ -42,8 +42,15 @@ export function block(n: number, url: string, body: unknown, status = 200): stri
 export function listBody(orderIds: Array<number | string>) {
   return {
     error: 0,
-    data: {
-      details_list: orderIds.map((id) => ({ info_card: { order_card: { order_id: Number(id) } } })),
+    error_msg: null,
+    new_data: {
+      order_or_checkout_data: orderIds.map((id) => ({
+        order_list_detail: {
+          status: { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
+          shipping: { tracking_info: { ctime: 1791400000 } },
+          info_card: { order_id: Number(id), order_list_cards: [], product_count: 1, subtotal: 100000, final_total: 100000 },
+        },
+      })),
     },
   };
 }

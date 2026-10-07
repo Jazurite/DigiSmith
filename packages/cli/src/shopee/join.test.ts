@@ -33,9 +33,23 @@ describe("joinOrders", () => {
     expect(r.orders[0].orderSn).toBe("NEW");
   });
 
-  it("reports hasList false and carries block errors", () => {
-    const r = joinOrders(block(9, DETAIL_URL(1), "bad"));
-    expect(r.hasList).toBe(false);
+  it("builds an order from a detail that is in no list", () => {
+    const r = joinOrders(block(2, DETAIL_URL(8), detailBody({ sn: "SN8" })));
+    expect(r.orders.map((o) => [o.orderId, o.orderSn, o.captured])).toEqual([["8", "SN8", true]]);
+    expect(r.missing).toBe(0);
+  });
+
+  it("uses the union of list ids and detail ids", () => {
+    const r = joinOrders([block(1, LIST_URL(), listBody([5])), block(2, DETAIL_URL(8), detailBody())].join("\n"));
+    expect(r.orders.map((o) => o.orderId)).toEqual(["5", "8"]);
+    expect(r.missing).toBe(1);
+  });
+
+  it("counts list entries with no order_list_detail and carries block errors", () => {
+    const body = listBody([1]);
+    body.new_data.order_or_checkout_data.push({} as never);
+    const r = joinOrders([block(1, LIST_URL(), body), block(9, DETAIL_URL(1), "bad")].join("\n"));
+    expect(r.skippedEntries).toBe(1);
     expect(r.errors).toEqual(["block 9: body is not JSON"]);
   });
 });
