@@ -1,5 +1,5 @@
 import { toVnd } from "./money.ts";
-import { obj, str, parseCards, refundIds, type OrderLine } from "./lines.ts";
+import { obj, str, parseCards, refundIds, isCancelled, type OrderLine } from "./lines.ts";
 
 // Order ids from one list response. Real shape: new_data.order_or_checkout_data[]
 // .order_list_detail.info_card.order_id. An entry with no order_list_detail is
@@ -13,6 +13,7 @@ export interface ListEntry {
   refundSkipped: number;
   total: number | null;
   statusLabel: string | null;
+  cancelled: boolean;
 }
 
 export interface ListResult {
@@ -63,6 +64,7 @@ export function parseOrderList(body: unknown): ListResult {
         refundSkipped: parsed.refundSkipped,
         total: toVnd(card?.final_total),
         statusLabel: str(obj(status?.status_label)?.text) ?? str(obj(status?.list_view_status_label)?.text),
+        cancelled: isCancelled(status),
       });
     }
   } else {

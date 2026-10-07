@@ -26,7 +26,7 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
           "Input is Proxyman 'copy' text (blocks starting with '[n] URL = ...') or a Proxyman Raw export folder. " +
             "Only the URL (request line 1 in a folder) and the response JSON body are read; everything else in a request is ignored. Purchase date is the detail's create_time. " +
             "Shopee sends money x100000; amounts are converted to VND. Shipping and payment data are never printed. " +
-            "Orders with no captured detail show MISSING and are counted. A bundle is one row at the bundle price. Refund lines are skipped and counted: a line with a negative price, text containing refund / hoan tien / return, or listed in an order-level refund list."
+            "Orders with no captured detail show MISSING and are counted. A bundle is one row at the bundle price. Rows have no currency in the list, so the currency defaults to VND (Shopee VN). Cancelled orders (status label_order_cancelled, or a header text with cancel and refund) are skipped whole and counted. Refund lines are skipped and counted: a line with a negative price, text containing refund / hoan tien / return, or listed in an order-level refund list."
         ),
     handler: (argv) => {
       const input = argv.input as string;

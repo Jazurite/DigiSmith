@@ -75,4 +75,36 @@ describe("joinOrders", () => {
     const cards = [card([[item({ name: "Refund x" }), item()]])];
     expect(joinOrders(block(1, LIST_URL(), listBody([4], { cards }))).refundSkipped).toBe(1);
   });
+
+  it("skips a cancelled order seen in the list and counts it", () => {
+    const r = joinOrders([block(1, LIST_URL(), listBody([4, 5], { cancelledIds: [5] }))].join("\n"));
+    expect(r.orders.map((o) => o.orderId)).toEqual(["4"]);
+    expect(r.skippedCancelled).toBe(1);
+    expect(r.missing).toBe(1);
+  });
+
+  it("skips an order whose captured detail is cancelled", () => {
+    const r = joinOrders([block(1, LIST_URL(), listBody([4])), block(2, DETAIL_URL(4), detailBody({ cancelled: true }))].join("\n"));
+    expect(r.orders).toEqual([]);
+    expect(r.skippedCancelled).toBe(1);
+    expect(r.missing).toBe(0);
+  });
+
+  it("skips on header text with cancel and refund even without the label", () => {
+    const body = detailBody() as { data: { status: Record<string, unknown> } };
+    body.data.status = { status_label: { text: "other" }, header_text: { text: "Order_Cancelled_Refund_x" } };
+    expect(joinOrders(block(2, DETAIL_URL(4), body)).skippedCancelled).toBe(1);
+  });
+
+  it("does not skip on the plain refund flags or a header with refund only", () => {
+    const cards = [card([[item({ ext_info: { is_refundable_sample: true, is_free_return: true, free_return_day: 15 } })]])];
+    const r = joinOrders(block(1, LIST_URL(), listBody([4], { cards })));
+    expect(r.skippedCancelled).toBe(0);
+    expect(r.orders).toHaveLength(1);
+  });
+
+  it("defaults currency to VND for list-only rows", () => {
+    expect(joinOrders(block(1, LIST_URL(), listBody([4]))).orders[0].currency).toBe("VND");
+  });
 });
+

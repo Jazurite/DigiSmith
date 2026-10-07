@@ -71,6 +71,25 @@ describe("shopee import-orders", () => {
     }
   });
 
+  it("leaves cancelled orders out of every format and leaks nothing", async () => {
+    const text = [
+      block(1, LIST_URL(), listBody([5, 6], { cancelledIds: [6] })),
+      block(2, DETAIL_URL(5), detailBody()),
+      block(3, DETAIL_URL(6), detailBody({ cancelled: true, sn: "CANCELLED-SN" })),
+    ].join("\n");
+    for (const flag of [[], ["--json"], ["--csv"]]) {
+      const { out, err } = await run(["import-orders", "-", ...flag], () => text);
+      expect(out).not.toContain("CANCELLED-SN");
+      for (const s of [...DUMMY_SECRETS, ...FAKE_PRIVATE]) {
+        expect(out).not.toContain(s);
+        expect(err).not.toContain(s);
+      }
+    }
+    expect((await run(["import-orders", "-"], () => text)).out).toContain("cancelled orders skipped: 1");
+    expect(JSON.parse((await run(["import-orders", "-", "--json"], () => text)).out).summary.skippedCancelledOrders).toBe(1);
+    expect(JSON.parse((await run(["import-orders", "-", "--json"], () => text)).out).orders.map((o: { orderId: string }) => o.orderId)).toEqual(["5"]);
+  });
+
   it("supports --json and --csv", async () => {
     expect(JSON.parse((await run(["import-orders", "-", "--json"])).out).orders).toHaveLength(2);
     expect((await run(["import-orders", "-", "--csv"])).out.split("\n")[0]).toContain("order id");

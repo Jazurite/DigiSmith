@@ -1,5 +1,5 @@
 import { toVnd } from "./money.ts";
-import { obj, str, num, parseCards, refundIds, type OrderLine } from "./lines.ts";
+import { obj, str, num, parseCards, refundIds, isCancelled, type OrderLine } from "./lines.ts";
 
 export type { OrderLine };
 
@@ -13,6 +13,7 @@ export interface Order {
   currency: string | null;
   statusLabel: string | null;
   refundSkipped: number;
+  cancelled: boolean;
 }
 
 // Allow-list: only the fields below are read. Shipping and payment fields are
@@ -36,5 +37,6 @@ export function parseOrderDetail(orderId: string, body: unknown): Order | null {
     currency: str(card?.currency) ?? parsed.currency,
     statusLabel: str(obj(status?.status_label)?.text) ?? str(obj(status?.list_view_status_label)?.text),
     refundSkipped: parsed.refundSkipped,
+    cancelled: isCancelled(status),
   };
 }

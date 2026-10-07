@@ -4,8 +4,8 @@ import { parseOrderDetail, type Order } from "./detail.ts";
 import { detailBody } from "./test-fixtures.ts";
 
 const good = parseOrderDetail("1", detailBody())!;
-const sum: Summary = { missing: 1, skipped: 0, skippedEntries: 0, refundSkipped: 2, listOffsets: [0, 5], nextOffsetsNotCaptured: [10] };
-const gone: Order = { orderId: "2", captured: false, orderSn: null, purchasedAt: null, lines: [], total: null, currency: null, statusLabel: null, refundSkipped: 0 };
+const sum: Summary = { missing: 1, skipped: 0, skippedEntries: 0, refundSkipped: 2, skippedCancelled: 1, listOffsets: [0, 5], nextOffsetsNotCaptured: [10] };
+const gone: Order = { orderId: "2", captured: false, orderSn: null, purchasedAt: null, lines: [], total: null, currency: null, statusLabel: null, refundSkipped: 0, cancelled: false };
 
 describe("formatTime", () => {
   it("prints UTC+7 first, UTC in brackets", () => {
@@ -24,7 +24,7 @@ describe("formatTable", () => {
     expect(out).toContain(MISSING);
   });
   it("prints the counts footer and the money note", () => {
-    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0, skipped list entries: 0, skipped refund lines: 2");
+    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0, skipped list entries: 0, skipped refund lines: 2, cancelled orders skipped: 1");
     expect(out).toContain("x100000");
   });
 });
@@ -48,6 +48,7 @@ describe("formatJson", () => {
     expect(j.orders[1].purchasedAt).toBeNull();
     expect(j.orders[1].purchaseDateMissing).toBe(true);
     expect(j.summary.missingDetail).toBe(1);
+    expect(j.summary.skippedCancelledOrders).toBe(1);
     expect(j.summary.nextOffsetsNotCaptured).toEqual([10]);
   });
 });

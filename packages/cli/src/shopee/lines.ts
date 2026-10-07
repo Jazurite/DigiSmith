@@ -37,6 +37,16 @@ function itemName(item: Obj): string {
   return parts.length ? parts.join(" + ") : (str(item.name) ?? "");
 }
 
+// A cancelled order is skipped whole: status_label.text is label_order_cancelled,
+// or header_text.text contains both "cancel" and "refund". Plain flags such as
+// is_refundable_sample, is_free_return and free_return_day are never read.
+export function isCancelled(status: unknown): boolean {
+  const s = obj(status);
+  if (str(obj(s?.status_label)?.text) === "label_order_cancelled") return true;
+  const header = (str(obj(s?.header_text)?.text) ?? "").toLowerCase();
+  return header.includes("cancel") && header.includes("refund");
+}
+
 // Cards are detail parcel_cards or list order_list_cards: same inner shape.
 export function parseCards(cards: unknown, refundItemIds: Set<number> = new Set()) {
   const lines: OrderLine[] = [];

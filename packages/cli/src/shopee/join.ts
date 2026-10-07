@@ -36,7 +36,7 @@ export function joinBlocks(parsed: PasteResult): JoinResult {
   }
   // Union: a detail whose order is in no list still makes a row (details-only export).
   for (const id of details.keys()) if (!ids.includes(id)) ids.push(id);
-  const orders = ids.map((id): Order => {
+  const all = ids.map((id): Order => {
     const detail = details.get(id);
     if (detail) return detail;
     const e = fromList.get(id);
@@ -50,8 +50,14 @@ export function joinBlocks(parsed: PasteResult): JoinResult {
       currency: null,
       statusLabel: e?.statusLabel ?? null,
       refundSkipped: e?.refundSkipped ?? 0,
+      cancelled: e?.cancelled ?? false,
     };
   });
+  // Cancelled orders (by the list or the detail) are left out whole.
+  const cancelledIds = new Set(all.filter((o) => o.cancelled || fromList.get(o.orderId)?.cancelled).map((o) => o.orderId));
+  const orders = all.filter((o) => !cancelledIds.has(o.orderId));
+  // The list has no currency and this is Shopee VN: default to VND.
+  for (const o of orders) o.currency ??= "VND";
   const sorted = [...offsets].sort((a, b) => a - b);
   return {
     orders,
@@ -59,6 +65,7 @@ export function joinBlocks(parsed: PasteResult): JoinResult {
     missing: orders.filter((o) => !o.captured).length,
     skipped: errors.length,
     skippedEntries,
+    skippedCancelled: cancelledIds.size,
     refundSkipped: orders.reduce((s, o) => s + o.refundSkipped, 0),
     listOffsets: sorted,
     nextOffsetsNotCaptured: [...nexts].filter((n) => !offsets.has(n)).sort((a, b) => a - b),

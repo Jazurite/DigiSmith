@@ -39,6 +39,12 @@ export function block(n: number, url: string, body: unknown, status = 200): stri
   ].join("\n");
 }
 
+export const CANCELLED_STATUS = {
+  status_label: { text: "label_order_cancelled" },
+  header_text: { text: "order_status_text_cancelled_order_cancelled_refund" },
+  list_view_status_label: { text: "label_cancelled" },
+};
+
 export const item = (over: Record<string, unknown> = {}) => ({
   item_id: 9,
   model_id: 9,
@@ -74,7 +80,7 @@ export const card = (groups: unknown[][], shop = { shop_id: 111, shop_name: "Fak
   product_info: { item_groups: groups.map((items) => ({ items })) },
 });
 
-export function listBody(orderIds: Array<number | string>, opts: { nextOffset?: number; cards?: unknown[] } = {}) {
+export function listBody(orderIds: Array<number | string>, opts: { nextOffset?: number; cards?: unknown[]; cancelledIds?: Array<number | string> } = {}) {
   return {
     error: 0,
     error_msg: null,
@@ -82,7 +88,9 @@ export function listBody(orderIds: Array<number | string>, opts: { nextOffset?: 
       ...(opts.nextOffset === undefined ? {} : { next_offset: opts.nextOffset }),
       order_or_checkout_data: orderIds.map((id) => ({
         order_list_detail: {
-          status: { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
+          status: (opts.cancelledIds ?? []).map(String).includes(String(id))
+            ? CANCELLED_STATUS
+            : { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
           shipping: { tracking_info: { ctime: 1791400000 } },
           info_card: { order_id: Number(id), order_list_cards: opts.cards ?? [], product_count: 1, subtotal: 100000, final_total: 100000 },
         },
@@ -91,12 +99,12 @@ export function listBody(orderIds: Array<number | string>, opts: { nextOffset?: 
   };
 }
 
-export function detailBody(opts: { createTime?: number; sn?: string; shopId?: number; shopName?: string } = {}) {
+export function detailBody(opts: { createTime?: number; sn?: string; shopId?: number; shopName?: string; cancelled?: boolean } = {}) {
   const { createTime = 1791338198, sn = "SN0001", shopId = 111, shopName = "Fake Shop" } = opts;
   return {
     error: 0,
     data: {
-      status: { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
+      status: opts.cancelled ? CANCELLED_STATUS : { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
       pc_processing_info: { create_time: createTime, pay_time: createTime + 60, order_sn: sn, paid_amount: 43141700000 },
       address: { shipping_name: FAKE_PRIVATE[0], shipping_phone: FAKE_PRIVATE[1], shipping_address: FAKE_PRIVATE[2] },
       payment: { card: FAKE_PRIVATE[3] },
