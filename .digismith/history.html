@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-10-04</span>
+    <span>Last updated: 2026-10-07</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1533,6 +1533,12 @@
       <div class="date">2026-10-06</div>
       <h4>Agentic Architecture 2, Autonomous (DGS-185)</h4>
       <p>A backlog item, with no code yet. Jack named the whole system <strong>Agentic</strong>, the same name as clan B. It has two architectures: the headless VPS one that runs today with Jack in the loop, and a second, Autonomous one where persistent workers pick up and finish tickets alone and reach Jack only through an escalation queue. The item sets out a draft contract: ClickUp as the queue, an explicit Ready checklist, claim and release, scoped data access, and a split between what runs alone and what asks Jack. The architectures are not clans or lineages, so no new ClickUp folder was made, and DGS-185 stays in E.4. See <a href="../backlog/autonomous-agentic-architecture.md">the backlog item</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-06</div>
+      <h4>DGS-181: Depot Process Lifecycle Portable</h4>
+      <p><code>dg depot</code> can now start and stop a process on macOS and Linux, and the Windows path is unchanged. On the Mac Workbox, <code>dg depot opencode ensure</code> started a real OpenCode server, the listening PID matched the tracking file, and <code>stop</code> left nothing behind. A second bug is fixed too: a spawn <code>ENOENT</code> from <code>taskkill</code> used to look like "already exited", so <code>stopProcess</code> could return <code>stopped: true</code> without killing anything. It now returns an error. Linux and Windows are covered by unit fixtures only. See <a href="board/DGS-181—depot-process-lifecycle-portable/worker-dgs-181/plan.md">plan</a> and <a href="board/DGS-181—depot-process-lifecycle-portable/worker-dgs-181/report.html">report</a>.</p>
     </div>
 
   </div>
