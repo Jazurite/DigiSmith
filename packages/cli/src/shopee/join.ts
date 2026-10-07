@@ -9,11 +9,11 @@ export interface JoinResult extends Summary {
   unknownSkipIds: string[]; // --skip ids that match no order in the data
 }
 
-export function joinOrders(text: string, skipIds: Iterable<string> = []): JoinResult {
-  return joinBlocks(parsePaste(text), skipIds);
+export function joinOrders(text: string, skipIds: Iterable<string> = [], onlyDated = false): JoinResult {
+  return joinBlocks(parsePaste(text), skipIds, onlyDated);
 }
 
-export function joinBlocks(parsed: PasteResult, skipIds: Iterable<string> = []): JoinResult {
+export function joinBlocks(parsed: PasteResult, skipIds: Iterable<string> = [], onlyDated = false): JoinResult {
   const skip = new Set(skipIds);
   const errors = [...parsed.errors];
   const ids: string[] = [];
@@ -59,7 +59,10 @@ export function joinBlocks(parsed: PasteResult, skipIds: Iterable<string> = []):
   const cancelledIds = new Set(all.filter((o) => o.cancelled || fromList.get(o.orderId)?.cancelled).map((o) => o.orderId));
   // --skip: an id the automatic rule already dropped counts as cancelled, not as skipped by the user.
   const userSkipped = new Set(all.filter((o) => skip.has(o.orderId) && !cancelledIds.has(o.orderId)).map((o) => o.orderId));
-  const orders = all.filter((o) => !cancelledIds.has(o.orderId) && !userSkipped.has(o.orderId));
+  const kept = all.filter((o) => !cancelledIds.has(o.orderId) && !userSkipped.has(o.orderId));
+  // --only-dated: drop what is left with no purchase date (no captured detail).
+  const undated = onlyDated ? kept.filter((o) => !o.purchasedAt) : [];
+  const orders = onlyDated ? kept.filter((o) => o.purchasedAt) : kept;
   // The list has no currency and this is Shopee VN: default to VND.
   for (const o of orders) o.currency ??= "VND";
   const sorted = [...offsets].sort((a, b) => a - b);
@@ -71,6 +74,7 @@ export function joinBlocks(parsed: PasteResult, skipIds: Iterable<string> = []):
     skippedEntries,
     skippedCancelled: cancelledIds.size,
     skippedByUser: userSkipped.size,
+    skippedUndated: undated.length,
     unknownSkipIds: [...skip].filter((id) => !ids.includes(id)),
     refundSkipped: orders.reduce((s, o) => s + o.refundSkipped, 0),
     listOffsets: sorted,

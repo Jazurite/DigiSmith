@@ -133,6 +133,18 @@ describe("shopee import-orders", () => {
       expect(csv.split("\n").slice(1).map((l) => l.split(",")[0])).toEqual(["6"]);
     });
 
+    it("--only-dated leaves undated orders out of table, json and csv", async () => {
+      const t = [block(1, LIST_URL(), listBody([4, 5])), block(2, DETAIL_URL(4), detailBody())].join("\n");
+      const json = JSON.parse((await run(["import-orders", "-", "--json", "--only-dated"], () => t)).out);
+      expect(json.orders.map((o: { orderId: string }) => o.orderId)).toEqual(["4"]);
+      expect(json.summary).toMatchObject({ skippedUndated: 1, missingDetail: 0 });
+      expect((await run(["import-orders", "-", "--only-dated"], () => t)).out).toContain("skipped undated: 1");
+      expect((await run(["import-orders", "-", "--only-dated"], () => t)).out).not.toContain("MISSING");
+      const csv = (await run(["import-orders", "-", "--csv", "--only-dated"], () => t)).out;
+      expect(csv.split("\n").slice(1).map((l) => l.split(",")[0])).toEqual(["4", "4"]); // one row per line item
+      expect((await run(["import-orders", "-"], () => t)).out).toContain("MISSING");
+    });
+
     it("exits 1 for an unreadable skip file", async () => {
       await run(["import-orders", "-", "--skip-file", "/nonexistent/skip.txt"], () => text);
       expect(process.exitCode).toBe(1);

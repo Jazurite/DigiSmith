@@ -41,13 +41,17 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
           array: true,
           describe: "order id(s) to leave out, comma separated, repeatable",
         })
+        .option("only-dated", {
+          type: "boolean",
+          describe: "leave out orders with no purchase date (no captured detail) and count them",
+        })
         .option("skip-file", { type: "string", describe: "file with one order id per line to leave out (# comments ignored)" })
         .conflicts("json", "csv")
         .epilog(
           "Input is Proxyman 'copy' text (blocks starting with '[n] URL = ...') or a Proxyman Raw export folder. " +
             "Only the URL (request line 1 in a folder) and the response JSON body are read; everything else in a request is ignored. Purchase date is the detail's create_time. " +
             "Shopee sends money x100000; amounts are converted to VND. Shipping and payment data are never printed. " +
-            "Orders with no captured detail show MISSING and are counted. A bundle is one row at the bundle price. Rows have no currency in the list, so the currency defaults to VND (Shopee VN). Cancelled orders (status label_order_cancelled, or a header text with cancel and refund) are skipped automatically and counted. Orders the list shows as completed but are cancelled or refunded in real life can be left out by hand with --skip <id[,id...]> (repeatable) or --skip-file <path> (one id per line, # comments ignored); they are counted as 'skipped by --skip', and an id not in the data only prints a note. Refund lines are skipped and counted: a line with a negative price, text containing refund / hoan tien / return, or listed in an order-level refund list."
+            "Orders with no captured detail show MISSING and are counted. A bundle is one row at the bundle price. Rows have no currency in the list, so the currency defaults to VND (Shopee VN). Cancelled orders (status label_order_cancelled, or a header text with cancel and refund) are skipped automatically and counted. Orders the list shows as completed but are cancelled or refunded in real life can be left out by hand with --skip <id[,id...]> (repeatable) or --skip-file <path> (one id per line, # comments ignored); they are counted as 'skipped by --skip', and an id not in the data only prints a note. --only-dated leaves out every order with no purchase date (no captured detail) and counts them as 'skipped undated'; it combines with the skip options and the cancelled rule. Without it, undated orders show as MISSING. Refund lines are skipped and counted: a line with a negative price, text containing refund / hoan tien / return, or listed in an order-level refund list."
         ),
     handler: (argv) => {
       const input = argv.input as string;
@@ -61,13 +65,14 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
             throw new Error(`cannot read skip file ${skipFile}`);
           }
         }
+        const onlyDated = argv["only-dated"] === true;
         const skipIds = collectSkipIds(argv.skip, skipText);
         let result;
         const isDir = input !== "-" && input !== "" && fs.existsSync(input) && fs.statSync(input).isDirectory();
         let text = "";
         // yargs turns a lone "-" into "", so both mean stdin.
         if (isDir) {
-          result = joinBlocks(readFolder(input), skipIds);
+          result = joinBlocks(readFolder(input), skipIds, onlyDated);
         } else if (input === "-" || input === "") {
           text = stdinReader();
         } else {
@@ -79,11 +84,11 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
         }
         if (!result) {
           if (!text.trim()) throw new Error("input is empty");
-          result = joinOrders(text, skipIds);
+          result = joinOrders(text, skipIds, onlyDated);
         }
         for (const e of result.errors) console.error(`shopee import-orders: ${e}`);
         for (const id of result.unknownSkipIds) console.error(`shopee import-orders: note: --skip id ${id} is not in the data`);
-        if (result.orders.length === 0 && result.skippedCancelled + result.skippedByUser === 0) throw new Error("no orders found in the input");
+        if (result.orders.length === 0 && result.skippedCancelled + result.skippedByUser + result.skippedUndated === 0) throw new Error("no orders found in the input");
         if (argv.json) console.log(formatJson(result.orders, result));
         else if (argv.csv) console.log(formatCsv(result.orders));
         else console.log(formatTable(result.orders, result));

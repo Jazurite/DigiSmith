@@ -120,5 +120,22 @@ describe("joinOrders", () => {
     const r = joinOrders(block(1, LIST_URL(), listBody([4, 5])), ["5"]);
     expect(r.missing).toBe(1);
   });
+
+  it("--only-dated drops orders with no detail and counts them", () => {
+    const text = [block(1, LIST_URL(), listBody([4, 5, 6])), block(2, DETAIL_URL(4), detailBody())].join("\n");
+    const r = joinOrders(text, [], true);
+    expect(r.orders.map((o) => o.orderId)).toEqual(["4"]);
+    expect(r.skippedUndated).toBe(2);
+    expect(r.missing).toBe(0);
+    expect(joinOrders(text).skippedUndated).toBe(0);
+    expect(joinOrders(text).missing).toBe(2);
+  });
+
+  it("--only-dated combines with --skip and the cancelled rule without double counting", () => {
+    const text = [block(1, LIST_URL(), listBody([4, 5, 6, 7], { cancelledIds: [7] })), block(2, DETAIL_URL(4), detailBody())].join("\n");
+    const r = joinOrders(text, ["5"], true);
+    expect(r.orders.map((o) => o.orderId)).toEqual(["4"]);
+    expect(r).toMatchObject({ skippedCancelled: 1, skippedByUser: 1, skippedUndated: 1 });
+  });
 });
 

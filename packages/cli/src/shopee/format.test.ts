@@ -4,7 +4,7 @@ import { parseOrderDetail, type Order } from "./detail.ts";
 import { detailBody } from "./test-fixtures.ts";
 
 const good = parseOrderDetail("1", detailBody())!;
-const sum: Summary = { missing: 1, skipped: 0, skippedEntries: 0, refundSkipped: 2, skippedCancelled: 1, skippedByUser: 3, listOffsets: [0, 5], nextOffsetsNotCaptured: [10] };
+const sum: Summary = { missing: 1, skipped: 0, skippedEntries: 0, refundSkipped: 2, skippedCancelled: 1, skippedByUser: 3, skippedUndated: 5, listOffsets: [0, 5], nextOffsetsNotCaptured: [10] };
 const gone: Order = { orderId: "2", captured: false, orderSn: null, purchasedAt: null, lines: [], total: null, currency: null, statusLabel: null, refundSkipped: 0, cancelled: false };
 
 describe("formatTime", () => {
@@ -24,7 +24,7 @@ describe("formatTable", () => {
     expect(out).toContain(MISSING);
   });
   it("prints the counts footer and the money note", () => {
-    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0, skipped list entries: 0, skipped refund lines: 2, cancelled orders skipped: 1, skipped by --skip: 3");
+    expect(out).toContain("orders: 2, rows: 3, missing detail: 1, skipped blocks: 0, skipped list entries: 0, skipped refund lines: 2, cancelled orders skipped: 1, skipped by --skip: 3, skipped undated: 5");
     expect(out).toContain("x100000");
   });
 });
@@ -50,6 +50,7 @@ describe("formatJson", () => {
     expect(j.summary.missingDetail).toBe(1);
     expect(j.summary.skippedCancelledOrders).toBe(1);
     expect(j.summary.skippedByUser).toBe(3);
+    expect(j.summary.skippedUndated).toBe(5);
     expect(j.summary.nextOffsetsNotCaptured).toEqual([10]);
   });
 });
