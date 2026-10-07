@@ -1,4 +1,4 @@
-import { parsePaste } from "./paste.ts";
+import { parsePaste, type PasteResult } from "./paste.ts";
 import { parseOrderList } from "./list.ts";
 import { parseOrderDetail, type Order } from "./detail.ts";
 
@@ -10,7 +10,12 @@ export interface JoinResult {
 }
 
 export function joinOrders(text: string): JoinResult {
-  const { blocks, errors } = parsePaste(text);
+  return joinBlocks(parsePaste(text));
+}
+
+export function joinBlocks(parsed: PasteResult): JoinResult {
+  const { blocks } = parsed;
+  const errors = [...parsed.errors];
   const ids: string[] = [];
   const details = new Map<string, Order>();
   let hasList = false;

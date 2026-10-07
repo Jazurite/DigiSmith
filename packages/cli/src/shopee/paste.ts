@@ -19,6 +19,38 @@ const RESPONSE_MARKER = /^Response\s*$/;
 const LIST_PATH = "/api/v4/order/get_all_order_and_checkout_list";
 const DETAIL_PATH = "/api/v4/order/get_order_detail";
 
+export function classify(url: URL): PasteBlock["kind"] | null {
+  return url.pathname === LIST_PATH ? "list" : url.pathname === DETAIL_PATH ? "detail" : null;
+}
+
+// Shared by the paste and folder readers: raw is the response body text only.
+export function buildBlock(
+  n: number,
+  kind: PasteBlock["kind"],
+  url: URL,
+  raw: string,
+  errors: string[]
+): PasteBlock | null {
+  const text = raw.trim();
+  if (!text) {
+    errors.push(`block ${n}: no JSON body`);
+    return null;
+  }
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    errors.push(`block ${n}: body is not JSON`);
+    return null;
+  }
+  const orderId = url.searchParams.get("order_id") ?? undefined;
+  if (kind === "detail" && !orderId) {
+    errors.push(`block ${n}: no order_id in URL`);
+    return null;
+  }
+  return { n, kind, orderId, offset: url.searchParams.get("offset") ?? undefined, body };
+}
+
 export function parsePaste(text: string): PasteResult {
   const lines = text.split(/\r?\n/);
   const starts: number[] = [];
@@ -40,7 +72,7 @@ export function parsePaste(text: string): PasteResult {
       errors.push(`block ${n}: bad URL line`);
       return;
     }
-    const kind = url.pathname === LIST_PATH ? "list" : url.pathname === DETAIL_PATH ? "detail" : null;
+    const kind = classify(url);
     if (!kind) return; // some other call in the paste: ignored
 
     let marker = -1;
@@ -61,24 +93,9 @@ export function parsePaste(text: string): PasteResult {
         break;
       }
     }
-    const raw = blank < 0 ? "" : lines.slice(blank + 1, end).join("\n").trim();
-    if (!raw) {
-      errors.push(`block ${n}: no JSON body`);
-      return;
-    }
-    let body: unknown;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      errors.push(`block ${n}: body is not JSON`);
-      return;
-    }
-    const orderId = url.searchParams.get("order_id") ?? undefined;
-    if (kind === "detail" && !orderId) {
-      errors.push(`block ${n}: no order_id in URL`);
-      return;
-    }
-    blocks.push({ n, kind, orderId, offset: url.searchParams.get("offset") ?? undefined, body });
+    const raw = blank < 0 ? "" : lines.slice(blank + 1, end).join("\n");
+    const built = buildBlock(n, kind, url, raw, errors);
+    if (built) blocks.push(built);
   });
 
   return { blocks, errors };

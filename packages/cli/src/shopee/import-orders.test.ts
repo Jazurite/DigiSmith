@@ -48,6 +48,29 @@ describe("shopee import-orders", () => {
     fs.rmSync(dir, { recursive: true });
   });
 
+  it("reads a Proxyman Raw export folder and leaks nothing", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "shopee-raw-"));
+    const put = (n: number, kind: string, ep: string, first: string, rest: string) =>
+      fs.writeFileSync(path.join(dir, `[${n}] ${kind} - shopee.vn_api_v4_order_${ep}.json.txt`), first + "\n" + rest);
+    const secrets = DUMMY_SECRETS.map((x) => `Cookie: ${x}`).join("\n");
+    put(1, "Request", "get_all_order_and_checkout_list", "GET /api/v4/order/get_all_order_and_checkout_list?limit=5&offset=0 HTTP/1.1", secrets);
+    put(1, "Response", "get_all_order_and_checkout_list", "HTTP/1.1 200 OK", `${secrets}\n\n${JSON.stringify(listBody([5]))}`);
+    put(2, "Request", "get_order_detail", "GET /api/v4/order/get_order_detail?_oft=2048&order_id=5 HTTP/1.1", secrets);
+    put(2, "Response", "get_order_detail", "HTTP/1.1 200 OK", `Set-Cookie: ${DUMMY_SECRETS[0]}\n\n${JSON.stringify(detailBody())}`);
+    try {
+      for (const flag of [[], ["--json"], ["--csv"]]) {
+        const { out, err } = await run(["import-orders", dir, ...flag], () => "");
+        expect(out).toContain("Widget, large");
+        for (const s of [...DUMMY_SECRETS, ...FAKE_PRIVATE]) {
+          expect(out).not.toContain(s);
+          expect(err).not.toContain(s);
+        }
+      }
+    } finally {
+      fs.rmSync(dir, { recursive: true });
+    }
+  });
+
   it("supports --json and --csv", async () => {
     expect(JSON.parse((await run(["import-orders", "-", "--json"])).out).orders).toHaveLength(2);
     expect((await run(["import-orders", "-", "--csv"])).out.split("\n")[0]).toContain("order id");
