@@ -6,6 +6,7 @@ export interface Summary {
   skippedEntries: number; // list entries with no order_list_detail
   refundSkipped: number; // refund line items left out
   skippedCancelled: number; // cancelled orders left out
+  skippedByUser: number; // orders left out by --skip / --skip-file
   listOffsets: number[]; // list pages captured
   nextOffsetsNotCaptured: number[];
 }
@@ -101,7 +102,7 @@ export function formatTable(orders: Order[], s: Summary): string {
   const widths = COLUMNS.map(([k, h]) => Math.max(h.length, ...data.map((r) => r[k].length)));
   const line = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ").trimEnd();
   const out = [line(COLUMNS.map(([, h]) => h)), ...data.map((r) => line(COLUMNS.map(([k]) => r[k])))];
-  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${s.missing}, skipped blocks: ${s.skipped}, skipped list entries: ${s.skippedEntries}, skipped refund lines: ${s.refundSkipped}, cancelled orders skipped: ${s.skippedCancelled}`);
+  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${s.missing}, skipped blocks: ${s.skipped}, skipped list entries: ${s.skippedEntries}, skipped refund lines: ${s.refundSkipped}, cancelled orders skipped: ${s.skippedCancelled}, skipped by --skip: ${s.skippedByUser}`);
   out.push(pagesNote(s));
   out.push("amounts are in the order currency (VND), converted from Shopee's x100000 integers");
   return out.join("\n");
@@ -127,6 +128,7 @@ export function formatJson(orders: Order[], s: Summary): string {
         skippedListEntries: s.skippedEntries,
         skippedRefundLines: s.refundSkipped,
         skippedCancelledOrders: s.skippedCancelled,
+        skippedByUser: s.skippedByUser,
         listOffsets: s.listOffsets,
         nextOffsetsNotCaptured: s.nextOffsetsNotCaptured,
       },

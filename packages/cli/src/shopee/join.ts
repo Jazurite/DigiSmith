@@ -6,13 +6,15 @@ import type { Summary } from "./format.ts";
 export interface JoinResult extends Summary {
   orders: Order[];
   errors: string[];
+  unknownSkipIds: string[]; // --skip ids that match no order in the data
 }
 
-export function joinOrders(text: string): JoinResult {
-  return joinBlocks(parsePaste(text));
+export function joinOrders(text: string, skipIds: Iterable<string> = []): JoinResult {
+  return joinBlocks(parsePaste(text), skipIds);
 }
 
-export function joinBlocks(parsed: PasteResult): JoinResult {
+export function joinBlocks(parsed: PasteResult, skipIds: Iterable<string> = []): JoinResult {
+  const skip = new Set(skipIds);
   const errors = [...parsed.errors];
   const ids: string[] = [];
   const details = new Map<string, Order>();
@@ -55,7 +57,9 @@ export function joinBlocks(parsed: PasteResult): JoinResult {
   });
   // Cancelled orders (by the list or the detail) are left out whole.
   const cancelledIds = new Set(all.filter((o) => o.cancelled || fromList.get(o.orderId)?.cancelled).map((o) => o.orderId));
-  const orders = all.filter((o) => !cancelledIds.has(o.orderId));
+  // --skip: an id the automatic rule already dropped counts as cancelled, not as skipped by the user.
+  const userSkipped = new Set(all.filter((o) => skip.has(o.orderId) && !cancelledIds.has(o.orderId)).map((o) => o.orderId));
+  const orders = all.filter((o) => !cancelledIds.has(o.orderId) && !userSkipped.has(o.orderId));
   // The list has no currency and this is Shopee VN: default to VND.
   for (const o of orders) o.currency ??= "VND";
   const sorted = [...offsets].sort((a, b) => a - b);
@@ -66,6 +70,8 @@ export function joinBlocks(parsed: PasteResult): JoinResult {
     skipped: errors.length,
     skippedEntries,
     skippedCancelled: cancelledIds.size,
+    skippedByUser: userSkipped.size,
+    unknownSkipIds: [...skip].filter((id) => !ids.includes(id)),
     refundSkipped: orders.reduce((s, o) => s + o.refundSkipped, 0),
     listOffsets: sorted,
     nextOffsetsNotCaptured: [...nexts].filter((n) => !offsets.has(n)).sort((a, b) => a - b),

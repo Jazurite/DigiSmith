@@ -106,5 +106,19 @@ describe("joinOrders", () => {
   it("defaults currency to VND for list-only rows", () => {
     expect(joinOrders(block(1, LIST_URL(), listBody([4]))).orders[0].currency).toBe("VND");
   });
+
+  it("skips ids given by the user and counts them apart from cancelled", () => {
+    const text = block(1, LIST_URL(), listBody([4, 5, 6], { cancelledIds: [6] }));
+    const r = joinOrders(text, ["5", "6", "99"]);
+    expect(r.orders.map((o) => o.orderId)).toEqual(["4"]);
+    expect(r.skippedByUser).toBe(1);
+    expect(r.skippedCancelled).toBe(1);
+    expect(r.unknownSkipIds).toEqual(["99"]);
+  });
+
+  it("does not count a skipped order as missing detail", () => {
+    const r = joinOrders(block(1, LIST_URL(), listBody([4, 5])), ["5"]);
+    expect(r.missing).toBe(1);
+  });
 });
 

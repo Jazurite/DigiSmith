@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import yargs from "yargs";
-import { createImportOrdersCommand } from "./import-orders.ts";
+import { createImportOrdersCommand, collectSkipIds, parseSkipFile } from "./import-orders.ts";
 import { block, listBody, detailBody, LIST_URL, DETAIL_URL, DUMMY_SECRETS, FAKE_PRIVATE } from "./test-fixtures.ts";
 
 const PASTE = [
@@ -88,6 +88,60 @@ describe("shopee import-orders", () => {
     expect((await run(["import-orders", "-"], () => text)).out).toContain("cancelled orders skipped: 1");
     expect(JSON.parse((await run(["import-orders", "-", "--json"], () => text)).out).summary.skippedCancelledOrders).toBe(1);
     expect(JSON.parse((await run(["import-orders", "-", "--json"], () => text)).out).orders.map((o: { orderId: string }) => o.orderId)).toEqual(["5"]);
+  });
+
+  describe("--skip", () => {
+    const text = block(1, LIST_URL(), listBody([4, 5, 6, 7], { cancelledIds: [7] }));
+    const ids = (out: string) => JSON.parse(out).orders.map((o: { orderId: string }) => o.orderId);
+
+    it("takes a comma list", async () => {
+      const { out } = await run(["import-orders", "-", "--json", "--skip", "4,5"], () => text);
+      expect(ids(out)).toEqual(["6"]);
+      expect(JSON.parse(out).summary).toMatchObject({ skippedByUser: 2, skippedCancelledOrders: 1 });
+    });
+
+    it("takes a repeated flag, keeping long ids as strings", async () => {
+      const { out } = await run(["import-orders", "-", "--json", "--skip", "4", "--skip", "5"], () => text);
+      expect(ids(out)).toEqual(["6"]);
+      const big = block(1, LIST_URL(), listBody(["244619842269716", "244563673265027"]));
+      expect(ids((await run(["import-orders", "-", "--json", "--skip", "244619842269716"], () => big)).out)).toEqual(["244563673265027"]);
+    });
+
+    it("reads --skip-file and ignores comments and blank lines", async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "shopee-skip-"));
+      const file = path.join(dir, "skip.txt");
+      fs.writeFileSync(file, "# cancelled in real life\n4\n\n5 # refunded\n");
+      try {
+        const { out } = await run(["import-orders", "-", "--json", "--skip-file", file], () => text);
+        expect(ids(out)).toEqual(["6"]);
+      } finally {
+        fs.rmSync(dir, { recursive: true });
+      }
+    });
+
+    it("prints a note, not an error, for an unknown id", async () => {
+      const { out, err } = await run(["import-orders", "-", "--skip", "99"], () => text);
+      expect(err).toContain("note: --skip id 99 is not in the data");
+      expect(out).toContain("skipped by --skip: 0");
+      expect(process.exitCode).toBe(0);
+    });
+
+    it("shows the count in the table footer next to the cancelled count and leaves rows out in csv", async () => {
+      const { out } = await run(["import-orders", "-", "--skip", "4"], () => text);
+      expect(out).toContain("cancelled orders skipped: 1, skipped by --skip: 1");
+      const csv = (await run(["import-orders", "-", "--csv", "--skip", "4,5"], () => text)).out;
+      expect(csv.split("\n").slice(1).map((l) => l.split(",")[0])).toEqual(["6"]);
+    });
+
+    it("exits 1 for an unreadable skip file", async () => {
+      await run(["import-orders", "-", "--skip-file", "/nonexistent/skip.txt"], () => text);
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("helpers", () => {
+      expect(collectSkipIds(["1,2", "3"], "# c\n4\n")).toEqual(["1", "2", "3", "4"]);
+      expect(parseSkipFile("a # x\n\n#only\nb")).toEqual(["a", "b"]);
+    });
   });
 
   it("supports --json and --csv", async () => {
