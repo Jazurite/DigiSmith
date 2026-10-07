@@ -1541,6 +1541,12 @@
       <p><code>dg depot</code> can now start and stop a process on macOS and Linux, and the Windows path is unchanged. On the Mac Workbox, <code>dg depot opencode ensure</code> started a real OpenCode server, the listening PID matched the tracking file, and <code>stop</code> left nothing behind. A second bug is fixed too: a spawn <code>ENOENT</code> from <code>taskkill</code> used to look like "already exited", so <code>stopProcess</code> could return <code>stopped: true</code> without killing anything. It now returns an error. Linux and Windows are covered by unit fixtures only. See <a href="board/DGS-181—depot-process-lifecycle-portable/worker-dgs-181/plan.md">plan</a> and <a href="board/DGS-181—depot-process-lifecycle-portable/worker-dgs-181/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-06</div>
+      <h4>Root Paths on the Mac Workbox</h4>
+      <p>Items 1 to 4 now work on macOS and Linux. The herdr hook, the usage-probe settings and the runbook use this machine's home. The dead <code>ssh_key</code> line is gone from <code>config.yml</code>. Two commits are ready on the branch and nothing is pushed. See <a href="board/DGS-184—root-paths-on-the-mac-workbox/worker-dgs-184/plan.md">plan</a> and <a href="board/DGS-184—root-paths-on-the-mac-workbox/worker-dgs-184/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
