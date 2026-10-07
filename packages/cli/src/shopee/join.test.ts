@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { joinOrders } from "./join.ts";
-import { block, listBody, detailBody, LIST_URL, DETAIL_URL } from "./test-fixtures.ts";
+import { item, bundleItem, card, block, listBody, detailBody, LIST_URL, DETAIL_URL } from "./test-fixtures.ts";
 
 describe("joinOrders", () => {
   it("joins details to list ids by order_id", () => {
@@ -51,5 +51,28 @@ describe("joinOrders", () => {
     const r = joinOrders([block(1, LIST_URL(), body), block(9, DETAIL_URL(1), "bad")].join("\n"));
     expect(r.skippedEntries).toBe(1);
     expect(r.errors).toEqual(["block 9: body is not JSON"]);
+  });
+
+  it("collects list pages and the next offset not captured", () => {
+    const r = joinOrders(
+      [
+        block(1, LIST_URL(0), listBody([1], { nextOffset: 5 })),
+        block(2, LIST_URL(5), listBody([2], { nextOffset: 10 })),
+      ].join("\n")
+    );
+    expect(r.listOffsets).toEqual([0, 5]);
+    expect(r.nextOffsetsNotCaptured).toEqual([10]);
+  });
+
+  it("fills lines, bundle and total from the list when the detail is missing, date stays null", () => {
+    const cards = [card([[bundleItem()], [item({ name: "Second group" })]])];
+    const r = joinOrders(block(1, LIST_URL(), listBody([4], { cards })));
+    expect(r.orders[0]).toMatchObject({ captured: false, purchasedAt: null, total: 1 });
+    expect(r.orders[0].lines.map((l) => [l.name, l.unitPrice])).toEqual([["Part A + Part B", 277338], ["Second group", 10000]]);
+  });
+
+  it("sums skipped refund lines", () => {
+    const cards = [card([[item({ name: "Refund x" }), item()]])];
+    expect(joinOrders(block(1, LIST_URL(), listBody([4], { cards }))).refundSkipped).toBe(1);
   });
 });

@@ -39,16 +39,52 @@ export function block(n: number, url: string, body: unknown, status = 200): stri
   ].join("\n");
 }
 
-export function listBody(orderIds: Array<number | string>) {
+export const item = (over: Record<string, unknown> = {}) => ({
+  item_id: 9,
+  model_id: 9,
+  name: "Plain item",
+  model_name: "",
+  amount: 1,
+  item_price: 1000000000,
+  order_price: 1000000000,
+  ext_info: { is_free_return: true, is_refundable_sample: false, free_return_day: 15 },
+  ...over,
+});
+
+// A bundle: placeholder item_id, bundle price on the item, parts with their own prices.
+export const bundleItem = () =>
+  item({
+    item_id: 1,
+    name: "Bundle placeholder",
+    item_price: 27733800000,
+    ext_info: {
+      bundle_order: {
+        bundle_deal_id: 55,
+        price_before_bundle: 28299800000,
+        bundle_deal_items: [
+          { item_id: 21, name: "Part A", item_price: 12999900000, is_refundable_sample: false },
+          { item_id: 22, name: "Part B", item_price: 15299900000, is_refundable_sample: false },
+        ],
+      },
+    },
+  });
+
+export const card = (groups: unknown[][], shop = { shop_id: 111, shop_name: "Fake Shop" }) => ({
+  shop_info: shop,
+  product_info: { item_groups: groups.map((items) => ({ items })) },
+});
+
+export function listBody(orderIds: Array<number | string>, opts: { nextOffset?: number; cards?: unknown[] } = {}) {
   return {
     error: 0,
     error_msg: null,
     new_data: {
+      ...(opts.nextOffset === undefined ? {} : { next_offset: opts.nextOffset }),
       order_or_checkout_data: orderIds.map((id) => ({
         order_list_detail: {
           status: { status_label: { text: "Completed" }, list_view_status_label: { text: "Done" } },
           shipping: { tracking_info: { ctime: 1791400000 } },
-          info_card: { order_id: Number(id), order_list_cards: [], product_count: 1, subtotal: 100000, final_total: 100000 },
+          info_card: { order_id: Number(id), order_list_cards: opts.cards ?? [], product_count: 1, subtotal: 100000, final_total: 100000 },
         },
       })),
     },

@@ -1,5 +1,23 @@
 import type { Order } from "./detail.ts";
 
+export interface Summary {
+  missing: number;
+  skipped: number; // blocks with an error
+  skippedEntries: number; // list entries with no order_list_detail
+  refundSkipped: number; // refund line items left out
+  listOffsets: number[]; // list pages captured
+  nextOffsetsNotCaptured: number[];
+}
+
+const andJoin = (xs: number[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+
+export function pagesNote(s: Summary): string {
+  if (s.listOffsets.length === 0) return "captured list pages: none";
+  const base = `captured list pages: offsets ${andJoin(s.listOffsets)}`;
+  const n = s.nextOffsetsNotCaptured;
+  return n.length ? `${base}; next offset ${andJoin(n)} not captured` : base;
+}
+
 export const MISSING = "purchase date: MISSING (detail not captured)";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -77,17 +95,18 @@ const COLUMNS: Array<[keyof Row, string]> = [
   ["status", "status"],
 ];
 
-export function formatTable(orders: Order[], missing: number, skipped: number, skippedEntries = 0): string {
+export function formatTable(orders: Order[], s: Summary): string {
   const data = rows(orders);
   const widths = COLUMNS.map(([k, h]) => Math.max(h.length, ...data.map((r) => r[k].length)));
   const line = (cells: string[]) => cells.map((c, i) => c.padEnd(widths[i])).join("  ").trimEnd();
   const out = [line(COLUMNS.map(([, h]) => h)), ...data.map((r) => line(COLUMNS.map(([k]) => r[k])))];
-  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${missing}, skipped blocks: ${skipped}, skipped list entries: ${skippedEntries}`);
+  out.push("", `orders: ${orders.length}, rows: ${data.length}, missing detail: ${s.missing}, skipped blocks: ${s.skipped}, skipped list entries: ${s.skippedEntries}, skipped refund lines: ${s.refundSkipped}`);
+  out.push(pagesNote(s));
   out.push("amounts are in the order currency (VND), converted from Shopee's x100000 integers");
   return out.join("\n");
 }
 
-export function formatJson(orders: Order[], missing: number, skipped: number, skippedEntries = 0): string {
+export function formatJson(orders: Order[], s: Summary): string {
   return JSON.stringify(
     {
       orders: orders.map((o) => ({
@@ -100,7 +119,15 @@ export function formatJson(orders: Order[], missing: number, skipped: number, sk
         currency: o.currency,
         status: o.statusLabel,
       })),
-      summary: { orders: orders.length, missingDetail: missing, skippedBlocks: skipped, skippedListEntries: skippedEntries },
+      summary: {
+        orders: orders.length,
+        missingDetail: s.missing,
+        skippedBlocks: s.skipped,
+        skippedListEntries: s.skippedEntries,
+        skippedRefundLines: s.refundSkipped,
+        listOffsets: s.listOffsets,
+        nextOffsetsNotCaptured: s.nextOffsetsNotCaptured,
+      },
     },
     null,
     2

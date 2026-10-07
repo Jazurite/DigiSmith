@@ -26,7 +26,7 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
           "Input is Proxyman 'copy' text (blocks starting with '[n] URL = ...') or a Proxyman Raw export folder. " +
             "Only the URL (request line 1 in a folder) and the response JSON body are read; everything else in a request is ignored. Purchase date is the detail's create_time. " +
             "Shopee sends money x100000; amounts are converted to VND. Shipping and payment data are never printed. " +
-            "Orders with no captured detail show MISSING and are counted."
+            "Orders with no captured detail show MISSING and are counted. A bundle is one row at the bundle price. Refund lines are skipped and counted: a line with a negative price, text containing refund / hoan tien / return, or listed in an order-level refund list."
         ),
     handler: (argv) => {
       const input = argv.input as string;
@@ -52,10 +52,9 @@ export function createImportOrdersCommand(stdinReader: () => string = readStdin)
         }
         for (const e of result.errors) console.error(`shopee import-orders: ${e}`);
         if (result.orders.length === 0) throw new Error("no orders found in the input");
-        const skipped = result.errors.length;
-        if (argv.json) console.log(formatJson(result.orders, result.missing, skipped, result.skippedEntries));
+        if (argv.json) console.log(formatJson(result.orders, result));
         else if (argv.csv) console.log(formatCsv(result.orders));
-        else console.log(formatTable(result.orders, result.missing, skipped, result.skippedEntries));
+        else console.log(formatTable(result.orders, result));
         process.exitCode = 0;
       } catch (err) {
         console.error(`shopee import-orders: ${(err as Error).message}`);
