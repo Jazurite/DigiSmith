@@ -8,6 +8,7 @@ import { ROOT_USAGE, brandOutput } from "./lib/brand-help.ts";
 import vpsCommand from "./vps/index.ts";
 import depotCommand from "./depot/index.ts";
 import clickupCommand from "./clickup/index.ts";
+import shopeeCommand from "./shopee/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -27,6 +28,7 @@ export function buildCli(argv: string[]): Argv {
     .command(vpsCommand)
     .command(depotCommand)
     .command(clickupCommand)
+    .command(shopeeCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
