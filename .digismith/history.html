@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-10-07</span>
+    <span>Last updated: 2026-10-08</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1545,6 +1545,12 @@
       <div class="date">2026-10-06</div>
       <h4>Root Paths on the Mac Workbox</h4>
       <p>Items 1 to 4 now work on macOS and Linux. The herdr hook, the usage-probe settings and the runbook use this machine's home. The dead <code>ssh_key</code> line is gone from <code>config.yml</code>. Two commits are ready on the branch and nothing is pushed. See <a href="board/DGS-184—root-paths-on-the-mac-workbox/worker-dgs-184/plan.md">plan</a> and <a href="board/DGS-184—root-paths-on-the-mac-workbox/worker-dgs-184/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-08</div>
+      <h4>DGS-196: dg shopee import-orders</h4>
+      <p><code>dg shopee import-orders</code> lists Jack's own Shopee VN purchases from a Proxyman Raw export folder, a saved paste, or stdin. It makes no call to Shopee. The purchase date comes from the order detail's <code>create_time</code>, so an order with no captured detail shows <code>MISSING</code> and is counted. On Jack's real export (7 list pages) the command gave 34 orders, and 26 with a purchase date after the skips and <code>--only-dated</code>. See <a href="board/DGS-196—shopee-import-orders/worker-dgs-196/design.html">design</a>, <a href="board/DGS-196—shopee-import-orders/worker-dgs-196/plan.md">plan</a>, and <a href="board/DGS-196—shopee-import-orders/worker-dgs-196/report.html">report</a>.</p>
     </div>
 
   </div>
