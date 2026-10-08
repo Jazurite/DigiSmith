@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DGS-196 Design</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#666;--line:#ddd;--code:#f4f4f4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161616;--fg:#e8e8e8;--mut:#999;--line:#333;--code:#232323}}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:0 auto;padding:1rem}
+code,pre{background:var(--code);border-radius:4px}code{padding:0 .25em}pre{padding:.75rem;overflow-x:auto}
+table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--line);padding:.3rem .5rem;text-align:left;vertical-align:top}
+.m{color:var(--mut)}
+</style></head><body>
+<h1>DGS-196: <code>dg shopee import-orders</code></h1>
+<p class="m">Design for checkpoint 1. 2026-10-07 (UTC+7).</p>
+
+<h2>Goal</h2>
+<p>List Jack's own Shopee VN purchases from Proxyman captures. The module only parses files. It makes no call to Shopee.</p>
+
+<h2>Decisions</h2>
+<table>
+<tr><th>Topic</th><th>Choice</th><th>Why</th></tr>
+<tr><td>Location</td><td><code>packages/cli/src/shopee/</code>, no new package</td><td>One consumer, no HTTP client. The ClickUp client exists because it makes calls. This module does not.</td></tr>
+<tr><td>Layers</td><td>Pure parsers and formatters. A thin yargs command.</td><td>Tests need no disk and no network.</td></tr>
+<tr><td>Input</td><td>Pasted text in Proxyman copy format. <code>pbpaste | dg shopee import-orders -</code> (stdin) or <code>dg shopee import-orders &lt;file&gt;</code>. No capture folder.</td><td>Jack's correction, 2026-10-07.</td></tr>
+<tr><td>Paste reader</td><td>One file, <code>paste.ts</code>. It splits at each <code>[n] URL = </code> line. From a block it keeps the URL line and the response JSON body. The Request section is skipped by position and never copied.</td><td>The Request section holds a live session. The reader never stores, prints or echoes it, not even in an error.</td></tr>
+<tr><td>Purchase date</td><td><code>detail.data.pc_processing_info.create_time</code></td><td>Jack's rule. Never the list time.</td></tr>
+<tr><td>Missing detail</td><td>Row shows <code>MISSING (detail not captured)</code>. The summary prints the count. JSON gets <code>null</code>.</td><td>No silent fallback.</td></tr>
+<tr><td>Money</td><td>Integer / 100000, in VND</td><td>Shopee sends amounts times 100000. Help text says so.</td></tr>
+<tr><td>Privacy</td><td>The detail parser keeps an allow-list of fields. Shipping and payment fields are never copied into the model.</td><td>Not printing is not enough. They never leave the parser.</td></tr>
+</table>
+
+<h2>Data flow</h2>
+<pre>text (stdin or file)
+  -> paste.ts     : split at "[n] URL = " lines; per block keep {n, url, body}; skip the Request section
+  -> list.ts      : parseOrderList(body) -> order ids (all pages, de-duplicated)
+  -> detail.ts    : parseOrderDetail(body) -> Order (allow-listed fields)
+  -> join.ts      : join(blocks) -> rows + missingCount
+  -> format.ts    : table | json | csv</pre>
+
+<h2>Order model</h2>
+<pre>Order { orderId, orderSn, purchasedAt: Date | null, shopId, shopName,
+        lines: [{ name, modelName, quantity, unitPrice }],
+        total, currency, statusLabel }</pre>
+<p>One output row per line item. Order-level fields repeat on each row in CSV. The table prints them once per order.</p>
+
+<h2>Output</h2>
+<ul>
+<li>Table (default): times as <code>2026-10-07 08:56:38 UTC+7 [01:56:38Z]</code>. Footer: orders, rows, missing count.</li>
+<li><code>--json</code>: ISO times (UTC+7 offset and UTC), numbers in VND.</li>
+<li><code>--csv</code>: one row per line item, header row, RFC 4180 quoting.</li>
+<li>Exit 1 with a plain message when the file is missing, stdin is empty, or no order list block is found.</li>
+</ul>
+
+<h2>Error handling</h2>
+<ul>
+<li>A malformed block (no Response section, or a body that is not JSON): skipped. The error names the block number only, for example <code>block 836: no JSON body</code>. Exit code stays 0 if other blocks parsed. The summary counts skipped blocks.</li>
+<li>Two details for one order id: the later block number wins.</li>
+<li>Orders only in a detail, not in any list: ignored. The list is the source of truth for which orders exist.</li>
+</ul>
+
+<h2>Tests (TDD, synthetic only)</h2>
+<p>Invented ids and shop names. Fixtures are built in the test by a small helper that builds Proxyman-copy-shaped text. Each block carries a fake Request section with obvious dummy secrets (<code>DUMMY-COOKIE-DO-NOT-LEAK</code> and similar). Tests prove those strings never reach stdout, stderr, JSON, CSV or an error message. No real order, name, phone or address. A test asserts the output never contains the fixture's shipping name, phone or address.</p>
+
+<h2>What I still need from Jack</h2>
+<ul>
+<li>One real paste is not needed to build, but it fixes two guesses: (1) the exact marker line that starts the Response section, and (2) the list response shape (I guess an ids array under <code>data</code>).</li>
+<li>Both guesses are isolated: the marker in <code>paste.ts</code>, the shape in <code>list.ts</code>. I will not read a real paste myself unless Jack or the maestro puts one in a file I may read. Safer: Jack runs the command once and reports whether it worked.</li>
+</ul>
+</body></html>
