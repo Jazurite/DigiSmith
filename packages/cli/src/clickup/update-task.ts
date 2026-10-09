@@ -25,6 +25,11 @@ export function createUpdateTaskCommand(
           type: "number",
           requiresArg: true,
           describe: "1=urgent, 2=high, 3=normal, 4=low",
+        })
+        .option("parent", {
+          type: "string",
+          requiresArg: true,
+          describe: "parent task id (moves the task into the parent's list); empty value clears it",
         }),
     handler: async (argv) => {
       try {

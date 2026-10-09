@@ -55,6 +55,14 @@ describe("buildTaskWriteBody", () => {
     expect(body).toEqual({ name: "Just a name" });
   });
 
+  it("carries --parent as the parent task id", () => {
+    expect(buildTaskWriteBody({ parent: "abc123" })).toEqual({ parent: "abc123" });
+  });
+
+  it("turns an empty --parent into none, which ClickUp reads as clear the parent", () => {
+    expect(buildTaskWriteBody({ parent: "" })).toEqual({ parent: "none" });
+  });
+
   it("returns an empty body when nothing was provided", () => {
     expect(buildTaskWriteBody({})).toEqual({});
   });

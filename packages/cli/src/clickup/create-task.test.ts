@@ -28,6 +28,20 @@ describe("createCreateTaskCommand", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("passes --parent through to the task body", async () => {
+    const createTask = vi.fn().mockResolvedValue({ id: "abc" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createCreateTaskCommand(() => ({ createTask }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { list: string; name: string; parent?: string }) => Promise<void>)({
+      list: "901",
+      name: "Child",
+      parent: "p1",
+    });
+
+    expect(createTask).toHaveBeenCalledWith("901", { name: "Child", parent: "p1" });
+  });
+
   it("errors and sets exitCode 1 when the client throws", async () => {
     const createTask = vi.fn().mockRejectedValue(new Error("HTTP 400"));
     const fakeClient = { createTask } as unknown as ClickUpClient;

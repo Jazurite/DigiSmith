@@ -22,6 +22,7 @@ export interface TaskFieldArgv {
   startDate?: string;
   dueDate?: string;
   priority?: number;
+  parent?: string;
 }
 
 export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
@@ -49,5 +50,6 @@ export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
     }
     body.priority = argv.priority;
   }
+  if (argv.parent !== undefined) body.parent = argv.parent === "" ? "none" : argv.parent;
   return body;
 }

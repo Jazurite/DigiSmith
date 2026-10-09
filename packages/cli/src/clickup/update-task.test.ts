@@ -24,6 +24,19 @@ describe("createUpdateTaskCommand", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("passes --parent through, and an empty value as none", async () => {
+    const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createUpdateTaskCommand(() => ({ updateTask }) as unknown as ClickUpClient);
+    const handler = command.handler as (argv: { task: string; parent?: string }) => Promise<void>;
+
+    await handler({ task: "abc", parent: "p1" });
+    await handler({ task: "abc", parent: "" });
+
+    expect(updateTask).toHaveBeenNthCalledWith(1, "abc", { parent: "p1" });
+    expect(updateTask).toHaveBeenNthCalledWith(2, "abc", { parent: "none" });
+  });
+
   it("errors and sets exitCode 1 when the client throws", async () => {
     const updateTask = vi.fn().mockRejectedValue(new Error("HTTP 404"));
     const fakeClient = { updateTask } as unknown as ClickUpClient;

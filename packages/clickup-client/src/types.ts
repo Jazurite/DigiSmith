@@ -235,6 +235,8 @@ export interface ClickUpTaskWriteBody {
   custom_item_id?: number;
   status?: string;
   priority?: number;
+  /** Parent task id; "none" makes the task top-level again (null, "" and false are ignored by ClickUp). */
+  parent?: string;
 }
 
 export interface ClickUpListWriteBody {

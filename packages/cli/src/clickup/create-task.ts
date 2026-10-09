@@ -30,6 +30,11 @@ export function createCreateTaskCommand(
           type: "number",
           requiresArg: true,
           describe: "1=urgent, 2=high, 3=normal, 4=low",
+        })
+        .option("parent", {
+          type: "string",
+          requiresArg: true,
+          describe: "parent task id (a subtask must be in the parent's list)",
         }),
     handler: async (argv) => {
       try {
