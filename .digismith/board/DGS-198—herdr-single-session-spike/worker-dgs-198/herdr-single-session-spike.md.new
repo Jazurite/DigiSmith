@@ -62,13 +62,13 @@ Jack (2026-10-09): do this **next on DigiSmith**. Order: (1) the Soveron test, a
 
 ## Decision and result (2026-10-09, worker dgs-198)
 
-Jack: **adopted with changes, by a reboot-based cutover. No carry-over of the old sessions** (DigiSmith, emma, Soveron are not restored). After the reboot only session `default` exists, and a bootstrap script sets up a workspace per project (DigiSmith, Emma, Soveron) and a new maestro in DigiSmith tab 1. Files in `.digismith/board/DGS-198—herdr-single-session-spike/worker-dgs-198/`: `report-1.md`, `herdr-boot.sh.new`, `herdr-bootstrap.sh.new`, `install-and-rollback.md` (install, rollback, reboot plan).
+Jack: **adopted with changes, by a reboot-based cutover. No carry-over of the old sessions** (DigiSmith, emma, Soveron are not restored). After the reboot only session `default` exists, and a bootstrap script sets up a workspace per project (DigiSmith, Emma, Soveron) and a new maestro in tab 1 of each (`maestro`, `emma-maestro`, `soveron-maestro`), all on STANDBY until Jack's first order (the Desktop sessions still drive today). Files in `.digismith/board/DGS-198—herdr-single-session-spike/worker-dgs-198/`: `report-1.md`, `herdr-boot.sh.new`, `herdr-bootstrap.sh.new`, `install-and-rollback.md` (install, rollback, reboot plan).
 
 Measured:
 - A new maestro rebuilt its role from three files in 9 seconds, with honest gaps. Tabs open and close cleanly; a closed tab frees the agent name.
 - Guardrail: plain `herdr` and `env herdr` denied; `herdr-ws` refuses other workspaces.
 - **Restore (no reboot, throwaway session):** after a server stop and start, workspaces, tabs and agents come back; an agent returns as `claude --resume <id>` with its name and history. **The launch flags are lost** (a deny rule given at start was gone). The bootstrap redoes only that: it relaunches the maestro with the flags, same session id.
-- Bootstrap on a fresh server: about 14 s; run again after a restart: about 8 s; creates nothing twice.
+- Bootstrap, three maestros: fresh start with 3 workspaces; a re-run on healthy maestros does nothing; after a server restart it relaunches all three with their flags (26 s). New folders stop at "trust this folder" (cursor starts on No); the three real ones are already trusted.
 
 ## Open changes
 1. **Install** the new boot script and the bootstrap (Jack runs them), then the reboot when no worker is mid-build.

@@ -1,17 +1,23 @@
 #!/bin/bash
 # DGS-198: set the herdr layout up once the server is up. Safe to run again (idempotent).
 #   HERDR_SESSION (default: default)   the session to set up; use another name to test
-# Layout: one workspace per project, tab 1 of DigiSmith = the maestro. Emma and Soveron get a plain shell, no agent.
-# What it redoes after a server restart: nothing is created twice; the maestro is relaunched with its guardrail flags,
-# because herdr restores an agent as plain `claude --resume <id>` and the launch flags are lost.
+#   DG_DIR, EMMA_DIR, EMMA_MAESTRO_DIR, SOV_DIR   project folders (defaults below; override only to test with dummies)
+# Layout: one workspace per project (found by label, created if missing). Tab 1 of each = that project's maestro:
+#   digismith-maestro, emma-maestro, soveron-maestro. Same guardrail flags; each gets its OWN HERDR_WS.
+# STANDBY: the Desktop sessions are still the maestros. The briefs tell each new maestro to read its files,
+# say what it understood, and wait for Jack's first order. Nothing is driven.
+# On a server restart herdr restores an agent as plain `claude --resume <id>` (flags lost): the maestro is
+# relaunched with the same session id and the flags. Nothing is created twice.
 set -u
 S="${HERDR_SESSION:-default}"
 H=("$HOME/.local/bin/herdr" --session "$S")
-REPO="$HOME/Workspace/Jazurite/DigiSmith"
+DG_DIR="${DG_DIR:-$HOME/Workspace/Jazurite/DigiSmith}"
+EMMA_DIR="${EMMA_DIR:-$HOME/Workspace/Emma}"                          # the workspace folder
+EMMA_MAESTRO_DIR="${EMMA_MAESTRO_DIR:-$HOME/Workspace/Emma/shopify-hub}" # where the maestro runs: its note and Claude memory live here
+SOV_DIR="${SOV_DIR:-$HOME/Obsidian/Knowpolis/1. Soveron}"
 WS_BIN="$HOME/.digismith-depot/bin/herdr-ws"
-log(){ echo "bootstrap: $*"; }
+log(){ echo "bootstrap: $*" >&2; }
 
-# 1. wait for the server
 for i in $(seq 1 30); do "${H[@]}" workspace list >/dev/null 2>&1 && break; sleep 1; done
 "${H[@]}" workspace list >/dev/null 2>&1 || { log "server not reachable"; exit 1; }
 
@@ -19,34 +25,56 @@ ws_id(){ "${H[@]}" workspace list | jq -r --arg l "$1" '.result.workspaces[]|sel
 ensure_ws(){ # label cwd -> id
   local id; id=$(ws_id "$1")
   if [ -z "$id" ]; then
-    id=$("${H[@]}" workspace create --cwd "$2" --label "$1" --no-focus | jq -r '.result.workspace.workspace_id'); log "created workspace $1 = $id" >&2
-  else log "workspace $1 exists = $id" >&2; fi
+    id=$("${H[@]}" workspace create --cwd "$2" --label "$1" --no-focus | jq -r '.result.workspace.workspace_id'); log "created workspace $1 = $id"
+  else log "workspace $1 exists = $id"; fi
   echo "$id"
 }
 
-DG=$(ensure_ws DigiSmith "$REPO")
-ensure_ws Emma "$HOME/Workspace/Emma" >/dev/null
-ensure_ws Soveron "$HOME/Obsidian/Knowpolis/1. Soveron" >/dev/null
+COMMON_RULES="You are a NEW instance with no chat history, and you are on STANDBY: the Desktop session for this project is still the maestro today. Do NOT drive anything: no herdr changes, no dispatching workers, no file edits, no git writes. No pushes, merges, or external posts (ClickUp, JIRA, Teams, Grafana). Never read or print a token, key or .env. Touch herdr only through $WS_BIN (groups agent, pane, tab; only your own workspace). Plain herdr is denied to you, but the real binary can still be reached by path: that gap is open and not approved to close, so never use it. Read ONLY the files named below (plus your auto-loaded Claude memory). Then reply in at most 12 lines: who you are, what you understood, what you would NOT touch, which files were missing or unclear. Then wait for Jack's first order."
 
-# 2. a fresh server starts with a plain shell workspace labelled "~": remove it once the others exist
+DG_PROMPT_BODY="Read ONLY: .digismith/sessions/DigiSmith/note.md, .digismith/sessions/DigiSmith/master-check.md, .digismith/sessions/workbox.md."
+EMMA_PROMPT_BODY="Read ONLY: .digismith/sessions/Emma/note.md (your maestro note) and .digismith/sessions/emkt-810/brief.md. No Emma-specific runbook was found: if you need one, say so as a gap. Emma rules: use the SSH Host github-emma (key ~/.ssh/emma, GitHub account hieu-huynh-emma) for emma-sleep repos; Emma folders can arrive without .git; each repo's main checkout is always a clean origin/main and ticket work happens only in .worktrees/; commits are title-only with no AI attribution; Jack reviews every JIRA, Teams and Grafana draft before anything is posted; times in UTC+7 first."
+SOV_PROMPT_BODY="Read ONLY: CLAUDE.md (the vault rules), '0. Grotto/Quick Notes/Session Handoff — 2026-09-30.md', and the markdown files under System/ outside node_modules (the fixture .md files)."
+
+ensure_maestro(){ # agent-name workspace-id pane-cwd role-text body
+  local name=$1 ws=$2 cwd=$3 role=$4 body=$5
+  local pane="$ws:p1" sid status prompt flags
+  flags=(--name "$name" --disallowedTools "Bash(herdr *)" --allowedTools "Bash(herdr-ws *)" "Bash($WS_BIN *)")
+  prompt="You are $name, the $role maestro inside herdr session $S, workspace $ws, tab 1. $COMMON_RULES $body"
+  "${H[@]}" tab rename "$ws:t1" maestro >/dev/null 2>&1
+  sid=$("${H[@]}" agent get "$name" 2>/dev/null | jq -r '.result.agent.agent_session.value // empty')
+  status=$("${H[@]}" agent get "$name" 2>/dev/null | jq -r '.result.agent.agent_status // empty')
+  if [ -z "$status" ]; then
+    # no agent yet: start it and brief it
+    "${H[@]}" pane run "$pane" "cd '$cwd' && export HERDR_WS=$ws" >/dev/null
+    if "${H[@]}" agent start "$name" --kind claude --pane "$pane" --timeout 90000 -- "${flags[@]}" >/dev/null 2>&1; then
+      "${H[@]}" agent prompt "$name" "$prompt" --wait >/dev/null 2>&1 && log "$name started and briefed (standby)"
+    else
+      log "$name BLOCKED at start (probably 'trust this folder'): answer it in pane $pane (down arrow, Enter), then run this script again"
+    fi
+    return
+  fi
+  if [ "$status" = blocked ]; then log "$name is blocked: answer its question in pane $pane, then run this script again"; return; fi
+  if ! "${H[@]}" agent read "$name" --source recent --lines 400 2>/dev/null | grep -q "STANDBY"; then
+    "${H[@]}" agent prompt "$name" "$prompt" --wait >/dev/null 2>&1 && log "$name was up but not briefed: briefed now (standby)"
+    return
+  fi
+  if pgrep -f "claude.*--name $name --disallowedTools" >/dev/null; then log "$name already runs with its flags: nothing to do"; return; fi
+  # restored by herdr as plain `claude --resume <id>`: relaunch with the same session id and the flags
+  log "$name restored as resume ${sid:-?}: relaunching with flags"
+  "${H[@]}" agent prompt "$name" "/exit" >/dev/null 2>&1; sleep 4
+  "${H[@]}" pane run "$pane" "cd '$cwd' && export HERDR_WS=$ws" >/dev/null
+  "${H[@]}" agent start "$name" --kind claude --pane "$pane" --timeout 90000 -- --resume "$sid" "${flags[@]}" >/dev/null 2>&1 && log "$name relaunched with flags" || log "$name relaunch failed: check pane $pane"
+}
+
+DG=$(ensure_ws DigiSmith "$DG_DIR")
+EM=$(ensure_ws Emma "$EMMA_DIR")
+SV=$(ensure_ws Soveron "$SOV_DIR")
+
+# a fresh server may start with a plain shell workspace labelled "~": remove it once the others exist
 OLD=$(ws_id "~"); [ -n "$OLD" ] && "${H[@]}" workspace close "$OLD" >/dev/null 2>&1 && log "closed plain workspace ~"
 
-# 3. tab 1 of DigiSmith = the maestro
-"${H[@]}" tab rename "$DG:t1" maestro >/dev/null 2>&1
-PANE="$DG:p1"
-FLAGS=(--name maestro --disallowedTools "Bash(herdr *)" --allowedTools "Bash(herdr-ws *)" "Bash($WS_BIN *)")
-PROMPT="You are maestro, the DigiSmith maestro inside herdr session $S, workspace $DG, tab 1. You are a NEW instance: no chat history. Read ONLY these three files: .digismith/sessions/DigiSmith/note.md, .digismith/sessions/DigiSmith/master-check.md, .digismith/sessions/workbox.md. Change nothing. Touch herdr only through $WS_BIN (groups agent, pane, tab; only workspace $DG). Never touch another workspace. Then reply in at most 10 lines: who you are, what is live, what you must not touch, what you could not learn from the files alone."
-
-SID=$("${H[@]}" agent get maestro 2>/dev/null | jq -r '.result.agent.agent_session.value // empty')
-if [ -z "$SID" ]; then
-  "${H[@]}" pane run "$PANE" "export HERDR_WS=$DG" >/dev/null
-  "${H[@]}" agent start maestro --kind claude --pane "$PANE" --timeout 90000 -- "${FLAGS[@]}" >/dev/null && log "started new maestro"
-  "${H[@]}" agent prompt maestro "$PROMPT" --wait >/dev/null && log "maestro briefed"
-else
-  # restored as plain `claude --resume`: restart it with the guardrail flags, same session id
-  log "maestro restored as resume $SID: relaunching with flags"
-  "${H[@]}" agent prompt maestro "/exit" >/dev/null 2>&1; sleep 4
-  "${H[@]}" pane run "$PANE" "export HERDR_WS=$DG" >/dev/null
-  "${H[@]}" agent start maestro --kind claude --pane "$PANE" --timeout 90000 -- --resume "$SID" "${FLAGS[@]}" >/dev/null && log "maestro relaunched with flags"
-fi
+ensure_maestro digismith-maestro "$DG" "$DG_DIR"           "DigiSmith" "$DG_PROMPT_BODY"
+ensure_maestro emma-maestro    "$EM" "$EMMA_MAESTRO_DIR" "Emma"      "$EMMA_PROMPT_BODY"
+ensure_maestro soveron-maestro "$SV" "$SOV_DIR"          "Soveron"   "$SOV_PROMPT_BODY"
 log "done"

@@ -1,0 +1,52 @@
+#!/bin/bash
+# DGS-198: set the herdr layout up once the server is up. Safe to run again (idempotent).
+#   HERDR_SESSION (default: default)   the session to set up; use another name to test
+# Layout: one workspace per project, tab 1 of DigiSmith = the maestro. Emma and Soveron get a plain shell, no agent.
+# What it redoes after a server restart: nothing is created twice; the maestro is relaunched with its guardrail flags,
+# because herdr restores an agent as plain `claude --resume <id>` and the launch flags are lost.
+set -u
+S="${HERDR_SESSION:-default}"
+H=("$HOME/.local/bin/herdr" --session "$S")
+REPO="$HOME/Workspace/Jazurite/DigiSmith"
+WS_BIN="$HOME/.digismith-depot/bin/herdr-ws"
+log(){ echo "bootstrap: $*"; }
+
+# 1. wait for the server
+for i in $(seq 1 30); do "${H[@]}" workspace list >/dev/null 2>&1 && break; sleep 1; done
+"${H[@]}" workspace list >/dev/null 2>&1 || { log "server not reachable"; exit 1; }
+
+ws_id(){ "${H[@]}" workspace list | jq -r --arg l "$1" '.result.workspaces[]|select(.label==$l)|.workspace_id' | head -1; }
+ensure_ws(){ # label cwd -> id
+  local id; id=$(ws_id "$1")
+  if [ -z "$id" ]; then
+    id=$("${H[@]}" workspace create --cwd "$2" --label "$1" --no-focus | jq -r '.result.workspace.workspace_id'); log "created workspace $1 = $id" >&2
+  else log "workspace $1 exists = $id" >&2; fi
+  echo "$id"
+}
+
+DG=$(ensure_ws DigiSmith "$REPO")
+ensure_ws Emma "$HOME/Workspace/Emma" >/dev/null
+ensure_ws Soveron "$HOME/Obsidian/Knowpolis/1. Soveron" >/dev/null
+
+# 2. a fresh server starts with a plain shell workspace labelled "~": remove it once the others exist
+OLD=$(ws_id "~"); [ -n "$OLD" ] && "${H[@]}" workspace close "$OLD" >/dev/null 2>&1 && log "closed plain workspace ~"
+
+# 3. tab 1 of DigiSmith = the maestro
+"${H[@]}" tab rename "$DG:t1" maestro >/dev/null 2>&1
+PANE="$DG:p1"
+FLAGS=(--name maestro --disallowedTools "Bash(herdr *)" --allowedTools "Bash(herdr-ws *)" "Bash($WS_BIN *)")
+PROMPT="You are maestro, the DigiSmith maestro inside herdr session $S, workspace $DG, tab 1. You are a NEW instance: no chat history. Read ONLY these three files: .digismith/sessions/DigiSmith/note.md, .digismith/sessions/DigiSmith/master-check.md, .digismith/sessions/workbox.md. Change nothing. Touch herdr only through $WS_BIN (groups agent, pane, tab; only workspace $DG). Never touch another workspace. Then reply in at most 10 lines: who you are, what is live, what you must not touch, what you could not learn from the files alone."
+
+SID=$("${H[@]}" agent get maestro 2>/dev/null | jq -r '.result.agent.agent_session.value // empty')
+if [ -z "$SID" ]; then
+  "${H[@]}" pane run "$PANE" "export HERDR_WS=$DG" >/dev/null
+  "${H[@]}" agent start maestro --kind claude --pane "$PANE" --timeout 90000 -- "${FLAGS[@]}" >/dev/null && log "started new maestro"
+  "${H[@]}" agent prompt maestro "$PROMPT" --wait >/dev/null && log "maestro briefed"
+else
+  # restored as plain `claude --resume`: restart it with the guardrail flags, same session id
+  log "maestro restored as resume $SID: relaunching with flags"
+  "${H[@]}" agent prompt maestro "/exit" >/dev/null 2>&1; sleep 4
+  "${H[@]}" pane run "$PANE" "export HERDR_WS=$DG" >/dev/null
+  "${H[@]}" agent start maestro --kind claude --pane "$PANE" --timeout 90000 -- --resume "$SID" "${FLAGS[@]}" >/dev/null && log "maestro relaunched with flags"
+fi
+log "done"
