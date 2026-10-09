@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>DGS-197 design</title>
+<body style="font-family:system-ui;max-width:42rem;margin:2rem auto;padding:0 1rem">
+<h1>DGS-197: <code>--parent</code> for dg clickup</h1>
+<h2>Test result</h2>
+<ul>
+<li>Create a subtask in another list than its parent: <b>400</b> "Parent not child of list".</li>
+<li>Create a subtask in the parent's list: <b>200</b>.</li>
+<li>Update a task in another list with <code>parent</code>: <b>200</b>, and ClickUp <b>moves the task into the parent's list</b>.</li>
+</ul>
+<h2>Design</h2>
+<ul>
+<li><code>ClickUpTaskWriteBody.parent?: string | null</code>.</li>
+<li><code>buildTaskWriteBody</code>: <code>--parent X</code> sends <code>parent: "X"</code>; <code>--parent ""</code> sends <code>parent: null</code>.</li>
+<li><code>create-task</code> and <code>update-task</code> get the option. No other change.</li>
+<li>Regroup consequence: <code>update-task --parent</code> alone is enough; no separate <code>move-task</code> needed. The move may remap statuses.</li>
+</ul>
+</body>

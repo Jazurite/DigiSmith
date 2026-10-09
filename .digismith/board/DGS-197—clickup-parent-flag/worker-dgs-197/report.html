@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>DGS-197 report</title>
+<body style="font-family:system-ui;max-width:42rem;margin:2rem auto;padding:0 1rem">
+<h1>DGS-197: --parent for dg clickup</h1>
+<p>Shipped 2026-10-09. <code>create-task</code> and <code>update-task</code> take <code>--parent &lt;task id&gt;</code>. An empty value clears the parent.</p>
+<h2>Findings from the live API</h2>
+<ul>
+<li>A subtask cannot be created in a different list than its parent (400, ITEM_137).</li>
+<li><code>update-task --parent</code> works across lists and moves the task into the parent's list.</li>
+<li>ClickUp ignores <code>null</code>, <code>""</code> and <code>false</code> for <code>parent</code>. Only <code>"none"</code> clears it, so an empty <code>--parent</code> sends <code>"none"</code>.</li>
+</ul>
+<h2>Checks</h2>
+<p>Acceptance on a throwaway task: set, read back, clear, create with parent. All passed. Throwaways archived, none deleted. Tests: 942 passed; only <code>index.e2e</code> fails, as on main.</p>
+<h2>Not tested</h2>
+<p>Whether moving a task into the parent's list remaps its status.</p>
+</body>
