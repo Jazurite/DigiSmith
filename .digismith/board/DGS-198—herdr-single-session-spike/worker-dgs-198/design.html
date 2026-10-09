@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-198 layout design</title>
+<style>body{font:15px/1.5 system-ui;max-width:760px;margin:2rem auto;padding:0 16px}pre{background:#f3f3f3;padding:12px;overflow:auto}td,th{border:1px solid #bbb;padding:4px 8px}table{border-collapse:collapse}@media(prefers-color-scheme:dark){body{background:#161616;color:#ddd}pre{background:#222}td,th{border-color:#555}}</style></head><body>
+<h1>DGS-198: one session, a workspace per project, a tab per ticket</h1>
+<h2>Target layout (session <code>default</code>)</h2>
+<pre>
+default (one server)
+└─ workspace "DigiSmith"
+   ├─ tab 1  maestro        agent maestro-next   (new Claude, dev0)
+   ├─ tab 2  &lt;ticket&gt;       agent dgs-&lt;n&gt;       (closes when the ticket ends)
+   └─ tab 3  &lt;ticket&gt;       ...
+Next to it, untouched: session DigiSmith (wM maestro, wP, wS dgs-197, wT me), emma, Soveron
+</pre>
+<h2>Order of work</h2>
+<ol><li>Start the <code>default</code> server (ask).</li><li>Create workspace and tab 1, start <code>maestro-next</code>.</li><li>Hand over context by files only; check it.</li><li>Open a test tab, run measures 1 to 5.</li><li>Report at checkpoint 2.</li></ol>
+<h2>Guardrail</h2>
+<table><tr><th>Layer</th><th>What</th><th>Strength</th></tr>
+<tr><td>Brief</td><td>own workspace ids only</td><td>weak</td></tr>
+<tr><td>Launch flags</td><td>deny <code>herdr *</code>, allow <code>herdr-ws *</code></td><td>medium (prefix rules can be bypassed)</td></tr>
+<tr><td>Wrapper <code>herdr-ws</code></td><td>forces <code>--session default</code>, refuses targets outside <code>$HERDR_WS</code>, resolves agent names to workspaces</td><td>strong against mistakes; not against a deliberate bypass</td></tr></table>
+<h2>Reboot path</h2>
+<p><code>herdr-boot.sh</code>: change <code>--session DigiSmith</code> to <code>--session default</code>, plus a start-agents step. Describe only; Jack owns the file.</p>
+<h2>Will not touch</h2>
+<p>Live workers, sessions emma and Soveron, stale workspace wK, boot script, plist, permissions, tokens, ClickUp, git push.</p>
+<h2>Test ticket</h2>
+<p>Pick A: a throwaway read-only Scout job. B: a real small ticket Jack names. C: DGS-197 restart (Jack only).</p>
+</body></html>

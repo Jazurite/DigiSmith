@@ -1,0 +1,8 @@
+#!/bin/bash
+# DGS-198 proposal (replaces the first draft). Replaces ~/.local/bin/herdr-boot.sh.
+# Starts ONLY the shared session "default". The old sessions DigiSmith, emma, Soveron are not started.
+# After it is up, run herdr-bootstrap.sh once (it sets the layout up).
+export HOME=/Users/workbox
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+[ -x "$HOME/.local/bin/claude-account" ] && eval "$("$HOME/.local/bin/claude-account" env 2>/dev/null)"
+exec "$HOME/.local/bin/herdr" --session default server
