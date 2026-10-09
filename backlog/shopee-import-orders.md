@@ -1,4 +1,6 @@
-**Status:** Applied on branch `dgs-196-shopee-import-orders`, awaiting push (2026-10-08). Ordered 2026-10-07 ~21:3x UTC+7 [14:3xZ] by the Master (Jack chose "option 1"). ClickUp: DGS-196 (`14zcebrv55w`, list C.2: CLI).
+# `dg shopee import-orders`: list Shopee VN purchases from a Proxyman export folder or pasted text
+
+**Status:** Applied and pushed (2026-10-09, `70b4395`, plugin 0.86.0-beta). Ordered 2026-10-07 ~21:3x UTC+7 [14:3xZ] by the Master (Jack chose "option 1"). ClickUp: **DGS-196** (C.2: CLI, task id `14zcebrv55w`).
 
 **Source:** Jack wants a list of his own Shopee VN purchases (buyer side, shopee.vn) inside `dg`. He records the Shopee web app's own calls with Proxyman. The module reads those recordings. It makes no live call to Shopee.
 
