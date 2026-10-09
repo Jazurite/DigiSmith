@@ -81,7 +81,7 @@ Measured:
 **Follow-ups (optional, nothing here blocks the ticket: DGS-198 is done)**
 1. **Optional extra safety:** close the loophole where a maestro could call the real `herdr` program by its full path and reach another workspace (a settings deny rule or a sandbox). The layout works without it; the launch flags plus the `herdr-ws` wrapper already keep a maestro to its own workspace in normal use.
 2. **Standby to active needs no switch.** A maestro is active when Jack gives it its first order in its own tab (for Soveron: the Soveron workspace, tab 1). Until then it only reads its files and waits.
-3. New agents start in auto mode: decide if that is wanted.
+3. **Decided (Jack, 2026-10-09): new agents keep running in auto mode**, for workers and maestros alike. The auto-mode classifier stays the safety net.
 4. Update `.digismith/sessions/workbox.md` and the maestro memory notes that still assume one session per project and say herdr does not restart agents.
 5. `herdr-ws` is fixed to session `default`.
 6. The bootstrap assumes tab 1 of each workspace is a free shell: after a reboot a restored test agent in that pane blocked the first run (found live). It should skip or report a pane that already holds an agent.
