@@ -69,6 +69,22 @@ describe("FrontdoorClient", () => {
     expect(request).toHaveBeenCalledWith({ method: "PUT", url: "/tasks/v1/123/customItem/1030", data: body });
   });
 
+  it("getField GETs the field by id", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "Bucket" } });
+    const field = await client.getField("f1");
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/customFields/v2/field/f1", data: undefined });
+    expect(field.name).toBe("Bucket");
+  });
+
+  it("updateField PUTs the full body to the field id", async () => {
+    const client = makeClient();
+    const body = { id: "f1", name: "N" } as never;
+    request.mockResolvedValueOnce({ data: { id: "f1" } });
+    await client.updateField("f1", body);
+    expect(request).toHaveBeenCalledWith({ method: "PUT", url: "/customFields/v2/field/f1", data: body });
+  });
+
   it("mergeTaskType PUTs destination_custom_item_id to the merge path", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: "" });

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import type { ClickUpTaskType, FrontdoorTaskTypeBody } from "./types.ts";
+import type { ClickUpTaskType, FrontdoorField, FrontdoorFieldPutBody, FrontdoorTaskTypeBody } from "./types.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 export const DEFAULT_FRONTDOOR_HOST = "frontdoor-prod-ap-southeast-2-2.clickup.com";
@@ -73,5 +73,13 @@ export class FrontdoorClient {
     await this.request("PUT", `/task-v3/core/${this.teamId}/customItems/${id}/merge`, {
       destination_custom_item_id: destinationId,
     });
+  }
+
+  getField(id: string): Promise<FrontdoorField> {
+    return this.request<FrontdoorField>("GET", `/customFields/v2/field/${id}`);
+  }
+
+  updateField(id: string, body: FrontdoorFieldPutBody): Promise<FrontdoorField> {
+    return this.request<FrontdoorField>("PUT", `/customFields/v2/field/${id}`, body);
   }
 }

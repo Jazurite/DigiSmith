@@ -281,53 +281,61 @@ export interface ClickUpAttachment {
   url: string;
 }
 
-export interface FrontdoorOptionAdd {
+export interface FrontdoorFieldOption {
+  id: string;
   name: string;
   color: string;
   orderindex: number;
 }
 
+/** A field as GET /customFields/v2/field/{id} returns it (only what the CLI relies on). */
+export interface FrontdoorField {
+  id: string;
+  name: string;
+  type: string;
+  type_config: {
+    sorting?: string;
+    new_drop_down?: boolean;
+    options?: FrontdoorFieldOption[];
+  };
+  description: string | null;
+  hide_from_guests: boolean;
+  pinned: boolean;
+  required: boolean;
+  required_on_subtasks: boolean;
+  private: boolean;
+  permission_level: string | null;
+  default_value: unknown;
+  members: unknown[];
+  groups: unknown[];
+}
+
 /**
- * The full body ClickUp's own web app sends to its undocumented
- * PUT /customFields/v2/field/{id} endpoint. The public API never returns
- * enough to reconstruct this.
+ * Body of the web app's PUT /customFields/v2/field/{id} (captured 2026-10-10): the full
+ * field, not a patch. Options are sent as add / update / rem, never as a plain list.
  */
 export interface FrontdoorFieldPutBody {
   id: string;
   name: string;
-  type: 'drop_down';
   type_config: {
-    default: number;
     sorting: string;
-    placeholder: string | null;
     new_drop_down: boolean;
     options: {
-      add: FrontdoorOptionAdd[];
-      update: [];
-      rem: [];
+      add: { name: string; color: string; orderindex: number }[];
+      update: FrontdoorFieldOption[];
+      rem: string[];
     };
   };
-  userid: string;
-  date_created: string;
   hide_from_guests: boolean;
-  team_id: string;
-  deleted: false;
-  date_deleted: null;
+  pinned: boolean;
   required: boolean;
-  required_on_subtasks: false;
-  private: false;
-  pinned: true;
-  default_value: null;
-  teams: { id: string; name: string; entity: 'team'; applied_objects: null }[];
-  values_set: null;
-  description: '';
-  deleted_by: null;
-  linked_subcategory: null;
-  permission_level: null;
-  type_id: 1;
-  automation_count: 0;
-  members: [];
-  groups: [];
+  required_on_subtasks: boolean;
+  description: string;
+  private: boolean;
+  permission_level: string | null;
+  default_value: unknown;
+  members: unknown[];
+  groups: unknown[];
 }
 
 /** Body of the Frontdoor task type calls: the full type, not a patch. */
