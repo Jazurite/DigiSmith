@@ -32,6 +32,15 @@ its own project and session on that server. Jack attaches once and sees every ma
 6. **Access.** One password unlocks every maestro: fine for Jack alone; separate access for others is a later question.
 7. **Bootstrap and runbook.** `herdr-bootstrap.sh` no longer starts maestro servers; herdr keeps the workers. Update `workbox.md`.
 
+## Design as Jack clarified it (2026-10-10 ~14:0x UTC+7)
+
+The maestro **runs in OpenCode** on the shared server (a cheap model is enough to orchestrate). When work needs real power, the OpenCode
+maestro **spins up a Claude Code agent** (in herdr, through `herdr-ws agent start --kind claude`) on a Claude seat, `jack` for now, running
+**Opus**. The subscription is used only inside Claude Code, which is allowed; OpenCode itself never needs a Claude login. So "Opus from
+Claude" means Claude Code agents started by the OpenCode maestro, not an Opus model inside OpenCode. DGS-224 (switching model sources) is
+no longer a blocker for this. What it needs: the maestro may write briefs and start Claude Code agents (DGS-169 gap 3: the edit rule is
+too narrow and dispatch is untested), the seat and model chosen at start (`claude-account use jack`, `--model opus`), and the result read back.
+
 ## Discussion record (Jack and the Master, 2026-10-10, 10:00 to 13:1x UTC+7)
 
 ### Decisions in order
