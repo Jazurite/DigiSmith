@@ -1656,6 +1656,18 @@
       <p>Added <code>dg clickup move-folder</code> on the public ClickUp API: <code>PUT /folder/{id}/position</code> with <code>CLICKUP_API_TOKEN</code>. The branch was first built on Frontdoor; the call was swapped and the Frontdoor method removed. Built and committed on branch dgs-266; first use waits for Jack's yes. See <a href="board/DGS-266—move-folder/worker-dgs-266/plan.md">plan</a> and <a href="board/DGS-266—move-folder/worker-dgs-266/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>Shared OpenCode server safety layer</h4>
+      <p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents. See <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>DGS-334 OpenCode 2.x on the shared server</h4>
+      <p>OpenCode 2.0.26 now runs the live shared server (port 4198) with the maestro config, a v2 safety plugin and a v2 key plugin, started by one boot script, <code>opencode-boot</code>. Luna and sonnet answer through it. The key is not readable through any API route or file. Jack switched the live server himself (the agent session cannot start stable 2.0.26: it hangs there; see Findings). See <a href="board/DGS-223—shared-opencode-server/worker-dgs-334/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-334/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
