@@ -119,12 +119,14 @@ export function createRelationCommand(
         }
         const client = clientFactory();
         const [a, b] = [await client.getTaskByRef(req.task), await client.getTaskByRef(req.other)];
+        if (a.id === b.id) throw new Error(`a task cannot be related to itself: ${req.task} and ${req.other} are the same task (${a.id})`);
         const resolved: RelationRequest = { ...req, task: a.id, other: b.id };
         const present = hasRelation(spec, a, resolved);
         const text = sentence(spec, label(a), label(b), req.side);
         const call = describeCall(spec, resolved);
         if (!argv.yes) {
           printCall(call.method, call.path, call.body);
+          console.log("read 2 tasks (read-only calls) to resolve and check; no write made");
           console.log(`${text}; currently ${present ? "set" : "not set"}`);
           console.log("nothing sent; add --yes to send");
         } else if (spec.action === "add" && present) {
