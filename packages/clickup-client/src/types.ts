@@ -345,6 +345,12 @@ export interface FrontdoorFieldPutBody {
   groups: unknown[];
 }
 
+/** Where move-list puts a List: a Folder and a place in it. */
+export interface MoveListTarget {
+  folderId: string;
+  position: number;
+}
+
 /** Body of the Frontdoor task type calls: the full type, not a patch. */
 export interface FrontdoorTaskTypeBody {
   avatar_source: string;

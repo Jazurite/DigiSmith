@@ -96,6 +96,17 @@ describe("FrontdoorClient", () => {
     });
   });
 
+  it("moveList PUTs the subcategory position path with the captured query and body", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.moveList("1301150000002956", { folderId: "1301150000002921", position: 1 });
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/hierarchy/v2/subcategory/1301150000002956/position?v2=true&conflict_modal=true&return_conflict_on_cancel=true",
+      data: { position: 1, include_archived: false, category: "1301150000002921" },
+    });
+  });
+
   it.each([401, 403])("turns HTTP %i into one clear session error", async (status) => {
     const client = makeClient();
     request.mockRejectedValueOnce({ isAxiosError: true, response: { status }, message: "x" });
