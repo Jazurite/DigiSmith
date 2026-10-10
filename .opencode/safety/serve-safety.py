@@ -10,14 +10,14 @@ if port == "4198": sys.exit("never the live port")
 pw = work / "pass"
 if not pw.exists():
     fd = os.open(pw, os.O_WRONLY | os.O_CREAT, 0o600); os.write(fd, secrets.token_hex(16).encode()); os.close(fd)
-cfg = json.load(open(root / "opencode.json")); m = cfg["agent"]["maestro"]
+CFG = root / ".opencode/maestro/opencode.json"; cfg = json.load(open(CFG)); m = cfg["agent"]["maestro"]
 extra = {"plugin": ["file://" + str(root / ".opencode/safety/maestro-safety.js")],
          "agent": {"probe": {"mode": "primary", "model": m["model"], "permission": m["permission"], "description": "permission test only"},
                    "probe-open": {"mode": "primary", "model": m["model"], "description": "plugin test: config allows everything, only the plugin guards",
                                   "permission": {"bash": "allow", "read": "allow", "edit": "allow", "list": "allow", "grep": "allow", "glob": "allow", "webfetch": "allow", "external_directory": "allow", "task": "allow"}},
                    "probe-open-sonnet": {"mode": "primary", "model": "tokenreply/claude-sonnet-5-5", "description": "plugin test with a stronger model",
                                          "permission": {"bash": "allow", "read": "allow", "edit": "allow", "list": "allow", "grep": "allow", "glob": "allow", "webfetch": "allow", "external_directory": "allow", "task": "allow"}}}}
-env = dict(os.environ, OPENCODE_CONFIG_CONTENT=json.dumps(extra), OPENCODE_SAFETY="1", OPENCODE_SERVER_PASSWORD=pw.read_text(),
+env = dict(os.environ, OPENCODE_CONFIG=str(CFG), OPENCODE_CONFIG_CONTENT=json.dumps(extra), OPENCODE_SAFETY="1", OPENCODE_SERVER_PASSWORD=pw.read_text(),
            SAFETY_LOG=str(work / "verdicts.jsonl"), SAFETY_ALLOWED_WS="w2")
 if len(sys.argv) > 3: env["SAFETY_REVIEWER_URL"] = sys.argv[3]
 os.chdir(root)

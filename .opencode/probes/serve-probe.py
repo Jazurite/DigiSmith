@@ -3,9 +3,9 @@
 Reason: the maestro prompt makes the model refuse secret calls before the permission engine is tested. Usage: serve-probe.py <port>"""
 import json, os, pathlib, sys
 root = pathlib.Path(__file__).resolve().parents[2]
-cfg = json.load(open(root / "opencode.json"))
+cfg = json.load(open(root / ".opencode/maestro/opencode.json"))
 m = cfg["agent"]["maestro"]
 extra = {"agent": {"probe": {"mode": "primary", "model": m["model"], "permission": m["permission"], "description": "permission test only"}}}
-env = dict(os.environ, OPENCODE_CONFIG_CONTENT=json.dumps(extra))
+env = dict(os.environ, OPENCODE_CONFIG=str(root / ".opencode/maestro/opencode.json"), OPENCODE_CONFIG_CONTENT=json.dumps(extra))
 os.chdir(root)
 os.execvpe("opencode", ["opencode", "serve", "--hostname", "127.0.0.1", "--port", sys.argv[1]], env)

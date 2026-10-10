@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 -I
 """Starts the shared OpenCode server detached (own session, parent launchd, no herdr), ALWAYS with OPENCODE_SAFETY=1, then checks that the
 safety plugin logged a new `loaded` line within 40 s; if not, it stops the server and exits 1 (fail closed).
+The maestro config is NOT in the repo root (it would lock down every OpenCode session): it is loaded here with OPENCODE_CONFIG.
 Usage: start-shared-server.py <project-dir> [port=4198]. The password comes from the password file and is never printed.
 Stop the old server first, by PID."""
 import base64, json, os, pathlib, subprocess, sys, time, urllib.request
@@ -9,7 +10,8 @@ oc = pathlib.Path.home() / ".digismith-depot/opencode"; log = oc / "verdicts.jso
 pw = (oc / "server-password").read_text().strip()
 def loaded(): return log.read_text().count('"event":"loaded"') if log.exists() else 0
 before = loaded()
-env = dict(os.environ, OPENCODE_SAFETY="1", SAFETY_ALLOWED_WS=os.environ.get("SAFETY_ALLOWED_WS", "w2"), OPENCODE_SERVER_PASSWORD=pw)
+CFG = pathlib.Path(__file__).resolve().parents[1] / "maestro/opencode.json"  # .opencode/maestro/opencode.json
+env = dict(os.environ, OPENCODE_CONFIG=str(CFG), OPENCODE_SAFETY="1", SAFETY_ALLOWED_WS=os.environ.get("SAFETY_ALLOWED_WS", "w2"), OPENCODE_SERVER_PASSWORD=pw)
 out = open(oc / "server.log", "ab"); os.chmod(oc / "server.log", 0o600)
 p = subprocess.Popen(["opencode", "serve", "--hostname", "127.0.0.1", "--port", port], cwd=proj, env=env, stdin=subprocess.DEVNULL, stdout=out, stderr=out, start_new_session=True)
 (oc / "server.pid").write_text(str(p.pid)); os.chmod(oc / "server.pid", 0o600)
