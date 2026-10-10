@@ -43,4 +43,12 @@ describe("depot registry", () => {
     const out = reg.read("DGS-1");
     expect(out.map((e) => e.kind)).toEqual(["session", "step_start"]);
   });
+  it("keeps the next entry when the file ends in a torn line without a newline", () => {
+    const dir = mkdtempSync(join(tmpdir(), "reg-"));
+    const reg = createDepotRegistry(dir);
+    reg.append({ kind: "session", ticket: "DGS-1", session_id: "s1", source: "claude-code", role: "worker", ts: "2026-10-10T01:00:00Z" });
+    appendFileSync(join(dir, "DGS-1.jsonl"), '{"kind":"step_sta');
+    reg.append({ kind: "step_start", ticket: "DGS-1", step: "finishing", session_id: "s1", ts: "2026-10-10T02:00:00Z" });
+    expect(reg.read("DGS-1").map((e) => e.kind)).toEqual(["session", "step_start"]);
+  });
 });

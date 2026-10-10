@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, fstatSync, mkdirSync, openSync, readFileSync, readSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { STEPS, type Registry, type RegistryEntry } from "./types.ts";
@@ -21,6 +21,21 @@ function isEntry(v: unknown): v is RegistryEntry {
   return false;
 }
 
+// True when the file is non-empty and its last byte is not a newline (a torn tail).
+function endsTorn(file: string): boolean {
+  if (!existsSync(file)) return false;
+  const fd = openSync(file, "r");
+  try {
+    const size = fstatSync(fd).size;
+    if (size === 0) return false;
+    const last = Buffer.alloc(1);
+    readSync(fd, last, 0, 1, size - 1);
+    return last[0] !== 0x0a;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 function assertTicket(ticket: string): void {
   if (!TICKET_PATTERN.test(ticket)) throw new Error(`invalid ticket key: ${ticket}`);
 }
@@ -32,7 +47,8 @@ export function createDepotRegistry(dir: string = depotRegistryDir()): Registry 
     append(entry: RegistryEntry): void {
       assertTicket(entry.ticket);
       mkdirSync(dir, { recursive: true });
-      appendFileSync(join(dir, `${entry.ticket}.jsonl`), `${JSON.stringify(entry)}\n`);
+      const file = join(dir, `${entry.ticket}.jsonl`);
+      appendFileSync(file, `${endsTorn(file) ? "\n" : ""}${JSON.stringify(entry)}\n`);
     },
     read(ticket: string): RegistryEntry[] {
       assertTicket(ticket);
