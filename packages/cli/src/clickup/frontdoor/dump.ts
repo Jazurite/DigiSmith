@@ -1,12 +1,12 @@
 import type { CommandModule } from "yargs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { maskJwts, newestCapture, readCalls } from "./captures.ts";
+import { maskBody, maskRequestLine, newestCapture, readCalls } from "./captures.ts";
 
 export const CAPTURES_ROOT = join(homedir(), "Downloads", "Proxyman Captures", "ClickUp");
 
 function pretty(body: string): string {
-  const masked = maskJwts(body);
+  const masked = maskBody(body);
   try {
     return JSON.stringify(JSON.parse(masked), null, 2);
   } catch {
@@ -37,7 +37,7 @@ export function createDumpCommand(capturesRoot: string = CAPTURES_ROOT): Command
         for (const call of readCalls(folder)) {
           if (!call.isFrontdoor) continue;
           if (match && !match.test(call.requestLine)) continue;
-          console.log(`===== [${call.n}] ${maskJwts(call.requestLine)}`);
+          console.log(`===== [${call.n}] ${maskRequestLine(call.requestLine)}`);
           if (call.requestBody.trim()) console.log(pretty(call.requestBody));
           if (call.responseStatus !== undefined) {
             console.log(`----- [${call.n}] ${call.responseStatus}`);

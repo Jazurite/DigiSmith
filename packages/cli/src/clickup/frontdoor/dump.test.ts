@@ -12,7 +12,7 @@ function capture(): string {
   dirs.push(d);
   writeFileSync(
     join(d, "[3] Request - frontdoor-prod-x.txt"),
-    `POST /tasks/v1/1/customItem HTTP/1.1\r\nHost: frontdoor-prod-x.clickup.com\r\nAuthorization: Bearer ${JWT}\r\nCookie: secretcookie=1\r\n\r\n{"name":"Epic","token":"${JWT}"}`,
+    `POST /tasks/v1/1/customItem HTTP/1.1\r\nHost: frontdoor-prod-x.clickup.com\r\nAuthorization: Bearer ${JWT}\r\nCookie: secretcookie=1\r\n\r\n{"name":"Epic","note":"${JWT}"}`,
   );
   writeFileSync(
     join(d, "[3] Response - frontdoor-prod-x.txt"),
@@ -64,5 +64,27 @@ describe("frontdoor dump", () => {
     await (createDumpCommand().handler as (a: object) => Promise<void>)({ capture: "/nonexistent/Raw_x" });
     expect(err).toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
+  });
+
+  it("masks credential query parameters and credential-named body fields that are not JWTs", async () => {
+    const d = mkdtempSync(join(tmpdir(), "dg-dump-"));
+    dirs.push(d);
+    writeFileSync(
+      join(d, "[1] Request - frontdoor-prod-x.txt"),
+      'POST /p?token=opaqueq&x=1&session_id=opaqueq2 HTTP/1.1\r\nHost: frontdoor-prod-x.clickup.com\r\n\r\n' +
+        '{"cookie":"opaquec","nested":{"Authorization":"opaquea","password":"opaquep","keep":"visible"},' +
+        '"list":[{"api_secret":"opaques"}],"blob":"' + "A1b2".repeat(15) + '"}',
+    );
+    writeFileSync(
+      join(d, "[1] Response - frontdoor-prod-x.txt"),
+      'HTTP/1.1 200 OK\r\n\r\n{"sessionToken":"opaquer","ok":true}',
+    );
+    const text = await run({ capture: d });
+    for (const secret of ["opaqueq", "opaquec", "opaquea", "opaquep", "opaques", "opaquer", "A1b2A1b2"]) {
+      expect(text).not.toContain(secret);
+    }
+    expect(text).toContain("x=1");
+    expect(text).toContain('"keep": "visible"');
+    expect(text).toContain('"ok": true');
   });
 });

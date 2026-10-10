@@ -77,6 +77,39 @@ export function maskJwts(text: string): string {
   return text.replace(JWT, "<JWT-REDACTED>");
 }
 
+const REDACTED = "<REDACTED>";
+const CREDENTIAL_KEY = /token|cookie|auth|secret|passw|session|credential|csrf|api[_-]?key|bearer/i;
+const OPAQUE = /^[A-Za-z0-9_\-+/=.]{40,}$/;
+
+function maskValue(value: unknown, key?: string): unknown {
+  if (key !== undefined && CREDENTIAL_KEY.test(key)) return REDACTED;
+  if (typeof value === "string") return OPAQUE.test(value) ? REDACTED : value;
+  if (Array.isArray(value)) return value.map((v) => maskValue(v));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, maskValue(v, k)]));
+  }
+  return value;
+}
+
+/** Masks JWTs and the values of credential-named query parameters in a "METHOD /path?query" line. */
+export function maskRequestLine(line: string): string {
+  return maskJwts(line).replace(/([?&])([^=&\s]+)=([^&\s]*)/g, (m, sep: string, k: string) =>
+    CREDENTIAL_KEY.test(k) ? `${sep}${k}=${REDACTED}` : m,
+  );
+}
+
+/** Masks JWTs, credential-named fields (JSON at any depth, or key=value text) and long opaque strings. */
+export function maskBody(body: string): string {
+  const jwtFree = maskJwts(body);
+  try {
+    return JSON.stringify(maskValue(JSON.parse(jwtFree)));
+  } catch {
+    return jwtFree.replace(/([A-Za-z0-9_-]+)=([^&\s]+)/g, (m, k: string) =>
+      CREDENTIAL_KEY.test(k) ? `${k}=${REDACTED}` : m,
+    );
+  }
+}
+
 /** The exp claim (epoch seconds) of the first JWT in a header value, if any. */
 export function jwtExpiry(value: string): number | undefined {
   const m = /eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/.exec(value);

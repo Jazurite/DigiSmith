@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { newestCapture, readCalls, maskJwts, jwtExpiry, formatExpiry } from "./captures.ts";
+import { newestCapture, readCalls, maskJwts, maskRequestLine, maskBody, jwtExpiry, formatExpiry } from "./captures.ts";
 
 const dirs: string[] = [];
 function tmp(): string {
@@ -94,5 +94,18 @@ describe("maskJwts / jwtExpiry / formatExpiry", () => {
   });
   it("formats UTC+7 first, UTC in brackets", () => {
     expect(formatExpiry(1790000000)).toBe("2026-09-21 21:13 UTC+7 [2026-09-21 14:13 UTC]");
+  });
+});
+
+describe("maskRequestLine / maskBody", () => {
+  it("masks credential query parameters only", () => {
+    expect(maskRequestLine("GET /p?token=abc&a=1&Session-Id=zzz")).toBe("GET /p?token=<REDACTED>&a=1&Session-Id=<REDACTED>");
+  });
+  it("masks credential-named JSON fields at any depth, and long opaque strings", () => {
+    const out = maskBody(JSON.stringify({ a: { cookie: "c" }, b: [{ auth: "x" }], id: "short", long: "Zz9_".repeat(12) }));
+    expect(JSON.parse(out)).toEqual({ a: { cookie: "<REDACTED>" }, b: [{ auth: "<REDACTED>" }], id: "short", long: "<REDACTED>" });
+  });
+  it("masks key=value credentials in a non-JSON body", () => {
+    expect(maskBody("a=1&password=hunter2&b=2")).toBe("a=1&password=<REDACTED>&b=2");
   });
 });
