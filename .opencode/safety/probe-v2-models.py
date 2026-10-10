@@ -2,8 +2,9 @@
 """DGS-334 model test for a 2.x server: one luna reply (agent maestro) and one sonnet reply (switch model), safety plugin loaded, key not in the server's environment.
 Usage: probe-v2-models.py <port> <pass-file> <project-dir> <verdicts.jsonl>. Prints reply text and booleans only, never the password or a key. Cost: two tiny prompts (about $0.01)."""
 import base64, json, pathlib, subprocess, sys, time, urllib.request
+LIVE = "--live" in sys.argv; LUNA_ONLY = "--luna-only" in sys.argv; sys.argv = [x for x in sys.argv if x not in ("--live", "--luna-only")]
 port, pf, proj, verd = sys.argv[1], pathlib.Path(sys.argv[2]).expanduser(), sys.argv[3], pathlib.Path(sys.argv[4]).expanduser()
-if port == "4198": sys.exit("throwaway servers only")
+if port == "4198" and not LIVE: sys.exit("the live port needs --live (throwaway servers by default)")
 auth = "Basic " + base64.b64encode(("opencode:" + pf.read_text().strip()).encode()).decode()
 def rq(path, m="GET", b=None, t=60):
     r = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method=m, data=None if b is None else json.dumps(b).encode(),
@@ -25,7 +26,7 @@ def run(agent, model, text, label):
             print(f"{label}: {txt.strip()[:200]!r} error={m.get('error')} model={m.get('model')} cost={rq(f'/api/session/{sid}')['data'].get('cost')}"); return
     print(f"{label}: no completed reply in 90 s")
 run("maestro", "gpt-5.6-luna", "Reply with the single word OK.", "luna/maestro")
-run("maestro-review", "claude-sonnet-5-5", "Reply with the single word FINE.", "sonnet/maestro-review")
+if not LUNA_ONLY: run("maestro-review", "claude-sonnet-5-5", "Reply with the single word FINE.", "sonnet/maestro-review")
 pid = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"], capture_output=True, text=True).stdout.split()[0]
 env = subprocess.run(["ps", "eww", "-p", pid], capture_output=True, text=True).stdout
 print("TOKENREPLY in server env:", "TOKENREPLY" in env)

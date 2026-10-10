@@ -2,8 +2,9 @@
 """DGS-334: does a 2.x server (or its files) expose the TokenReply key? Prints route, HTTP status and a boolean per check, NEVER a response body or the key.
 Usage: check-key-exposure.py <port> <pass-file> <project-dir> <server-home-dir>. Compares against TOKENREPLY_API_KEY from ~/.digismith-depot/.env, in memory."""
 import base64, json, pathlib, re, sys, urllib.request, urllib.error
+LIVE = "--live" in sys.argv; sys.argv = [x for x in sys.argv if x != "--live"]
 port, pf, proj, home = sys.argv[1], pathlib.Path(sys.argv[2]).expanduser(), sys.argv[3], pathlib.Path(sys.argv[4]).expanduser()
-if port == "4198": sys.exit("throwaway servers only")
+if port == "4198" and not LIVE: sys.exit("the live port needs --live (throwaway servers by default)")
 key = re.search(r"^TOKENREPLY_API_KEY=(.*)$", (pathlib.Path.home() / ".digismith-depot/.env").read_text(), re.M).group(1).strip().strip("\"'")
 kb = key.encode(); auth = "Basic " + base64.b64encode(("opencode:" + pf.read_text().strip()).encode()).decode()
 def get(path):
