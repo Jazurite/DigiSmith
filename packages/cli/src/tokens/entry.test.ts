@@ -138,4 +138,66 @@ describe("entry.ts", () => {
     const none = run(["task-tokens", "--ticket", "T-1", "--task", "4", "--ledger", ledger], f);
     expect(none.stdout.trim()).toBe("Task 4: tokens in=0 out=0 cr=0 cw5=0 cw1=0");
   });
+
+  describe("snapshot --write and the tasks section", () => {
+    const counts = { input: 1, output: 2, cache_read: 3, cache_write_5m: 4, cache_write_1h: 5 };
+    const oldTasks = { "9": { "claude-opus-5-5": counts } };
+    const snapFile = (f: { registry: string }, ticket = "T-1") => join(f.registry, `${ticket}.tokens.json`);
+    const seed = (f: { registry: string }, body: string) => writeFileSync(snapFile(f), body);
+    const old = (ticket: string, version = 1) => JSON.stringify({ schema_version: version, ticket, generated_at: "x", reader_versions: {}, steps: {}, tasks: oldTasks, sessions: [], unattributed: {} });
+    const read = (f: { registry: string }) => JSON.parse(readFileSync(snapFile(f), "utf-8"));
+    const tempCwd = () => mkdtempSync(join(tmpdir(), "cwd-"));
+    const setup = () => {
+      const f = fixture();
+      run(["session", "--ticket", "T-1", "--role", "worker", "--session-id", "sess-1"], f);
+      return f;
+    };
+
+    it("carries the old tasks over when no ledger is given", () => {
+      const f = setup();
+      seed(f, old("T-1"));
+      const r = run(["snapshot", "--ticket", "T-1", "--write"], f, tempCwd());
+      expect(r.status).toBe(0);
+      const s = read(f);
+      expect(s.tasks).toEqual(oldTasks);
+      expect(s.generated_at).not.toBe("x");
+      expect(Object.keys(s.steps).length + s.sessions.length).toBeGreaterThan(0);
+      expect(s.sessions[0].session_id).toBe("sess-1");
+    });
+
+    it("replaces the old tasks when a ledger is given", () => {
+      const f = setup();
+      seed(f, old("T-1"));
+      const ledger = join(mkdtempSync(join(tmpdir(), "led-")), "ledger.md");
+      writeFileSync(ledger, "Task 3: dispatch implementer agent=a111\n");
+      const r = run(["snapshot", "--ticket", "T-1", "--ledger", ledger, "--write"], f, tempCwd());
+      expect(r.status).toBe(0);
+      const s = read(f);
+      expect(Object.keys(s.tasks)).toEqual(["3"]);
+      expect(s.tasks["9"]).toBeUndefined();
+    });
+
+    it("does not carry tasks over from another ticket", () => {
+      const f = setup();
+      seed(f, old("T-2"));
+      const r = run(["snapshot", "--ticket", "T-1", "--write"], f, tempCwd());
+      expect(r.status).toBe(0);
+      expect(read(f).tasks).toEqual({});
+    });
+
+    it("does not carry tasks over from a wrong schema version", () => {
+      const f = setup();
+      seed(f, old("T-1", 2));
+      expect(run(["snapshot", "--ticket", "T-1", "--write"], f, tempCwd()).status).toBe(0);
+      expect(read(f).tasks).toEqual({});
+    });
+
+    it("does not carry over from a corrupt file and does not crash", () => {
+      const f = setup();
+      seed(f, "{not json");
+      const r = run(["snapshot", "--ticket", "T-1", "--write"], f, tempCwd());
+      expect(r.status).toBe(0);
+      expect(read(f).tasks).toEqual({});
+    });
+  });
 });

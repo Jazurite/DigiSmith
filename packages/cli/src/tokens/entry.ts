@@ -4,7 +4,7 @@ import { findTranscript } from "./attribution.ts";
 import { countTicket, renderTable, resolveSnapshotPath } from "./count.ts";
 import { parseTaskAgents } from "./ledger.ts";
 import { createDepotRegistry } from "./registry.ts";
-import { STEPS, type Role, type Step } from "./types.ts";
+import { STEPS, type Role, type Snapshot, type Step } from "./types.ts";
 
 const ROLES: readonly Role[] = ["worker", "maestro", "reviewer", "other"];
 const ID_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -60,6 +60,18 @@ function readLedger(flags: Record<string, string>): Record<string, string[]> | u
   return flags.ledger ? parseTaskAgents(readFileSync(flags.ledger, "utf-8")) : undefined;
 }
 
+// Tasks of an earlier snapshot for the same ticket, or null when there is none to trust.
+function previousTasks(path: string, ticket: string): Snapshot["tasks"] | null {
+  try {
+    const old = JSON.parse(readFileSync(path, "utf-8"));
+    if (old?.schema_version !== 1 || old.ticket !== ticket) return null;
+    if (!old.tasks || typeof old.tasks !== "object" || Array.isArray(old.tasks)) return null;
+    return old.tasks;
+  } catch {
+    return null;
+  }
+}
+
 function main(argv: string[]): void {
   const [cmd, ...rest] = argv;
   const flags = parseArgs(rest);
@@ -90,6 +102,7 @@ function main(argv: string[]): void {
       console.log(renderTable(snapshot));
       if (flags.write) {
         const out = resolveSnapshotPath(process.cwd(), ticket);
+        if (!flags.ledger) snapshot.tasks = previousTasks(out, ticket) ?? snapshot.tasks;
         mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, `${JSON.stringify(snapshot, null, 2)}\n`);
         console.error(`tokens: wrote ${out}`);
