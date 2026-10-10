@@ -15,10 +15,11 @@ ClickUp (A: System, B: Agentic, C: Platform, D: Depot, E: Methodology, and this 
 Letters B, C and D are parked in a future placeholder clan to be distributed later. Letter E (the spine: `init`, `adopt`, stage-order enforcement)
 goes to clan A: System. Letters A, F, I, J, L, M and N fold into clan F: Scripture.
 
-**Rule (Jack, 2026-10-10):** Scripture is our SDLC, so anything about the ticket goes to clan F. Letter Q in its current meaning (Templating:
-Q.1 `generate-comment`, Q.2 the I.1 and I.4 consumers moved onto it) folds into F, probably .7 Report and sync. Q's retired meaning (Convention
-enforcement, the Enforcer, absorbed into the vendored primitives by W.5) stays out of F. Open: this rule may also pull letter E (`init`,
-`adopt`, `bootstrap`) and the parked B, C and D into F, against the 2026-10-06 split above. Jack decides.
+**Rule (Jack, 2026-10-10):** Scripture is our SDLC: the ticket's path goes to clan F. How the system works stays in **A: System**: how Claude
+and an agent operate in a session, the skills, the plugin marketplace. So a skill gets its ticket in A (A.1 Primitives), and F will probably get
+its own ticket for the lifecycle stage, with a link to the A ticket. Applied: letter E (`bootstrap`, `init`, `adopt`) and the `jira-intake` skill
+get their tickets in A.1; letter Q's current meaning (Templating) is the stage in F (probably .7 Report and sync), and its `generate-comment` skill
+is an A ticket. Q's retired meaning (Convention enforcement, absorbed into the primitives by W.5) is A only.
 
 ## What Scripture is
 
