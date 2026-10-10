@@ -1,6 +1,6 @@
 # A dedicated clan for monitoring and analysis: telemetry, metrics, token analysis, Grafana
 
-**Status:** Decided in principle, Jack (2026-10-10 ~16:4x UTC+7). **Letter G** (Jack, the same day). Name and lineages open. No ClickUp folder yet. ClickUp: **DGS-232** (list E.3: Conventions, created 2026-10-10 16:36 UTC+7 [09:36Z], task id `14zcebrvcqg`).
+**Status:** Decided in principle, Jack (2026-10-10 ~16:4x UTC+7). **Letter G** (Jack, the same day). Created as `G: TBD` with G.0: Pavilion and G.1: Telemetry (letter P, DGS-41). Name open. No ClickUp folder yet. ClickUp: **DGS-232** (list E.3: Conventions, created 2026-10-10 16:36 UTC+7 [09:36Z], task id `14zcebrvcqg`).
 
 **Source:** the letter P migration (DGS-41), 2026-10-10. Jack first said telemetry "should be part" of something larger, maybe a lineage under a
 new clan "Analysis", then: "We're gonna have a dedicated clan for monitoring. It will include Grafana monitoring, telemetry, metrics, token count
@@ -22,8 +22,8 @@ Boundaries:
 
 ## Open questions
 
-1. **Name.** Jack said "monitoring" and "analysis". Options: Monitoring, Analysis, or a name in the style of Scripture and Imperium (for example
-   Observatory). Jack decides.
+1. **Name.** The folder is created as **`G: TBD`** (Jack, 2026-10-10: "just G: TBD, and the first task of that is to write down the name").
+   Its first ticket, in G.0: Pavilion, is "Write down the name for clan G". Options so far: Monitoring, Analysis, Observatory.
 2. **Letter: G** (Jack, 2026-10-10: "the next should be the G letter"). F stays reserved for Scripture (DGS-186, no folder yet). Say
    "clan G" for this one and "letter G" for the legacy Methodology letter (now clan E).
 3. **Lineages.** Per the Pavilion rule: `.0: Pavilion` first. Then perhaps `.1 Telemetry`, `.2 Metrics`, `.3 Token Analysis`, `.4 Visualization`
@@ -34,5 +34,5 @@ Boundaries:
 
 ## Related
 
-DGS-41 (letter P), DGS-214 and DGS-204 (B.3: Token Economics), DGS-186 (clan F: Scripture), DGS-215 (Imperium), DGS-229 (articles stay out of
+DGS-220 (epic: telemetry and data collection; Jack 2026-10-10: its tickets belong to clan G), DGS-41 (letter P), DGS-214 and DGS-204 (B.3: Token Economics), DGS-186 (clan F: Scripture), DGS-215 (Imperium), DGS-229 (articles stay out of
 the repo), `scripture-clan.md`, `platform-clan.md`.
