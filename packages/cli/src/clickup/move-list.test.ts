@@ -83,4 +83,18 @@ describe("move-list", () => {
     expect(err.mock.calls.join("\n")).toContain("clickup move-list: boom");
     expect(process.exitCode).toBe(1);
   });
+
+  it("--yes without a session prints the factory error and sets exit code 1", async () => {
+    const factory = vi.fn(() => {
+      throw new Error("CLICKUP_FRONTDOOR_AUTH missing");
+    });
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await (createMoveListCommand(factory as unknown as () => FrontdoorClient).handler as (a: object) => Promise<void>)({
+      list: "1",
+      folder: "2",
+      yes: true,
+    });
+    expect(err.mock.calls.join("\n")).toContain("CLICKUP_FRONTDOOR_AUTH missing");
+    expect(process.exitCode).toBe(1);
+  });
 });
