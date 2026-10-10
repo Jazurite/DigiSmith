@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -140,5 +141,76 @@ describe("resolveSnapshotPath", () => {
     } finally {
       delete process.env.DIGISMITH_TOKEN_REGISTRY_DIR;
     }
+  });
+
+  describe("with real git repos", () => {
+    const git = (cwd: string, ...args: string[]) => {
+      const r = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf-8" });
+      if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    };
+    function makeRepo(name: string) {
+      const repo = realpathSync(mkdtempSync(join(tmpdir(), "gitrepo-")));
+      git(repo, "init", "-q", "-b", "main");
+      mkdirSync(join(repo, ".claude-plugin"), { recursive: true });
+      writeFileSync(join(repo, ".claude-plugin", "plugin.json"), JSON.stringify({ name }));
+      mkdirSync(join(repo, "packages", "cli"), { recursive: true });
+      writeFileSync(join(repo, "packages", "cli", "x.txt"), "x");
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "init");
+      return repo;
+    }
+    function withDepot<T>(fn: (depot: string) => T): T {
+      const depot = mkdtempSync(join(tmpdir(), "depot-"));
+      process.env.DIGISMITH_TOKEN_REGISTRY_DIR = depot;
+      try {
+        return fn(depot);
+      } finally {
+        delete process.env.DIGISMITH_TOKEN_REGISTRY_DIR;
+      }
+    }
+
+    it("finds the board folder from a nested directory of the checkout", () => {
+      const repo = makeRepo("digismith");
+      mkdirSync(join(repo, ".digismith", "board", "DGS-214—count-tokens"), { recursive: true });
+      withDepot(() => {
+        expect(resolveSnapshotPath(join(repo, "packages", "cli"), "DGS-214")).toBe(
+          join(repo, ".digismith", "board", "DGS-214—count-tokens", "tokens.json"),
+        );
+      });
+    });
+
+    it("uses the main checkout's board folder from a linked worktree", () => {
+      const repo = makeRepo("digismith");
+      mkdirSync(join(repo, ".digismith", "board", "DGS-214—count-tokens"), { recursive: true });
+      const wt = join(repo, ".worktrees", "dgs-214");
+      git(repo, "worktree", "add", "-q", "-b", "dgs-214", wt);
+      withDepot(() => {
+        const want = join(repo, ".digismith", "board", "DGS-214—count-tokens", "tokens.json");
+        expect(resolveSnapshotPath(wt, "DGS-214")).toBe(want);
+        expect(resolveSnapshotPath(join(wt, "packages", "cli"), "DGS-214")).toBe(want);
+      });
+    });
+
+    it("uses the depot for a DigiSmith repo with no board folder for the ticket", () => {
+      const repo = makeRepo("digismith");
+      withDepot((depot) => {
+        expect(resolveSnapshotPath(repo, "DGS-999")).toBe(join(depot, "DGS-999.tokens.json"));
+      });
+    });
+
+    it("uses the depot in a non-DigiSmith repo, never the repo", () => {
+      const repo = makeRepo("client");
+      mkdirSync(join(repo, ".digismith", "board", "EMKT-9—x"), { recursive: true });
+      withDepot((depot) => {
+        expect(resolveSnapshotPath(join(repo, "packages", "cli"), "EMKT-9")).toBe(join(depot, "EMKT-9.tokens.json"));
+      });
+    });
+
+    it("uses the depot outside any git repo", () => {
+      const dir = mkdtempSync(join(tmpdir(), "nogit-"));
+      withDepot((depot) => {
+        expect(resolveSnapshotPath(dir, "DGS-214")).toBe(join(depot, "DGS-214.tokens.json"));
+      });
+    });
   });
 });
