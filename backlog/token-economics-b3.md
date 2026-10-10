@@ -64,7 +64,14 @@ the group ratio. The Claude groups on that list:
 | `claude_official` | 1.2 | $2.40 / $12.00 | $4.80 / $24.00 |
 
 The group names suggest the source: `claude_official` costs 20% more than Anthropic (likely real API keys plus a margin), while the 0.3 groups are
-named after subscription plans. All of these Claude models are `access_tier: plus` on TokenReply (Plus is a $5 subscription, per Jack 2026-10-10, assumed monthly; it is not on the price list, and whether it includes credit is not known).
+named after subscription plans. All of these Claude models are `access_tier: plus` on TokenReply (Plus is a $5 subscription, per Jack 2026-10-10).
+
+**Jack's TokenReply dashboard, 2026-10-10 ~17:3x UTC+7 (screenshot):** subscription `plus`; a **usage allowance of $5.00 that resets monthly**
+(next reset Nov 9), $4.74 left (95%); top-up credit $0.00; rate limit 10 requests per minute. All-time consumption $4.06, where the dashboard says
+the direct API would have cost $18.68 ("Saved vs Direct API $14.62"), an overall ratio of about 0.22 across the models and groups used. Period
+figures: $0.26 spent, 3,535,360 tokens, 643 calls; models today were claude-sonnet-5-5, gpt-5.6-luna, kimi-k2.7, gpt-5.6-terra, gpt-6-sol and
+claude-haiku-5-5. Not known: whether the $5 Plus price and the $5 allowance are the same money. If they are, TokenReply's monthly cost is
+max($5, 0.3 x the API value) in the 0.3 groups, and the break-even below moves back to about $83 of API value (17% to 21% of the seat).
 The list's own `recent_metrics` showed `claude-sonnet-5-5` at 25% availability over 4 calls at that time, where the card showed 88.0%.
 One TokenReply base price differs from the skill table: `claude-haiku-5-5` at $0.20 / $1.00 (skill: $0.10 / $0.50).
 
