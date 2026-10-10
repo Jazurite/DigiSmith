@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DGS-25 gap tickets report</title>
+<style>body{font-family:system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem;line-height:1.5}table{border-collapse:collapse;width:100%}td,th{border:1px solid #bbb;padding:.35rem .5rem;text-align:left;font-size:.9rem}th{background:#eee}@media(prefers-color-scheme:dark){body{background:#111;color:#eee}th{background:#222}td,th{border-color:#555}}</style></head><body>
+<h1>DGS-25 gap tickets: report</h1>
+<p>Done 2026-10-10 (UTC+7). Checkpoint 1 was approved by Jack via the Master. I created 8 tickets, set DGS-77, and read every ticket back with <code>dg clickup get-task</code>. Status and dates below are from that read-back (start = due).</p>
+<table><tr><th>Ticket</th><th>Name</th><th>List</th><th>Status</th><th>Start = due</th><th>Attachments</th></tr>
+<tr><td>DGS-205</td><td>Global standards: git/PR conventions and surgical changes (G.1 follow-up)</td><td>E.1</td><td>done</td><td>2026-08-14</td><td>none (no docs exist)</td></tr>
+<tr><td>DGS-206</td><td>Unified docs convention</td><td>E.3</td><td>done</td><td>2026-08-08</td><td>design.html, plan.md, report.html</td></tr>
+<tr><td>DGS-207</td><td>Enforcer: enforce the unified docs convention</td><td>A.1</td><td>done</td><td>2026-08-15</td><td>design.html, plan.md, report.html</td></tr>
+<tr><td>DGS-208</td><td>Retire the Enforcer into the vendored primitives (W.5)</td><td>A.1</td><td>done</td><td>2026-09-04</td><td>design.html, plan.md</td></tr>
+<tr><td>DGS-209</td><td>Retire Subagent-driven always into the vendored primitives (W.6)</td><td>A.1</td><td>done</td><td>2026-09-04</td><td>design.html, plan.md, report.html</td></tr>
+<tr><td>DGS-210</td><td>jira-intake skill: two-door ticket intake</td><td>A.1</td><td>done</td><td>2026-08-07</td><td>design.html, plan.md</td></tr>
+<tr><td>DGS-211</td><td>using-digismith, now bootstrap: first slice of the spine</td><td>A.1</td><td>done</td><td>2026-08-07</td><td>design.html, plan.md</td></tr>
+<tr><td>DGS-212</td><td>digismith:init and digismith:adopt: unified entry point</td><td>A.1</td><td>done</td><td>2026-08-16</td><td>design.html, plan.md, report.html</td></tr>
+<tr><td>DGS-77 (existing, W.13)</td><td>Move vendored skills' .superpowers/ paths into .digismith/</td><td>A.1</td><td>done (unchanged)</td><td>2026-09-26 (set now)</td><td>report.html (already there), design.html and plan.md added</td></tr></table>
+<h2>Notes</h2>
+<ul>
+<li>Jack's answers applied: ticket 2 in E.3; DGS-77 dated and completed, with report.html skipped because it was already attached; ticket 4 with no report; the Enforcer ticket has no letter in its name.</li>
+<li>I also dropped the letter from the names of DGS-210 to DGS-212 (they were first created with "(A)", "(E.1)", "(E.1-amend)"). Those letters are retired meanings, and Jack said retired meanings are not mapped. Renamed within minutes of creation. W.5, W.6 and the G.1 follow-up keep their current map ids. Say if you want the old letters back.</li>
+<li>Descriptions are one sentence each. DGS-207 points to the W.5 ticket in words, not by number.</li>
+<li>DGS-77's docs live in <code>docs/W/W.3-move-vendored-skills-superpowers-paths/</code>, a folder name that carries an old W.3 label for what the map calls W.13.</li>
+<li>W.9 was not built (backlog only), so it has no ticket. Not touched: DGS-25, DGS-32, DGS-42, DGS-47 status; no Templating ticket; no clan F folder or ticket; nothing deleted; no repo change except my plan.md and this report.</li>
+<li>The created tickets got custom ids DGS-205 to DGS-212 only after creation; the create call returns none.</li>
+</ul>
+</body></html>
