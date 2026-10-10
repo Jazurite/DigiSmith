@@ -1,7 +1,9 @@
 # Backfill tickets for the historical `.digismith/docs/` folders, then move them to the board
 
 **Status:** Idea, Jack's call (2026-10-04, answering the DGS-159 split): "The historical 87 docs is for another backlog because we need to
-backfill ticket for them." No design yet. ClickUp: **DGS-164** (list E.3: Conventions, created 2026-10-04 10:16 UTC+7 [03:16Z], task id `14zcebruqt0`).
+backfill ticket for them." No design yet. ClickUp: **DGS-164** (created 2026-10-04 10:16 UTC+7 [03:16Z] in E.3: Conventions, task id `14zcebruqt0`; since 2026-10-10 ~18:2x UTC+7 a subtask of
+the epic DGS-25 "Legacy Letter Backfill", list Imperium). Phase 1 (match folders to tickets, create missing ones) ordered the same day; the
+move to the board waits for the link decision below.
 
 **Source:** DGS-159 (ticket-based naming: modify the code and move the files), Part 6. DGS-159's Part 6 is limited to the live session
 files. This item takes the rest.

@@ -1,7 +1,9 @@
 # Convert every `backlog/` file into a ClickUp ticket, then move the content to the board
 
 **Status:** Idea, Jack's call (2026-10-04, answering the DGS-159 split, Part 7): "All but that's another backlog ticket." No design yet.
-ClickUp: **DGS-165** (list E.3: Conventions, created 2026-10-04 10:16 UTC+7 [03:16Z], task id `14zcebruqt1`).
+ClickUp: **DGS-165** (created 2026-10-04 10:16 UTC+7 [03:16Z] in E.3: Conventions, task id `14zcebruqt1`; since 2026-10-10 ~18:2x UTC+7 a subtask of
+the epic DGS-25 "Legacy Letter Backfill", list Imperium, Jack: "move the sweep into milestone"). Phase 1 (match, write back keys, create missing
+tickets) ordered the same day; the move to the board is a later checkpoint.
 
 **Source:** DGS-159 (ticket-based naming: modify the code and move the files), Part 7. "No ticket, no work": every idea gets a ticket
 first, so the `backlog/` files become tickets. DGS-159 does not do this part.
