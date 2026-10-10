@@ -2,7 +2,8 @@
 
 **Status:** Not applied. Idea only. Deferred until real telemetry data
 has been collected — revisit once there's enough usage history to know
-what's actually worth automating.
+what's actually worth automating. ClickUp: **DGS-235** (list G.1: Telemetry, clan `G: TBD`,
+created 2026-10-10 16:4x UTC+7 by the letter P migration, task id `14zcebrvcqk`).
 
 **Source:** Jack's own note, 2026-08-14.
 
