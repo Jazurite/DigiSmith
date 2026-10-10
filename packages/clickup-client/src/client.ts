@@ -246,10 +246,13 @@ export class ClickUpClient {
   /** A folder's lists, archived included: the API hides archived lists unless archived=true, so read both and merge by id. */
   async getFolderLists(folderId: string): Promise<ClickUpListSummary[]> {
     const path = `/folder/${folderId}/list`;
-    const active = await this.get<ClickUpListsResponse>(path, { params: { archived: false } });
-    const archived = await this.get<ClickUpListsResponse>(path, { params: { archived: true } });
     const byId = new Map<string, ClickUpListSummary>();
-    for (const l of [...(active.lists ?? []), ...(archived.lists ?? [])]) if (!byId.has(l.id)) byId.set(l.id, l);
+    for (const archived of [false, true]) {
+      const data = await this.get<ClickUpListsResponse>(path, { params: { archived } });
+      // Fail closed: a body without a lists array must not read as "no lists".
+      if (!Array.isArray(data?.lists)) throw new Error(`unexpected answer from GET ${path} (archived=${archived}): no lists array`);
+      for (const l of data.lists) if (!byId.has(l.id)) byId.set(l.id, l);
+    }
     return [...byId.values()];
   }
 

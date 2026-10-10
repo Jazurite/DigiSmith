@@ -429,12 +429,36 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(lists.map((l) => l.id)).toEqual(["l1", "l2", "l3"]);
   });
 
+  it("getFolderLists() keeps a list that only the active read returns (gate must refuse)", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { lists: [{ id: "l1", name: "A" }] } }).mockResolvedValueOnce({ data: { lists: [] } });
+
+    expect(await client.getFolderLists("55")).toEqual([{ id: "l1", name: "A" }]);
+  });
+
+  it("getFolderLists() keeps a list that only the archived read returns (gate must refuse)", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { lists: [] } }).mockResolvedValueOnce({ data: { lists: [{ id: "l2", name: "Old" }] } });
+
+    expect(await client.getFolderLists("55")).toEqual([{ id: "l2", name: "Old" }]);
+  });
+
   it("getFolderLists() returns [] when both reads are empty", async () => {
     const client = makeClient();
-    request.mockResolvedValueOnce({ data: { lists: [] } }).mockResolvedValueOnce({ data: {} });
+    request.mockResolvedValueOnce({ data: { lists: [] } }).mockResolvedValueOnce({ data: { lists: [] } });
 
     expect(await client.getFolderLists("55")).toEqual([]);
   });
+
+  it.each([[{}, { lists: [] }], [{ lists: [] }, {}], [{ lists: null }, { lists: [] }]])(
+    "getFolderLists() throws on a body without a lists array, so the gate fails closed",
+    async (first, second) => {
+      const client = makeClient();
+      request.mockResolvedValueOnce({ data: first }).mockResolvedValueOnce({ data: second });
+
+      await expect(client.getFolderLists("55")).rejects.toThrow(/lists/);
+    },
+  );
 
   it("getFolderlessLists() returns the lists array", async () => {
     const client = makeClient();
