@@ -8,12 +8,12 @@ get it from the backlog? How do they know a ticket can be worked on, and access 
 
 ## Naming
 
-**Agentic** is the name of the one big system (Jack, 2026-10-06). It has two architectures:
+Two architectures, the second evolves from the first (Jack, 2026-10-10; replaces "Agentic = the one big system" of 2026-10-06):
 
-1. **Architecture 1, headless VPS** (what runs today): persistent herdr workers on a headless box, with Jack in the loop. He approves, answers
-   worker prompts, and says "go".
-2. **Architecture 2, Autonomous** (this item): the same agents pick up and finish tickets alone; Jack is only reached through an
-   escalation queue.
+1. **Agentic Architecture** (or **Agentic System**; name open between the two), what runs today: persistent herdr workers on an always-on
+   Workbox, with Jack in the loop. He approves, answers worker prompts, and says "go".
+2. **Autonomous Agentic Architecture** (or **Continuous Agentic Architecture**; name open between the two), this item, the evolved form: the
+   same agents pick up and finish tickets alone; Jack is only reached through an escalation queue.
 
 These are two architectures of one system. They are not clans or lineages, so no new ClickUp folder or list is made for them. Jack's spoken
 word was first transcribed "Archanted" and "Argentic"; both mean "agentic" (corrected 2026-10-06).
