@@ -16,6 +16,8 @@ Imperium is more suitable."
   still pick option A, subtasks with the "Subtasks in Multiple Lists" ClickApp).
 - **Milestone:** a dated checkpoint, ClickUp's Milestone type. Its description says "done when"; the tickets that must finish first block it.
 - Industry order: initiative > epic > ticket > subtask. A milestone is a point in time, not a container.
+- **Concepts with no clan yet are parked in Imperium as `backlog` (Jack, 2026-10-10).** A concept has no letter in its name and no
+  lineage until Jack places it: DGS-43 "End-to-end testing" and DGS-44 "Figma visual regression" (were letters R and S of DGS-25).
 - **A ticket that belongs to two clans becomes two tickets (Jack, 2026-10-10).** Each one covers only its own clan's or lineage's part,
   and the two link to each other. An epic or initiative may span clans. Example: DGS-214 (the token counter) stays in B.3: Token Economics;
   the analysis of its counts is a separate clan G ticket that links to it (DGS-220, the data collection epic, spans both). The A/F rule
