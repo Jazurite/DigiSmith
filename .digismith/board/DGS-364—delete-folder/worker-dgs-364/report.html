@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-364 dg clickup delete-folder on the public API — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-364 dg clickup delete-folder on the public API — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-364</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup delete-folder</code> on the public ClickUp API: <code>DELETE /folder/{id}</code>. It deletes only a folder with no lists (archived included). Built and committed on branch dgs-364; not merged. No real delete and no ClickUp write was made.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>ClickUpClient.deleteFolder(id)</code> and <code>getFolderLists(id)</code>: two reads (<code>archived=false</code> and <code>archived=true</code>) merged by list id. A body without a <code>lists</code> array throws, so the gate fails closed.</li>
+<li><code>delete-folder --folder &lt;id&gt; [--yes]</code>: reads the lists first. The dry run prints "would delete" or "would refuse" with each list id and name, exit 0, no DELETE. With <code>--yes</code>, any list means a refusal and exit 1; none means the DELETE.</li>
+<li>No allow rule: every real delete prompts.</li>
+<li>Tests: client 65, CLI 514 pass with <code>FORCE_COLOR=1</code>; the build is clean. Lists found only by the active read, or only by the archived read, both refuse.</li>
+<li>Dry run on the old O folder <code>1301150000001877</code> (read only): refused, 5 lists.</li>
+</ul>
+</section>
+<section id="docs">
+<h2>ClickUp docs: non-empty folder</h2>
+<p>The Delete Folder page says only "Delete a Folder from your Workspace." It does not say if a non-empty folder is refused or deleted with its contents.</p>
+</section>
+<section id="risks">
+<h2>Accepted risks</h2>
+<ul>
+<li>Race: a list added between the read and the DELETE is not guarded.</li>
+<li>Nested folders: the gate reads direct lists only; a folder holding only child folders would pass. Not verified against ClickUp. Check before deleting such a folder.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review. Fixed with tests: a <code>{}</code> body read as "no lists". Documented, not fixed: nested folders.</p>
+</section>
+</body>
+</html>
