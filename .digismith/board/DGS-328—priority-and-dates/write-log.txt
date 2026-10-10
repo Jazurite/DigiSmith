@@ -1,0 +1,501 @@
+OK DGS-327
+OK DGS-318
+OK DGS-317
+OK DGS-316
+OK DGS-315
+OK DGS-314
+OK DGS-313
+OK DGS-312
+OK DGS-311
+OK DGS-310
+OK DGS-309
+OK DGS-308
+OK DGS-307
+OK DGS-306
+OK DGS-305
+OK DGS-304
+OK DGS-303
+OK DGS-302
+OK DGS-301
+OK DGS-300
+--- batch done 20
+OK DGS-299
+OK DGS-298
+OK DGS-297
+OK DGS-296
+OK DGS-295
+OK DGS-294
+OK DGS-293
+OK DGS-292
+OK DGS-291
+OK DGS-289
+OK DGS-213
+OK DGS-188
+OK DGS-187
+OK DGS-178
+OK DGS-165
+OK DGS-164
+OK DGS-126
+OK DGS-125
+OK DGS-118
+OK DGS-115
+--- batch done 40
+OK DGS-87
+ERR DGS-49 clickup update-task: Request failed with status code 400
+
+HOLD DGS-49 (400: start after due), asked Jack
+OK DGS-48
+--- batch done 1
+OK DGS-46
+--- batch done 2
+OK DGS-45
+--- batch done 3
+OK DGS-44
+--- batch done 4
+OK DGS-43
+--- batch done 5
+OK DGS-42
+--- batch done 6
+OK DGS-41
+--- batch done 7
+OK DGS-40
+--- batch done 8
+OK DGS-39
+--- batch done 9
+OK DGS-38
+--- batch done 10
+OK DGS-37
+--- batch done 11
+OK DGS-36
+--- batch done 12
+OK DGS-35
+--- batch done 13
+OK DGS-34
+--- batch done 14
+OK DGS-33
+--- batch done 15
+OK DGS-32
+--- batch done 16
+OK DGS-31
+--- batch done 17
+OK DGS-30
+--- batch done 18
+OK DGS-29
+--- batch done 19
+OK DGS-28
+--- batch done 20
+OK DGS-27
+--- batch done 21
+OK DGS-26
+--- batch done 22
+OK DGS-25
+--- batch done 23
+OK DGS-168
+--- batch done 24
+OK DGS-5
+--- batch done 25
+OK DGS-1
+--- batch done 26
+OK DGS-265
+--- batch done 27
+OK DGS-2
+--- batch done 28
+OK DGS-246
+--- batch done 29
+OK DGS-245
+--- batch done 30
+OK DGS-244
+--- batch done 31
+OK DGS-8
+--- batch done 32
+OK DGS-7
+--- batch done 33
+OK DGS-6
+--- batch done 34
+OK DGS-329
+--- batch done 35
+OK DGS-320
+--- batch done 36
+OK DGS-267
+--- batch done 37
+OK DGS-266
+--- batch done 38
+OK DGS-230
+--- batch done 39
+OK DGS-222
+--- batch done 40
+OK DGS-221
+--- batch done 41
+OK DGS-219
+--- batch done 42
+OK DGS-218
+--- batch done 43
+OK DGS-217
+--- batch done 44
+OK DGS-89
+--- batch done 45
+OK DGS-80
+--- batch done 46
+OK DGS-79
+--- batch done 47
+OK DGS-10
+--- batch done 48
+OK DGS-9
+--- batch done 49
+OK DGS-280
+--- batch done 50
+OK DGS-243
+--- batch done 51
+OK DGS-242
+--- batch done 52
+OK DGS-241
+--- batch done 53
+OK DGS-240
+--- batch done 54
+OK DGS-239
+--- batch done 55
+OK DGS-233
+--- batch done 56
+OK DGS-212
+--- batch done 57
+OK DGS-211
+--- batch done 58
+OK DGS-210
+--- batch done 59
+OK DGS-209
+--- batch done 60
+OK DGS-208
+--- batch done 61
+OK DGS-207
+--- batch done 62
+OK DGS-116
+--- batch done 63
+OK DGS-64
+--- batch done 64
+OK DGS-63
+--- batch done 65
+OK DGS-62
+--- batch done 66
+OK DGS-59
+--- batch done 67
+OK DGS-58
+--- batch done 68
+OK DGS-57
+--- batch done 69
+OK DGS-56
+--- batch done 70
+OK DGS-55
+--- batch done 71
+OK DGS-54
+--- batch done 72
+OK DGS-53
+--- batch done 73
+OK DGS-52
+--- batch done 74
+OK DGS-51
+--- batch done 75
+OK DGS-162
+--- batch done 76
+OK DGS-161
+--- batch done 77
+OK DGS-67
+--- batch done 78
+OK DGS-66
+--- batch done 79
+OK DGS-65
+--- batch done 80
+OK DGS-70
+--- batch done 81
+OK DGS-69
+--- batch done 82
+OK DGS-271
+--- batch done 83
+OK DGS-73
+--- batch done 84
+OK DGS-72
+--- batch done 85
+OK DGS-71
+--- batch done 86
+OK DGS-105
+--- batch done 87
+OK DGS-104
+--- batch done 88
+OK DGS-103
+--- batch done 89
+OK DGS-102
+--- batch done 90
+OK DGS-100
+--- batch done 91
+OK DGS-99
+--- batch done 92
+OK DGS-98
+--- batch done 93
+OK DGS-97
+--- batch done 94
+OK DGS-96
+--- batch done 95
+OK DGS-95
+--- batch done 96
+OK DGS-94
+--- batch done 97
+OK DGS-93
+--- batch done 98
+OK DGS-92
+--- batch done 99
+OK DGS-91
+--- batch done 100
+OK DGS-90
+--- batch done 101
+OK DGS-114
+--- batch done 102
+OK DGS-113
+--- batch done 103
+OK DGS-112
+--- batch done 104
+OK DGS-111
+--- batch done 105
+OK DGS-321
+--- batch done 106
+OK DGS-132
+--- batch done 107
+OK DGS-130
+--- batch done 108
+OK DGS-129
+--- batch done 109
+OK DGS-128
+--- batch done 110
+OK DGS-127
+--- batch done 111
+OK DGS-124
+--- batch done 112
+OK DGS-123
+--- batch done 113
+OK DGS-122
+--- batch done 114
+OK DGS-121
+--- batch done 115
+OK DGS-120
+--- batch done 116
+OK DGS-119
+--- batch done 117
+OK DGS-110
+--- batch done 118
+OK DGS-108
+--- batch done 119
+OK DGS-101
+--- batch done 120
+OK DGS-78
+--- batch done 121
+OK DGS-216
+--- batch done 122
+OK DGS-203
+--- batch done 123
+OK DGS-191
+--- batch done 124
+OK DGS-176
+--- batch done 125
+OK DGS-175
+--- batch done 126
+OK DGS-171
+--- batch done 127
+OK DGS-170
+--- batch done 128
+OK DGS-272
+--- batch done 129
+OK DGS-231
+--- batch done 130
+OK DGS-228
+--- batch done 131
+OK DGS-227
+--- batch done 132
+OK DGS-190
+--- batch done 133
+OK DGS-184
+--- batch done 134
+OK DGS-183
+--- batch done 135
+OK DGS-182
+--- batch done 136
+OK DGS-181
+--- batch done 137
+OK DGS-180
+--- batch done 138
+OK DGS-177
+--- batch done 139
+OK DGS-174
+--- batch done 140
+OK DGS-169
+--- batch done 141
+OK DGS-131
+--- batch done 142
+OK DGS-109
+--- batch done 143
+OK DGS-107
+--- batch done 144
+OK DGS-106
+--- batch done 145
+OK DGS-290
+--- batch done 146
+OK DGS-270
+--- batch done 147
+OK DGS-269
+--- batch done 148
+OK DGS-268
+--- batch done 149
+OK DGS-197
+--- batch done 150
+OK DGS-117
+--- batch done 151
+OK DGS-224
+--- batch done 152
+OK DGS-156
+--- batch done 153
+OK DGS-284
+--- batch done 154
+OK DGS-205
+--- batch done 155
+OK DGS-192
+--- batch done 156
+OK DGS-194
+--- batch done 157
+OK DGS-193
+--- batch done 158
+OK DGS-185
+--- batch done 159
+OK DGS-179
+--- batch done 160
+OK DGS-173
+--- batch done 161
+OK DGS-172
+--- batch done 162
+OK DGS-163
+--- batch done 163
+OK DGS-160
+--- batch done 164
+OK DGS-157
+--- batch done 165
+OK DGS-155
+--- batch done 166
+OK DGS-154
+--- batch done 167
+OK DGS-232
+--- batch done 168
+OK DGS-215
+--- batch done 169
+OK DGS-206
+--- batch done 170
+OK DGS-195
+--- batch done 171
+OK DGS-166
+--- batch done 172
+OK DGS-159
+--- batch done 173
+OK DGS-158
+--- batch done 174
+OK DGS-326
+--- batch done 175
+OK DGS-288
+--- batch done 176
+OK DGS-214
+--- batch done 177
+OK DGS-204
+--- batch done 178
+OK DGS-238
+--- batch done 179
+OK DGS-237
+--- batch done 180
+OK DGS-220
+--- batch done 181
+OK DGS-236
+--- batch done 182
+OK DGS-235
+--- batch done 183
+OK DGS-234
+--- batch done 184
+OK DGS-255
+--- batch done 185
+OK DGS-254
+--- batch done 186
+OK DGS-189
+--- batch done 187
+OK DGS-186
+--- batch done 188
+OK DGS-257
+--- batch done 189
+OK DGS-256
+--- batch done 190
+OK DGS-247
+--- batch done 191
+OK DGS-167
+--- batch done 192
+OK DGS-259
+--- batch done 193
+OK DGS-258
+--- batch done 194
+OK DGS-248
+--- batch done 195
+OK DGS-264
+--- batch done 196
+OK DGS-263
+--- batch done 197
+OK DGS-262
+--- batch done 198
+OK DGS-261
+--- batch done 199
+OK DGS-260
+--- batch done 200
+OK DGS-253
+--- batch done 201
+OK DGS-252
+--- batch done 202
+OK DGS-251
+--- batch done 203
+OK DGS-250
+--- batch done 204
+OK DGS-249
+--- batch done 205
+OK DGS-283
+--- batch done 206
+OK DGS-282
+--- batch done 207
+OK DGS-281
+--- batch done 208
+OK DGS-279
+--- batch done 209
+OK DGS-277
+--- batch done 210
+OK DGS-276
+--- batch done 211
+OK DGS-275
+--- batch done 212
+OK DGS-274
+--- batch done 213
+OK DGS-273
+--- batch done 214
+OK DGS-278
+--- batch done 215
+OK DGS-229
+--- batch done 216
+OK DGS-285
+--- batch done 217
+OK DGS-286
+--- batch done 218
+OK DGS-287
+--- batch done 219
+OK DGS-322
+--- batch done 220
+OK DGS-319
+--- batch done 221
+OK DGS-325
+--- batch done 222
+OK DGS-324
+--- batch done 223
+OK DGS-323
+--- batch done 224
+OK DGS-226
+--- batch done 225
+OK DGS-225
+--- batch done 226
+OK DGS-223
+--- batch done 227
+DONE 227

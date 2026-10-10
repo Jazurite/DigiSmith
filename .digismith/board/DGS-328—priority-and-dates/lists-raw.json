@@ -1,0 +1,4485 @@
+{
+  "folders": [
+    {
+      "id": "1301150000001868",
+      "name": "A: System",
+      "orderindex": 4,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "37",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002399",
+          "name": "A.0: Pavilion",
+          "orderindex": 2,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- 2026-09-27: Created with the Town Hall and Pavilion convention.\n- 2026-10-03: Renamed from the unnumbered Pavilion to A.0: Pavilion (Jack): lineage 0 of every clan is the Pavilion. The old A.0 (Primitives) is now A.1. The Miscellaneous list is merged here.\n\nRetirements (historical record only, not tracked as tickets - once a letter is folded into a vendored primitive, it's just a fact about how this clan came to be, not ongoing work):\n- W.5 (2026-09-04): retired real map item Q (Convention enforcement / the digismith:enforcer skill) by folding its logic directly into brainstorming/writing-plans/bootstrap/adopt.\n- W.6 (2026-09-04): retired real map item H's original meaning (Subagent-driven always) by folding its classification logic directly into writing-plans' Execution Handoff.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002238",
+          "name": "A.1: Primitives",
+          "orderindex": 3,
+          "content": "Letter history (ClickUp-only - this is decoupled from DigiSmith's real internal map letters):\n\n- 2026-09-25: ClickUp's own letter P was reassigned here first (sunset from Telemetry, real DigiSmith letter P), covering real internal letters W (Primitive ownership) and Y (Lifecycle hooks, absorbed as lineage .6).\n- 2026-09-26: Reassigned again, from P to A - Jack's call that this clan (DigiSmith's vendored-primitive ownership/activation mechanism, plus everything that grew out of it) is the system defaults / backbone that everything else in DigiSmith builds on, deserving the very first letter. ClickUp's P is now free again (Telemetry's own eventual migration can reclaim it).\n- The real DigiSmith repo (MEMORY.md, .digismith/docs/) is untouched by either reassignment - it still calls this content W and Y internally. ClickUp is the single source of truth for this lettering; the codebase's own lettering is a separate, independent scheme.\n- ClickUp's letter A is now taken by this clan - when real DigiSmith letter A (Intake/creation) is eventually migrated, it will need a different, currently-unused ClickUp letter.\n- A.1: 2026-10-03: Renumbered from A.0 to A.1 (Jack), because A.0 is now the Pavilion.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 29,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002244",
+          "name": "A.3: Lifecycle Hooks",
+          "orderindex": 4,
+          "content": "A.3: 2026-10-03: Renumbered from A.1 to A.3 (Jack), because A.0 is now the Pavilion.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 5,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002913",
+          "name": "A.4: Configuration",
+          "orderindex": 6,
+          "content": "DigiSmith's configuration mechanism: the per-folder config file, its optional global layer, the shared reader that every skill and hook uses, and the migration from the older files.\n\n- The mechanism lives here. The settings in the file stay with the lineages that own them: profile (O.0), role (O.3), preference keys such as finish_option and ssh_key (O.1), voices (T).\n- Why in A: the A.3 SessionStart hook and the O.0 profile mechanism both read the config, so the config sits below both of them.\n- 2026-10-02: Created (Jack). First build: the centralized config file (DGS-141).\n- A.4: 2026-10-03: Renumbered from A.2 to A.4 (Jack), because A.0 is now the Pavilion.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000001908",
+      "name": "B: Agentic",
+      "orderindex": 5,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "28",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002299",
+          "name": "B.4: Maestro",
+          "orderindex": 0,
+          "content": "Letter history (ClickUp-only - this is decoupled from DigiSmith's real internal map letters):\n\n- 2026-09-26: Created as ClickUp clan B. It groups three real DigiSmith letters as lineages instead of separate clans: K (Maestro) as B.0, X (VPS hosting) as B.1, and Z (Model Router) as B.2. Jack's call: the first live cross-model review (a Claude implementer with a GPT-5.6 Sol reviewer via herdr on the VPS) showed these three letters are one agentic-orchestration theme.\n- 2026-09-26: First planned as K: Agentic, reusing Maestro's real letter the way O: Profiling kept O. Moved to B the same day. Jack's call: this clan is DigiSmith's founding idea.\n- The real DigiSmith repo (MEMORY.md, .digismith/docs/) is untouched by this. It still calls this content K, X and Z internally. ClickUp is the single source of truth for this lettering.\n- ClickUp's letter B is now taken. When real DigiSmith letter B (Spec seam) is migrated, it needs a different, currently-unused ClickUp letter (noted on DGS-27).\n- Real letter Z never had a 'Migrate Clan' subtask in Town Hall's Clan Backfill milestone, which only covered letters A-Y.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 17,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002300",
+          "name": "B.1: VPS Hosting",
+          "orderindex": 1,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 0,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002301",
+          "name": "B.2: Model Router",
+          "orderindex": 2,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 4,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002400",
+          "name": "B.0: Pavilion",
+          "orderindex": 3,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- 2026-09-27: Created with the Town Hall and Pavilion convention.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 6,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003495",
+          "name": "B.3: Token Economics",
+          "orderindex": 4,
+          "content": "Token Economics: what a model token really costs on each channel, and what each task cost or would cost.\n\n- The big comparison: for each model (Claude first, then Kimi and others), the official API price, a subscription plan's price and its API-equivalent value, and third-party gateway prices (TokenReply, Chutes, relays), with the date and source of every number.\n- How each channel counts and bills tokens (cache read and write, batch, multipliers), and how far each one can be trusted.\n- Per task: the real token counts of each task and model, and a what-if cost on every channel.\n- Part of the K family (real DigiSmith letter K, B.0: Maestro). Related repo items: K.4 token counter (scripts/token-counter/), K.7 vendor benchmark, the usage monitoring client (C.3: Accounts, Capacity). Billing on C.3 may move here.\n- 2026-10-10: Created (Jack).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000002449",
+      "name": "C: Platform",
+      "orderindex": 7,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "21",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002950",
+          "name": "C.0: Pavilion",
+          "orderindex": 0,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- Lineage 0 of every clan is the Pavilion (Jack, 2026-10-03).\n- 2026-10-03: Created with the clan.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 0,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002951",
+          "name": "C.1: Workbox",
+          "orderindex": 1,
+          "content": "Workbox: herdr on a VPS or any dedicated server, where DigiSmith's workers and reviewers run.\n\n- Worker slots, the roster, the runbook (.digismith/sessions/workbox.md), and the dg workbox commands in packages/workbox.\n- Which account a worker uses is decided in C.3: Accounts, and which model in B.2. This lineage runs the workers.\n- 2026-10-03: Created (Jack). Candidates to move in: VPS hosting tickets from B.1, DGS-131, DGS-151.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002952",
+          "name": "C.2: CLI",
+          "orderindex": 2,
+          "content": "The dg command line: the command framework, its conventions and its tests.\n\n- Each command group belongs to the lineage of the feature it operates (dg clickup in D.3, dg depot in D.2, dg workbox in C.1).\n  This lineage owns the shell they plug into.\n- 2026-10-03: Created (Jack). Candidate to move in: DGS-117.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 10,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002956",
+          "name": "C.3: Accounts",
+          "orderindex": 3,
+          "content": "Accounts: the logins DigiSmith's workers run on, and which one a new worker gets.\n\n- The seats (jack, dev0), which seat each worker uses, usage against the 5h and weekly limits, limit stops, exhausted marks and token handling.\n- Submodule: Capacity (seats, usage and limit stops). Billing (cost per ticket, plans, extra usage) may join later.\n- The manual is in the Workbox runbook (.digismith/sessions/workbox.md), \"Choose the account for a new worker\". Starting a worker is C.1: Workbox.\n- 2026-10-03: Created (Jack). Candidate to move in: DGS-144.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003519",
+          "name": "C.4: Observability",
+          "orderindex": 4,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003521",
+          "name": "C.5: Nexus",
+          "orderindex": 5,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 4,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000001867",
+      "name": "D: Depot",
+      "orderindex": 9,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "52",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002235",
+          "name": "D.4: Foundation",
+          "orderindex": 0,
+          "content": "Letter history (ClickUp-only - this is decoupled from DigiSmith's real internal map letters):\n\n- 2026-09-25: ClickUp's own letter D was reassigned. It previously would have hosted \"Delivery\" (DigiSmith's real map letter D - merge -> release -> verification -> announcement), but that clan was never migrated yet, so ClickUp's D is sunset from Delivery and reused here for Depot instead (DigiSmith's real internal letter V).\n- The real DigiSmith repo (MEMORY.md, .digismith/docs/) is untouched by this - it still calls this content V internally. ClickUp is the single source of truth for this lettering; the codebase's own lettering is a separate, independent scheme.\n- When Delivery's own clan is eventually migrated (see the Clan Backfill milestone in Town Hall), it will need a different ClickUp letter, since D is now taken.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002192",
+          "name": "D.1: Runtime Services",
+          "orderindex": 1,
+          "content": "Shared machine-wide runtime services other DigiSmith builds depend on, each managed through the same ensure/stop lifecycle pattern (mirroring the packages/ clone's ensure/refresh shape):\n\n- OpenCode server (2026-08-28) - a single shared server backing every digismith:offload-implementer dispatch (previously one server per plan), started/tracked/stopped via ensure-opencode-server/stop-opencode-server.\n- Agentic Bridge proxy (2026-09-11, map item K.9) - a local HTTP proxy (scripts/agentic-bridge/server.ts) that repairs TokenReply's kimi-k3 XTML tool-call leak into a genuine Anthropic tool_use block before Claude Code's own agentic loop sees it, via ensure-agentic-bridge/stop-agentic-bridge.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002236",
+          "name": "D.2: CLI & Packaging",
+          "orderindex": 3,
+          "content": "Depot's CLI and publishing surface - the tooling that exposes its managed resources to the command line and to npm:\n\n- VPS session CLI (2026-09-11) - status/connect commands reconnecting to an already-provisioned Hetzner VPS's persistent claude tmux session over SSH. Internally superseded 2026-09-24 by letter X's herdr-based rewrite, but this is where the CLI surface originated.\n- @digismith/cli npm package (2026-09-12) - publishes Depot's CLI as the digismith/dg binaries (packages/cli). Ownership later moved to letter U (2026-09-19).\n- dg depot command group (2026-09-13) - dg depot clone|opencode|bridge ensure|refresh|stop, wrapping V.0's and V.1's own resources into the CLI via a shared process-lifecycle helper.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 6,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002237",
+          "name": "D.3: ClickUp Channel",
+          "orderindex": 4,
+          "content": "DigiSmith's ClickUp integration surface, organized under two milestones plus this lineage's own backlog:\n\n- ClickUp Connector (milestone) - @digismith/clickup-client package plus the dg clickup CLI: read commands (V.6, 2026-09-24) and write commands (V.7, 2026-09-25).\n- Clan Backfill (milestone) - tracks migrating the other 24 DigiSmith map letters (A-Y, excluding V) into ClickUp using this same Clan/Lineage/ticket/doc-attachment pattern, one clan at a time, at Jack's own pace.\n- Standalone backlog tickets - the connector's own deferred future work: CLI gaps (list/folder creation, delete-task, PDF export), tech debt from V.7's review, consumer integration wiring, the Soveron cutover, historical backfill, and the pending npm publish.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 40,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002401",
+          "name": "D.0: Pavilion",
+          "orderindex": 6,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- 2026-09-27: Created with the Town Hall and Pavilion convention.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000002460",
+      "name": "E: Methodology",
+      "orderindex": 10,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "25",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002965",
+          "name": "E.0: Pavilion",
+          "orderindex": 0,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- Lineage 0 of every clan is the Pavilion (Jack, 2026-10-03).\n- 2026-10-03: Created with the clan.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002966",
+          "name": "E.1: Standards",
+          "orderindex": 1,
+          "content": "Jack's coding standards and style guide, carried into every implementer subagent's brief (repo map item G.1).\n\n- 2026-10-03: Created (Jack). Tickets move in later.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002967",
+          "name": "E.2: Toolchain",
+          "orderindex": 2,
+          "content": "Jack's standing toolchain defaults (test runner, styling, E2E framework, script language, package manager, Node install method), read by digismith:brainstorming (repo map item G.2).\n\n- 2026-10-03: Created (Jack). Tickets move in later.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002969",
+          "name": "E.3: Conventions",
+          "orderindex": 3,
+          "content": "DigiSmith's documentation conventions: where a feature's docs live and how they are named. Docs nest by clan and lineage, as .digismith/docs/<Clan>/<Lineage>/<slug>/ (repo map item G.3, Dynamic Doc Conventions; backlog/docs-convention-letter-nesting.md).\n\n- 2026-10-03: Created (Jack). Tickets move in later.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 9,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002968",
+          "name": "E.4: Workflows",
+          "orderindex": 4,
+          "content": "How work moves through DigiSmith: the processes, protocols and procedures that connect its primitives (A.1: Primitives holds the single nodes). Each ticket carries a Kind field: Process, Protocol, Procedure or Primitive.\n\n- The spine (repo map item E): E.1 shipped as digismith:init; the remaining scope (E.2: stage-order enforcement and routing) lands here.\n- First protocol: Flux, the renewal of a worker session.\n- 2026-10-03: Created (Jack). Replaces the empty A.2 list.\n- 2026-10-03: Renumbered from E.3 to E.4 (Jack), because E.3 is the Conventions lineage.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 10,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000002846",
+      "name": "F: Scripture",
+      "orderindex": 11,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "21",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000003504",
+          "name": "F.0: Pavilion",
+          "orderindex": 0,
+          "content": "Tracker support list, adapter contract, and anything across the Scripture lineages.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 4,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003505",
+          "name": "F.2: Intake",
+          "orderindex": 1,
+          "content": "Ticket text in: the intake stage of a ticket.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003506",
+          "name": "F.5: Review and verification",
+          "orderindex": 2,
+          "content": "Review of a design and of built work.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003507",
+          "name": "F.6: Integrate and finish",
+          "orderindex": 3,
+          "content": "Merge, pull request and deploy-URL capture.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003508",
+          "name": "F.7: Report and sync",
+          "orderindex": 4,
+          "content": "Reports and write-back to the ticket tracker.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 10,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000001877",
+      "name": "O: Profiling",
+      "orderindex": 12,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "15",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000002252",
+          "name": "O.4: Foundation",
+          "orderindex": 1,
+          "content": "A per-repo behavior profile (standards subset, ticket/ephemeral/reporting on-off) that existing stages consult independently at their own trigger point. Storage: .digismith/profile (one-line profile name) + profiles/<name>.yml (flat domain: choice pairs) - the same pattern every later profile-gated feature (G.2's toolchain, H's preferences) reuses.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 2,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002253",
+          "name": "O.1: Preferences Store",
+          "orderindex": 2,
+          "content": "Folded in from real DigiSmith letter H (Preferences store) 2026-09-26 - H and O are both per-repo configuration mechanisms (O = static behavior flags from profiles/*.yml, H = dynamic settings decided through live interaction, stored in .digismith/preferences.yml), close enough in theme that Jack chose to file H under this clan as its own lineage rather than giving it a separate ClickUp clan. Only H's current/final meaning is covered here (Preferences store) - H's earlier retired meaning (Subagent-driven always, 2026-08-12 - 2026-09-04, folded into W.6/P.2) is not migrated, same rule already applied to Q and U during the Clan Backfill milestone setup.\n\n- 2026-10-02: Storage moves to the A.4: Configuration file (DGS-141). O.1 keeps the preference keys (finish_option, ssh_key) and digismith:preferences.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 5,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002907",
+          "name": "O.2: Tailoring",
+          "orderindex": 4,
+          "content": "Tailoring of each DigiSmith profile: the behavior a profile changes beyond the flags in profiles/<name>.yml, such as its own skills, templates, rules and tools.\n\n- Profiles: DigiSmith, Emma, Jazurite, Personal.\n- Each ticket sets the Profile custom field (O: Profiling folder) to exactly one profile.\n- Profile empty: the ticket changes the tailoring mechanism itself, so it affects every profile.\n- The profile mechanism and its flags (profiles/*.yml) stay in O.0. Per-repo settings (.digismith/preferences.yml) stay in O.1. Session roles (maestro / worker / solo) are in O.3.\n- 2026-10-02: Created (Jack). Maestro was planned here as a fifth profile the same day, then moved to O.3: Roles, because it is a session role, not a profile.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 0,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002402",
+          "name": "O.0: Pavilion",
+          "orderindex": 5,
+          "content": "Items that affect more than one lineage in this clan, or the clan as a whole.\n\n- Work for one lineage goes in that lineage's list.\n- Work that affects more than one clan goes in Town Hall (Clans folder).\n- 2026-09-27: Created with the Town Hall and Pavilion convention.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 0,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000002911",
+          "name": "O.3: Roles",
+          "orderindex": 6,
+          "content": "Session roles: what a session does, next to its profile (which org's behavior applies, O.0). Like Kubernetes: the maestro is the control plane (the \"master\"), the workers are the nodes.\n\n- Roles: maestro (a Desktop session that supervises herdr workers), worker (a terminal session in a herdr pane, started by a maestro), solo (Jack's direct sessions, neither of the two).\n- This lineage owns the role question at session start and the setup for each role: the maestro's home folder (~/.digismith-depot/maestro/) and its claims, and the worker's environment (DIGISMITH_MAESTRO, auto mode, folder trust).\n- Workers never get the role question: the maestro sets their role when it starts them.\n- The profile mechanism and its flags stay in O.0. Per-profile tailoring stays in O.2.\n- 2026-10-02: Created (Jack). First build: the maestro role (DGS-139, backlog/manager-orchestrator-profile.md).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 8,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "parent_folder": "1301150000001850",
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000001850",
+      "name": "Clans",
+      "orderindex": 17,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "0",
+      "archived": false,
+      "statuses": [],
+      "lists": [],
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000002844",
+      "name": "G: TBD",
+      "orderindex": 19,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "6",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000003501",
+          "name": "G.0: Pavilion",
+          "orderindex": 0,
+          "content": "The clan's shared work: items that affect more than one lineage in clan G, or the clan as a whole. Clan G covers monitoring, telemetry, metrics, token analysis and visualization (name open, DGS-232). 2026-10-10: Created (Jack).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003502",
+          "name": "G.1: Telemetry",
+          "orderindex": 1,
+          "content": "Capture of session transcripts (legacy map letter P, DGS-41). 2026-10-10: Created (Jack).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 3,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003518",
+          "name": "G.2: Observability",
+          "orderindex": 2,
+          "content": "",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 0,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "permission_level": "create"
+    },
+    {
+      "id": "1301150000002847",
+      "name": "H: TBD",
+      "orderindex": 20,
+      "override_statuses": false,
+      "hidden": false,
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith"
+      },
+      "task_count": "14",
+      "archived": false,
+      "statuses": [],
+      "lists": [
+        {
+          "id": "1301150000003509",
+          "name": "H.0: Pavilion",
+          "orderindex": 0,
+          "content": "Items that affect more than one voice, or the clan as a whole: the clan name, voice selection, rules shared by all voices. Clan H is named H: TBD for now (2026-10-10, Jack); it holds repo map letter T (Voice).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 4,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003510",
+          "name": "H.1: Technical voice",
+          "orderindex": 1,
+          "content": "AI-written artifacts read by an engineer or agent: PR descriptions, JIRA and Teams comments, reports, skill text (ASD-STE100).",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 5,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003511",
+          "name": "H.2: Conversation voice",
+          "orderindex": 2,
+          "content": "The shape of live replies to an engineer.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003512",
+          "name": "H.3: Public article voice",
+          "orderindex": 3,
+          "content": "Articles, tutorials and write-ups for readers outside the team.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003513",
+          "name": "H.4: Presentation voice",
+          "orderindex": 4,
+          "content": "Slides and talks.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003514",
+          "name": "H.5: Business voice",
+          "orderindex": 5,
+          "content": "Text for business readers: PO, PM, owners.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        },
+        {
+          "id": "1301150000003515",
+          "name": "H.6: Analytical voice",
+          "orderindex": 6,
+          "content": "Reports and analysis that argue from data.",
+          "status": null,
+          "priority": null,
+          "assignee": null,
+          "task_count": 1,
+          "due_date": null,
+          "start_date": null,
+          "space": {
+            "id": "1301150000001271",
+            "name": "DigiSmith",
+            "archived": false,
+            "access": true
+          },
+          "archived": false,
+          "override_statuses": false,
+          "statuses": [
+            {
+              "id": "p1301150000001271_QX6gikEz",
+              "status": "backlog",
+              "orderindex": 0,
+              "color": "#87909e",
+              "type": "open",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_U0yMEDod",
+              "status": "concept",
+              "orderindex": 1,
+              "color": "#f8ae00",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_Cm7akkIo",
+              "status": "discovery",
+              "orderindex": 2,
+              "color": "#3db88b",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_o1RtkJcr",
+              "status": "to do",
+              "orderindex": 3,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_bgZIpWAD",
+              "status": "in progress",
+              "orderindex": 4,
+              "color": "#1090e0",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_y4KMxv8a",
+              "status": "review",
+              "orderindex": 5,
+              "color": "#5f55ee",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_qWCE3NYK",
+              "status": "release",
+              "orderindex": 6,
+              "color": "#d33d44",
+              "type": "custom",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_HWxaYkey",
+              "status": "done",
+              "orderindex": 7,
+              "color": "#008844",
+              "type": "done",
+              "status_group": "proj_1301150000001271"
+            },
+            {
+              "id": "p1301150000001271_q0w0uCVd",
+              "status": "documentation",
+              "orderindex": 8,
+              "color": "#008844",
+              "type": "closed",
+              "status_group": "proj_1301150000001271"
+            }
+          ],
+          "permission_level": "create"
+        }
+      ],
+      "permission_level": "create"
+    }
+  ],
+  "lists": [
+    {
+      "id": "1301150000002179",
+      "name": "Imperium",
+      "orderindex": 0,
+      "content": "The roadmap: DigiSmith's initiatives, epics and milestones. Normal tickets do not live here; each one lives in its clan's lineage list.\n\n- Initiative: a group of epics for one goal (custom task type Initiative). Its epics are its subtasks.\n- Epic: a body of work with an end (custom task type Epic). Its tickets stay in their clan lists and link to the epic.\n- Milestone: a dated checkpoint (ClickUp Milestone type). Its description says \"done when\"; the tickets that must finish first block it.\n- Each clan folder has its own Pavilion list for items that affect more than one of that clan's lineages, or the clan as a whole.\n- 2026-10-10: Renamed from Town Hall to Imperium (Jack), and made the home of initiatives, epics and milestones only.\n- 2026-09-27: Renamed from Pavilion to Town Hall. The name Pavilion moved down one level, to the clan-level lists.",
+      "status": null,
+      "priority": null,
+      "assignee": null,
+      "task_count": 47,
+      "due_date": null,
+      "start_date": null,
+      "folder": {
+        "id": "1301150000002448",
+        "name": "hidden",
+        "hidden": true,
+        "archived": false,
+        "access": true
+      },
+      "space": {
+        "id": "1301150000001271",
+        "name": "DigiSmith",
+        "archived": false,
+        "access": true
+      },
+      "archived": false,
+      "override_statuses": false,
+      "permission_level": "create"
+    }
+  ]
+}

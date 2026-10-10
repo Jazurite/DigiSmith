@@ -1,0 +1,46 @@
+1 1301150000002399 A: System/A.0: Pavilion
+1 1301150000002238 A: System/A.1: Primitives
+1 1301150000002244 A: System/A.3: Lifecycle Hooks
+1 1301150000002913 A: System/A.4: Configuration
+1 1301150000002299 B: Agentic/B.4: Maestro
+1 1301150000002300 B: Agentic/B.1: VPS Hosting
+1 1301150000002301 B: Agentic/B.2: Model Router
+1 1301150000002400 B: Agentic/B.0: Pavilion
+1 1301150000003495 B: Agentic/B.3: Token Economics
+1 1301150000002950 C: Platform/C.0: Pavilion
+1 1301150000002951 C: Platform/C.1: Workbox
+1 1301150000002952 C: Platform/C.2: CLI
+1 1301150000002956 C: Platform/C.3: Accounts
+1 1301150000003519 C: Platform/C.4: Observability
+1 1301150000003521 C: Platform/C.5: Nexus
+1 1301150000002235 D: Depot/D.4: Foundation
+1 1301150000002192 D: Depot/D.1: Runtime Services
+1 1301150000002236 D: Depot/D.2: CLI & Packaging
+1 1301150000002237 D: Depot/D.3: ClickUp Channel
+1 1301150000002401 D: Depot/D.0: Pavilion
+1 1301150000002965 E: Methodology/E.0: Pavilion
+1 1301150000002966 E: Methodology/E.1: Standards
+1 1301150000002967 E: Methodology/E.2: Toolchain
+1 1301150000002969 E: Methodology/E.3: Conventions
+1 1301150000002968 E: Methodology/E.4: Workflows
+1 1301150000003504 F: Scripture/F.0: Pavilion
+1 1301150000003505 F: Scripture/F.2: Intake
+1 1301150000003506 F: Scripture/F.5: Review and verification
+1 1301150000003507 F: Scripture/F.6: Integrate and finish
+1 1301150000003508 F: Scripture/F.7: Report and sync
+1 1301150000002252 O: Profiling/O.4: Foundation
+1 1301150000002253 O: Profiling/O.1: Preferences Store
+1 1301150000002907 O: Profiling/O.2: Tailoring
+1 1301150000002402 O: Profiling/O.0: Pavilion
+1 1301150000002911 O: Profiling/O.3: Roles
+1 1301150000003501 G: TBD/G.0: Pavilion
+1 1301150000003502 G: TBD/G.1: Telemetry
+1 1301150000003518 G: TBD/G.2: Observability
+1 1301150000003509 H: TBD/H.0: Pavilion
+1 1301150000003510 H: TBD/H.1: Technical voice
+1 1301150000003511 H: TBD/H.2: Conversation voice
+1 1301150000003512 H: TBD/H.3: Public article voice
+1 1301150000003513 H: TBD/H.4: Presentation voice
+1 1301150000003514 H: TBD/H.5: Business voice
+1 1301150000003515 H: TBD/H.6: Analytical voice
+1 1301150000002179 Imperium
