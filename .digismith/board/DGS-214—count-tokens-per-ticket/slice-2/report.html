@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-214 Token Counter (slice 2) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-214 Token Counter (slice 2) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-10</span>
+    <span>Ticket: <strong>DGS-214</strong></span>
+    <span>Commit range: <code>3acd108..99b70dd</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Goal: count the tokens of every ticket from Claude Code transcripts, with no prices. Slice 1 built the counter and <code>dg tokens &lt;ticket&gt;</code>. Slice 2 makes the workflow write the data the counter needs. Architecture: a plain-Node entry, <code>entry.ts</code>, lets skills write session and step entries to the registry. The entry reads the live session id from <code>CLAUDE_CODE_SESSION_ID</code> and accepts <code>--session-id</code> as an override. The skills <code>init</code>, <code>brainstorming</code>, <code>writing-plans</code>, <code>executing-plans</code>, <code>subagent-driven-development</code> and <code>finishing-a-development-branch</code> call it. SDD records the agent id of every dispatch in its ledger, so each task gets its own token row. The snapshot <code>tokens.json</code> is written at the end of SDD and again at finish, and the second write keeps the task rows. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (4 tasks of the plan's 10, slice 2 only, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix rounds before merge: Task 9 fix round 1, Task 10 fix round 1, and the 2-finding fix wave after the Sol whole-branch review.</p>
+  <p>Reference documents: the <a href="../design.html">design spec</a> and the
+  <a href="../plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 7</div><h4>The plain-Node entry for skills</h4><p>Provides <code>parseTaskAgents</code> and <code>entry.ts</code> with the subcommands <code>session</code>, <code>step-start</code>, <code>step-end</code>, <code>snapshot</code> and <code>task-tokens</code>, and the session id order: flag, then <code>CLAUDE_CODE_SESSION_ID</code>.</p></div>
+    <div class="card"><div class="tag">Task 8</div><h4><code>digismith:init</code> writes the session and the first step</h4><p><code>bootstrap</code>, <code>adopt</code> and <code>init</code> register the ticket's session and the first step. The step never blocks a ticket flow.</p></div>
+    <div class="card"><div class="tag">Task 9</div><h4>Step skills mark their boundaries</h4><p><code>brainstorming</code>, <code>writing-plans</code>, <code>executing-plans</code>, <code>subagent-driven-development</code> and <code>finishing-a-development-branch</code> write <code>step-start</code> and <code>step-end</code> lines. The finishing end block runs in every option, discard included.</p></div>
+    <div class="card"><div class="tag">Task 10</div><h4>SDD ledger rows and the snapshot at finish</h4><p>SDD records <code>Task N: dispatch &lt;role&gt; agent=&lt;id&gt;</code> and <code>Task N: tokens ...</code> lines and writes the snapshot before it deletes the workspace. <code>snapshot --write</code> keeps the existing task rows when no ledger is given.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 7: The plain-Node entry for skills</td><td>Provides <code>parseTaskAgents</code> and <code>entry.ts</code> with the subcommands <code>session</code>, <code>step-start</code>, <code>step-end</code>, <code>snapshot</code> and <code>task-tokens</code>, and the session id order: flag, then <code>CLAUDE_CODE_SESSION_ID</code>.</td><td><span class="status-ok">Approved, clean</span></td><td>a bare --session-id with no value parses as "true" and would be recorded; an invalid explicit --session-id falls through to the env var instead of warning; read-then-append idempotence is not atomic; no test for snapshot --write, snapshot --ledger or a missing --ticket; task-tokens has no duplicate-message-id test</td></tr>
+    <tr><td>Task 8: <code>digismith:init</code> writes the session and the first step</td><td><code>bootstrap</code>, <code>adopt</code> and <code>init</code> register the ticket's session and the first step. The step never blocks a ticket flow.</td><td><span class="status-ok">Approved, clean</span></td><td>a semicolon in new init prose; the always-brainstorming step-start in bootstrap could log a wrong step for a resumed ticket that reaches bootstrap (rare); optional parenthetical wording</td></tr>
+    <tr><td>Task 9: Step skills mark their boundaries</td><td><code>brainstorming</code>, <code>writing-plans</code>, <code>executing-plans</code>, <code>subagent-driven-development</code> and <code>finishing-a-development-branch</code> write <code>step-start</code> and <code>step-end</code> lines. The finishing end block runs in every option, discard included.</td><td><span class="status-fixed">Approved after 1 fix round</span></td><td>the finishing end blocks no longer say "skip when no key" (the start block does; the CLI exit is non-blocking); Option 1 prose cleans up the worktree before hooks (pre-existing order)</td></tr>
+    <tr><td>Task 10: SDD ledger rows and the snapshot at finish</td><td>SDD records <code>Task N: dispatch &lt;role&gt; agent=&lt;id&gt;</code> and <code>Task N: tokens ...</code> lines and writes the snapshot before it deletes the workspace. <code>snapshot --write</code> keeps the existing task rows when no ledger is given.</td><td><span class="status-fixed">Approved after 1 fix round</span></td><td>resume rule edge at fix round 5/5 before the completion line; Finish says "after digismith:report-implementation" without an explicit invoke</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready after fixes: Sol found 4 findings (3 Important, 1 Minor). 2 were fixed, and 2 were rejected after the maestro verified them in the code. A scoped re-review found both fixes addressed.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td><code>readLedger</code> threw when <code>--ledger</code> pointed at a missing or unreadable file, and the carry-forward was skipped whenever the flag was given.</td><td>Fixed: a missing or unreadable ledger warns on stderr and is treated as not given, so the task rows carry forward. <code>task-tokens</code> prints the zero line.</td></tr>
+    <tr><td>Important</td><td>Adopt then SDD wrote <code>step-start implementation</code> twice for one session with no end between.</td><td>Fixed in <code>entry.ts</code>: <code>step-start</code> writes nothing when the session's latest step event is already a <code>step_start</code> of the same step. No skill changed.</td></tr>
+    <tr><td>Important</td><td>The snapshot is written twice in the normal SDD path (SDD with the ledger, then finishing without it).</td><td>Rejected after verification: both writes are intended. Finishing covers every path, <code>executing-plans</code> included, and carries the task rows forward.</td></tr>
+    <tr><td>Minor</td><td>No tests for the <code>/clear</code>, resume, fork and subagent session-id rules.</td><td>Rejected after verification: those rules are Claude Code behavior, proven in <code>session-id-source.md</code>. <code>entry.ts</code> only reads the env var and the flag.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">9a209b9</span> feat(tokens): add the ledger parser</li>
+    <li><span class="sha">babe2b0</span> feat(tokens): add the plain-Node entry for skills</li>
+    <li><span class="sha">82ae9c0</span> feat(init): register the ticket session for token counting</li>
+    <li><span class="sha">b0e74d0</span> feat(skills): mark step boundaries for token counting</li>
+    <li><span class="sha">3a14afb</span> fix(skills): close the finishing step in every option</li>
+    <li><span class="sha">cd66d3b</span> feat(tokens): keep task rows when the snapshot is rewritten</li>
+    <li><span class="sha">0924ed8</span> feat(skills): record SDD agent ids and write the token snapshot at finish</li>
+    <li><span class="sha">f46864b</span> fix(skills): keep the SDD resume rule working with dispatch lines</li>
+    <li><span class="sha">f4a7db2</span> fix(tokens): tolerate a missing ledger and keep the task rows</li>
+    <li><span class="sha">99b70dd</span> fix(tokens): skip a repeated step-start</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-214—count-tokens-per-ticket/slice-2/report.html</footer>
+
+</body>
+</html>
