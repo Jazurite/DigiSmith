@@ -32,6 +32,54 @@ its own project and session on that server. Jack attaches once and sees every ma
 6. **Access.** One password unlocks every maestro: fine for Jack alone; separate access for others is a later question.
 7. **Bootstrap and runbook.** `herdr-bootstrap.sh` no longer starts maestro servers; herdr keeps the workers. Update `workbox.md`.
 
+## Discussion record (Jack and the Master, 2026-10-10, 10:00 to 13:1x UTC+7)
+
+### Decisions in order
+1. **Adopt OpenCode for the maestro** (DGS-169, ~10:1x): side-by-side pilot, luna for routine turns, sonnet for reviews and decisions, key plugin global.
+2. **pnpm only** (~10:3x): `pnpm add dotenv @opencode-ai/plugin@1.18.35` in `~/.config/opencode`, npm lockfiles removed. It is the DigiSmith toolchain
+   rule (`toolchain.yml`: `package_manager: pnpm`), even over a folder's existing npm lockfile. OpenCode upgraded on the Mac to 1.18.35 to match the PC.
+3. **Attach only after the ticket**, then changed: Jack attached during checkpoint 3 because the server was already up.
+4. **No public front door now** (~12:2x): the Mac Workbox sits on the **company network**. Owning jazurite.com does not give a way in: the Mac is
+   behind the company router (no port forward), and any tunnel (Cloudflare, VPS relay, Tailscale Funnel) would expose a command-running service from
+   inside the company network, against usual IT policy. A public front door (`maestro.jazurite.com`, Caddy plus port forward, or a tunnel with a
+   login gate) waits until the Mac is on a network Jack controls, or IT approves. DNS for jazurite.com is at Namecheap (`registrar-servers.com`).
+5. **Tailscale Serve, tailnet only** (~12:4x): Jack enabled Serve and HTTPS certificates in the admin console; the Master ran
+   `tailscale serve --bg --https=443 http://127.0.0.1:4198`. Checked: 401 without auth, 200 with, HTML web app at `/`. The pf anchor only guards
+   ports 22, 3283, 5900, so it does not block Serve.
+6. **One server for all maestros** (~13:0x): not one server per maestro; this ticket.
+7. **Its own epic** (~13:1x): not a lineage, not under DGS-182.
+
+### How Jack attaches (Windows PC, worked 2026-10-10 ~12:5x)
+- **Browser:** `https://workbox.tail730dcf.ts.net`, sign-in box (basic auth), username `opencode`, the server password; the browser may save it.
+  An empty "Nothing here yet" screen means no project is open: **Add project** with the server's folder (today
+  `/Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-169`), then open the session.
+- **Terminal, no typing of the password:** once, in PowerShell:
+  `[Environment]::SetEnvironmentVariable("OPENCODE_SERVER_PASSWORD", (ssh workbox "cat ~/.digismith-depot/opencode/server-password"), "User")`;
+  check with `[bool]$env:OPENCODE_SERVER_PASSWORD`; then `opencode attach https://workbox.tail730dcf.ts.net -c`. Optional profile function:
+  `function maestro { opencode attach https://workbox.tail730dcf.ts.net -c }`. Stored in plain text in the user profile (Credential Manager is the
+  encrypted option).
+- **OpenCode Desktop:** no documented "add server" screen found (feature requests anomalyco/opencode#7371, #7790; Railway's tool writes a remote
+  server into Desktop, so it exists inside). If the Desktop app has a server setting: URL above, user `opencode`, the password. Unverified.
+- **Alternatives kept:** `ssh -t workbox '... opencode attach http://127.0.0.1:4198 -c'` (runs on the Mac); an SSH `LocalForward 4198` in the
+  `workbox` host (no longer needed with Serve); `herdr --remote workbox --session default` (shows every herdr tab, shares the one TUI pane; needs
+  herdr on the PC, Windows support unknown). OpenCode 1.18.35 has no `--remote` flag; herdr 0.9.3 does.
+
+### What the pilot showed (DGS-169 checkpoints 2 and 3)
+- The server is **separate from herdr**: PID parent `launchd`; the herdr tab `opencode-maestro` is only one client. Nothing restarts it after a
+  reboot or crash (hence the LaunchAgent). The worker's bootstrap text started the server in a herdr tab, which would tie it to herdr again: do not.
+- **Guardrail** (luna, prompt-free `probe` agent with the same permission block): 26 probes denied, no leak; `cat`, `head`, `wc` removed from bash
+  (reads go through the path-denied read tool); pipes, redirects, `;`, `&`, `$`, backticks denied; grep and glob disabled (grep matched file
+  contents and leaked a canary); the `list` tool does not exist in 1.18.35; exact git allow list (`git status [--short|--porcelain]`,
+  `git diff [--stat|--name-only|HEAD]`, `git log --oneline [-N]`, `git branch [-a|-vv]`) closes `git diff --no-ind\ex` and `git branch -D`;
+  built-in `build`, `plan`, `general`, `explore` agents disabled. OpenCode turns `\` into `/` before matching, so a backslash cannot be denied by
+  pattern: `ls` can still list names through a backslash path (accepted residual risk). Worker prompts cannot contain `| > $ & ;`. The gateway
+  refuses prompts that look like injections ("do not refuse").
+- **Pilot asks** (status, list agents, draft a brief): luna $0.017 total, good enough for routine status, one wrong label; sonnet $0.142 (about 8x),
+  better judgment. Use `maestro-review` for decisions. The Claude-side comparison (digismith-maestro) was not run.
+- **Missing before real use:** dispatching workers (edit rule too narrow, untested); no memory, SessionStart or post-finish hooks, no usage probe;
+  the TUI pane is not a named herdr agent (`pane run` with text, never empty); memory up to 2.6 GB on the test server.
+- Spend: about $0.53 of the $1 order cap (about $0.71 including the spike).
+
 ## Related
 
 DGS-169 (the pilot, [maestro-in-herdr.md](maestro-in-herdr.md)), DGS-182 (Dedicated Workbox milestone), DGS-177 (hardening), DGS-198 (one herdr session),
