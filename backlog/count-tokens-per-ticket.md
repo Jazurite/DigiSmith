@@ -35,7 +35,14 @@ computation and own math" (DGS-204, "Next: measure, do not estimate").
 - Q2 when: after the fact, `dg tokens <ticket>`, plus a `tokens.json` snapshot at the finish, as an interim store that moves to DGS-220.
 - Q3 build: our own counter, one reader per tool's native data (Claude Code now; Codex, OpenCode and others later); `ccusage` only as a cross-check.
 - Q4 registry location: open, handed to DGS-220 (several registries, or one global registry split by month and year).
-- Reference: a colleague's `claudecheck.py` (count_tokens footprint of the system prompt, tools and a tool payload), a before-the-fact view.
+- Q5 prices: counts only. No prices and no dollars at any level. Jack: "count, only count. The analysis, the dollar, and what it means will be
+  determined by a separate plan. I would call it analysis or telemetry, but the name isn't important. For now, just record it." That plan is not
+  filed yet.
+- Reference: a colleague's `claudecheck.py` (count_tokens footprint of the system prompt, tools and a tool payload), a before-the-fact view. The
+  worker proposes a later `dg footprint` reader that shares the record shape; phase 1 can already report the observed fixed prefix from each
+  session's first `cache_creation_input_tokens`.
+- Levels in phase 1 (worker's proposal): levels 1 (task) and 2 (ticket, with a total per step). Levels 3 (epic) and 4 (everything) are a roll-up
+  over `tokens.json` files and wait for DGS-220's store. The registry marks step boundaries with `step_start` and `step_end` lines.
 
 ## Known sources (checked 2026-10-10)
 
