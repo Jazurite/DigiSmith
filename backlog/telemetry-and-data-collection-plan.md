@@ -42,6 +42,35 @@ Several pieces collect data about DigiSmith's own work, each in its own place an
 - **Readers.** The DGS-214 report, the DGS-204 comparison, the account balancer, a usage page, and living history (DGS-187).
 - **Migration.** How DGS-214's interim `tokens.json` and the telemetry skill's copies move into the new store.
 
+## Jack's direction after DGS-214 shipped (2026-10-10 ~20:3x UTC+7)
+
+DGS-214 is done (both slices merged, 0.91.0-beta): `dg tokens` counts a ticket at about 78.3 million tokens, 97.6% of them cache reads. Jack: "this is a
+great first step. We still need to enrich the data more and add more columns and fields ... and we need to figure out a place for us to store all of
+this data for Grafana or another chart tool."
+
+**Enrichment: fields to consider** (a candidate list for the brainstorm, not a decision):
+
+- *Where the work sits:* project and repo, epic, ticket, step, task, role (worker, maestro, reviewer, subagent), agent name, session and parent session,
+  subagent id and type.
+- *Who paid:* seat or account (`jack`, `dev0`), channel (subscription seat, TokenReply and its group, direct API), harness (Claude Code, OpenCode,
+  Codex), machine.
+- *How it ran:* model, effort level, thinking, speed (fast mode), service tier, refusal fallbacks, tool calls and their names.
+- *Time:* the timestamp of each response, the duration of each step and task, wall clock against active time.
+- *Outcome:* commits, lines changed, tests run and passed, review findings, fix rounds, merged or not.
+- *Seat side:* 5-hour and weekly percent before and after (the usage probe).
+- Dollars stay out of the store: the separate Analysis plan computes them from counts and a dated price table (DGS-214 Q5, DGS-204).
+
+**A store that Grafana or another chart tool can read.** Options to weigh:
+
+- SQLite file in the depot plus Grafana's SQLite data source: one file, no server; Grafana runs on the Workbox or Jack's PC.
+- PostgreSQL (or TimescaleDB): a server to run; strong SQL; the usual Grafana pairing.
+- Prometheus or a push gateway: built for metrics, poor for per-ticket events.
+- ClickHouse or DuckDB: fast analytics over many events; DuckDB is a file, like SQLite.
+- Keep JSONL files and point Grafana's Infinity data source at them: no migration, weak queries.
+
+Open: where Grafana itself runs (the Mac Workbox, Jack's PC, Grafana Cloud's free tier), who writes rows (`entry.ts` at the finish, or a collector),
+and whether the store is a Depot runtime service (D.1, like the OpenCode server and the Agentic Bridge).
+
 ## Related
 
 DGS-214 ([count-tokens-per-ticket.md](count-tokens-per-ticket.md)), DGS-204 ([token-economics-b3.md](token-economics-b3.md)),
