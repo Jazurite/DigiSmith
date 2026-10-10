@@ -108,6 +108,15 @@ describe("createCreateTaskCommand", () => {
       expect(client.setCustomField).toHaveBeenNthCalledWith(2, "new1", "f2", "hello");
     });
 
+    it("sets a Relationship field with resolved task ids", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { client, handler } = mk();
+      (client.getListFields as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "f9", name: "Epic", type: "list_relationship", type_config: {} }]);
+      (client as unknown as { getTaskByRef: unknown }).getTaskByRef = vi.fn(async (r: string) => ({ id: r === "DGS-343" ? "id343" : r }));
+      await handler({ list: "L", name: "t", field: ["Epic=DGS-343"] });
+      expect(client.setCustomField).toHaveBeenCalledWith("new1", "f9", { add: ["id343"], rem: [] });
+    });
+
     it("creates nothing when a field is bad", async () => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const { client, handler } = mk();
