@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-136 dg clickup list-fields and --field — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-136 dg clickup list-fields and --field — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-136</strong></span><span>Date: 2026-10-10</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup list-fields</code> and a repeatable <code>--field "&lt;name or id&gt;=&lt;value&gt;"</code> option on <code>create-task</code> and <code>update-task</code>. First use set ClickUp API Type on DGS-266 and DGS-267 (Frontdoor) and DGS-320 (Public); each read back correctly.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>list-fields --list &lt;id&gt; [--json]</code>: id, name, type and drop-down options of a list.</li>
+<li><code>--field</code> resolves a field by id or case-insensitive name; a duplicate name is an error that asks for the field id; an unknown field or option is an error that lists the valid names. Types: drop_down (option name or id), text, short_text, number, currency, checkbox. labels and automatic_progress are refused.</li>
+<li>Every field resolves before the first write, so a bad one writes nothing. No dry run, like <code>update-task</code>. <code>update-task</code> with only <code>--field</code> skips the empty PUT. A failed field write names the field and shows ClickUp's error body.</li>
+<li>Tests: the CLI suite passes (443 tests) with <code>FORCE_COLOR=1</code>; the build is clean.</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>With Jack's yes at checkpoint 2: DGS-266 and DGS-267 = Frontdoor, DGS-320 = Public. The first run returned 404 on each task and wrote nothing; two retries later all three were set. The 404 cause was not found and looks transient on the ClickUp side.</p>
+</section>
+</body>
+</html>
