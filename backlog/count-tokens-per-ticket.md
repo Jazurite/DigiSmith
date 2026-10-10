@@ -17,6 +17,26 @@ computation and own math" (DGS-204, "Next: measure, do not estimate").
   TokenReply, and Sol (GPT-5.6 Sol, the default reviewer) through OpenCode. Sources: OpenCode's own session store, TokenReply's request log, and the
   runners' `ParsedResult` ([token-counter-usage-producer-gap.md](token-counter-usage-producer-gap.md)).
 
+## Levels that build up (Jack, 2026-10-10 ~13:3x UTC+7)
+
+"All of the metrics will be measured gradually and we'll build up on top of the smaller one." Each level is the sum of the one below:
+
+1. **Task.** In `subagent-driven-development`, the SDD `progress.md` ledger holds the tokens of each subtask: the implementer, the reviewers and
+   everything else.
+2. **Ticket.** Every development workflow is based on a ticket, so the ticket's total spans all its steps (brainstorming, writing plans,
+   implementation, finishing), with a total per step.
+3. **Epic.** The sum of its tickets (for example DGS-220 under Imperium).
+4. **Everything.** The grand total.
+
+## Brainstorm answers so far (Jack, relayed 2026-10-10)
+
+- Q1 attribution: both. A registry written by the workflow (`init` at the start, `subagent-driven-development` at dispatch, the finish; extend the
+  skills if they do not write it), with transcript tagging as the fallback.
+- Q2 when: after the fact, `dg tokens <ticket>`, plus a `tokens.json` snapshot at the finish, as an interim store that moves to DGS-220.
+- Q3 build: our own counter, one reader per tool's native data (Claude Code now; Codex, OpenCode and others later); `ccusage` only as a cross-check.
+- Q4 registry location: open, handed to DGS-220 (several registries, or one global registry split by month and year).
+- Reference: a colleague's `claudecheck.py` (count_tokens footprint of the system prompt, tools and a tool payload), a before-the-fact view.
+
 ## Known sources (checked 2026-10-10)
 
 - **Claude Code transcripts** (`~/.claude/projects/<project>/<session>.jsonl`): each assistant message has `usage` with `input_tokens`,
