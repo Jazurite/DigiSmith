@@ -68,6 +68,10 @@ too narrow and dispatch is untested), the seat and model chosen at start (`claud
 - **Browser:** `https://workbox.tail730dcf.ts.net`, sign-in box (basic auth), username `opencode`, the server password; the browser may save it.
   An empty "Nothing here yet" screen means no project is open: **Add project** with the server's folder (today
   `/Users/workbox/Workspace/Jazurite/DigiSmith/.worktrees/dgs-169`), then open the session.
+  If clicks do nothing on the empty screen, open the project by URL: the web app addresses a project as
+  `https://workbox.tail730dcf.ts.net/<base64url of the folder path>/session/<session id>` (worked 2026-10-10 ~14:2x for the maestro session
+  `ses_edbd33565ffeBvJA2WZeLjHW6d`; Jack typed into it, agent Maestro, model TokenReply GPT-5.6 Luna). The event stream through Tailscale was
+  checked and works, so the empty-screen clicks were a missing project, not the network.
 - **Terminal, no typing of the password:** once, in PowerShell:
   `[Environment]::SetEnvironmentVariable("OPENCODE_SERVER_PASSWORD", (ssh workbox "cat ~/.digismith-depot/opencode/server-password"), "User")`;
   check with `[bool]$env:OPENCODE_SERVER_PASSWORD`; then `opencode attach https://workbox.tail730dcf.ts.net -c`. Optional profile function:
