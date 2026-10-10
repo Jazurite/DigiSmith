@@ -1680,6 +1680,12 @@
       <p><code>dg clickup</code> can now relate tickets without moving them. <code>add-dependency</code> and <code>remove-dependency</code> set "waiting on" and "blocking", <code>add-link</code> and <code>remove-link</code> set task links, and <code>--field</code> on <code>create-task</code> and <code>update-task</code> takes Relationship values, so a ticket in its clan list can name its epic (<code>--field "Epic=DGS-343"</code>). Keys resolve to task ids before any write, a dry run sends nothing and needs no network with plain ids, and only the two add commands have an allow rule. Tested live on real tickets: Dawn (DGS-338) now waits on DGS-327. The review was a Claude whole-branch review, because OpenCode v2 does not run for agents yet; five of its findings were fixed. The Epic and Initiative fields themselves come with DGS-344.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>DGS-361 dg clickup move-list on Frontdoor</h4>
+      <p>Added <code>dg clickup move-list</code>. The public API documents no List move, so it uses the Frontdoor call from Jack's capture: <code>PUT /hierarchy/v2/subcategory/{list}/position</code> with <code>{position, include_archived:false, category}</code>. No ClickUp write was made; the first use is DGS-365. See <a href="board/DGS-361—move-list/worker-dgs-361/plan.md">plan</a> and <a href="board/DGS-361—move-list/worker-dgs-361/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
