@@ -1,4 +1,4 @@
-# Agentic architecture 2, Autonomous: persistent workers that pick up tickets without Jack
+# Autonomous Agentic Architecture: persistent workers that pick up tickets without Jack
 
 **Status:** Idea, Jack's call (2026-10-06 UTC+7). No design yet. ClickUp: **DGS-185** (list E.4: Workflows, task id `14zcebruzkd`, created 2026-10-06 UTC+7).
 
