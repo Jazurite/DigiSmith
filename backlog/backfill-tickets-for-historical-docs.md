@@ -1,4 +1,4 @@
-# Backfill tickets for the historical `.digismith/docs/` folders, then move them to the board
+# Historical docs: give every `.digismith/docs/` folder a ClickUp ticket, then move it to the board
 
 **Status:** Idea, Jack's call (2026-10-04, answering the DGS-159 split): "The historical 87 docs is for another backlog because we need to
 backfill ticket for them." No design yet. ClickUp: **DGS-164** (created 2026-10-04 10:16 UTC+7 [03:16Z] in E.3: Conventions, task id `14zcebruqt0`; since 2026-10-10 ~18:2x UTC+7 a subtask of

@@ -1,4 +1,4 @@
-# Convert every `backlog/` file into a ClickUp ticket, then move the content to the board
+# Backlog files: give every `backlog/` file a ClickUp ticket, then move it to the board
 
 **Status:** Idea, Jack's call (2026-10-04, answering the DGS-159 split, Part 7): "All but that's another backlog ticket." No design yet.
 ClickUp: **DGS-165** (created 2026-10-04 10:16 UTC+7 [03:16Z] in E.3: Conventions, task id `14zcebruqt1`; since 2026-10-10 ~18:2x UTC+7 a subtask of
