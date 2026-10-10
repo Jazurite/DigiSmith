@@ -1644,6 +1644,12 @@
       <p>Added <code>dg clickup list-fields</code> and a repeatable <code>--field "&lt;name or id&gt;=&lt;value&gt;"</code> option on <code>create-task</code> and <code>update-task</code>. First use set ClickUp API Type on DGS-266 and DGS-267 (Frontdoor) and DGS-320 (Public); each read back correctly. See <a href="board/DGS-136—custom-fields/worker-dgs-136/plan.md">plan</a> and <a href="board/DGS-136—custom-fields/worker-dgs-136/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>DGS-266 dg clickup move-folder on the public API</h4>
+      <p>Added <code>dg clickup move-folder</code> on the public ClickUp API: <code>PUT /folder/{id}/position</code> with <code>CLICKUP_API_TOKEN</code>. The branch was first built on Frontdoor; the call was swapped and the Frontdoor method removed. Built and committed on branch dgs-266; first use waits for Jack's yes. See <a href="board/DGS-266—move-folder/worker-dgs-266/plan.md">plan</a> and <a href="board/DGS-266—move-folder/worker-dgs-266/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
