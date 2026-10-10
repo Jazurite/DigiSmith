@@ -1,5 +1,7 @@
 # Post-finish hooks assume the Option-1 merge flow — a direct-to-main push leaves them stranded (map item Y)
 
+**ClickUp:** **DGS-295** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Observational — surfaced by a real occurrence, not yet patched. A gap
 in **Y.1**'s shipped `post-finish` hooks (`.digismith/hooks/post-finish/`), not a new letter —
 see `MEMORY.md`'s **Y** row and `.digismith/docs/lifecycle-hooks/design.html`.

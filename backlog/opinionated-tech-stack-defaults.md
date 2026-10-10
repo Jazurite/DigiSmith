@@ -1,5 +1,7 @@
 # Opinionated default tech stack (shipped as map item G.2, Toolchain)
 
+**ClickUp:** **DGS-193** (E.2: Toolchain, done); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Designed 2026-09-11 as map item **U**, renamed **Toolchain** during the brainstorm
 (the "tech stack" framing oversold the scope — it's specific tool/technology choices, not
 architecture). Shipped 2026-09-11; merged into map item **G** as **G.2** the same day once G/U's

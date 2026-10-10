@@ -1,5 +1,7 @@
 # offload-implementer: timeout floor too low, undocumented progress-read options
 
+**ClickUp:** **DGS-102** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Two related findings from a real live test, out of scope for the task
 that found them.
 

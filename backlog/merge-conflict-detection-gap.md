@@ -1,5 +1,7 @@
 # finishing-a-development-branch Option 1: no explicit guidance when `git merge` itself fails
 
+**Discarded** (Jack, 2026-10-10, DGS-165 sweep): low confidence, no ticket. File kept, not deleted.
+
 **Status:** Not applied. Findings only. **Lower confidence than the other
 backlog items** — flagged explicitly below, may not be worth doing.
 

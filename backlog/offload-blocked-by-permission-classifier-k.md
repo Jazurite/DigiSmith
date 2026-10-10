@@ -1,5 +1,7 @@
 # Mechanical/task-tier offload is unusable under Claude Code's auto-mode permission classifier (K-lineage)
 
+**ClickUp:** **DGS-101** (B.0: Pavilion, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Confirmed live, twice in one session (2026-09-11), across both configured
 runners. This is an environmental constraint, not a DigiSmith bug — nothing in `offload-implementer`,
 `print-config.ts`, or the profile config is broken. Filed under K (Maestro) since it affects the

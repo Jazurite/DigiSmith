@@ -1,5 +1,7 @@
 # `subagent-driven-development`'s mechanical-tier offload prerequisite check needs a real check, not a shell env-var echo
 
+**ClickUp:** **DGS-114** (B.2: Model Router, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Captured live during H.1 (Saved Finish Option)'s build, 2026-09-08.
 
 ## The bug

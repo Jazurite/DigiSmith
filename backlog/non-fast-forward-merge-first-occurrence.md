@@ -1,5 +1,7 @@
 # Non-fast-forward merges in this repo — re-examine report-implementation's assumption
 
+**Merged into DGS-260** (same gap as `report-implementation-non-ff-merge-range.md`), DGS-165 sweep 2026-10-10.
+
 **Status:** Not applied. A flag for a future pass, not a bug to fix now. Now confirmed three times.
 
 **Source:** 2026-08-27, merging map item K.2 (`implementer-offload`) into

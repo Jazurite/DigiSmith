@@ -1,5 +1,7 @@
 # Persistent concurrent worker pool for offload dispatch (K.8)
 
+**ClickUp:** **DGS-99** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only, not scoped. Depends on K.2, K.3, K.6, V.1.
 
 **Map item:** **K.8**, sibling to K.2/K.3/K.5/K.6/K.7 under **K** ("Model tiering").

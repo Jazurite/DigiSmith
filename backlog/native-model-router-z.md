@@ -1,5 +1,7 @@
 # Native multi-provider model router (new letter, tentatively Z)
 
+**ClickUp:** **DGS-113** (B.2: Model Router, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only, not scoped. Promoted out of the K-lineage (was
 **K.9**) on 2026-09-04 — Jack judged K had grown too large/sprawling to
 keep holding this, and this item's actual mechanism (modifying

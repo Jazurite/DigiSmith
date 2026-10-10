@@ -1,5 +1,7 @@
 # DigiSmith self-development can't test its own not-yet-merged Skill-tool calls
 
+**Applied by DGS-161** (done, A.3), marked in the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Observational — a real, recurring limitation of DigiSmith's own
 self-development process, not a bug in any shipped skill.
 
