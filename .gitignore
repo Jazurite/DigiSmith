@@ -6,3 +6,5 @@ __pycache__/
 node_modules/
 *.tgz
 dist/
+.opencode/probes/decoy/
+.opencode/probes/results*
