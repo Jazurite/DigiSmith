@@ -22,7 +22,7 @@ describe("computeTokenCost", () => {
       provider: "tokenreply",
       model: "gpt-5.6-luna",
       usage: { inputTokens: 1_000_000, outputTokens: 500_000 },
-      costUsd: 0.08, // 1M input @ $0.02/M ($0.02) + 0.5M output @ $0.12/M ($0.06)
+      costUsd: 0.8, // 1M input @ $0.20/M ($0.20) + 0.5M output @ $1.20/M ($0.60)
     });
   });
 

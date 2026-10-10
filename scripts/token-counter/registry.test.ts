@@ -19,8 +19,9 @@ describe("resolvePricing", () => {
 
   it("resolves TokenReply's gpt-5.6-luna pricing", () => {
     expect(resolvePricing("tokenreply", "gpt-5.6-luna")).toEqual({
-      inputPricePerMillion: 0.02,
-      outputPricePerMillion: 0.12,
+      inputPricePerMillion: 0.2,
+      outputPricePerMillion: 1.2,
+      cacheReadPricePerMillion: 0.02,
     });
   });
 

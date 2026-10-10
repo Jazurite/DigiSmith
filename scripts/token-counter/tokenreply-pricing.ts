@@ -19,9 +19,10 @@ export const tokenreplyPricing: Record<string, PricingEntry> = {
     cacheReadPricePerMillion: 0.19,
   },
   // Confirmed via scripts/providers/tokenreply.ts's own comment, sourced from
-  // TokenReply's live model catalog (2026-09-05).
+  // TokenReply's live model catalog (2026-09-05); price corrected 2026-10-10 (DGS-169).
   "gpt-5.6-luna": {
-    inputPricePerMillion: 0.02,
-    outputPricePerMillion: 0.12,
+    inputPricePerMillion: 0.2,
+    outputPricePerMillion: 1.2,
+    cacheReadPricePerMillion: 0.02,
   },
 };
