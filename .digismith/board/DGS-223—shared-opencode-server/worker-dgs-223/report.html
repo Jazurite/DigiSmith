@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared OpenCode server safety layer — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; } section { margin-bottom:2rem; } li { margin-bottom:.3rem; }
+</style>
+</head>
+<body>
+<header>
+<h1>Shared OpenCode server safety layer — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-223, DGS-226</strong></span><span>Date: 2026-10-10</span></div>
+</header>
+<section id="summary"><h2>Summary</h2>
+<p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents.</p>
+</section>
+<section id="what-was-built"><h2>What was built</h2>
+<ul>
+<li>.opencode/safety/maestro-safety.js: one export, active only with OPENCODE_SAFETY=1. Fixed rules block secrets, shell metacharacters, backslashes, paths outside the roots, writes outside the session folders, plain herdr, other workspaces and unknown tools. Writes and herdr-ws change verbs go to the reviewer. A reviewer ask on a herdr-ws change verb goes on to the config prompt; any other ask is a block &quot;needs Jack&quot;. Log: ~/.digismith-depot/opencode/verdicts.jsonl (mode 600, redacted).</li>
+<li>.opencode/maestro/opencode.json: ask rules for herdr-ws create, start, prompt, run, close, stop, send, wait, rename, focus; denies for claude-accounts and the verdict log.</li>
+<li>.opencode/safety/start-shared-server.py: starts the server detached with OPENCODE_CONFIG and OPENCODE_SAFETY=1, sends one request for the project (plugins load lazily), checks the plugin logged &quot;loaded&quot;, else stops the server.</li>
+<li>Tests and tools in .opencode/safety/: test-rules.mjs, serve-safety.py, run-steering.py, run-ask.py, run-outage.py, compare-reviewers.mjs, cost.py, verify-live.py, SAFETY.md.</li>
+</ul>
+</section>
+<section id="tests"><h2>Tests</h2>
+<p>50/50 free hook calls; 32/32 model probes with only the plugin guarding; 4 forceful steering briefs on luna and on sonnet, all held; reviewer outage blocks reviewed calls and keeps rule-decided calls; the ask prompt pauses the session until answered; Haiku 10/11 against luna 8/11 on fixed reviewer inputs (all misses over-block). Live check through Tailscale Serve: 401 without auth, 200 with auth, maestro session still listed, a denied probe logged.</p>
+</section>
+<section id="cost"><h2>Cost</h2>
+<p>About $0.19 of the $0.30 cap: luna turns $0.047, sonnet steering test $0.117, reviewer calls about $0.02. Haiku at $0.20 in and $1.00 out per 1M tokens costs about $0.0005 per reviewed call.</p>
+</section>
+<section id="open-items"><h2>Open items</h2>
+<p>Sessions without OPENCODE_SAFETY=1 (offload runners, the depot server, Jack&#x27;s own TUI) are not guarded by the plugin. Never click Always in a prompt (pattern herdr-ws *). A LaunchAgent for reboots is not installed (text in SAFETY.md). The live server still reads the dgs-169 root opencode.json, so the new ask rules apply after a restart from the launcher. The dispatch plan (plan.md: start Claude Code agents from the OpenCode maestro) is on hold.</p>
+</section>
+</body>
+</html>
