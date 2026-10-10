@@ -25,7 +25,9 @@ The list description in ClickUp says the same (set 2026-10-10).
    Epic. Check the plan's limit on tasks with a non-default type (Free plan: 20).
 2. **Test on a throwaway ticket:** a link from a ticket in a clan list to an epic in Imperium, and whether a Rollup column shows the epic's
    progress. Archive the throwaway after, never hard-delete it.
-3. **`dg clickup` additions (C.2: CLI):** set a task type, add a dependency, add a link, and (only for option A) add a task to another list.
+3. **`dg clickup` additions (D.3: ClickUp Channel, filed 2026-10-10):** DGS-217 create-task-type (Frontdoor API, needs a capture of the
+   web app call), DGS-218 list-task-types and `--type` (public API), DGS-219 dependency and link commands (public API). Only for option A:
+   add a task to another list (no ticket yet).
 4. **Distribute the normal tickets in Imperium** to their clans, with a plan Jack approves first (`dg clickup move-task`). On 2026-10-10:
    DGS-13, 68, 82 (with its subtask DGS-87), 115, 118, 125, 126, 146, 148, 149, 152, 186, 187, 188, 189. Some may be epics instead (DGS-68
    "Integrate ClickUp into DigiSmith's workflow" overlaps DGS-213; DGS-82 has a subtask). DGS-149 is a duplicate kept for reuse, not
