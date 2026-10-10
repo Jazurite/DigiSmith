@@ -48,6 +48,12 @@ its own project and session on that server. Jack attaches once and sees every ma
    ports 22, 3283, 5900, so it does not block Serve.
 6. **One server for all maestros** (~13:0x): not one server per maestro; this ticket.
 7. **Its own epic** (~13:1x): not a lineage, not under DGS-182.
+8. **Model: Opus, from Claude** (~13:4x): the orchestrator needs Opus (more capable than sonnet). Terra pilot (step 1, report in
+   `.digismith/board/DGS-223—shared-opencode-server/worker-dgs-223-terra/`): sonnet beat terra ($0.095 vs $0.100, better judgment); sonnet's true
+   DGS-169 pilot cost is $0.095 (the report used $3/$15, TokenReply lists $2/$10). The OpenCode server stays and its maestros will run on
+   Opus. The Claude Code maestros do not switch yet (Jack: "not yet"). Open: how Opus reaches OpenCode (TokenReply `claude-opus-5-5` at
+   $4/$20 per 1M, or an Anthropic API key; a Claude subscription login in a third-party tool is not an option), and the cost of long
+   maestro sessions against the $5 TokenReply allowance.
 
 ### How Jack attaches (Windows PC, worked 2026-10-10 ~12:5x)
 - **Browser:** `https://workbox.tail730dcf.ts.net`, sign-in box (basic auth), username `opencode`, the server password; the browser may save it.
