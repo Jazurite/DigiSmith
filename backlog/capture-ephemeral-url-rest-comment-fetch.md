@@ -1,5 +1,7 @@
 # capture-ephemeral-url: fetch PR comments via REST, not `gh pr view`
 
+**ClickUp:** **DGS-258** (list F.6: Integrate and finish, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctm`).
+
 **Status:** Not applied. Drafted only — needs review before touching
 `skills/capture-ephemeral-url/SKILL.md`.
 

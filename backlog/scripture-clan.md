@@ -1,7 +1,11 @@
 # Scripture: the clan for DigiSmith's software development lifecycle
 
-**Status:** Idea, Jack's call (2026-10-06 UTC+7). Definition only: no ClickUp clan, folder or list exists yet. Letter: **F**, the next after E (Jack, 2026-10-06). ClickUp: **DGS-186**
-(Town Hall, like DGS-152, task id `14zcebrv03m`, created 2026-10-06 UTC+7).
+**Status:** **Created in ClickUp 2026-10-10 ~17:3x UTC+7** (Jack approved the DGS-186 design, worker dgs-186). Folder `F: Scripture`
+(`1301150000002846`) with five lists: F.0 Pavilion, F.2 Intake, F.5 Review and verification, F.6 Integrate and finish, F.7 Report and sync
+(F.1, F.3, F.4 not created: no ticket yet). Letter **F** (Jack, 2026-10-06). ClickUp: **DGS-186** (now in F.0: Pavilion, `in progress` until
+Jack's yes on the report; task id `14zcebrv03m`). Stage tickets DGS-247 to DGS-253, A.1 skill tickets DGS-239 to DGS-243, jira-client package
+tickets DGS-244 to DGS-246 (D.2), J and L ideas DGS-254, DGS-255 (F.0), old backlog files DGS-256 to DGS-264. Letter Q (DGS-42) done.
+Design and report: `.digismith/board/DGS-186—scripture-clan/` (plan.md, report.html).
 
 **Source:** Jack, 2026-10-06, while backfilling the clans (DGS-25). He wanted a clan for "the integration of the ticket text and then reporting
 to the ticket tracker", then widened it: "this will be our actual software development lifecycle". After weighing SDLC, Pipeline, Ticket Flow and

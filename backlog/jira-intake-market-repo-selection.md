@@ -1,5 +1,7 @@
 # `jira-intake`/`bootstrap` never asks which market repo(s) a ticket targets
 
+**ClickUp:** **DGS-256** (list F.2: Intake, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctj`).
+
 **Status:** Not applied. Raw finding, no design yet.
 
 **Source:** Live during EMKT-809 (2026-09-29), a JP-only PDP bug ("Paidy info

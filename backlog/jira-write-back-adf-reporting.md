@@ -1,5 +1,7 @@
 # Multi-repo distribution (I.2): profile-gated worktree fan-out
 
+**ClickUp:** **DGS-259** (list F.6: Integrate and finish, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctn`).
+
 **Status:** Not applied. Raw material only — needs a design spec before
 becoming a skill. (This item originally also covered I.1's real ADF
 formatting technique; **I.1 shipped 2026-08-26** as

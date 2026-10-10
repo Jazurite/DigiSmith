@@ -1,5 +1,7 @@
 # `report-implementation` (N) assumes fast-forward history — breaks on a real merge commit
 
+**ClickUp:** **DGS-260** (list F.7: Report and sync, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctp`).
+
 **Status:** Not applied. Raw idea only, no design spec yet.
 
 ## What prompted it

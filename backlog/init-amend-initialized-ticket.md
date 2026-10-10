@@ -1,5 +1,7 @@
 # `digismith:init` has no path for a new change request on an already-initialized ticket
 
+**ClickUp:** **DGS-257** (list F.2: Intake, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctk`).
+
 **Status:** Idea only, confirmed live once. No design yet.
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

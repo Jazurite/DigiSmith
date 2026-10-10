@@ -1,5 +1,7 @@
 # RichText (HTML) to ADF tool for JIRA comments
 
+**ClickUp:** **DGS-263** (list F.7: Report and sync, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctt`).
+
 **Status:** Idea only, confirmed live. No design yet. Filed as a task chip 2026-10-02. Supersedes "support inline code in markdown-to-adf".
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

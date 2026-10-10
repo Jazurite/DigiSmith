@@ -1,5 +1,7 @@
 # `report-implementation`'s only source of truth gets deleted by the very next step it feeds into
 
+**ClickUp:** **DGS-261** (list F.7: Report and sync, clan F: Scripture; created 2026-10-10 ~17:3x UTC+7 by the clan F work, task id `14zcebrvctq`).
+
 **Status:** Not applied. Confirmed live 2026-09-11, shipping K.4 (token counter). Process/design
 gap, not a code bug — nothing in `digismith:report-implementation` or
 `digismith:subagent-driven-development` malfunctioned; the two skills just aren't sequenced
