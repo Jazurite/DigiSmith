@@ -1,5 +1,7 @@
 # Herdr as a persistent multiplexer (tentative X.3/X.4)
 
+**ClickUp:** **DGS-109** (C.1: Workbox, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 ## Status
 Real spike done (2026-09-19), not yet brainstormed into an actual design/build. Jack's own
 placement call (2026-09-18): this is a descendant of **X** specifically — not a new top-level

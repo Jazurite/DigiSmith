@@ -1,5 +1,7 @@
 # MCP-based orchestration: X as server, V (Depot) as orchestrator, K (Maestro) as bare metal
 
+**ClickUp:** **DGS-124** (B.0: Pavilion, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Diagram (2026-09-18):** https://claude.ai/artifact/GhzA6bCwVCa6eQEb9X9nXz — the shipped
 TokenReply/OpenCode stack vs. the missing Herdr multiplexer layer proposed on the VPS (X), with
 K's open classifier question called out. Reflects the herdr correction below (pane supervisor,

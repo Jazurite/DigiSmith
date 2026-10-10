@@ -1,5 +1,7 @@
 # Improve the maestro role: relay tiny decisions to the worker instead of asking Jack
 
+**ClickUp:** **DGS-314** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea, Jack's rule (2026-10-03). No design yet. No ClickUp ticket yet. It belongs with the maestro and worker
 protocol (A.2: Protocols) and the maestro role (O.3: Roles). Related: `maestro-delegates-builds-to-workers.md` (DGS-146).
 

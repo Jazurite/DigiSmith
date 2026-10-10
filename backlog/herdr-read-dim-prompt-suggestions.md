@@ -1,5 +1,7 @@
 # Claude Code's dimmed prompt suggestions look like typed input in `herdr agent read`
 
+**ClickUp:** **DGS-304** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Finding, confirmed live 3 times. No design yet.
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

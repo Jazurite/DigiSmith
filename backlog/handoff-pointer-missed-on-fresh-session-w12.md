@@ -1,5 +1,7 @@
 # W.12's SessionStart pointer can silently miss on a freshly-cleared session
 
+**Discarded** (Jack, 2026-10-10, DGS-165 sweep): moot, no ticket. File kept, not deleted.
+
 **Status:** Not applied — and now moot day-to-day. Single occurrence, root cause narrowed but
 never confirmed (see "First theory, ruled out" below). Jack sidestepped recurrence risk directly
 rather than chase the harness bug further: this repo's `clear_context` preference is now set to

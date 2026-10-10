@@ -1,5 +1,7 @@
 # Herdr session's own auto-mode answers its elicitation prompts faster than an external `herdr pane run` message can redirect it
 
+**ClickUp:** **DGS-305** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Findings only — no ticket, no code touched.
 
 **Source:** Live session, 2026-09-30, working EMKT-809 in

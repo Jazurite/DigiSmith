@@ -1,5 +1,7 @@
 # H.2 SSH key preference: list candidate keys instead of a blind text prompt
 
+**ClickUp:** **DGS-297** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Raw idea only, no design spec yet — single live occurrence, not yet brainstormed.
 
 ## What prompted it

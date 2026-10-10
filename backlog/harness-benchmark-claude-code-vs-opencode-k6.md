@@ -1,5 +1,7 @@
 # Harness benchmark: Claude Code vs. OpenCode (K.6)
 
+**ClickUp:** **DGS-100** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Idea only.
 
 **Map item:** **K.6**, sibling to [K.3](ai-gateway-vendors-k3.md) under **K** ("Model tiering").

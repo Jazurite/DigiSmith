@@ -1,5 +1,7 @@
 # `update-history.ts` / `03-history-update.md` hardening (map item Y.1.3)
 
+**ClickUp:** **DGS-294** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Found during Y.1.3's final whole-branch review
 (2026-09-11) and its fix-wave re-review. Deliberately deferred — none are
 reachable under today's real conditions, and the hook's failure mode when
