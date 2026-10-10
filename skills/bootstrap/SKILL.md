@@ -491,6 +491,19 @@ what Step 2's new sub-step 7 below makes possible.
 8. **`.digismith/preferences.yml`.** Nothing more to do: sub-step 6
    already copies it with the other config files when the original
    checkout still has one.
+9. **Register the ticket's session for token counting.** Runs on every
+   ticket start, **not** gated on `logging` (it records counts and ids
+   only, no transcript text). From inside the worktree, with `<Key>` the
+   tracker key Step 1 resolved:
+
+   ```bash
+   node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <Key> --role worker
+   node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step brainstorming
+   ```
+
+   No tracker key (a `ticket: false` profile and no key evident) → skip,
+   silently. A non-zero exit or a warning never blocks the ticket flow
+   (same disposition as Step 1.5's missing transcript).
 
 ### Step 3: Hand Off to Brainstorming
 
@@ -588,4 +601,5 @@ Wrap `<title>`/`<folder name>` in single quotes, and write any `'` inside either
 | 1 | Get a real ticket: `ticket: true` always invokes `digismith:jira-intake` (stop if key-less). `ticket: false` first checks whether a key is already evident — if so, same as `ticket: true`, output at `.digismith/board/<KEY>—<slug>/ticket.md`; if not, derive the slug directly and skip to Step 1.5, writing nothing (unchanged). Read the ticket file's full content into context now when it exists — a worktree checks out only committed files, and it isn't committed yet (and may be gitignored outright), so it won't exist in the worktree |
 | 1.5 | Always `rm -f .digismith/telemetry-marker` first (no stale marker from a prior ticket survives). Then, if the active profile's `logging` is `true`, locate the live session transcript and write `.digismith/telemetry-marker` (transcript path, **session id**, start line, timestamp, repo, slug, ticket key if any) in the original checkout; otherwise skip, no marker written |
 | 2 | Derive `<Key>__<slug>` (or `<slug>` alone under `ticket: false`) branch name; reuse an existing worktree, or attach one to an existing branch (`git worktree add`, no `-b`), or create both (verify/rename to the exact name if the creation tool altered it); ask on collision with an unrelated ticket; then **2.6** copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` when present, **2.7** copy `.digismith/telemetry-marker` (only if Step 1.5 just wrote one this run) — all plain file copies, never `git add -f` |
+| 2.9 | From inside the worktree, with a tracker key: run `entry.ts session --ticket <Key> --role worker`, then `entry.ts step-start --ticket <Key> --step brainstorming` (`~/.digismith-depot/repo/packages/cli/src/tokens/`). Not gated on `logging`. No key → skip silently; a non-zero exit or warning never blocks |
 | 3 | Invoke `digismith:brainstorming` directly, passing the already-derived slug plus the Step 1 ticket content as seed context (when there is any); Superpowers' own chain takes over from there once it reports its design doc written |

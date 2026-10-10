@@ -11,6 +11,16 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
+Before Step 1, mark the start of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step finishing
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow. Keep the key for the end block.
+
+The end blocks also write the token snapshot. In DigiSmith's own repo it goes to the ticket's board folder. In any other repo it goes to the depot, never the client repo. Committing it stays with this flow's own rules.
+
 ## Step 1: Verify Tests
 
 Run the project's full test suite (`npm test` / `cargo test` / `pytest` / `go test ./...`).
@@ -265,6 +275,13 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/base
 git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 ```
 
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
+```
+
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 
 ### Option 2: Push and Create PR
@@ -318,11 +335,25 @@ invoke it unasked — this is an offer, not an automatic action, the same
 disposition Step 4.5's "remember this?" follow-up already has for a
 different case.
 
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
+```
+
 Once the Teams-notification offer is resolved (either answer), continue to Step 7 to hand off.
 
 ### Option 3: Keep As-Is
 
 Report: "Keeping branch <name>. Worktree preserved at <path>."
+
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
+```
 
 ### If your human partner asks to discard the work
 
@@ -349,6 +380,13 @@ Then clean up the worktree (Step 6) and force-delete the branch:
 
 ```bash
 git branch -D <feature-branch>
+```
+
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
 ## Step 6: Cleanup Workspace

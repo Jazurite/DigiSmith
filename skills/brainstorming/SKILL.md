@@ -294,6 +294,14 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 **Implementation:**
 
+Before invoking the next skill, mark the end of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step brainstorming
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+
 - Invoke the digismith:writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. digismith:writing-plans is the next step.
 

@@ -70,7 +70,18 @@ Check, in order:
    keyed tickets) also still the real, current home for a keyed ticket's
    `plan.md` today, even once its `ticket.md` already lives under `board/`.
    - **Exists** (either place) → this worktree was already fully set up
-     by DigiSmith for this specific ticket. Read `profile` from
+     by DigiSmith for this specific ticket. First, with a ticket key
+     (the branch's `<Key>__` prefix, or the matched folder's key), run
+     once, so a resumed or cleared session joins the ticket's registry:
+
+     ```bash
+     node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <Key> --role worker
+     ```
+
+     `/clear` gives a new session id and a new transcript file; `--resume`
+     and `--continue` keep the same id; a fork gets a new id. The command
+     skips a session whose id is already registered. No key → skip; a
+     non-zero exit or warning never blocks. Then read `profile` from
      `.digismith/config.yml`, or from `.digismith/profile` when
      `config.yml` or its `profile` key is missing (A.4 fallback). If
      `config.yml` exists but cannot be read or parsed, handle it the same

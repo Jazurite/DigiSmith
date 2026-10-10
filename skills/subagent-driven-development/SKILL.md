@@ -114,6 +114,14 @@ superpowers:using-git-worktrees to create one or verify the existing one.
 Never start implementation on a main/master branch without your human
 partner's explicit consent.
 
+Once the worktree exists, mark the start of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step implementation
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+
 Conversation memory does not survive compaction. In real sessions,
 controllers that lost their place have re-dispatched entire completed task
 sequences — the single most expensive failure observed. Track progress in
@@ -129,8 +137,9 @@ a ledger file, not only in todos.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
   line names your plan file, tasks with a `Task <N>: complete` line are DONE
   — do not re-dispatch them; resume at the first task without one. A task
-  whose last line is a fix round is mid-loop: resume the loop at the next
-  round. A ledger whose first line names a different plan file is another
+  with a `Task <N>: fix round` line and no `Task <N>: complete` line is
+  mid-loop: resume the loop at the round after the highest `fix round <R>/5`.
+  A ledger whose first line names a different plan file is another
   plan's progress: leave it in place and start your own, fresh.
 - Create the ledger with its identity as the first line:
   `# SDD ledger — plan: <plan file path>`.
@@ -290,6 +299,10 @@ bullet list below exactly as before.
   a pointer to that ledger entry in the dispatch.
 - Record the implementer's agent identity from the dispatch result —
   fix-loop rounds 1-3 resume this agent.
+- After every dispatch, append `Task <N>: dispatch <role> agent=<agentId>`
+  to the ledger. `<agentId>` is the `agentId` the Agent tool result returns.
+  `<role>` is `implementer`, `task-reviewer`, `re-review`, `fix` or
+  `final-reviewer`. The final reviewer's task id is `final`.
 - Never dispatch multiple implementation subagents in parallel (conflicts).
 
 Template: [implementer-prompt.md](implementer-prompt.md)
@@ -402,7 +415,7 @@ and returns the short contract. Before re-dispatching the reviewer, confirm
 the fix report contains the covering tests, the command run, and the
 output; dispatch the re-review once all three are present. Name the
 covering test files in the fix message — a one-line fix does not need the
-whole suite.
+whole suite. Append the `Task <N>: dispatch ...` line as in step 1.
 
 **The re-review is scoped.** Run `scripts/review-package PLAN_FILE FIX_BASE HEAD`
 where FIX_BASE is the head the previous review saw, and dispatch
@@ -441,8 +454,15 @@ a silent discard is forbidden.
 ### 5. Complete the task
 
 When the review comes back clean — or every open finding is parked with a
-ruling at the cap — append the completion line to the ledger in the same
-message as your other bookkeeping:
+ruling at the cap — first run:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-tokens --ticket <Key> --task <N> --ledger <workspace>/progress.md
+```
+
+Append the printed `Task <N>: tokens ...` line to the ledger. Same key rule
+as the start block. Then append the completion line in the same message as
+your other bookkeeping:
 
 - `Task <N>: complete (commits <base7>..<head7>, review clean)`
 - `Task <N>: complete (commits <base7>..<head7>, <K> parked)` after a
@@ -463,7 +483,8 @@ on the most capable available model (see Model Selection), using
 superpowers:requesting-code-review's
 [code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at
 the ledger's deferred-minor and parked lines so it can triage which must be
-fixed before merge.
+fixed before merge. Append the `Task final: dispatch final-reviewer ...` line
+as in step 1.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
@@ -477,12 +498,26 @@ rulings, or stop on load-bearing ones. There is no second fix wave —
 residual load-bearing findings surface to your human partner when
 finishing-a-development-branch presents the options.
 
+Once the final review is clean, before the report and the Finish step, mark the end of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step implementation
+```
+
+Same key rule as the start block.
+
 ## Finish
 
 When the final whole-branch review is clean and its fixes are merged,
-delete this plan's workspace (`rm -rf <workspace>`) — the git history is
-the record now. Sibling directories belong to other plans; leave them
-alone.
+run, after digismith:report-implementation and before the deletion:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --ledger <workspace>/progress.md --write
+```
+
+Use the key from the start block. Then delete this plan's workspace
+(`rm -rf <workspace>`) — the git history is the record now. Sibling
+directories belong to other plans; leave them alone.
 
 Use digismith:finishing-a-development-branch.
 
