@@ -48,4 +48,30 @@ describe("createUpdateTaskCommand", () => {
     expect(errorSpy).toHaveBeenCalledWith("clickup update-task: HTTP 404");
     expect(process.exitCode).toBe(1);
   });
+
+  it("resolves --type by name and sends custom_item_id", async () => {
+    const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
+    const getTaskTypes = vi.fn().mockResolvedValue([
+      { id: 1030, name: "Epic", name_plural: "Epics", description: null, avatar: null },
+    ]);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createUpdateTaskCommand(() => ({ updateTask, getTaskTypes }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", type: "epic" });
+
+    expect(updateTask).toHaveBeenCalledWith("abc", { custom_item_id: 1030 });
+  });
+
+  it("errors without calling the API write when --type is unknown", async () => {
+    const updateTask = vi.fn();
+    const getTaskTypes = vi.fn().mockResolvedValue([]);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const command = createUpdateTaskCommand(() => ({ updateTask, getTaskTypes }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", type: "saga" });
+
+    expect(updateTask).not.toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0][0]).toMatch(/clickup update-task: unknown task type "saga"/);
+    expect(process.exitCode).toBe(1);
+  });
 });

@@ -1,6 +1,7 @@
 import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient, buildTaskWriteBody } from "./lib.ts";
+import { resolveTaskType } from "./task-types.ts";
 
 export function createUpdateTaskCommand(
   clientFactory: () => ClickUpClient = createClient
@@ -30,11 +31,19 @@ export function createUpdateTaskCommand(
           type: "string",
           requiresArg: true,
           describe: "parent task id (moves the task into the parent's list); empty value clears it",
+        })
+        .option("type", {
+          type: "string",
+          requiresArg: true,
+          describe: "task type, by name (singular or plural) or id; 0 = plain task",
         }),
     handler: async (argv) => {
       try {
         const client = clientFactory();
         const body = buildTaskWriteBody(argv as unknown as Parameters<typeof buildTaskWriteBody>[0]);
+        if (argv.type !== undefined) {
+          body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
+        }
         const task = await client.updateTask(argv.task as string, body);
         console.log(JSON.stringify(task, null, 2));
         process.exitCode = 0;

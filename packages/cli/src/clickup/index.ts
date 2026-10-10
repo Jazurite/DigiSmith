@@ -9,6 +9,7 @@ import { moveTaskCommand } from "./move-task.ts";
 import { createFolderCommand } from "./create-folder.ts";
 import { createListCommand } from "./create-list.ts";
 import { updateListCommand } from "./update-list.ts";
+import { listTaskTypesCommand } from "./list-task-types.ts";
 import frontdoorCommand from "./frontdoor/index.ts";
 import { uploadAttachmentCommand } from "./upload-attachment.ts";
 
@@ -28,6 +29,7 @@ const clickupCommand: CommandModule = {
       .command(createListCommand)
       .command(updateListCommand)
       .command(uploadAttachmentCommand)
+      .command(listTaskTypesCommand)
       .command(frontdoorCommand)
       .demandCommand(1, ""),
   handler: () => {},
