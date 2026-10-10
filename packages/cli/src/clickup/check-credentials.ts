@@ -1,5 +1,5 @@
 import type { CommandModule } from "yargs";
-import { checkCredentials } from "@digismith/clickup-client";
+import { checkCredentials, readFrontdoorAuth } from "@digismith/clickup-client";
 
 export function createCheckCredentialsCommand(envPath?: string): CommandModule {
   return {
@@ -9,6 +9,9 @@ export function createCheckCredentialsCommand(envPath?: string): CommandModule {
       try {
         checkCredentials(envPath);
         console.log("clickup check-credentials: ok");
+        console.log(
+          `clickup check-credentials: frontdoor session ${readFrontdoorAuth(envPath) ? "present" : "missing"}`
+        );
         process.exitCode = 0;
       } catch (err) {
         console.error(`clickup check-credentials: ${(err as Error).message}`);

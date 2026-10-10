@@ -24,7 +24,7 @@ function stripQuotes(value: string): string {
   return value;
 }
 
-function parseEnvFile(path: string): Record<string, string> {
+export function parseEnvFile(path: string): Record<string, string> {
   const content = readFileSync(path, "utf-8");
   const result: Record<string, string> = {};
   for (const rawLine of content.split("\n")) {
@@ -53,4 +53,13 @@ export function checkCredentials(envPath: string = defaultEnvPath()): Credential
     );
   }
   return { teamId: CLICKUP_TEAM_ID, apiToken: CLICKUP_API_TOKEN };
+}
+
+/** The Frontdoor session header from the env file, or undefined when absent. Never logged. */
+export function readFrontdoorAuth(envPath: string = defaultEnvPath()): string | undefined {
+  try {
+    return parseEnvFile(envPath).CLICKUP_FRONTDOOR_AUTH || undefined;
+  } catch {
+    return undefined;
+  }
 }

@@ -329,3 +329,12 @@ export interface FrontdoorFieldPutBody {
   members: [];
   groups: [];
 }
+
+/** Body of the Frontdoor task type calls: the full type, not a patch. */
+export interface FrontdoorTaskTypeBody {
+  avatar_source: string;
+  avatar_value: string;
+  description: string;
+  name: string;
+  name_plural: string;
+}

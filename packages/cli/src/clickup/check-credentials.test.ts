@@ -38,4 +38,33 @@ describe("createCheckCredentialsCommand", () => {
     expect(process.exitCode).toBe(1);
     rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  it("reports the Frontdoor session as present without printing its value", () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "dg-clickup-check-creds-fd-"));
+    const envPath = join(tmpDir, ".env");
+    writeFileSync(
+      envPath,
+      "CLICKUP_API_TOKEN=tok_123\nCLICKUP_TEAM_ID=5738747\nCLICKUP_FRONTDOOR_AUTH='Bearer secret.jwt.value'\n"
+    );
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    (createCheckCredentialsCommand(envPath).handler as () => void)();
+
+    expect(logSpy).toHaveBeenCalledWith("clickup check-credentials: frontdoor session present");
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain("secret");
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("reports the Frontdoor session as missing, still exit 0", () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "dg-clickup-check-creds-nofd-"));
+    const envPath = join(tmpDir, ".env");
+    writeFileSync(envPath, "CLICKUP_API_TOKEN=tok_123\nCLICKUP_TEAM_ID=5738747\n");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    (createCheckCredentialsCommand(envPath).handler as () => void)();
+
+    expect(logSpy).toHaveBeenCalledWith("clickup check-credentials: frontdoor session missing");
+    expect(process.exitCode).toBe(0);
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
 });
