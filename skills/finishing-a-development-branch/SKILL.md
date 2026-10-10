@@ -17,7 +17,7 @@ Before Step 1, mark the start of this step:
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step finishing
 ```
 
-Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow. Keep the key for the end block.
 
 ## Step 1: Verify Tests
 
@@ -172,14 +172,6 @@ Then continue to Step 5 exactly as written.
 
 ## Step 5: Execute Choice
 
-Once the chosen option is done, mark the end of this step. That is after Option 1's post-finish hooks, after Option 2 reports the PR, and right after Option 3's report. Run it before Step 7:
-
-```bash
-node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
-```
-
-Same key rule as the start block.
-
 ### Option 1: Merge Locally
 
 Resolve this repo's `ssh_key` preference once, before running any command
@@ -281,6 +273,12 @@ git update-ref -d refs/digismith/post-finish/<feature-branch>/base
 git update-ref -d refs/digismith/post-finish/<feature-branch>/head
 ```
 
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+```
+
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
 
 ### Option 2: Push and Create PR
@@ -334,11 +332,23 @@ invoke it unasked — this is an offer, not an automatic action, the same
 disposition Step 4.5's "remember this?" follow-up already has for a
 different case.
 
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+```
+
 Once the Teams-notification offer is resolved (either answer), continue to Step 7 to hand off.
 
 ### Option 3: Keep As-Is
 
 Report: "Keeping branch <name>. Worktree preserved at <path>."
+
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+```
 
 ### If your human partner asks to discard the work
 
@@ -365,6 +375,12 @@ Then clean up the worktree (Step 6) and force-delete the branch:
 
 ```bash
 git branch -D <feature-branch>
+```
+
+Mark the end of finishing. Use the key from the start block:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
 ```
 
 ## Step 6: Cleanup Workspace
