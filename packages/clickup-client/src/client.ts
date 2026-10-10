@@ -111,6 +111,16 @@ export class ClickUpClient {
     return data.custom_items;
   }
 
+  /** How many tasks (closed and subtasks too) in the whole workspace have this task type. */
+  async countTasksOfType(typeId: number): Promise<number> {
+    const tasks = await this.paginate<ClickUpTask>(
+      `/team/${this.teamId}/task?custom_items[]=${typeId}`,
+      { params: { include_closed: true, subtasks: true } },
+      (resp) => (resp as ClickUpTasksResponse).tasks ?? [],
+    );
+    return tasks.length;
+  }
+
   getListTasks(listId: string, opts: RequestOptions = {}): Promise<ClickUpTask[]> {
     return this.paginate<ClickUpTask>(
       `/list/${listId}/task`,

@@ -1,4 +1,4 @@
-import { ClickUpClient, checkCredentials, Space } from "@digismith/clickup-client";
+import { ClickUpClient, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
 
 export function createClient(envPath?: string): ClickUpClient {
@@ -7,6 +7,17 @@ export function createClient(envPath?: string): ClickUpClient {
     CLICKUP_TEAM_ID: creds.teamId,
     CLICKUP_API_TOKEN: creds.apiToken,
   });
+}
+
+export function createFrontdoorClient(envPath?: string): FrontdoorClient {
+  const creds = checkCredentials(envPath);
+  const auth = readFrontdoorAuth(envPath);
+  if (!auth) {
+    throw new Error(
+      "CLICKUP_FRONTDOOR_AUTH is missing in ~/.digismith-depot/.env; run dg clickup frontdoor import-auth"
+    );
+  }
+  return new FrontdoorClient({ CLICKUP_TEAM_ID: creds.teamId, CLICKUP_FRONTDOOR_AUTH: auth });
 }
 
 export const DIGISMITH_SPACE_ID = "1301150000001271";

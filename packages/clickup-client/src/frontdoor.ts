@@ -24,7 +24,7 @@ export interface FrontdoorClientConfig {
  * prefer ClickUpClient wherever the public API can do the job.
  */
 export class FrontdoorClient {
-  private readonly teamId: string;
+  readonly teamId: string;
   private readonly http: AxiosInstance;
   private readonly limiter: RateLimiter;
 

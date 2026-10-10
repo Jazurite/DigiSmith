@@ -113,6 +113,22 @@ describe("ClickUpClient domain methods", () => {
     await expect(client.getTaskTypes()).rejects.toThrow("custom_items");
   });
 
+  it("countTasksOfType() counts the workspace tasks of one type, closed and subtasks included", async () => {
+    const client = makeClient();
+    request
+      .mockResolvedValueOnce({ data: { tasks: [{ id: "1" }, { id: "2" }] } })
+      .mockResolvedValueOnce({ data: { tasks: [{ id: "3" }] } })
+      .mockResolvedValueOnce({ data: { tasks: [] } });
+
+    expect(await client.countTasksOfType(1030)).toBe(3);
+    expect(request).toHaveBeenNthCalledWith(1, {
+      method: "GET",
+      url: "/team/5738747/task?custom_items[]=1030",
+      params: { include_closed: true, subtasks: true, page: 0 },
+      data: undefined,
+    });
+  });
+
   it("getListTasks() paginates the list task endpoint", async () => {
     const client = makeClient();
     request
