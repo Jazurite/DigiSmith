@@ -26,6 +26,12 @@ Several pieces collect data about DigiSmith's own work, each in its own place an
 
 - **One store or several.** A file layout under `~/.digismith-depot/`, files in the repo, a small database, or ClickUp. What is per machine, what is
   shared, and what is committed.
+- **The session registry (DGS-214's Question 4, handed here by Jack, 2026-10-10 ~12:1x UTC+7).** DGS-214 needs a registry: one line per ticket,
+  session id, role (worker, subagent, reviewer, maestro) and start time. Jack: "we will have multiple registries right now ... I don't know if we
+  should have a global registry ... the global registry, we will need to record it, so we will have the registry by month, by year ... that's why I
+  said we still need brainstorming." Options on the table: one file per ticket in the depot (`~/.digismith-depot/token-registry/<ticket>.jsonl`,
+  the worker's pick), one file per ticket in the board folder, or one global registry split by month and year. DGS-214 designs the registry behind
+  a small read and write interface and leaves the location to this plan.
 - **One record shape.** Common keys for every record: ticket, session id, agent, seat, model, time. Each source adds its own fields.
 - **Collection points.** Which lifecycle points write records (ticket start in `init`, subagent dispatch, the finish, a limit stop, a reboot), and
   whether hooks or skills do it. The telemetry marker is already a start point.
