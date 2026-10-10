@@ -1583,6 +1583,12 @@
       <p>A new clan for monitoring and analysis now exists as <strong>G: TBD</strong>, with <strong>G.0</strong> Pavilion and <strong>G.1</strong> Telemetry. It will hold telemetry, metrics, the analysis of token counts and Grafana (DGS-232). Its first task is to choose its name (DGS-237). Letter P (Telemetry, DGS-41) was migrated: the telemetry skill is DGS-233 in A.1, and G.1 holds DGS-234 (logging switched off on 2026-09-04), DGS-235 (automatic lifecycle) and DGS-236 (keep raw transcripts out of the public repo). A check found that no transcript was ever committed. The data collection plan DGS-220 moved into G.0, and DGS-238 is the clan G side of the token counter DGS-214, which stays in B.3. See <a href="board/DGS-41—migrate-letter-p-telemetry/plan.md">plan</a> and <a href="board/DGS-41—migrate-letter-p-telemetry/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>Shared OpenCode server safety layer</h4>
+      <p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents. See <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
