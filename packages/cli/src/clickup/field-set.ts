@@ -1,4 +1,5 @@
 import type { ClickUpClient } from "@digismith/clickup-client";
+import { REF } from "./refs.ts";
 
 /** The slice of a list field that --field needs; the client's union type does not cover text or number. */
 export interface FieldLike {
@@ -76,6 +77,7 @@ export function parseRelationValue(raw: string): { add: string[]; rem: string[] 
     const remove = item.startsWith("-");
     const ref = (remove ? item.slice(1) : item).trim();
     if (!ref) throw new Error(`relationship value "${raw}" has an empty item`);
+    if (!REF.test(ref)) throw new Error(`"${ref}" is not a task id or key like DGS-12`);
     (remove ? rem : add).push(ref);
   }
   const both = add.find((r) => rem.some((x) => x.toLowerCase() === r.toLowerCase()));
@@ -99,7 +101,10 @@ async function resolveRelationValue(client: ClickUpClient, field: FieldLike, raw
     }
     return [...new Set(out)];
   };
-  return { add: await ids(add), rem: await ids(rem) };
+  const resolved = { add: await ids(add), rem: await ids(rem) };
+  const shared = resolved.add.find((id) => resolved.rem.includes(id));
+  if (shared) throw new Error(`field "${field.name}": task ${shared} is both added and removed in "${raw}"`);
+  return resolved;
 }
 
 /** Reads the list's fields once and resolves every arg; throws before anything is written. */
@@ -107,13 +112,25 @@ export async function resolveFieldArgs(client: ClickUpClient, listId: string, ar
   if (args.length === 0) return [];
   const fields = (await client.getListFields(listId)) as unknown as FieldLike[];
   const resolved: ResolvedField[] = [];
+  // Per field: what earlier args added and removed, so a later arg cannot undo them.
+  const seen = new Map<string, { add: Set<string>; rem: Set<string> }>();
   for (const arg of args) {
     const { key, value } = parseFieldArg(arg);
     const field = resolveField(fields, key);
-    resolved.push({
-      field,
-      value: RELATIONSHIP_TYPES.includes(field.type) ? await resolveRelationValue(client, field, value) : resolveValue(field, value),
-    });
+    let resolvedValue: unknown;
+    if (RELATIONSHIP_TYPES.includes(field.type)) {
+      const rel = await resolveRelationValue(client, field, value);
+      const prior = seen.get(field.id) ?? { add: new Set<string>(), rem: new Set<string>() };
+      const clash = [...rel.add.filter((id) => prior.rem.has(id)), ...rel.rem.filter((id) => prior.add.has(id))][0];
+      if (clash) throw new Error(`field "${field.name}": task ${clash} is both added and removed across --field args`);
+      rel.add.forEach((id) => prior.add.add(id));
+      rel.rem.forEach((id) => prior.rem.add(id));
+      seen.set(field.id, prior);
+      resolvedValue = rel;
+    } else {
+      resolvedValue = resolveValue(field, value);
+    }
+    resolved.push({ field, value: resolvedValue });
   }
   return resolved;
 }

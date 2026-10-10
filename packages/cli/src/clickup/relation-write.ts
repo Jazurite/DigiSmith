@@ -1,11 +1,9 @@
 import type { Argv, CommandModule } from "yargs";
 import type { ClickUpClient, ClickUpTask, DependencyRelation } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
+import { REF, KEY } from "./refs.ts";
 import { printCall } from "./task-type-write.ts";
 
-/** A ClickUp id (alphanumeric) or a custom id such as DGS-343. */
-const REF = /^[A-Za-z0-9]+(-\d+)?$/;
-const KEY = /^[A-Za-z]+-\d+$/;
 
 export type RelationKind = "dependency" | "link";
 export type RelationAction = "add" | "remove";

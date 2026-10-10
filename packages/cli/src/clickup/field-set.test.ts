@@ -122,7 +122,7 @@ describe("Relationship fields", () => {
       getListFields: vi.fn().mockResolvedValue([...fields, rel]),
       getTaskByRef: vi.fn(async (ref: string) => {
         if (ref in byKey) return { id: byKey[ref] };
-        if (ref === "rawid") return { id: "rawid" };
+        if (ref === "rawid" || Object.values(byKey).includes(ref)) return { id: ref };
         throw new Error(`no task ${ref}`);
       }),
       setCustomField,
@@ -148,6 +148,38 @@ describe("Relationship fields", () => {
     const set = vi.fn();
     await expect(resolveFieldArgs(clientWith(set), "L", ["Epic=DGS-999"])).rejects.toThrow(/DGS-999/);
     expect(set).not.toHaveBeenCalled();
+  });
+  it("refuses a key in add and its id in rem after resolving", async () => {
+    const set = vi.fn();
+    await expect(resolveFieldArgs(clientWith(set), "L", ["Epic=DGS-343,-id343"])).rejects.toThrow("both added and removed");
+    expect(set).not.toHaveBeenCalled();
+  });
+  it("refuses the same task added in one --field and removed in another on the same field", async () => {
+    const set = vi.fn();
+    await expect(resolveFieldArgs(clientWith(set), "L", ["Epic=DGS-343", "Epic=-DGS-343"])).rejects.toThrow("both added and removed");
+    expect(set).not.toHaveBeenCalled();
+  });
+  it("refuses a ref that is not an id or a key before any lookup", async () => {
+    const client = clientWith();
+    await expect(resolveFieldArgs(client, "L", ["Epic=../list/123"])).rejects.toThrow(/not a task id or key/);
+    await expect(resolveFieldArgs(client, "L", ["Epic=a b"])).rejects.toThrow(/not a task id or key/);
+    expect(client.getTaskByRef).not.toHaveBeenCalled();
+  });
+  it("sends a repeated ref once", async () => {
+    const resolved = await resolveFieldArgs(clientWith(), "L", ["Epic=DGS-343,DGS-343"]);
+    expect(resolved[0].value).toEqual({ add: ["id343"], rem: [] });
+  });
+  it("allows spaces around the - prefix", () => {
+    expect(parseRelationValue(" - DGS-343 , DGS-344 ")).toEqual({ add: ["DGS-344"], rem: ["DGS-343"] });
+  });
+  it("accepts the tasks type name and a lower-case key", async () => {
+    const tasks = plain("f21", "Initiative", "tasks");
+    const client = clientWith();
+    (client.getListFields as ReturnType<typeof vi.fn>).mockResolvedValue([tasks]);
+    (client.getTaskByRef as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "id1" });
+    const resolved = await resolveFieldArgs(client, "L", ["Initiative=dgs-1"]);
+    expect(client.getTaskByRef).toHaveBeenCalledWith("dgs-1");
+    expect(resolved[0].value).toEqual({ add: ["id1"], rem: [] });
   });
   it("other unsupported types are still refused", async () => {
     await expect(resolveFieldArgs(clientWith(), "L", ["Tags=x"])).rejects.toThrow("not supported by --field");
