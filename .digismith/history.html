@@ -1601,6 +1601,12 @@
       <p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents. See <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>DGS-214 Token Counter (slice 1)</h4>
+      <p>Goal: count the tokens of every ticket from Claude Code transcripts. The count has no prices. The command is <code>dg tokens &lt;ticket&gt;</code>, and a <code>tokens.json</code> snapshot stores the result. Architecture: a library in <code>packages/cli/src/tokens/</code> has one reader for each source. Phase 1 has only the Claude Code reader. Every reader returns the same <code>UsageRecord</code> shape. A registry with <code>append</code> and <code>read</code> stores session and step entries. A grouping function builds the snapshot from the records and the registry. Slice 1 ships the <code>dg tokens</code> front end. The plain-Node entry for skills comes in slice 2. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (6 tasks of the plan's 10, slice 1 only, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix rounds before merge: Task 6 fix round 1, the session-tagging fix after the checkpoint 3 live run, and the 10-finding fix wave after the Sol whole-branch review. See <a href="board/DGS-214—count-tokens-per-ticket/design.html">design</a>, <a href="board/DGS-214—count-tokens-per-ticket/plan.md">plan</a>, and <a href="board/DGS-214—count-tokens-per-ticket/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
