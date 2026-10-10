@@ -134,6 +134,30 @@ one table where each row has a date and a source.
 - **What moves in.** The K.4 gap, K.7 and the Billing part of C.3: move to B.3, or stay and link?
 - **Output.** A page, a `dg` command, or both.
 
+## Next: measure, do not estimate (Jack, 2026-10-10)
+
+Jack: "we can only know for sure when we run it and capture the logs, and we can come up with our own computation and own math." Every dollar
+value above that comes from a third party (the seat's API value, the 0.3 ratio's real cost) stays an estimate until our own logs replace it.
+
+Sources we already have:
+
+- **Claude Code session transcripts** (`~/.claude/projects/<project>/<session>.jsonl`). Checked 2026-10-10: each assistant message carries
+  `usage` with `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens` (split by 5-minute and 1-hour in
+  `cache_creation`), `service_tier`, `speed` and the `model`. This gives exact tokens per session, per worker and per ticket.
+- **The usage probe** (`~/.digismith-depot/usage-probe/`): the 5h and weekly percent used per seat, at any moment.
+- **TokenReply's own usage log** for each request (New API keeps one per key). Needs our key; not read yet.
+
+Our own math, a sketch:
+
+1. Read the probe before and after a run on one seat, and sum the tokens of every session that ran on that seat in the window.
+2. Price those tokens at the API list price: that is the API value of the run.
+3. API value / points of the 5h (and weekly) window used = the API value of 1%. Times 100 = the seat's real API value at the cap, for our own
+   mix of models and cache use.
+4. Run the same kind of task through TokenReply and price it from its log, to check the 0.3 ratio and its token counts against Claude Code's.
+
+Noise: other sessions on the same seat (other devices, Desktop) count in the probe but not in our transcripts. Run the measurement when the seat
+is otherwise idle, or mark the reading as noisy.
+
 ## Related
 
 [token-counter-usage-producer-gap.md](token-counter-usage-producer-gap.md), [gateway-vendor-benchmark-k7.md](gateway-vendor-benchmark-k7.md),
