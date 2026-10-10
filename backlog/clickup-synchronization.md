@@ -1,6 +1,6 @@
 # ClickUp Synchronization: the ticket follows the work, all the time
 
-**Status:** Epic, Jack's call (2026-10-10 UTC+7). No design yet. ClickUp: **DGS-213** (list Town Hall, created 2026-10-10 11:46 UTC+7 [04:46Z], task id `14zcebrvck0`).
+**Status:** Epic, Jack's call (2026-10-10 UTC+7). No design yet. ClickUp: **DGS-213** (list Imperium, then named Town Hall, created 2026-10-10 11:46 UTC+7 [04:46Z], task id `14zcebrvck0`).
 
 **Source:** the DGS-25 backfill session, 2026-10-10. DGS-32 (letter G) was finished but still `in progress` until Jack set it by hand, and
 DGS-42 (letter Q) stayed `backlog` while we worked on Q. Jack: "for the DigiSmith profile or any profile that enables the tracker as ClickUp
@@ -22,7 +22,7 @@ Out of scope: Jira. Jira status changes stay manual (standing rule). A Jira prof
 ## Subtasks
 
 - **DGS-178** The maestro posts ClickUp progress comments automatically (Jack, 2026-10-10: a subtask of this epic; set 2026-10-10,
-  which moved it from E.4 to Town Hall).
+  which moved it from E.4 to Imperium).
 - Candidates, Jack confirms: DGS-79 (status follows the work), DGS-21 (ClickUp write-back, the I.1 analog), DGS-163 (each backlog item gets
   its ClickUp task, with description sync), DGS-179 (a "ready" status and a "Pickup" field).
 
@@ -36,7 +36,7 @@ around the classifier through another agent.
 ## Open questions
 
 1. Where the mechanism lives. Jack's rule (2026-10-10): how the agent works in a session is clan A: System (probably A.3 Lifecycle Hooks),
-   and the lifecycle stage is clan F: Scripture (.7 Report and sync). The epic itself sits in Town Hall, like DGS-25.
+   and the lifecycle stage is clan F: Scripture (.7 Report and sync). The epic itself sits in Imperium, the roadmap list (DGS-215).
 2. Which steps trigger each status move (init or bootstrap, the first checkpoint, the final review, finishing a branch, a Scout report).
 3. Statuses differ per ClickUp list: one mapping per list, or read from the list.
 4. "Epic" in ClickUp: DGS-25 uses ClickUp's Milestone task type. An Epic task type must be made in the ClickUp UI; `dg clickup` cannot

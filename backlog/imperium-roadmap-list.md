@@ -1,0 +1,39 @@
+# Imperium: the roadmap list, and every normal ticket back to its clan
+
+**Status:** Decided, Jack (2026-10-10 UTC+7). The list is renamed and described; the rest is to do. ClickUp: **DGS-215** (list E.3: Conventions, created 2026-10-10 11:55 UTC+7 [04:55Z], task id `14zcebrvck7`).
+
+**Source:** the DGS-213 talk on epics, initiatives and milestones, 2026-10-10. Jack: "the town hall is where we place all our big initiative,
+epic and milestone, while the normal ticket lives and distributes to each clan", then "we should not call it Town Hall. I think the word
+Imperium is more suitable."
+
+## The rule (Jack, 2026-10-10)
+
+- **Imperium** (ClickUp list `1301150000002179`, renamed from Town Hall on 2026-10-10) is the roadmap. It holds initiatives, epics and
+  milestones only.
+- **Normal tickets** live in their clan's lineage list. A clan's Pavilion list takes what spans that clan's lineages.
+- **Initiative:** a group of epics for one goal; its epics are its subtasks (both live in Imperium, so a subtask is fine).
+- **Epic:** a body of work with an end. Its tickets stay in their clan lists and link to it (option B, the Master's recommendation; Jack can
+  still pick option A, subtasks with the "Subtasks in Multiple Lists" ClickApp).
+- **Milestone:** a dated checkpoint, ClickUp's Milestone type. Its description says "done when"; the tickets that must finish first block it.
+- Industry order: initiative > epic > ticket > subtask. A milestone is a point in time, not a container.
+
+The list description in ClickUp says the same (set 2026-10-10).
+
+## To do
+
+1. **Jack, in the ClickUp UI:** create the custom task types Epic and Initiative (Milestone exists). Change DGS-25, DGS-182 and DGS-213 to
+   Epic. Check the plan's limit on tasks with a non-default type (Free plan: 20).
+2. **Test on a throwaway ticket:** a link from a ticket in a clan list to an epic in Imperium, and whether a Rollup column shows the epic's
+   progress. Archive the throwaway after, never hard-delete it.
+3. **`dg clickup` additions (C.2: CLI):** set a task type, add a dependency, add a link, and (only for option A) add a task to another list.
+4. **Distribute the normal tickets in Imperium** to their clans, with a plan Jack approves first (`dg clickup move-task`). On 2026-10-10:
+   DGS-13, 68, 82 (with its subtask DGS-87), 115, 118, 125, 126, 146, 148, 149, 152, 186, 187, 188, 189. Some may be epics instead (DGS-68
+   "Integrate ClickUp into DigiSmith's workflow" overlaps DGS-213; DGS-82 has a subtask). DGS-149 is a duplicate kept for reuse, not
+   archived (Jack).
+5. **DGS-178** goes back to E.4 with a link to DGS-213 when option B is confirmed (the parent move put it in Imperium).
+6. **DGS-25's 24 letter subtasks** (DGS-26 to DGS-49): keep them as subtasks of the epic, or link them. Jack decides.
+
+## Related
+
+DGS-213 (ClickUp Synchronization, the first epic made under this rule), DGS-25, DGS-182, DGS-197 (`--parent`), DGS-152 (C clan migration),
+`clickup-synchronization.md`, `clickup-parent-flag.md`.

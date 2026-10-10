@@ -2,7 +2,7 @@
 
 **Status:** Decided for DGS-159, an idea for the rest. Jack's call (2026-10-04 14:26 UTC+7 [07:26Z]): "For 159 you have my permission to do it and should do it
 automatically from now on. Add backlog item if not exists." ClickUp: **DGS-178** (created 2026-10-04 14:26 UTC+7 [07:26Z] in E.4: Workflows, task id `14zcebrur0g`; since 2026-10-10 a subtask of the
-epic DGS-213 ClickUp Synchronization, list Town Hall).
+epic DGS-213 ClickUp Synchronization, list Imperium).
 
 **Source:** the DGS-159 and DGS-161 progress comments. The maestro asked for a yes before each one. Jack: "for 159 ... do it automatically
 from now on." No existing backlog item covers it: `clickup-ticket-writeback-i1-analog.md` is the consumer-repo write-back through
