@@ -1,6 +1,6 @@
 # A dedicated clan for monitoring and analysis: telemetry, metrics, token analysis, Grafana
 
-**Status:** Decided in principle, Jack (2026-10-10 ~16:4x UTC+7); name, letter and lineages open. No ClickUp folder yet. ClickUp: **DGS-232** (list E.3: Conventions, created 2026-10-10 16:36 UTC+7 [09:36Z], task id `14zcebrvcqg`).
+**Status:** Decided in principle, Jack (2026-10-10 ~16:4x UTC+7). **Letter G** (Jack, the same day). Name and lineages open. No ClickUp folder yet. ClickUp: **DGS-232** (list E.3: Conventions, created 2026-10-10 16:36 UTC+7 [09:36Z], task id `14zcebrvcqg`).
 
 **Source:** the letter P migration (DGS-41), 2026-10-10. Jack first said telemetry "should be part" of something larger, maybe a lineage under a
 new clan "Analysis", then: "We're gonna have a dedicated clan for monitoring. It will include Grafana monitoring, telemetry, metrics, token count
@@ -24,7 +24,8 @@ Boundaries:
 
 1. **Name.** Jack said "monitoring" and "analysis". Options: Monitoring, Analysis, or a name in the style of Scripture and Imperium (for example
    Observatory). Jack decides.
-2. **Letter.** F is reserved for Scripture (no folder yet). The next free clan letter is G (the legacy letter G, Methodology, is now clan E).
+2. **Letter: G** (Jack, 2026-10-10: "the next should be the G letter"). F stays reserved for Scripture (DGS-186, no folder yet). Say
+   "clan G" for this one and "letter G" for the legacy Methodology letter (now clan E).
 3. **Lineages.** Per the Pavilion rule: `.0: Pavilion` first. Then perhaps `.1 Telemetry`, `.2 Metrics`, `.3 Token Analysis`, `.4 Visualization`
    (Grafana). Jack decides.
 4. **Telemetry and the public repo.** Telemetry commits raw, unredacted transcripts into DigiSmith's repo, which is public (Jack, 2026-10-10:
