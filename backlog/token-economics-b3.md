@@ -53,6 +53,39 @@ Every price is 0.3x the API price. A flat ratio is how relay panels such as New 
 sources of tokens this cheap: pooled subscription seats (against Anthropic's terms), farmed cloud credits, stolen keys or cards, a cheaper model
 in place of the named one, inflated token counts. Not known for this relay.
 
+**Update, 2026-10-10 11:2x UTC+7:** the card is TokenReply's. TokenReply runs New API, and its price list is public at
+`https://www.tokenreply.com/api/pricing` (no login). Base price = `model_ratio` x $2 per 1M input, output = input x `completion_ratio`, then x
+the group ratio. The Claude groups on that list:
+
+| Group | Ratio | Sonnet 5.5 in / out per 1M | Opus 5.5 in / out per 1M |
+|---|---|---|---|
+| `claude_plus`, `claude_enterprise`, `claude_sales` | 0.3 | $0.60 / $3.00 | $1.20 / $6.00 |
+| `devin` | 0.5 | $1.00 / $5.00 | $2.00 / $10.00 |
+| `claude_official` | 1.2 | $2.40 / $12.00 | $4.80 / $24.00 |
+
+The group names suggest the source: `claude_official` costs 20% more than Anthropic (likely real API keys plus a margin), while the 0.3 groups are
+named after subscription plans. All of these Claude models are `access_tier: plus` on TokenReply (the cost of Plus access is not on the list).
+The list's own `recent_metrics` showed `claude-sonnet-5-5` at 25% availability over 4 calls at that time, where the card showed 88.0%.
+One TokenReply base price differs from the skill table: `claude-haiku-5-5` at $0.20 / $1.00 (skill: $0.10 / $0.50).
+
+### A $25 Team Standard seat at its cap against the same tokens on TokenReply
+
+Jack's question, 2026-10-10. Third-party sources put a Team Standard seat ($25 a month, $20 on annual billing) at about Pro-level usage, or
+1.25x Pro. With Pro at $400 a month at the cap (the table below), the seat's API value at the cap is about **$400 to $500 a month**.
+
+| The same tokens on | Cost per month | Against the $25 seat |
+|---|---|---|
+| The $25 Team Standard seat, at its cap | $25 | 1x |
+| TokenReply, 0.3 groups | $120 to $150 | 5x to 6x more |
+| TokenReply, `devin` (0.5) | $200 to $250 | 8x to 10x more |
+| Anthropic API (list) | $400 to $500 | 16x to 20x more |
+| TokenReply, `claude_official` (1.2) | $480 to $600 | 19x to 24x more |
+
+Break-even: TokenReply's 0.3 groups cost less than the seat only below $83 of API-value a month, which is 17% to 21% of the seat's cap. The ratio
+holds for any model, because TokenReply applies one ratio to every price. The seat has a 5-hour and a weekly cap; TokenReply has none, so it is an
+overflow option at 0.3x when a seat is out (Team extra usage is billed at API prices). The seat's real value at the cap is an estimate until we
+measure our own tokens per 5-hour window.
+
 A model check: real Sonnet 5.5 returns a 400 for `thinking: {type: "disabled"}` and for `tool_choice: {type: "any"}`. If a channel accepts either,
 another model answered or the channel changed the request.
 
