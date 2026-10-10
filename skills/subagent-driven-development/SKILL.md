@@ -298,6 +298,10 @@ bullet list below exactly as before.
   a pointer to that ledger entry in the dispatch.
 - Record the implementer's agent identity from the dispatch result —
   fix-loop rounds 1-3 resume this agent.
+- After every dispatch, append `Task <N>: dispatch <role> agent=<agentId>`
+  to the ledger. `<agentId>` is the `agentId` the Agent tool result returns.
+  `<role>` is `implementer`, `task-reviewer`, `re-review`, `fix` or
+  `final-reviewer`. The final reviewer's task id is `final`.
 - Never dispatch multiple implementation subagents in parallel (conflicts).
 
 Template: [implementer-prompt.md](implementer-prompt.md)
@@ -449,8 +453,15 @@ a silent discard is forbidden.
 ### 5. Complete the task
 
 When the review comes back clean — or every open finding is parked with a
-ruling at the cap — append the completion line to the ledger in the same
-message as your other bookkeeping:
+ruling at the cap — first run:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-tokens --ticket <Key> --task <N> --ledger <workspace>/progress.md
+```
+
+Append the printed `Task <N>: tokens ...` line to the ledger. Same key rule
+as the start block. Then append the completion line in the same message as
+your other bookkeeping:
 
 - `Task <N>: complete (commits <base7>..<head7>, review clean)`
 - `Task <N>: complete (commits <base7>..<head7>, <K> parked)` after a
@@ -496,8 +507,14 @@ Same key rule as the start block.
 ## Finish
 
 When the final whole-branch review is clean and its fixes are merged,
-delete this plan's workspace (`rm -rf <workspace>`) — the git history is
-the record now. Sibling directories belong to other plans; leave them
+run, after digismith:report-implementation and before the deletion:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --ledger <workspace>/progress.md --write
+```
+
+Use the key from the start block. Then delete this plan's workspace
+(`rm -rf <workspace>`) — the git history is the record now. Sibling directories belong to other plans; leave them
 alone.
 
 Use digismith:finishing-a-development-branch.

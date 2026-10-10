@@ -19,6 +19,8 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow. Keep the key for the end block.
 
+The end blocks also write the token snapshot. In DigiSmith's own repo it goes to the ticket's board folder. In any other repo it goes to the depot, never the client repo. Committing it stays with this flow's own rules.
+
 ## Step 1: Verify Tests
 
 Run the project's full test suite (`npm test` / `cargo test` / `pytest` / `go test ./...`).
@@ -277,6 +279,7 @@ Mark the end of finishing. Use the key from the start block:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
 Once cleanup (Step 6) is done, continue to Step 7 to hand off.
@@ -336,6 +339,7 @@ Mark the end of finishing. Use the key from the start block:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
 Once the Teams-notification offer is resolved (either answer), continue to Step 7 to hand off.
@@ -348,6 +352,7 @@ Mark the end of finishing. Use the key from the start block:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
 ### If your human partner asks to discard the work
@@ -381,6 +386,7 @@ Mark the end of finishing. Use the key from the start block:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
 ## Step 6: Cleanup Workspace
