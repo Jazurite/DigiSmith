@@ -36,6 +36,26 @@
         "bash": {
           "*": "deny",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * create": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * create *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * start": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * start *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * prompt": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * prompt *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * run": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * run *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * close": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * close *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * stop": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * stop *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * send": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * send *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * wait": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * wait *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus *": "ask",
           "ls": "allow",
           "ls *": "allow",
           "git status": "allow",
@@ -79,7 +99,9 @@
           "*--output*": "deny",
           "*--no-index*": "deny",
           "*herdr *": "deny",
-          "*/.local/bin*": "deny"
+          "*/.local/bin*": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "read": {
           "*": "allow",
@@ -100,7 +122,9 @@
           "*.key*": "deny",
           "*.env.example": "allow",
           "*/.digismith-depot": "deny",
-          "*/.digismith-depot/": "deny"
+          "*/.digismith-depot/": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "grep": "deny",
         "glob": "deny",
@@ -123,7 +147,9 @@
           "*.key*": "deny",
           "*.env.example": "allow",
           "*/.digismith-depot": "deny",
-          "*/.digismith-depot/": "deny"
+          "*/.digismith-depot/": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "webfetch": "deny",
         "websearch": "deny",
@@ -152,6 +178,26 @@
         "bash": {
           "*": "deny",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * create": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * create *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * start": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * start *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * prompt": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * prompt *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * run": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * run *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * close": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * close *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * stop": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * stop *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * send": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * send *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * wait": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * wait *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus *": "ask",
           "ls": "allow",
           "ls *": "allow",
           "git status": "allow",
@@ -195,7 +241,9 @@
           "*--output*": "deny",
           "*--no-index*": "deny",
           "*herdr *": "deny",
-          "*/.local/bin*": "deny"
+          "*/.local/bin*": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "read": {
           "*": "allow",
@@ -216,7 +264,9 @@
           "*.key*": "deny",
           "*.env.example": "allow",
           "*/.digismith-depot": "deny",
-          "*/.digismith-depot/": "deny"
+          "*/.digismith-depot/": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "grep": "deny",
         "glob": "deny",
@@ -239,7 +289,9 @@
           "*.key*": "deny",
           "*.env.example": "allow",
           "*/.digismith-depot": "deny",
-          "*/.digismith-depot/": "deny"
+          "*/.digismith-depot/": "deny",
+          "*claude-accounts*": "deny",
+          "*verdicts.jsonl*": "deny"
         },
         "webfetch": "deny",
         "websearch": "deny",
