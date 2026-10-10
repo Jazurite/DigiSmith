@@ -137,8 +137,9 @@ a ledger file, not only in todos.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
   line names your plan file, tasks with a `Task <N>: complete` line are DONE
   — do not re-dispatch them; resume at the first task without one. A task
-  whose last line is a fix round is mid-loop: resume the loop at the next
-  round. A ledger whose first line names a different plan file is another
+  with a `Task <N>: fix round` line and no `Task <N>: complete` line is
+  mid-loop: resume the loop at the round after the highest `fix round <R>/5`.
+  A ledger whose first line names a different plan file is another
   plan's progress: leave it in place and start your own, fresh.
 - Create the ledger with its identity as the first line:
   `# SDD ledger — plan: <plan file path>`.
@@ -414,7 +415,7 @@ and returns the short contract. Before re-dispatching the reviewer, confirm
 the fix report contains the covering tests, the command run, and the
 output; dispatch the re-review once all three are present. Name the
 covering test files in the fix message — a one-line fix does not need the
-whole suite.
+whole suite. Append the `Task <N>: dispatch ...` line as in step 1.
 
 **The re-review is scoped.** Run `scripts/review-package PLAN_FILE FIX_BASE HEAD`
 where FIX_BASE is the head the previous review saw, and dispatch
@@ -482,7 +483,8 @@ on the most capable available model (see Model Selection), using
 superpowers:requesting-code-review's
 [code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at
 the ledger's deferred-minor and parked lines so it can triage which must be
-fixed before merge.
+fixed before merge. Append the `Task final: dispatch final-reviewer ...` line
+as in step 1.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
@@ -514,8 +516,8 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Use the key from the start block. Then delete this plan's workspace
-(`rm -rf <workspace>`) — the git history is the record now. Sibling directories belong to other plans; leave them
-alone.
+(`rm -rf <workspace>`) — the git history is the record now. Sibling
+directories belong to other plans; leave them alone.
 
 Use digismith:finishing-a-development-branch.
 
