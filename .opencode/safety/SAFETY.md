@@ -19,16 +19,15 @@ The plugin does nothing unless the server starts with `OPENCODE_SAFETY=1`. **The
 1. `cp .opencode/safety/maestro-safety.js ~/.config/opencode/plugins/maestro-safety.js` (one file, one export; do not copy the tests there)
    Config check, free: without `OPENCODE_CONFIG`, `opencode agent list` in this repo shows the default agents (build, plan) and no maestro; with it, maestro and maestro-review.
    Still loaded for every session in this repo: the four skills in `.opencode/skills/` (clickup-rules, dispatch-worker, flux, handoff): text only, loaded on demand, harmless but visible to offload workers..
-2. Start line of the shared server (and the LaunchAgent `ProgramArguments` for DGS-223). The maestro config is NOT in the repo root: a root `opencode.json`
-   would make every OpenCode session in this repo (offload workers too) read-only. It lives in `.opencode/maestro/opencode.json` and is loaded only through `OPENCODE_CONFIG`.
-   The launcher sets `OPENCODE_CONFIG`, `OPENCODE_SAFETY=1` and `SAFETY_ALLOWED_WS`, reads the password file (never printed), detaches (PPID launchd), and runs the loaded check:
-   `python3 -I <repo>/.opencode/safety/start-shared-server.py <project-dir> 4198`
-   LaunchAgent: `ProgramArguments` = `/usr/bin/python3`, `-I`, `<repo>/.opencode/safety/start-shared-server.py`, `<project-dir>`, `4198` (`SAFETY_ALLOWED_WS` in `EnvironmentVariables`, default `w2`).
-   Without the launcher, by hand: `OPENCODE_CONFIG=<repo>/.opencode/maestro/opencode.json OPENCODE_SAFETY=1 opencode serve ...`.
-3. Start check (launcher): OpenCode loads plugins lazily, on the first request for a project folder. The launcher sends one request for it, then within 20 s the log must have a new `"event":"loaded"` line; if not, it stops the server. Without the plugin only layers 1 and 3 stand.
+2. Start the shared server with `opencode-boot` (the ONLY boot script; source `scripts/opencode-boot/`, installed by `sh scripts/opencode-boot/install.sh` to `~/.digismith-depot/bin/opencode-boot`, payload in `~/.digismith-depot/opencode/boot/`).
+   It stops what holds the port (by PID), starts OpenCode 2.0.26 from the v2 home (`~/.digismith-depot/opencode/v2`) with the maestro config, the v2 safety plugin (`maestro-safety-v2.js`, a plugin directory) and the v2 key plugin (`tokenreply-key-v2.js`) and `OPENCODE_SAFETY=1`,
+   and requires the `loaded` line; if that fails it falls back to `~/.opencode/bin/opencode-1.18.35` with the 1.x setup (global 1.x plugins, `OPENCODE_CONFIG`). The password comes from `~/.digismith-depot/opencode/server-password` (never printed; the server log is mode 600 and not to be shown).
+   `opencode-boot` restarts the live server on 4198; `opencode-boot --test` starts a throwaway server (port 4217, home `~/.digismith-depot/opencode/test`) and never touches 4198. The LaunchAgent (DGS-331) calls `opencode-boot`; `SAFETY_ALLOWED_WS` goes in its `EnvironmentVariables` (default `w2`).
+   The maestro config is NOT in the repo root: a root `opencode.json` would make every OpenCode session in this repo (offload workers too) read-only. It lives in `.opencode/maestro/opencode.json` and is installed into the payload.
+3. Start check (`opencode-boot`): OpenCode loads plugins lazily, on the first request for a project folder. The launcher sends one request for it, then within 20 s the log must have a new `"event":"loaded"` line; if not, it stops the server. Without the plugin only layers 1 and 3 stand.
 4. `SAFETY_ALLOWED_WS` lists the herdr workspaces the plugin accepts; the per-project permission block still pins one workspace per agent (DGS-225).
 
 ## Tests (all on a throwaway server, port 4213, fresh random password; live 4198 untouched)
 - `node test-rules.mjs` free, no model: 50 calls (reviewer URL dead on purpose).
-- `serve-safety.py <port> <workdir> [reviewer-url]`, then `../probes/run_probes.py probe-open <port>` (config allows everything, only the plugin guards),
+- (Needs a port to v2, DGS-346: the throwaway server and probe agents `serve-safety.py` made are gone; these scripts speak the 1.x REST API.) `../probes/run_probes.py probe-open <port>` (config allows everything, only the plugin guards),
   `run-steering.py <agent> <port> [summarize|follow]`, `run-ask.py <port>`, `run-outage.py <port>`, `compare-reviewers.mjs <model>...`, `cost.py`.

@@ -24,8 +24,8 @@
 <ul>
 <li>.opencode/safety/maestro-safety.js: one export, active only with OPENCODE_SAFETY=1. Fixed rules block secrets, shell metacharacters, backslashes, paths outside the roots, writes outside the session folders, plain herdr, other workspaces and unknown tools. Writes and herdr-ws change verbs go to the reviewer. A reviewer ask on a herdr-ws change verb goes on to the config prompt; any other ask is a block &quot;needs Jack&quot;. Log: ~/.digismith-depot/opencode/verdicts.jsonl (mode 600, redacted).</li>
 <li>.opencode/maestro/opencode.json: ask rules for herdr-ws create, start, prompt, run, close, stop, send, wait, rename, focus; denies for claude-accounts and the verdict log.</li>
-<li>.opencode/safety/start-shared-server.py: starts the server detached with OPENCODE_CONFIG and OPENCODE_SAFETY=1, sends one request for the project (plugins load lazily), checks the plugin logged &quot;loaded&quot;, else stops the server.</li>
-<li>Tests and tools in .opencode/safety/: test-rules.mjs, serve-safety.py, run-steering.py, run-ask.py, run-outage.py, compare-reviewers.mjs, cost.py, verify-live.py, SAFETY.md.</li>
+<li>.opencode/safety/start-shared-server.py (replaced by opencode-boot, DGS-334): starts the server detached with OPENCODE_CONFIG and OPENCODE_SAFETY=1, sends one request for the project (plugins load lazily), checks the plugin logged &quot;loaded&quot;, else stops the server.</li>
+<li>Tests and tools in .opencode/safety/: test-rules.mjs, serve-safety.py (removed, DGS-334), run-steering.py, run-ask.py, run-outage.py, compare-reviewers.mjs, cost.py, verify-live.py, SAFETY.md.</li>
 </ul>
 </section>
 <section id="tests"><h2>Tests</h2>
