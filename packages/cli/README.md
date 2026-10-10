@@ -32,9 +32,16 @@ digismith clickup create-folder --name <name>                      # create a ne
 digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
 digismith clickup update-list --list <id> [--name <name>] [--description <text> | --description-file <path>]  # rename a List and set its description
 digismith clickup upload-attachment --task <id> --file <path>      # upload a file as an attachment on a task
+digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session of a Proxyman capture in ~/.digismith-depot/.env (no secret printed)
+digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
 
 digismith --version
 ```
+
+Frontdoor commands cover what the public ClickUp API cannot do (task types today). Capture procedure: turn Proxyman on,
+do the action once in the ClickUp web app, export the requests as Raw into `~/Downloads/Proxyman Captures/ClickUp/`, then run
+`dg clickup frontdoor import-auth` (it never moves or changes the export). Without `--capture` both commands use the newest `Raw_*` there.
+The session token expires; a 401 or 403 says to capture a new one.
 
 `dg` accepts exactly the same arguments. `--help`, at any level, shows branded, colorized command help.
 

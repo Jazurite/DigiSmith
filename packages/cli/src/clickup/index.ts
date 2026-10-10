@@ -9,6 +9,7 @@ import { moveTaskCommand } from "./move-task.ts";
 import { createFolderCommand } from "./create-folder.ts";
 import { createListCommand } from "./create-list.ts";
 import { updateListCommand } from "./update-list.ts";
+import frontdoorCommand from "./frontdoor/index.ts";
 import { uploadAttachmentCommand } from "./upload-attachment.ts";
 
 const clickupCommand: CommandModule = {
@@ -27,6 +28,7 @@ const clickupCommand: CommandModule = {
       .command(createListCommand)
       .command(updateListCommand)
       .command(uploadAttachmentCommand)
+      .command(frontdoorCommand)
       .demandCommand(1, ""),
   handler: () => {},
 };
