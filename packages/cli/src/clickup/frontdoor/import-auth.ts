@@ -1,5 +1,5 @@
 import type { CommandModule } from "yargs";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { formatExpiry, jwtExpiry, newestCapture, readCalls } from "./captures.ts";
@@ -19,6 +19,8 @@ function storeAuth(envPath: string, value: string): void {
   const at = lines.findIndex((l) => l.startsWith(`${KEY}=`));
   if (at === -1) lines.push(line);
   else lines[at] = line;
+  // mode only applies when the file is created: tighten an existing file before the secret goes in.
+  if (existsSync(envPath)) chmodSync(envPath, 0o600);
   writeFileSync(envPath, lines.join("\n") + "\n", { mode: 0o600 });
 }
 

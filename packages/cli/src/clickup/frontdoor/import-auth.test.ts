@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync, statSync, readdirSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync, statSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createImportAuthCommand } from "./import-auth.ts";
@@ -65,6 +65,13 @@ describe("frontdoor import-auth", () => {
 
   it("creates the env file when it is missing, mode 600", async () => {
     const { cap, env } = setup();
+    await run(env, { capture: cap });
+    expect(statSync(env).mode & 0o777).toBe(0o600);
+  });
+
+  it("chmods an existing 0644 env file to 600 before writing the value", async () => {
+    const { cap, env } = setup("A=1\n");
+    chmodSync(env, 0o644);
     await run(env, { capture: cap });
     expect(statSync(env).mode & 0o777).toBe(0o600);
   });
