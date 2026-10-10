@@ -19,7 +19,9 @@ export interface CapturedCall {
 /** The newest Raw_* export in a captures folder, by the timestamp in its name. */
 export function newestCapture(root: string): string {
   let best: { key: number; name: string } | undefined;
-  for (const name of readdirSync(root)) {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const name = entry.name;
     const m = RAW_NAME.exec(name);
     if (!m) continue;
     const [mo, d, y, h, mi, s] = m.slice(1).map(Number);

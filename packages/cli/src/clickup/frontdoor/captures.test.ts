@@ -28,6 +28,13 @@ describe("newestCapture", () => {
     expect(newestCapture(root)).toBe(join(root, "Raw_10_10_2026_12_22_34.folder"));
   });
 
+  it("ignores a newer file named Raw_*", () => {
+    const root = tmp();
+    mkdirSync(join(root, "Raw_10_03_2026_13_50_53.folder"));
+    writeFileSync(join(root, "Raw_10_10_2026_12_22_34.zip"), "");
+    expect(newestCapture(root)).toBe(join(root, "Raw_10_03_2026_13_50_53.folder"));
+  });
+
   it("throws when there is no Raw_* capture", () => {
     expect(() => newestCapture(tmp())).toThrow(/no Raw_\* capture/);
   });
