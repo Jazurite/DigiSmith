@@ -12,6 +12,16 @@ Depot clan renumbered the same day (Jack): `D.0: Foundation` became `D.4: Founda
 - Repos hold only source and templates.
 - An **install step** copies source into the depot. A merge reaches a live service only when it is installed, never by running from a checkout.
 
+## The model: factory and depot (Jack, 2026-10-10 ~18:1x UTC+7)
+
+- **The DigiSmith repo is the factory.** It produces the materials: source, scaffolding, templates, compiled packages, configs, skills.
+  Nothing runs in the factory.
+- **The depot runs things.** When something has to run (a server such as the shared OpenCode maestro server, the future DigiSmith MCP server
+  of DGS-216, a proxy, a wrapper script), the depot runs it from `~/.digismith-depot/`. That is why the depot has its own clan (D) and its
+  own client (`dg depot`).
+- **The depot takes its materials from the factory**: it pulls or installs them (the sparse `packages/` clone, an install step per resource),
+  never runs them in place inside a checkout.
+
 ## Why now
 
 The rule exists only in the depot skill's description (`skills/depot/SKILL.md`, map item V: "machine-wide runtime resources ... independent
