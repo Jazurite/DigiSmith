@@ -18,21 +18,22 @@ def say(m): print(now(), m, flush=True)
 
 def install():
     """Copy the repo source to the v2 home (the repo stays the source of truth)."""
-    for d in ("maestro", "prompts", "plugin-safety", "xdg/c", "xdg/d", "xdg/s", "xdg/k"): (V2 / d).mkdir(parents=True, exist_ok=True)
+    for d in ("maestro", "prompts", "plugin-safety", "plugin-key", "xdg/c", "xdg/d", "xdg/s", "xdg/k"): (V2 / d).mkdir(parents=True, exist_ok=True)
     shutil.copytree(REPO / ".opencode/prompts", V2 / "prompts", dirs_exist_ok=True)
     shutil.copy(SAFE / "maestro-safety.js", V2 / "plugin-safety/maestro-safety.js"); shutil.copy(SAFE / "maestro-safety-v2.js", V2 / "plugin-safety/server.js")
-    (V2 / "plugin-safety/package.json").write_text('{"type":"module"}\n')   # key plugin (tokenreply-key-v2.js) not installed: ctx.provider.transform does not exist in the beta runtime
-    if not (V2 / "node_modules/@opencode/plugin").exists():   # 2.x plugin directories import @opencode/plugin: pnpm only (its ignored-build exit code is fine)
+    shutil.copy(SAFE / "tokenreply-key-v2.js", V2 / "plugin-key/server.js")   # the key plugin needs the 2.0.26 runtime (ctx.provider; the beta runtime has no ctx.provider)
+    for d in ("plugin-safety", "plugin-key"): (V2 / d / "package.json").write_text('{"type":"module"}\n')
+    if not (V2 / "node_modules/@opencode/plugin").exists() or not (V2 / "node_modules/dotenv").exists():   # 2.x plugin directories import @opencode/plugin: pnpm only (its ignored-build exit code is fine)
         (V2 / "package.json").write_text('{"name":"opencode-v2-home","private":true}\n')
-        subprocess.run(["pnpm", "add", "@opencode/plugin@2.0.26"], cwd=V2, capture_output=True, text=True, timeout=180)
-    for d in ("plugin-safety",):
+        subprocess.run(["pnpm", "add", "@opencode/plugin@2.0.26", "dotenv@16.4.5"], cwd=V2, capture_output=True, text=True, timeout=180)
+    for d in ("plugin-safety", "plugin-key"):
         l = V2 / d / "node_modules"
         if not l.exists() and not l.is_symlink(): l.symlink_to("../node_modules")
     cfg = json.load(open(REPO / ".opencode/maestro/opencode.json"))
     glob = json.load(open(HOME / ".config/opencode/opencode.json"))["provider"]["tokenreply"]   # 1.x global provider block: npm package and baseURL (its apiKey is an env reference, dropped)
     prov = cfg.setdefault("provider", {}).setdefault("tokenreply", {})
     prov["npm"] = glob["npm"]; prov["name"] = glob["name"]; prov["options"] = {"baseURL": glob["options"]["baseURL"]}
-    cfg["plugin"] = [str(V2 / "plugin-safety")]
+    cfg["plugin"] = [str(V2 / "plugin-key"), str(V2 / "plugin-safety")]
     (V2 / "maestro/opencode.json").write_text(json.dumps(cfg, indent=1))
 
 def pids_on(port):
