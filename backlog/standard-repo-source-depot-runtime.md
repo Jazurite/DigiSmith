@@ -1,6 +1,7 @@
 # Standard: the repo holds the source, the depot runs it (machine-wide runtime lives in ~/.digismith-depot)
 
-**Status:** Idea, Jack (2026-10-10 ~18:0x UTC+7 [11:0xZ]). ClickUp: **DGS-265** (D.0: Foundation, Depot clan, task id `14zcebrvctw`). No design yet.
+**Status:** Idea, Jack (2026-10-10 ~18:0x UTC+7 [11:0xZ]). ClickUp: **DGS-265** (D.4: Foundation, Depot clan, task id `14zcebrvctw`).
+Depot clan renumbered the same day (Jack): `D.0: Foundation` became `D.4: Foundation` (a lineage of its own, with DGS-2), the unnumbered `Pavilion` became `D.0: Pavilion`, like every clan's .0. No design yet.
 
 ## The rule (Jack)
 
