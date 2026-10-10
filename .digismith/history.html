@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-10-09</span>
+    <span>Last updated: 2026-10-10</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1557,6 +1557,30 @@
       <div class="date">2026-10-09</div>
       <h4>DGS-197: dg clickup --parent</h4>
       <p><code>create-task</code> and <code>update-task</code> take <code>--parent &lt;task id&gt;</code>. An empty value clears the parent. See <a href="board/DGS-197—clickup-parent-flag/worker-dgs-197/design.html">design</a>, <a href="board/DGS-197—clickup-parent-flag/worker-dgs-197/plan.md">plan</a>, and <a href="board/DGS-197—clickup-parent-flag/worker-dgs-197/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>Legacy Letter Backfill: Letter G and the Gap Tickets</h4>
+      <p>The milestone DGS-25 is now called <strong>Legacy Letter Backfill</strong>: a <strong>letter</strong> is the old Markdown map, a <strong>clan</strong> is ClickUp. Letter G (Methodology, DGS-32) got four done tickets in clan E with their real ship dates and docs: DGS-192 (G.1 standards injection), DGS-193 and DGS-194 (G.2 toolchain, merge of U into G) and DGS-195 (G.3 doc conventions). A rescan found no full G item missing. Eight more history tickets filled the gaps: DGS-205 (global standards, E.1), DGS-206 (unified docs convention, E.3), and in A.1 the Enforcer (DGS-207), W.5 and W.6 (DGS-208, DGS-209), <code>jira-intake</code> (DGS-210), <code>bootstrap</code> (DGS-211) and <code>init</code> with <code>adopt</code> (DGS-212). Two rules came out of it: only a letter's current meaning is mapped (a retired meaning gets a plain ticket with no letter), and skills belong to clan A while the ticket lifecycle is clan F: Scripture, which has no folder yet. See <a href="board/DGS-32—migrate-letter-g-methodology/worker-dgs-32/report.html">the G report</a>, <a href="board/DGS-32—migrate-letter-g-methodology/worker-dgs-32-rescan/report.md">the rescan</a> and <a href="board/DGS-25—legacy-letter-backfill/worker-dgs-25-gaps/report.html">the gap tickets report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>Imperium: the Roadmap List</h4>
+      <p>The ClickUp list Town Hall is now <strong>Imperium</strong>. It holds only initiatives, epics and milestones; every normal ticket lives in its clan's list (DGS-215). The order is initiative, epic, ticket, subtask, and a milestone is a dated checkpoint, not a container. A ticket that belongs to two clans becomes two tickets, one per clan, that link to each other. The first epic made under this rule is DGS-213, ClickUp Synchronization: the ticket follows the work, all the time. See <a href="../backlog/imperium-roadmap-list.md">the Imperium item</a> and <a href="../backlog/clickup-synchronization.md">the epic</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>DGS-217: Task-Type Commands and the Frontdoor Client</h4>
+      <p><code>dg clickup</code> can now read and change ClickUp task types. A Frontdoor client (DGS-133) calls ClickUp's internal API, which the public API cannot replace for task types. <code>dg clickup frontdoor import-auth</code> stores the web session from a Proxyman capture without printing it, and <code>dump</code> prints only masked request and response bodies (DGS-138). <code>list-task-types</code> and <code>--type</code> use the public API (DGS-218). <code>create-task-type</code>, <code>update-task-type</code> and <code>delete-task-type</code> (DGS-217, DGS-221, DGS-222) do a dry run unless given <code>--yes</code>, and delete also needs the matching task count. Sol reviewed the branch; three findings were fixed. With these commands the task types <strong>Epic</strong> and <strong>Initiative</strong> were created, and DGS-25, DGS-182 and DGS-213 became epics. Jack's rule: ClickUp changes go through <code>dg</code>, never a one-off script. See <a href="board/DGS-217—task-type-commands/plan.md">plan</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>Clan G and Letter P: Telemetry</h4>
+      <p>A new clan for monitoring and analysis now exists as <strong>G: TBD</strong>, with <strong>G.0</strong> Pavilion and <strong>G.1</strong> Telemetry. It will hold telemetry, metrics, the analysis of token counts and Grafana (DGS-232). Its first task is to choose its name (DGS-237). Letter P (Telemetry, DGS-41) was migrated: the telemetry skill is DGS-233 in A.1, and G.1 holds DGS-234 (logging switched off on 2026-09-04), DGS-235 (automatic lifecycle) and DGS-236 (keep raw transcripts out of the public repo). A check found that no transcript was ever committed. The data collection plan DGS-220 moved into G.0, and DGS-238 is the clan G side of the token counter DGS-214, which stays in B.3. See <a href="board/DGS-41—migrate-letter-p-telemetry/plan.md">plan</a> and <a href="board/DGS-41—migrate-letter-p-telemetry/report.html">report</a>.</p>
     </div>
 
   </div>
