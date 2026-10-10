@@ -1,29 +1,30 @@
-# DGS-334 Implementation Report: OpenCode 2.x side by side, then the live switch
+# DGS-334 Implementation Report: OpenCode 2.x on the shared server
 
-Worker dgs-334, 2026-10-10 to 2026-10-11 (UTC+7). Branch `dgs-334` (not pushed). Details and findings: `results-checkpoint-2.md`, plan: `plan.md`.
+Worker dgs-334, 2026-10-10 to 2026-10-11 (UTC+7). Plan: `plan.md`. Findings log: `results-checkpoint-2.md`. TokenReply spend: under $0.10 (model probes only).
 
 ## Summary
-2.0.26 installed apart (pnpm, throwaway folder), a beta channel build tested, a v2 safety adapter written, and the live shared server switched to 2.0.26 by Jack running `switch-v2.py` (PID 85023, port 4198, safety plugin loaded). TokenReply spend: $0.
+OpenCode 2.0.26 now runs the live shared server (port 4198) with the maestro config, a v2 safety plugin and a v2 key plugin, started by one boot script, `opencode-boot`. Luna and sonnet answer through it. The key is not readable through any API route or file. Jack switched the live server himself (the agent session cannot start stable 2.0.26: it hangs there; see Findings).
 
-## State tonight
-- Live server: `~/.opencode/bin/opencode` 2.0.26 on 4198; 1.18.35 kept at `~/.opencode/bin/opencode-1.18.35` (sha256 46b8ee40...d761). Tailscale: only 443 -> 4198. Jack's PC v2 CLI connects.
-- v2 data is separate: `~/.digismith-depot/opencode/v2/xdg/` (the 1.x db is untouched, so rollback to 1.18.35 keeps history).
-- Test servers 4214 and 4215 and the :8443 path are gone.
+## Built
+- `scripts/opencode-boot/opencode-boot.py` + `install.sh`: the ONLY boot script. Installed to `~/.digismith-depot/bin/opencode-boot` with its payload in `~/.digismith-depot/opencode/boot/`. Stops what holds the port (by PID), starts 2.0.26 from the v2 home, requires the safety plugin's `loaded` line, falls back to `~/.opencode/bin/opencode-1.18.35`. `--test` = throwaway home and port 4217, never 4198, no fallback. The password comes from a file; the server log is mode 600 and never shown.
+- `.opencode/safety/maestro-safety-v2.js`: 2.x adapter (plugin directory, `Plugin.define`, `tool.execute.before` and the client-shell hook) around the unchanged `maestro-safety.js`.
+- `.opencode/safety/tokenreply-key-v2.js`: key plugin. dotenv, in memory, adds the Bearer header per model request (`session` hook `model.request`); strips `*_API_KEY`, `*_TOKEN`, `*_AUTH` from shell env.
+- `.opencode/safety/probe-v2-models.py` and `check-key-exposure.py`: model probe and a boolean-only key exposure check (`--live` for 4198).
+- Removed: `start-shared-server.py`, `switch-v2.py`, `serve-oc2.py`, `serve-safety.py`, `serve-probe.py`; `SAFETY.md` and the DGS-223 report updated.
 
-## What changed on branch dgs-334
-- `.opencode/safety/maestro-safety-v2.js`: 2.x adapter (plugin DIRECTORY, `server.js`, `Plugin.define`, `ctx.tool.hook("execute.before")`, `ctx.shell.hook("create.before")`) around the unchanged `maestro-safety.js`.
-- `.opencode/safety/switch-v2.py`: installs the v2 home (plugin dir + pnpm `@opencode/plugin`, merged config), stops the old server by PID, starts a candidate, requires listen in 60 s and a new `loaded` line after `POST /api/session` and `GET /api/plugin`, else falls back to 1.18.35 with `start-shared-server.py`.
-- `.opencode/safety/serve-oc2.py`: throwaway server helper for tests.
+## Results
+- Live (PID from `opencode-boot`, 2026-10-11 00:19 UTC+7): both plugins active, safety plugin `loaded`, luna replied `OK`, no key in any of 19 routes plus session routes, none of 160 files in the v2 home, none in the server env.
+- Test server 4217: luna `OK`, sonnet `FINE`.
+- First key version (header on the provider definition) exposed the key through `GET /api/provider/tokenreply`; it ran live for a few minutes before the per-request version replaced it. Jack rotates the key.
 
 ## Findings
-- 2.x: plugin API is new (directory plugins, domain hooks, no `tool.execute.before` or `permission.ask` names), config 1.x is auto-converted, REST moved to `/api/...`, pairing and a background "service" exist, a plugin loads only after `GET /api/plugin` or similar, the CLI logs argv (never pass a password on a command line), the server prints its generated password at start (log must be mode 600).
-- 2.0.26 hung when started from the agent session but listens when Jack starts it (see results file); beta served from both.
+- 2.x: plugin directories (`server.js`, deps by pnpm), domain hooks, `/api/...` REST, 1.x config auto-converted, plugins load only after `GET /api/plugin`, new sessions start on `opencode/exo-free` (deprecated: set the model explicitly), agent model from config not applied by the agent switch, the CLI logs argv, the server prints its password at start.
+- Stable 2.0.26 hangs when started from the agent session but listens when Jack starts it (same script and env): the launching context matters, cause unverified.
+- The installer `https://opencode.ai/v2/install` overwrites `~/.opencode/bin/opencode`; `opencode pair` only pairs with the 2.x background service, not with `serve`.
 
 ## Open items
-1. **Key plugin for v2.** The 1.x `tokenreply-key.js` uses the `config` hook. The beta runtime has `ctx.catalog` and `ctx.integration` (no `ctx.provider`). No models work on the live server yet; provider baseURL comes from the config merge in `switch-v2.py`, the key does not.
-2. **No 1.x history in v2** (separate data folder). Migration route exists in 2.x (`/api/experimental/migration/v1`), untested.
-3. **Shell route:** `POST /api/session/:id/shell` bypassed the rules; the adapter now has the `shell` hook, untested on a live server.
-4. **DGS-226 probes and tests not run on v2** (1.x REST scripts need porting); only the load check passed.
-5. **Launcher and LaunchAgent (DGS-331)** must use `switch-v2.py` or a v2 launcher: `start-shared-server.py` runs `opencode serve` from PATH with the 1.x plugin file, which 2.x does not load.
-6. Clients: PC CLI v2 `opencode --server <url> -c` (password env `OPENCODE_SERVER_PASSWORD` or `OPENCODE_PASSWORD`); Desktop 2.0.26 add-server path not found, pairing via `opencode pair --url` needs 2.x service mode.
-7. Beta build lives in the throwaway folder `~/.digismith-depot/opencode2-test/beta/` (fallback candidate for the script); move it into the depot or drop it.
+1. DGS-346: DGS-226 probes and tests on v2, including the client shell route (the adapter hook exists, untested on a live call).
+2. DGS-347: 1.x session history is not in v2 (separate data folder; rollback keeps 1.x intact).
+3. DGS-331: the LaunchAgent must call `opencode-boot`.
+4. Desktop 2.0.26 pairing needs the 2.x service mode; not done.
+5. Model choice per session: clients pick `tokenreply/gpt-5.6-luna` themselves.
