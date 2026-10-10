@@ -14,6 +14,7 @@ describe("buildCli", () => {
     const help = await buildCli([]).getHelp();
     expect(help).toMatch(/vps/);
     expect(help).toMatch(/depot/);
+    expect(help).toMatch(/tokens/);
   });
 });
 
