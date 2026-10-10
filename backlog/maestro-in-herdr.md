@@ -142,6 +142,13 @@ redirects: deny by path). **Skills:** OpenCode loads `.claude/skills` and `~/.cl
 $0.0101 per run, total spend about $0.18). Recommendation: adopt OpenCode as the maestro hub, luna first, sonnet fallback, pilot on a low-risk project. The real
 attach from the PC is still untested.
 
+## Outcome (2026-10-10): adopted, continues as DGS-223
+
+Jack adopted OpenCode for the maestro and attached from his Windows PC (browser and `opencode attach`) over Tailscale Serve
+(`https://workbox.tail730dcf.ts.net`, tailnet only). He then decided on ONE shared OpenCode server for all maestros, a project and session each:
+**DGS-223** ([shared-opencode-server.md](shared-opencode-server.md)), its own epic, holds the full discussion record, the guardrail findings and
+the attach steps. The pilot branch `dgs-169` (guarded agents, prompt, skills, probes) is the template for DGS-223; it is not merged as is.
+
 ## A spike (when memory allows)
 
 A throwaway maestro (option A: a Claude Code agent in herdr `default`; option B: an OpenCode session on a localhost-only `opencode serve`) that reads the runbook and the maestro note (read-only) and proves five things: it takes
