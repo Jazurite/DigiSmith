@@ -81,4 +81,40 @@ describe("createCreateTaskCommand", () => {
     expect(errorSpy.mock.calls[0][0]).toMatch(/clickup create-task: unknown task type "saga"/);
     expect(process.exitCode).toBe(1);
   });
+
+  describe("--field", () => {
+    const fields = [
+      { id: "f1", name: "ClickUp API Type", type: "drop_down", type_config: { options: [{ id: "o1", name: "Frontdoor" }] } },
+      { id: "f2", name: "Notes", type: "text", type_config: {} },
+    ];
+    const mk = () => {
+      const calls: string[] = [];
+      const client = {
+        get: vi.fn().mockResolvedValue({ id: "new1" }),
+        getListFields: vi.fn().mockResolvedValue(fields),
+        createTask: vi.fn().mockImplementation(async () => { calls.push("create"); return { id: "new1" }; }),
+        setCustomField: vi.fn().mockImplementation(async () => { calls.push("set"); }),
+      };
+      return { client, calls, handler: createCreateTaskCommand(() => client as unknown as ClickUpClient).handler as (a: object) => Promise<void> };
+    };
+
+    it("creates the task, then sets each field (repeatable)", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { client, calls, handler } = mk();
+      await handler({ list: "L", name: "t", field: ["ClickUp API Type=Frontdoor", "Notes=hello"] });
+      expect(client.getListFields).toHaveBeenCalledWith("L");
+      expect(calls).toEqual(["create", "set", "set"]);
+      expect(client.setCustomField).toHaveBeenNthCalledWith(1, "new1", "f1", "o1");
+      expect(client.setCustomField).toHaveBeenNthCalledWith(2, "new1", "f2", "hello");
+    });
+
+    it("creates nothing when a field is bad", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { client, handler } = mk();
+      await handler({ list: "L", name: "t", field: ["ClickUp API Type=Nope"] });
+      expect(client.createTask).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0]).toMatch(/clickup create-task: unknown option "Nope"/);
+      expect(process.exitCode).toBe(1);
+    });
+  });
 });

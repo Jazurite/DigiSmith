@@ -2,6 +2,7 @@ import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient, buildTaskWriteBody } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
+import { resolveFieldArgs, applyFields } from "./field-set.ts";
 
 export function createCreateTaskCommand(
   clientFactory: () => ClickUpClient = createClient
@@ -41,6 +42,12 @@ export function createCreateTaskCommand(
           type: "string",
           requiresArg: true,
           describe: "task type, by name (singular or plural) or id; 0 = plain task",
+        })
+        .option("field", {
+          type: "string",
+          array: true,
+          requiresArg: true,
+          describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more',
         }),
     handler: async (argv) => {
       try {
@@ -49,7 +56,12 @@ export function createCreateTaskCommand(
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
         }
-        const task = await client.createTask(argv.list as string, body);
+        const resolved = await resolveFieldArgs(client, argv.list as string, (argv.field as string[] | undefined) ?? []);
+        let task = await client.createTask(argv.list as string, body);
+        if (resolved.length > 0) {
+          await applyFields(client, task.id, resolved);
+          task = await client.get<typeof task>(`/task/${task.id}`);
+        }
         console.log(JSON.stringify(task, null, 2));
         process.exitCode = 0;
       } catch (err) {

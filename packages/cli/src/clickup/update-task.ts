@@ -1,7 +1,8 @@
 import type { CommandModule } from "yargs";
-import type { ClickUpClient } from "@digismith/clickup-client";
+import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createClient, buildTaskWriteBody } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
+import { resolveFieldArgs, applyFields } from "./field-set.ts";
 
 export function createUpdateTaskCommand(
   clientFactory: () => ClickUpClient = createClient
@@ -36,6 +37,12 @@ export function createUpdateTaskCommand(
           type: "string",
           requiresArg: true,
           describe: "task type, by name (singular or plural) or id; 0 = plain task",
+        })
+        .option("field", {
+          type: "string",
+          array: true,
+          requiresArg: true,
+          describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more',
         }),
     handler: async (argv) => {
       try {
@@ -44,7 +51,17 @@ export function createUpdateTaskCommand(
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
         }
-        const task = await client.updateTask(argv.task as string, body);
+        const fieldArgs = (argv.field as string[] | undefined) ?? [];
+        const taskId = argv.task as string;
+        const resolved = fieldArgs.length
+          ? await resolveFieldArgs(client, (await client.get<ClickUpTask>(`/task/${taskId}`)).list.id, fieldArgs)
+          : [];
+        // With --field and no task flag, the PUT would carry an empty body: skip it.
+        let task = fieldArgs.length && Object.keys(body).length === 0 ? undefined : await client.updateTask(taskId, body);
+        if (resolved.length > 0) {
+          await applyFields(client, taskId, resolved);
+          task = await client.get<ClickUpTask>(`/task/${taskId}`);
+        }
         console.log(JSON.stringify(task, null, 2));
         process.exitCode = 0;
       } catch (err) {
