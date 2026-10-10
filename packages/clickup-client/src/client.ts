@@ -20,12 +20,15 @@ import type {
   ClickUpTaskType,
   ClickUpTaskTypesResponse,
   ClickUpTaskWriteBody,
+  DependencyRelation,
   MoveFolderTarget,
 } from "./types.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 const BASE_URL = "https://api.clickup.com/api/v2";
 const BASE_URL_V3 = "https://api.clickup.com/api/v3";
+/** A custom task id such as DGS-343. */
+const CUSTOM_ID = /^[A-Za-z]+-\d+$/;
 const RATE_LIMIT = 100; // requests
 const RATE_WINDOW_SEC = 60;
 
@@ -147,6 +150,34 @@ export class ClickUpClient {
 
   async deleteTask(taskId: string): Promise<void> {
     await this.delete(`/task/${taskId}`);
+  }
+
+  /** Reads a task by ClickUp id, or by custom id (DGS-343): keys need custom_task_ids and the team id. */
+  getTaskByRef(ref: string): Promise<ClickUpTask> {
+    const params = CUSTOM_ID.test(ref) ? { custom_task_ids: true, team_id: this.teamId } : undefined;
+    return this.get<ClickUpTask>(`/task/${ref}`, { params });
+  }
+
+  /** POST /task/{id}/dependency: dependsOn = the task waits on that one; dependencyOf = that one waits on the task. ClickUp answers {}. */
+  async addDependency(taskId: string, rel: DependencyRelation): Promise<void> {
+    await this.post(`/task/${taskId}/dependency`, {
+      data: "dependsOn" in rel ? { depends_on: rel.dependsOn } : { dependency_of: rel.dependencyOf },
+    });
+  }
+
+  /** DELETE /task/{id}/dependency: the relation goes in the query, not the body. */
+  async removeDependency(taskId: string, rel: DependencyRelation): Promise<void> {
+    await this.delete(`/task/${taskId}/dependency`, {
+      params: "dependsOn" in rel ? { depends_on: rel.dependsOn } : { dependency_of: rel.dependencyOf },
+    });
+  }
+
+  async addLink(taskId: string, linksTo: string): Promise<void> {
+    await this.post(`/task/${taskId}/link/${linksTo}`);
+  }
+
+  async removeLink(taskId: string, linksTo: string): Promise<void> {
+    await this.delete(`/task/${taskId}/link/${linksTo}`);
   }
 
   /** Changes the task's home List. v3 URL is absolute, so it overrides axios's v2 baseURL. */

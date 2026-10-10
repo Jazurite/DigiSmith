@@ -351,3 +351,6 @@ export interface FrontdoorTaskTypeBody {
 export type MoveFolderTarget =
   | { parentFolderId: string; position?: number }
   | { spaceId: string; position?: number };
+
+/** Which side of a dependency the other task is on. */
+export type DependencyRelation = { dependsOn: string } | { dependencyOf: string };
