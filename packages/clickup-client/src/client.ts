@@ -238,6 +238,21 @@ export class ClickUpClient {
     await this.put(`/folder/${folderId}/position`, { data });
   }
 
+  /** DELETE /folder/{id}. ClickUp answers {}. Callers must prove the folder is empty first (getFolderLists). */
+  async deleteFolder(folderId: string): Promise<void> {
+    await this.delete(`/folder/${folderId}`);
+  }
+
+  /** A folder's lists, archived included: the API hides archived lists unless archived=true, so read both and merge by id. */
+  async getFolderLists(folderId: string): Promise<ClickUpListSummary[]> {
+    const path = `/folder/${folderId}/list`;
+    const active = await this.get<ClickUpListsResponse>(path, { params: { archived: false } });
+    const archived = await this.get<ClickUpListsResponse>(path, { params: { archived: true } });
+    const byId = new Map<string, ClickUpListSummary>();
+    for (const l of [...(active.lists ?? []), ...(archived.lists ?? [])]) if (!byId.has(l.id)) byId.set(l.id, l);
+    return [...byId.values()];
+  }
+
   async getFolderlessLists(spaceId: string): Promise<ClickUpListSummary[]> {
     const data = await this.get<ClickUpListsResponse>(`/space/${spaceId}/list`);
     return data.lists ?? [];

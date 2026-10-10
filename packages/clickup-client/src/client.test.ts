@@ -407,6 +407,35 @@ describe("ClickUpClient domain write/read methods", () => {
     });
   });
 
+  it("deleteFolder() sends DELETE /folder/{id}", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await client.deleteFolder("55");
+
+    expect(request).toHaveBeenCalledWith({ method: "DELETE", url: "/folder/55", params: undefined, data: undefined });
+  });
+
+  it("getFolderLists() reads active and archived lists and merges them by id", async () => {
+    const client = makeClient();
+    request
+      .mockResolvedValueOnce({ data: { lists: [{ id: "l1", name: "A" }, { id: "l2", name: "B" }] } })
+      .mockResolvedValueOnce({ data: { lists: [{ id: "l2", name: "B" }, { id: "l3", name: "C" }] } });
+
+    const lists = await client.getFolderLists("55");
+
+    expect(request).toHaveBeenNthCalledWith(1, { method: "GET", url: "/folder/55/list", params: { archived: false }, data: undefined });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/folder/55/list", params: { archived: true }, data: undefined });
+    expect(lists.map((l) => l.id)).toEqual(["l1", "l2", "l3"]);
+  });
+
+  it("getFolderLists() returns [] when both reads are empty", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { lists: [] } }).mockResolvedValueOnce({ data: {} });
+
+    expect(await client.getFolderLists("55")).toEqual([]);
+  });
+
   it("getFolderlessLists() returns the lists array", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: { lists: [{ id: "l9", name: "Workflows" }] } });
