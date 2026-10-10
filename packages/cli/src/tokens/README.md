@@ -12,7 +12,7 @@
 
 ## Registry
 
-`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (`backlog/telemetry-and-data-collection-plan.md`). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (custom title, first `gitBranch`, first `cwd` of each transcript), shown as `inferred`.
+`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (`backlog/telemetry-and-data-collection-plan.md`). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (in the first 200 lines of each transcript: any `custom-title` line, an `agent-name` line, any `gitBranch` value, any `cwd` path segment that carries the key), shown as `inferred`.
 
 ## tokens.json
 
@@ -44,5 +44,5 @@ Result on 2026-10-10, ticket DGS-154, session f94b2d68 (DGS-198 has no transcrip
 
 - Slice 2 is not built: skills and the SDD ledger do not write registry entries yet, so steps are `other` unless a registry exists.
 - Live session id: the "newest transcript in the project folder" rule is unreliable (several live sessions share a folder). Slice 2 is blocked until a reliable source exists.
-- Fallback tagging misses sessions whose branch, cwd and title do not carry the ticket key.
+- Fallback tagging misses sessions whose title, agent name, branch and cwd in the first 200 lines do not carry the ticket key.
 - If a ticket includes resumed session B but not original session A, the A work replayed inside B's file is counted for the ticket.

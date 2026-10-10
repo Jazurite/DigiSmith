@@ -10,15 +10,11 @@ function project(root: string, name: string) {
   return dir;
 }
 
-function session(dir: string, sid: string, opts: { title?: string; branch?: string; cwd?: string }) {
-  writeFileSync(
-    join(dir, `${sid}.jsonl`),
-    JSON.stringify({ type: "user", sessionId: sid, gitBranch: opts.branch ?? "main", cwd: opts.cwd ?? "/x" }) + "\n",
-  );
-  if (opts.title) {
-    mkdirSync(join(dir, sid), { recursive: true });
-    writeFileSync(join(dir, sid, "custom-title.json"), JSON.stringify({ customTitle: opts.title }));
-  }
+function session(dir: string, sid: string, opts: { title?: string; agent?: string; branch?: string; cwd?: string }) {
+  const lines: object[] = [{ type: "user", sessionId: sid, gitBranch: opts.branch ?? "main", cwd: opts.cwd ?? "/x" }];
+  if (opts.title) lines.splice(0, 0, { type: "custom-title", customTitle: opts.title, sessionId: sid });
+  if (opts.agent) lines.splice(0, 0, { type: "agent-name", agentName: opts.agent, sessionId: sid });
+  writeFileSync(join(dir, `${sid}.jsonl`), lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
 }
 
 describe("attribution", () => {
@@ -48,14 +44,40 @@ describe("attribution", () => {
     ]);
   });
 
-  it("only the first gitBranch and first cwd line decide the match", () => {
+  it("matches a title line that is not the first and a title repeated later", () => {
     const root = mkdtempSync(join(tmpdir(), "proj-"));
     const p = project(root, "-a");
     const lines = [
-      { type: "user", gitBranch: "main", cwd: "/w/other" },
-      { type: "user", gitBranch: "DGS-214__later", cwd: "/w/.worktrees/dgs-214" },
+      { type: "user", gitBranch: "main", cwd: "/x" },
+      { type: "custom-title", customTitle: "placeholder" },
+      { type: "user", gitBranch: "main", cwd: "/x" },
+      { type: "custom-title", customTitle: "DGS-214 placeholder" },
     ];
-    writeFileSync(join(p, "late-branch.jsonl"), lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
-    expect(inferSessionsForTicket("DGS-214", root)).toEqual([]);
+    writeFileSync(join(p, "late-title.jsonl"), lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+    expect(inferSessionsForTicket("DGS-214", root)).toEqual(["late-title"]);
+  });
+
+  it("matches an agent-name line by key and rejects other keys", () => {
+    const root = mkdtempSync(join(tmpdir(), "proj-"));
+    const p = project(root, "-a");
+    session(p, "agent-ok", { agent: "dgs-214" });
+    session(p, "agent-other", { agent: "dgs-2140" });
+    expect(inferSessionsForTicket("DGS-214", root)).toEqual(["agent-ok"]);
+  });
+
+  it("matches a later gitBranch or cwd line (start on main in the repo root, move to the worktree)", () => {
+    const root = mkdtempSync(join(tmpdir(), "proj-"));
+    const p = project(root, "-a");
+    const move = [
+      { type: "user", gitBranch: "main", cwd: "/w" },
+      { type: "user", gitBranch: "main", cwd: "/w/.worktrees/dgs-214" },
+    ];
+    const branch = [
+      { type: "user", gitBranch: "main", cwd: "/w" },
+      { type: "user", gitBranch: "dgs-214", cwd: "/w" },
+    ];
+    writeFileSync(join(p, "moved-cwd.jsonl"), move.map((l) => JSON.stringify(l)).join("\n") + "\n");
+    writeFileSync(join(p, "moved-branch.jsonl"), branch.map((l) => JSON.stringify(l)).join("\n") + "\n");
+    expect(inferSessionsForTicket("DGS-214", root).sort()).toEqual(["moved-branch", "moved-cwd"]);
   });
 });

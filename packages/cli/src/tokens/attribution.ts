@@ -48,36 +48,20 @@ export function inferSessionsForTicket(ticket: string, root: string = claudeProj
       if (!name.endsWith(".jsonl")) continue;
       const sid = name.slice(0, -".jsonl".length);
       let hit = false;
-      const titleFile = join(dir, sid, "custom-title.json");
-      if (existsSync(titleFile)) {
+      // Any title, agent name, branch or cwd in the head can carry the key (a session starts on
+      // main in the repo root and moves into the worktree later; a title can change).
+      for (const raw of readHead(join(dir, name), 200)) {
+        if (!raw) continue;
         try {
-          const title = (JSON.parse(readFileSync(titleFile, "utf-8")) as { customTitle?: string }).customTitle ?? "";
-          hit = titleRe.test(title);
+          const o = JSON.parse(raw) as { type?: string; customTitle?: string; agentName?: string; gitBranch?: string; cwd?: string };
+          if (o.type === "custom-title" && typeof o.customTitle === "string" && titleRe.test(o.customTitle)) hit = true;
+          if (o.type === "agent-name" && typeof o.agentName === "string" && nameRe.test(o.agentName)) hit = true;
+          if (typeof o.gitBranch === "string" && nameRe.test(o.gitBranch)) hit = true;
+          if (typeof o.cwd === "string" && o.cwd.split("/").some((seg) => nameRe.test(seg))) hit = true;
         } catch {
-          // unreadable title: fall through to branch and cwd
+          continue;
         }
-      }
-      if (!hit) {
-        // Only the first line carrying gitBranch and the first line carrying cwd decide.
-        let branchSeen = false;
-        let cwdSeen = false;
-        for (const raw of readHead(join(dir, name), 200)) {
-          if (!raw || (branchSeen && cwdSeen)) continue;
-          try {
-            const o = JSON.parse(raw) as { gitBranch?: string; cwd?: string };
-            if (!branchSeen && o.gitBranch) {
-              branchSeen = true;
-              if (nameRe.test(o.gitBranch)) hit = true;
-            }
-            if (!cwdSeen && o.cwd) {
-              cwdSeen = true;
-              if (o.cwd.split("/").some((seg) => nameRe.test(seg))) hit = true;
-            }
-          } catch {
-            continue;
-          }
-          if (hit || (branchSeen && cwdSeen)) break;
-        }
+        if (hit) break;
       }
       if (hit) found.push(sid);
     }
