@@ -1,7 +1,7 @@
 # Count the tokens of every ticket: Claude Code first, then OpenCode and gateway models (B.3)
 
 **Status:** Idea, Jack (2026-10-10 ~11:4x UTC+7 [04:4xZ]). First ticket of **B.3: Token Economics**, subtask of DGS-204. ClickUp: **DGS-214** (B.3: Token
-Economics, task id `14zcebrvck3`). Brainstorm ordered 2026-10-10; no design yet.
+Economics, task id `14zcebrvck3`). Design approved 2026-10-10 ~16:4x UTC+7 (checkpoint 1, `.digismith/board/DGS-214—count-tokens-per-ticket/design.html`); plan not started.
 
 **Source:** Live session 2026-10-10, right after DGS-204 was filed. Jack: "first things first, let's start with the token counter task ... how we can
 count tokens for every task, reviewer ... maybe the first time we only count for Claude Code, and then we will have another to count the tokens from
