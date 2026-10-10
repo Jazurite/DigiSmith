@@ -96,7 +96,7 @@ describe("readClaudeCodeSession", () => {
     expect(out.map((r) => [r.input, r.output])).toEqual([[2, 40], [2, 50]]);
   });
 
-  it("ignores a compaction summary line and keeps the session id of replayed lines", () => {
+  it("ignores a compaction summary line and keeps the sessionId written on each line", () => {
     const { file, sid } = setup();
     writeFileSync(file, [
       line({ type: "user", isCompactSummary: true, sessionId: sid, message: { role: "user", content: "x" } }),
@@ -106,5 +106,16 @@ describe("readClaudeCodeSession", () => {
     const out = readClaudeCodeSession(file);
     expect(out).toHaveLength(1);
     expect(out[0].session_id).toBe("22222222-2222-2222-2222-222222222222");
+  });
+  it("never dedupes id-less lines across files", () => {
+    const mk = (n: number) => {
+      const { file } = setup();
+      const f = file.replace(".jsonl", `-${n}.jsonl`);
+      writeFileSync(f, line({ type: "assistant", timestamp: "2026-10-10T01:00:00Z", message: { model: "claude-opus-5-5", usage: { input_tokens: 1, output_tokens: 5 } } }));
+      return f;
+    };
+    const a = readClaudeCodeSession(mk(1));
+    const b = readClaudeCodeSession(mk(2));
+    expect(a[0].response_id).not.toBe(b[0].response_id);
   });
 });

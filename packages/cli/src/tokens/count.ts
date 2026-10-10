@@ -18,21 +18,29 @@ export function countTicket(opts: CountOptions): Snapshot {
   const root = opts.projectsDir ?? claudeProjectsDir();
   const entries = opts.registry.read(opts.ticket);
   const registered = entries.flatMap((e) => (e.kind === "session" ? [e.session_id] : []));
-  const inferred = inferSessionsForTicket(opts.ticket, root).filter((s) => !registered.includes(s));
+  const inferred = inferSessionsForTicket(opts.ticket, root).filter((s) => !registered.includes(s)).sort();
+  const ticketSessions = new Set([...registered, ...inferred]);
   // A resumed transcript replays earlier responses, so dedupe across sessions too.
-  const byResponse = new Map<string, UsageRecord>();
+  const byResponse = new Map<string, { r: UsageRecord; file: string }>();
   for (const sid of [...new Set([...registered, ...inferred])]) {
     const file = findTranscript(sid, root);
     if (!file) {
       console.error(`tokens: no transcript found for session ${sid}`);
       continue;
     }
+    // On a duplicate prefer the record whose own session is a ticket session, then the one read
+    // from its own session's file, then the highest output.
+    const rank = (r: UsageRecord, file: string): number[] => [ticketSessions.has(r.session_id) ? 1 : 0, r.session_id === file ? 1 : 0, r.output];
+    const better = (a: number[], b: number[]): boolean => {
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i];
+      return false;
+    };
     for (const r of readClaudeCodeSession(file)) {
       const prior = byResponse.get(r.response_id);
-      if (!prior || r.output > prior.output) byResponse.set(r.response_id, { ...r, session_id: sid });
+      if (!prior || better(rank(r, sid), rank(prior.r, prior.file))) byResponse.set(r.response_id, { r, file: sid });
     }
   }
-  const records = [...byResponse.values()].sort((a, b) => a.ts.localeCompare(b.ts));
+  const records = [...byResponse.values()].map((v) => v.r).sort((a, b) => a.ts.localeCompare(b.ts));
   return buildSnapshot({
     ticket: opts.ticket,
     generatedAt: (opts.now ?? (() => new Date().toISOString()))(),

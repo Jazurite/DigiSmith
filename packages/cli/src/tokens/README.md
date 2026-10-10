@@ -45,3 +45,4 @@ Result on 2026-10-10, ticket DGS-154, session f94b2d68 (DGS-198 has no transcrip
 - Slice 2 is not built: skills and the SDD ledger do not write registry entries yet, so steps are `other` unless a registry exists.
 - Live session id: the "newest transcript in the project folder" rule is unreliable (several live sessions share a folder). Slice 2 is blocked until a reliable source exists.
 - Fallback tagging misses sessions whose branch, cwd and title do not carry the ticket key.
+- If a ticket includes resumed session B but not original session A, the A work replayed inside B's file is counted for the ticket.

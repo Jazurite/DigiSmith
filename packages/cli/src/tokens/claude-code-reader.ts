@@ -23,7 +23,9 @@ interface Line {
 }
 
 function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>): void {
-  for (const raw of readFileSync(path, "utf-8").split("\n")) {
+  const lines = readFileSync(path, "utf-8").split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    const raw = lines[index];
     if (!raw) continue;
     let o: Line;
     try {
@@ -40,7 +42,7 @@ function parseFile(path: string, sessionFallback: string, into: Map<string, Usag
       source: "claude-code",
       session_id: o.sessionId ?? sessionFallback,
       agent_id: o.agentId ?? null,
-      response_id: m.id && o.requestId ? `${m.id}|${o.requestId}` : `uuid|${o.uuid ?? raw.length}`,
+      response_id: m.id && o.requestId ? `${m.id}|${o.requestId}` : `line|${sessionFallback}|${o.agentId ?? "main"}|${index}`,
       model: m.model,
       ts: o.timestamp ?? "",
       input: u.input_tokens ?? 0,
