@@ -17,6 +17,10 @@ ticket builds, and also the maestro's and the Master's own work (backfills, orde
 - **New work gets a ticket** in the same step (already the rule for backlog items, DGS-163).
 - **Descriptions stay in step** with their repo files (`~/.digismith-depot/backlog-sync/sync.py` today).
 
+**Rule (Jack, 2026-10-10 ~21:3x UTC+7): every ticket carries its fields.** A new ticket gets a priority when it is created (Normal unless
+Jack says otherwise). A ticket that closes as `done` gets its start date (the day work began) and due date (the day it finished). Found when
+nearly every backlog-fill ticket had none; the fill is **DGS-328** (subtask of this epic).
+
 Out of scope: Jira. Jira status changes stay manual (standing rule). A Jira profile keeps the I.1 write-back only.
 
 ## Subtasks
