@@ -1,5 +1,7 @@
 # Ticket-level ClickUp write-back (I.1/JIRA analog)
 
+**ClickUp:** **DGS-21** (D.3: ClickUp Channel, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 JIRA write-back (map item **I.1**) posts progress/investigation comments
 back to a JIRA ticket for consuming-repo ticket work. Once the ClickUp
 connector package exists (brainstormed 2026-09-24, expected under the **V**

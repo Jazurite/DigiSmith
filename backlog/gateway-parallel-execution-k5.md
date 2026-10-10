@@ -1,5 +1,7 @@
 # Run multiple gateways in parallel (K.5)
 
+**ClickUp:** **DGS-97** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Idea only, depends on K.3.
 
 **Map item:** **K.5**, sibling to [K.3](ai-gateway-vendors-k3.md) under **K** ("Model tiering").

@@ -1,5 +1,7 @@
 # Auto-mode classifier blocks read-only `gh auth status`
 
+**ClickUp:** **DGS-308** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Observation only, carried forward from the now-shipped H.2
 (`per-repo-git-credential-preference-h2.md`, deleted once H.2's SSH-key half applied — this
 side-observation is the part that wasn't resolved by that build).

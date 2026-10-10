@@ -1,5 +1,7 @@
 # Per-worktree dev server port allocation
 
+**ClickUp:** **DGS-292** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Findings only. **Medium confidence** — flagged
 below; depends on how often Jack actually runs more than one worktree's
 dev server at once, which isn't confirmed.

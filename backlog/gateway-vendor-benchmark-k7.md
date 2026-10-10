@@ -1,5 +1,7 @@
 # Vendor benchmark: Chutes vs. TokenReply vs. future gateways (K.7)
 
+**ClickUp:** **DGS-98** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Idea only, depends on K.3.
 
 **Map item:** **K.7**, sibling to [K.3](ai-gateway-vendors-k3.md) under **K** ("Model tiering").

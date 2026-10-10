@@ -1,5 +1,7 @@
 # Diagramming tool integration (G.2.1)
 
+**ClickUp:** **DGS-299** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 ## Status
 Raw idea, not brainstormed. Jack's own placement call (2026-09-19): a child of **G.2**
 (Toolchain), not a standalone letter — filed here as the entry point.

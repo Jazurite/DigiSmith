@@ -1,5 +1,7 @@
 # Dormant vendored skills' internal `superpowers:` cross-references (map item W)
 
+**ClickUp:** **DGS-291** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Found during W.2.1's final whole-branch review
 (2026-09-05).
 

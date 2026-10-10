@@ -1,5 +1,7 @@
 # Cross-repo hook sharing (new letter, tentatively Y2)
 
+**ClickUp:** **DGS-296** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only. No design yet — explicitly scoped out of **Y**
 (lifecycle hooks) rather than folded into it. See `MEMORY.md`'s **Y**
 row and `.digismith/docs/lifecycle-hooks/design.html`.
