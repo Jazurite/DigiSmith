@@ -1,5 +1,7 @@
 # `check-attribution` / `[CHECK_ATTRIBUTION_PATH]` hardening (map item W.8)
 
+**ClickUp:** **DGS-317** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10. Merged ticket for several files.
+
 **Status:** Not applied. Deferred deliberately — surfaced during W.8's final whole-branch review,
 none currently reachable under real conditions.
 

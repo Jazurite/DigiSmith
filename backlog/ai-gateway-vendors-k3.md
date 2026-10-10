@@ -1,5 +1,7 @@
 # AI Gateway Vendors (K.3)
 
+**ClickUp:** **DGS-92** (B.4: Maestro, done); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Raw spike material, not yet brainstormed or spec'd.
 
 **Map item:** **K.3**, not a new letter — **K** ("Model tiering") already explicitly reserves

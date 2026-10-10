@@ -1,5 +1,7 @@
 # Soveron's own cutover to the moved ClickUp client
 
+**ClickUp:** **DGS-22** (D.3: ClickUp Channel, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 Soveron (`E:\MEGA\Obsidian\Knowpolis\1. Soveron`) is the source of the
 ClickUp connector being moved into DigiSmith's `packages/clickup-client`
 (brainstormed 2026-09-24). Once that move ships, Soveron's own consumer

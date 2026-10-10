@@ -1,5 +1,7 @@
 # Auto-accept Claude Code folder trust for manager-started worker agents in Jack's own repos
 
+**ClickUp:** **DGS-303** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only, confirmed live 3 times. No design yet. Filed as a task chip 2026-10-02.
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

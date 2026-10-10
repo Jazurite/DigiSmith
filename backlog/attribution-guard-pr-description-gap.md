@@ -1,5 +1,7 @@
 # AI attribution policy covers PR descriptions in wording only — `check-attribution` never checks one
 
+**ClickUp:** **DGS-317** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10. Merged ticket for several files.
+
 **Status:** Not applied. Confirmed live during W.8's own final whole-branch review (2026-09-11).
 
 **Source:** Final review (opus) of the W.8 branch (`review-template-ai-attribution-guard`),

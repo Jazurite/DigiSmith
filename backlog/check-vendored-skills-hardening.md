@@ -1,5 +1,7 @@
 # `check_vendored_skills.ts` hardening (map item W.2)
 
+**ClickUp:** **DGS-289** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Found during W.2's final whole-branch review
 (2026-08-29) and its fix-wave re-review. Deliberately deferred — none are
 reachable today, and the script is report-only with a human reading the

@@ -1,5 +1,7 @@
 # Wire DigiSmith's own backlog/map flow to the ClickUp connector
 
+**ClickUp:** **DGS-20** (D.3: ClickUp Channel, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 Once the ClickUp connector package (brainstormed 2026-09-24, expected under
 the **V** lineage — see `.digismith/docs/V/` once shipped) exists, wire
 DigiSmith's own backlog- and map-tracking flow to actually call it, replacing

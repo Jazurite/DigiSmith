@@ -1,5 +1,7 @@
 # Activate `requesting-code-review` with DigiSmith standards injection (new letter/number, tentatively W.9)
 
+**ClickUp:** **DGS-316** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10. Merged ticket for several files.
+
 **Status:** Not applied. Idea only, brainstormed 2026-09-11 up through a proposed design, then
 explicitly deferred — captured here rather than decided in the moment.
 
