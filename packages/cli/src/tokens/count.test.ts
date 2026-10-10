@@ -80,6 +80,26 @@ describe("countTicket", () => {
     expect(snap.unattributed).toEqual({});
   });
 
+  it.each([["A first", ["zzz-A", "aaa-B"]], ["B first", ["aaa-B", "zzz-A"]]])("keeps the larger copy of a replayed response and its owning session (%s)", (_label, order) => {
+    const projects = mkdtempSync(join(tmpdir(), "proj-"));
+    const dir = join(projects, "-a");
+    mkdirSync(dir, { recursive: true });
+    const mk = (sid: string, req: string, out: number, ts: string) =>
+      JSON.stringify({
+        type: "assistant", sessionId: sid, requestId: req, timestamp: ts,
+        message: { id: `m-${req}`, model: "claude-opus-5-5", usage: { input_tokens: 1, output_tokens: out, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } },
+      });
+    const head = (sid: string) => JSON.stringify({ type: "user", sessionId: sid, gitBranch: "T-1__x", cwd: "/w" });
+    writeFileSync(join(dir, "zzz-A.jsonl"), [head("zzz-A"), mk("zzz-A", "r1", 5, "2026-10-10T01:00:00Z")].join("\n"));
+    writeFileSync(join(dir, "aaa-B.jsonl"), [head("aaa-B"), mk("zzz-A", "r1", 20, "2026-10-10T01:00:00Z")].join("\n"));
+    const reg = createDepotRegistry(mkdtempSync(join(tmpdir(), "reg-")));
+    for (const sid of order) reg.append({ kind: "session", ticket: "T-1", session_id: sid, source: "claude-code", role: "worker", ts: "2026-10-10T00:00:00Z" });
+    reg.append({ kind: "step_start", ticket: "T-1", step: "brainstorming", session_id: "zzz-A", ts: "2026-10-10T00:30:00Z" });
+    const snap = countTicket({ ticket: "T-1", registry: reg, projectsDir: projects, now: () => "t" });
+    expect(snap.steps.brainstorming["claude-opus-5-5"]).toMatchObject({ output: 20, responses: 1 });
+    expect(snap.unattributed).toEqual({});
+  });
+
   it("prefers the registry entry and its step windows", () => {
     const { projects, sid } = fixture();
     const reg = createDepotRegistry(mkdtempSync(join(tmpdir(), "reg-")));

@@ -28,9 +28,9 @@ export function countTicket(opts: CountOptions): Snapshot {
       console.error(`tokens: no transcript found for session ${sid}`);
       continue;
     }
-    // On a duplicate prefer the record whose own session is a ticket session, then the one read
-    // from its own session's file, then the highest output.
-    const rank = (r: UsageRecord, file: string): number[] => [ticketSessions.has(r.session_id) ? 1 : 0, r.session_id === file ? 1 : 0, r.output];
+    // On a duplicate prefer the record whose own session is a ticket session, then the highest output,
+    // then the one read from its own session's file as the tie-breaker.
+    const rank = (r: UsageRecord, file: string): number[] => [ticketSessions.has(r.session_id) ? 1 : 0, r.output, r.session_id === file ? 1 : 0];
     const better = (a: number[], b: number[]): boolean => {
       for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i];
       return false;
