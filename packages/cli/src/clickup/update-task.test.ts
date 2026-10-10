@@ -100,6 +100,16 @@ describe("createUpdateTaskCommand", () => {
       expect(process.exitCode).toBe(0);
     });
 
+    it("sets a Relationship field with resolved task ids", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const { client, handler } = mk();
+      (client.getListFields as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "f9", name: "Epic", type: "list_relationship", type_config: {} }]);
+      (client as unknown as { getTaskByRef: unknown }).getTaskByRef = vi.fn(async (r: string) => ({ id: r === "DGS-343" ? "id343" : r }));
+      await handler({ task: "abc", field: ["Epic=DGS-343,-old1"] });
+      expect(client.setCustomField).toHaveBeenCalledWith("abc", "f9", { add: ["id343"], rem: ["old1"] });
+      expect(process.exitCode).toBe(0);
+    });
+
     it("puts the task flags first, then sets the fields", async () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
       const { calls, handler } = mk();

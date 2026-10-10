@@ -122,12 +122,19 @@ export interface LabelsField extends CustomFieldBase {
   value?: string[];
 }
 
+/** A Relationship field: the tasks it points to. Set it with {add: [ids], rem: [ids]}. */
+export interface RelationshipField extends CustomFieldBase {
+  type: 'list_relationship';
+  value?: { id: string; name?: string }[];
+}
+
 export type ClickUpCustomField =
   | AutomaticProgressField
   | CheckboxField
   | CurrencyField
   | DropdownField
-  | LabelsField;
+  | LabelsField
+  | RelationshipField;
 
 export interface ClickUpTask {
   id: string;
@@ -351,3 +358,6 @@ export interface FrontdoorTaskTypeBody {
 export type MoveFolderTarget =
   | { parentFolderId: string; position?: number }
   | { spaceId: string; position?: number };
+
+/** Which side of a dependency the other task is on. */
+export type DependencyRelation = { dependsOn: string } | { dependencyOf: string };

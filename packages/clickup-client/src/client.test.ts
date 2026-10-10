@@ -484,3 +484,66 @@ describe("ClickUpClient uploadAttachment", () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 });
+
+describe("ClickUpClient relations", () => {
+  beforeEach(() => {
+    request.mockReset();
+    vi.mocked(axios.create).mockReset();
+  });
+
+  it("getTaskByRef() reads a plain id as is", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "abc" } });
+
+    await client.getTaskByRef("abc");
+
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/task/abc", params: undefined, data: undefined });
+  });
+
+  it("getTaskByRef() reads a key with custom_task_ids and the team id", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "abc" } });
+
+    await client.getTaskByRef("DGS-343");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "GET",
+      url: "/task/DGS-343",
+      params: { custom_task_ids: true, team_id: "5738747" },
+      data: undefined,
+    });
+  });
+
+  it("addDependency() POSTs depends_on or dependency_of in the body", async () => {
+    const client = makeClient();
+    request.mockResolvedValue({ data: {} });
+
+    await client.addDependency("a", { dependsOn: "b" });
+    await client.addDependency("a", { dependencyOf: "c" });
+
+    expect(request).toHaveBeenNthCalledWith(1, { method: "POST", url: "/task/a/dependency", params: undefined, data: { depends_on: "b" } });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "POST", url: "/task/a/dependency", params: undefined, data: { dependency_of: "c" } });
+  });
+
+  it("removeDependency() DELETEs with the relation in the query, not the body", async () => {
+    const client = makeClient();
+    request.mockResolvedValue({ data: {} });
+
+    await client.removeDependency("a", { dependsOn: "b" });
+    await client.removeDependency("a", { dependencyOf: "c" });
+
+    expect(request).toHaveBeenNthCalledWith(1, { method: "DELETE", url: "/task/a/dependency", params: { depends_on: "b" }, data: undefined });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "DELETE", url: "/task/a/dependency", params: { dependency_of: "c" }, data: undefined });
+  });
+
+  it("addLink() and removeLink() use POST and DELETE on /link/{to}", async () => {
+    const client = makeClient();
+    request.mockResolvedValue({ data: { task: {} } });
+
+    await client.addLink("a", "b");
+    await client.removeLink("a", "b");
+
+    expect(request).toHaveBeenNthCalledWith(1, { method: "POST", url: "/task/a/link/b", params: undefined, data: undefined });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "DELETE", url: "/task/a/link/b", params: undefined, data: undefined });
+  });
+});

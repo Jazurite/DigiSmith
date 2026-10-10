@@ -16,6 +16,10 @@ import { updateTaskTypeCommand } from "./update-task-type.ts";
 import { deleteTaskTypeCommand } from "./delete-task-type.ts";
 import { updateFieldCommand } from "./update-field.ts";
 import { listFieldsCommand } from "./list-fields.ts";
+import { addDependencyCommand } from "./add-dependency.ts";
+import { removeDependencyCommand } from "./remove-dependency.ts";
+import { addLinkCommand } from "./add-link.ts";
+import { removeLinkCommand } from "./remove-link.ts";
 import frontdoorCommand from "./frontdoor/index.ts";
 import { uploadAttachmentCommand } from "./upload-attachment.ts";
 
@@ -42,6 +46,10 @@ const clickupCommand: CommandModule = {
       .command(deleteTaskTypeCommand)
       .command(updateFieldCommand)
       .command(listFieldsCommand)
+      .command(addDependencyCommand)
+      .command(removeDependencyCommand)
+      .command(addLinkCommand)
+      .command(removeLinkCommand)
       .command(frontdoorCommand)
       .demandCommand(1, ""),
   handler: () => {},

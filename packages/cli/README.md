@@ -36,11 +36,17 @@ digismith clickup upload-attachment --task <id> --file <path>      # upload a fi
 digismith clickup create-task-type --name <n> --plural <p> [--description <t>] [--icon <fas name>] [--yes]  # create a workspace task type (Frontdoor; dry run without --yes)
 digismith clickup update-task-type --type <name or id> [--name] [--plural] [--description] [--icon] [--yes]  # edit a task type (full body sent; dry run without --yes)
 digismith clickup delete-task-type --type <name or id> --merge-into <name or id> [--yes --confirm-count <n>]  # merge a type's tasks into another and remove it (prints the count first)
+digismith clickup add-dependency --task <id|key> (--waiting-on <id|key> | --blocking <id|key>) [--yes]  # add a dependency (public API; dry run without --yes; has an allow rule)
+digismith clickup remove-dependency --task <id|key> (--waiting-on <id|key> | --blocking <id|key>) [--yes]  # remove a dependency, never a task (dry run without --yes; no allow rule)
+digismith clickup add-link --task <id|key> --to <id|key> [--yes]   # link two tasks (public API; dry run without --yes; has an allow rule)
+digismith clickup remove-link --task <id|key> --to <id|key> [--yes]  # remove a link, never a task (dry run without --yes; no allow rule)
 digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session of a Proxyman capture in ~/.digismith-depot/.env (no secret printed)
 digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
 
 digismith --version
 ```
+
+`--field` on create-task and update-task also takes Relationship values: `--field "Epic=DGS-343"` (keys or ids, comma-separated; a `-` prefix removes, `Epic=-DGS-343`).
 
 Frontdoor commands cover what the public ClickUp API cannot do (task types today). Capture procedure: turn Proxyman on,
 do the action once in the ClickUp web app, export the requests as Raw into `~/Downloads/Proxyman Captures/ClickUp/`, then run

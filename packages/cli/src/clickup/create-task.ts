@@ -47,7 +47,7 @@ export function createCreateTaskCommand(
           type: "string",
           array: true,
           requiresArg: true,
-          describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more',
+          describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more. Relationship fields take task keys or ids, comma-separated; a - prefix removes',
         }),
     handler: async (argv) => {
       try {
