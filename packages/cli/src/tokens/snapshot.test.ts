@@ -29,6 +29,28 @@ describe("stepForRecord", () => {
   });
 });
 
+describe("stepForRecord instants", () => {
+  const e = (kind: "step_start" | "step_end", step: "brainstorming" | "implementation", ts: string): RegistryEntry => ({ kind, ticket: "T-1", step, session_id: "s1", ts });
+  it("compares parsed instants across mixed precision", () => {
+    const start = [e("step_start", "brainstorming", "2026-10-10T01:00:00Z")];
+    expect(stepForRecord(rec({ ts: "2026-10-10T01:00:00.500Z" }), start)).toBe("brainstorming");
+    const closed = [...start, e("step_end", "brainstorming", "2026-10-10T01:00:01.250Z")];
+    expect(stepForRecord(rec({ ts: "2026-10-10T01:00:01Z" }), closed)).toBe("brainstorming");
+    expect(stepForRecord(rec({ ts: "2026-10-10T01:00:01.500Z" }), closed)).toBe("other");
+  });
+  it("ignores entries with an invalid ts and sends a record with an invalid ts to other", () => {
+    const list = [e("step_start", "brainstorming", "2026-10-10T01:00:00Z"), e("step_end", "brainstorming", "garbage")];
+    expect(stepForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), list)).toBe("brainstorming");
+    expect(stepForRecord(rec({ ts: "" }), list)).toBe("other");
+    expect(stepForRecord(rec({ ts: "nope" }), list)).toBe("other");
+  });
+  it("sorts a step_end before a step_start at the same instant", () => {
+    const t = "2026-10-10T01:00:00Z";
+    const list = [e("step_start", "implementation", t), e("step_end", "brainstorming", t), e("step_start", "brainstorming", "2026-10-10T00:00:00Z")];
+    expect(stepForRecord(rec({ ts: "2026-10-10T01:00:00.000Z" }), list)).toBe("implementation");
+  });
+});
+
 describe("buildSnapshot", () => {
   it("sums counts per step and model, with task rows from agent ids", () => {
     const snap = buildSnapshot({

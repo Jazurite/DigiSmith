@@ -1,11 +1,17 @@
 import { addCounts, emptyCounts, type Counts, type RegistryEntry, type Role, type Snapshot, type Step, type UsageRecord } from "./types.ts";
 
+// Windows compare parsed instants, never strings, so mixed precision ("...:00Z" vs "...:00.500Z")
+// orders correctly. An entry or record with an unparseable ts is ignored for windows.
 export function stepForRecord(record: UsageRecord, entries: RegistryEntry[]): Step {
+  const at = Date.parse(record.ts);
+  if (Number.isNaN(at)) return "other";
   const own = entries
     .filter((e): e is Extract<RegistryEntry, { step: Step }> => (e.kind === "step_start" || e.kind === "step_end") && e.session_id === record.session_id)
-    .filter((e) => e.ts <= record.ts)
-    .sort((a, b) => a.ts.localeCompare(b.ts));
-  const last = own[own.length - 1];
+    .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
+    .filter((x) => !Number.isNaN(x.t) && x.t <= at)
+    // at the same instant a step_end sorts before a step_start; otherwise file order is kept
+    .sort((a, b) => a.t - b.t || Number(b.e.kind === "step_end") - Number(a.e.kind === "step_end") || a.order - b.order);
+  const last = own[own.length - 1]?.e;
   return last && last.kind === "step_start" ? last.step : "other";
 }
 
