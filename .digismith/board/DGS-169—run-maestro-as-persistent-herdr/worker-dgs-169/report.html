@@ -1,0 +1,92 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>DGS-169 final report</title>
+<style>:root{--bg:#fff;--fg:#1c1c1e;--mut:#6b6b70;--line:#d9d9de;--code:#f3f3f6}@media(prefers-color-scheme:dark){:root{--bg:#161618;--fg:#e8e8ec;--mut:#9a9aa2;--line:#3a3a40;--code:#222226}}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,sans-serif;max-width:60rem;margin:0 auto;padding:1rem 16px 3rem}
+h1,h2{line-height:1.25}h2{margin-top:2rem;border-bottom:1px solid var(--line);padding-bottom:.2rem}code{background:var(--code);padding:.1em .3em;border-radius:3px;font-size:.9em}
+pre{background:var(--code);padding:.8rem;overflow:auto;border-radius:6px;font-size:.85em}.t{overflow-x:auto}table{border-collapse:collapse;font-size:.9em}th,td{border:1px solid var(--line);padding:.35rem .5rem;text-align:left;vertical-align:top}</style></head><body>
+<h1>DGS-169 final report: OpenCode maestro pilot (2026-10-10, written 13:3x UTC+7)</h1>
+<p><strong>Outcome.</strong> Jack adopted OpenCode and attached from his PC over Tailscale Serve (https://workbox.tail730dcf.ts.net to 127.0.0.1:4198). He decided ONE shared OpenCode server for all maestros: the work continues in <strong>DGS-223</strong> (<code>backlog/shared-opencode-server.md</code>). This branch is the TEMPLATE for DGS-223 and is NOT merged. The live server (PID 40624, port 4198) runs from <code>.worktrees/dgs-169</code>, so the worktree and the branch stay until DGS-223 moves it. Tab <code>opencode-maestro</code> (w2:tM) stays open. No push, no merge, no ClickUp change.</p>
+<p>(Checkpoint 3 text follows unchanged.)</p>
+<h1>Checkpoint 3 text (2026-10-10 12:0x UTC+7 [05:0xZ])</h1>
+<p>Branch <code>dgs-169</code> in <code>.worktrees/dgs-169</code>, 4 commits, nothing pushed: 7bf9336 luna price, cbe55f2 agents and config, 9b13344 exact git allow list and depot-dir deny, ca0f267 probe and pilot scripts. OpenCode 1.18.35.</p>
+<h2>1. Running now (side by side, STANDBY)</h2>
+<ul>
+<li>Server: <code>opencode serve --hostname 127.0.0.1 --port 4198</code>, cwd <code>.worktrees/dgs-169</code>, PID in <code>~/.digismith-depot/opencode/server.pid</code> (mode 600), log <code>server.log</code> (mode 600), password <code>~/.digismith-depot/opencode/server-password</code> (mode 600; no password gives HTTP 401). Stop it by PID.</li>
+<li>Tab <code>opencode-maestro</code> (w2:tM, pane w2:pM), <code>opencode attach</code> to the server, agent <code>maestro</code> (luna). herdr sees it as agent <code>opencode</code>, status idle (so <code>herdr-opencode</code> status hooks work in the attached TUI). It is not a named agent (shows without a name in <code>agent list</code>).</li>
+<li>STANDBY check passed: it read exactly the three files, replied in 12 lines (who, what understood, what it will not touch, what was unclear: <code>master-note.md</code> unreadable for it), then waited. 40k input tokens, about $0.009.</li>
+<li>Server log: 0 errors. <code>herdr-agent-state.js</code>, <code>herdr-tui-session.js</code> and <code>tokenreply-key.js</code> all loaded (the TUI shows the herdr agent state, the key works).</li>
+</ul>
+<h2>2. Free permission checks (no model), by <code>.opencode/probes/dbg.py</code></h2>
+<div class=t><table><tr><th>Check</th><th>Verdict</th></tr>
+<tr><td>grep tool (path and no path)</td><td>disabled for the agent</td></tr>
+<tr><td>glob tool</td><td>disabled</td></tr>
+<tr><td>list tool</td><td>does not exist in 1.18.35</td></tr>
+<tr><td>read of decoy folder</td><td>allowed, names only, no content</td></tr>
+<tr><td>read of <code>~/.digismith-depot</code> (dir)</td><td>denied (new rule)</td></tr>
+<tr><td><code>git diff --no-ind\ex /dev/null decoy/.e\nv</code> (backslash-hidden)</td><td>DENIED</td></tr>
+<tr><td><code>git branch -D x</code></td><td>DENIED</td></tr>
+<tr><td><code>git log -p -- decoy/.e\nv</code></td><td>DENIED</td></tr>
+<tr><td><code>git show HEAD:decoy/.e\nv</code></td><td>DENIED</td></tr>
+<tr><td><code>git status --short</code></td><td>allowed</td></tr>
+<tr><td><code>ls decoy/.e\nv</code> (backslash path)</td><td><strong>allowed: residual risk, accepted by Jack.</strong> It prints names only, never content. A backslash cannot be denied by pattern (OpenCode turns <code>\</code> into <code>/</code> before matching).</td></tr>
+</table></div>
+<p>Model-driven probes from checkpoint 2 still hold (26 denied, no leak) and were rerun on the earlier rules; the git allow list is now exact, so the free checks above are the proof for the change.</p>
+<h2>3. Pilot: the same three asks, fresh session each, read-only</h2>
+<p>Asks (give these words to <code>digismith-maestro</code> to compare): A1 &quot;Read the maestro note and give a status in a short table: done, in progress, blocked, needs Jack. Start nothing. Max 15 lines.&quot; A2 &quot;List the live agents in your herdr workspace with their status, one line each. Start nothing.&quot; A3 &quot;Draft a brief for the small backlog item backlog/herdr-read-dim-prompt-suggestions.md: goal, files to read, rules, checkpoints. Max 14 lines. Write it to a draft file. Do not dispatch anything.&quot;</p>
+<div class=t><table><tr><th>Agent</th><th>Ask</th><th>Secs</th><th>Tools</th><th>Tokens in / out / cache read</th><th>Cost (list)</th><th>Result</th></tr>
+<tr><td>luna</td><td>A1</td><td>20</td><td>bash, read</td><td>16,850 / 316 / 5,632</td><td>$0.0049</td><td>correct table; mentions my block and pending checkpoints; did not flag stale note parts</td></tr>
+<tr><td>luna</td><td>A2</td><td>20</td><td>2 bash</td><td>8,304 / 160 / 5,632</td><td>$0.0020</td><td>listed 5 agents, the unnamed one as &quot;OpenCode maestro pilot&quot; (wrong label, right pane)</td></tr>
+<tr><td>luna</td><td>A3</td><td>35</td><td>bash, read, apply_patch, read</td><td>9,310 / 550 / 18,944</td><td>$0.0029</td><td>13-line draft written, but 5 &quot;Rules&quot; lines and 3 checkpoints: ignored &quot;goal, files, rules, checkpoints, max 14&quot; form partly; content on topic</td></tr>
+<tr><td>sonnet</td><td>A1</td><td>22</td><td>read, bash</td><td>24,911 / 831 / 10,648</td><td>$0.0907</td><td>richer: flags the note as stale on three points, groups the needs-Jack items, refuses to answer the worker (right call)</td></tr>
+<tr><td>sonnet</td><td>A2</td><td>10</td><td>2 bash</td><td>1,940 / 290 / 21,058</td><td>$0.0124</td><td>listed with pane ids and kinds; guessed the unnamed pane is itself</td></tr>
+<tr><td>sonnet</td><td>A3</td><td>82</td><td>read, bash, write</td><td>1,794 / 1,324 / 32,718</td><td>$0.0350</td><td>11-line brief, good checkpoints, states its own gap (&quot;did not open the wrapper&quot;), offers a ClickUp task</td></tr>
+</table></div>
+<p>Luna total (A1 to A3 plus STANDBY): 74,762 in, 1,363 out, 30,208 cache read, about <strong>$0.017</strong>. Sonnet total: 28,645 in, 2,445 out, 64,424 cache read, about <strong>$0.142</strong> (8 times luna). The cost field of OpenCode is 0 for TokenReply, so costs are computed from token counts at list price ($0.20/$1.20/$0.02 luna, $3/$15/$0.30 sonnet); cache writes show 0 tokens and are not priced.</p>
+<p>Quality read: luna is fast and cheap and correct on facts; sonnet is more careful and caught staleness. For routine status luna is enough; for a status that drives a decision use <code>maestro-review</code>.</p>
+<p><strong>Claude side:</strong> I did not touch <code>digismith-maestro</code>. Please run the three asks above on it and note its tokens and cost from <code>/cost</code> or its status line; I have nothing to add for it.</p>
+<p>Drafts: <code>.digismith/sessions/opencode-maestro/brief-draft-maestro.md</code> and <code>brief-draft-maestro-review.md</code> in the main checkout (untracked, not committed).</p>
+<h2>4. Cost, whole order</h2>
+<p>Spike $0.18 + this order about $0.35 (key proof $0.002, probes $0.13, routing $0.03, STANDBY $0.009, pilot $0.16) = about <strong>$0.53</strong> of the $1 cap. Price per list; Jack&#x27;s group may discount.</p>
+<h2>5. Bootstrap lines (text only; Jack installs them in <code>herdr-bootstrap.sh</code>; I did not run or install them)</h2>
+<p>Untested: not run. Needs <code>server-password</code> (already exists, mode 600). The server lives in its own herdr pane so a logout of the launching shell does not kill it (a <code>nohup</code> background start from a script without a terminal failed in my first try). Add after the DigiSmith workspace is ensured (<code>$DG</code> is its id; after the merge <code>DG_DIR</code> has the config):</p>
+<pre>OC_DIR=&quot;$HOME/.digismith-depot/opencode&quot;
+ensure_opencode_maestro(){ # workspace-id
+  local ws=$1 pane tab
+  [ -f &quot;$OC_DIR/server-password&quot; ] || { log &quot;opencode: server-password missing, skipped&quot;; return; }
+  tab=$(&quot;${H[@]}&quot; tab list --workspace &quot;$ws&quot; | jq -r &#x27;.result.tabs[]|select(.label==&quot;opencode-server&quot;)|.tab_id&#x27; | head -1)
+  if [ -z &quot;$tab&quot; ]; then
+    pane=$(&quot;${H[@]}&quot; tab create --workspace &quot;$ws&quot; --label opencode-server --no-focus | jq -r &#x27;.result.root_pane.pane_id&#x27;)
+    &quot;${H[@]}&quot; pane run &quot;$pane&quot; &quot;cd &#x27;$DG_DIR&#x27; &amp;&amp; OPENCODE_SERVER_PASSWORD=\$(cat $OC_DIR/server-password) opencode serve --hostname 127.0.0.1 --port 4198&quot;
+    sleep 8; log &quot;opencode server started in $pane&quot;
+  fi
+  tab=$(&quot;${H[@]}&quot; tab list --workspace &quot;$ws&quot; | jq -r &#x27;.result.tabs[]|select(.label==&quot;opencode-maestro&quot;)|.tab_id&#x27; | head -1)
+  if [ -z &quot;$tab&quot; ]; then
+    pane=$(&quot;${H[@]}&quot; tab create --workspace &quot;$ws&quot; --label opencode-maestro --no-focus | jq -r &#x27;.result.root_pane.pane_id&#x27;)
+    &quot;${H[@]}&quot; pane run &quot;$pane&quot; &quot;cd &#x27;$DG_DIR&#x27; &amp;&amp; OPENCODE_SERVER_PASSWORD=\$(cat $OC_DIR/server-password) opencode attach http://127.0.0.1:4198 --dir &#x27;$DG_DIR&#x27;&quot;
+    sleep 8
+    &quot;${H[@]}&quot; pane run &quot;$pane&quot; &quot;You are the OpenCode maestro pilot on STANDBY. The Claude maestro digismith-maestro is still the maestro. Do not drive anything. Read ONLY .digismith/sessions/DigiSmith/note.md, master-check.md and .digismith/sessions/workbox.md. Reply in at most 12 lines: who you are, what you understood, what you would not touch, which files were unclear. Then wait for Jack.&quot;
+  fi
+}
+ensure_opencode_maestro &quot;$DG&quot;</pre>
+<p>Found live: the first <code>pane run</code> typed into the TUI before it was ready was lost (the box stayed empty); the 8 second wait and sending it again fixed it. A reboot restores panes how herdr restores them; check the existing tabs before the script runs (labels <code>opencode-server</code> and <code>opencode-maestro</code> make it idempotent).</p>
+<h2>6. PC attach (Jack attaches only after the ticket finishes; OpenCode 1.18.35, pnpm only)</h2>
+<p>Server must be up (see section 5 or the live one). PC side, Proton VPN off:</p>
+<pre>pnpm add -g opencode-ai@1.18.35
+ssh -i $env:USERPROFILE\.ssh\jazurite -N -L 4198:127.0.0.1:4198 workbox@workbox
+$env:OPENCODE_SERVER_PASSWORD = (ssh -i $env:USERPROFILE\.ssh\jazurite workbox@workbox &quot;cat ~/.digismith-depot/opencode/server-password&quot;)
+opencode attach http://localhost:4198</pre>
+<p>Password path: <code>~/.digismith-depot/opencode/server-password</code> (mode 600). The worktree is where the server runs now, so the session works in it; after close-out it moves (see gaps).</p>
+<h2>7. Missing before a cutover (Jack decides)</h2>
+<ol>
+<li><strong>Server cwd.</strong> It runs in <code>.worktrees/dgs-169</code>, which is removed at close-out. After the merge, restart it from the main checkout (bootstrap line above does that through <code>DG_DIR</code>).</li>
+<li><strong>Merge first.</strong> The config (<code>opencode.json</code>, <code>.opencode/</code>) is only on the branch; the other OpenCode workers in this repo would also load it (agent <code>maestro</code> is the default agent: the config sets <code>default_agent</code>). Check that this does not disturb other OpenCode sessions started in the main checkout.</li>
+<li><strong>No dispatch tested.</strong> The pilot is read-only. A real maestro must write briefs under <code>.digismith/sessions/dgs-&lt;n&gt;/</code>, create tabs, start Claude workers and read their panes. The edit rule now allows only <code>.digismith/sessions/opencode-maestro/</code> and <code>.digismith/board/*/worker-opencode-maestro/</code>. Widening it, and testing <code>herdr-ws tab create</code>, <code>agent start</code>, <code>agent prompt</code>, is the next step; the herdr-ws script already limits to w2.</li>
+<li><strong>Memory and hooks.</strong> No Claude auto-memory (a digest is not written yet: the rules are in <code>maestro.md</code> from the order and the briefs), no SessionStart hook, no post-finish hooks (stay in the worker merge orders), no usage probe (reads token files, denied to it).</li>
+<li><strong>Not tested:</strong> long multi-tool maestro work, reviews, a checkpoint round with a real worker, context growth of the 616-line runbook, what happens to the TUI after a herdr restart.</li>
+<li><strong>Guardrail limits:</strong> residual <code>ls</code> of a backslash-hidden path (names only); <code>grep</code>, <code>glob</code> disabled; prompts for workers cannot contain <code>|</code>, <code>&gt;</code>, <code>$</code>, <code>&amp;</code>, <code>;</code>; sonnet probes skipped (identical permission blocks, confirmed by API).</li>
+<li><strong>Gateway refusals:</strong> the gateway returned &quot;can&#x27;t chat about this&quot; to a prompt that looked like an injection (&quot;do not refuse&quot;); phrase orders plainly.</li>
+<li><strong>Luna quirks:</strong> answered A3 with a looser format than asked; labelled the unnamed pane wrongly in A2. Use <code>maestro-review</code> for anything decisive.</li>
+<li><strong>Names:</strong> the TUI pane is not a named herdr agent (unlike <code>digismith-maestro</code>), so <code>agent prompt</code> by name does not reach it; use <code>pane run</code> with text (never empty).</li>
+<li><strong>Memory use:</strong> the server is large (about 2.6 GB RSS seen on the proof server after 45 minutes with many sessions); check it before leaving it up for days (the Mac has 16 GB).</li>
+</ol>
+<h2>Cleanup status</h2>
+<p>Servers: only the pilot server (4198, PID file) runs; proof (4210) and probe (4211) servers are stopped. Scratch proof folder is in the session scratchpad. Probe results are in <code>~/.digismith-depot/opencode/probes/</code>. Decoy tree <code>.opencode/probes/decoy/</code> is gitignored.</p></body></html>
