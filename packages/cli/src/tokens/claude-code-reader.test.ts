@@ -82,4 +82,29 @@ describe("readClaudeCodeSession", () => {
     ].join("\n"));
     expect(readClaudeCodeSession(file)).toEqual([]);
   });
+  it("counts the top-level usage and ignores usage.iterations", () => {
+    const { file, sid } = setup();
+    const one = JSON.parse(assistant({ id: "m1", req: "r1", output: 40, ts: "2026-10-10T01:00:00Z", sessionId: sid }));
+    one.message.usage.iterations = [{ type: "message", input_tokens: 2, output_tokens: 40 }];
+    const two = JSON.parse(assistant({ id: "m2", req: "r2", output: 50, ts: "2026-10-10T02:00:00Z", sessionId: sid }));
+    two.message.usage.iterations = [
+      { type: "message", input_tokens: 2, output_tokens: 20 },
+      { type: "message", input_tokens: 2, output_tokens: 30 },
+    ];
+    writeFileSync(file, [line(one), line(two)].join("\n"));
+    const out = readClaudeCodeSession(file);
+    expect(out.map((r) => [r.input, r.output])).toEqual([[2, 40], [2, 50]]);
+  });
+
+  it("ignores a compaction summary line and keeps the session id of replayed lines", () => {
+    const { file, sid } = setup();
+    writeFileSync(file, [
+      line({ type: "user", isCompactSummary: true, sessionId: sid, message: { role: "user", content: "x" } }),
+      line({ type: "system", subtype: "compact_boundary", sessionId: sid }),
+      assistant({ id: "m1", req: "r1", output: 9, ts: "2026-10-10T01:00:00Z", sessionId: "22222222-2222-2222-2222-222222222222" }),
+    ].join("\n"));
+    const out = readClaudeCodeSession(file);
+    expect(out).toHaveLength(1);
+    expect(out[0].session_id).toBe("22222222-2222-2222-2222-222222222222");
+  });
 });

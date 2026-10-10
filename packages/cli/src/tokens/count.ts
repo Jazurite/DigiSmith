@@ -19,15 +19,20 @@ export function countTicket(opts: CountOptions): Snapshot {
   const entries = opts.registry.read(opts.ticket);
   const registered = entries.flatMap((e) => (e.kind === "session" ? [e.session_id] : []));
   const inferred = inferSessionsForTicket(opts.ticket, root).filter((s) => !registered.includes(s));
-  const records: UsageRecord[] = [];
+  // A resumed transcript replays earlier responses, so dedupe across sessions too.
+  const byResponse = new Map<string, UsageRecord>();
   for (const sid of [...new Set([...registered, ...inferred])]) {
     const file = findTranscript(sid, root);
     if (!file) {
       console.error(`tokens: no transcript found for session ${sid}`);
       continue;
     }
-    records.push(...readClaudeCodeSession(file));
+    for (const r of readClaudeCodeSession(file)) {
+      const prior = byResponse.get(r.response_id);
+      if (!prior || r.output > prior.output) byResponse.set(r.response_id, { ...r, session_id: sid });
+    }
   }
+  const records = [...byResponse.values()].sort((a, b) => a.ts.localeCompare(b.ts));
   return buildSnapshot({
     ticket: opts.ticket,
     generatedAt: (opts.now ?? (() => new Date().toISOString()))(),

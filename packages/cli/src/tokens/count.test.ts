@@ -32,6 +32,31 @@ describe("countTicket", () => {
     expect(snap.steps.other["claude-opus-5-5"]).toMatchObject({ input: 2, output: 10, responses: 1 });
   });
 
+  it("counts a replayed response once when a resumed transcript repeats an earlier session", () => {
+    const { projects, sid } = fixture();
+    const dir = join(projects, "-a");
+    const resumed = "sess-2";
+    // The resumed file replays the earlier response under the old session id, then adds one of its own.
+    writeFileSync(
+      join(dir, `${resumed}.jsonl`),
+      [
+        JSON.stringify({ type: "user", sessionId: sid, gitBranch: "T-1__x", cwd: "/w" }),
+        JSON.stringify({
+          type: "assistant", sessionId: sid, requestId: "r1", timestamp: "2026-10-10T01:00:00Z",
+          message: { id: "m1", model: "claude-opus-5-5", usage: { input_tokens: 2, output_tokens: 10, cache_read_input_tokens: 100, cache_creation_input_tokens: 30, cache_creation: { ephemeral_5m_input_tokens: 10, ephemeral_1h_input_tokens: 20 } } },
+        }),
+        JSON.stringify({
+          type: "assistant", sessionId: resumed, requestId: "r2", timestamp: "2026-10-10T02:00:00Z",
+          message: { id: "m2", model: "claude-opus-5-5", usage: { input_tokens: 1, output_tokens: 7, cache_read_input_tokens: 5, cache_creation_input_tokens: 0 } },
+        }),
+      ].join("\n"),
+    );
+    const reg = createDepotRegistry(mkdtempSync(join(tmpdir(), "reg-")));
+    const snap = countTicket({ ticket: "T-1", registry: reg, projectsDir: projects, now: () => "t" });
+    expect(snap.steps.other["claude-opus-5-5"]).toMatchObject({ input: 3, output: 17, responses: 2 });
+    expect(snap.unattributed).toEqual({});
+  });
+
   it("prefers the registry entry and its step windows", () => {
     const { projects, sid } = fixture();
     const reg = createDepotRegistry(mkdtempSync(join(tmpdir(), "reg-")));
