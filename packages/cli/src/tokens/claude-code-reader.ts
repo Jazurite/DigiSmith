@@ -31,6 +31,15 @@ function validCount(v: unknown): boolean {
   return v === undefined || (typeof v === "number" && Number.isFinite(v) && v >= 0);
 }
 
+const FLAG_KEYS = ["service_tier", "speed", "iterations", "fallback_credit"];
+
+// Copied as found, never interpreted; only the keys present in usage (no message text).
+function rawFlags(usage: Record<string, unknown>): Record<string, unknown> {
+  const flags: Record<string, unknown> = {};
+  for (const k of FLAG_KEYS) if (k in usage) flags[k] = usage[k];
+  return flags;
+}
+
 function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>, fileAgentId: string | null = null): void {
   const lines = readFileSync(path, "utf-8").split("\n");
   for (let index = 0; index < lines.length; index++) {
@@ -65,6 +74,7 @@ function parseFile(path: string, sessionFallback: string, into: Map<string, Usag
       cache_write_5m: split ? (split.ephemeral_5m_input_tokens ?? 0) : total,
       cache_write_1h: split ? (split.ephemeral_1h_input_tokens ?? 0) : 0,
       write_split: split ? "known" : "unknown",
+      raw_flags: rawFlags(u),
     };
     const prior = into.get(record.response_id);
     if (!prior || record.output >= prior.output) into.set(record.response_id, record);

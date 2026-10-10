@@ -168,4 +168,18 @@ describe("readClaudeCodeSession", () => {
     const out = readClaudeCodeSession(file);
     expect(out.map((r) => r.output)).toEqual([3]);
   });
+  it("keeps service_tier, speed, iterations and fallback_credit as raw_flags, only the keys present", () => {
+    const { file, sid } = setup();
+    const one = JSON.parse(assistant({ id: "m1", req: "r1", output: 4, ts: "2026-10-10T01:00:00Z", sessionId: sid }));
+    one.message.usage.service_tier = "standard";
+    one.message.usage.speed = "fast";
+    one.message.usage.iterations = [{ type: "message", input_tokens: 2, output_tokens: 4 }];
+    one.message.usage.fallback_credit = { kind: "placeholder" };
+    const two = JSON.parse(assistant({ id: "m2", req: "r2", output: 5, ts: "2026-10-10T01:01:00Z", sessionId: sid }));
+    two.message.usage.service_tier = "priority";
+    writeFileSync(file, [line(one), line(two)].join("\n"));
+    const [a, b] = readClaudeCodeSession(file);
+    expect(a.raw_flags).toEqual({ service_tier: "standard", speed: "fast", iterations: [{ type: "message", input_tokens: 2, output_tokens: 4 }], fallback_credit: { kind: "placeholder" } });
+    expect(b.raw_flags).toEqual({ service_tier: "priority" });
+  });
 });

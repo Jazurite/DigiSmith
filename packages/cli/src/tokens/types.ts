@@ -38,6 +38,7 @@ export interface UsageRecord {
   cache_write_5m: number;
   cache_write_1h: number;
   write_split: "known" | "unknown";
+  raw_flags: Record<string, unknown>; // service_tier, speed, iterations, fallback_credit as found; uninterpreted
 }
 
 export type Role = "worker" | "maestro" | "reviewer" | "other";

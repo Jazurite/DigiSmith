@@ -6,7 +6,7 @@ function rec(over: Partial<UsageRecord>): UsageRecord {
   return {
     source: "claude-code", session_id: "s1", agent_id: null, response_id: Math.random().toString(),
     model: "claude-opus-5-5", ts: "2026-10-10T01:00:00Z", input: 1, output: 10, cache_read: 100,
-    cache_write_5m: 5, cache_write_1h: 7, write_split: "known", ...over,
+    cache_write_5m: 5, cache_write_1h: 7, write_split: "known", raw_flags: {}, ...over,
   };
 }
 
