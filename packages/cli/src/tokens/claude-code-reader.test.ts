@@ -118,4 +118,28 @@ describe("readClaudeCodeSession", () => {
     const b = readClaudeCodeSession(mk(2));
     expect(a[0].response_id).not.toBe(b[0].response_id);
   });
+  it("counts id-less lines of two subagent files and the main file at the same line index", () => {
+    const { dir, file, sid } = setup();
+    const idless = (output: number) =>
+      line({ type: "assistant", timestamp: "2026-10-10T01:00:00Z", sessionId: sid, message: { model: "claude-opus-5-5", usage: { input_tokens: 1, output_tokens: output } } });
+    writeFileSync(file, idless(1));
+    mkdirSync(join(dir, sid, "subagents"), { recursive: true });
+    writeFileSync(join(dir, sid, "subagents", "agent-aaa.jsonl"), idless(2));
+    writeFileSync(join(dir, sid, "subagents", "agent-bbb.jsonl"), idless(3));
+    const out = readClaudeCodeSession(file);
+    expect(out.map((r) => r.output).sort()).toEqual([1, 2, 3]);
+    expect(new Set(out.map((r) => r.response_id)).size).toBe(3);
+  });
+
+  it("takes the agent id from the subagent file name, and an explicit line agentId wins", () => {
+    const { dir, file, sid } = setup();
+    writeFileSync(file, "");
+    mkdirSync(join(dir, sid, "subagents"), { recursive: true });
+    const noAgent = (id: string) =>
+      line({ type: "assistant", timestamp: "2026-10-10T01:00:00Z", sessionId: sid, requestId: `q-${id}`, message: { id, model: "claude-opus-5-5", usage: { input_tokens: 1, output_tokens: 1 } } });
+    writeFileSync(join(dir, sid, "subagents", "agent-abc123.jsonl"), [noAgent("n1"), assistant({ id: "n2", req: "q2", output: 1, ts: "2026-10-10T01:00:00Z", sessionId: sid, agentId: "explicit9" })].join("\n"));
+    const out = readClaudeCodeSession(file);
+    expect(out.find((r) => r.response_id === "n1|q-n1")!.agent_id).toBe("abc123");
+    expect(out.find((r) => r.response_id === "n2|q2")!.agent_id).toBe("explicit9");
+  });
 });

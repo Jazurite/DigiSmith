@@ -22,7 +22,7 @@ interface Line {
   };
 }
 
-function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>): void {
+function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>, fileAgentId: string | null = null): void {
   const lines = readFileSync(path, "utf-8").split("\n");
   for (let index = 0; index < lines.length; index++) {
     const raw = lines[index];
@@ -41,8 +41,8 @@ function parseFile(path: string, sessionFallback: string, into: Map<string, Usag
     const record: UsageRecord = {
       source: "claude-code",
       session_id: o.sessionId ?? sessionFallback,
-      agent_id: o.agentId ?? null,
-      response_id: m.id && o.requestId ? `${m.id}|${o.requestId}` : `line|${sessionFallback}|${o.agentId ?? "main"}|${index}`,
+      agent_id: o.agentId ?? fileAgentId,
+      response_id: m.id && o.requestId ? `${m.id}|${o.requestId}` : `line|${path}|${index}`,
       model: m.model,
       ts: o.timestamp ?? "",
       input: u.input_tokens ?? 0,
@@ -64,7 +64,7 @@ export function readClaudeCodeSession(transcriptPath: string): UsageRecord[] {
   const subDir = join(dirname(transcriptPath), sessionId, "subagents");
   if (existsSync(subDir)) {
     for (const name of readdirSync(subDir)) {
-      if (name.startsWith("agent-") && name.endsWith(".jsonl")) parseFile(join(subDir, name), sessionId, byId);
+      if (name.startsWith("agent-") && name.endsWith(".jsonl")) parseFile(join(subDir, name), sessionId, byId, name.slice("agent-".length, -".jsonl".length));
     }
   }
   return [...byId.values()].sort((a, b) => a.ts.localeCompare(b.ts));
