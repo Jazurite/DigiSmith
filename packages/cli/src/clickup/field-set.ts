@@ -67,15 +67,55 @@ export function resolveValue(field: FieldLike, raw: string): unknown {
   }
 }
 
+/** "DGS-1,DGS-2,-DGS-3": keys or ids, comma-separated; a - prefix removes. */
+export function parseRelationValue(raw: string): { add: string[]; rem: string[] } {
+  const add: string[] = [];
+  const rem: string[] = [];
+  for (const part of raw.split(",")) {
+    const item = part.trim();
+    const remove = item.startsWith("-");
+    const ref = (remove ? item.slice(1) : item).trim();
+    if (!ref) throw new Error(`relationship value "${raw}" has an empty item`);
+    (remove ? rem : add).push(ref);
+  }
+  const both = add.find((r) => rem.some((x) => x.toLowerCase() === r.toLowerCase()));
+  if (both) throw new Error(`"${both}" is both added and removed in "${raw}"`);
+  return { add, rem };
+}
+
+const RELATIONSHIP_TYPES = ["list_relationship", "tasks"];
+
+/** Resolves keys to task ids with one read each; an unknown key throws before any write. */
+async function resolveRelationValue(client: ClickUpClient, field: FieldLike, raw: string): Promise<{ add: string[]; rem: string[] }> {
+  const { add, rem } = parseRelationValue(raw);
+  const ids = async (refs: string[]) => {
+    const out: string[] = [];
+    for (const ref of refs) {
+      try {
+        out.push((await client.getTaskByRef(ref)).id);
+      } catch (err) {
+        throw new Error(`field "${field.name}": cannot find task "${ref}": ${(err as Error).message}`);
+      }
+    }
+    return [...new Set(out)];
+  };
+  return { add: await ids(add), rem: await ids(rem) };
+}
+
 /** Reads the list's fields once and resolves every arg; throws before anything is written. */
 export async function resolveFieldArgs(client: ClickUpClient, listId: string, args: string[]): Promise<ResolvedField[]> {
   if (args.length === 0) return [];
   const fields = (await client.getListFields(listId)) as unknown as FieldLike[];
-  return args.map((arg) => {
+  const resolved: ResolvedField[] = [];
+  for (const arg of args) {
     const { key, value } = parseFieldArg(arg);
     const field = resolveField(fields, key);
-    return { field, value: resolveValue(field, value) };
-  });
+    resolved.push({
+      field,
+      value: RELATIONSHIP_TYPES.includes(field.type) ? await resolveRelationValue(client, field, value) : resolveValue(field, value),
+    });
+  }
+  return resolved;
 }
 
 export async function applyFields(client: ClickUpClient, taskId: string, resolved: ResolvedField[]): Promise<void> {

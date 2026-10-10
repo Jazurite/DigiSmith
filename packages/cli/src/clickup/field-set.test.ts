@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { ClickUpClient } from "@digismith/clickup-client";
-import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields } from "./field-set.ts";
+import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue } from "./field-set.ts";
 
 const dd = (id: string, name: string, options: { id: string; name: string }[]) => ({
   id,
@@ -111,5 +111,45 @@ describe("applyFields", () => {
     await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(
       /setting field "ClickUp API Type" on task t1 failed: Request failed with status code 404 \{"err":"Field not found"\}/
     );
+  });
+});
+
+describe("Relationship fields", () => {
+  const rel = plain("f20", "Epic", "list_relationship");
+  const byKey: Record<string, string> = { "DGS-343": "id343", "DGS-344": "id344" };
+  const clientWith = (setCustomField = vi.fn().mockResolvedValue(undefined)) =>
+    ({
+      getListFields: vi.fn().mockResolvedValue([...fields, rel]),
+      getTaskByRef: vi.fn(async (ref: string) => {
+        if (ref in byKey) return { id: byKey[ref] };
+        if (ref === "rawid") return { id: "rawid" };
+        throw new Error(`no task ${ref}`);
+      }),
+      setCustomField,
+    }) as unknown as ClickUpClient;
+
+  it("parseRelationValue splits on commas and reads a - prefix as remove", () => {
+    expect(parseRelationValue("DGS-343, DGS-344,-rawid")).toEqual({ add: ["DGS-343", "DGS-344"], rem: ["rawid"] });
+  });
+  it("parseRelationValue refuses an empty item and the same task added and removed", () => {
+    expect(() => parseRelationValue("DGS-1,,DGS-2")).toThrow("empty");
+    expect(() => parseRelationValue("-")).toThrow("empty");
+    expect(() => parseRelationValue("DGS-1,-DGS-1")).toThrow("both added and removed");
+  });
+  it("resolves keys to task ids and sends {add, rem}", async () => {
+    const set = vi.fn().mockResolvedValue(undefined);
+    const client = clientWith(set);
+    const resolved = await resolveFieldArgs(client, "L", ["Epic=DGS-343,DGS-344", "Epic=-rawid"]);
+    await applyFields(client, "t1", resolved);
+    expect(set).toHaveBeenNthCalledWith(1, "t1", "f20", { add: ["id343", "id344"], rem: [] });
+    expect(set).toHaveBeenNthCalledWith(2, "t1", "f20", { add: [], rem: ["rawid"] });
+  });
+  it("an unknown key is an error before any write", async () => {
+    const set = vi.fn();
+    await expect(resolveFieldArgs(clientWith(set), "L", ["Epic=DGS-999"])).rejects.toThrow(/DGS-999/);
+    expect(set).not.toHaveBeenCalled();
+  });
+  it("other unsupported types are still refused", async () => {
+    await expect(resolveFieldArgs(clientWith(), "L", ["Tags=x"])).rejects.toThrow("not supported by --field");
   });
 });
