@@ -9,6 +9,7 @@ import vpsCommand from "./vps/index.ts";
 import depotCommand from "./depot/index.ts";
 import clickupCommand from "./clickup/index.ts";
 import shopeeCommand from "./shopee/index.ts";
+import tokensCommand from "./tokens/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -29,6 +30,7 @@ export function buildCli(argv: string[]): Argv {
     .command(depotCommand)
     .command(clickupCommand)
     .command(shopeeCommand)
+    .command(tokensCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
