@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-214 Token counter design</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">checkpoint 1: awaiting approval</span>
+  <h1>DGS-214 Token counter design</h1>
+  <div class="meta">
+    <span>Date: 2026-10-10</span>
+    <span>Ticket: DGS-214 (B.3 Token Economics, subtask of DGS-204)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal and non-goals</a></li>
+    <li><a href="#decisions">Jack's five answers</a></li>
+    <li><a href="#prior">Prior art</a></li>
+    <li><a href="#shape">Record shape and readers</a></li>
+    <li><a href="#counting">Counting right</a></li>
+    <li><a href="#registry">The registry</a></li>
+    <li><a href="#levels">Levels and steps</a></li>
+    <li><a href="#snapshot">tokens.json and dg tokens</a></li>
+    <li><a href="#boundary">The DGS-220 boundary</a></li>
+    <li><a href="#later">Phase 2 and later readers</a></li>
+    <li><a href="#test">Testing and rules</a></li>
+    <li><a href="#open">Open items</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>1. Goal and non-goals</h2>
+<p>Count the tokens of every ticket, exactly, from the native usage data of the tool that did the work. Phase 1 has one reader: Claude Code transcripts.</p>
+<ul>
+  <li><strong>Counts only.</strong> No prices, no dollars, no price table read, at any level. Analysis (dollars, meaning, comparison) is a separate plan, not filed yet.</li>
+  <li><strong>Transcripts are read for numbers only:</strong> <code>usage</code>, <code>model</code>, ids, timestamps. No message text is copied out.</li>
+  <li><strong>Not in phase 1:</strong> OpenCode, Codex, TokenReply, footprint measure, ClickUp comment, DGS-204 database, levels 3 and 4.</li>
+  <li><strong>Not decided here:</strong> where the registry lives (DGS-220).</li>
+</ul>
+</section>
+
+<section id="decisions">
+<h2>2. Jack's five answers</h2>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>Question</th><th>Answer</th></tr>
+<tr><td>1</td><td>Attribution</td><td>Both: a registry written by the workflow, plus transcript tagging as fallback for sessions started outside it.</td></tr>
+<tr><td>2</td><td>When and where</td><td>After the fact: <code>dg tokens &lt;ticket&gt;</code>, plus a <code>tokens.json</code> snapshot in the board folder at finish. Interim. ClickUp comment and DGS-204 database come later.</td></tr>
+<tr><td>3</td><td>Build or reuse</td><td>Build our own. One reader per source behind a common record shape. ccusage is a cross-check only.</td></tr>
+<tr><td>4</td><td>Registry location</td><td>Not decided, not DGS-214's. Behind one small interface. Owned by DGS-220.</td></tr>
+<tr><td>5</td><td>Prices</td><td>Counts only. No prices anywhere in DGS-214.</td></tr>
+</table></div>
+<p>Direction from Jack: metrics build up in levels (task, ticket, epic, everything), each summed from the one below; measure smallest first.</p>
+</section>
+
+<section id="prior">
+<h2>3. Prior art</h2>
+<div class="table-wrap"><table>
+<tr><th>Option</th><th>What it gives</th><th>Why not the base</th></tr>
+<tr><td>ccusage (MIT, <code>pnpm dlx ccusage</code>)</td><td>Reads the same transcripts. <code>session</code>, <code>blocks</code>, <code>--json</code>.</td><td>No ticket, step or herdr link. Prices from LiteLLM, which we do not want. Dedupe and subagent handling not documented. Use as a test oracle.</td></tr>
+<tr><td>Claude Code OpenTelemetry</td><td><code>claude_code.token.usage</code> with <code>session.id</code>, <code>model</code>, <code>type</code>, <code>query_source</code> (main, subagent, auxiliary), <code>agent.name</code>.</td><td>No file exporter: needs a collector. Counts only from switch-on, not past sessions. No ticket tag. Parent agent id is on traces, not metrics. Possible phase 2 source, not phase 1.</td></tr>
+<tr><td>Own reader over transcripts</td><td>Exact per-response usage, past and present. Subagent files under <code>&lt;session&gt;/subagents/</code>.</td><td>We build it. Chosen.</td></tr>
+<tr><td><code>claudecheck.py</code> (colleague)</td><td>Fixed per-turn footprint via free <code>count_tokens</code>.</td><td>Different measure (before the fact). See section 10.</td></tr>
+</table></div>
+<p>The K.4 counter (<code>scripts/token-counter/</code>) prices tokens. DGS-214 does not read or change it. Its missing producer of real token counts (<code>backlog/token-counter-usage-producer-gap.md</code>) is closed in spirit by this reader, but wiring it into the runners is a later ticket.</p>
+</section>
+
+<section id="shape">
+<h2>4. Record shape and readers</h2>
+<p>One record per API response, the same for every source:</p>
+<pre><code>UsageRecord {
+  source:      "claude-code"            // reader name; later "opencode", "codex", ...
+  session_id:  string                   // the session the response belongs to
+  agent_id:    string | null            // subagent id, null for the main thread
+  response_id: string                   // dedupe key (Claude Code: message.id + requestId)
+  model:       string
+  ts:          ISO-8601 UTC
+  input:       number
+  output:      number
+  cache_read:  number
+  cache_write_5m: number
+  cache_write_1h: number
+}</code></pre>
+<p>A reader is one function: <code>read(sessionRef) -> UsageRecord[]</code>, already deduped. The grouping code (steps, tickets, levels) never sees a transcript, only records. Adding Codex or OpenCode later means adding a reader, nothing else.</p>
+<p>The Claude Code reader maps <code>usage.input_tokens</code>, <code>output_tokens</code>, <code>cache_read_input_tokens</code> and <code>usage.cache_creation.{ephemeral_5m,ephemeral_1h}_input_tokens</code>. If <code>cache_creation</code> is missing, all of <code>cache_creation_input_tokens</code> goes to <code>cache_write_5m</code> and the record is marked <code>write_split: unknown</code>. Fields such as <code>service_tier</code>, <code>speed</code>, <code>iterations</code>, <code>fallback_credit</code> are kept in a free-form <code>raw_flags</code> object so a later analysis can use them; this plan does not interpret them.</p>
+</section>
+
+<section id="counting">
+<h2>5. Counting right</h2>
+<ul>
+  <li><strong>Dedupe.</strong> One response appears on several transcript lines with the same <code>message.id</code> and <code>requestId</code>. Checked on this session's own transcript: 109 assistant lines, 60 unique pairs. Group by the pair, take one record per pair. Where lines differ, keep the line with the highest <code>output_tokens</code> (streaming lines can carry a partial output). The plan must pin this with a fixture.</li>
+  <li><strong>Subagents.</strong> Their transcripts are in <code>&lt;session&gt;/subagents/agent-&lt;id&gt;.jsonl</code> with a <code>.meta.json</code>. Each line carries the parent <code>sessionId</code> and an <code>agentId</code>. So a parent session in the registry covers its subagents; no write is needed at subagent dispatch.</li>
+  <li><strong>Session id changes.</strong> A worker's session id changes on <code>/clear</code> or resume. The registry therefore lists every session id of a ticket, and the init write must be repeated when a resumed session continues the ticket (the resume path of <code>init</code> appends a line too).</li>
+  <li><strong>Transcript location.</strong> A transcript is re-homed to the project folder of its current cwd. Find it by session id with the three-step lookup already in <code>skills/telemetry/SKILL.md</code> Step 2 (recorded path, current-cwd folder, a search under <code>~/.claude/projects</code>).</li>
+  <li><strong>Compaction, refusal fallbacks, <code>iterations</code>.</strong> Not assumed. The plan opens real transcripts that contain each case and checks that the per-response sum is right. If <code>iterations</code> carries extra billed work not in the top-level counts, the reader adds it and the fixture proves it.</li>
+  <li><strong>Cross-check.</strong> At build time and when a Claude Code version changes the format, compare per-session totals against <code>pnpm dlx ccusage session --json</code>. A mismatch is a bug in one of the two. ccusage is never a dependency.</li>
+</ul>
+</section>
+
+<section id="registry">
+<h2>6. The registry</h2>
+<h3>Interface</h3>
+<pre><code>Registry {
+  append(entry: RegistryEntry): void   // append-only
+  read(ticket: string): RegistryEntry[]
+}
+
+RegistryEntry =
+  | { kind: "session",    ticket, session_id, source, role, ts }
+  | { kind: "step_start", ticket, step, session_id, ts }
+  | { kind: "step_end",   ticket, step, session_id, ts }
+// role: worker | maestro | reviewer | other   (subagents are found through their parent session)
+// step: brainstorming | writing-plans | implementation | finishing | other</code></pre>
+<p>Everything else in DGS-214 uses only these two calls. The location behind them is not picked.</p>
+<h3>Location: open, owned by DGS-220</h3>
+<ul>
+  <li><strong>Option 1, depot per ticket:</strong> <code>~/.digismith-depot/token-registry/&lt;ticket&gt;.jsonl</code>. Outside every worktree, so no copy step. Stays on one machine.</li>
+  <li><strong>Option 2, board folder:</strong> <code>.digismith/board/&lt;ticket&gt;/registry.jsonl</code>. Travels with the ticket. Untracked in a worktree, lost on cleanup unless committed, puts session ids into git.</li>
+  <li><strong>Option 3, one global registry split by month and year:</strong> <code>registry/&lt;yyyy&gt;/&lt;mm&gt;.jsonl</code>. One place to scan. A ticket that spans a month boundary spans two files.</li>
+</ul>
+<p>The plan for DGS-214 ships a default implementation behind the interface only so the feature works; DGS-220 may replace it. The default must be chosen at plan time and is marked interim.</p>
+<h3>Writers</h3>
+<div class="table-wrap"><table>
+<tr><th>Where</th><th>Writes</th><th>Change to existing skill</th></tr>
+<tr><td><code>digismith:init</code> (bootstrap Step 1.5 point, adopt equivalent, and the resume path)</td><td><code>session</code> line for the live session; <code>step_start brainstorming</code></td><td>New step beside the telemetry-marker write. Not gated on <code>logging</code>: it records counts and ids, no text.</td></tr>
+<tr><td><code>digismith:brainstorming</code> end, <code>writing-plans</code> start and end, <code>subagent-driven-development</code> / <code>executing-plans</code> start and end, <code>finishing-a-development-branch</code> start and end</td><td><code>step_end</code> / <code>step_start</code> lines</td><td>One small write each.</td></tr>
+<tr><td><code>subagent-driven-development</code> per task</td><td>A token row in <code>progress.md</code> for the task (level 1), computed from the task's subagent files</td><td>Extend the ledger row. No registry line at dispatch.</td></tr>
+<tr><td><code>finishing-a-development-branch</code></td><td>Runs the count and saves <code>tokens.json</code> in the board folder</td><td>One step. Not a push.</td></tr>
+</table></div>
+<p><strong>Why not reuse <code>.digismith/telemetry-marker</code>.</strong> It is written only when the profile has <code>logging: true</code> (the <code>digismith</code> profile has <code>false</code>). It is one untracked file per checkout, deleted and rewritten at each ticket start, and it holds one session id. Only its <em>start point</em> and its transcript lookup are reused.</p>
+<h3>Fallback tagging</h3>
+<p>For sessions with no registry line: the <code>customTitle</code> (<code>custom-title.json</code> in the session folder, such as <code>DGS-214 ⚚ Token counter</code>), the <code>gitBranch</code> (<code>&lt;Key&gt;__&lt;slug&gt;</code>) and the <code>cwd</code> (worktree path) are matched to a ticket key. A match is marked <code>attribution: inferred</code> in the output. No match goes to the <code>unattributed</code> bucket. The maestro's and the Master's turns are never split by ticket in phase 1: they are a <code>maestro</code> session of their own, counted per session.</p>
+</section>
+
+<section id="levels">
+<h2>7. Levels and steps</h2>
+<div class="table-wrap"><table>
+<tr><th>Level</th><th>Sum of</th><th>Phase 1?</th><th>Where it lives</th></tr>
+<tr><td>1 Task</td><td>The records of the task's subagents: implementer, reviewers, fix dispatches</td><td>Yes</td><td>A row in the SDD <code>progress.md</code> ledger</td></tr>
+<tr><td>2 Ticket</td><td>Its tasks plus the non-SDD steps; with a total per step</td><td>Yes</td><td><code>tokens.json</code> and <code>dg tokens &lt;ticket&gt;</code></td></tr>
+<tr><td>3 Epic</td><td>Its tickets' <code>tokens.json</code></td><td>No, waits for DGS-220</td><td>Read-only roll-up</td></tr>
+<tr><td>4 Everything</td><td>All epics</td><td>No, waits for DGS-220</td><td>Read-only roll-up</td></tr>
+</table></div>
+<p>Only level 1 reads transcripts. Each level above reads the output of the level below, so a roll-up never touches a transcript.</p>
+<h3>Step boundaries</h3>
+<p>A record belongs to the step whose <code>step_start</code> / <code>step_end</code> window (in the same session) contains its timestamp. A record inside no window goes to step <code>other</code>. Subagent records take the step of their parent session at that time. A step may have several windows (resumed work). The SDD task rows split the <code>implementation</code> step further, by task.</p>
+</section>
+
+<section id="snapshot">
+<h2>8. tokens.json and dg tokens</h2>
+<pre><code>{
+  "schema_version": 1,
+  "ticket": "DGS-214",
+  "generated_at": "...",
+  "reader_versions": { "claude-code": "1" },
+  "steps": {
+    "brainstorming": {
+      "claude-opus-5-5": { "input": 0, "output": 0, "cache_read": 0,
+                           "cache_write_5m": 0, "cache_write_1h": 0, "responses": 0 }
+    }
+  },
+  "tasks": { "task-1": { "...": "same shape as a step" } },
+  "sessions": [ { "session_id": "...", "role": "worker", "attribution": "registry" } ],
+  "unattributed": { "...": "same shape" }
+}</code></pre>
+<p>Counts only. Versioned and self-describing so DGS-220 can ingest it unchanged. Written once at finish by the command below; rewritten if the command is run again.</p>
+<p><code>dg tokens &lt;ticket&gt;</code>: read the registry, run the readers, dedupe, group by step, print a table (steps by model by token class) and a per-session list. <code>--json</code> prints the snapshot. <code>--write</code> saves it into the board folder. Code location is not fixed by this design (proposed: a new module next to <code>scripts/token-counter/</code>, with the command in <code>packages/cli</code>); the plan decides.</p>
+</section>
+
+<section id="boundary">
+<h2>9. The DGS-220 boundary</h2>
+<p><strong>DGS-220</strong> (Imperium epic, <code>backlog/telemetry-and-data-collection-plan.md</code>) is the future home of the store. DGS-214 keeps its storage small so it moves in:</p>
+<ul>
+  <li>The <strong>registry interface</strong> (<code>append</code>, <code>read</code>) and its entry types are the contract. DGS-220 replaces the implementation behind it.</li>
+  <li>The <strong><code>tokens.json</code> schema</strong> (<code>schema_version</code>) and the <strong><code>UsageRecord</code> shape</strong> are the migration format. DGS-220 ingests existing files unchanged.</li>
+  <li>DGS-220 decides: the registry location (the three options above), one record shape across all telemetry, who collects, retention and privacy, and levels 3 and 4.</li>
+  <li>A separate <strong>Analysis</strong> plan (name open, not filed) owns prices, dollars and comparisons. DGS-214 emits nothing it needs beyond counts.</li>
+</ul>
+</section>
+
+<section id="later">
+<h2>10. Phase 2 and later readers</h2>
+<h3>Phase 2 (named, bounded, not designed)</h3>
+<p>More readers behind the same <code>UsageRecord</code>: OpenCode (its own session store, for Sol), Codex (its native logs), TokenReply (its request log, for Kimi and luna), and the runners' <code>ParsedResult</code>. Each needs its own look at what that tool records, and whether its numbers are comparable (for example, how it reports cache). Nothing in phase 1 blocks them.</p>
+<h3>Footprint measure (<code>claudecheck.py</code>), later</h3>
+<p>The colleague's script measures what we <em>would send</em> each turn (system prompt, tool schemas, a sample tool payload) with the free <code>count_tokens</code> endpoint, subtracting a baseline call. <code>dg tokens</code> measures what was <em>billed</em>. Together they explain a bill: footprint times turns is most of the input and cache tokens.</p>
+<ul>
+  <li><strong>Not phase 1.</strong> It needs an API key, which the Workbox rules forbid reading. Its model <code>claude-3-5-sonnet-latest</code> has an older tokenizer than 5.x. The baseline subtraction leaves a few tokens of error per measure. It uses <code>pip</code>.</li>
+  <li><strong>Where it would sit:</strong> a <code>dg footprint</code> command beside <code>dg tokens</code>, as its own reader with <code>kind: footprint</code> records. Subjects: our skills list, CLAUDE.md, MEMORY.md, MCP tool definitions. It would use a 5.x model, pnpm and a key held the way Jack approves.</li>
+  <li><strong>Free partial view now:</strong> the first response of a session shows the real fixed prefix (turn-1 cache creation). Phase 1 can print it as <code>observed_prefix</code> per session at no API cost. Optional; the plan decides.</li>
+</ul>
+</section>
+
+<section id="test">
+<h2>11. Testing and rules</h2>
+<ul>
+  <li><strong>Fixtures:</strong> small synthetic transcripts (no real message text) for: duplicate lines, a subagent file, missing <code>cache_creation</code>, a resumed session, a record outside every step window.</li>
+  <li><strong>Reader contract test:</strong> every reader returns the same <code>UsageRecord</code> shape.</li>
+  <li><strong>Oracle check:</strong> per-session totals against ccusage, run by hand or in a manual test; not a CI dependency.</li>
+  <li><strong>Real run:</strong> count DGS-214's own session and compare with a hand count of one transcript.</li>
+  <li><strong>Rules:</strong> pnpm only. No token or <code>.env</code> read. No message text copied. Skill changes (<code>init</code>, step skills, SDD, finishing) follow <code>digismith:writing-skills</code>.</li>
+</ul>
+</section>
+
+<section id="open">
+<h2>12. Open items</h2>
+<div class="callout">
+<ul>
+  <li><strong>Registry location:</strong> DGS-220. A default behind the interface is picked at plan time and marked interim.</li>
+  <li><strong>Analysis plan</strong> (prices, dollars, meaning): not filed. Not DGS-214.</li>
+  <li><strong>Code location</strong> and the <code>dg</code> command home: decided in the plan.</li>
+  <li><strong>Per-step vs per-session registry writes inside <code>executing-plans</code></strong> (no ledger there): the plan decides whether it also writes task rows.</li>
+  <li><strong>Behavior to verify while planning:</strong> <code>iterations</code> and <code>fallback_credit</code> semantics; compaction lines; how a resumed session appears. Verify all of it on real transcripts (review note 4).</li>
+</ul>
+<h3>Review notes for the plan (Jack, approved checkpoint 1)</h3>
+<ul>
+  <li><strong>1. Consumer repos.</strong> The registry and <code>tokens.json</code> would also be written in client repos such as Emma's. The board-folder option would put DigiSmith session ids into a client's git. Prefer the depot as the interim default.</li>
+  <li><strong>2. Task to subagent mapping.</strong> The SDD ledger row must know which subagent files belong to which task. Likely answer: the ledger records the agent id of each dispatch (the implementer, each reviewer, each fix), and the row sums the files of those agent ids. The plan confirms where SDD can read the agent id.</li>
+  <li><strong>3. Slicing.</strong> Phase 1 touches about six skills. Consider slice 1 = the reader and <code>dg tokens</code> over fallback tagging only, slice 2 = the registry writes in the skills (smallest first).</li>
+  <li><strong>4. Real transcripts.</strong> Verify <code>iterations</code> and compaction on real transcripts (already listed above).</li>
+</ul>
+</div>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-214—count-tokens-per-ticket/design.html</footer>
+
+</body>
+</html>
