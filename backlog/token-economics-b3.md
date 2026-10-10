@@ -64,7 +64,7 @@ the group ratio. The Claude groups on that list:
 | `claude_official` | 1.2 | $2.40 / $12.00 | $4.80 / $24.00 |
 
 The group names suggest the source: `claude_official` costs 20% more than Anthropic (likely real API keys plus a margin), while the 0.3 groups are
-named after subscription plans. All of these Claude models are `access_tier: plus` on TokenReply (the cost of Plus access is not on the list).
+named after subscription plans. All of these Claude models are `access_tier: plus` on TokenReply (Plus is a $5 subscription, per Jack 2026-10-10, assumed monthly; it is not on the price list, and whether it includes credit is not known).
 The list's own `recent_metrics` showed `claude-sonnet-5-5` at 25% availability over 4 calls at that time, where the card showed 88.0%.
 One TokenReply base price differs from the skill table: `claude-haiku-5-5` at $0.20 / $1.00 (skill: $0.10 / $0.50).
 
@@ -76,12 +76,12 @@ Jack's question, 2026-10-10. Third-party sources put a Team Standard seat ($25 a
 | The same tokens on | Cost per month | Against the $25 seat |
 |---|---|---|
 | The $25 Team Standard seat, at its cap | $25 | 1x |
-| TokenReply, 0.3 groups | $120 to $150 | 5x to 6x more |
+| TokenReply, 0.3 groups, plus the $5 Plus subscription | $125 to $155 | 5x to 6x more |
 | TokenReply, `devin` (0.5) | $200 to $250 | 8x to 10x more |
 | Anthropic API (list) | $400 to $500 | 16x to 20x more |
 | TokenReply, `claude_official` (1.2) | $480 to $600 | 19x to 24x more |
 
-Break-even: TokenReply's 0.3 groups cost less than the seat only below $83 of API-value a month, which is 17% to 21% of the seat's cap. The ratio
+Break-even: with the $5 Plus subscription, TokenReply's 0.3 groups cost less than the seat only below $67 of API-value a month ($5 + 0.3 x $67 = $25), which is 13% to 17% of the seat's cap. The ratio
 holds for any model, because TokenReply applies one ratio to every price. The seat has a 5-hour and a weekly cap; TokenReply has none, so it is an
 overflow option at 0.3x when a seat is out (Team extra usage is billed at API prices). The seat's real value at the cap is an estimate until we
 measure our own tokens per 5-hour window.
