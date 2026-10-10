@@ -11,6 +11,14 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
+Before Step 1, mark the start of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step finishing
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+
 ## Step 1: Verify Tests
 
 Run the project's full test suite (`npm test` / `cargo test` / `pytest` / `go test ./...`).
@@ -163,6 +171,14 @@ Skip straight to Step 5 for Option 3.
 Then continue to Step 5 exactly as written.
 
 ## Step 5: Execute Choice
+
+Once the chosen option is done, mark the end of this step. That is after Option 1's post-finish hooks, after Option 2 reports the PR, and right after Option 3's report. Run it before Step 7:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step finishing
+```
+
+Same key rule as the start block.
 
 ### Option 1: Merge Locally
 

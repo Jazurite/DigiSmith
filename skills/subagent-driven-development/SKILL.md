@@ -114,6 +114,14 @@ superpowers:using-git-worktrees to create one or verify the existing one.
 Never start implementation on a main/master branch without your human
 partner's explicit consent.
 
+Once the worktree exists, mark the start of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step implementation
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+
 Conversation memory does not survive compaction. In real sessions,
 controllers that lost their place have re-dispatched entire completed task
 sequences — the single most expensive failure observed. Track progress in
@@ -476,6 +484,14 @@ Adjudicate any residual findings as in the task loop's breaker: park with
 rulings, or stop on load-bearing ones. There is no second fix wave —
 residual load-bearing findings surface to your human partner when
 finishing-a-development-branch presents the options.
+
+Once the final review is clean, before the report and the Finish step, mark the end of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step implementation
+```
+
+Same key rule as the start block.
 
 ## Finish
 

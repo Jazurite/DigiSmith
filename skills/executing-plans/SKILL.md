@@ -15,6 +15,14 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ## The Process
 
+Mark the start of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step implementation
+```
+
+Take `<Key>` from the board folder name, or from the branch or worktree name with `^([A-Za-z]+-[0-9]+)(__|-|$)`, uppercasing the first group (`dgs-2140` gives `DGS-2140`, never `DGS-214`). No key → skip, silently. A warning or non-zero exit never blocks the flow.
+
 ### Step 1: Load and Review Plan
 1. Ensure an isolated workspace: use digismith:using-git-worktrees to create one or verify the existing one
 2. Read plan file
@@ -49,6 +57,14 @@ For each task:
 7. Mark as completed
 
 ### Step 3: Complete Development
+
+After the last task's self-check, before the report below, mark the end of this step:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step implementation
+```
+
+Same key rule as the start block.
 
 After all tasks complete and verified:
 - Announce: "I'm using the report-implementation skill to generate this feature's implementation report."
