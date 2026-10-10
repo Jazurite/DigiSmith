@@ -12,8 +12,9 @@ ingest the data, make sense of it, and go into Grafana and other tools for analy
 Everything that reads what DigiSmith and its agents produce, makes sense of it, and shows it:
 - **Telemetry:** legacy letter P (DGS-41). The `digismith:telemetry` skill captures each ticket build's session transcript.
 - **Metrics:** measures over tickets, sessions, workers and models.
-- **Token count analysis:** reads the results of the token counter (DGS-214, B.3: Token Economics), ingests them and analyses them. The counter
-  itself produces the data; whether B.3 moves into this clan is open.
+- **Token count analysis:** reads the results of the token counter (DGS-214, B.3: Token Economics), ingests them and analyses them: **DGS-238**
+  (G.0). The counter stays in B.3 (Jack, 2026-10-10: a ticket in two clans becomes two linked tickets).
+- **Data collection plan:** DGS-220, moved into G.0: Pavilion on 2026-10-10.
 - **Visualization:** Grafana and other tools: dashboards, trends.
 
 Boundaries:

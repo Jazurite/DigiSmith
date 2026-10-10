@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DGS-41 report: Letter P (Telemetry)</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem;color:#222;background:#fff}
+table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccc;padding:.4rem .6rem;text-align:left;vertical-align:top}th{background:#f3f3f3}
+@media(prefers-color-scheme:dark){body{color:#ddd;background:#181818}th{background:#262626}th,td{border-color:#444}}</style></head>
+<body>
+<h1>DGS-41 report: migrate Letter P (Telemetry)</h1>
+<p>2026-10-10 (UTC+7). Jack approved checkpoint 1. All writes went through <code>dg clickup</code>. Every item below was read back.
+DGS-41 itself is not set to done (the maestro does that on Jack's yes). Letter P is the old Markdown map letter. Clan G is the new ClickUp clan.</p>
+
+<h2>Folder and lists</h2>
+<table><tr><th>Item</th><th>ID</th><th>Read back</th></tr>
+<tr><td>Folder <b>G: TBD</b></td><td>1301150000002844</td><td>2 lists, 4 tasks</td></tr>
+<tr><td>List G.0: Pavilion (the clan's shared work)</td><td>1301150000003501</td><td>description set, 1 task</td></tr>
+<tr><td>List G.1: Telemetry (capture of session transcripts, letter P)</td><td>1301150000003502</td><td>description set, 3 tasks</td></tr></table>
+
+<h2>Tickets</h2>
+<table><tr><th>Key</th><th>Name</th><th>List</th><th>Status</th><th>Start = due (UTC+7)</th><th>Attachments</th></tr>
+<tr><td>DGS-233</td><td>Session transcript capture: the telemetry skill (P)</td><td>A.1: Primitives</td><td>done</td><td>2026-08-12</td><td>design.html, plan.md, report.html</td></tr>
+<tr><td>DGS-234</td><td>Switch telemetry logging off in all profiles</td><td>G.1</td><td>done</td><td>2026-09-04</td><td>none</td></tr>
+<tr><td>DGS-235</td><td>Telemetry auto lifecycle (P)</td><td>G.1</td><td>backlog</td><td>none</td><td>none</td></tr>
+<tr><td>DGS-236</td><td>Keep raw transcripts out of the public repo</td><td>G.1</td><td>backlog</td><td>none</td><td>none</td></tr>
+<tr><td>DGS-237</td><td>Write down the name for clan G</td><td>G.0</td><td>backlog</td><td>none</td><td>none</td></tr></table>
+<ul>
+<li>DGS-233 holds the merged logging field and marker (old ticket 2) and the 2026-09-08 trigger fix in its description.</li>
+<li>DGS-234 to DGS-236 each say they build on DGS-233 (task id 14zcebrvcqh).</li>
+<li>DGS-237 lists the name options (Monitoring, Analysis, Observatory) and the scope from DGS-232.</li>
+</ul>
+
+<h2>Not done, on purpose</h2>
+<ul><li>DGS-220's tickets (DGS-214, B.3) not moved into clan G. No clan F folder. DGS-41 not set done. No other DGS-25 subtask touched. Nothing deleted.</li>
+<li>No git change except this untracked board folder.</li></ul>
+
+<h2>Transcript check (from the plan)</h2>
+<p>No session transcript was ever committed to the public repo, so no secret scan was needed. The skill is installed; <code>logging: true</code> would restart capture. DGS-236 tracks the fix.</p>
+</body></html>

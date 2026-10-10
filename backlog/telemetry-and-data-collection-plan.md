@@ -1,7 +1,8 @@
 # Telemetry and data collection: one plan for what DigiSmith records, where it is stored, and who collects it
 
-**Status:** Idea, Jack (2026-10-10 ~12:0x UTC+7 [05:0xZ]). ClickUp: **DGS-220** (Imperium, the roadmap list, task id `14zcebrvckg`).
-An **epic** under the Imperium rule (DGS-215): its tickets stay in their clan lists and link to it; DGS-214 (B.3) is the first. No design yet.
+**Status:** Idea, Jack (2026-10-10 ~12:0x UTC+7 [05:0xZ]). ClickUp: **DGS-220** (task id `14zcebrvckg`; list **G.0: Pavilion** of clan `G: TBD` since 2026-10-10 ~16:5x UTC+7, Jack: "move it to the G clan";
+before that Imperium). It is clan G's plan for data collection. Tickets in other clans keep their own part and link to it (Jack's cross-clan rule,
+DGS-215): DGS-214 (B.3) counts the tokens; **DGS-238** (G.0) ingests, analyses and shows the counts. No design yet.
 
 **Source:** Live session 2026-10-10, during the DGS-214 brainstorm. The worker's Question 2 asked when token counts are collected and where they
 are stored. Jack: "I think we need a new plan to handle the telemetry and data collection." He chose a separate ticket in Town Hall (renamed Imperium

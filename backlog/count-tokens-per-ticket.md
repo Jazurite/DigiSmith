@@ -68,5 +68,5 @@ computation and own math" (DGS-204, "Next: measure, do not estimate").
 
 ## Related
 
-DGS-204 ([token-economics-b3.md](token-economics-b3.md)), DGS-220 (epic: telemetry and data collection, [telemetry-and-data-collection-plan.md](telemetry-and-data-collection-plan.md)), [token-counter-usage-producer-gap.md](token-counter-usage-producer-gap.md),
+DGS-238 (clan G side of this ticket: ingest, analyse and show the counts; G.0: Pavilion), DGS-204 ([token-economics-b3.md](token-economics-b3.md)), DGS-220 (telemetry and data collection plan, now clan G, [telemetry-and-data-collection-plan.md](telemetry-and-data-collection-plan.md)), [token-counter-usage-producer-gap.md](token-counter-usage-producer-gap.md),
 [usage-monitoring-client.md](usage-monitoring-client.md), [telemetry-auto-lifecycle.md](telemetry-auto-lifecycle.md).
