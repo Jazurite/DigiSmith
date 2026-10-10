@@ -1,0 +1,4 @@
+# Status for the maestro (note.md), 2026-10-10 09:57 UTC+7 [02:57Z]
+- DGS-169 model test DONE through a project plugin (`config` hook worked; plugin in the spike `work/.opencode/plugins/`, not global). luna 9/9 PASS, sonnet 6/6 PASS, judged by real side effects; T2 checker bug fixed and re-judged (old/new table in `report-4.md`). Cost about $0.18 of $1 (luna $0.0025/run, sonnet $0.0101/run). Skills and guardrail probes through a model also done (one slip: `head` on a .env).
+- Recommendation: adopt OpenCode as the maestro hub, luna first, sonnet fallback, pilot on a low-risk project; port path-based permissions, AGENTS.md, plugin skills, flux/handoff text.
+- Server stopped by PID, tabs closed, nothing committed. Jack decides on the plugin location. Backlog item `backlog/maestro-in-herdr.md` has a Spike 2 section (uncommitted, older "model test not done" line to refresh by the Master). I am idle.

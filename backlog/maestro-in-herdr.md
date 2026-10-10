@@ -1,4 +1,4 @@
-# Run the maestro as a persistent herdr agent on the VPS, with Observer and Operator clients
+# Run the maestro as a persistent herdr agent (Mac Workbox), with Observer and Operator clients
 
 **Status:** Idea, an exploration by Jack (2026-10-04 11:15 UTC+7 [04:15Z]). No design yet. ClickUp: **DGS-169** (list C.1: Workbox, created 2026-10-04 11:11 UTC+7 [04:11Z], task id `14zcebruqtg`).
 
@@ -129,6 +129,18 @@ automatic renewal by a flux, and a decision log. See the Autonomy section of `ba
   (see DGS-170, Authority).
 - **Two clients typing into one pane collide.** The Operator needs a lock or a rule: one typist at a time.
 - **Memory.** One Claude process either way, so no extra, unless the Desktop maestro runs while the herdr one is tested.
+
+## Spike 2 on the Mac Workbox (DGS-169 worker, 2026-10-09 22:25 to 22:32 UTC+7 [15:25 to 15:32Z]) — supersedes "on the VPS" above
+
+Report: `.digismith/board/DGS-169—run-maestro-as-persistent-herdr/worker-dgs-169-spike/report-2.md` (and `report.html`). The Mac has 16 GB, so memory is
+no longer the blocker (server 665 to 1005 MB, each TUI about 300 MB, system free 85%). **Works:** `opencode serve` on 127.0.0.1 with a password; two TUIs
+on one session, live both ways; a client exit leaves the other working; a server kill and restart keeps the history and the attached client reconnects;
+a project-level agent with a bash allowlist denies herdr, `bash -c`, `sh`, `python3`, `rm`, `git push` (slips: `head`/`wc` on secret files, pipes, `>`
+redirects: deny by path). **Skills:** OpenCode loads `.claude/skills` and `~/.claude/skills`, not the DigiSmith plugin (no `digismith:*`, no hooks): port them.
+**Model test (2026-10-10, `report-4.md`):** TokenReply returned 401 until a project plugin (`work/.opencode/plugins/tokenreply-key.js`, `config` hook, key read from
+`.env` in memory only) supplied the key. Then `gpt-5.6-luna` 9 of 9 and `claude-sonnet-5-5` 6 of 6 runs passed, judged by real side effects (about $0.0025 and
+$0.0101 per run, total spend about $0.18). Recommendation: adopt OpenCode as the maestro hub, luna first, sonnet fallback, pilot on a low-risk project. The real
+attach from the PC is still untested.
 
 ## A spike (when memory allows)
 
