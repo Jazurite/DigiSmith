@@ -1603,6 +1603,12 @@
 
     <div class="event">
       <div class="date">2026-10-10</div>
+      <h4>Backlog and Docs Sweep: Every Item Has a Ticket</h4>
+      <p>After the letters, a sweep (DGS-165 for the backlog files, DGS-164 for the historical docs folders, both now under the epic DGS-25) matched the repo to the 278 ClickUp tickets. Of the 138 backlog files, 79 already recorded a key, 23 had a ticket whose key was never written back, and 35 had none; the historical <code>.digismith/docs/</code> folders matched 78 tickets. Keys were written back into 59 backlog files and the index, and each docs folder got a <code>ticket.md</code>. Twenty-nine new tickets (DGS-289 to DGS-318) wait in Imperium as backlog, each naming a proposed home, because Jack chose not to decide every placement now. Merged items point to the ticket that absorbed them, two stale ideas are marked discarded, and nothing was deleted. Moving the content into <code>.digismith/board/</code> is a later step, because the links on this page must keep working. See <a href="board/DGS-165—backlog-sweep/plan.md">plan</a> and <a href="board/DGS-165—backlog-sweep/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
       <h4>Shared OpenCode server safety layer</h4>
       <p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents. See <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/report.html">report</a>.</p>
     </div>
