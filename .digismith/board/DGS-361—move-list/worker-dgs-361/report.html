@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-361 dg clickup move-list on Frontdoor — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-361 dg clickup move-list on Frontdoor — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-361</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup move-list</code>. The public API documents no List move, so it uses the Frontdoor call from Jack's capture: <code>PUT /hierarchy/v2/subcategory/{list}/position</code> with <code>{position, include_archived:false, category}</code>. No ClickUp write was made; the first use is DGS-365.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>FrontdoorClient.moveList(listId, {folderId, position})</code>; type <code>MoveListTarget</code>.</li>
+<li><code>move-list --list &lt;id&gt; --folder &lt;id&gt; [--position n] [--yes]</code>: a dry run unless <code>--yes</code>; the dry run builds no client. Refused: non-digit ids, bad position. Position defaults to 0. No own-folder check.</li>
+<li>Allow rule <code>Bash(dg clickup move-list:*)</code>; the <code>:*</code> also lets <code>--yes</code> through, as for move-folder.</li>
+<li>Tests: 1 client test and the command tests; the full run passes with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Not done here. DGS-365 moves the four lists after the merge. The dry run for C.3 into I at position 1 printed the call and sent nothing.</p>
+</section>
+</body>
+</html>
