@@ -12,11 +12,11 @@
 
 ## Registry
 
-`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (`backlog/telemetry-and-data-collection-plan.md`). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (in the first 200 lines of each transcript: any `custom-title` line, an `agent-name` line, any `gitBranch` value, any `cwd` path segment that carries the key), shown as `inferred`.
+`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (`backlog/telemetry-and-data-collection-plan.md`). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (a `custom-title` or `agent-name` line anywhere in a transcript; any `gitBranch` value or `cwd` path segment that carries the key in the first 200 lines), shown as `inferred`.
 
 ## tokens.json
 
-`schema_version: 1`. `--write` puts it in `.digismith/board/<ticket>—<slug>/tokens.json` when run in DigiSmith's own repo, else in the depot as `<ticket>.tokens.json` next to the registry.
+`schema_version: 1`. `--write` puts it in `.digismith/board/<ticket>—<slug>/tokens.json` when run in DigiSmith's own repo, else in the depot as `<ticket>.tokens.json` next to the registry. The path rule: resolve the checkout root (`git rev-parse --show-toplevel`, else the nearest parent with `.claude-plugin/plugin.json`); in DigiSmith's own repo (plugin name `digismith`) use that checkout's board folder, or from a linked worktree the main checkout's board folder (the board is untracked); otherwise the depot.
 
 ## Cross-check with ccusage
 
@@ -44,5 +44,6 @@ Result on 2026-10-10, ticket DGS-154, session f94b2d68 (DGS-198 has no transcrip
 
 - Slice 2 is not built: skills and the SDD ledger do not write registry entries yet, so steps are `other` unless a registry exists.
 - Live session id: the "newest transcript in the project folder" rule is unreliable (several live sessions share a folder). Slice 2 is blocked until a reliable source exists.
-- Fallback tagging misses sessions whose title, agent name, branch and cwd in the first 200 lines do not carry the ticket key.
+- Fallback tagging misses sessions whose titles and agent names do not carry the ticket key and whose branch and cwd in the first 200 lines do not either.
+- The usage reader (`claude-code-reader.ts`) still reads each transcript whole into memory. Attribution reads incrementally (64 KB chunks, a line over 1 MB is skipped), so a huge unrelated transcript is safe to scan, but a huge ticket transcript is still read whole when counted.
 - If a ticket includes resumed session B but not original session A, the A work replayed inside B's file is counted for the ticket.
