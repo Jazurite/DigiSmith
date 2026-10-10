@@ -105,4 +105,11 @@ describe("applyFields", () => {
     expect(setCustomField).toHaveBeenNthCalledWith(2, "t1", "f6", 2);
     expect(client.getListFields).toHaveBeenCalledTimes(1);
   });
+  it("names the field and shows ClickUp's error body when a write fails", async () => {
+    const err = Object.assign(new Error("Request failed with status code 404"), { response: { data: { err: "Field not found" } } });
+    const client = { setCustomField: vi.fn().mockRejectedValue(err) } as unknown as ClickUpClient;
+    await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(
+      /setting field "ClickUp API Type" on task t1 failed: Request failed with status code 404 \{"err":"Field not found"\}/
+    );
+  });
 });

@@ -79,5 +79,13 @@ export async function resolveFieldArgs(client: ClickUpClient, listId: string, ar
 }
 
 export async function applyFields(client: ClickUpClient, taskId: string, resolved: ResolvedField[]): Promise<void> {
-  for (const { field, value } of resolved) await client.setCustomField(taskId, field.id, value);
+  for (const { field, value } of resolved) {
+    try {
+      await client.setCustomField(taskId, field.id, value);
+    } catch (err) {
+      const body = (err as { response?: { data?: unknown } }).response?.data;
+      const detail = body === undefined ? "" : ` ${JSON.stringify(body)}`;
+      throw new Error(`setting field "${field.name}" on task ${taskId} failed: ${(err as Error).message}${detail}`);
+    }
+  }
 }
