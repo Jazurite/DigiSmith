@@ -1,5 +1,7 @@
 # A monitoring and analysis client: how much each account is used, per worker and per ticket
 
+**ClickUp:** **DGS-315** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea, Jack (2026-10-03). No ClickUp ticket yet. Likely home: **C: Platform, C.3: Accounts**, in the Capacity
 submodule (seats, usage and limit stops). Jack has not decided the lineage.
 

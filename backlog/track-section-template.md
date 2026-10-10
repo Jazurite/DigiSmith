@@ -1,5 +1,7 @@
 # Ticket description Track-section template (Deliverable / Per Market)
 
+**ClickUp:** **DGS-302** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Live-tested design, not yet a skill. Produced
 entirely by hand via direct REST (the same transport `I.1` has since
 migrated onto — see

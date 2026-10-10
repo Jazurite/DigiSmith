@@ -1,5 +1,7 @@
 # Reconsider TokenReply's "task" role default model (kimi-k2.7 vs. kimi-k3)
 
+**ClickUp:** **DGS-105** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Raised and deliberately deferred, not investigated further.
 
 **Source:** 2026-09-06, during Model Router Z.1's execution (map item K-lineage territory, not Z —

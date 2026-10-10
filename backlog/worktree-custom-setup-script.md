@@ -1,5 +1,7 @@
 # Worktree creation: support arbitrary per-project setup, not just package-manager installs
 
+**ClickUp:** **DGS-293** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Findings only — no ticket, no code touched.
 
 **Source:** `D:\Workspace\Library\automaker`, specifically

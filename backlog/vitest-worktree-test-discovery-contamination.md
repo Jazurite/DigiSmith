@@ -1,5 +1,7 @@
 # `pnpm test` at repo root picks up other worktrees' test files, causing false failures
 
+**Applied:** the fix shipped (`vitest.config.ts` excludes nested worktrees). **ClickUp:** **DGS-318** (done); docs in `.digismith/docs/vitest-worktree-contamination/`. DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Confirmed real via direct testing, not yet scoped.
 
 **Source:** Found live during I.5's `finishing-a-development-branch` run (2026-09-18) —

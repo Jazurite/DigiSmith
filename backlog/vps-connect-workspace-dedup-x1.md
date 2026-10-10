@@ -1,5 +1,7 @@
 # `dg vps connect` leaks a duplicate herdr workspace on every crash-recovery cycle
 
+**ClickUp:** **DGS-107** (C.1: Workbox, done); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Fixed by X.2, 2026-09-24 — see `.digismith/docs/X/X.2-vps-connect-workspace-dedup/`. Live-verified
 on the real VPS: killed `opencode-main`'s process (simulating the crash), confirmed `herdr agent get`
 returned `agent_not_found` while the workspace/pane survived, ran `dg vps connect` and confirmed the log

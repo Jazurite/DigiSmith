@@ -1,5 +1,7 @@
 # Toolchain defaults: trigger scope beyond brainstorming
 
+**ClickUp:** **DGS-298** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Deferred. Map item **G.2** (Toolchain, part of **G** "Methodology" — formerly its own
 letter, **U**, until the 2026-09-11 merge) ships with its consult mechanism scoped
 to `digismith:brainstorming`'s "Ask clarifying questions" step only. This file captures the
