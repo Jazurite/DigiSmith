@@ -147,3 +147,4 @@ Delete an item's file once it's been applied (or explicitly dropped).
 - [dg CLI e2e test fails without a colour terminal](cli-e2e-colour-test.md) — DGS-290 (C.2); the index.e2e --help colour check passes only with FORCE_COLOR=1
 - [workbox-health: heat, fan, CPU idle and memory in one command, with a history log](workbox-health.md) — DGS-319 (C.4 Observability); v1 built and installed in the depot; next: sudoers rule, LaunchAgent, dashboard
 - [Rename clan A from "System" to "Reactor"](rename-clan-a-to-reactor.md) — DGS-321 (A.0); Jack 2026-10-10: System too broad; Reactor = the plugin machinery that powers the other clans; C stays Platform; needs DGS-320 (dg clickup update-folder)
+- [Nexus API service: the backend that serves the power metrics over a URL](nexus-api-power-metrics.md) — DGS-324 (C.5 Nexus); GET /power-metrics as JSON, root collector limited to powermetrics, tailnet only; DGS-322 (C.4) stores and charts
