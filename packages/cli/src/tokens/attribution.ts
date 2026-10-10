@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -35,35 +35,101 @@ function nameRegex(ticket: string): RegExp {
   return new RegExp(`^${escapeRegex(ticket)}(__|-|$)`, "i");
 }
 
-function readHead(file: string, maxLines: number): string[] {
-  return readFileSync(file, "utf-8").split("\n", maxLines);
+const CHUNK_SIZE = 64 * 1024;
+const MAX_LINE_BYTES = 1024 * 1024;
+const HEAD_LINES = 200;
+
+export interface InferOptions {
+  chunkSize?: number;
 }
 
-export function inferSessionsForTicket(ticket: string, root: string = claudeProjectsDir()): string[] {
+// Calls onLine for each line, reading the file in chunks. A line over MAX_LINE_BYTES is dropped
+// without being held. onLine returns true to stop. Lines are decoded one at a time, so a multi-byte
+// character that spans two chunks stays intact.
+function scanLines(file: string, chunkSize: number, onLine: (line: string, index: number) => boolean | void): void {
+  const fd = openSync(file, "r");
+  try {
+    const buf = Buffer.alloc(chunkSize);
+    let parts: Buffer[] = [];
+    let held = 0;
+    let skipping = false;
+    let index = 0;
+    const emit = (extra: Buffer): boolean => {
+      let line: string | null = null;
+      if (!skipping && held + extra.length <= MAX_LINE_BYTES) line = Buffer.concat([...parts, extra]).toString("utf-8");
+      parts = [];
+      held = 0;
+      skipping = false;
+      if (line === null) {
+        index++;
+        return false;
+      }
+      return onLine(line, index++) === true;
+    };
+    for (;;) {
+      const n = readSync(fd, buf, 0, chunkSize, null);
+      if (n === 0) break;
+      let start = 0;
+      for (;;) {
+        const nl = buf.indexOf(10, start);
+        if (nl === -1 || nl >= n) break;
+        if (emit(Buffer.from(buf.subarray(start, nl)))) return;
+        start = nl + 1;
+      }
+      if (start < n) {
+        const rest = n - start;
+        if (!skipping && held + rest > MAX_LINE_BYTES) {
+          skipping = true;
+          parts = [];
+          held = 0;
+        } else if (!skipping) {
+          parts.push(Buffer.from(buf.subarray(start, n)));
+          held += rest;
+        }
+      }
+    }
+    if (held > 0 || skipping) emit(Buffer.alloc(0));
+  } finally {
+    closeSync(fd);
+  }
+}
+
+type Line = { type?: string; customTitle?: string; agentName?: string; gitBranch?: string; cwd?: string };
+
+function fileHasTicket(file: string, titleRe: RegExp, nameRe: RegExp, chunkSize: number): boolean {
+  let hit = false;
+  scanLines(file, chunkSize, (raw, i) => {
+    if (!raw) return;
+    const isMeta = raw.includes('"custom-title"') || raw.includes('"agent-name"');
+    // gitBranch and cwd count only in the head; titles and agent names count anywhere.
+    if (i >= HEAD_LINES && !isMeta) return;
+    try {
+      const o = JSON.parse(raw) as Line;
+      if (o.type === "custom-title" && typeof o.customTitle === "string" && titleRe.test(o.customTitle)) hit = true;
+      if (o.type === "agent-name" && typeof o.agentName === "string" && nameRe.test(o.agentName)) hit = true;
+      if (i < HEAD_LINES) {
+        if (typeof o.gitBranch === "string" && nameRe.test(o.gitBranch)) hit = true;
+        if (typeof o.cwd === "string" && o.cwd.split("/").some((seg) => nameRe.test(seg))) hit = true;
+      }
+    } catch {
+      return;
+    }
+    return hit;
+  });
+  return hit;
+}
+
+export function inferSessionsForTicket(ticket: string, root: string = claudeProjectsDir(), opts: InferOptions = {}): string[] {
   const titleRe = titleRegex(ticket);
   const nameRe = nameRegex(ticket);
+  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
   const found: string[] = [];
   for (const dir of projectDirs(root)) {
     for (const name of readdirSync(dir)) {
       if (!name.endsWith(".jsonl")) continue;
       const sid = name.slice(0, -".jsonl".length);
-      let hit = false;
-      // Any title, agent name, branch or cwd in the head can carry the key (a session starts on
-      // main in the repo root and moves into the worktree later; a title can change).
-      for (const raw of readHead(join(dir, name), 200)) {
-        if (!raw) continue;
-        try {
-          const o = JSON.parse(raw) as { type?: string; customTitle?: string; agentName?: string; gitBranch?: string; cwd?: string };
-          if (o.type === "custom-title" && typeof o.customTitle === "string" && titleRe.test(o.customTitle)) hit = true;
-          if (o.type === "agent-name" && typeof o.agentName === "string" && nameRe.test(o.agentName)) hit = true;
-          if (typeof o.gitBranch === "string" && nameRe.test(o.gitBranch)) hit = true;
-          if (typeof o.cwd === "string" && o.cwd.split("/").some((seg) => nameRe.test(seg))) hit = true;
-        } catch {
-          continue;
-        }
-        if (hit) break;
-      }
-      if (hit) found.push(sid);
+      // A session starts on main in the repo root and moves into the worktree later; a title can change.
+      if (fileHasTicket(join(dir, name), titleRe, nameRe, chunkSize)) found.push(sid);
     }
   }
   return found;
