@@ -1,5 +1,7 @@
 # The plugin-cache copy of the DigiSmith CLI cannot run (no `node_modules`)
 
+**ClickUp:** **DGS-270** (list C.2: CLI, created 2026-10-10 ~17:5x UTC+7 by the letter U migration, task id `14zcebrvcux`).
+
 **Status:** Finding, confirmed live. No design yet.
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

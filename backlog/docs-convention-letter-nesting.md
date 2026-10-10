@@ -1,5 +1,7 @@
 # G.3 Dynamic Doc Conventions — per-letter nesting, configurable per repo, also resolves the report/plan filename-collision gap
 
+**ClickUp:** covered by **DGS-195** "Dynamic Doc Conventions: per-letter doc nesting (G.3)" (E.3: Conventions, `done`, 2026-09-23). Superseded by DGS-158.
+
 ## Status
 
 Raised 2026-09-19 during U.1's own brainstorm; merged 2026-09-19 with a same-shaped gap found

@@ -1,5 +1,7 @@
 # `@digismith/cli`: add `-v`/`-V` as aliases for `--version` (map item V.4)
 
+**ClickUp:** **DGS-269** (list C.2: CLI, created 2026-10-10 ~17:5x UTC+7 by the letter U migration, task id `14zcebrvcuw`).
+
 **Status:** Idea only, confirmed live. No design yet.
 
 **Source:** Found live 2026-09-12, right after `@digismith/cli@0.1.0-beta`'s first publish — Jack

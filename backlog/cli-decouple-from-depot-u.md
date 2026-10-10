@@ -1,5 +1,7 @@
 # Decouple @digismith/cli from Depot into its own letter, U
 
+**ClickUp:** fulfilled by **DGS-268** "CLI domain framework with branded help (U.1)" (C.2: CLI, `done`, 2026-09-19; task id `14zcebrvcuv`). No ticket of its own.
+
 ## Status
 Letter assigned 2026-09-19, per Jack's direct request. No code has moved yet — this file
 records the decision and scope so whoever picks up U next (or V, whose lineage this is coming

@@ -1591,6 +1591,12 @@
 
     <div class="event">
       <div class="date">2026-10-10</div>
+      <h4>Letter U: the CLI Framework in C.2, and R and S Become Concepts</h4>
+      <p>Letter U (CLI command framework, DGS-46) went into the existing lineage <strong>C.2: CLI</strong> of clan C: Platform, not a new clan. DGS-268 records U.1, the yargs domain framework with the branded <code>--help</code> (2026-09-19, done, with its docs); the npm package (DGS-7) and the <code>dg depot</code> group (DGS-8) in D.2 name it as the framework they use. Two old backlog findings got tickets: <code>-v</code> and <code>-V</code> for <code>--version</code> (DGS-269) and the plugin-cache copy of the CLI that cannot run without <code>node_modules</code> (DGS-270). Letters R (End-to-end testing) and S (Figma visual regression) were not migrated: they are concepts with no clan yet, so DGS-43 and DGS-44 lost their letters and wait in Imperium as backlog. See <a href="board/DGS-46—migrate-letter-u-cli-framework/plan.md">plan</a> and <a href="board/DGS-46—migrate-letter-u-cli-framework/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-10</div>
       <h4>Shared OpenCode server safety layer</h4>
       <p>The shared OpenCode server now runs a three-layer safety layer, the same idea as Claude Code auto mode: ask prompts for herdr-ws change verbs, a reviewer plugin on tool.execute.before (fixed rules, then claude-haiku-5-5 for unclear calls, fail closed, every verdict logged), and the DGS-169 deny rules. The maestro config moved out of the repo root to .opencode/maestro/opencode.json and loads only through OPENCODE_CONFIG, so other OpenCode sessions in the repo keep the default agents. See <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-223/report.html">report</a>.</p>
     </div>
