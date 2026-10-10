@@ -33,6 +33,9 @@ digismith clickup create-folder --name <name>                      # create a ne
 digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
 digismith clickup update-list --list <id> [--name <name>] [--description <text> | --description-file <path>]  # rename a List and set its description
 digismith clickup upload-attachment --task <id> --file <path>      # upload a file as an attachment on a task
+digismith clickup create-task-type --name <n> --plural <p> [--description <t>] [--icon <fas name>] [--yes]  # create a workspace task type (Frontdoor; dry run without --yes)
+digismith clickup update-task-type --type <name or id> [--name] [--plural] [--description] [--icon] [--yes]  # edit a task type (full body sent; dry run without --yes)
+digismith clickup delete-task-type --type <name or id> --merge-into <name or id> [--yes --confirm-count <n>]  # merge a type's tasks into another and remove it (prints the count first)
 digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session of a Proxyman capture in ~/.digismith-depot/.env (no secret printed)
 digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
 
