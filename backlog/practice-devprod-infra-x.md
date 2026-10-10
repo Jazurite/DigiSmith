@@ -1,5 +1,7 @@
 # Practice-grade dev/prod infrastructure: relocate Agentic Bridge to the VPS, with real auth and eventually CI/CD (new letter, tentatively X)
 
+**ClickUp:** **DGS-108** (B.0: Pavilion, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only. Explicitly NOT a DigiSmith functional requirement — deliberately
 captured as a skill-building/practice goal, not a response to an actual problem DigiSmith
 has today. No design, no `superpowers:brainstorming` pass yet.

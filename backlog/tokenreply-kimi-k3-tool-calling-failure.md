@@ -1,5 +1,7 @@
 # TokenReply's kimi-k3 fails tool-calling via claude-code runner (regression)
 
+**ClickUp:** **DGS-103** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Root-caused, and a working recovery mechanism now exists and
 has been live-verified end-to-end for `kimi-k3` — distinct from the
 earlier "reverted to `kimi-k2.7`, unfixed" status below. A parser

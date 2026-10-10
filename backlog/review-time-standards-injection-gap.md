@@ -1,5 +1,7 @@
 # `inject-standards` has no scenario for review-time dispatch
 
+**ClickUp:** **DGS-316** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10. Merged ticket for several files.
+
 **Status:** Not applied. Folded into `backlog/activate-requesting-code-review-w8.md` (2026-09-11),
 which reframes this gap as a dependency of activating the `requesting-code-review` W-lineage
 primitive rather than a standalone G.1 change. Don't brainstorm this file's gap in isolation —

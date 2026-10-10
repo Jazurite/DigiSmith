@@ -1,5 +1,7 @@
 # Shopify CLI theme access token setup without Claude handling the token
 
+**ClickUp:** **DGS-311** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Idea only, confirmed live. No design yet.
 
 **Source:** Live session 2026-10-02 (Claude desktop-app session "Main", manager mode: one Claude session managed herdr worker agents on EMKT-791 and EMKT-810). Full retro: [manager-mode-retro-2026-10-02.md](manager-mode-retro-2026-10-02.md).

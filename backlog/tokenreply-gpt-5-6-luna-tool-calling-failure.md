@@ -1,5 +1,7 @@
 # TokenReply's gpt-5.6-luna also fails tool-calling via claude-code runner
 
+**ClickUp:** **DGS-104** (B.4: Maestro, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Confirmed live, unfixed. Distinct bug from
 `tokenreply-kimi-k3-tool-calling-failure.md` — different vendor, different
 failure signature, same underlying symptom class (TokenReply's proxy not

@@ -1,5 +1,7 @@
 # Auto-recover from a stale `.git/index.lock` after an interrupted git command
 
+**ClickUp:** **DGS-301** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Findings only — no ticket, no code touched.
 
 **Source:** `D:\Workspace\Library\automaker\apps\server\src\lib\git.ts`

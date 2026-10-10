@@ -1,5 +1,7 @@
 # Token counter (K.4) has no producer of real `TokenUsage` yet
 
+**ClickUp:** **DGS-214** (B.3: Token Economics, backlog); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Gap, not yet applied. Found during K.4's final whole-branch review (2026-09-11).
 
 **Source:** K.4 shipped `scripts/token-counter/computeTokenCost(provider, model, usage)`, which

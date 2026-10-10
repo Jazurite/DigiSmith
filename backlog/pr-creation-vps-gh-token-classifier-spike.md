@@ -1,5 +1,7 @@
 # Spike: give the Herdr/VPS session a way to create its own PR
 
+**ClickUp:** **DGS-306** (list Imperium, backlog; proposed home in the ticket); key written back by the DGS-165 sweep, 2026-10-10.
+
 **Status:** Not applied. Findings only — no ticket, no code touched.
 
 **Source:** Live session, 2026-09-30, working EMKT-809 in
