@@ -142,4 +142,30 @@ describe("readClaudeCodeSession", () => {
     expect(out.find((r) => r.response_id === "n1|q-n1")!.agent_id).toBe("abc123");
     expect(out.find((r) => r.response_id === "n2|q2")!.agent_id).toBe("explicit9");
   });
+  it("skips valid JSON of the wrong shape without crashing", () => {
+    const { file, sid } = setup();
+    writeFileSync(file, [
+      "null", "[]", "7", '"x"', line({ type: "assistant", message: null }), line({ type: "assistant", message: [] }),
+      line({ type: "assistant", message: { model: "claude-opus-5-5", usage: null } }),
+      assistant({ id: "m1", req: "r1", output: 3, ts: "2026-10-10T01:00:00Z", sessionId: sid }),
+    ].join("\n"));
+    const out = readClaudeCodeSession(file);
+    expect(out).toHaveLength(1);
+    expect(out[0].output).toBe(3);
+  });
+
+  it.each([
+    ["a string count", '"2"'],
+    ["a negative count", "-4"],
+    ["a non-finite count", "1e999"],
+    ["a null count", "null"],
+  ])("skips a record with %s", (_label, bad) => {
+    const { file, sid } = setup();
+    const good = assistant({ id: "m1", req: "r1", output: 3, ts: "2026-10-10T01:00:00Z", sessionId: sid });
+    const broken = assistant({ id: "m2", req: "r2", output: 999, ts: "2026-10-10T01:00:01Z", sessionId: sid }).replace('"input_tokens":2', `"input_tokens":${bad}`);
+    expect(broken).toContain(bad);
+    writeFileSync(file, [good, broken].join("\n"));
+    const out = readClaudeCodeSession(file);
+    expect(out.map((r) => r.output)).toEqual([3]);
+  });
 });

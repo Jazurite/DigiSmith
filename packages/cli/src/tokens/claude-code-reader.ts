@@ -22,29 +22,43 @@ interface Line {
   };
 }
 
+function isObject(v: unknown): v is Record<string, any> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+// An absent count is 0; a present one must be a finite, non-negative number.
+function validCount(v: unknown): boolean {
+  return v === undefined || (typeof v === "number" && Number.isFinite(v) && v >= 0);
+}
+
 function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>, fileAgentId: string | null = null): void {
   const lines = readFileSync(path, "utf-8").split("\n");
   for (let index = 0; index < lines.length; index++) {
     const raw = lines[index];
     if (!raw) continue;
-    let o: Line;
+    let parsed: unknown;
     try {
-      o = JSON.parse(raw) as Line;
+      parsed = JSON.parse(raw);
     } catch {
       continue;
     }
+    if (!isObject(parsed)) continue;
+    const o = parsed as Line;
     const m = o.message;
-    if (o.type !== "assistant" || !m?.usage || !m.model || m.model === "<synthetic>") continue;
+    if (o.type !== "assistant" || !isObject(m) || !isObject(m.usage) || typeof m.model !== "string" || !m.model || m.model === "<synthetic>") continue;
     const u = m.usage;
-    const split = u.cache_creation;
+    const split = isObject(u.cache_creation) ? u.cache_creation : undefined;
+    // A usage object with any invalid consumed count (not a finite, non-negative number) is skipped whole.
+    const counts = [u.input_tokens, u.output_tokens, u.cache_read_input_tokens, u.cache_creation_input_tokens, split?.ephemeral_5m_input_tokens, split?.ephemeral_1h_input_tokens];
+    if (!counts.every(validCount)) continue;
     const total = u.cache_creation_input_tokens ?? 0;
     const record: UsageRecord = {
       source: "claude-code",
-      session_id: o.sessionId ?? sessionFallback,
-      agent_id: o.agentId ?? fileAgentId,
-      response_id: m.id && o.requestId ? `${m.id}|${o.requestId}` : `line|${path}|${index}`,
+      session_id: typeof o.sessionId === "string" ? o.sessionId : sessionFallback,
+      agent_id: typeof o.agentId === "string" && o.agentId ? o.agentId : fileAgentId,
+      response_id: typeof m.id === "string" && m.id && typeof o.requestId === "string" && o.requestId ? `${m.id}|${o.requestId}` : `line|${path}|${index}`,
       model: m.model,
-      ts: o.timestamp ?? "",
+      ts: typeof o.timestamp === "string" ? o.timestamp : "",
       input: u.input_tokens ?? 0,
       output: u.output_tokens ?? 0,
       cache_read: u.cache_read_input_tokens ?? 0,

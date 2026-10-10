@@ -1,12 +1,24 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { Registry, RegistryEntry } from "./types.ts";
+import { STEPS, type Registry, type RegistryEntry } from "./types.ts";
 
 const TICKET_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 export function depotRegistryDir(): string {
   return process.env.DIGISMITH_TOKEN_REGISTRY_DIR ?? join(homedir(), ".digismith-depot", "token-registry");
+}
+
+const ROLES = ["worker", "maestro", "reviewer", "other"];
+
+function isEntry(v: unknown): v is RegistryEntry {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+  const e = v as Record<string, unknown>;
+  const str = (k: string) => typeof e[k] === "string";
+  if (!str("ticket") || !str("session_id") || !str("ts")) return false;
+  if (e.kind === "session") return str("source") && typeof e.role === "string" && ROLES.includes(e.role);
+  if (e.kind === "step_start" || e.kind === "step_end") return typeof e.step === "string" && (STEPS as readonly string[]).includes(e.step);
+  return false;
 }
 
 function assertTicket(ticket: string): void {
@@ -30,7 +42,8 @@ export function createDepotRegistry(dir: string = depotRegistryDir()): Registry 
       for (const raw of readFileSync(file, "utf-8").split("\n")) {
         if (!raw) continue;
         try {
-          out.push(JSON.parse(raw) as RegistryEntry);
+          const parsed: unknown = JSON.parse(raw);
+          if (isEntry(parsed)) out.push(parsed);
         } catch {
           // a torn or hand-edited line never breaks a count
         }
