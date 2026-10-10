@@ -177,6 +177,33 @@ describe("entry.ts", () => {
       expect(s.tasks["9"]).toBeUndefined();
     });
 
+    const missing = () => join(mkdtempSync(join(tmpdir(), "led-")), "nope.md");
+
+    it("a missing ledger warns and keeps the old tasks on --write", () => {
+      const f = setup();
+      seed(f, old("T-1"));
+      const r = run(["snapshot", "--ticket", "T-1", "--ledger", missing(), "--write"], f, tempCwd());
+      expect(r.status).toBe(0);
+      expect(read(f).tasks).toEqual(oldTasks);
+      expect(r.stderr).toContain("ledger");
+    });
+
+    it("a missing ledger without --write still prints the table", () => {
+      const f = setup();
+      const r = run(["snapshot", "--ticket", "T-1", "--ledger", missing()], f);
+      expect(r.status).toBe(0);
+      expect(r.stdout).toContain("ticket T-1");
+      expect(r.stderr).toContain("ledger");
+    });
+
+    it("task-tokens with a missing ledger prints the zero line", () => {
+      const f = setup();
+      const r = run(["task-tokens", "--ticket", "T-1", "--task", "3", "--ledger", missing()], f);
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe("Task 3: tokens in=0 out=0 cr=0 cw5=0 cw1=0");
+      expect(r.stderr).toContain("ledger");
+    });
+
     it("does not carry tasks over from another ticket", () => {
       const f = setup();
       seed(f, old("T-2"));

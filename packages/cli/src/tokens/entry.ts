@@ -57,7 +57,13 @@ function stepFlag(flags: Record<string, string>): Step {
 }
 
 function readLedger(flags: Record<string, string>): Record<string, string[]> | undefined {
-  return flags.ledger ? parseTaskAgents(readFileSync(flags.ledger, "utf-8")) : undefined;
+  if (!flags.ledger) return undefined;
+  try {
+    return parseTaskAgents(readFileSync(flags.ledger, "utf-8"));
+  } catch {
+    console.error(`tokens: cannot read ledger ${flags.ledger}; continuing without it`);
+    return undefined;
+  }
 }
 
 // Tasks of an earlier snapshot for the same ticket, or null when there is none to trust.
@@ -98,11 +104,12 @@ function main(argv: string[]): void {
     }
     case "snapshot": {
       const ticket = need(flags, "ticket");
-      const snapshot = countTicket({ ticket, registry, taskAgents: readLedger(flags) });
+      const taskAgents = readLedger(flags);
+      const snapshot = countTicket({ ticket, registry, taskAgents });
       console.log(renderTable(snapshot));
       if (flags.write) {
         const out = resolveSnapshotPath(process.cwd(), ticket);
-        if (!flags.ledger) snapshot.tasks = previousTasks(out, ticket) ?? snapshot.tasks;
+        if (!taskAgents) snapshot.tasks = previousTasks(out, ticket) ?? snapshot.tasks;
         mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, `${JSON.stringify(snapshot, null, 2)}\n`);
         console.error(`tokens: wrote ${out}`);
