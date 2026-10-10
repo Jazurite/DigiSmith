@@ -17,5 +17,10 @@ export default Plugin.define({
       if (SEEN) appendFileSync(SEEN, JSON.stringify({ tool: i.tool, keys: Object.keys(i.input ?? {}) }) + "\n")
       await hooks["tool.execute.before"]({ tool: TOOL_MAP[i.tool] ?? i.tool, sessionID: i.sessionID, callID: i.id }, { args: i.input ?? {} })
     })
+    // Client-run shell (POST /api/session/:id/shell) does not pass execute.before: the same rules judge it as a bash call.
+    await ctx.shell.hook("create.before", async (i) => {
+      if (SEEN) appendFileSync(SEEN, JSON.stringify({ shell: true, cwd: i.cwd }) + "\n")
+      await hooks["tool.execute.before"]({ tool: "bash", sessionID: "client-shell", callID: "client-shell" }, { args: { command: i.command, workdir: i.cwd } })
+    })
   },
 })
