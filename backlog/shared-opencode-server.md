@@ -22,7 +22,11 @@ its own project and session on that server. Jack attaches once and sees every ma
 
 ## To do
 
-1. **Neutral home.** Run the server from a folder no repo owns (for example `~/.digismith-depot/opencode`), not from a repo or worktree.
+1. **Neutral home: DECIDED (Jack, 2026-10-10 ~17:5x UTC+7): the server root is `~/.digismith-depot/opencode/`**, next to the password and
+   logs. The maestro config sits at that root as a plain `opencode.json` (plus `.opencode/` with prompts and skills), loaded the normal way, no
+   `OPENCODE_CONFIG`. The repo keeps the source; an install step copies it to the server root (like `herdr-ws` to `~/.digismith-depot/bin/`),
+   so a merge reaches the live server only when installed. The LaunchAgent then points at the server root. Today (interim) the server runs
+   from the main checkout with `OPENCODE_CONFIG=.opencode/maestro/opencode.json`.
 2. **Always on.** A LaunchAgent: start at login, restart on crash, password from the file, never printed. Jack installs it (no background services
    by agents).
 3. **No `default_agent`** in any repo config: it would apply to every OpenCode session in that repo (offload workers included).
