@@ -227,4 +227,39 @@ describe("entry.ts", () => {
       expect(read(f).tasks).toEqual({});
     });
   });
+
+  describe("step-start dedupe", () => {
+    const ss = (f: ReturnType<typeof fixture>, cmd: string, step: string, sid = "sess-1") =>
+      run([cmd, "--ticket", "T-1", "--step", step, "--session-id", sid], f);
+    const kinds = (f: { registry: string }) => lines(f.registry).filter((l) => l.kind !== "session").map((l) => `${l.kind}:${l.step}:${l.session_id}`);
+
+    it("a repeated step-start for the same session writes once", () => {
+      const f = fixture();
+      ss(f, "step-start", "implementation");
+      ss(f, "step-start", "implementation");
+      expect(kinds(f)).toEqual(["step_start:implementation:sess-1"]);
+    });
+
+    it("start, end, start writes three lines", () => {
+      const f = fixture();
+      ss(f, "step-start", "implementation");
+      ss(f, "step-end", "implementation");
+      ss(f, "step-start", "implementation");
+      expect(kinds(f)).toHaveLength(3);
+    });
+
+    it("a different step still writes", () => {
+      const f = fixture();
+      ss(f, "step-start", "brainstorming");
+      ss(f, "step-start", "implementation");
+      expect(kinds(f)).toHaveLength(2);
+    });
+
+    it("the same step from a different session still writes", () => {
+      const f = fixture();
+      ss(f, "step-start", "implementation");
+      ss(f, "step-start", "implementation", "sess-2");
+      expect(kinds(f)).toHaveLength(2);
+    });
+  });
 });

@@ -99,6 +99,13 @@ function main(argv: string[]): void {
       const step = stepFlag(flags);
       const id = liveSession(cmd, flags);
       if (!id) return;
+      if (cmd === "step-start") {
+        let latest: { kind: string; step?: string; ts: string } | undefined;
+        for (const e of registry.read(ticket)) {
+          if ((e.kind === "step_start" || e.kind === "step_end") && e.session_id === id && (!latest || e.ts >= latest.ts)) latest = e;
+        }
+        if (latest?.kind === "step_start" && latest.step === step) return;
+      }
       registry.append({ kind: cmd === "step-start" ? "step_start" : "step_end", ticket, step, session_id: id, ts: new Date().toISOString() });
       return;
     }
