@@ -1668,6 +1668,18 @@
       <p>OpenCode 2.0.26 now runs the live shared server (port 4198) with the maestro config, a v2 safety plugin and a v2 key plugin, started by one boot script, <code>opencode-boot</code>. Luna and sonnet answer through it. The key is not readable through any API route or file. Jack switched the live server himself (the agent session cannot start stable 2.0.26: it hangs there; see Findings). See <a href="board/DGS-223—shared-opencode-server/worker-dgs-334/plan.md">plan</a> and <a href="board/DGS-223—shared-opencode-server/worker-dgs-334/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-10</div>
+      <h4>The First Roadmap: Forge, Ledger, Smithy, and the Milestones Genesis and Dawn</h4>
+      <p>Imperium now holds DigiSmith's first roadmap. Three initiatives: <strong>Forge</strong> (DGS-335), its machines (the Mac Workbox epic DGS-182 and the Hetzner VPS epic DGS-340); <strong>Ledger</strong> (DGS-337), its own ticket tracker and process in ClickUp (the epics DGS-25, DGS-213 and DGS-327); and <strong>Smithy</strong> (DGS-341), herdr and the maestro (the epics DGS-342 and DGS-343). Two milestones mark the way: <strong>Genesis</strong> (DGS-339, done 2026-09-24), the zero version proven on real tickets while work was still tracked in Markdown, and <strong>Dawn</strong> (DGS-338), the day DigiSmith runs fully on its own tracker in the cloud, waiting on DGS-327. A milestone keeps its standard meaning: a dated checkpoint, not a container. The Hetzner VPS stays as one node of a future multi-node server (DGS-336).</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>DGS-219 and DGS-345: Links, Dependencies and Relationship Fields</h4>
+      <p><code>dg clickup</code> can now relate tickets without moving them. <code>add-dependency</code> and <code>remove-dependency</code> set "waiting on" and "blocking", <code>add-link</code> and <code>remove-link</code> set task links, and <code>--field</code> on <code>create-task</code> and <code>update-task</code> takes Relationship values, so a ticket in its clan list can name its epic (<code>--field "Epic=DGS-343"</code>). Keys resolve to task ids before any write, a dry run sends nothing and needs no network with plain ids, and only the two add commands have an allow rule. Tested live on real tickets: Dawn (DGS-338) now waits on DGS-327. The review was a Claude whole-branch review, because OpenCode v2 does not run for agents yet; five of its findings were fixed. The Epic and Initiative fields themselves come with DGS-344.</p>
+    </div>
+
   </div>
 </section>
 
