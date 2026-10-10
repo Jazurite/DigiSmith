@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-266 dg clickup move-folder on the public API — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-266 dg clickup move-folder on the public API — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-266</strong></span><span>Date: 2026-10-10</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup move-folder</code> on the public ClickUp API: <code>PUT /folder/{id}/position</code> with <code>CLICKUP_API_TOKEN</code>. The branch was first built on Frontdoor; the call was swapped and the Frontdoor method removed. Built and committed on branch dgs-266; first use waits for Jack's yes.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>ClickUpClient.moveFolder(folderId, {parentFolderId} | {spaceId}, position?)</code>; type <code>MoveFolderTarget</code>.</li>
+<li><code>move-folder --folder &lt;id&gt; (--parent &lt;id&gt; | --space &lt;id&gt;) [--position n] [--yes]</code>: a dry run unless <code>--yes</code>; the dry run builds no client. Refused: both flags, neither flag, same folder and parent, non-digit ids, bad position. <code>--parent none</code> hints at <code>--space</code>.</li>
+<li>Removed the Frontdoor <code>moveFolder</code>, its test and its body type. Allow rule <code>Bash(dg clickup move-folder:*)</code> kept.</li>
+<li>Tests: 2 client tests and 15 command tests; the full run passes (1031 tests) with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>With Jack's yes at checkpoint 2, <code>move-folder --folder 1301150000002844 --parent 1301150000001850 --yes</code> moved G: TBD into Clans on the first try (no 404). <code>get-lists</code> read back parent_folder = 1301150000001850.</p>
+</section>
+</body>
+</html>

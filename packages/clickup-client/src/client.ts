@@ -20,6 +20,7 @@ import type {
   ClickUpTaskType,
   ClickUpTaskTypesResponse,
   ClickUpTaskWriteBody,
+  MoveFolderTarget,
 } from "./types.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
@@ -191,6 +192,14 @@ export class ClickUpClient {
   async getSpaceFolders(spaceId: string): Promise<ClickUpFolderWithLists[]> {
     const data = await this.get<ClickUpFoldersResponse>(`/space/${spaceId}/folder`);
     return data.folders ?? [];
+  }
+
+  /** PUT /folder/{id}/position: nests the folder in another folder, or moves it to a space's top level. ClickUp answers {}. */
+  async moveFolder(folderId: string, target: MoveFolderTarget): Promise<void> {
+    const data: Record<string, unknown> =
+      "parentFolderId" in target ? { parent_folder_id: target.parentFolderId } : { space_id: target.spaceId };
+    if (target.position !== undefined) data.position = target.position;
+    await this.put(`/folder/${folderId}/position`, { data });
   }
 
   async getFolderlessLists(spaceId: string): Promise<ClickUpListSummary[]> {

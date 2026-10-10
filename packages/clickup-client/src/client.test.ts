@@ -365,6 +365,34 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(folders[0].lists[0].name).toBe("CW-30: 20/7 - 26/7");
   });
 
+  it("moveFolder() PUTs parent_folder_id to the folder's position path", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await client.moveFolder("55", { parentFolderId: "77" });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/folder/55/position",
+      params: undefined,
+      data: { parent_folder_id: "77" },
+    });
+  });
+
+  it("moveFolder() PUTs space_id and an optional position", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await client.moveFolder("55", { spaceId: "9", position: 2 });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/folder/55/position",
+      params: undefined,
+      data: { space_id: "9", position: 2 },
+    });
+  });
+
   it("getFolderlessLists() returns the lists array", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: { lists: [{ id: "l9", name: "Workflows" }] } });

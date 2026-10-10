@@ -4,7 +4,8 @@
       "Bash(dg clickup frontdoor import-auth:*)",
       "Bash(dg clickup frontdoor dump:*)",
       "Bash(dg clickup create-task-type:*)",
-      "Bash(dg clickup update-task-type:*)"
+      "Bash(dg clickup update-task-type:*)",
+      "Bash(dg clickup move-folder:*)"
     ]
   }
 }

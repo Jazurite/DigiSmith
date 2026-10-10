@@ -346,3 +346,8 @@ export interface FrontdoorTaskTypeBody {
   name: string;
   name_plural: string;
 }
+
+/** Where move-folder puts a folder: inside another folder, or at the top level of a space. position is optional. */
+export type MoveFolderTarget =
+  | { parentFolderId: string; position?: number }
+  | { spaceId: string; position?: number };
