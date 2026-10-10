@@ -1,5 +1,7 @@
 # Propagate the ASD-STE100 standard into consuming repos' own `CLAUDE.md` (T.3)
 
+**ClickUp:** **DGS-281** (list H.0: Pavilion, clan `H: TBD`, `backlog`, task id `14zcebrvcv8`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Not applied. Deferred child of **T** ("Voice", promoted 2026-09-13 out of `G` —
 this item was "G.3.3" before that). Depends on **T.1** (the standard content)
 existing first. The most novel and most consequential of T's children — writes into a file

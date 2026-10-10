@@ -1,5 +1,7 @@
 # Audience-filtering content-voice skill (T.6)
 
+**ClickUp:** **DGS-282** (list H.0: Pavilion, `backlog`, task id `14zcebrvcva`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Not applied. Raw idea only, no design spec yet — needs `digismith:brainstorming`
 before becoming a skill. A small, tangled numbering history worth spelling out exactly, all on
 2026-09-13: this item started as a tentative standalone letter, **T** → got folded in as **G.3.6**

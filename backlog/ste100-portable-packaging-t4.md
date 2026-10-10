@@ -1,5 +1,7 @@
 # Portable output-style packaging + mechanical linter for ASD-STE100 (T.4)
 
+**ClickUp:** **DGS-276** (list H.1: Technical voice, `backlog`, task id `14zcebrvcv3`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Not applied. Deferred child of **T** ("Voice", promoted 2026-09-13 out of `G` —
 this item was "G.3.4" before that). Depends on **T.1** (the standard content)
 existing first. Smallest and least urgent of T's children.

@@ -1,5 +1,7 @@
 # `inject-standards` needs a real scope gate for prose-only standards, and companion-file awareness
 
+**ClickUp:** shipped as **DGS-274** (list H.1: Technical voice, `done`, 2026-09-13, task id `14zcebrvcv1`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Applied 2026-09-13. See `.digismith/docs/inject-standards-prose-scope-gate/design.html`
 and `plan.md`. Both open questions below resolved: a `kind: prose` field (not a dedicated folder)
 excludes prose standards from Scenario 4, and a `companions:` list (not Markdown-reference parsing)

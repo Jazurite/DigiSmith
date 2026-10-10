@@ -1,5 +1,7 @@
 # Simplified Technical English writing standard (T lineage source narrative)
 
+**ClickUp:** attached to **DGS-273** "ASD-STE100 writing standard (T.1)" (list H.1: Technical voice, `done`, 2026-09-12). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 ## Status
 Brainstormed 2026-09-12. Grew into a multi-part feature — G's original working number, **G.3**,
 was promoted 2026-09-13 into its own top-level letter, **T** ("Voice"), once the umbrella

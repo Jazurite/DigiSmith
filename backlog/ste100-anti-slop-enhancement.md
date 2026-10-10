@@ -1,5 +1,7 @@
 # T.1 enhancement: cluster-counting restraint, preserve-list, and expanded tell catalog
 
+**ClickUp:** **DGS-277** (list H.1: Technical voice, `backlog`, task id `14zcebrvcv4`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Not applied. Started as "expand the word-swaps table" (raised 2026-09-12 during T.1's
 own brainstorm), broadened 2026-09-14 after exploring `Deupaxx/EveryDay-Writer` (MIT, cloned to
 `D:/Workspace/Library/EveryDay-Writer`) — a much more mature anti-AI-slop system than either of

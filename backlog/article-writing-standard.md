@@ -1,6 +1,7 @@
 # A standard and a process for writing articles (tutorials and write-ups)
 
-**Status:** Idea, Jack (2026-10-10 16:30 UTC+7 [09:30Z]). ClickUp: **DGS-229** (E.1: Standards, task id `14zcebrvcq9`). No design yet.
+**Status:** Idea, Jack (2026-10-10 16:30 UTC+7 [09:30Z]). ClickUp: **DGS-229** (task id `14zcebrvcq9`; list **H.3: Public article voice** of clan `H: TBD` since 2026-10-10 ~18:1x UTC+7, moved from E.1:
+Standards on Jack's yes: the article standard is the public article voice). No design yet.
 
 ## Why
 

@@ -1,5 +1,7 @@
 # Category-scoped injection for inject-standards
 
+**ClickUp:** **DGS-284** (list E.1: Standards, `backlog`, beside DGS-192, task id `14zcebrvcvc`). Set by the letter T migration (DGS-45), 2026-10-10 ~18:1x UTC+7.
+
 **Status:** Not applied. Raw idea, surfaced during T.2's brainstorm (2026-09-23) — needs its own
 design pass before becoming a plan.
 
