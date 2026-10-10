@@ -5,7 +5,9 @@
       "Bash(dg clickup frontdoor dump:*)",
       "Bash(dg clickup create-task-type:*)",
       "Bash(dg clickup update-task-type:*)",
-      "Bash(dg clickup move-folder:*)"
+      "Bash(dg clickup move-folder:*)",
+      "Bash(dg clickup add-dependency:*)",
+      "Bash(dg clickup add-link:*)"
     ]
   }
 }
