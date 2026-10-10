@@ -15,7 +15,11 @@ folders moved with them (`.digismith/docs/A/A.1/` and `.digismith/docs/A/A.4/`).
 `O.0: Foundation`). Renumbering them would break session titles, handoff paths and docs, so decide that separately.
 **Meaning of C (Jack, 2026-10-10):** Platform = the under-the-hood infrastructure we work on. The Workbox (C.1) is the all-powerful
 dedicated server, the mothership that hosts every service; service families get their own C lineage (C.4: Observability, created
-2026-10-10, DGS-319 and DGS-322; hosting pattern DGS-323 in C.1). C keeps the name Platform; clan A becomes Reactor (DGS-321).
+2026-10-10, DGS-319 and DGS-322; hosting pattern DGS-323). C keeps the name Platform; clan A becomes Reactor (DGS-321).
+**C.1 Workbox = the machine** (the MacBook: macOS, boot, power, Tailscale, pf, hardening). **C.5: Nexus** (created 2026-10-10, Jack picked
+the name over Hub and Mothership) = the software server on that machine: the always-on layer that hosts and serves every service through
+one door (the shared OpenCode maestro server DGS-223 with DGS-225/226, the hosting pattern and URLs DGS-323; observability C.4 is served
+through it).
 
 **Decided 2026-10-10 (Jack): every clan's .0 is its Pavilion.** Renamed in ClickUp (lists kept, no ticket moved): `B.0: Maestro` became
 `B.4: Maestro` and the unnumbered `Pavilion` became `B.0: Pavilion`; `D.0: Foundation` became `D.4: Foundation` and `Pavilion` became

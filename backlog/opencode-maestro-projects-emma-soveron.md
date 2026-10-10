@@ -1,6 +1,6 @@
 # Emma and Soveron maestro projects on the shared OpenCode server (guarded config per project)
 
-**Status:** Idea, Jack (2026-10-10 ~14:3x UTC+7 [07:3xZ]). ClickUp: **DGS-225** (C.1: Workbox, subtask of DGS-223, task id `14zcebrvcp1`). No design yet.
+**Status:** Idea, Jack (2026-10-10 ~14:3x UTC+7 [07:3xZ]). ClickUp: **DGS-225** (C.5: Nexus, subtask of DGS-223, task id `14zcebrvcp1`). No design yet.
 
 ## Why
 

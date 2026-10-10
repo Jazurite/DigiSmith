@@ -1,6 +1,6 @@
 # Shared OpenCode server on the Workbox: one server, a project and session per maestro
 
-**Status:** Idea, Jack (2026-10-10 ~13:0x UTC+7 [06:0xZ]). ClickUp: **DGS-223** (C.1: Workbox, task id `14zcebrvcm7`). No design yet.
+**Status:** Idea, Jack (2026-10-10 ~13:0x UTC+7 [06:0xZ]). ClickUp: **DGS-223** (C.5: Nexus, task id `14zcebrvcm7`; moved from C.1 on 2026-10-10). No design yet.
 Its own epic (Jack): not a lineage and not a subtask of DGS-182; related to the Workbox, separate in itself.
 
 ## Why

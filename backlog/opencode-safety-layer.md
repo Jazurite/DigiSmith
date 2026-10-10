@@ -1,6 +1,6 @@
 # OpenCode safety layer as strong as Claude Code auto mode (ask prompts, a pre-tool reviewer plugin, deny rules)
 
-**Status:** Idea, Jack (2026-10-10 ~14:4x UTC+7 [07:4xZ]). ClickUp: **DGS-226** (C.1: Workbox, subtask of DGS-223, task id `14zcebrvcp2`). No design yet.
+**Status:** Idea, Jack (2026-10-10 ~14:4x UTC+7 [07:4xZ]). ClickUp: **DGS-226** (C.5: Nexus, subtask of DGS-223, task id `14zcebrvcp2`). No design yet.
 
 ## Jack's rule
 
