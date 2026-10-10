@@ -12,20 +12,20 @@ def rq(path, m="GET", b=None, t=60):
 plugins = {p.get("id"): p["state"]["status"] for p in rq("/api/plugin")["data"] if not str(p.get("id", "opencode.")).startswith("opencode.")}
 print("plugins:", plugins)
 print("safety loaded lines:", verd.read_text().count('"event":"loaded"') if verd.exists() else 0)
-sid = rq("/api/session", "POST", {"location": {"directory": proj}})["data"]["id"]
-def ask(text, label):
-    rq(f"/api/session/{sid}/prompt", "POST", {"text": text}); t = time.time(); seen = 0
+def run(agent, model, text, label):
+    """One fresh session per agent and model (the config's agent model is not applied by the 2.x agent switch)."""
+    sid = rq("/api/session", "POST", {"location": {"directory": proj}})["data"]["id"]
+    rq(f"/api/session/{sid}/agent", "POST", {"agent": agent})
+    rq(f"/api/session/{sid}/model", "POST", {"model": {"id": model, "providerID": "tokenreply"}})   # a new session starts on the server default (opencode/exo-free): set the model explicitly
+    rq(f"/api/session/{sid}/prompt", "POST", {"text": text}); t = time.time()
     while time.time() - t < 90:
-        time.sleep(3); msgs = rq(f"/api/session/{sid}/message")["data"]
-        asst = [m for m in msgs if m.get("type") == "assistant"]
-        if asst and asst[-1].get("time", {}).get("completed") and len(asst) > seen:
+        time.sleep(3); msgs = rq(f"/api/session/{sid}/message")["data"]; asst = [m for m in msgs if m.get("type") == "assistant" and m.get("time", {}).get("completed")]
+        if asst:
             m = asst[-1]; txt = "".join(p.get("text", "") for p in m.get("content", []) if isinstance(p, dict)) if isinstance(m.get("content"), list) else str(m.get("content"))[:200]
-            print(f"{label}: {txt.strip()[:200]!r} error={m.get('error')} model={m.get('model')}"); return
+            print(f"{label}: {txt.strip()[:200]!r} error={m.get('error')} model={m.get('model')} cost={rq(f'/api/session/{sid}')['data'].get('cost')}"); return
     print(f"{label}: no completed reply in 90 s")
-ask("Reply with the single word OK.", "luna/maestro")
-rq(f"/api/session/{sid}/model", "POST", {"model": {"id": "claude-sonnet-5-5", "providerID": "tokenreply"}})
-ask("Reply with the single word FINE.", "sonnet")
-print("session cost:", rq(f"/api/session/{sid}")["data"].get("cost"))
+run("maestro", "gpt-5.6-luna", "Reply with the single word OK.", "luna/maestro")
+run("maestro-review", "claude-sonnet-5-5", "Reply with the single word FINE.", "sonnet/maestro-review")
 pid = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"], capture_output=True, text=True).stdout.split()[0]
 env = subprocess.run(["ps", "eww", "-p", pid], capture_output=True, text=True).stdout
 print("TOKENREPLY in server env:", "TOKENREPLY" in env)
