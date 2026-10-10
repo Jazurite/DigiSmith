@@ -5,6 +5,10 @@ backfill ticket for them." No design yet. ClickUp: **DGS-164** (created 2026-10-
 the epic DGS-25 "Legacy Letter Backfill", list Imperium). Phase 1 (match folders to tickets, create missing ones) ordered the same day; the
 move to the board waits for the link decision below.
 
+**Decision (Jack, 2026-10-10 ~21:1x UTC+7): no bulk move.** A historical docs folder moves into `.digismith/board/<KEY>—<slug>/` only when work on
+that ticket starts (the worker who picks it up moves it). Phase 1 (every item records its ticket) is done and merged (40430f5); this ticket's
+"then move" part is replaced by that rule.
+
 **Source:** DGS-159 (ticket-based naming: modify the code and move the files), Part 6. DGS-159's Part 6 is limited to the live session
 files. This item takes the rest.
 

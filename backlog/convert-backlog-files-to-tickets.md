@@ -5,6 +5,10 @@ ClickUp: **DGS-165** (created 2026-10-04 10:16 UTC+7 [03:16Z] in E.3: Convention
 the epic DGS-25 "Legacy Letter Backfill", list Imperium, Jack: "move the sweep into milestone"). Phase 1 (match, write back keys, create missing
 tickets) ordered the same day; the move to the board is a later checkpoint.
 
+**Decision (Jack, 2026-10-10 ~21:1x UTC+7): no bulk move.** A backlog file moves into `.digismith/board/<KEY>—<slug>/` only when work on
+that ticket starts (the worker who picks it up moves it). Phase 1 (every item records its ticket) is done and merged (40430f5); this ticket's
+"then move" part is replaced by that rule.
+
 **Source:** DGS-159 (ticket-based naming: modify the code and move the files), Part 7. "No ticket, no work": every idea gets a ticket
 first, so the `backlog/` files become tickets. DGS-159 does not do this part.
 
