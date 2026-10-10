@@ -12,7 +12,11 @@ the rule on 2026-10-03: `A.0: Pavilion` now exists, and the old A lineages were 
 `A.1`, `A.1: Lifecycle Hooks` is now `A.3`, `A.2: Configuration` is now `A.4`, and `A.2: Protocols` is new). The handoff
 folders moved with them (`.digismith/docs/A/A.1/` and `.digismith/docs/A/A.4/`). B, D and O still keep a separate
 "Pavilion" list and their own unnumbered Pavilion with `.0` lineages (`B.0: Maestro`, `D.0: Foundation`,
-`O.0: Foundation`). Renumbering them would break session titles, handoff paths and docs, so decide that separately. The
+`O.0: Foundation`). Renumbering them would break session titles, handoff paths and docs, so decide that separately.
+**Decided 2026-10-10 (Jack): every clan's .0 is its Pavilion.** Renamed in ClickUp (lists kept, no ticket moved): `B.0: Maestro` became
+`B.4: Maestro` and the unnumbered `Pavilion` became `B.0: Pavilion`; `D.0: Foundation` became `D.4: Foundation` and `Pavilion` became
+`D.0: Pavilion`; `O.0: Foundation` became `O.4: Foundation` and `Pavilion` became `O.0: Pavilion`. Older notes that name the old lists stay as
+history. The
 Town Hall list description still says "Each clan folder has its own Pavilion list": update it when the rule is applied
 to every clan.
 
