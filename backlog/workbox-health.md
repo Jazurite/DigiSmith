@@ -1,7 +1,8 @@
 # workbox-health: one command for the Mac Workbox's heat, fan, CPU idle and memory, with a history log
 
-**Status:** v1 built, Jack (2026-10-10 ~20:3x UTC+7 [13:3xZ]). ClickUp: **DGS-319** (G.2: Observability, task id `14zcebrvcye`). First ticket of
-the new lineage **G.2: Observability** in clan G (name of clan G still open), next to G.1: Telemetry.
+**Status:** v1 built, Jack (2026-10-10 ~20:3x UTC+7 [13:3xZ]). ClickUp: **DGS-319** (C.4: Observability, task id `14zcebrvcye`). First ticket of
+the lineage **C.4: Observability** in C: Platform (moved from G.2 the same evening: the Workbox is Jack's own dedicated server, so its
+observability is platform infrastructure, not clan G). Next: DGS-322 (probe server, database, Grafana).
 
 ## Why
 

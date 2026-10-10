@@ -13,6 +13,10 @@ the rule on 2026-10-03: `A.0: Pavilion` now exists, and the old A lineages were 
 folders moved with them (`.digismith/docs/A/A.1/` and `.digismith/docs/A/A.4/`). B, D and O still keep a separate
 "Pavilion" list and their own unnumbered Pavilion with `.0` lineages (`B.0: Maestro`, `D.0: Foundation`,
 `O.0: Foundation`). Renumbering them would break session titles, handoff paths and docs, so decide that separately.
+**Meaning of C (Jack, 2026-10-10):** Platform = the under-the-hood infrastructure we work on. The Workbox (C.1) is the all-powerful
+dedicated server, the mothership that hosts every service; service families get their own C lineage (C.4: Observability, created
+2026-10-10, DGS-319 and DGS-322; hosting pattern DGS-323 in C.1). C keeps the name Platform; clan A becomes Reactor (DGS-321).
+
 **Decided 2026-10-10 (Jack): every clan's .0 is its Pavilion.** Renamed in ClickUp (lists kept, no ticket moved): `B.0: Maestro` became
 `B.4: Maestro` and the unnumbered `Pavilion` became `B.0: Pavilion`; `D.0: Foundation` became `D.4: Foundation` and `Pavilion` became
 `D.0: Pavilion`; `O.0: Foundation` became `O.4: Foundation` and `Pavilion` became `O.0: Pavilion`. Older notes that name the old lists stay as
