@@ -15,6 +15,11 @@ ClickUp (A: System, B: Agentic, C: Platform, D: Depot, E: Methodology, and this 
 Letters B, C and D are parked in a future placeholder clan to be distributed later. Letter E (the spine: `init`, `adopt`, stage-order enforcement)
 goes to clan A: System. Letters A, F, I, J, L, M and N fold into clan F: Scripture.
 
+**Rule (Jack, 2026-10-10):** Scripture is our SDLC, so anything about the ticket goes to clan F. Letter Q in its current meaning (Templating:
+Q.1 `generate-comment`, Q.2 the I.1 and I.4 consumers moved onto it) folds into F, probably .7 Report and sync. Q's retired meaning (Convention
+enforcement, the Enforcer, absorbed into the vendored primitives by W.5) stays out of F. Open: this rule may also pull letter E (`init`,
+`adopt`, `bootstrap`) and the parked B, C and D into F, against the 2026-10-06 split above. Jack decides.
+
 ## What Scripture is
 
 The path a ticket travels from first text to reported delivery, with research as its first step, and the written record that path leaves behind.
