@@ -72,6 +72,14 @@ the direct API would have cost $18.68 ("Saved vs Direct API $14.62"), an overall
 figures: $0.26 spent, 3,535,360 tokens, 643 calls; models today were claude-sonnet-5-5, gpt-5.6-luna, kimi-k2.7, gpt-5.6-terra, gpt-6-sol and
 claude-haiku-5-5. Not known: whether the $5 Plus price and the $5 allowance are the same money. If they are, TokenReply's monthly cost is
 max($5, 0.3 x the API value) in the 0.3 groups, and the break-even below moves back to about $83 of API value (17% to 21% of the seat).
+
+**First measured run: the DGS-214 Sol review, 2026-10-10 17:29 to 17:40 UTC+7.** `gpt-6-astra` through OpenCode, 9 steps, 26 tool calls. OpenCode's
+own events summed to about 340k input and 55k output tokens (each step resends the context). At TokenReply's base price ($10 / $50 per 1M) that
+is about $6.10. The dashboard after the run: allowance $4.09 left (was $4.74), consumption $4.71 (was $4.06), "direct API would have cost"
+$25.11 (was $18.68), and a `gpt-6-astra` bar of about $0.36 at 17:00; tokens in period rose by only 284,026 (3,535,360 to 3,819,386), less
+than OpenCode's own sum. So Jack's key gets the **0.1 group** (`openai_pro` / `openai_enterprise`) on the GPT-6 models: a review that lists at
+about $6 cost about $0.36. The token gap between OpenCode's events and the dashboard is a first case for the DGS-214 phase 2 readers.
+
 The list's own `recent_metrics` showed `claude-sonnet-5-5` at 25% availability over 4 calls at that time, where the card showed 88.0%.
 One TokenReply base price differs from the skill table: `claude-haiku-5-5` at $0.20 / $1.00 (skill: $0.10 / $0.50).
 
