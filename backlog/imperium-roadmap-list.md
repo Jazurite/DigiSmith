@@ -17,7 +17,7 @@ Imperium is more suitable."
 - **Milestone:** a dated checkpoint, ClickUp's Milestone type. Its description says "done when"; the tickets that must finish first block it.
 - Industry order: initiative > epic > ticket > subtask. A milestone is a point in time, not a container.
 - **First roadmap (Jack, 2026-10-10 ~23:0x UTC+7):** the initiatives **Forge** (DGS-335: machines and maestros; epic DGS-182) and **Genesis**
-  (DGS-337: the ClickUp tracker and process; epics DGS-25, DGS-213, DGS-327), and the milestone **Day One** (DGS-338, type Milestone, no date yet,
+  (DGS-337: the ClickUp tracker and process; epics DGS-25, DGS-213, DGS-327), and the milestone **Dawn** (DGS-338, type Milestone, no date yet,
   waiting on DGS-327). Jack kept "milestone" as the standard dated checkpoint, not a container; no level above initiative for now.
 - **Concepts, and any new ticket whose clan is not clear, are parked in Imperium as `backlog` (Jack, 2026-10-10: "if you want to ask me
   which clan or lineage it belongs to ... just create in the Imperium backlog").** The description names a proposed home; step 4 places them later.
