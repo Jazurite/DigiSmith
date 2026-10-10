@@ -335,6 +335,21 @@ it didn't:
   `digismith:adopt` run, or a genuine naming collision) → ask before overwriting, same "never
   silently overwrite" posture used everywhere else in this project.
 
+### Step 6.5: Register the Ticket's Session for Token Counting
+
+Runs on every adoption, **not** gated on `logging` (it records counts and ids
+only, no transcript text). From inside the worktree, with `<Key>` the key Step 3
+resolved:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <Key> --role worker
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step <step>
+```
+
+`<step>` is `implementation` when a plan exists (Step 1 requires one, so
+normally this), else `brainstorming`. No ticket key → skip, silently. A
+non-zero exit or a warning never blocks adoption.
+
 ### Step 7: Hand Off to Build
 
 Invoke `digismith:subagent-driven-development` directly against
@@ -376,4 +391,5 @@ it triggers off the dispatch itself, not off which entry point produced it.
 | 4 | Ensure an isolated worktree — already in one, or attach one to the existing branch (`digismith:bootstrap` Step 2.3's logic, no `-b`) |
 | 5 | Copy `.digismith/config.yml`, `.digismith/profile` and `.digismith/preferences.yml` (each when present), and (if Step 4 attached a new worktree) the resolved ticket folder (`.digismith/board/<KEY>—<slug>/` or `.digismith/docs/<slug>/`) in; unconditionally clear then (if `logging: true`) write and copy in a fresh telemetry marker |
 | 6 | Write Step 1's in-hand plan (required) and spec (optional) content directly into the resolved target folder — `.digismith/board/<KEY>—<slug>/` when Step 3 resolved a key, `.digismith/docs/<slug>/` otherwise |
+| 6.5 | With a ticket key, from inside the worktree: run `entry.ts session --ticket <Key> --role worker`, then `entry.ts step-start --ticket <Key> --step implementation` (`brainstorming` when no plan exists) (`~/.digismith-depot/repo/packages/cli/src/tokens/`). Not gated on `logging`. No key → skip silently; a non-zero exit or warning never blocks |
 | 7 | Invoke `digismith:subagent-driven-development` directly against the relocated `plan.md` |
