@@ -1704,6 +1704,12 @@
       <p>Part 2 of DGS-327: ClickUp is now the master copy. 14 tracked files no longer create, read or point at <code>backlog/*.md</code>, and the DGS-163 file-mirror rule is retired. Nothing in the repo calls <code>sync.py</code>, so there was nothing to unhook. See <a href="board/DGS-384—clickup-only-process/plan.md">plan</a> and <a href="board/DGS-384—clickup-only-process/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>dg clickup --markdown-description</h4>
+      <p><code>dg clickup create-task</code> and <code>update-task</code> now take <code>--markdown-description &lt;text&gt;</code> and <code>--markdown-description-file &lt;path&gt;</code> (public API field <code>markdown_description</code>), so ClickUp renders Markdown instead of showing it raw. The DGS-327 bulk move of about 150 backlog files into ticket descriptions needs this. See <a href="board/DGS-230—markdown-description/plan.md">plan</a> and <a href="board/DGS-230—markdown-description/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
