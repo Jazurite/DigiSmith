@@ -16,6 +16,10 @@ describe("parseDateFlag", () => {
     expect(parseDateFlag("2026-10-10T21:00:00Z", "--start-date")).toEqual({ ms: 1791666000000, hasTime: true });
   });
 
+  it("refuses a timed value on a day that does not exist", () => {
+    expect(() => parseDateFlag("2026-02-30T04:00:00+07:00", "--due-date")).toThrow(/invalid --due-date.*does not exist/);
+  });
+
   it("refuses a time without an offset", () => {
     expect(() => parseDateFlag("2026-10-11T04:00:00", "--start-date")).toThrow(/invalid --start-date.*offset/);
   });

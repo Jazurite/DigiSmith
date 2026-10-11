@@ -17,18 +17,21 @@ export interface ParsedDate {
 export function parseDateFlag(value: string, flag: string): ParsedDate {
   const invalid = (why: string) =>
     new Error(`invalid ${flag} "${value}" — ${why}`);
+  const dayExists = (y: number, m: number, d: number) => {
+    const check = new Date(Date.UTC(y, m - 1, d));
+    return check.getUTCFullYear() === y && check.getUTCMonth() === m - 1 && check.getUTCDate() === d;
+  };
   const plain = PLAIN_DATE.exec(value);
   if (plain) {
     const [y, m, d] = [Number(plain[1]), Number(plain[2]), Number(plain[3])];
+    if (!dayExists(y, m, d)) throw invalid("that day does not exist");
     const utc = Date.UTC(y, m - 1, d);
-    const check = new Date(utc);
-    if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) {
-      throw invalid("that day does not exist");
-    }
     return { ms: utc + (ALL_DAY_HOUR - UTC_OFFSET_HOURS) * HOUR_MS, hasTime: false };
   }
   if (value.includes("T")) {
     if (!HAS_OFFSET.test(value)) throw invalid("a time needs an offset, e.g. 2026-10-11T04:00:00+07:00");
+    const day = /^(\d{4})-(\d{2})-(\d{2})T/.exec(value);
+    if (day && !dayExists(Number(day[1]), Number(day[2]), Number(day[3]))) throw invalid("that day does not exist");
     const ms = new Date(value).getTime();
     if (!Number.isNaN(ms)) return { ms, hasTime: true };
   }

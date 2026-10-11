@@ -124,6 +124,14 @@ describe("applyFields with a client error that already carries the body", () => 
   });
 });
 
+describe("applyFields with a string error body", () => {
+  it("does not print the body twice", async () => {
+    const err = Object.assign(new Error("Request failed with status code 400: Bad input"), { response: { data: "Bad input" } });
+    const client = { setCustomField: vi.fn().mockRejectedValue(err) } as unknown as ClickUpClient;
+    await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(/400: Bad input$/);
+  });
+});
+
 describe("Relationship fields", () => {
   const rel = plain("f20", "Epic", "list_relationship");
   const byKey: Record<string, string> = { "DGS-343": "id343", "DGS-344": "id344" };
