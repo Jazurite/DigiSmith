@@ -28,12 +28,12 @@ export function createCreateTaskCommand(
         .option("markdown-description", {
           type: "string",
           requiresArg: true,
-          describe: "task description as Markdown (ClickUp renders it); not with --description",
+          describe: "task description as Markdown (ClickUp renders it); not with the other description flags",
         })
         .option("markdown-description-file", {
           type: "string",
           requiresArg: true,
-          describe: "read the Markdown description from this UTF-8 file; not with --description",
+          describe: "read the Markdown description from this UTF-8 file; not with the other description flags",
         })
         .option("status", { type: "string", requiresArg: true, describe: "status (must exist on the list)" })
         .option("start-date", { type: "string", requiresArg: true, describe: "start date, e.g. 2026-08-28" })
