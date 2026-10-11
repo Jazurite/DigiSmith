@@ -2,23 +2,20 @@
 <meta charset="utf-8"><title>DGS-383 report</title>
 <h1>Move every backlog file's full text into its ClickUp ticket — Implementation Report</h1>
 <p>Ticket: <strong>DGS-383</strong> <span>Date: 2026-10-11</span></p>
-<section id="summary"><p>Part 1 of DGS-327: ClickUp is now the master copy of the backlog text. 135 tickets hold the full text of their file under the line "Moved from backlog/&lt;file&gt;.md on 2026-10-11 (DGS-327). ClickUp is the master copy." and carry the .md as an attachment. One new ticket was created. No file was edited or deleted, and no status, name, priority or list changed on an existing ticket. First real use of <code>--markdown-description-file</code> (DGS-230).</p></section>
+<section id="summary"><p>Part 1 of DGS-327: ClickUp is now the master copy of the backlog text. 135 tickets hold the full text of their file under the line "Moved from backlog/&lt;file&gt;.md on 2026-10-11 (DGS-327). ClickUp is the master copy." and carry the .md as an attachment. Three new tickets were created (DGS-393, DGS-394, DGS-395). No file was edited or deleted, and no status, name, priority or list changed on an existing ticket. First real use of <code>--markdown-description-file</code> (DGS-230).</p></section>
 <h2>Classes (148 files, table.md in this folder)</h2>
 <ul>
 <li>65 <code>same</code> and 4 <code>file newer</code> (DGS-169, DGS-185, DGS-223, DGS-318): description = Moved line + full file, .md attached (69 tickets).</li>
-<li>67 <code>ticket has edits not in the file</code> (the ticket held a hand-written summary): Jack approved "keep the old text". 66 tickets: Moved line + full file + final section "Ticket summary before the move (kept)" with the old description unchanged, .md attached. Old descriptions saved first to the scratchpad, one file per key (<code>old/&lt;key&gt;.md</code>). The 67th (<code>token-counter-usage-producer-gap.md</code>, DGS-214) shares its ticket with <code>count-tokens-per-ticket.md</code>, whose text is already the DGS-214 description: attached only.</li>
+<li>67 <code>ticket has edits not in the file</code> (the ticket held a hand-written summary): Jack approved "keep the old text". 66 tickets: Moved line + full file + final section "Ticket summary before the move (kept)" with the old description unchanged, .md attached. Old descriptions saved first to the scratchpad, one file per key (<code>old/&lt;key&gt;.md</code>). The 67th (<code>token-counter-usage-producer-gap.md</code>) shares ticket DGS-214 with <code>count-tokens-per-ticket.md</code>, whose text is already the DGS-214 description: attached to DGS-214, and it also became its own ticket <strong>DGS-394</strong> (below).</li>
 <li>5 <code>merged ticket, several files</code> (DGS-316 x2, DGS-317 x3): descriptions unchanged, each .md attached.</li>
-<li>5 <code>no ticket</code>: 3 files attached to the ticket they name (<code>non-fast-forward-merge-first-occurrence</code> to DGS-260, <code>plugin-cache-lag-self-development</code> to DGS-161, <code>platform-accounts-or-billing-lineage</code> to DGS-152). <code>manager-mode-retro-2026-10-02</code> got a new ticket, <strong>DGS-393</strong> in B.4: Maestro, priority Normal, status backlog, .md attached. <code>merge-conflict-detection-gap</code> is parked.</li>
+<li>5 <code>no ticket</code>: 3 files attached to the ticket they name (<code>non-fast-forward-merge-first-occurrence</code> to DGS-260, <code>plugin-cache-lag-self-development</code> to DGS-161, <code>platform-accounts-or-billing-lineage</code> to DGS-152). <code>manager-mode-retro-2026-10-02</code> got a new ticket, <strong>DGS-393</strong> in B.4: Maestro, priority Normal, status backlog, .md attached. <code>merge-conflict-detection-gap</code> got <strong>DGS-395</strong> in F.6: Integrate and finish, status <code>discarded</code>, priority Normal, with one line giving the reason from the file's own status line (Jack, 2026-10-10, DGS-165 sweep: low confidence), .md attached.</li>
+<li>Loose idea files become their own tickets (Jack's rule: an idea lives as a ticket, not only as an attachment): <code>token-counter-usage-producer-gap.md</code> became <strong>DGS-394</strong> in B.3: Token Economics (priority Normal, status backlog, .md attached), linked to DGS-214 with <code>add-link</code>; the attachment on DGS-214 stays.</li>
 <li>1 already moved (DGS-230, a DGS-230 worker proof, untouched) and 1 not a backlog item (README).</li>
 </ul>
 <h2>Counts</h2>
-<p>Descriptions written: 69 + 66 = 135 existing tickets + 1 new ticket (DGS-393). Attachments made: 69 + 66 + 9 + 1 = 145. Every ticket was read back (<code>get-task --markdown</code>) right after its write; the run stopped at each mismatch until the cause was found.</p>
+<p>Descriptions written: 69 + 66 = 135 existing tickets + 3 new tickets (DGS-393, DGS-394, DGS-395). Attachments made: 69 + 66 + 9 + 3 = 147. Every ticket was read back (<code>get-task --markdown</code>) right after its write; the run stopped at each mismatch until the cause was found.</p>
 <h2>Parked</h2>
-<ul>
-<li><code>merge-conflict-detection-gap.md</code> names no ticket (file says "Discarded, no ticket"), so it has nothing to attach to.</li>
-<li><code>token-counter-usage-producer-gap.md</code>: its text lives in ClickUp only as an attachment on DGS-214 (the description is the other file's text). Jack may want a separate ticket for it.</li>
-<li>DGS-316 and DGS-317 descriptions keep the sweep header ("Source file ... mirror at creation").</li>
-</ul>
+<p>Nothing is parked. DGS-316 and DGS-317 keep the sweep header ("Source file ... mirror at creation") in their descriptions; the text is all there.</p>
 <h2>Read-back differences (all DIFF lines)</h2>
 <p>ClickUp rewrites Markdown on read-back, so the check compares letters and digits only. Every difference was inspected; none was real text. A difference outside the groups below stops the run.</p>
 <ul>

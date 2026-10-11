@@ -27,8 +27,8 @@ Columns: `ticket-only` = characters on lines in the ticket that are not in the f
 | check-attribution-hardening.md | DGS-317 | merged ticket, several files (ticket holds all of them) | 6843 | 0 |  |
 | check-attribution-no-escape-hatch-for-pre-policy-history.md | DGS-317 | merged ticket, several files (ticket holds all of them) | 5238 | 0 |  |
 | review-time-standards-injection-gap.md | DGS-316 | merged ticket, several files (ticket holds all of them) | 7469 | 0 |  |
-| manager-mode-retro-2026-10-02.md | - | no ticket | 0 | 0 | no ticket; clan unclear (herdr manager-mode retro; B.4 Maestro or Imperium) |
-| merge-conflict-detection-gap.md | - | no ticket | 0 | 0 | no ticket: file says Discarded (Jack, 2026-10-10, DGS-165 sweep), file kept |
+| manager-mode-retro-2026-10-02.md | - | no ticket | 0 | 0 | no ticket; clan unclear (herdr manager-mode retro; B.4 Maestro or Imperium); now ticket DGS-393 (B.4), .md attached |
+| merge-conflict-detection-gap.md | - | no ticket | 0 | 0 | no ticket: file says Discarded (Jack, 2026-10-10, DGS-165 sweep), file kept; now its own ticket DGS-395 (F.6, discarded), .md attached |
 | non-fast-forward-merge-first-occurrence.md | - | no ticket | 0 | 0 | no own ticket: file says Merged into DGS-260 |
 | platform-accounts-or-billing-lineage.md | - | no ticket | 0 | 0 | no own ticket: file names migration ticket DGS-152 / DGS-144 (key written as none) |
 | plugin-cache-lag-self-development.md | - | no ticket | 0 | 0 | no own ticket: file says Applied by DGS-161 |
@@ -156,7 +156,7 @@ Columns: `ticket-only` = characters on lines in the ticket that are not in the f
 | ste100-consuming-repo-propagation-t3.md | DGS-281 | ticket has edits not in the file | 279 | 3131 |  |
 | ste100-portable-packaging-t4.md | DGS-276 | ticket has edits not in the file | 253 | 2178 |  |
 | ste100-writing-standard-t.md | DGS-273 | ticket has edits not in the file | 585 | 5704 |  |
-| token-counter-usage-producer-gap.md | DGS-214 | ticket has edits not in the file | 6618 | 1978 | ticket DGS-214 is much longer than the file (6.6k chars of ticket-side analysis); count-tokens-per-ticket.md shares it |
+| token-counter-usage-producer-gap.md | DGS-214 | ticket has edits not in the file | 6618 | 1978 | ticket DGS-214 is much longer than the file (6.6k chars of ticket-side analysis); count-tokens-per-ticket.md shares it; now also its own ticket DGS-394 (linked to DGS-214), .md attached to DGS-214 too |
 | tokenreply-gpt-5-6-luna-tool-calling-failure.md | DGS-104 | ticket has edits not in the file | 395 | 8396 |  |
 | tokenreply-kimi-k3-tool-calling-failure.md | DGS-103 | ticket has edits not in the file | 405 | 18876 |  |
 | tokenreply-task-role-default-model-k.md | DGS-105 | ticket has edits not in the file | 332 | 2431 |  |
@@ -165,3 +165,7 @@ Columns: `ticket-only` = characters on lines in the ticket that are not in the f
 | workbox-idle-cleanup.md | DGS-153 | ticket has edits not in the file | 1397 | 2394 |  |
 | worker-and-maestro-conventions.md | DGS-158 | ticket has edits not in the file | 2152 | 6557 |  |
 | worktrees-at-repo-root-a0.md | DGS-86 | ticket has edits not in the file | 1723 | 4135 |  |
+
+## After the writes (2026-10-11)
+
+New tickets: DGS-393 (manager-mode-retro, B.4: Maestro), DGS-394 (token-counter-usage-producer-gap, B.3: Token Economics, linked to DGS-214), DGS-395 (merge-conflict-detection-gap, F.6: Integrate and finish, status discarded). Nothing is parked.
