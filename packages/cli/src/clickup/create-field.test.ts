@@ -77,6 +77,18 @@ describe("create-field", () => {
     });
   });
 
+  it("a tail that is only hex-looking text stays in the option name", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { name: "P", option: ["Plan:add", "V: 100", "Ok:#fff"], folder: "1", yes: true });
+    const options = client.createField.mock.calls[0][0].type_config.options;
+    expect(options.map((o: { name: string; color: string }) => [o.name, o.color])).toEqual([
+      ["Plan:add", "#7C4DFF"],
+      ["V: 100", "#1bbc9c"],
+      ["Ok", "#fff"],
+    ]);
+  });
+
   it("--yes prints the field id and each option id", async () => {
     const client = fake();
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -95,6 +107,7 @@ describe("create-field", () => {
     ["no option", { name: "P", folder: "1" }, "at least one --option"],
     ["duplicate option", { name: "P", option: ["Ab", "ab:#fff"], folder: "1" }, 'duplicate option "ab"'],
     ["empty option", { name: "P", option: [":#fff"], folder: "1" }, "option name must not be empty"],
+    ["repeated --name", { name: ["a", "b"], option: ["a"], folder: "1" }, "--name was given more than once"],
     ["empty name", { name: "  ", option: ["a"], folder: "1" }, "--name must not be empty"],
   ])("refuses %s", async (_label, argv, message) => {
     const client = fake();

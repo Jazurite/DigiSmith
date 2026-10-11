@@ -4,9 +4,9 @@ import { createFrontdoorClient } from "./lib.ts";
 import { printCall } from "./task-type-write.ts";
 
 const DEFAULT_COLORS = ["#7C4DFF", "#1bbc9c", "#F9D900", "#e50000", "#0079bf", "#ff7800", "#81b1ff", "#b5bcc2"];
-const HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const HEX = /^(#([0-9a-f]{3}|[0-9a-f]{6})|[0-9a-f]{6})$/i;
 
-/** "Name" or "Name:color": the colour counts only when the text after the last ":" is a hex colour. */
+/** "Name" or "Name:color": the colour counts only when the text after the last ":" is a hex colour: "#rgb", "#rrggbb" or "rrggbb" (a bare 3-digit tail stays part of the name). */
 export function parseOption(input: string, position: number): { name: string; color: string } {
   const at = input.lastIndexOf(":");
   const tail = at < 0 ? "" : input.slice(at + 1).trim();
@@ -77,6 +77,9 @@ export function createCreateFieldCommand(
           throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder.");
         }
         if (argv.type !== "drop_down") throw new Error(`type "${argv.type}" is not supported; only drop_down`);
+        for (const flag of ["name", "folder", "description"] as const) {
+          if (Array.isArray(argv[flag])) throw new Error(`--${flag} was given more than once`);
+        }
         const name = ((argv.name as string) ?? "").trim();
         if (name === "") throw new Error("--name must not be empty");
         const folder = argv.folder as string | undefined;
