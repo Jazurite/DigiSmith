@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8"><title>DGS-384 report</title>
+<h1>Skills, hooks and runbooks use ClickUp tickets, never backlog files — Implementation Report</h1>
+<p>Ticket: <strong>DGS-384</strong> <span>Date: 2026-10-11</span></p>
+<section id="summary"><p>Part 2 of DGS-327: ClickUp is now the master copy. 14 tracked files no longer create, read or point at <code>backlog/*.md</code>, and the DGS-163 file-mirror rule is retired. Nothing in the repo calls <code>sync.py</code>, so there was nothing to unhook.</p></section>
+<h2>What changed (14 files, docs and comments only)</h2>
+<ul>
+<li>6 skills: brainstorming, toolchain, adopt, depot, subagent-driven-development, offload-implementer.</li>
+<li>Post-finish hook 02, <code>docs/getting-started.md</code>, the <code>packages/cli/src/tokens</code> README, and 3 code comments (<code>scripts/providers/tokenreply.ts</code>, <code>scripts/runners/types.ts</code>, <code>scripts/token-counter/tokenreply-pricing.ts</code>).</li>
+<li>2 .opencode files (<code>skills/clickup-rules/SKILL.md</code>, <code>prompts/maestro.md</code>): the DGS-163 mirror rule is replaced by "ClickUp is the master copy; write the full text with <code>dg clickup create-task</code> / <code>update-task --markdown-description</code>". The git-excluded <code>workbox.md</code> was edited on disk.</li>
+</ul>
+<h2>Keys used and checked</h2>
+<p>Read from each file's own ClickUp line: DGS-298, DGS-103, DGS-92, DGS-161, DGS-107 (on disk: DGS-151, DGS-162). Two files have no ticket and no key was invented: <code>mid-development-workflow-injection</code> and <code>manager-mode-retro-2026-10-02</code>.</p>
+<h2>Review</h2>
+<p>Claude whole-branch review (Sol is paused: OpenCode v2 stalls): "ready after fixes", 4 minor findings. Three were fixed (a comment word, the final DGS-230 wording with no "until then", the <code>list-tasks --list</code> hint in getting-started); one was answered (the adopt wording stays).</p>
+<h2>Tests</h2>
+<p>1233 of 1234 pass after the rebase on main 6dd5cab (1254 of 1255 on the merged tree). The only failure is the known e2e <code>--help</code> colour test. The worktree's <code>node_modules</code> symlink was unlinked with Jack's yes and replaced by a real <code>pnpm install</code>.</p>
+<h2>Left for Jack and the Master</h2>
+<ul>
+<li><code>~/.digismith-depot/backlog-sync/sync.py</code> is kept: no caller, not deleted. Jack decides.</li>
+<li>Master's memory lines 29, 42, 53 mention backlog; not edited.</li>
+<li><code>DigiSmith/note.md</code> lines 109, 132, 134 and <code>d3-maestro/brief.md</code> line 25 still carry the old rule; not mine to edit.</li>
+<li>Part 3 (<code>git rm backlog/</code>) and part 4 (history map, <code>MEMORY.md</code> letter map) stay open.</li>
+</ul>
