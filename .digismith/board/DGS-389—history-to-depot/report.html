@@ -17,8 +17,10 @@
 <li><code>docs/A/A.2/centralized-digismith-config-file/*</code> becomes <code>docs/A/A.4/centralized-digismith-config-file/*</code></li>
 <li><code>docs/A/A.2/migrate-own-repo-config-yml/*</code> becomes <code>docs/A/A.4/migrate-own-repo-config-yml/*</code></li>
 </ul>
+<h2>Review</h2>
+<p>Claude whole-branch review: 8 findings, all fixed test-first: duplicate-entry skip, rewriter refuses a page inside the worktree and an unpushed SHA, rewriter exits non-zero on dead links, blank and <code>~</code> history dir, literal-string tests (nested slug, <code>#?%</code>, raw em dash), behind-origin test, plan note, import commit on first use.</p>
 <h2>Tests</h2>
-<p>TDD: tests first (commit "test(history)..."), then the code. 1279 of 1280 pass; the only failure is the known e2e <code>--help</code> colour test. Worktree has a real <code>pnpm install</code>.</p>
+<p>TDD: tests first (commit "test(history)..."), then the code. 1293 of 1294 pass; the only failure is the known e2e <code>--help</code> colour test. Worktree has a real <code>pnpm install</code>.</p>
 <h2>Left for Jack and the Master</h2>
 <ul>
 <li><code>.digismith/history.html</code> in the repo stays, frozen, until Jack's yes for <code>git rm</code>. Old versions stay in public git history.</li>
