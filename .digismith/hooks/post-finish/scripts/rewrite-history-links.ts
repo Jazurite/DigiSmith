@@ -1,5 +1,7 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import { isPublished } from "./update-history.ts";
 import { parseArgs, requireArgs } from "../../../../scripts/cli-args.ts";
 
 // One-time migration helper (DGS-389): rewrites the relative links of the old repo-bound
@@ -69,11 +71,32 @@ export const CLAN_A_RENAMES: [string, string][] = [
   ["docs/A/A.2/migrate-own-repo-config-yml/", "docs/A/A.4/migrate-own-repo-config-yml/"],
 ];
 
+function realPathOfFile(file: string): string {
+  return path.join(fs.realpathSync(path.dirname(path.resolve(file))), path.basename(file));
+}
+
+// The page is rewritten in place, so refuse the frozen repo page, and refuse a sha GitHub cannot
+// resolve yet (every link would stay dead).
+export function checkRewriteGuards(page: string, sha: string, cwd: string): void {
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
+  if (top.status === 0) {
+    const root = fs.realpathSync(top.stdout.trim());
+    const rel = path.relative(root, realPathOfFile(page));
+    if (rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))) {
+      throw new Error(`--page ${page} is inside the git worktree ${root}; copy the page out first`);
+    }
+  }
+  if (!isPublished(sha, cwd)) {
+    throw new Error(`--sha ${sha} is not pushed to origin, so the permalinks would not resolve`);
+  }
+}
+
 export function main(): void {
   const args = parseArgs(process.argv.slice(2));
   try {
     requireArgs(args, ["page", "sha", "blob-base"]);
     const cwd = process.cwd();
+    checkRewriteGuards(args.page, args.sha, cwd);
     const html = fs.readFileSync(args.page, "utf8");
     const result = rewriteHistoryLinks(html, {
       blobBase: args["blob-base"],
@@ -85,6 +108,10 @@ export function main(): void {
     for (const f of result.fixed) console.log(`FIXED ${f.old} -> ${f.new}`);
     for (const d of result.dead) console.log(`DEAD ${d}`);
     console.log(`REWRITTEN fixed=${result.fixed.length} dead=${result.dead.length}`);
+    if (result.dead.length > 0) {
+      console.error(`${result.dead.length} link(s) stay relative: their file is missing at ${args.sha}`);
+      process.exit(1);
+    }
   } catch (err) {
     console.error(`Cannot rewrite links: ${(err as Error).message}`);
     process.exit(1);
