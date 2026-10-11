@@ -84,7 +84,7 @@
 <header class="doc-head">
   <h1>DigiSmith — Build History</h1>
   <div class="meta">
-    <span>Last updated: 2026-10-10</span>
+    <span>Last updated: 2026-10-11</span>
     <span>Repo: <a href="https://github.com/Jazurite/DigiSmith">github.com/Jazurite/DigiSmith</a></span>
   </div>
 </header>
@@ -1684,6 +1684,12 @@
       <div class="date">2026-10-11</div>
       <h4>DGS-361 dg clickup move-list on Frontdoor</h4>
       <p>Added <code>dg clickup move-list</code>. The public API documents no List move, so it uses the Frontdoor call from Jack's capture: <code>PUT /hierarchy/v2/subcategory/{list}/position</code> with <code>{position, include_archived:false, category}</code>. No ClickUp write was made; the first use is DGS-365. See <a href="board/DGS-361—move-list/worker-dgs-361/plan.md">plan</a> and <a href="board/DGS-361—move-list/worker-dgs-361/report.html">report</a>.</p>
+    </div>
+
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>DGS-83 dg clickup delete-list on the public API</h4>
+      <p>Added <code>dg clickup delete-list</code> on the public ClickUp API: <code>DELETE /list/{id}</code> with <code>CLICKUP_API_TOKEN</code>. It refuses to delete a list that holds any task. Merged; first use pending (DGS-363). See <a href="board/DGS-83—delete-list/worker-dgs-83/plan.md">plan</a> and <a href="board/DGS-83—delete-list/worker-dgs-83/report.html">report</a>.</p>
     </div>
 
   </div>
