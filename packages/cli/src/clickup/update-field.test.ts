@@ -24,11 +24,13 @@ const field = (over: object = {}) => ({
   groups: [],
   ...over,
 });
-function fake(f: object = field()) {
+function fake(f: object = field(), valueCount = 0) {
   const getField = vi.fn().mockResolvedValue(f);
   const updateField = vi.fn().mockResolvedValue({ id: "f1" });
-  return { getField, updateField } as unknown as FrontdoorClient & {
+  const getFieldValueCount = vi.fn().mockResolvedValue(valueCount);
+  return { getField, updateField, getFieldValueCount } as unknown as FrontdoorClient & {
     updateField: ReturnType<typeof vi.fn>;
+    getFieldValueCount: ReturnType<typeof vi.fn>;
   };
 }
 const run = (client: unknown, argv: object) =>
@@ -173,6 +175,74 @@ describe("update-field", () => {
     ["a bad color", { addOption: ["X"], color: "red" }, /--color must look like/],
     ["--color without --add-option", { name: "N", color: "#fff" }, /--color needs --add-option/],
   ])("errors on add with %s and sends nothing", async (_n, argv, re) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", yes: true, ...argv });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(re);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("removes by name and by id: the ids go in rem, the rest as read (mock only)", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["frontdoor api", "o2"], confirmRemove: ["Frontdoor API", "Public API"], yes: true });
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.type_config.options).toEqual({ add: [], update: [], rem: ["o1", "o2"] });
+    expect(body.name).toBe("Bucket");
+  });
+
+  it("adds and removes in one PUT", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["Maestro"], removeOption: ["o2"], confirmRemove: ["Public API"], yes: true });
+    expect(client.updateField).toHaveBeenCalledTimes(1);
+    const o = client.updateField.mock.calls[0][1].type_config.options;
+    expect(o.add).toHaveLength(1);
+    expect(o.rem).toEqual(["o2"]);
+  });
+
+  it("dry run of a remove warns with the ticket count and sends nothing", async () => {
+    const client = fake(field(), 3);
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", removeOption: ["Public API"] });
+    expect(client.getFieldValueCount).toHaveBeenCalledWith("f1", "o2");
+    expect(client.updateField).not.toHaveBeenCalled();
+    const text = out.join("\n");
+    expect(text).toContain('remove option "Public API" (o2)');
+    expect(text).toContain('WARNING: 3 ticket(s) hold "Public API"; removing it changes their value (what ClickUp does to values is not captured)');
+    expect(text).toContain("nothing sent");
+  });
+
+  it("dry run of a remove with no ticket using it prints no warning", async () => {
+    const client = fake(field(), 0);
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", removeOption: ["Public API"] });
+    const text = out.join("\n");
+    expect(text).not.toContain("WARNING");
+    expect(text).toContain('no ticket holds "Public API"');
+  });
+
+  it.each([
+    ["no --confirm-remove", {}],
+    ["a wrong name", { confirmRemove: ["public api"] }],
+    ["a confirm for another option", { confirmRemove: ["Frontdoor API"] }],
+  ])("--yes remove with %s exits 1 and sends nothing", async (_n, extra) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], yes: true, ...extra });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--confirm-remove "Public API"/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([
+    ["an unknown option", { removeOption: ["Nope"] }, /unknown option "Nope"/],
+    ["the same option twice", { removeOption: ["o1", "Frontdoor API"] }, /removed twice/],
+    ["an option that is also renamed", { removeOption: ["o1"], option: ["o1=X"] }, /both removed and renamed/],
+  ])("errors on remove of %s and sends nothing", async (_n, argv, re) => {
     const client = fake();
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run(client, { field: "f1", yes: true, ...argv });
