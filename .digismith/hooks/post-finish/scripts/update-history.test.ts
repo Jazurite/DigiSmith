@@ -963,17 +963,31 @@ describe("main (CLI) refuses a link to a file that is not at the pinned commit",
     try {
       const args = ["--base", baseSha, "--head", headSha, "--history-dir", historyDir];
       expect(runScript(dir, args).stdout).toContain("APPENDED 1");
-      // the plan is now gone from head's reach: delete it from the index view by pinning to a head without it
-      const folder = path.join(dir, ".digismith", "board", SLUG);
-      fs.rmSync(path.join(folder, "plan.md"));
-      fs.writeFileSync(path.join(folder, "plan.md"), "again");
-      spawnSync("git", ["update-index", "--force-remove", `.digismith/board/${SLUG}/plan.md`], { cwd: dir });
+      // a later head without the plan: the entry is old, so the check must not run for it
+      spawnSync("git", ["rm", "--cached", "-q", `.digismith/board/${SLUG}/plan.md`], { cwd: dir });
       spawnSync("git", ["commit", "-q", "-m", "drop plan"], { cwd: dir });
       const laterHead = revParseHead(dir);
       const rerun = runScript(dir, ["--base", baseSha, "--head", laterHead, "--history-dir", historyDir, "--allow-unpushed", "true"]);
 
       expect(rerun.status).toBe(0);
       expect(rerun.stdout).toContain("NOTHING (already recorded)");
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("says the head sha is not a commit, instead of reporting every file as DEAD", () => {
+    const { dir, baseSha, historyDir } = makeBoardRepo(true);
+    const bare = addOrigin(dir, true);
+    try {
+      const bogus = "0123456789abcdef0123456789abcdef01234567";
+
+      const result = runScript(dir, ["--base", baseSha, "--head", bogus, "--history-dir", historyDir, "--allow-unpushed", "true"]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(`head sha ${bogus} is not a commit here`);
+      expect(result.stderr).not.toContain("DEAD");
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(HISTORY_FIXTURE);
     } finally {
       for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
@@ -995,6 +1009,7 @@ describe("main (CLI) refuses a link to a file that is not at the pinned commit",
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(`DEAD .digismith/board/${SLUG}/plan.md`);
       expect(result.stderr).toContain("DEAD .digismith/board/DGS-397—other/design.html");
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(HISTORY_FIXTURE);
     } finally {
       for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
