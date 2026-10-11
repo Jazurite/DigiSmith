@@ -89,6 +89,7 @@
     <li><a href="#summary">Summary</a></li>
     <li><a href="#delivered">What Was Delivered</a></li>
     <li><a href="#build">Build Process</a></li>
+    <li><a href="#review">Review</a></li>
     <li><a href="#merge">Commits</a></li>
   </ol>
 </nav>
@@ -122,11 +123,17 @@
   <p>Test counts against the base: <code>lib.test.ts</code> 24 to 28, <code>create-task.test.ts</code> 14 to 15, <code>update-task.test.ts</code> 19 to 20, <code>src/clickup</code> 312 to 318 in 32 files. No existing test or assertion changed. Full suite: 606 passed, 1 failed. The failure is the known e2e <code>--help</code> colour test; main already carries its fix (DGS-290).</p>
 </section>
 
+<section id="review">
+  <h2>Review</h2>
+  <p>Claude whole-branch review: ready to merge. Behaviour neutrality verified: the ten options match the removed code, the <code>--parent</code> wording is kept per command, the order is unchanged, no new flag. One cheap fix was ordered and done (<code>98d49d4</code>): each command test now checks its own <code>--parent</code> text in the <code>--help</code> output (swapping the two strings fails the test, confirmed by a temporary swap), and the <code>TaskFieldArgv</code> comment says <code>type</code> and <code>field</code> are declared by the helper but handled by the commands. Counts now: <code>lib</code> 28, <code>create-task</code> 16, <code>update-task</code> 21, <code>src/clickup</code> 320; full suite 608 passed, 1 known e2e colour failure.</p>
+</section>
+
 <section id="merge">
   <h2>Commits</h2>
   <ul class="commit-list">
     <li><span class="sha">0a88759</span> refactor(clickup): use TaskFieldArgv in task commands</li>
     <li><span class="sha">cc78e2f</span> refactor(clickup): share task-field yargs options</li>
+    <li><span class="sha">98d49d4</span> test(clickup): pin each command's own --parent wording</li>
   </ul>
 </section>
 
