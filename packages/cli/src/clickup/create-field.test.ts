@@ -62,7 +62,7 @@ describe("create-field", () => {
           { id: null, name: "DigiSmith", color: "#7C4DFF", orderindex: null },
           { id: null, name: "Emma", color: "#1bbc9c", orderindex: null },
           { id: null, name: "Jazurite", color: "#ABCDEF", orderindex: null },
-          { id: null, name: "Note: x", color: "#F9D900", orderindex: null },
+          { id: null, name: "Note: x", color: "#e50000", orderindex: null },
         ],
       },
       category_id: "1301150000002921",
