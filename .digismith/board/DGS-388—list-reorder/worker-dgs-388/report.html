@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-388 dg clickup list reorder — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-388 dg clickup list reorder — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-388</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup move-list</code> now reorders a list inside its own folder. It sends the position only, as the web app does, because ClickUp answers 400 when the folder is sent for the folder the list is already in.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>ClickUpClient.getList</code> reads the list's current folder. <code>move-list</code> reads it first, a dry run too.</li>
+<li>The folder is the current one, or left out: position-only body, <code>--position</code> required. Another folder: the old folder change.</li>
+<li>A folderless list without <code>--folder</code> and a failed read both refuse. Dry run and <code>--yes</code> say which body is sent.</li>
+<li><code>FrontdoorClient</code> shows ClickUp's error body in the message of a failed call.</li>
+<li>Tests added for the client and the command. The whole repo passes with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: no findings.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Sort folders B and D by list number, then close DGS-388. The result goes to the maestro report.</p>
+</section>
+</body>
+</html>
