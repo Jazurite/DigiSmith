@@ -45,8 +45,15 @@ function findRepoRoot(startDir: string): string {
   }
 }
 
-function run(args: string[]) {
-  return spawnSync("node", [DIST_ENTRY, ...args], { encoding: "utf-8" });
+function run(args: string[], env: NodeJS.ProcessEnv = process.env) {
+  return spawnSync("node", [DIST_ENTRY, ...args], { encoding: "utf-8", env });
+}
+
+// picocolors turns colour on only with a TTY or FORCE_COLOR, and NO_COLOR beats both,
+// so the colour test sets its own environment instead of relying on the terminal.
+function colourEnv(): NodeJS.ProcessEnv {
+  const { NO_COLOR: _noColor, ...rest } = process.env;
+  return { ...rest, FORCE_COLOR: "1" };
 }
 
 beforeAll(() => {
@@ -64,7 +71,7 @@ beforeAll(() => {
 
 describe("dist/index.js (real entry point, subprocess)", () => {
   it("--help exits 0 with a single Usage line and a properly-closed colorized Domains header", () => {
-    const result = run(["--help"]);
+    const result = run(["--help"], colourEnv());
 
     expect(result.status).toBe(0);
     expect(result.stdout.match(/^Usage: digismith/gm)).toHaveLength(1);
