@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-320 dg clickup update-folder — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-320 dg clickup update-folder — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-320</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup update-folder --folder &lt;id&gt; --name &lt;name&gt; [--yes]</code>, which renames a folder through the public API (<code>PUT /v2/folder/{id}</code> with <code>{name}</code>). It is a dry run unless <code>--yes</code>. The request body is taken from the API reference and is not proven live yet; the first real send is DGS-321.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>ClickUpClient.updateFolder</code> and <code>getFolder</code> (PUT and GET <code>/folder/{id}</code>).</li>
+<li>The dry run prints the call and builds no client, so it needs no credentials and no network. An empty or blank name is refused, and so is a folder id that is not digits.</li>
+<li>After <code>--yes</code> the command reads the folder back and prints the new name; a different name exits 1.</li>
+<li>No <code>--description</code>: the API has no folder description. No allow rule was added.</li>
+<li>9 new tests (2 client, 7 command); the repo suite has 1357 tests (base 1348), and the one known e2e <code>--help</code> colour failure remains.</li>
+</ul>
+</section>
+</body>
+</html>
