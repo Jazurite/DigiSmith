@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "../../../../scripts/cli-args.ts";
@@ -95,16 +96,54 @@ export function parseReport(reportPath: string): ParsedReport {
   };
 }
 
-export function buildReferenceLinks(slug: string, base: "docs" | "board", cwd: string = process.cwd()): string {
+export const DEFAULT_REPO_URL = "https://github.com/Jazurite/DigiSmith";
+
+// Where the living history page lives: --history-dir flag, else DIGISMITH_HISTORY_DIR, else the
+// depot on this machine. The page is <dir>/history.html, in its own git repo (no remote).
+export function resolveHistoryDir(
+  args: Record<string, string>,
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = os.homedir(),
+): string {
+  return args["history-dir"] ?? env.DIGISMITH_HISTORY_DIR ?? path.join(home, ".digismith-depot", "history");
+}
+
+// Permalink root pinned to one commit, so a file that moves later never breaks the link.
+export function buildPermalinkBase(sha: string, env: NodeJS.ProcessEnv = process.env): string {
+  const repoUrl = (env.DIGISMITH_HISTORY_REPO_URL ?? DEFAULT_REPO_URL).replace(/\/+$/, "");
+  return `${repoUrl}/blob/${sha}`;
+}
+
+// True when a remote-tracking ref of origin contains the sha, i.e. GitHub can resolve the permalink.
+export function isPublished(sha: string, cwd: string = process.cwd()): boolean {
+  const result = spawnSync(
+    "git",
+    ["for-each-ref", "--contains", sha, "--format=%(refname)", "refs/remotes/origin"],
+    { cwd, encoding: "utf8" },
+  );
+  return result.status === 0 && result.stdout.trim().length > 0;
+}
+
+function encodePath(p: string): string {
+  return p.split("/").map(encodeURIComponent).join("/");
+}
+
+export function buildReferenceLinks(
+  slug: string,
+  base: "docs" | "board",
+  cwd: string,
+  permalinkBase: string,
+): string {
   const folder = path.join(cwd, ".digismith", base, slug);
+  const href = (file: string) => `${permalinkBase}/${encodePath(`.digismith/${base}/${slug}/${file}`)}`;
   const parts: { label: string; href: string }[] = [];
   if (fs.existsSync(path.join(folder, "design.html"))) {
-    parts.push({ label: "design", href: `${base}/${slug}/design.html` });
+    parts.push({ label: "design", href: href("design.html") });
   }
   if (fs.existsSync(path.join(folder, "plan.md"))) {
-    parts.push({ label: "plan", href: `${base}/${slug}/plan.md` });
+    parts.push({ label: "plan", href: href("plan.md") });
   }
-  parts.push({ label: "report", href: `${base}/${slug}/report.html` });
+  parts.push({ label: "report", href: href("report.html") });
 
   const links = parts.map((p) => `<a href="${p.href}">${p.label}</a>`);
   if (links.length === 1) {
@@ -165,7 +204,19 @@ export function main(): void {
       return;
     }
 
-    const historyPath = path.join(cwd, ".digismith", "history.html");
+    const historyDir = resolveHistoryDir(args);
+    const historyPath = path.join(historyDir, "history.html");
+    if (!fs.existsSync(historyPath)) {
+      throw new Error(`NO HISTORY HOME ${historyDir}: ${historyPath} is missing. Restore the depot page first.`);
+    }
+    if (!isPublished(args.head, cwd)) {
+      const msg = `head ${args.head} is not pushed to origin, so its permalinks would not resolve on GitHub yet`;
+      if (args["allow-unpushed"] !== "true") {
+        throw new Error(`${msg}. Push the merge first, or pass --allow-unpushed true.`);
+      }
+      console.error(`warning: ${msg}`);
+    }
+    const permalinkBase = buildPermalinkBase(args.head);
     let historyHtml = fs.readFileSync(historyPath, "utf8");
     const nl = historyHtml.includes("\r\n") ? "\r\n" : "\n";
     const today = new Date().toISOString().slice(0, 10);
@@ -176,7 +227,7 @@ export function main(): void {
     for (const relPath of changedReports) {
       const absPath = path.join(cwd, relPath);
       const parsed = parseReport(absPath);
-      const links = buildReferenceLinks(parsed.slug, parsed.base, cwd);
+      const links = buildReferenceLinks(parsed.slug, parsed.base, cwd, permalinkBase);
       const body = `${parsed.summary} ${links}`;
       eventsHtml.push(buildEventHtml({ date: parsed.date, title: parsed.featureTitle, body }, nl));
       titles.push(parsed.featureTitle);
