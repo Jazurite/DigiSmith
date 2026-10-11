@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-83 dg clickup delete-list on the public API — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-83 dg clickup delete-list on the public API — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-83</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup delete-list</code> on the public ClickUp API: <code>DELETE /list/{id}</code> with <code>CLICKUP_API_TOKEN</code>. It refuses to delete a list that holds any task. Merged; first use pending (DGS-363).</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>ClickUpClient.deleteList(listId)</code>.</li>
+<li><code>delete-list --list &lt;id&gt; [--yes]</code>: a dry run unless <code>--yes</code>. Both modes first read the tasks twice (<code>archived=false</code> and <code>archived=true</code>, each with closed and subtasks), merge by id, and refuse (exit 1; count, up to 5 tasks, "... and N more") when any exists. Non-digit ids are refused before any call.</li>
+<li>No allow rule. Main's ask rules for every <code>dg clickup delete-*</code> apply.</li>
+<li>Tests: 1 client test and 15 command tests, mocks only; the full run passes (1216 tests) with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="incident">
+<h2>Incident</h2>
+<p>The first gate made one read with <code>archived=true</code>. ClickUp returns only archived tasks for that value, so a list with live tasks looked empty. During the checkpoint 2 check the worker ran the dry run and then, wrongly, <code>--yes</code> on the real list 1301150000002237 (the list that held DGS-83). The list was deleted. The worker stopped at once and made no undo call; restoring it is Jack's. Fix: the gate reads both values and merges by id, with tests that fail on the old single read. Full account: <code>incident.md</code> in the worker's board folder.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Pending (DGS-363). The fixed gate has not run against the real API; Jack's dry-run proof is in <code>report.md</code>. Open question for that first use: after a real delete, does <code>GET /list/{id}</code> return <code>deleted: true</code> or 404?</p>
+</section>
+</body>
+</html>
