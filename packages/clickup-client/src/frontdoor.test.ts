@@ -89,6 +89,19 @@ describe("FrontdoorClient", () => {
     expect(n).toBe(3);
   });
 
+  it.each([
+    ["missing", undefined],
+    ["empty", ""],
+    ["garbage", "abc"],
+    ["negative", "-1"],
+    ["fractional", "1.5"],
+    ["infinite", "Infinity"],
+  ])("getFieldValueCount throws on a %s value_count", async (_n, value_count) => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", value_count } });
+    await expect(client.getFieldValueCount("f1", "o1")).rejects.toThrow(/value_count/);
+  });
+
   it("updateField PUTs the full body to the field id", async () => {
     const client = makeClient();
     const body = { id: "f1", name: "N" } as never;

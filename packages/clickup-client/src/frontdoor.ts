@@ -84,13 +84,18 @@ export class FrontdoorClient {
     return this.request<FrontdoorField>("GET", `/customFields/v2/field/${id}`);
   }
 
-  /** How many tasks hold one option of a dropdown (the web app asks before a removal). Read only; ClickUp answers a string. */
+  /** How many tasks hold one option of a dropdown (the web app asks before a removal). Read only; ClickUp answers a string. Throws on anything but a whole number >= 0, so a caller never reads a bad answer as zero. */
   async getFieldValueCount(id: string, optionId: string): Promise<number> {
     const res = await this.request<{ value_count?: string | number }>(
       "GET",
       `/customFields/v2/field/${id}?count_values=true&option_id=${optionId}`,
     );
-    return Number(res.value_count ?? 0);
+    const raw = String(res.value_count ?? "").trim();
+    const n = Number(raw);
+    if (raw === "" || !Number.isInteger(n) || n < 0) {
+      throw new Error(`field ${id}: value_count is not a count: ${JSON.stringify(res.value_count)}`);
+    }
+    return n;
   }
 
   updateField(id: string, body: FrontdoorFieldPutBody): Promise<FrontdoorField> {
