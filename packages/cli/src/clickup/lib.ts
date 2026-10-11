@@ -47,13 +47,23 @@ export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
     throw new Error("use only one of --description, --markdown-description, --markdown-description-file");
   }
   if (argv.description !== undefined) body.description = argv.description;
-  if (argv.markdownDescription !== undefined) body.markdown_description = argv.markdownDescription;
+  if (argv.markdownDescription !== undefined) {
+    if (typeof argv.markdownDescription !== "string") throw new Error("pass --markdown-description once");
+    if (argv.markdownDescription.trim() === "") throw new Error("--markdown-description needs non-empty text");
+    body.markdown_description = argv.markdownDescription;
+  }
   if (argv.markdownDescriptionFile !== undefined) {
+    const file = argv.markdownDescriptionFile;
+    if (typeof file !== "string") throw new Error("pass --markdown-description-file once");
+    let text: string;
     try {
-      body.markdown_description = readFileSync(argv.markdownDescriptionFile, "utf8");
+      text = readFileSync(file, "utf8");
     } catch (err) {
-      throw new Error(`cannot read --markdown-description-file ${argv.markdownDescriptionFile}: ${(err as Error).message}`);
+      throw new Error(`cannot read --markdown-description-file ${file}: ${(err as Error).message}`);
     }
+    if (text.startsWith("\uFEFF")) text = text.slice(1);
+    if (text.trim() === "") throw new Error(`--markdown-description-file ${file} is empty`);
+    body.markdown_description = text;
   }
   if (argv.status !== undefined) body.status = argv.status;
   if (argv.startDate !== undefined) {

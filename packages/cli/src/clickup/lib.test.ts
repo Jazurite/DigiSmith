@@ -87,6 +87,61 @@ describe("buildTaskWriteBody", () => {
     expect(() => buildTaskWriteBody({ markdownDescription: "a", markdownDescriptionFile: "b.md" })).toThrow(msg);
   });
 
+  describe("markdown description edge cases", () => {
+    function withFile(content: string, run: (file: string) => void) {
+      const dir = mkdtempSync(join(tmpdir(), "dg-clickup-md-"));
+      try {
+        const file = join(dir, "d.md");
+        writeFileSync(file, content, "utf8");
+        run(file);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+
+    it("strips a leading UTF-8 BOM from the file text", () => {
+      withFile("\uFEFF# Title\n", (file) => {
+        expect(buildTaskWriteBody({ markdownDescriptionFile: file })).toEqual({ markdown_description: "# Title\n" });
+      });
+    });
+
+    it("keeps CRLF line endings and a BOM-looking char that is not leading", () => {
+      withFile("a\r\nb\uFEFFc\r\n", (file) => {
+        expect(buildTaskWriteBody({ markdownDescriptionFile: file })).toEqual({ markdown_description: "a\r\nb\uFEFFc\r\n" });
+      });
+    });
+
+    it("passes JSON and shell-looking content through untouched", () => {
+      const text = '{"a":"$(x)"} `rm -rf` $HOME \\n';
+      expect(buildTaskWriteBody({ markdownDescription: text })).toEqual({ markdown_description: text });
+      withFile(text, (file) => {
+        expect(buildTaskWriteBody({ markdownDescriptionFile: file })).toEqual({ markdown_description: text });
+      });
+    });
+
+    it("rejects an empty or whitespace-only --markdown-description", () => {
+      expect(() => buildTaskWriteBody({ markdownDescription: "" })).toThrow(/--markdown-description needs non-empty text/);
+      expect(() => buildTaskWriteBody({ markdownDescription: "  \n " })).toThrow(/--markdown-description needs non-empty text/);
+    });
+
+    it("rejects an empty, whitespace-only or BOM-only file", () => {
+      for (const content of ["", " \n\t", "\uFEFF", "\uFEFF\n"]) {
+        withFile(content, (file) => {
+          expect(() => buildTaskWriteBody({ markdownDescriptionFile: file })).toThrow(/is empty/);
+        });
+      }
+    });
+
+    it("rejects a repeated flag (yargs gives an array)", () => {
+      expect(() => buildTaskWriteBody({ markdownDescription: ["a", "b"] as unknown as string })).toThrow(
+        "pass --markdown-description once"
+      );
+      expect(() => buildTaskWriteBody({ markdownDescriptionFile: ["a", "b"] as unknown as string })).toThrow(
+        "pass --markdown-description-file once"
+      );
+    });
+  });
+
   it("carries --parent as the parent task id", () => {
     expect(buildTaskWriteBody({ parent: "abc123" })).toEqual({ parent: "abc123" });
   });
