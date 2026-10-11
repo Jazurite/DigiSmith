@@ -1,6 +1,6 @@
 import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
-import { createClient, buildTaskWriteBody } from "./lib.ts";
+import { createClient, buildTaskWriteBody, type TaskFieldArgv } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
 import { resolveFieldArgs, applyFields } from "./field-set.ts";
 
@@ -61,7 +61,7 @@ export function createCreateTaskCommand(
         }),
     handler: async (argv) => {
       try {
-        const body = buildTaskWriteBody(argv as unknown as Parameters<typeof buildTaskWriteBody>[0]);
+        const body = buildTaskWriteBody(argv as unknown as TaskFieldArgv);
         const client = clientFactory();
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
