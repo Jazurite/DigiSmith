@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8"><title>DGS-383 report</title>
+<h1>Move every backlog file's full text into its ClickUp ticket — Implementation Report</h1>
+<p>Ticket: <strong>DGS-383</strong> <span>Date: 2026-10-11</span></p>
+<section id="summary"><p>Part 1 of DGS-327: ClickUp is now the master copy of the backlog text. 135 tickets hold the full text of their file under the line "Moved from backlog/&lt;file&gt;.md on 2026-10-11 (DGS-327). ClickUp is the master copy." and carry the .md as an attachment. One new ticket was created. No file was edited or deleted, and no status, name, priority or list changed on an existing ticket. First real use of <code>--markdown-description-file</code> (DGS-230).</p></section>
+<h2>Classes (148 files, table.md in this folder)</h2>
+<ul>
+<li>65 <code>same</code> and 4 <code>file newer</code> (DGS-169, DGS-185, DGS-223, DGS-318): description = Moved line + full file, .md attached (69 tickets).</li>
+<li>67 <code>ticket has edits not in the file</code> (the ticket held a hand-written summary): Jack approved "keep the old text". 66 tickets: Moved line + full file + final section "Ticket summary before the move (kept)" with the old description unchanged, .md attached. Old descriptions saved first to the scratchpad, one file per key (<code>old/&lt;key&gt;.md</code>). The 67th (<code>token-counter-usage-producer-gap.md</code>, DGS-214) shares its ticket with <code>count-tokens-per-ticket.md</code>, whose text is already the DGS-214 description: attached only.</li>
+<li>5 <code>merged ticket, several files</code> (DGS-316 x2, DGS-317 x3): descriptions unchanged, each .md attached.</li>
+<li>5 <code>no ticket</code>: 3 files attached to the ticket they name (<code>non-fast-forward-merge-first-occurrence</code> to DGS-260, <code>plugin-cache-lag-self-development</code> to DGS-161, <code>platform-accounts-or-billing-lineage</code> to DGS-152). <code>manager-mode-retro-2026-10-02</code> got a new ticket, <strong>DGS-393</strong> in B.4: Maestro, priority Normal, status backlog, .md attached. <code>merge-conflict-detection-gap</code> is parked.</li>
+<li>1 already moved (DGS-230, a DGS-230 worker proof, untouched) and 1 not a backlog item (README).</li>
+</ul>
+<h2>Counts</h2>
+<p>Descriptions written: 69 + 66 = 135 existing tickets + 1 new ticket (DGS-393). Attachments made: 69 + 66 + 9 + 1 = 145. Every ticket was read back (<code>get-task --markdown</code>) right after its write; the run stopped at each mismatch until the cause was found.</p>
+<h2>Parked</h2>
+<ul>
+<li><code>merge-conflict-detection-gap.md</code> names no ticket (file says "Discarded, no ticket"), so it has nothing to attach to.</li>
+<li><code>token-counter-usage-producer-gap.md</code>: its text lives in ClickUp only as an attachment on DGS-214 (the description is the other file's text). Jack may want a separate ticket for it.</li>
+<li>DGS-316 and DGS-317 descriptions keep the sweep header ("Source file ... mirror at creation").</li>
+</ul>
+<h2>Read-back differences (all DIFF lines)</h2>
+<p>ClickUp rewrites Markdown on read-back, so the check compares letters and digits only. Every difference was inspected; none was real text. A difference outside the groups below stops the run.</p>
+<ul>
+<li><strong>Link targets dropped, display text kept</strong> (relative .md links such as <code>[K.3](ai-gateway-vendors-k3.md)</code> become <code>K.3</code>): DGS-92 (4 targets), DGS-97 (2), DGS-98 (4), DGS-100 (2), DGS-302 (1: <code>skills/jira-progress-write-back/SKILL.md</code> link text).</li>
+<li><strong>Local path link target dropped</strong>: DGS-113 (<code>file:///C:/Users/jazurite/.claude/skills/chutes-routing</code>, display text "chutes-routing skill" kept).</li>
+<li><strong>Autolinks and link prefixes</strong>: a bare domain became <code>[www.emmasleep.co.kr](...)</code> (DGS-309); <code>http://</code> or <code>https://</code> prefixed to <code>.md</code> link targets (DGS-229, DGS-393).</li>
+<li><strong>Markup normalisation, text equal</strong>: <code>-</code> bullets became <code>*</code>; continuation lines split by blank lines; <code>_x_</code> and <code>*x*</code> swapped; ordered-list numbers renumbered (DGS-173: "6." became "2."); a code fence gained the label "plain" (DGS-182); strikethrough split around inline code (DGS-177); backticks moved (DGS-289).</li>
+</ul>
+<p>The first checks ignored punctuation and numbering; the last ones accepted only deletions of link targets (<code>*.md</code>, <code>file:</code>). Cases before that rule are covered by the same inspection.</p>
+<h2>Final re-compare before DGS-385</h2>
+<p>Other sessions still edit <code>backlog/*.md</code> until the removal. A FINAL re-compare of <code>backlog/</code> against ClickUp must run right before DGS-385 (<code>git rm backlog/</code>), to catch late file changes and new files. The copy in ClickUp is from 2026-10-11 ~13:00 to 14:00 UTC+7 [06:00 to 07:00Z].</p>
+<h2>Files and rules kept</h2>
+<p>No backlog file, history file or memory file was edited. Nothing was deleted. ClickUp writes went only through <code>dg clickup</code> (<code>update-task</code>, <code>upload-attachment</code>, <code>create-task</code>). Composed texts stay in the scratchpad.</p>
