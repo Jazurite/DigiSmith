@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-134 dg clickup create-field — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-134 dg clickup create-field — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-134</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>dg clickup create-field</code>: it creates a dropdown custom field scoped to one folder, through the Frontdoor API. A dry run unless <code>--yes</code>.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>FrontdoorClient.createField(body)</code>: <code>POST /customFields/v2/field?ignore_existing=true</code>, with <code>category_id</code> set to the folder id. No location call is needed for a folder.</li>
+<li><code>create-field --name --type drop_down --option name[:color]... --folder [--description] [--yes]</code>. Default colours by position. It prints the field id and option ids.</li>
+<li>The public API (v2, v3) cannot create custom fields, so Frontdoor is used.</li>
+<li>Not built: <code>setFieldLocations</code> (dead code) and <code>--list</code> (refused: the list location type is not captured). No allow rule.</li>
+<li>Tests: 15 new; the whole repo passes with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review, two verified finds, fixed with tests: a bare 3-digit hex tail (<code>Plan:add</code>) was read as a colour; a repeated <code>--name</code> gave a poor error.</p>
+</section>
+<section id="follow-ups">
+<h2>Follow-ups</h2>
+<p>Capture the list location type, then build <code>--list</code> and <code>setFieldLocations</code>.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>The Profile dropdown on folder I: Account, after the merge and push. The result goes to the maestro report.</p>
+</section>
+</body>
+</html>
