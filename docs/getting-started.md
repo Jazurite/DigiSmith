@@ -102,8 +102,9 @@ trigger point inside the chain above, gated by the active profile:
   (before a spec/plan exists, or mid-build). Outside that one case, G/M/N
   still fire fine off their own hooks, but P only captures from wherever
   its marker ends up written, not from wherever the work actually started.
-- **Open tickets aren't applied yet.** Check the ClickUp tickets
-  (`dg clickup list-tasks`) before assuming a stage is
+- **Open tickets aren't applied yet.** Check the open stage tickets in
+  the F: Scripture lists (F.0 to F.7; `dg clickup list-tasks --list <list id>`,
+  ids from `dg clickup get-lists --space 1301150000001271`) before assuming a stage is
   airtight — known open ones include a comment-fetch bug in M and no
   auto-recovery from a stale `.git/index.lock`.
 
