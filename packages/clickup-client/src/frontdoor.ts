@@ -108,4 +108,9 @@ export class FrontdoorClient {
       },
     );
   }
+
+  /** Restores a deleted List from the Trash, with its tasks (the web app's undo of a delete). ClickUp answers {}. */
+  async restoreList(listId: string): Promise<void> {
+    await this.request("PUT", `/v1/subcategory/${listId}/undo`, { method: "delete" });
+  }
 }

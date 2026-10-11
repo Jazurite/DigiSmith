@@ -128,6 +128,25 @@ describe("FrontdoorClient", () => {
     expect(Object.keys(request.mock.calls[0][0].data)).not.toContain("category");
   });
 
+  it("restoreList PUTs the subcategory undo path with the captured body", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.restoreList("1301150000002237");
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/v1/subcategory/1301150000002237/undo",
+      data: { method: "delete" },
+    });
+  });
+
+  it("restoreList puts ClickUp's error body in the message of a 404", async () => {
+    const client = makeClient();
+    request.mockRejectedValueOnce(
+      Object.assign(new Error("Request failed with status code 404"), { response: { status: 404, data: { err: "not in trash" } } }),
+    );
+    await expect(client.restoreList("1")).rejects.toThrow('status code 404: {"err":"not in trash"}');
+  });
+
   it("puts ClickUp's error body in the message of a 400", async () => {
     const client = makeClient();
     request.mockRejectedValueOnce(
