@@ -19,6 +19,15 @@
 </ul>
 <h2>Review</h2>
 <p>Claude whole-branch review: 8 findings, all fixed test-first: duplicate-entry skip, rewriter refuses a page inside the worktree and an unpushed SHA, rewriter exits non-zero on dead links, blank and <code>~</code> history dir, literal-string tests (nested slug, <code>#?%</code>, raw em dash), behind-origin test, plan note, import commit on first use.</p>
+<h2>Migration</h2>
+<p>Migration SHA (pushed <code>origin/main</code> head): <code>bf1dee87f2bccbb921b7847a2603bee5b1be0dc9</code>. The repo page was copied to the depot with a <code>cmp</code> check, then rewritten on the depot copy only. Result: 269 file links, 265 rewritten to permalinks (9 of them the dead clan A links, fixed to their current paths), 4 left relative. Depot first commit: <code>docs(history): import</code>.</p>
+<h2>Not pinned: files never committed</h2>
+<p>4 hrefs (3 files) stay relative because the files exist only as untracked files in the main checkout, so no permalink can exist. Jack decided: leave them, do not commit them from this ticket. Follow-up for the Master: commit the 3 plan files, then re-pin the 4 hrefs with a small rewrite.</p>
+<ul>
+<li><code>board/DGS-223—shared-opencode-server/worker-dgs-223/plan.md</code> (2 hrefs)</li>
+<li><code>board/DGS-384—clickup-only-process/plan.md</code></li>
+<li><code>board/DGS-134—create-field/worker-dgs-134/plan.md</code></li>
+</ul>
 <h2>Tests</h2>
 <p>TDD: tests first (commit "test(history)..."), then the code. 1293 of 1294 pass; the only failure is the known e2e <code>--help</code> colour test. Worktree has a real <code>pnpm install</code>.</p>
 <h2>Left for Jack and the Master</h2>
