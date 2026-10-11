@@ -119,6 +119,68 @@ describe("update-field", () => {
     expect(client.updateField).not.toHaveBeenCalled();
   });
 
+  it("adds options: name, color and the next orderindex, the rest as read", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["Maestro", "Scout"], color: "#F9D900", yes: true });
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.type_config.options).toEqual({
+      add: [
+        { name: "Maestro", color: "#F9D900", orderindex: 2 },
+        { name: "Scout", color: "#F9D900", orderindex: 3 },
+      ],
+      update: [],
+      rem: [],
+    });
+    expect(body.name).toBe("Bucket");
+  });
+
+  it("adds with the web app's default color when --color is missing", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["Maestro"], yes: true });
+    expect(client.updateField.mock.calls[0][1].type_config.options.add).toEqual([
+      { name: "Maestro", color: "#cecece", orderindex: 2 },
+    ]);
+  });
+
+  it("adds, renames and renames the field in one PUT", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", name: "N", option: ["o2=Public"], addOption: ["Maestro"], yes: true });
+    expect(client.updateField).toHaveBeenCalledTimes(1);
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.type_config.options.add).toHaveLength(1);
+    expect(body.type_config.options.update).toHaveLength(1);
+  });
+
+  it("dry run of an add lists the current options and the planned add, and sends nothing", async () => {
+    const client = fake();
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", addOption: ["Maestro"], color: "#F9D900" });
+    expect(client.updateField).not.toHaveBeenCalled();
+    const text = out.join("\n");
+    expect(text).toContain("current options: Frontdoor API (o1), Public API (o2)");
+    expect(text).toContain('add option "Maestro" #F9D900 at position 2');
+    expect(text).toContain("nothing sent");
+  });
+
+  it.each([
+    ["an existing name", { addOption: ["public api"] }, /already exists/],
+    ["the same name twice", { addOption: ["X", "x"] }, /added twice/],
+    ["an empty name", { addOption: [" "] }, /must not be empty/],
+    ["a bad color", { addOption: ["X"], color: "red" }, /--color must look like/],
+    ["--color without --add-option", { name: "N", color: "#fff" }, /--color needs --add-option/],
+  ])("errors on add with %s and sends nothing", async (_n, argv, re) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", yes: true, ...argv });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(re);
+    expect(process.exitCode).toBe(1);
+  });
+
   it("refuses a field that is not a dropdown", async () => {
     const client = fake(field({ type: "text" }));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});

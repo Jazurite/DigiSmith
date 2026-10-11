@@ -41,8 +41,35 @@ export function resolveOptionRenames(field: FrontdoorField, inputs: string[]): O
   return renames;
 }
 
+export const DEFAULT_OPTION_COLOR = "#cecece";
+
+export interface OptionAdd {
+  name: string;
+  color: string;
+  orderindex: number;
+}
+
+/** Plans the adds: trimmed names, one color, next free orderindex each. Throws on an empty, repeated or existing name. */
+export function resolveOptionAdds(field: FrontdoorField, names: string[], color: string | undefined): OptionAdd[] {
+  if (color !== undefined && !/^#[0-9a-fA-F]{3,8}$/.test(color)) throw new Error(`--color must look like "#rrggbb", got "${color}"`);
+  if (color !== undefined && names.length === 0) throw new Error("--color needs --add-option");
+  const options = field.type_config.options ?? [];
+  let next = options.reduce((max, o) => Math.max(max, o.orderindex), -1) + 1;
+  const seen = new Set(options.map((o) => o.name.toLowerCase()));
+  const adds: OptionAdd[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!name) throw new Error("--add-option must not be empty");
+    const key = name.toLowerCase();
+    if (adds.some((a) => a.name.toLowerCase() === key)) throw new Error(`option "${name}" is added twice`);
+    if (seen.has(key)) throw new Error(`option "${name}" already exists`);
+    adds.push({ name, color: color ?? DEFAULT_OPTION_COLOR, orderindex: next++ });
+  }
+  return adds;
+}
+
 /** PUT is the full field, not a patch: every flag is sent with its current value. Only name and renamed options change. */
-export function buildFieldPutBody(field: FrontdoorField, name: string | undefined, renames: OptionRename[]): FrontdoorFieldPutBody {
+export function buildFieldPutBody(field: FrontdoorField, name: string | undefined, renames: OptionRename[], adds: OptionAdd[] = []): FrontdoorFieldPutBody {
   return {
     id: field.id,
     name: name ?? field.name,
@@ -50,7 +77,7 @@ export function buildFieldPutBody(field: FrontdoorField, name: string | undefine
       sorting: field.type_config.sorting ?? "manual",
       new_drop_down: field.type_config.new_drop_down ?? true,
       options: {
-        add: [],
+        add: adds,
         update: renames.map(({ option, to }) => ({
           id: option.id,
           name: to,
@@ -73,9 +100,16 @@ export function buildFieldPutBody(field: FrontdoorField, name: string | undefine
   };
 }
 
-export function describeFieldDiff(field: FrontdoorField, name: string | undefined, renames: OptionRename[]): string[] {
-  const lines = [`field ${field.id} (${field.type})`];
+export function describeFieldDiff(
+  field: FrontdoorField,
+  name: string | undefined,
+  renames: OptionRename[],
+  adds: OptionAdd[] = []
+): string[] {
+  const lines = [`field ${field.id} ${JSON.stringify(field.name)} (${field.type})`];
+  lines.push(`  current options: ${(field.type_config.options ?? []).map((o) => `${o.name} (${o.id})`).join(", ")}`);
   if (name !== undefined) lines.push(`  name: ${JSON.stringify(field.name)} -> ${JSON.stringify(name)}`);
   for (const r of renames) lines.push(`  option ${r.option.id}: ${JSON.stringify(r.option.name)} -> ${JSON.stringify(r.to)}`);
+  for (const a of adds) lines.push(`  add option ${JSON.stringify(a.name)} ${a.color} at position ${a.orderindex}`);
   return lines;
 }
