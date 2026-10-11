@@ -9,6 +9,15 @@
       "Bash(dg clickup move-list:*)",
       "Bash(dg clickup add-dependency:*)",
       "Bash(dg clickup add-link:*)"
+    ],
+    "ask": [
+      "Bash(dg clickup delete-*)",
+      "Bash(dg clickup delete-folder:*)",
+      "Bash(dg clickup delete-list:*)",
+      "Bash(dg clickup delete-task-type:*)",
+      "Bash(digismith clickup delete-*)",
+      "Bash(node * clickup delete-*)",
+      "Bash(pnpm * clickup delete-*)"
     ]
   }
 }
