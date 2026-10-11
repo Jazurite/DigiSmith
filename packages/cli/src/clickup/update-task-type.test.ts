@@ -24,6 +24,7 @@ describe("update-task-type", () => {
   afterEach(() => {
     process.exitCode = 0;
     vi.restoreAllMocks();
+    throwingFd.mockClear();
   });
 
   it("sends the full body: changed fields new, every other field its current value", async () => {

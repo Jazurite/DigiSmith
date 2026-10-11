@@ -29,6 +29,7 @@ describe("delete-task-type", () => {
   afterEach(() => {
     process.exitCode = 0;
     vi.restoreAllMocks();
+    throwingFd.mockClear();
   });
 
   it("without --yes prints the task count and the target, then stops", async () => {
@@ -86,8 +87,9 @@ describe("delete-task-type", () => {
   it("refuses when --confirm-count is missing or stale", async () => {
     const f = fakes(5);
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    await run(f, { type: "activity", mergeInto: "quest", yes: true });
-    await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 });
+    await run(f, { type: "activity", mergeInto: "quest", yes: true }, throwingFd);
+    await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 }, throwingFd);
+    expect(throwingFd).not.toHaveBeenCalled();
     expect(f.mergeTaskType).not.toHaveBeenCalled();
     expect(err.mock.calls[1][0]).toMatch(/has 5 tasks, not 4/);
     expect(process.exitCode).toBe(1);
@@ -96,8 +98,9 @@ describe("delete-task-type", () => {
   it("refuses a built-in type and a target equal to the type", async () => {
     const f = fakes();
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    await run(f, { type: "milestone", mergeInto: "0", yes: true, confirmCount: 0 });
-    await run(f, { type: "activity", mergeInto: "activity", yes: true, confirmCount: 4 });
+    await run(f, { type: "milestone", mergeInto: "0", yes: true, confirmCount: 0 }, throwingFd);
+    await run(f, { type: "activity", mergeInto: "activity", yes: true, confirmCount: 4 }, throwingFd);
+    expect(throwingFd).not.toHaveBeenCalled();
     expect(err.mock.calls[0][0]).toMatch(/built-in/);
     expect(err.mock.calls[1][0]).toMatch(/must differ/);
     expect(f.mergeTaskType).not.toHaveBeenCalled();
@@ -106,7 +109,8 @@ describe("delete-task-type", () => {
   it("needs --merge-into", async () => {
     const f = fakes();
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    await run(f, { type: "activity" });
+    await run(f, { type: "activity" }, throwingFd);
+    expect(throwingFd).not.toHaveBeenCalled();
     expect(err.mock.calls[0][0]).toMatch(/--merge-into is required/);
     expect(process.exitCode).toBe(1);
   });

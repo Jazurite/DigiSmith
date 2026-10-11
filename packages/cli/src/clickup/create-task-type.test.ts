@@ -18,6 +18,7 @@ describe("create-task-type", () => {
   afterEach(() => {
     process.exitCode = 0;
     vi.restoreAllMocks();
+    throwingFd.mockClear();
   });
 
   it("dry run by default: prints the call, sends nothing", async () => {
