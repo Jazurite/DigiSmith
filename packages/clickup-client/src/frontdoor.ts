@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorTaskTypeBody } from "./types.ts";
+import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody } from "./types.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 export const DEFAULT_FRONTDOOR_HOST = "frontdoor-prod-ap-southeast-2-2.clickup.com";
@@ -81,6 +81,11 @@ export class FrontdoorClient {
 
   updateField(id: string, body: FrontdoorFieldPutBody): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("PUT", `/customFields/v2/field/${id}`, body);
+  }
+
+  /** Creates a field. With category_id in the body it is scoped to that folder; no second location call is needed. */
+  createField(body: FrontdoorFieldCreateBody): Promise<FrontdoorField> {
+    return this.request<FrontdoorField>("POST", "/customFields/v2/field?ignore_existing=true", body);
   }
 
   /** Moves a List into a Folder at a position. Same call as dragging it in the web app; ClickUp answers {}. */

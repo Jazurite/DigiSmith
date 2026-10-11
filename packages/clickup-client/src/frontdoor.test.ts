@@ -85,6 +85,15 @@ describe("FrontdoorClient", () => {
     expect(request).toHaveBeenCalledWith({ method: "PUT", url: "/customFields/v2/field/f1", data: body });
   });
 
+  it("createField POSTs the body to the field path with ignore_existing", async () => {
+    const client = makeClient();
+    const body = { name: "Profile" } as never;
+    request.mockResolvedValueOnce({ data: { id: "f9" } });
+    const field = await client.createField(body);
+    expect(request).toHaveBeenCalledWith({ method: "POST", url: "/customFields/v2/field?ignore_existing=true", data: body });
+    expect(field.id).toBe("f9");
+  });
+
   it("mergeTaskType PUTs destination_custom_item_id to the merge path", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: "" });

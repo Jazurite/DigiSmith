@@ -347,6 +347,35 @@ export interface FrontdoorFieldPutBody {
   groups: unknown[];
 }
 
+/** An option of a new dropdown: no id or orderindex yet, ClickUp assigns them. */
+export interface FrontdoorFieldCreateOption {
+  id: null;
+  name: string;
+  color: string;
+  orderindex: null;
+}
+
+/** Body of the web app's POST /customFields/v2/field (captured 2026-10-02): a dropdown scoped to one folder. */
+export interface FrontdoorFieldCreateBody {
+  name: string;
+  description: string;
+  type: "drop_down";
+  type_config: {
+    new_drop_down: true;
+    sorting: "manual";
+    options: FrontdoorFieldCreateOption[];
+  };
+  category_id: string;
+  required: boolean;
+  required_on_subtasks: boolean;
+  pinned: boolean;
+  private: boolean;
+  hide_from_guests: boolean;
+  permission_level: string | null;
+  members: unknown[];
+  groups: unknown[];
+}
+
 /** Where move-list puts a List: a Folder and a place in it. */
 export interface MoveListTarget {
   folderId: string;
