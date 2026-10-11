@@ -3,7 +3,7 @@
 // Active ONLY when the server starts with OPENCODE_SAFETY=1. Sessions without the flag stay unguarded by this plugin.
 // Reads ONLY TOKENREPLY_API_KEY from ~/.digismith-depot/.env, in memory. Never logs or prints it.
 // One export only: OpenCode loads every export of a plugin file as a plugin.
-import { readFileSync, appendFileSync, mkdirSync, realpathSync } from "node:fs"
+import { readFileSync, appendFileSync, mkdirSync, realpathSync, lstatSync } from "node:fs"
 import { homedir } from "node:os"
 import { join, resolve, dirname, relative, isAbsolute } from "node:path"
 
@@ -74,7 +74,7 @@ export const MaestroSafety = async (ctx) => {
     let r = resolve(dir, p.replace(/^~(?=\/)/, HOME))
     const tail = []
     for (;;) {
-      try { r = realpathSync(r); break } catch { const up = dirname(r); if (up === r) break; tail.unshift(r.slice(up.length + 1)); r = up }
+      try { r = realpathSync(r); break } catch { try { if (lstatSync(r).isSymbolicLink()) throw new Error("dangling symlink") } catch (e) { if (e.message === "dangling symlink") throw e } const up = dirname(r); if (up === r) break; tail.unshift(r.slice(up.length + 1)); r = up }
     }
     return join(r, ...tail)
   }
@@ -134,6 +134,8 @@ export const MaestroSafety = async (ctx) => {
       if (m && m[2] === HERDR_WS) {
         if (!wsOk.includes(m[1])) return { v: "block", why: "workspace not allowed" }
         if (!["agent", "pane", "tab"].includes(m[3])) return { v: "block", why: "herdr-ws group not allowed" }
+        // one --workspace (and one --pane), value equal to the allowed workspace; no -w, no `=` forms (the wrapper reads only the first occurrence)
+        if (/(^|\s)-w(\s|=|$)|--(workspace|pane)=/.test(m[5]) || (m[5].match(/--workspace/g) || []).length > 1 || (m[5].match(/--pane/g) || []).length > 1) return { v: "block", why: "duplicate or odd workspace/pane flag" }
         if (/--workspace/.test(m[5]) && !new RegExp("--workspace " + m[1] + "(\\s|$)").test(m[5])) return { v: "block", why: "other workspace" }
         if (HERDR_READ.has(m[4])) return { v: "allow", why: "herdr-ws read verb" }
         if (HERDR_DISPATCH.has(m[3] + " " + m[4])) return { v: "allow", why: "herdr-ws dispatch verb in an allowed workspace" }

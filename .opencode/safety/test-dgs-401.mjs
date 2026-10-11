@@ -14,6 +14,10 @@ writeFileSync(join(R, ".claude/settings.json"), "{}")
 symlinkSync(join(R, ".claude/settings.json"), join(R, ".digismith/sessions/dgs-3-brief-target"))
 mkdirSync(join(R, ".digismith/sessions/dgs-3"), { recursive: true })
 symlinkSync(join(R, ".claude/settings.json"), join(R, ".digismith/sessions/dgs-3/brief.md")) // brief.md itself a link to a repo file
+symlinkSync(join(OUT, "new.txt"), join(R, ".digismith/board/DGS-401—x/dangling.md"))       // dangling link out of the root
+symlinkSync(join(R, ".claude/hook.sh"), join(R, ".digismith/board/DGS-401—x/worker-dgs-401/d2.md")) // dangling link to a repo path
+mkdirSync(join(R, ".digismith/sessions/dgs-5"), { recursive: true })
+symlinkSync(join(OUT, "b.txt"), join(R, ".digismith/sessions/dgs-5/brief.md"))
 process.env.OPENCODE_SAFETY = "1"; process.env.SAFETY_LOG = join(tmp, "v.jsonl"); process.env.SAFETY_REVIEWER_URL = "http://127.0.0.1:1"; process.env.SAFETY_ROOTS = R
 const { MaestroSafety } = await import("./maestro-safety.js")
 const H = join(homedir(), ".digismith-depot/bin/herdr-ws")
@@ -46,6 +50,9 @@ const cases = [
   ["symlink-board-to-repo", w(`${R}/${B}/DGS-9—link/cli/x.md`), "block"],
   ["symlink-file-in", w(`${R}/${S}/dgs-346/link.md`), "block"],
   ["symlink-brief-file", w(`${R}/${S}/dgs-3/brief.md`), "block"],
+  ["dangling-out", w(`${R}/${B}/DGS-401—x/dangling.md`), "block"],
+  ["dangling-repo", w(`${R}/${B}/DGS-401—x/worker-dgs-401/d2.md`), "block"],
+  ["dangling-brief", w(`${R}/${S}/dgs-5/brief.md`), "block"],
   ["repo-claude", w(`${R}/.claude/settings.json`), "block"],
   ["repo-packages", w(`${R}/packages/cli/index.ts`), "block"],
   ["repo-readme", w(`${R}/README.md`), "block"],
@@ -62,6 +69,12 @@ const cases = [
   ["agent-prompt", ["bash", { command: `HERDR_WS=w2 ${H} agent prompt dgs-346 "Read brief and follow it."` }], "allow"],
   ["agent-prompt-plain", ["bash", { command: `HERDR_WS=w2 ${H} agent prompt dgs-346 Read-brief` }], "allow"],
   ["agent-wait", ["bash", { command: `HERDR_WS=w2 ${H} agent wait dgs-346 --status idle` }], "allow"],
+  ["ws-dup-last", ["bash", { command: `HERDR_WS=w2 ${H} tab create x --workspace w2 --workspace w3` }], "block"],
+  ["ws-dup-first", ["bash", { command: `HERDR_WS=w2 ${H} agent prompt p1 --workspace w3 --workspace w2` }], "block"],
+  ["ws-short", ["bash", { command: `HERDR_WS=w2 ${H} tab create x -w w3 --workspace w2` }], "block"],
+  ["ws-equals", ["bash", { command: `HERDR_WS=w2 ${H} tab create x --workspace=w3` }], "block"],
+  ["ws-single-ok", ["bash", { command: `HERDR_WS=w2 ${H} tab create x --workspace w2` }], "allow"],
+  ["pane-dup", ["bash", { command: `HERDR_WS=w2 ${H} agent start a --pane w2:p1 --pane w3:p1` }], "block"],
   ["tab-create-w3", ["bash", { command: `HERDR_WS=w3 ${H} tab create --label x` }], "block"],
   ["tab-create-flag-w3", ["bash", { command: `HERDR_WS=w2 ${H} tab create --workspace w3 --label x` }], "block"],
   ["pane-create-not-listed", ["bash", { command: `HERDR_WS=w2 ${H} pane create --label x` }], "block-review"],
