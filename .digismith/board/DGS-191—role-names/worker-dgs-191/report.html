@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-191 role names — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-191 role names — Implementation Report</h1>
+<div class="meta"><span>Tickets: <strong>DGS-191, DGS-403</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The skill text now uses the new role words: <strong>Maestro</strong> (a session outside herdr that represents Jack, old word "Master") and <strong>conductor</strong> (the project's head butler inside herdr, old role word "maestro"). Text only; identifiers keep their names until DGS-405.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Role words changed in <code>skills/handoff</code>, <code>skills/bootstrap</code>, <code>skills/finishing-a-development-branch</code>, post-finish hook 02, a comment in <code>scripts/session-path.ts</code> and the four <code>.opencode/skills</code> files.</li>
+<li>New guard test <code>scripts/role-words.test.ts</code>: fails on "Master" or a lowercase "maestro" outside backticks in <code>skills/**</code> and <code>.opencode/skills/**</code>. It failed on 7 files first, then passed.</li>
+<li>The whole repo passes with <code>FORCE_COLOR=1</code>; the CLI build and the vendored-skills check are clean.</li>
+<li>The runbook <code>workbox.md</code> (untracked) got a Roles table and the same word rules; ClickUp renames follow after the merge.</li>
+</ul>
+</section>
+<section id="not-changed">
+<h2>Not changed</h2>
+<p><code>.opencode/prompts/maestro.md</code>, <code>.opencode/maestro/opencode.json</code> and <code>.opencode/safety/*</code> (dgs-401 changes them, about 55 hits for DGS-405); historical docs and reports; <code>Role = "maestro"</code> in the token code.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude review subagent: no identifier changed, no hit missed. One finding not taken: the OpenCode skills say "Maestro" because the order names the OpenCode app session a Maestro; flagged for the conductor to confirm.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>ClickUp renames of DGS-170, DGS-176, DGS-145 and a line on DGS-139, each read back after the write.</p>
+</section>
+</body>
+</html>
