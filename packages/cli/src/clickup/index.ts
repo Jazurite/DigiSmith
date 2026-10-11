@@ -8,6 +8,7 @@ import { updateTaskCommand } from "./update-task.ts";
 import { moveTaskCommand } from "./move-task.ts";
 import { deleteListCommand } from "./delete-list.ts";
 import { moveFolderCommand } from "./move-folder.ts";
+import { updateFolderCommand } from "./update-folder.ts";
 import { deleteFolderCommand } from "./delete-folder.ts";
 import { moveListCommand } from "./move-list.ts";
 import { restoreListCommand } from "./restore-list.ts";
@@ -42,6 +43,7 @@ const clickupCommand: CommandModule = {
       .command(moveTaskCommand)
       .command(deleteListCommand)
       .command(moveFolderCommand)
+      .command(updateFolderCommand)
       .command(deleteFolderCommand)
       .command(moveListCommand)
       .command(restoreListCommand)
