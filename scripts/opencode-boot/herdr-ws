@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""herdr-ws: herdr limited to one workspace of session "default" (DGS-198 guardrail).
+Needs HERDR_WS (for example w2). Allowed groups: agent, pane, tab. Every target must sit in that workspace.
+Lists are filtered. create needs --workspace equal to HERDR_WS. start and prompt-type verbs check the target."""
+import json, os, subprocess, sys
+H = ["/Users/workbox/.local/bin/herdr", "--session", "default"]
+WS = os.environ.get("HERDR_WS", "")
+def deny(m): sys.stderr.write("herdr-ws: refused: %s\n" % m); sys.exit(3)
+# DGS-408: the OpenCode server runs with XDG_CONFIG_HOME in its own home; herdr finds its socket under XDG_CONFIG_HOME, so the herdr subprocess (and only it) gets the real one.
+# Proven: of XDG_CONFIG/DATA/STATE/CACHE_HOME only XDG_CONFIG_HOME changes where herdr looks.
+HERDR_ENV = {**os.environ, "XDG_CONFIG_HOME": "/Users/workbox/.config"}
+def run(a): return subprocess.run(H + a, capture_output=True, text=True, env=HERDR_ENV)
+def find(o, key):
+    if isinstance(o, dict):
+        if key in o: return o[key]
+        for v in o.values():
+            r = find(v, key)
+            if r: return r
+    elif isinstance(o, list):
+        for v in o:
+            r = find(v, key)
+            if r: return r
+    return ""
+def ws_of(t):
+    if t.startswith("w") and ":" in t: return t.split(":")[0]
+    r = run(["agent", "get", t])
+    try: return find(json.loads(r.stdout), "workspace_id")
+    except Exception: return ""
+if not WS: deny("HERDR_WS not set")
+a = sys.argv[1:]
+if len(a) < 2: deny("usage: herdr-ws <agent|pane|tab> <verb> [target] ...")
+grp, verb, rest = a[0], a[1], a[2:]
+if grp not in ("agent", "pane", "tab"): deny("group %s not allowed" % grp)
+if verb == "list":
+    if grp in ("pane", "tab"):
+        r = run([grp, "list", "--workspace", WS])
+    else:
+        r = run(["agent", "list"])
+        try:
+            d = json.loads(r.stdout)
+            def keep(x): return find(x, "workspace_id") == WS
+            for k, v in d.get("result", {}).items():
+                if isinstance(v, list): d["result"][k] = [x for x in v if keep(x)]
+            print(json.dumps(d)); sys.exit(0)
+        except Exception: deny("could not filter agent list")
+    sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)
+if verb == "create":
+    if "--workspace" not in rest or rest[rest.index("--workspace") + 1] != WS: deny("create needs --workspace %s" % WS)
+    cmd = a
+else:
+    if not rest: deny("target missing")
+    tgt = rest[0]
+    if verb == "start":  # agent start <name> --pane <id>
+        if "--pane" not in rest or ws_of(rest[rest.index("--pane") + 1]) != WS: deny("--pane outside %s" % WS)
+    elif ws_of(tgt) != WS: deny("target %s is not in workspace %s" % (tgt, WS))
+    cmd = a
+if verb in ("close",) and grp == "tab" and rest and rest[0] == WS + ":t1": deny("tab 1 (maestro) cannot be closed here")
+r = run(cmd)
+sys.stdout.write(r.stdout); sys.stderr.write(r.stderr); sys.exit(r.returncode)

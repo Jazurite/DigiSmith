@@ -7,8 +7,9 @@ DEPOT="$HOME/.digismith-depot"; PAY="$DEPOT/opencode/boot"
 MAIN=$(cd "$SRC" && dirname "$(git rev-parse --path-format=absolute --git-common-dir)")   # the main checkout, also when run from a worktree
 mkdir -p "$DEPOT/bin" "$PAY/prompts"
 cp "$SRC/scripts/opencode-boot/opencode-boot.py" "$DEPOT/bin/opencode-boot"; chmod 755 "$DEPOT/bin/opencode-boot"
+cp "$SRC/scripts/opencode-boot/herdr-ws" "$DEPOT/bin/herdr-ws"; chmod 755 "$DEPOT/bin/herdr-ws"   # DGS-408: runs herdr with the real XDG_CONFIG_HOME
 cp "$SRC/.opencode/maestro/opencode.json" "$PAY/opencode.json"
 cp -R "$SRC/.opencode/prompts/." "$PAY/prompts/"
 cp "$SRC/.opencode/safety/maestro-safety.js" "$SRC/.opencode/safety/maestro-safety-v2.js" "$SRC/.opencode/safety/tokenreply-key-v2.js" "$PAY/"
 printf '%s\n' "$MAIN" > "$PAY/project"
-echo "installed: $DEPOT/bin/opencode-boot (payload $PAY, project $MAIN)"
+echo "installed: $DEPOT/bin/opencode-boot, $DEPOT/bin/herdr-ws (payload $PAY, project $MAIN)"
