@@ -31,9 +31,18 @@
 <li>No edit in <code>packages/clickup-client</code>.</li>
 </ul>
 </section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: ready to merge, 4 minor findings.</p>
+<ul>
+<li><strong>Live comparison, dry runs only (2026-10-11):</strong> the main checkout's <code>dg</code> (old code, Frontdoor read) against this branch's built CLI. The same dry run on <code>update-task-type --type Epic --icon bolt</code>, <code>update-task-type --type Initiative --icon bullseye</code> and <code>create-task-type --name Demo --plural Demos --icon star --description x</code> printed output IDENTICAL by <code>diff</code>: request line, body, description and name_plural included. No header printed, nothing sent.</li>
+<li><strong>Fixed:</strong> <code>credentialsTeamId</code> now has 3 tests (team id only; missing file names the path; incomplete file names the path, not the values). The delete-task-type refusal tests (missing or stale count, built-in type, merge into itself, merge-into required) now pass a throwing Frontdoor factory and assert it was not called.</li>
+<li><strong>Accepted, not changed:</strong> <code>delete-task-type --yes</code> without a session now waits for the public count read before the session error appears.</li>
+</ul>
+</section>
 <section id="tests">
 <h2>Tests</h2>
-<p>Per describe, base to branch: create-task-type 3 to 6, update-task-type 6 to 9, delete-task-type 6 to 9. Full run: 609 passed, 1 failed (the known e2e <code>--help</code> colour test). Build clean.</p>
+<p>Per describe, base to branch: create-task-type 3 to 6, update-task-type 6 to 9, delete-task-type 6 to 9, task-type-write 6 to 9 (3 credentialsTeamId tests). Full run: 609 passed, 1 failed (the known e2e <code>--help</code> colour test). Build clean.</p>
 </section>
 </body>
 </html>
