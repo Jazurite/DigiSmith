@@ -10,6 +10,8 @@ import type {
   ClickUpFieldsResponse,
   ClickUpListDetail,
   ClickUpListSummary,
+  ClickUpListDetail,
+  ClickUpListDetail,
   ClickUpListsResponse,
   ClickUpListWriteBody,
   ClickUpMoveTaskOptions,
@@ -268,6 +270,10 @@ export class ClickUpClient {
   async getFolderlessLists(spaceId: string): Promise<ClickUpListSummary[]> {
     const data = await this.get<ClickUpListsResponse>(`/space/${spaceId}/list`);
     return data.lists ?? [];
+  }
+
+  getList(listId: string): Promise<ClickUpListDetail> {
+    return this.get<ClickUpListDetail>(`/list/${listId}`);
   }
 
   async getListFields(listId: string): Promise<ClickUpCustomField[]> {

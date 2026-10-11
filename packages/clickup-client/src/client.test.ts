@@ -407,6 +407,16 @@ describe("ClickUpClient domain write/read methods", () => {
     });
   });
 
+  it("getList() GETs /list/{id} and returns the folder", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "7", name: "B.0", folder: { id: "55", hidden: false } } });
+
+    const list = await client.getList("7");
+
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/list/7", params: undefined, data: undefined });
+    expect(list.folder).toEqual({ id: "55", hidden: false });
+  });
+
   it("deleteFolder() sends DELETE /folder/{id}", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });

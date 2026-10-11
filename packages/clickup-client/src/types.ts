@@ -214,6 +214,8 @@ export interface ClickUpTaskTypesResponse {
 
 export interface ClickUpListSummary { id: string; name: string; }
 export interface ClickUpFolderWithLists { id: string; name: string; lists: ClickUpListSummary[]; }
+/** GET /list/{id}: a folderless list has folder.hidden true. */
+export interface ClickUpListDetail { id: string; name: string; folder?: { id: string; hidden?: boolean }; }
 export interface ClickUpFoldersResponse { folders: ClickUpFolderWithLists[]; }
 export interface ClickUpListsResponse { lists: ClickUpListSummary[]; }
 export interface ClickUpFieldsResponse { fields: ClickUpCustomField[]; }
@@ -378,7 +380,8 @@ export interface FrontdoorFieldCreateBody {
 
 /** Where move-list puts a List: a Folder and a place in it. */
 export interface MoveListTarget {
-  folderId: string;
+  /** Leave out to reorder inside the list's own folder: the call then carries the position only. */
+  folderId?: string;
   position: number;
 }
 

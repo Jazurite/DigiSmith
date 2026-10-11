@@ -45,6 +45,11 @@ export class FrontdoorClient {
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
       if (status === 401 || status === 403) throw new FrontdoorAuthError();
+      // Same as ClickUpClient: keep the error object, only show ClickUp's body in the message.
+      const body = (err as { response?: { data?: unknown } }).response?.data;
+      if (err instanceof Error && body !== undefined && body !== "") {
+        err.message += `: ${typeof body === "string" ? body : JSON.stringify(body)}`;
+      }
       throw err;
     }
   }
@@ -88,12 +93,19 @@ export class FrontdoorClient {
     return this.request<FrontdoorField>("POST", "/customFields/v2/field?ignore_existing=true", body);
   }
 
-  /** Moves a List into a Folder at a position. Same call as dragging it in the web app; ClickUp answers {}. */
+  /**
+   * Moves a List into a Folder at a position, or (no folderId) reorders it inside its own folder:
+   * the web app sends the position only then, and ClickUp answers 400 when the category is sent. ClickUp answers {}.
+   */
   async moveList(listId: string, target: MoveListTarget): Promise<void> {
     await this.request(
       "PUT",
       `/hierarchy/v2/subcategory/${listId}/position?v2=true&conflict_modal=true&return_conflict_on_cancel=true`,
-      { position: target.position, include_archived: false, category: target.folderId },
+      {
+        position: target.position,
+        include_archived: false,
+        ...(target.folderId !== undefined ? { category: target.folderId } : {}),
+      },
     );
   }
 }

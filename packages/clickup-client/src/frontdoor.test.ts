@@ -116,6 +116,26 @@ describe("FrontdoorClient", () => {
     });
   });
 
+  it("moveList without a folder sends the position only (a reorder inside its own folder)", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.moveList("1301150000002956", { position: 2 });
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/hierarchy/v2/subcategory/1301150000002956/position?v2=true&conflict_modal=true&return_conflict_on_cancel=true",
+      data: { position: 2, include_archived: false },
+    });
+    expect(Object.keys(request.mock.calls[0][0].data)).not.toContain("category");
+  });
+
+  it("puts ClickUp's error body in the message of a 400", async () => {
+    const client = makeClient();
+    request.mockRejectedValueOnce(
+      Object.assign(new Error("Request failed with status code 400"), { response: { status: 400, data: { err: "bad position" } } }),
+    );
+    await expect(client.moveList("1", { position: 1 })).rejects.toThrow('status code 400: {"err":"bad position"}');
+  });
+
   it.each([401, 403])("turns HTTP %i into one clear session error", async (status) => {
     const client = makeClient();
     request.mockRejectedValueOnce({ isAxiosError: true, response: { status }, message: "x" });
