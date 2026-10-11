@@ -330,6 +330,31 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(list).toEqual({ id: "l1", name: "Town Hall", content: "- scope" });
   });
 
+  it("updateFolder() PUTs { name } to the folder endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "A: Reactor", hidden: false } });
+
+    const folder = await client.updateFolder("f1", "A: Reactor");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/folder/f1",
+      params: undefined,
+      data: { name: "A: Reactor" },
+    });
+    expect(folder).toEqual({ id: "f1", name: "A: Reactor", hidden: false });
+  });
+
+  it("getFolder() GETs the folder endpoint", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "A: Reactor", hidden: false } });
+
+    const folder = await client.getFolder("f1");
+
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/folder/f1", params: undefined, data: undefined });
+    expect(folder.name).toBe("A: Reactor");
+  });
+
   it("setCustomField() POSTs { value } to the field endpoint", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });

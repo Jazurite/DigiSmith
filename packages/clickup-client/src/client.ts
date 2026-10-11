@@ -247,6 +247,15 @@ export class ClickUpClient {
     await this.put(`/folder/${folderId}/position`, { data });
   }
 
+  /** PUT /folder/{id} {name}: renames the folder. ClickUp answers the updated folder. */
+  updateFolder(folderId: string, name: string): Promise<ClickUpCreatedFolder> {
+    return this.put<ClickUpCreatedFolder>(`/folder/${folderId}`, { data: { name } });
+  }
+
+  getFolder(folderId: string): Promise<ClickUpCreatedFolder> {
+    return this.get<ClickUpCreatedFolder>(`/folder/${folderId}`);
+  }
+
   /** DELETE /folder/{id}. ClickUp answers {}. Callers must prove the folder is empty first (getFolderLists). */
   async deleteFolder(folderId: string): Promise<void> {
     await this.delete(`/folder/${folderId}`);
