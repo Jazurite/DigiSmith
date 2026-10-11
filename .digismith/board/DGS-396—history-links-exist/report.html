@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-396 history links exist — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-396 history links exist — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-396</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The history hook no longer writes a link to a file that is missing at the pinned commit. It checks each link with <code>git cat-file -e</code> and stops with <code>DEAD &lt;path&gt;</code> before it writes anything. The 6 dead links of the depot page were re-pinned first.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Five merged plan files were committed (<code>a2112a0</code>). Six links in the depot page now point at that commit; all 276 permalinks resolve.</li>
+<li><code>update-history.ts</code> asks git, not the disk. A file on disk but not at the head sha is DEAD. A file absent on disk and at head gets no link and no error. A report already in the page is skipped before the check.</li>
+<li>All dead paths of all reports in range are listed in one run, with the recovery: commit the file, move the head pin, re-run.</li>
+<li>The <code>report-implementation</code> skill commits <code>plan.md</code> and <code>design.html</code> together with <code>report.html</code>, before the merge. Hook 03 documents the DEAD case and the pin recovery.</li>
+<li>Tests first: new fixtures use a real git repo, including the full-sha permalink case. The whole repo passes except the known e2e <code>--help</code> colour test.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: ordered by the maestro, not yet run when this report was written.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>This ticket's own history entry must pass the new check: its <code>plan.md</code> and <code>report.html</code> are committed on the branch before the merge.</p>
+</section>
+</body>
+</html>
