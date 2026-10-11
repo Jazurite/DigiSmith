@@ -66,3 +66,4 @@ No script or test changes: no test run needed beyond a quick `git diff --stat` c
 ## Result
 
 MEMORY.md: 315 lines, 89,858 bytes before; 197 lines, 11658 bytes after (see report).
+- Review findings 1 and 2 (Master's ruling): Structure "Everything on the map below becomes a skill" now reads "Every skill DigiSmith ships lives inside the single `digismith` plugin"; Conventions "`.digismith/history.html` replaces `docs/history.html`" now reads "Shipped-work history lives in the depot history page (hook 03, DGS-389), not in the repo." Compared with the base: these are the only differences left in Structure and Conventions.
