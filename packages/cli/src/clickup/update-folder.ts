@@ -19,9 +19,9 @@ export function createUpdateFolderCommand(
     handler: async (argv) => {
       try {
         const folder = String(argv.folder);
-        const name = String(argv.name);
+        const name = String(argv.name).trim();
         if (!ID.test(folder)) throw new Error("--folder must be a folder id (digits only)");
-        if (name.trim() === "") throw new Error("--name needs a non-empty name");
+        if (name === "") throw new Error("--name needs a non-empty name");
         if (!argv.yes) {
           printCall("PUT", `/folder/${folder}`, { name });
           console.log("nothing sent; add --yes to send");
@@ -29,6 +29,7 @@ export function createUpdateFolderCommand(
           const client = clientFactory();
           await client.updateFolder(folder, name);
           const back = await client.getFolder(folder);
+          if (typeof back.name !== "string") throw new Error(`no name in the response for folder ${folder}`);
           if (back.name !== name) {
             throw new Error(`sent "${name}" but read back "${back.name}" for folder ${folder}`);
           }

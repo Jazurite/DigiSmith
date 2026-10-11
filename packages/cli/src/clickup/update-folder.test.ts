@@ -86,4 +86,36 @@ describe("update-folder", () => {
     expect(client.getFolder).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
+
+  it("trims edge whitespace: sends the trimmed name and accepts the read-back", async () => {
+    capture();
+    const client = fake();
+    await run(() => client, { folder: "1", name: "A: Reactor ", yes: true });
+    expect(client.updateFolder).toHaveBeenCalledWith("1", "A: Reactor");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("dry run shows the trimmed name", async () => {
+    capture();
+    await run(vi.fn(), { folder: "1", name: "  A: Reactor " });
+    expect(out.join("\n")).toContain('"name": "A: Reactor"');
+  });
+
+  it("handles a unicode name", async () => {
+    capture();
+    const client = fake("Lò phản ứng ⚛");
+    await run(() => client, { folder: "1", name: "Lò phản ứng ⚛", yes: true });
+    expect(client.updateFolder).toHaveBeenCalledWith("1", "Lò phản ứng ⚛");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("exits 1 with 'no name in the response' when the GET answer has no name", async () => {
+    capture();
+    const client = fake();
+    client.getFolder.mockResolvedValueOnce({ id: "1" });
+    await run(() => client, { folder: "1", name: "A: Reactor", yes: true });
+    expect(err.join("\n")).toContain("no name in the response");
+    expect(err.join("\n")).not.toContain("undefined");
+    expect(process.exitCode).toBe(1);
+  });
 });
