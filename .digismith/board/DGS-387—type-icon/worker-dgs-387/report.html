@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-387 show each task type's icon in dg clickup list-task-types — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-387 show each task type's icon in dg clickup list-task-types — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-387</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup list-task-types</code> now prints the icon of each type as a fifth column: <code>source value</code>, for example <code>fas flag</code>. A type with no avatar prints <code>-</code>. No new call and no ClickUp write.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>The first four columns are unchanged. The icon is the last column, so a reader of the first four is not affected.</li>
+<li>A null avatar, or an avatar with empty source and value, prints <code>-</code>. Plain Task (id 0) prints <code>-</code>.</li>
+<li>Files: <code>list-task-types.ts</code>, its test, and one line in the CLI README. The client type already had the avatar fields.</li>
+<li>Tests were written first and seen failing: an avatar, a null avatar, an empty avatar and the plain Task line.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review (subagent): no code findings. One doc nit, the README line, was verified and fixed.</p>
+</section>
+</body>
+</html>
