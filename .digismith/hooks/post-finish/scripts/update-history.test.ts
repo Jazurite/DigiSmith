@@ -11,7 +11,12 @@ import {
   buildEventHtml,
   insertTimelineEntries,
   bumpLastUpdated,
+  resolveHistoryDir,
+  buildPermalinkBase,
+  isPublished,
 } from "./update-history.ts";
+
+const PL = "https://github.com/Jazurite/DigiSmith/blob/abc123";
 
 function makeTmpDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -310,10 +315,10 @@ describe("buildReferenceLinks", () => {
     fs.writeFileSync(path.join(slugDir, "design.html"), "");
     fs.writeFileSync(path.join(slugDir, "plan.md"), "");
 
-    const result = buildReferenceLinks("sample-feature", "docs", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
 
     expect(result).toBe(
-      'See <a href="docs/sample-feature/design.html">design</a>, <a href="docs/sample-feature/plan.md">plan</a>, and <a href="docs/sample-feature/report.html">report</a>.',
+      `See <a href="${PL}/.digismith/docs/sample-feature/design.html">design</a>, <a href="${PL}/.digismith/docs/sample-feature/plan.md">plan</a>, and <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`,
     );
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -325,10 +330,10 @@ describe("buildReferenceLinks", () => {
     fs.mkdirSync(slugDir, { recursive: true });
     fs.writeFileSync(path.join(slugDir, "plan.md"), "");
 
-    const result = buildReferenceLinks("sample-feature", "docs", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
 
     expect(result).toBe(
-      'See <a href="docs/sample-feature/plan.md">plan</a> and <a href="docs/sample-feature/report.html">report</a>.',
+      `See <a href="${PL}/.digismith/docs/sample-feature/plan.md">plan</a> and <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`,
     );
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -338,9 +343,9 @@ describe("buildReferenceLinks", () => {
     const dir = makeTmpDir("update-history-test-");
     fs.mkdirSync(path.join(dir, ".digismith", "docs", "sample-feature"), { recursive: true });
 
-    const result = buildReferenceLinks("sample-feature", "docs", dir);
+    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
 
-    expect(result).toBe('See <a href="docs/sample-feature/report.html">report</a>.');
+    expect(result).toBe(`See <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`);
 
     fs.rmSync(dir, { recursive: true, force: true });
   });
@@ -352,10 +357,10 @@ describe("buildReferenceLinks", () => {
     fs.mkdirSync(slugDir, { recursive: true });
     fs.writeFileSync(path.join(slugDir, "design.html"), "");
 
-    const result = buildReferenceLinks(slug, "board", dir);
+    const result = buildReferenceLinks(slug, "board", dir, PL);
 
     expect(result).toBe(
-      `See <a href="board/${slug}/design.html">design</a> and <a href="board/${slug}/report.html">report</a>.`,
+      `See <a href="${PL}/.digismith/board/${encodeURIComponent(slug)}/design.html">design</a> and <a href="${PL}/.digismith/board/${encodeURIComponent(slug)}/report.html">report</a>.`,
     );
 
     fs.rmSync(dir, { recursive: true, force: true });
@@ -608,6 +613,139 @@ describe("main (CLI)", () => {
       expect(result.stdout).toContain("NOTHING (no report in range)");
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("resolveHistoryDir", () => {
+  it("prefers the flag, then the env var, then the depot default", () => {
+    expect(resolveHistoryDir({ "history-dir": "/a" }, { DIGISMITH_HISTORY_DIR: "/b" }, "/home/u")).toBe("/a");
+    expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "/b" }, "/home/u")).toBe("/b");
+    expect(resolveHistoryDir({}, {}, "/home/u")).toBe("/home/u/.digismith-depot/history");
+  });
+});
+
+describe("buildPermalinkBase", () => {
+  it("pins the public repo URL to a commit sha", () => {
+    expect(buildPermalinkBase("abc123", {})).toBe("https://github.com/Jazurite/DigiSmith/blob/abc123");
+  });
+
+  it("takes the repo URL from DIGISMITH_HISTORY_REPO_URL", () => {
+    expect(buildPermalinkBase("abc123", { DIGISMITH_HISTORY_REPO_URL: "https://example.test/r/" })).toBe(
+      "https://example.test/r/blob/abc123",
+    );
+  });
+});
+
+function makeRepoWithReport(): { dir: string; baseSha: string; headSha: string; historyDir: string } {
+  const dir = makeTmpDir("update-history-e2e-");
+  initHistoryFixtureRepo(dir);
+  const baseSha = revParseHead(dir);
+  writeReportFixture(path.join(dir, ".digismith", "docs", "sample-feature", "report.html"));
+  fs.writeFileSync(path.join(dir, ".digismith", "docs", "sample-feature", "plan.md"), "");
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  spawnSync("git", ["commit", "-q", "-m", "add report"], { cwd: dir });
+  const historyDir = makeTmpDir("update-history-home-");
+  fs.writeFileSync(path.join(historyDir, "history.html"), HISTORY_FIXTURE);
+  return { dir, baseSha, headSha: revParseHead(dir), historyDir };
+}
+
+function addOrigin(dir: string, pushed: boolean): string {
+  const bare = makeTmpDir("update-history-origin-");
+  spawnSync("git", ["init", "-q", "--bare"], { cwd: bare });
+  spawnSync("git", ["remote", "add", "origin", bare], { cwd: dir });
+  if (pushed) spawnSync("git", ["push", "-q", "origin", "HEAD:refs/heads/main"], { cwd: dir });
+  return bare;
+}
+
+describe("isPublished", () => {
+  it("is true only when an origin remote-tracking ref contains the sha", () => {
+    const { dir, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      expect(isPublished(headSha, dir)).toBe(true);
+      const unpushedDir = makeRepoWithReport();
+      expect(isPublished(unpushedDir.headSha, unpushedDir.dir)).toBe(false);
+      fs.rmSync(unpushedDir.dir, { recursive: true, force: true });
+      fs.rmSync(unpushedDir.historyDir, { recursive: true, force: true });
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("main (CLI) with the depot history home", () => {
+  it("writes the depot page with permalinks at the head sha and leaves the repo page alone", () => {
+    const { dir, baseSha, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      const repoPage = path.join(dir, ".digismith", "history.html");
+      fs.writeFileSync(repoPage, HISTORY_FIXTURE);
+
+      const result = runScript(dir, ["--base", baseSha, "--head", headSha, "--history-dir", historyDir]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("APPENDED 1: Sample Feature (Z)");
+      const page = fs.readFileSync(path.join(historyDir, "history.html"), "utf8");
+      const blob = `https://github.com/Jazurite/DigiSmith/blob/${headSha}/.digismith/docs/sample-feature`;
+      expect(page).toContain(`<a href="${blob}/plan.md">plan</a>`);
+      expect(page).toContain(`<a href="${blob}/report.html">report</a>`);
+      expect(fs.readFileSync(repoPage, "utf8")).toBe(HISTORY_FIXTURE);
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("honours DIGISMITH_HISTORY_DIR when no flag is given", () => {
+    const { dir, baseSha, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      const result = spawnSync(
+        "node",
+        ["--experimental-strip-types", SCRIPT_PATH, "--base", baseSha, "--head", headSha],
+        { cwd: dir, encoding: "utf8", env: { ...process.env, DIGISMITH_HISTORY_DIR: historyDir } },
+      );
+
+      expect(result.status).toBe(0);
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toContain("Sample Feature (Z)");
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("stops with NO HISTORY HOME when the depot page is missing", () => {
+    const { dir, baseSha, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      const missing = path.join(historyDir, "nope");
+
+      const result = runScript(dir, ["--base", baseSha, "--head", headSha, "--history-dir", missing]);
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("NO HISTORY HOME");
+      expect(fs.existsSync(missing)).toBe(false);
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("fails loudly when the head sha is not on origin, and only warns with --allow-unpushed", () => {
+    const { dir, baseSha, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, false);
+    try {
+      const args = ["--base", baseSha, "--head", headSha, "--history-dir", historyDir];
+
+      const loud = runScript(dir, args);
+      expect(loud.status).not.toBe(0);
+      expect(loud.stderr).toContain("not pushed");
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(HISTORY_FIXTURE);
+
+      const warned = runScript(dir, [...args, "--allow-unpushed", "true"]);
+      expect(warned.status).toBe(0);
+      expect(warned.stderr).toContain("not pushed");
+      expect(warned.stdout).toContain("APPENDED 1");
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
   });
 });
