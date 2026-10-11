@@ -61,6 +61,19 @@ and report link are already in the page (`NOTHING (already recorded)`), so nothi
 **Links.** The permalink root is `https://github.com/Jazurite/DigiSmith`; the env var
 `DIGISMITH_HISTORY_REPO_URL` overrides it (tests, a fork).
 
+**Dead link (`DEAD <path>`).** Every link the hook writes is checked with
+`git cat-file -e <HEAD_SHA>:<path>`. A `plan.md` or `design.html` that is on disk but not in
+`HEAD_SHA` (untracked, or committed after the merge) is DEAD: the script prints `DEAD <path>` for
+every such file of every report in range, exits 1, and writes nothing. A file absent on disk and at
+`HEAD_SHA` is deliberately absent: no link, no error. A report already in the page is skipped before
+the check. Prevention: commit `plan.md` and `design.html` together with `report.html`, **before the
+merge** (`digismith:report-implementation` Step 4). Recovery after a merge: commit the missing file,
+push, move the head pin to that commit, and re-run this hook:
+
+```bash
+git update-ref refs/digismith/post-finish/<feature-branch>/head <sha>
+```
+
 **Where the push happens.** The new entry's links are GitHub permalinks pinned to `HEAD_SHA`
 (`https://github.com/Jazurite/DigiSmith/blob/<HEAD_SHA>/.digismith/...`), so a moved file never breaks
 them. A permalink resolves only after that SHA is on GitHub. `finishing-a-development-branch`
