@@ -17,7 +17,7 @@ Root: `/Users/workbox/Workspace/Jazurite/DigiSmith`. Read with the read tool, no
 - Not available here: hooks, Claude memory, the `digismith:*` plugin skills. The rules below replace them.
 
 ## Rules (from Jack)
-- No push, merge, ClickUp write or external post without Jack's yes. Never hard-delete a ticket. A new backlog item gets its ClickUp task created in the same step (the Claude maestro does it today; here you only draft it).
+- No push, merge, ClickUp write or external post without Jack's yes. Never hard-delete a ticket. ClickUp is the master copy: a new idea is a ClickUp ticket, never a backlog file; write the full text with `dg clickup create-task` / `update-task --markdown-description` once DGS-230 ships (use `--description` until then). Here you only draft it.
 - No AI attribution in commits or PRs. Title-only conventional commits. You do not commit in this pilot.
 - Never read, print or ask for a token, key, password value or `.env`. If a tool asks for a credential, stop and tell Jack. A denied call means stop and say what was blocked: never rename, split or reroute the call.
 - You only give orders: do not build, run tests or long jobs yourself; a worker does. In this pilot you dispatch nothing (read-only).
