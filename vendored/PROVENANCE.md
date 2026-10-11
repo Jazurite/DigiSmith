@@ -26,7 +26,7 @@ Cloned: 2026-08-20
   `.digismith/hooks/post-finish/` and `fire-lifecycle-hook.md` in this skill's own
   folder. W.4.1's version-bump (previously wired directly into this file) is now
   the first stock hook there, alongside a new plugin-cache-reinstall hook. See
-  DigiSmith `MEMORY.md` map items W and Y. **Further diverged by W.4.1's merge-pinning pass**
+  the frozen letter map (DGS-356), map items W and Y. **Further diverged by W.4.1's merge-pinning pass**
   (2026-09-12): Option 1 now pins the merge range as
   `refs/digismith/post-finish/<feature-branch>/{base,head}` right after `git merge` and deletes
   both pins after the `post-finish` hooks fire; `fire-lifecycle-hook.md` gained the "Merge-range
@@ -39,15 +39,14 @@ Cloned: 2026-08-20
   `writing-plans`, below). Now self-detects DigiSmith-tracked work and writes
   to `.digismith/docs/<slug>/design.html` in HTML instead of its own upstream
   Markdown default — absorbing map item Q's logic, which is now retired. See
-  DigiSmith `MEMORY.md` map item W. **Further diverged by W.13** (2026-09-26):
+  the frozen letter map (DGS-356), map item W. **Further diverged by W.13** (2026-09-26):
   `scripts/start-server.sh` gained a `--slug <slug>` flag nesting mockup
   output under `.digismith/brainstorm/<slug>/` instead of a flat per-session
   bucket, and its brainstorm root moved to `.digismith/brainstorm/` (renamed
   from `.superpowers/brainstorm/`).
 - **writing-plans** — map item **W.5**, activated 2026-09-04 (alongside
   `brainstorming`, above). Now writes to `.digismith/docs/<slug>/plan.md` for
-  DigiSmith-tracked work instead of its own upstream default. See DigiSmith
-  `MEMORY.md` map item W. **Further diverged by W.6** (2026-09-04): its Execution
+  DigiSmith-tracked work instead of its own upstream default. See the frozen letter map (DGS-356), map item W. **Further diverged by W.6** (2026-09-04): its Execution
   Handoff step now decides inline-vs-subagent-driven by autonomous complexity reasoning instead
   of presenting Superpowers' original live question.
 - **executing-plans** — map item **W.6**, activated 2026-09-04. Gained a lightweight ledger
@@ -56,20 +55,19 @@ Cloned: 2026-08-20
   `# Inline-execution ledger`) and
   a per-task self-check step it never had before — DigiSmith's `writing-plans` now dispatches
   here directly for low-complexity plans instead of defaulting to
-  `subagent-driven-development` unconditionally. See DigiSmith `MEMORY.md` map item W.
+  `subagent-driven-development` unconditionally. See the frozen letter map (DGS-356), map item W.
 - **subagent-driven-development** — map item **W.7**, activated 2026-09-05. Gained one guard
   paragraph in its Setup section's pre-flight conflict scan, closing a rationalization loophole
   a live session hit (found a Global Constraint contradicting the actual codebase, reasoned
   "this is just my own wording bug, not a real conflict," and silently fixed it instead of
-  asking). See DigiSmith `MEMORY.md` map item W. **Further diverged by W.8** (2026-09-11): a new
+  asking). See the frozen letter map (DGS-356), map item W. **Further diverged by W.8** (2026-09-11): a new
   `scripts/check-attribution` is now called by `scripts/review-package` before any review
   package is written, blocking on any AI/assistant attribution found in the commit range's
   messages; `task-reviewer-prompt.md` gained an explicit no-attribution policy line, and the
-  Step 3 manual "without bash" fallback gained the same check inline. See DigiSmith
-  `MEMORY.md` map item W. **Further diverged by W.11** (2026-09-24): `check-attribution` now
+  Step 3 manual "without bash" fallback gained the same check inline. See the frozen letter map (DGS-356), map item W. **Further diverged by W.11** (2026-09-24): `check-attribution` now
   sources its attribution regex from a new `scripts/git-hooks/attribution-pattern.sh` instead of
   declaring it inline, so the same pattern also backs a new `commit-msg` git hook that catches
-  ad-hoc commits outside any review flow — see DigiSmith `MEMORY.md` map item W. **Further
+  ad-hoc commits outside any review flow — see the frozen letter map (DGS-356), map item W. **Further
   diverged by W.13** (2026-09-26): `scripts/sdd-workspace` now nests the workspace inside the
   plan's own folder (`.sdd-workspace/` for a plan literally named `plan.md`, else a
   `.sdd-workspace-<plan-basename>/` sibling) instead of resolving to the plan directory itself,
@@ -81,7 +79,7 @@ Cloned: 2026-08-20
   `code-reviewer.md` template (used both as `subagent-driven-development`'s own final
   whole-branch review template and standalone) now runs `scripts/check-attribution` as a
   mandatory step alongside its existing diff commands — a hit is an automatic Critical finding,
-  full stop, regardless of the rest of the diff. See DigiSmith `MEMORY.md` map item W.
+  full stop, regardless of the rest of the diff. See the frozen letter map (DGS-356), map item W.
 
 ## License
 
@@ -105,7 +103,7 @@ system, consistent with DigiSmith staying a personal tool. Note: this
 only detects drift in files that existed at the baseline commit — a
 file upstream has added to a skill since then is not detected;
 extending coverage to newly-added upstream files is a possible future
-enhancement, not built here. See DigiSmith `MEMORY.md` map item W.
+enhancement, not built here. See the frozen letter map (DGS-356), map item W.
 
 ## Activation
 
