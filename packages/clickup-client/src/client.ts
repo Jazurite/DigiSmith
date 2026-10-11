@@ -10,8 +10,6 @@ import type {
   ClickUpFieldsResponse,
   ClickUpListDetail,
   ClickUpListSummary,
-  ClickUpListDetail,
-  ClickUpListDetail,
   ClickUpListsResponse,
   ClickUpListWriteBody,
   ClickUpMoveTaskOptions,

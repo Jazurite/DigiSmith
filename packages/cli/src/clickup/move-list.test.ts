@@ -118,7 +118,7 @@ describe("move-list", () => {
       expect(text).toContain("PUT /hierarchy/v2/subcategory/7/position?v2=true");
       expect(text).toContain('"position": 3');
       expect(text).toContain('"include_archived": false');
-      expect(text).not.toContain("category");
+      expect(text).not.toContain('"category"');
       expect(text).toContain("reorder");
       expect(process.exitCode).toBe(0);
     });
