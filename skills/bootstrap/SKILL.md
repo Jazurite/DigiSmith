@@ -265,7 +265,7 @@ Check whether this conversation already produced a ticket file via
 **If the active profile's `ticket` field is `false`:** check first whether
 a real tracker key is already evident from how this work was requested —
 the user named one (e.g. "implement DGS-159"), or the dispatching context
-supplied one directly (a maestro's brief naming a key, the way this very
+supplied one directly (a conductor's brief naming a key, the way this very
 ticket's own brief named DGS-159).
 
 - **A key is evident** → invoke `digismith:jira-intake` Door 1 with that

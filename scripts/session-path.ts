@@ -64,7 +64,7 @@ function hasFile(dir: string, filename: string): boolean {
 }
 
 // Session names (herdr agent names, Desktop session titles) that currently hold a note.md —
-// i.e. maestro sessions. A worker's brief-only folder (dgs-161: brief.md, no note.md) and a
+// i.e. conductor and Maestro sessions. A worker's brief-only folder (dgs-161: brief.md, no note.md) and a
 // non-session folder with no note.md directly inside it (workbox-archive: a dated subfolder,
 // not a note) are both excluded by the same `hasFile` check, with no special-casing needed.
 export function listNoteSessionNames(mainRoot: string): string[] {

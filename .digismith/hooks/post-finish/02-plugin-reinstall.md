@@ -38,12 +38,12 @@ Then print this reminder plainly:
 > "DigiSmith's plugin cache has been refreshed to the latest merge. Any other live session on
 > this machine can try `/reload-plugins` to pick this up without restarting — if the skill text
 > stays stale after that, restart that session instead. For a herdr worker pane:
-> `herdr agent prompt <agent> "/reload-plugins"`. Untested on the Desktop maestro: it is a
+> `herdr agent prompt <agent> "/reload-plugins"`. Untested on the Maestro (a Desktop session): it is a
 > remote session, and the CLI has a separate message, "/reload-plugins isn't available over a
 > remote connection in this session," that may apply there. A `clear_session` is a second
-> possible reload path for the maestro — seen once (2026-10-04: a skill loaded post-clear with
+> possible reload path for the Maestro — seen once (2026-10-04: a skill loaded post-clear with
 > text that was stale pre-clear), but not proven, since the session could instead have restarted
-> around the same time. Both the maestro's `/reload-plugins` and its `clear_session` path stay
+> around the same time. Both the Maestro's `/reload-plugins` and its `clear_session` path stay
 > unverified until tested separately (see the live test procedure in this ticket's board
 > folder)."
 

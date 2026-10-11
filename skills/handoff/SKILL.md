@@ -8,7 +8,7 @@ description: Use when the user asks to hand off, wrap up, checkpoint, "save wher
 ## Overview
 
 The last stage of DigiSmith's ticket workflow, and a checkpoint you can take at any time. Each
-maestro session keeps one living note that says where the session stands now:
+conductor or Maestro session keeps one living note that says where the session stands now:
 
 ```
 .digismith/sessions/<session-name>/note.md     title "DigiSmith"        → DigiSmith  (current)
@@ -44,7 +44,7 @@ Two modes:
 - A `SessionStart` line `DigiSmith: lineage handoff notes in ...` — resume, but only when this
   session's own key (from its title, same mapping as the Overview table) is among the keys the
   line lists. Otherwise ignore the line silently: no lookup, no mention of it. Also ignore it
-  in a worker the maestro started with a brief (its first message tells it to read a brief
+  in a worker the conductor started with a brief (its first message tells it to read a brief
   file): a worker has no note and no resume. That line is built by the script and lists only
   fallback notes: a note at `.digismith/sessions/<session-name>/note.md` is found by "resume" or
   "Arise", not by that line.
@@ -99,7 +99,7 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
 ## Write Mode
 
 1. Resolve the note.
-2. A worker the maestro started with a brief writes no note: if this session's first message
+2. A worker the conductor started with a brief writes no note: if this session's first message
    told it to read a brief file, say so and stop. Otherwise, if the current note exists, read
    it; if only the fallback note exists (path from `--action path`), read that one, and say it
    came from the fallback, because the `_unlettered` note is shared and may belong to another
