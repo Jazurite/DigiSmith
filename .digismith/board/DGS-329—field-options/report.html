@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-329 field options — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-329 field options — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-329</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup update-field</code> now adds and removes dropdown options, besides the rename built in DGS-135. It is a dry run unless <code>--yes</code>. It reads the field first and sends every other flag back unchanged.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>--add-option &lt;name&gt;</code> (repeatable) with <code>--color</code> (default <code>#cecece</code>). The orderindex is the highest existing one plus 1. A name that exists, a repeated name, an empty name and a bad colour are errors.</li>
+<li><code>--remove-option &lt;name|id&gt;</code> (repeatable) puts the option ids in <code>options.rem</code>. An unknown option, a repeat, or an option also renamed is an error. Add, rename, remove and the field name go in one PUT.</li>
+<li>Removal is a delete. With <code>--yes</code> it also needs <code>--confirm-remove "&lt;exact name&gt;"</code>; without it the command exits 1 and sends nothing. It was tested with mocks only and never run for real.</li>
+<li>The dry run prints the field's current options, the planned change, and for each removal how many tickets hold the option (<code>FrontdoorClient.getFieldValueCount</code>, a read-only GET with <code>count_values=true&amp;option_id=</code>). A used option gets a WARNING that says what ClickUp does to the values is not captured.</li>
+<li>No allow rule and no ask rule for <code>update-field</code>; <code>.claude/settings.json</code> is untouched. The permission question for <code>--remove-option</code> is parked for Jack.</li>
+</ul>
+</section>
+<section id="captures">
+<h2>Captures</h2>
+<p>The ticket names the 03 folder for both calls. The add call [91] is in <code>Raw_10_10_2026_12_19_58.folder</code>; only the remove call [240] and the count call [235] are in <code>Raw_10_03_2026_13_50_53.folder</code>. The add body is <code>{name, color, orderindex}</code> with no id.</p>
+</section>
+<section id="tests">
+<h2>Tests</h2>
+<p><code>update-field.test.ts</code>: 12 tests at the base, 31 now. <code>frontdoor.test.ts</code>: 19 at the base, 20 now. Whole repo: 1348 at the base, 1368 now; the one failure is the known e2e <code>--help</code> colour test, the same as on the base.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: ordered by the maestro, not yet run when this report was written.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>After the merge: <code>--add-option</code> as a dry run only, on Profile (I: Account, field <code>b04c67e0-c531-476b-b984-6670760ac0fd</code>). No real add and no remove. The ticket stays open until Jack names a field and option for the first real use.</p>
+</section>
+</body>
+</html>
