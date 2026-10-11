@@ -625,6 +625,11 @@ rendered empty.
      git add <target folder>/report.html
      git commit -m "docs: add <feature> (<ticket>) implementation report"
      ```
+     Commit `plan.md` and `design.html` together with `report.html`, before
+     the merge — name each one that exists in the target folder in the same
+     `git add`. The history hook links them at the merged commit and stops on
+     a file that is on disk but not committed, and after the merge that stop
+     has no recovery while the head pin is fixed.
 
 ### Step 5: Hand Back
 
@@ -687,5 +692,5 @@ ledger type; this skill's job still just ends here.
 | 1 | Locate ledger + plan; read the ledger's first line to determine SDD vs. inline-execution grammar; derive `<feature-slug>` (parent dir when the plan is at `.digismith/docs/<slug>/plan.md`, else parse it out of the `<date>-<slug>-plan.md` filename — or, for a board-folder plan, `<target folder>` is `dirname(plan.md)` directly, validated via `board-path.ts --action parse`); compute commit range; `git log --reverse --oneline`; check for an optional ticket key gated by the active profile's `ticket` field; skip entirely if no ledger or if the active profile's `reporting` is `false` (see Prerequisites); for an SDD ledger, ask if no final-review line — an inline-execution ledger never has one, that's expected |
 | 2 | Derive header placeholders including `{{TICKET}}` (2a, always rendered — real key or `n/a`) — applying `ste100-writing` to the composed `{{SUMMARY_PARAGRAPH}}` clauses when `technical_voice` is on; per-task rows (2b, SDD or inline-execution variant); final-review findings (2c, SDD only — never applies to an inline-execution ledger); delivered cards (2d), oldest-first commits (2e); escape all ledger/plan text (2f) |
 | 3 | Render using the standard report HTML template, including the ledger-type-appropriate Build Process block and the literal Final Review & Fix block (or omit both/either, with the TOC entry, when there are no findings or no final review at all); try `scripts/model_offload.ts` first, but only in DigiSmith's own repo, and state which path produced the file |
-| 4 | Write to `<target folder>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit, exit 0 (ignored) → leave it uncommitted and say so |
+| 4 | Write to `<target folder>/report.html`, ask before overwrite; `git check-ignore -q` the path first — exit 1 (not ignored) → `git add` + commit (with `plan.md` and `design.html` when they exist), exit 0 (ignored) → leave it uncommitted and say so |
 | 5 | Hand back to `digismith:subagent-driven-development`'s unmodified Finish step |
