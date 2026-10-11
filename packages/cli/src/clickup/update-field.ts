@@ -70,12 +70,18 @@ export function createUpdateFieldCommand(
         // a read, so it is safe in a dry run: how many tickets hold each option about to go
         const warnings: string[] = [];
         for (const o of removes) {
-          const n = await client.getFieldValueCount(field.id, o.id);
-          warnings.push(
-            n > 0
-              ? `  WARNING: ${n} ticket(s) hold ${JSON.stringify(o.name)}; removing it changes their value (what ClickUp does to values is not captured)`
-              : `  no ticket holds ${JSON.stringify(o.name)}`
-          );
+          try {
+            const n = await client.getFieldValueCount(field.id, o.id);
+            warnings.push(
+              n > 0
+                ? `  WARNING: ${n} ticket(s) hold ${JSON.stringify(o.name)}; removing it changes their value (what ClickUp does to values is not captured)`
+                : `  no ticket holds ${JSON.stringify(o.name)}`
+            );
+          } catch (err) {
+            // a dry run still shows the plan; --yes fails closed, nothing is sent
+            if (argv.yes) throw err;
+            warnings.push(`  WARNING: could not count tickets for ${JSON.stringify(o.name)}: ${(err as Error).message}`);
+          }
         }
         if (!argv.yes) {
           for (const line of describeFieldDiff(field, name?.trim(), renames, adds, removes)) console.log(line);

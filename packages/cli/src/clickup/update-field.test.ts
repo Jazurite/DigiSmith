@@ -151,9 +151,29 @@ describe("update-field", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     await run(client, { field: "f1", name: "N", option: ["o2=Public"], addOption: ["Maestro"], yes: true });
     expect(client.updateField).toHaveBeenCalledTimes(1);
-    const body = client.updateField.mock.calls[0][1];
-    expect(body.type_config.options.add).toHaveLength(1);
-    expect(body.type_config.options.update).toHaveLength(1);
+    expect(client.updateField.mock.calls[0][1]).toEqual({
+      id: "f1",
+      name: "N",
+      type_config: {
+        sorting: "manual",
+        new_drop_down: true,
+        options: {
+          add: [{ name: "Maestro", color: "#cecece", orderindex: 2 }],
+          update: [{ id: "o2", name: "Public", color: "#1bbc9c", orderindex: 1 }],
+          rem: [],
+        },
+      },
+      hide_from_guests: false,
+      pinned: true,
+      required: false,
+      required_on_subtasks: false,
+      description: "",
+      private: false,
+      permission_level: null,
+      default_value: null,
+      members: [],
+      groups: [],
+    });
   });
 
   it("dry run of an add lists the current options and the planned add, and sends nothing", async () => {
@@ -249,6 +269,84 @@ describe("update-field", () => {
     expect(client.updateField).not.toHaveBeenCalled();
     expect(err.mock.calls[0][0]).toMatch(re);
     expect(process.exitCode).toBe(1);
+  });
+
+  it("dry run: a failed ticket count prints the plan, a WARNING and nothing sent", async () => {
+    const client = fake();
+    client.getFieldValueCount.mockRejectedValue(new Error("value_count is not a count"));
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", removeOption: ["Public API"] });
+    expect(client.updateField).not.toHaveBeenCalled();
+    const text = out.join("\n");
+    expect(text).toContain('remove option "Public API" (o2)');
+    expect(text).toContain('WARNING: could not count tickets for "Public API": value_count is not a count');
+    expect(text).not.toContain("no ticket holds");
+    expect(text).toContain("nothing sent");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("--yes: a failed ticket count exits 1 and sends nothing", async () => {
+    const client = fake();
+    client.getFieldValueCount.mockRejectedValue(new Error("value_count is not a count"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], confirmRemove: ["Public API"], yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/value_count is not a count/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("dry run prints the WARNING line before the PUT line", async () => {
+    const client = fake(field(), 2);
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", removeOption: ["Public API"] });
+    const text = out.join("\n");
+    expect(text.indexOf("WARNING")).toBeGreaterThan(-1);
+    expect(text.indexOf("WARNING")).toBeLessThan(text.indexOf("PUT /customFields/v2/field/f1"));
+  });
+
+  it("two removals with only one confirmed exits 1 and sends nothing", async () => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["o1", "o2"], confirmRemove: ["Frontdoor API"], yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--confirm-remove "Public API"/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([
+    ["other case", "public api"],
+    ["trailing space", "Public API "],
+    ["leading space", " Public API"],
+    ["a look-alike unicode letter", "Publіc API"],
+  ])("--confirm-remove with %s does not match", async (_n, confirm) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], confirmRemove: [confirm], yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--confirm-remove "Public API"/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([
+    ["a 5-digit color", "#12345"],
+    ["a 7-digit color", "#1234567"],
+    ["an 8-digit color", "#12345678"],
+  ])("errors on %s", async (_n, color) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["X"], color, yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--color must look like/);
+  });
+
+  it.each(["#fff", "#FFAA00"])("accepts the color %s", async (color) => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["X"], color, yes: true });
+    expect(client.updateField.mock.calls[0][1].type_config.options.add[0].color).toBe(color);
   });
 
   it("refuses a field that is not a dropdown", async () => {

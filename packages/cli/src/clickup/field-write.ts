@@ -77,7 +77,7 @@ export interface OptionAdd {
 
 /** Plans the adds: trimmed names, one color, next free orderindex each. Throws on an empty, repeated or existing name. */
 export function resolveOptionAdds(field: FrontdoorField, names: string[], color: string | undefined): OptionAdd[] {
-  if (color !== undefined && !/^#[0-9a-fA-F]{3,8}$/.test(color)) throw new Error(`--color must look like "#rrggbb", got "${color}"`);
+  if (color !== undefined && !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color)) throw new Error(`--color must look like "#rrggbb", got "${color}"`);
   if (color !== undefined && names.length === 0) throw new Error("--color needs --add-option");
   const options = field.type_config.options ?? [];
   let next = options.reduce((max, o) => Math.max(max, o.orderindex), -1) + 1;
