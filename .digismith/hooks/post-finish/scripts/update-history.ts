@@ -234,6 +234,9 @@ export function main(): void {
 
   try {
     const cwd = process.cwd();
+    if (spawnSync("git", ["cat-file", "-e", `${args.head}^{commit}`], { cwd }).status !== 0) {
+      throw new Error(`head sha ${args.head} is not a commit here: fetch it or check the pin.`);
+    }
     const changedReports = findChangedReports(args.base, args.head, cwd);
 
     if (changedReports.length === 0) {
