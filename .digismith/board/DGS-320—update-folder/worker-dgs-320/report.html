@@ -29,8 +29,12 @@
 <li>The dry run prints the call and builds no client, so it needs no credentials and no network. An empty or blank name is refused, and so is a folder id that is not digits.</li>
 <li>After <code>--yes</code> the command reads the folder back and prints the new name; a different name exits 1.</li>
 <li>No <code>--description</code>: the API has no folder description. No allow rule was added.</li>
-<li>9 new tests (2 client, 7 command); the repo suite has 1357 tests (base 1348), and the one known e2e <code>--help</code> colour failure remains.</li>
+<li>13 new tests (2 client, 11 command); the repo suite has 1361 tests (base 1348), and the one known e2e <code>--help</code> colour failure remains.</li>
 </ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>The Claude whole-branch review said ready to merge, with four minor findings. Fixed: the name is trimmed before it is sent and compared with the read-back; a read-back answer without a string name now fails with "no name in the response" instead of reading back "undefined". Added tests for edge whitespace, a unicode name and a missing name. No other command has a registration test, so none was added for <code>index.ts</code>. Left as is: no name length cap. The CLI build was run with <code>pnpm --filter @digismith/cli build</code>.</p>
 </section>
 </body>
 </html>
