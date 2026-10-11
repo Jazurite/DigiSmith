@@ -38,11 +38,12 @@
 </section>
 <section id="tests">
 <h2>Tests</h2>
-<p><code>update-field.test.ts</code>: 12 tests at the base, 31 now. <code>frontdoor.test.ts</code>: 19 at the base, 20 now. Whole repo: 1348 at the base, 1368 now; the one failure is the known e2e <code>--help</code> colour test, the same as on the base.</p>
+<p><code>update-field.test.ts</code>: 12 tests at the base, 48 now (two describes: 44 and 4 argv tests). <code>frontdoor.test.ts</code>: 19 at the base, 26 now. Whole repo: 1348 at the base, TOTAL_NOW now; the one failure is the known e2e <code>--help</code> colour test, the same as on the base.</p>
 </section>
 <section id="review">
 <h2>Review</h2>
-<p>Claude whole-branch review: ordered by the maestro, not yet run when this report was written.</p>
+<p>Claude whole-branch review: "ready after fixes", 8 findings. Fixed: (1) <code>getFieldValueCount</code> reads <code>value_count</code> strictly and throws on missing, empty, garbage, negative or fractional values, so a bad answer is never read as "no ticket holds it". (2) A failed count in the dry run prints <code>WARNING: could not count tickets</code> after the plan; with <code>--yes</code> the command exits 1 and sends nothing. (5) Tests run the command through yargs with real argv strings: two <code>--remove-option</code> flags need two confirms; the greedy form <code>--remove-option A B</code> removes both and still needs both confirms; an empty value is an unknown option; <code>--add-option -x</code> is refused by yargs, <code>--add-option=-x</code> works. (6) Test gaps closed: one of two removals confirmed, WARNING before the PUT line, confirm with other case, spaces or a look-alike unicode letter fails, exact body in the add+rename test. (8) Colour must be 3 or 6 hex digits.</p>
+<p>Known limits (plan.md): clash checks ignore removals, so remove X + add X and remove B + rename A to B fail closed; a field with duplicate option names blocks every removal (finding 3, skipped); an id that equals another option's name resolves to the id (finding 7, left).</p>
 </section>
 <section id="first-use">
 <h2>First use</h2>

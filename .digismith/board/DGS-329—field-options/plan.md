@@ -72,3 +72,8 @@ Report per-describe test counts against the base after editing the test file (ba
 - `--confirm-remove "<name>"` (exact match) approved: with `--yes`, a missing or wrong confirm exits 1 and sends nothing.
 - `--remove-option` is tested with mocks only. Its first real use waits for Jack to name the field and option.
 - Correction: the base had 12 tests in `update-field` (the `it.each` cases count), not 6.
+
+## Limits (known, fail closed)
+- The clash checks use the options as read, not the final names: remove X + add X fails "already exists"; remove B + rename A->B fails "two options would be named". Run two calls instead.
+- A field that already has two options with the same name blocks every removal (the rename check refuses it first). Not fixed (review finding 3).
+- `getFieldValueCount` throws on a value_count that is not a whole number >= 0. A dry run then prints "WARNING: could not count tickets" and still shows the plan; with `--yes` it exits 1 and sends nothing.
