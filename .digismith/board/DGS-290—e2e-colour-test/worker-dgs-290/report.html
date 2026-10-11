@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-290 e2e help colour test without a colour terminal — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-290 e2e help colour test without a colour terminal — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-290</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The e2e <code>--help</code> test expected coloured headers and failed whenever the run had no colour terminal. It now sets its own environment. The CLI is unchanged.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Cause: <code>picocolors</code> turns colour on only with a TTY or <code>FORCE_COLOR</code>, and <code>NO_COLOR</code> beats both.</li>
+<li>One file, <code>packages/cli/src/index.e2e.test.ts</code>: <code>run()</code> takes an optional <code>env</code>; the <code>--help</code> test spawns with <code>FORCE_COLOR=1</code> and no <code>NO_COLOR</code>. The open-then-close colour assertion stays. The other two tests have no colour dependency.</li>
+<li>Red first: without <code>FORCE_COLOR</code>, 1 of 601 CLI tests failed. After the change 601 of 601 pass, also with <code>NO_COLOR=1</code>.</li>
+<li>Repo-wide <code>pnpm test</code>: 1348 of 1348 without <code>FORCE_COLOR</code> and 1348 of 1348 with it.</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>None. This is a test fix.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review of the diff against origin/main: no findings.</p>
+</section>
+</body>
+</html>
