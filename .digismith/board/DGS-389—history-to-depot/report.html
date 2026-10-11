@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8"><title>DGS-389 report</title>
+<h1>History page moves out of the public repo into the depot — Implementation Report</h1>
+<p>Ticket: <strong>DGS-389</strong> <span>Date: 2026-10-11</span></p>
+<section id="summary"><p>Part 4 of DGS-327 for the history page: the living page now lives in <code>~/.digismith-depot/history/history.html</code> (its own local git repo, no remote), and hook 03 writes and commits it there. It never commits or pushes the page to the public repo. New entries carry GitHub permalinks pinned to the merge head SHA, so a moved file never breaks a link.</p></section>
+<h2>What changed</h2>
+<ul>
+<li><code>update-history.ts</code>: new home from <code>--history-dir</code>, else <code>DIGISMITH_HISTORY_DIR</code>, else the depot default. Links are <code>https://github.com/Jazurite/DigiSmith/blob/&lt;head sha&gt;/.digismith/...</code> with each path segment URL-encoded (the board em dash too). The script stops with "not pushed" when no <code>origin</code> ref contains the head SHA (<code>--allow-unpushed true</code> only warns). A missing page stops with <code>NO HISTORY HOME</code>. The <code>APPENDED</code> / <code>NOTHING</code> contract and the merge-range pins are unchanged.</li>
+<li>Hook 03: commits in the depot repo only (<code>git init</code> if the page exists without <code>.git</code>) and documents the push order: Option 1 pushes the merge, then 01 pushes the bump, then 03 runs, so the head SHA is already on GitHub.</li>
+<li><code>rewrite-history-links.ts</code> (one-time): rewrites the page's relative links to permalinks pinned to the migration SHA, checked against that commit with <code>git cat-file</code>.</li>
+<li>README, <code>docs/getting-started.md</code>, handoff and adopt skills: no link into the repo; they name the depot page.</li>
+</ul>
+<h2>Dead links fixed (clan A renumbering)</h2>
+<p>9 hrefs (design.html, plan.md, report.html for each) now point at the current path, as permalinks at the migration SHA:</p>
+<ul>
+<li><code>docs/A/A.0/lineage-handoff/*</code> becomes <code>docs/A/A.1/lineage-handoff/*</code></li>
+<li><code>docs/A/A.2/centralized-digismith-config-file/*</code> becomes <code>docs/A/A.4/centralized-digismith-config-file/*</code></li>
+<li><code>docs/A/A.2/migrate-own-repo-config-yml/*</code> becomes <code>docs/A/A.4/migrate-own-repo-config-yml/*</code></li>
+</ul>
+<h2>Tests</h2>
+<p>TDD: tests first (commit "test(history)..."), then the code. 1279 of 1280 pass; the only failure is the known e2e <code>--help</code> colour test. Worktree has a real <code>pnpm install</code>.</p>
+<h2>Left for Jack and the Master</h2>
+<ul>
+<li><code>.digismith/history.html</code> in the repo stays, frozen, until Jack's yes for <code>git rm</code>. Old versions stay in public git history.</li>
+<li><code>MEMORY.md</code> lines 18, 149, 150 still name the old path; not edited (letter map).</li>
+<li>The depot repo has no remote; only the Workbox writes it until the server (DGS-336).</li>
+</ul>
