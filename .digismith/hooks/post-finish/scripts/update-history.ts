@@ -144,20 +144,41 @@ export function isAlreadyRecorded(
   return historyHtml.includes(tail) || historyHtml.includes(`${base}/${encodePath(slug)}/report.html"`);
 }
 
+// True when `<sha>:<relPath>` is a file in git's object store, i.e. the permalink resolves.
+export function existsAtCommit(sha: string, relPath: string, cwd: string): boolean {
+  return spawnSync("git", ["cat-file", "-e", `${sha}:${relPath}`], { cwd }).status === 0;
+}
+
+const LINK_FILES = ["design.html", "plan.md", "report.html"];
+
+// A file counts as dead when the report folder holds it on disk but the pinned commit does not
+// (untracked, or committed after the head pin). A file absent on disk and at head is deliberately
+// absent: no link, no error. report.html is always expected at head.
+export function findDeadLinks(slug: string, base: "docs" | "board", cwd: string, headSha: string): string[] {
+  return LINK_FILES.flatMap((file) => {
+    const rel = `.digismith/${base}/${slug}/${file}`;
+    if (existsAtCommit(headSha, rel, cwd)) return [];
+    return file === "report.html" || fs.existsSync(path.join(cwd, rel)) ? [rel] : [];
+  });
+}
+
 export function buildReferenceLinks(
   slug: string,
   base: "docs" | "board",
   cwd: string,
   permalinkBase: string,
+  headSha: string,
 ): string {
-  const folder = path.join(cwd, ".digismith", base, slug);
+  const dead = findDeadLinks(slug, base, cwd, headSha);
+  if (dead.length > 0) {
+    throw new Error(dead.map((rel) => `DEAD ${rel}`).join("\n"));
+  }
   const href = (file: string) => `${permalinkBase}/${encodePath(`.digismith/${base}/${slug}/${file}`)}`;
   const parts: { label: string; href: string }[] = [];
-  if (fs.existsSync(path.join(folder, "design.html"))) {
-    parts.push({ label: "design", href: href("design.html") });
-  }
-  if (fs.existsSync(path.join(folder, "plan.md"))) {
-    parts.push({ label: "plan", href: href("plan.md") });
+  for (const [file, label] of [["design.html", "design"], ["plan.md", "plan"]]) {
+    if (existsAtCommit(headSha, `.digismith/${base}/${slug}/${file}`, cwd)) {
+      parts.push({ label, href: href(file) });
+    }
   }
   parts.push({ label: "report", href: href("report.html") });
 
@@ -240,11 +261,26 @@ export function main(): void {
     const eventsHtml: string[] = [];
     const titles: string[] = [];
 
+    const pending: ParsedReport[] = [];
     for (const relPath of changedReports) {
-      const absPath = path.join(cwd, relPath);
-      const parsed = parseReport(absPath);
+      const parsed = parseReport(path.join(cwd, relPath));
       if (isAlreadyRecorded(historyHtml, parsed.featureTitle, parsed.base, parsed.slug)) continue;
-      const links = buildReferenceLinks(parsed.slug, parsed.base, cwd, permalinkBase);
+      pending.push(parsed);
+    }
+
+    // Check every report before writing anything: a dead link found after the merge has no
+    // recovery while the head pin is fixed, so list them all and stop.
+    const dead = pending.flatMap((p) => findDeadLinks(p.slug, p.base, cwd, args.head));
+    if (dead.length > 0) {
+      throw new Error(
+        `${dead.map((rel) => `DEAD ${rel}`).join("\n")}\n` +
+          `Each file above is missing at ${args.head}. Commit it, move the head pin to that commit ` +
+          `(git update-ref refs/digismith/post-finish/<branch>/head <sha>), and re-run. Nothing was written.`,
+      );
+    }
+
+    for (const parsed of pending) {
+      const links = buildReferenceLinks(parsed.slug, parsed.base, cwd, permalinkBase, args.head);
       const body = `${parsed.summary} ${links}`;
       eventsHtml.push(buildEventHtml({ date: parsed.date, title: parsed.featureTitle, body }, nl));
       titles.push(parsed.featureTitle);

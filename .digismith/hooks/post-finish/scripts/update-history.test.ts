@@ -990,7 +990,7 @@ describe("main (CLI) refuses a link to a file that is not at the pinned commit",
       spawnSync("git", ["commit", "-q", "-m", "second report"], { cwd: dir });
       fs.writeFileSync(path.join(other, "design.html"), "");
 
-      const result = runScript(dir, ["--base", baseSha, "--head", revParseHead(dir), "--history-dir", historyDir]);
+      const result = runScript(dir, ["--base", baseSha, "--head", revParseHead(dir), "--history-dir", historyDir, "--allow-unpushed", "true"]);
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(`DEAD .digismith/board/${SLUG}/plan.md`);
