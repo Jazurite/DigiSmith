@@ -14,6 +14,7 @@ import {
   resolveHistoryDir,
   buildPermalinkBase,
   isPublished,
+  isAlreadyRecorded,
 } from "./update-history.ts";
 
 const PL = "https://github.com/Jazurite/DigiSmith/blob/abc123";
@@ -360,10 +361,56 @@ describe("buildReferenceLinks", () => {
     const result = buildReferenceLinks(slug, "board", dir, PL);
 
     expect(result).toBe(
-      `See <a href="${PL}/.digismith/board/${encodeURIComponent(slug)}/design.html">design</a> and <a href="${PL}/.digismith/board/${encodeURIComponent(slug)}/report.html">report</a>.`,
+      `See <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/design.html">design</a> and <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/report.html">report</a>.`,
     );
 
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("buildReferenceLinks encoding", () => {
+  it("keeps the slash of a nested board slug and encodes each segment", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slug = "DGS-159—x/script-layer";
+    fs.mkdirSync(path.join(dir, ".digismith", "board", slug), { recursive: true });
+
+    const result = buildReferenceLinks(slug, "board", dir, PL);
+
+    expect(result).toBe(
+      'See <a href="https://github.com/Jazurite/DigiSmith/blob/abc123/.digismith/board/DGS-159%E2%80%94x/script-layer/report.html">report</a>.',
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("encodes #, ? and % in a path", () => {
+    const dir = makeTmpDir("update-history-test-");
+    const slug = "a#b?c%d";
+    fs.mkdirSync(path.join(dir, ".digismith", "docs", slug), { recursive: true });
+
+    const result = buildReferenceLinks(slug, "docs", dir, PL);
+
+    expect(result).toBe(
+      'See <a href="https://github.com/Jazurite/DigiSmith/blob/abc123/.digismith/docs/a%23b%3Fc%25d/report.html">report</a>.',
+    );
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("isAlreadyRecorded", () => {
+  const page = '<h4>Sample Feature</h4><p>See <a href="https://x/blob/s1/.digismith/board/DGS-1%E2%80%94x/report.html">report</a>.</p>';
+
+  it("matches the title plus the report path, whatever the sha", () => {
+    expect(isAlreadyRecorded(page, "Sample Feature", "board", "DGS-1—x")).toBe(true);
+  });
+
+  it("matches an old relative link with a raw em dash", () => {
+    const old = '<h4>T</h4><a href="board/DGS-1—x/report.html">report</a>';
+    expect(isAlreadyRecorded(old, "T", "board", "DGS-1—x")).toBe(true);
+  });
+
+  it("is false for another title or another report", () => {
+    expect(isAlreadyRecorded(page, "Other", "board", "DGS-1—x")).toBe(false);
+    expect(isAlreadyRecorded(page, "Sample Feature", "board", "DGS-2—y")).toBe(false);
   });
 });
 
@@ -623,6 +670,18 @@ describe("resolveHistoryDir", () => {
     expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "/b" }, "/home/u")).toBe("/b");
     expect(resolveHistoryDir({}, {}, "/home/u")).toBe("/home/u/.digismith-depot/history");
   });
+
+  it("treats an empty or whitespace env var or flag as unset", () => {
+    expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "" }, "/home/u")).toBe("/home/u/.digismith-depot/history");
+    expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "  " }, "/home/u")).toBe("/home/u/.digismith-depot/history");
+    expect(resolveHistoryDir({ "history-dir": " " }, { DIGISMITH_HISTORY_DIR: "/b" }, "/home/u")).toBe("/b");
+  });
+
+  it("expands a leading ~ to the home directory", () => {
+    expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "~/h" }, "/home/u")).toBe("/home/u/h");
+    expect(resolveHistoryDir({ "history-dir": "~" }, {}, "/home/u")).toBe("/home/u");
+    expect(resolveHistoryDir({}, { DIGISMITH_HISTORY_DIR: "/x/~y" }, "/home/u")).toBe("/x/~y");
+  });
 });
 
 describe("buildPermalinkBase", () => {
@@ -668,6 +727,20 @@ describe("isPublished", () => {
       expect(isPublished(unpushedDir.headSha, unpushedDir.dir)).toBe(false);
       fs.rmSync(unpushedDir.dir, { recursive: true, force: true });
       fs.rmSync(unpushedDir.historyDir, { recursive: true, force: true });
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("is false when origin exists but is behind the sha", () => {
+    const { dir, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      fs.writeFileSync(path.join(dir, "README.md"), "newer");
+      spawnSync("git", ["add", "-A"], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "ahead of origin"], { cwd: dir });
+
+      expect(isPublished(revParseHead(dir), dir)).toBe(false);
     } finally {
       for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
@@ -744,6 +817,26 @@ describe("main (CLI) with the depot history home", () => {
       expect(warned.status).toBe(0);
       expect(warned.stderr).toContain("not pushed");
       expect(warned.stdout).toContain("APPENDED 1");
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("skips a report already in the page, so a re-run after a failed depot commit adds nothing", () => {
+    const { dir, baseSha, headSha, historyDir } = makeRepoWithReport();
+    const bare = addOrigin(dir, true);
+    try {
+      const args = ["--base", baseSha, "--head", headSha, "--history-dir", historyDir];
+      const first = runScript(dir, args);
+      expect(first.stdout).toContain("APPENDED 1");
+      const afterFirst = fs.readFileSync(path.join(historyDir, "history.html"), "utf8");
+
+      const second = runScript(dir, args);
+
+      expect(second.status).toBe(0);
+      expect(second.stdout).toContain("NOTHING (already recorded)");
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(afterFirst);
+      expect(afterFirst.split("<h4>Sample Feature (Z)</h4>")).toHaveLength(2);
     } finally {
       for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
