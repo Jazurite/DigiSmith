@@ -2,9 +2,9 @@
 
 Jack's personal SDLC plugin — ticket to delivery, built on top of
 [Superpowers](https://github.com/obra/superpowers). See
-[`MEMORY.md`](MEMORY.md) for the full philosophy and roadmap,
+[`MEMORY.md`](MEMORY.md) for the full philosophy,
 the history page (kept in the Workbox depot, outside this repo) for a live progress tracker
-across every map item, and [`docs/getting-started.md`](docs/getting-started.md)
+across every ticket, and [`docs/getting-started.md`](docs/getting-started.md)
 for the first-run walkthrough in a brand-new repo.
 
 This README covers the one skill you actually invoke to start working:

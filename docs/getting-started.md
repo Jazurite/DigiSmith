@@ -111,4 +111,4 @@ trigger point inside the chain above, gated by the active profile:
 ## 7. Check status
 
 The history page (kept in the Workbox depot, outside this repo) — live progress
-per map item and per tier.
+per ticket.
