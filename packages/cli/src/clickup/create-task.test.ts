@@ -16,6 +16,12 @@ describe("createCreateTaskCommand", () => {
     vi.restoreAllMocks();
   });
 
+  it("describes --parent with its own wording", async () => {
+    const builder = createCreateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
+    const help = (await builder(yargs([]).wrap(null)).getHelp()).replace(/\s+/g, " ");
+    expect(help).toContain("parent task id (a subtask must be in the parent's list)");
+  });
+
   it("exposes the shared task-field options and its own ones", () => {
     const builder = createCreateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
     const keys = Object.keys(builder(yargs([])).getOptions().key).filter((k) => k !== "help" && k !== "version");

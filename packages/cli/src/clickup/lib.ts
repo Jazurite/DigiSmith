@@ -29,6 +29,10 @@ export function createDigiSmithSpace(client: ClickUpClient = createClient()): Sp
   return new Space(client, DIGISMITH_SPACE_ID);
 }
 
+/**
+ * The task flags `buildTaskWriteBody` reads. `withTaskFieldOptions` also declares `type` and `field`,
+ * but those are not here: the commands handle them themselves.
+ */
 export interface TaskFieldArgv {
   name?: string;
   description?: string;

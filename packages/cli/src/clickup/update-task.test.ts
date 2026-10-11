@@ -16,6 +16,12 @@ describe("createUpdateTaskCommand", () => {
     vi.restoreAllMocks();
   });
 
+  it("describes --parent with its own wording", async () => {
+    const builder = createUpdateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
+    const help = (await builder(yargs([]).wrap(null)).getHelp()).replace(/\s+/g, " ");
+    expect(help).toContain("parent task id (moves the task into the parent's list); empty value clears it");
+  });
+
   it("exposes the shared task-field options and its own ones", () => {
     const builder = createUpdateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
     const keys = Object.keys(builder(yargs([])).getOptions().key).filter((k) => k !== "help" && k !== "version");
