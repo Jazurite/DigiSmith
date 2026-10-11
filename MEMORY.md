@@ -89,8 +89,8 @@ One plugin, self-hosted marketplace. The repo is both:
 ```
 
 Installed via `/plugin marketplace add` against this repo directly, not
-through someone else's marketplace. Everything on the map below becomes a
-skill inside the single `digismith` plugin — not separate plugins.
+through someone else's marketplace. Every skill DigiSmith ships lives
+inside the single `digismith` plugin — not separate plugins.
 Rationale: the stages depend on each other and the spine routes between
 them, so splitting would add coordination cost for no gain, and
 `plugin.json` has no dependency field to express the relationships anyway.
@@ -124,8 +124,8 @@ Moved to ClickUp DGS-398 (Notes): it is personal and leaves the public repo.
   `.digismith/docs/` yet → ask once via `AskUserQuestion`, and if
   gitignored is chosen, safely append the entry (its presence becomes the
   remembered answer for every future session; its absence means
-  "committed," equally durable). `.digismith/history.html` replaces
-  `docs/history.html` in DigiSmith's own repo.
+  "committed," equally durable). Shipped-work history lives in the
+  depot history page (hook 03, DGS-389), not in the repo.
   Any HTML doc in that set — `design.html`, `report.html` — also gets
   published via the `Artifact` tool once written, unless the active
   profile has `publish_artifact: false` (added 2026-08-16), with the
