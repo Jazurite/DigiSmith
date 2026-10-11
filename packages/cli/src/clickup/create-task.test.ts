@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import yargs from "yargs";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +14,24 @@ describe("createCreateTaskCommand", () => {
   afterEach(() => {
     process.exitCode = 0;
     vi.restoreAllMocks();
+  });
+
+  it("exposes the shared task-field options and its own ones", () => {
+    const builder = createCreateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
+    const keys = Object.keys(builder(yargs([])).getOptions().key).filter((k) => k !== "help" && k !== "version");
+    expect(keys).toEqual([
+      "list", "name",
+      "description",
+      "markdown-description",
+      "markdown-description-file",
+      "status",
+      "start-date",
+      "due-date",
+      "priority",
+      "parent",
+      "type",
+      "field",
+    ]);
   });
 
   it("creates a task on the given list and prints it as JSON", async () => {

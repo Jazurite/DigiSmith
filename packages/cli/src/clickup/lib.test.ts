@@ -4,7 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ClickUpClient, Space } from "@digismith/clickup-client";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
-import { createClient, buildTaskWriteBody, createDigiSmithSpace, DIGISMITH_SPACE_ID } from "./lib.ts";
+import yargs from "yargs";
+import { createClient, buildTaskWriteBody, createDigiSmithSpace, DIGISMITH_SPACE_ID, withTaskFieldOptions } from "./lib.ts";
+
+const SHARED_TASK_FIELD_OPTIONS = [
+  "description",
+  "markdown-description",
+  "markdown-description-file",
+  "status",
+  "start-date",
+  "due-date",
+  "priority",
+  "parent",
+  "type",
+  "field",
+];
 
 describe("createClient", () => {
   it("builds a ClickUpClient from a valid credentials file", () => {
@@ -189,6 +203,33 @@ describe("buildTaskWriteBody", () => {
     expect(() => buildTaskWriteBody({ priority: Number.NaN })).toThrow(
       /invalid --priority "NaN" — expected an integer 1-4/
     );
+  });
+});
+
+describe("withTaskFieldOptions", () => {
+  const build = () => withTaskFieldOptions(yargs([]), { parentDescribe: "the parent wording" });
+
+  it("declares the ten shared options, each taking an argument", () => {
+    const options = build().getOptions();
+    for (const name of SHARED_TASK_FIELD_OPTIONS) {
+      expect(options.key).toHaveProperty(name);
+      expect(options.narg[name]).toBeNaN(); // yargs records requiresArg as a NaN narg
+    }
+  });
+
+  it("types priority as a number, field as an array, the rest as strings", () => {
+    const options = build().getOptions();
+    expect(options.number).toEqual(["priority"]);
+    expect(options.array).toEqual(["field"]);
+    expect(options.string).toEqual(SHARED_TASK_FIELD_OPTIONS.filter((n) => n !== "priority"));
+  });
+
+  it("uses parentDescribe as the --parent description", async () => {
+    expect(await build().getHelp()).toContain("the parent wording");
+  });
+
+  it("declares no required option", () => {
+    expect(build().getDemandedOptions()).toEqual({});
   });
 });
 

@@ -1,6 +1,6 @@
 import type { CommandModule } from "yargs";
 import type { ClickUpClient, ClickUpTask, ClickUpTaskWriteBody } from "@digismith/clickup-client";
-import { createClient, buildTaskWriteBody, type TaskFieldArgv } from "./lib.ts";
+import { createClient, buildTaskWriteBody, withTaskFieldOptions, type TaskFieldArgv } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
 import { assertDateOrder } from "./parse-date.ts";
 import { resolveFieldArgs, applyFields } from "./field-set.ts";
@@ -12,49 +12,17 @@ export function createUpdateTaskCommand(
     command: "update-task",
     describe: "update an existing ClickUp task",
     builder: (y) =>
-      y
-        .option("task", {
-          type: "string",
-          requiresArg: true,
-          demandOption: true,
-          describe: "ClickUp task ID",
-        })
-        .option("name", { type: "string", requiresArg: true, describe: "task name" })
-        .option("description", { type: "string", requiresArg: true, describe: "task description" })
-        .option("markdown-description", {
-          type: "string",
-          requiresArg: true,
-          describe: "task description as Markdown (ClickUp renders it); not with the other description flags",
-        })
-        .option("markdown-description-file", {
-          type: "string",
-          requiresArg: true,
-          describe: "read the Markdown description from this UTF-8 file; not with the other description flags",
-        })
-        .option("status", { type: "string", requiresArg: true, describe: "status (must exist on the list)" })
-        .option("start-date", { type: "string", requiresArg: true, describe: "start date, e.g. 2026-08-28" })
-        .option("due-date", { type: "string", requiresArg: true, describe: "due date, e.g. 2026-08-28" })
-        .option("priority", {
-          type: "number",
-          requiresArg: true,
-          describe: "1=urgent, 2=high, 3=normal, 4=low",
-        })
-        .option("parent", {
-          type: "string",
-          requiresArg: true,
-          describe: "parent task id (moves the task into the parent's list); empty value clears it",
-        })
-        .option("type", {
-          type: "string",
-          requiresArg: true,
-          describe: "task type, by name (singular or plural) or id; 0 = plain task",
-        })
-        .option("field", {
-          type: "string",
-          array: true,
-          requiresArg: true,
-          describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more. Relationship fields take task keys or ids, comma-separated; a - prefix removes',
-        }),
+      withTaskFieldOptions(
+        y
+          .option("task", {
+            type: "string",
+            requiresArg: true,
+            demandOption: true,
+            describe: "ClickUp task ID",
+          })
+          .option("name", { type: "string", requiresArg: true, describe: "task name" }),
+        { parentDescribe: "parent task id (moves the task into the parent's list); empty value clears it" }
+      ),
     handler: async (argv) => {
       try {
         const body = buildTaskWriteBody(argv as unknown as TaskFieldArgv);

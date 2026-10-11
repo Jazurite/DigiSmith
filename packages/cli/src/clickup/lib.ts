@@ -2,6 +2,7 @@ import { ClickUpClient, FrontdoorClient, checkCredentials, readFrontdoorAuth, Sp
 import { readFileSync } from "node:fs";
 import { parseDateFlag, assertDateOrder } from "./parse-date.ts";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
+import type { Argv } from "yargs";
 
 export function createClient(envPath?: string): ClickUpClient {
   const creds = checkCredentials(envPath);
@@ -38,6 +39,42 @@ export interface TaskFieldArgv {
   dueDate?: string;
   priority?: number;
   parent?: string;
+}
+
+/** The yargs options create-task and update-task share; `--parent` wording differs per command. */
+export function withTaskFieldOptions(y: Argv, opts: { parentDescribe: string }): Argv {
+  return y
+    .option("description", { type: "string", requiresArg: true, describe: "task description" })
+    .option("markdown-description", {
+      type: "string",
+      requiresArg: true,
+      describe: "task description as Markdown (ClickUp renders it); not with the other description flags",
+    })
+    .option("markdown-description-file", {
+      type: "string",
+      requiresArg: true,
+      describe: "read the Markdown description from this UTF-8 file; not with the other description flags",
+    })
+    .option("status", { type: "string", requiresArg: true, describe: "status (must exist on the list)" })
+    .option("start-date", { type: "string", requiresArg: true, describe: "start date, e.g. 2026-08-28" })
+    .option("due-date", { type: "string", requiresArg: true, describe: "due date, e.g. 2026-08-28" })
+    .option("priority", {
+      type: "number",
+      requiresArg: true,
+      describe: "1=urgent, 2=high, 3=normal, 4=low",
+    })
+    .option("parent", { type: "string", requiresArg: true, describe: opts.parentDescribe })
+    .option("type", {
+      type: "string",
+      requiresArg: true,
+      describe: "task type, by name (singular or plural) or id; 0 = plain task",
+    })
+    .option("field", {
+      type: "string",
+      array: true,
+      requiresArg: true,
+      describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more. Relationship fields take task keys or ids, comma-separated; a - prefix removes',
+    });
 }
 
 export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
