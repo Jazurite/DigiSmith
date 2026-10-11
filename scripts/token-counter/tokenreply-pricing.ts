@@ -2,7 +2,7 @@ import type { PricingEntry } from "./types.ts";
 
 export const tokenreplyPricing: Record<string, PricingEntry> = {
   // Real figure observed against TokenReply's Trial tier — see
-  // DGS-92. That file's own 2026-09-04 update flags this rate
+  // DGS-92. That ticket's own 2026-09-04 update flags this rate
   // as unverified specifically for kimi-k3 (TokenReply added kimi-k3 after this rate was
   // recorded against kimi-k2.7); re-confirm via TokenReply's dashboard before trusting
   // either entry below for real cost decisions.
