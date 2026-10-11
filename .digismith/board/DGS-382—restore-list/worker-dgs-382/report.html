@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-382 dg clickup restore-list — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-382 dg clickup restore-list — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-382</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup restore-list</code> restores a deleted List from the ClickUp Trash, with its tasks. It is a dry run unless <code>--yes</code> is given.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>FrontdoorClient.restoreList</code> sends <code>PUT /v1/subcategory/{id}/undo</code> with body <code>{"method":"delete"}</code>, as captured. ClickUp's error body shows in the message of a failed call.</li>
+<li>The command takes <code>--list</code> (digits only). A dry run builds no client and sends nothing. <code>--yes</code> sends the call and points at <code>dg clickup get-lists</code> for the read-back.</li>
+<li>Tests added for the client and the command, mocks only. The whole repo passes with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+<li>No allow rule: every real restore prompts for Jack.</li>
+</ul>
+</section>
+<section id="not-built">
+<h2>Not built</h2>
+<p>Restore of a folder and of a task. A capture is needed before adding them.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: no bugs, style notes only.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>None, by Jack's rule. A real <code>--yes</code> only on a list Jack names. First use pending.</p>
+</section>
+</body>
+</html>
