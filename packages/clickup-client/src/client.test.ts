@@ -613,4 +613,28 @@ describe("ClickUpClient relations", () => {
     expect(request).toHaveBeenNthCalledWith(1, { method: "POST", url: "/task/a/link/b", params: undefined, data: undefined });
     expect(request).toHaveBeenNthCalledWith(2, { method: "DELETE", url: "/task/a/link/b", params: undefined, data: undefined });
   });
+
+  it("adds ClickUp's error body to the message and keeps the original error and response", async () => {
+    const client = makeClient();
+    const err = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { err: "Start date must be before due date", ECODE: "DATE_001" } },
+    });
+    request.mockRejectedValueOnce(err);
+
+    const caught = await client.get("/task/x").catch((e: unknown) => e);
+
+    expect(caught).toBe(err);
+    expect((caught as Error).message).toBe(
+      'Request failed with status code 400: {"err":"Start date must be before due date","ECODE":"DATE_001"}',
+    );
+    expect((caught as typeof err).response.status).toBe(400);
+    expect((caught as typeof err).response.data.ECODE).toBe("DATE_001");
+  });
+
+  it("leaves an error without a response body untouched", async () => {
+    const client = makeClient();
+    const err = new Error("connect ECONNREFUSED");
+    request.mockRejectedValueOnce(err);
+    await expect(client.get("/x")).rejects.toThrow(/^connect ECONNREFUSED$/);
+  });
 });

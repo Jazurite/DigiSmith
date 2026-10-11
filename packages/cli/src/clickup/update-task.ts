@@ -1,7 +1,8 @@
 import type { CommandModule } from "yargs";
-import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
+import type { ClickUpClient, ClickUpTask, ClickUpTaskWriteBody } from "@digismith/clickup-client";
 import { createClient, buildTaskWriteBody } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
+import { assertDateOrder } from "./parse-date.ts";
 import { resolveFieldArgs, applyFields } from "./field-set.ts";
 
 export function createUpdateTaskCommand(
@@ -58,6 +59,7 @@ export function createUpdateTaskCommand(
       try {
         const body = buildTaskWriteBody(argv as unknown as Parameters<typeof buildTaskWriteBody>[0]);
         const client = clientFactory();
+        await checkAgainstStoredDate(client, argv.task as string, body);
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
         }
@@ -80,6 +82,17 @@ export function createUpdateTaskCommand(
       }
     },
   };
+}
+
+/** With only one of start or due given, read the task and check the order against the stored other date. */
+async function checkAgainstStoredDate(client: ClickUpClient, taskId: string, body: ClickUpTaskWriteBody): Promise<void> {
+  const startGiven = body.start_date !== undefined;
+  const dueGiven = body.due_date !== undefined;
+  if (startGiven === dueGiven) return;
+  const stored = await client.get<ClickUpTask>(`/task/${taskId}`);
+  const storedMs = (value: string | null | undefined) => (value ? Number(value) : undefined);
+  if (startGiven) assertDateOrder(body.start_date, storedMs(stored.due_date));
+  else assertDateOrder(storedMs(stored.start_date), body.due_date);
 }
 
 export const updateTaskCommand: CommandModule = createUpdateTaskCommand();

@@ -44,6 +44,50 @@ describe("createUpdateTaskCommand", () => {
     expect(updateTask).toHaveBeenNthCalledWith(2, "abc", { parent: "none" });
   });
 
+  describe("date order with one date given", () => {
+    const run = async (argv: Record<string, unknown>, stored: { start_date: string | null; due_date: string | null }) => {
+      const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
+      const get = vi.fn().mockResolvedValue(stored);
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const command = createUpdateTaskCommand(() => ({ updateTask, get }) as unknown as ClickUpClient);
+      await (command.handler as (a: unknown) => Promise<void>)({ task: "abc", ...argv });
+      return { updateTask, get, errorSpy };
+    };
+
+    it("refuses a due date before the stored start, and makes no update", async () => {
+      const { updateTask, get, errorSpy } = await run({ dueDate: "2026-10-11" }, { start_date: "1791752400000", due_date: null });
+      expect(get).toHaveBeenCalledWith("/task/abc");
+      expect(updateTask).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0]).toMatch(/due date 2026-10-11 04:00 UTC\+7 is before the start date 2026-10-12 04:00 UTC\+7/);
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("refuses a start date after the stored due", async () => {
+      const { updateTask, errorSpy } = await run({ startDate: "2026-10-13" }, { start_date: null, due_date: "1791752400000" });
+      expect(updateTask).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0]).toMatch(/due date 2026-10-12 04:00 UTC\+7 is before the start date 2026-10-13 04:00 UTC\+7/);
+    });
+
+    it("updates when the order holds", async () => {
+      const { updateTask } = await run({ dueDate: "2026-10-12" }, { start_date: "1791666000000", due_date: null });
+      expect(updateTask).toHaveBeenCalledWith("abc", { due_date: 1791752400000, due_date_time: false });
+      expect(process.exitCode).toBe(0);
+    });
+
+    it("does not check when the other date is not stored", async () => {
+      const { updateTask } = await run({ dueDate: "2026-10-11" }, { start_date: null, due_date: null });
+      expect(updateTask).toHaveBeenCalled();
+    });
+
+    it("does not read the task when both dates are given or none", async () => {
+      const both = await run({ startDate: "2026-10-11", dueDate: "2026-10-12" }, { start_date: null, due_date: null });
+      expect(both.get).not.toHaveBeenCalled();
+      const none = await run({ status: "done" }, { start_date: null, due_date: null });
+      expect(none.get).not.toHaveBeenCalled();
+    });
+  });
+
   it("errors and sets exitCode 1 when the client throws", async () => {
     const updateTask = vi.fn().mockRejectedValue(new Error("HTTP 404"));
     const fakeClient = { updateTask } as unknown as ClickUpClient;

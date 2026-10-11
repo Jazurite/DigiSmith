@@ -63,13 +63,22 @@ export class ClickUpClient {
     opts: RequestOptions = {},
   ): Promise<T> {
     await this.limiter.acquire();
-    const { data } = await this.http.request<T>({
-      method,
-      url: path,
-      params: opts.params,
-      data: opts.data,
-    });
-    return data;
+    try {
+      const { data } = await this.http.request<T>({
+        method,
+        url: path,
+        params: opts.params,
+        data: opts.data,
+      });
+      return data;
+    } catch (err) {
+      // Keep the same error object (response, cause, isAxiosError stay available); only show ClickUp's body in the message.
+      const body = (err as { response?: { data?: unknown } }).response?.data;
+      if (err instanceof Error && body !== undefined && body !== "") {
+        err.message += `: ${typeof body === "string" ? body : JSON.stringify(body)}`;
+      }
+      throw err;
+    }
   }
 
   get<T>(path: string, opts?: RequestOptions): Promise<T> {

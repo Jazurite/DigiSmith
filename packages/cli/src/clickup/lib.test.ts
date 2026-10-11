@@ -42,8 +42,10 @@ describe("buildTaskWriteBody", () => {
       name: "V.1 — OpenCode server management",
       description: "Extends Depot to also manage a second machine-wide resource.",
       status: "done",
-      start_date: new Date("2026-08-20").getTime(),
-      due_date: new Date("2026-08-28").getTime(),
+      start_date: 1787173200000,
+      start_date_time: false,
+      due_date: 1787864400000,
+      due_date_time: false,
       priority: 3,
     };
     expect(body).toEqual(expected);
@@ -164,6 +166,23 @@ describe("buildTaskWriteBody", () => {
     expect(() => buildTaskWriteBody({ dueDate: "28/08/2026" })).toThrow(
       /invalid --due-date "28\/08\/2026"/
     );
+  });
+
+  it("sends an explicit time as given, with the time flag set", () => {
+    expect(buildTaskWriteBody({ startDate: "2026-10-11T04:00:00+07:00" })).toEqual({
+      start_date: 1791666000000,
+      start_date_time: true,
+    });
+  });
+
+  it("refuses a due date before the start date when both are given", () => {
+    expect(() => buildTaskWriteBody({ startDate: "2026-10-12", dueDate: "2026-10-11" })).toThrow(
+      /due date 2026-10-11 04:00 UTC\+7 is before the start date 2026-10-12 04:00 UTC\+7/
+    );
+  });
+
+  it("allows equal start and due dates", () => {
+    expect(() => buildTaskWriteBody({ startDate: "2026-10-11", dueDate: "2026-10-11" })).not.toThrow();
   });
 
   it("throws when priority is not an integer", () => {

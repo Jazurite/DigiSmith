@@ -1,5 +1,6 @@
 import { ClickUpClient, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
 import { readFileSync } from "node:fs";
+import { parseDateFlag, assertDateOrder } from "./parse-date.ts";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
 
 export function createClient(envPath?: string): ClickUpClient {
@@ -67,19 +68,16 @@ export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
   }
   if (argv.status !== undefined) body.status = argv.status;
   if (argv.startDate !== undefined) {
-    const startDate = new Date(argv.startDate).getTime();
-    if (Number.isNaN(startDate)) {
-      throw new Error(`invalid --start-date "${argv.startDate}" — expected an ISO date like 2026-08-28`);
-    }
-    body.start_date = startDate;
+    const { ms, hasTime } = parseDateFlag(argv.startDate, "--start-date");
+    body.start_date = ms;
+    body.start_date_time = hasTime;
   }
   if (argv.dueDate !== undefined) {
-    const dueDate = new Date(argv.dueDate).getTime();
-    if (Number.isNaN(dueDate)) {
-      throw new Error(`invalid --due-date "${argv.dueDate}" — expected an ISO date like 2026-08-28`);
-    }
-    body.due_date = dueDate;
+    const { ms, hasTime } = parseDateFlag(argv.dueDate, "--due-date");
+    body.due_date = ms;
+    body.due_date_time = hasTime;
   }
+  assertDateOrder(body.start_date, body.due_date);
   if (argv.priority !== undefined) {
     if (!Number.isInteger(argv.priority)) {
       throw new Error(`invalid --priority "${argv.priority}" — expected an integer 1-4`);

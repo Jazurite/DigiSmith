@@ -35,6 +35,16 @@ describe("createCreateTaskCommand", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("refuses a due date before the start date and makes no call", async () => {
+    const createTask = vi.fn();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const command = createCreateTaskCommand(() => ({ createTask }) as unknown as ClickUpClient);
+    await (command.handler as (a: unknown) => Promise<void>)({ list: "901", name: "x", startDate: "2026-10-12", dueDate: "2026-10-11" });
+    expect(createTask).not.toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0][0]).toMatch(/is before the start date/);
+    expect(process.exitCode).toBe(1);
+  });
+
   it("passes --parent through to the task body", async () => {
     const createTask = vi.fn().mockResolvedValue({ id: "abc" });
     vi.spyOn(console, "log").mockImplementation(() => {});
