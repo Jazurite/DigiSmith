@@ -11,14 +11,19 @@ function fakes(count = 4) {
   const mergeTaskType = vi.fn().mockResolvedValue(undefined);
   const getTaskTypes = vi.fn().mockResolvedValue(types);
   const countTasksOfType = vi.fn().mockResolvedValue(count);
+  const fd = { mergeTaskType } as unknown as FrontdoorClient;
   return {
-    fd: { mergeTaskType, getTaskTypes, teamId: "55" } as unknown as FrontdoorClient,
-    pub: { countTasksOfType } as unknown as ClickUpClient,
+    fd,
+    fdFactory: vi.fn(() => fd),
+    pub: { countTasksOfType, getTaskTypes } as unknown as ClickUpClient,
     mergeTaskType,
   };
 }
-const run = (f: ReturnType<typeof fakes>, argv: object) =>
-  (createDeleteTaskTypeCommand(() => f.fd, () => f.pub).handler as (a: object) => Promise<void>)(argv);
+const throwingFd = vi.fn((): FrontdoorClient => {
+  throw new Error("CLICKUP_FRONTDOOR_AUTH is missing");
+});
+const run = (f: ReturnType<typeof fakes>, argv: object, fdFactory: () => FrontdoorClient = f.fdFactory) =>
+  (createDeleteTaskTypeCommand(fdFactory, () => f.pub).handler as (a: object) => Promise<void>)(argv);
 
 describe("delete-task-type", () => {
   afterEach(() => {
@@ -30,7 +35,8 @@ describe("delete-task-type", () => {
     const f = fakes(4);
     const out: string[] = [];
     vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
-    await run(f, { type: "activity", mergeInto: "quest" });
+    await run(f, { type: "activity", mergeInto: "quest" }, throwingFd);
+    expect(throwingFd).not.toHaveBeenCalled();
     expect(f.mergeTaskType).not.toHaveBeenCalled();
     const text = out.join("\n");
     expect(text).toContain("Activity (1005) has 4 tasks");
@@ -44,6 +50,30 @@ describe("delete-task-type", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 });
     expect(f.mergeTaskType).toHaveBeenCalledWith(1005, 1006);
+  });
+
+  it("--yes builds the Frontdoor client once", async () => {
+    const f = fakes(4);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 });
+    expect(f.fdFactory).toHaveBeenCalledTimes(1);
+  });
+
+  it("--yes without a Frontdoor session: clear error, nothing sent", async () => {
+    const f = fakes(4);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 }, throwingFd);
+    expect(err.mock.calls[0][0]).toMatch(/clickup delete-task-type: CLICKUP_FRONTDOOR_AUTH is missing/);
+    expect(f.mergeTaskType).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("a stale --confirm-count fails before any Frontdoor session is needed", async () => {
+    const f = fakes(5);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(f, { type: "activity", mergeInto: "quest", yes: true, confirmCount: 4 }, throwingFd);
+    expect(throwingFd).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/has 5 tasks, not 4/);
   });
 
   it("--merge-into 0 names the plain task on purpose", async () => {

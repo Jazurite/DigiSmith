@@ -22,13 +22,13 @@ export function createDeleteTaskTypeCommand(
         if (argv.mergeInto === undefined) {
           throw new Error("--merge-into is required; name 0 for the plain task on purpose");
         }
-        const frontdoor = frontdoorFactory();
-        const types = await frontdoor.getTaskTypes();
+        const pub = publicFactory();
+        const types = await pub.getTaskTypes();
         const type = resolveTaskType(types, argv.type as string);
         assertCustomType(type);
         const target = resolveTaskType(types, String(argv.mergeInto));
         if (target.id === type.id) throw new Error("the target type must differ from the type being removed");
-        const count = await publicFactory().countTasksOfType(type.id);
+        const count = await pub.countTasksOfType(type.id);
         if (!argv.yes) {
           console.log(`${type.name} (${type.id}) has ${count} tasks. They move to ${target.name} (${target.id}), then the type is removed.`);
           console.log("Task types are workspace-wide. Tasks are not deleted. Nothing sent.");
@@ -39,7 +39,7 @@ export function createDeleteTaskTypeCommand(
               `${type.name} (${type.id}) has ${count} tasks, not ${argv.confirmCount ?? "(no --confirm-count)"}; run without --yes to see the count again`
             );
           }
-          await frontdoor.mergeTaskType(type.id, target.id);
+          await frontdoorFactory().mergeTaskType(type.id, target.id);
           console.log(`clickup delete-task-type: removed ${type.name} (${type.id}); ${count} tasks moved to ${target.name} (${target.id})`);
         }
         process.exitCode = 0;
