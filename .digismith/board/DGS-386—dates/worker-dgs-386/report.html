@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-386 dg clickup dates — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-386 dg clickup dates — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-386</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>A plain <code>YYYY-MM-DD</code> in <code>--start-date</code> or <code>--due-date</code> now means that day at 04:00 UTC+7, as ClickUp stores its own all-day dates. A due date before the start date is refused before the call.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>parse-date.ts</code>: a strict parser. Plain dates send <code>start_date_time</code> / <code>due_date_time</code> false. A value with a time and an offset is sent as it is. A time without an offset, or a day that does not exist, is refused.</li>
+<li>Used by <code>create-task</code> and <code>update-task</code>, the only commands with date flags. <code>update-task</code> with one date reads the task once and checks the other stored date.</li>
+<li><code>ClickUpClient.request</code> shows ClickUp's error body in the message of the same error, so <code>err.response</code> stays available.</li>
+<li>Tests added for the parser, both commands, the client and field-set. The whole repo passes with <code>FORCE_COLOR=1</code>; the CLI build is clean.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review, two verified finds, fixed with tests: a timed value on a day that does not exist rolled over silently; a string error body was printed twice.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Close DGS-386 with plain dates and read both back as <code>1791666000000</code>. The result goes to the maestro report.</p>
+</section>
+</body>
+</html>
