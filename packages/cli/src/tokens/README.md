@@ -12,7 +12,7 @@
 
 ## Registry
 
-`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (`backlog/telemetry-and-data-collection-plan.md`). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (a `custom-title` or `agent-name` line anywhere in a transcript; any `gitBranch` value or `cwd` path segment that carries the key in the first 200 lines), shown as `inferred`.
+`Registry` (types.ts) has `append(entry)` and `read(ticket)`. Default store: `~/.digismith-depot/token-registry/<ticket>.jsonl`; override the folder with `DIGISMITH_TOKEN_REGISTRY_DIR`. Where the registry finally lives belongs to DGS-220 (its ClickUp ticket). Slice 1 only reads it; an empty registry works and sessions come from fallback tagging (a `custom-title` or `agent-name` line anywhere in a transcript; any `gitBranch` value or `cwd` path segment that carries the key in the first 200 lines), shown as `inferred`.
 
 ## tokens.json
 

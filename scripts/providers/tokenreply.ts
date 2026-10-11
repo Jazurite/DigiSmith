@@ -11,7 +11,7 @@ export const tokenreply: GatewayProvider = {
   // kimi-k3 is confirmed broken for tool-calling via this route (live-tested
   // 2026-09-04, 2/2 dispatches emitted garbled pseudo-tool-call text instead
   // of a real tool_use block — see
-  // backlog/tokenreply-kimi-k3-tool-calling-failure.md). kimi-k2.7 confirmed
+  // DGS-103). kimi-k2.7 confirmed
   // working (2/2) on the identical pipeline — reverted until root-caused on
   // TokenReply's or the model's side.
   //
