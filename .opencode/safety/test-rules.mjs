@@ -43,7 +43,7 @@ const cases = [
   ["webfetch", "webfetch", { url: "https://example.com" }, "block"],
   ["task", "task", { prompt: "x" }, "block"],
   ["mcp-unknown", "somemcp_tool", { a: 1 }, "block"],
-  ["edit-repo", "edit", { filePath: `${R}/README.md`, oldString: "a", newString: "b" }, "block"],
+  ["edit-repo", "edit", { filePath: `${R}/README.md`, oldString: "a", newString: "b" }, "allow"],
   ["write-secret-text", "write", { filePath: `${R}/.digismith/sessions/opencode-maestro/x.md`, content: "key sk-abcdefghijklmnopqrstuvwx" }, "block"],
   ["patch-delete", "apply_patch", { patchText: "*** Begin Patch\n*** Delete File: " + R + "/.digismith/sessions/opencode-maestro/x.md\n*** End Patch" }, "block"],
   ["write-own-folder", "write", { filePath: `${R}/.digismith/sessions/opencode-maestro/x.md`, content: "hello" }, "allow"],

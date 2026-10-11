@@ -13,13 +13,16 @@ const HERDR_WS = join(DEPOT_BIN, "herdr-ws")
 const SECRET_PATH = /(\.env(?!\.example)|password|passwd|auth\.json|\.ssh|token|secret|credential|opencode\.json|\.config\/opencode|claude-accounts|tokenreply|\.pem|id_rsa|id_ed25519|\.key|verdicts\.jsonl)/i
 const SECRET_TEXT = /(sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY|CANARY-DENY|TOKENREPLY_API_KEY|CLAUDE_CODE_OAUTH)/
 const META = /[|<>;&$`\\\n\r]/
-// DGS-401: write allow list, matched on the REAL path relative to a root (no `..`, symlinks resolved): the session folder, a brief.md under dgs-<n>/, files directly in a board ticket folder or its worker-* folders.
-const EDIT_OK = [
-  /^\.digismith\/sessions\/opencode-maestro\/.+/,
-  /^\.digismith\/board\/[^/]+\/worker-opencode-maestro\/.+/,
-  /^\.digismith\/sessions\/dgs-\d+\/brief\.md$/,
-  /^\.digismith\/board\/[^/]+\/[^/]+$/,
-  /^\.digismith\/board\/[^/]+\/worker-[^/]+\/[^/]+$/,
+// DGS-408: a write is allowed anywhere inside the repo root (worktrees included), judged on the REAL path (normalized, no `..`, symlinks resolved, no dangling symlink),
+// EXCEPT these classes, checked on the lowercased relative path (macOS is case-insensitive): the agent's own config and instructions, git internals, node_modules, Claude's permission surface.
+// Secret-like names are blocked by SECRET_PATH (also case-insensitive). Deletes and moves are never allowed by rule: they go to Jack's prompt (see markDelete / permission.evaluate).
+const EDIT_DENY = [
+  /(^|\/)opencode\.json/,
+  /(^|\/)\.opencode\/(maestro|safety|prompts)(\/|$)/,
+  /(^|\/)\.claude\/(settings[^/]*\.json|hooks(\/|$))/,
+  /(^|\/)scripts\/opencode-boot(\/|$)/,
+  /(^|\/)\.git(\/|$)/,
+  /(^|\/)node_modules(\/|$)/,
 ]
 const GIT_OK = /^git (status( --short| --porcelain)?|diff( --stat| --name-only| HEAD)?|log --oneline( -\d{1,2})?|branch( -a| -vv)?)$/
 const HERDR_READ = new Set(["list", "get", "read"])
@@ -52,11 +55,28 @@ function redact(s) {
   return String(s).replace(SECRET_TEXT, "[redacted]").replace(/[A-Za-z0-9+_-]{32,}/g, "[long]")
 }
 
+const PATCH_TOOLS = new Set(["patch", "apply_patch"])
+// Mirrors OpenCode's patch parser (lines trimmed, \r stripped, `*** Add|Update|Delete File: <p>`, `*** Move to: <p>`) with a looser, case-insensitive, any-spacing scan on top:
+// anything the server could take for a marker is treated as one. A line starting with + or - is content and never matches; a context line (leading space) that looks like a marker counts as a marker (unsure = ask).
+function patchInfo(text) {
+  const paths = []
+  let del = false
+  for (const line of String(text).split("\n")) {
+    const t = line.replace(/\r$/, "").trim()
+    let m = t.match(/^\*{3}\s*(add|update|delete)\s+file\s*:\s*(.*)$/i)
+    if (m) { if (m[1].toLowerCase() === "delete") del = true; if (m[2].trim()) paths.push(m[2].trim()); continue }
+    m = t.match(/^\*{3}\s*move\s+to\s*:?\s*(.*)$/i)
+    if (m) { del = true; if (m[1].trim()) paths.push(m[1].trim()); continue }
+    if (/^\*{3}\s*(delete|remove|move|rename)\b/i.test(t)) del = true
+  }
+  return { paths, del }
+}
+const patchText = (a) => Object.values(a || {}).filter((v) => typeof v === "string").join("\n")
+
 function pathsOf(tool, a) {
   const out = []
   for (const k of ["filePath", "path", "file", "dir", "workdir", "cwd"]) if (typeof a?.[k] === "string") out.push(a[k])
-  if (typeof a?.patchText === "string") for (const m of a.patchText.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) out.push(m[1].trim())
-  if (typeof a?.patchText === "string") for (const m of a.patchText.matchAll(/^\*\*\* Move to: (.+)$/gm)) out.push(m[1].trim())
+  if (PATCH_TOOLS.has(tool)) out.push(...patchInfo(patchText(a)).paths)
   return out
 }
 
@@ -84,11 +104,22 @@ export const MaestroSafety = async (ctx) => {
     const r = real(p)
     return realRoots.some((x) => r === x || r.startsWith(x + "/"))
   }
-  // a write is allowed only inside a project root (never the depot bin) and only on the EDIT_OK shapes
+  // a write is allowed only inside a project root (never the depot bin), on a path none of the EDIT_DENY classes match (given path and real path, lowercased)
   const editOk = (p) => {
     const r = real(p)
-    return realRoots.slice(0, -1).some((x) => { const rel = relative(x, r); return rel && !rel.startsWith("..") && !isAbsolute(rel) && EDIT_OK.some((re) => re.test(rel)) })
+    const given = resolve(dir, p.replace(/^~(?=\/)/, HOME))
+    return realRoots.slice(0, -1).some((x) => {
+      const rel = relative(x, r)
+      if (!rel || rel.startsWith("..") || isAbsolute(rel)) return false
+      const relGiven = relative(x, given).toLowerCase()
+      return !EDIT_DENY.some((re) => re.test(rel.toLowerCase()) || re.test(relGiven))
+    })
   }
+  // Delete / move marks (DGS-408): set when a patch with a Delete File or Move to passed the path rules; permission.evaluate turns the server's decision into ask for them.
+  const markTtl = Number(process.env.SAFETY_MARK_TTL_MS || 120000)
+  const markIds = new Map(), markSessions = new Map()
+  const markDelete = (callID, sessionID) => { const until = Date.now() + markTtl; if (callID) markIds.set(callID, until); if (sessionID) markSessions.set(sessionID, until) }
+  const marked = (id, sessionID) => { const now = Date.now(); return (id && markIds.get(id) > now) || markSessions.get(sessionID) > now }
   const key = loadKey()
 
   function log(rec) {
@@ -114,10 +145,14 @@ export const MaestroSafety = async (ctx) => {
     if (tool === "read" || tool === "list") return { v: "allow", why: "read inside roots" }
     if (WRITE_TOOLS.has(tool)) {
       if (!paths.length) return { v: "block", why: "write without a path" }
-      for (const p of paths) if (!editOk(p)) return { v: "block", why: "write outside the allowed folders" }
+      for (const p of paths) if (!editOk(p)) return { v: "block", why: "write outside the repo or on a protected path" }
       if (SECRET_TEXT.test(JSON.stringify(a))) return { v: "block", why: "secret-like text in a write" }
-      if (/^\*\*\* Delete File:/m.test(a?.patchText || "")) return { v: "block", why: "delete" }
-      return { v: "allow", why: "write on an allowed path (DGS-401: rules decide, no model)" }
+      // delete guard (DGS-408), independent of the path allow: never allowed by rule, on any path
+      if (PATCH_TOOLS.has(tool) && patchInfo(patchText(a)).del) {
+        if (!ctx?.canAsk) return { v: "block", why: "needs Jack: delete or move in a patch (no permission hook to ask with)" }
+        return { v: "ask", why: "delete or move in a patch: goes to Jack's prompt", prompt: true, mark: true }
+      }
+      return { v: "allow", why: "write inside the repo on an unprotected path (DGS-408: rules decide, no model)" }
     }
     if (tool === "bash") {
       const c = String(a?.command ?? "")
@@ -216,8 +251,18 @@ export const MaestroSafety = async (ctx) => {
         args: redact(JSON.stringify(output.args || {}).slice(0, 120)), step, verdict: res.v, final, reason: res.why + (final === "allow" && res.v === "ask" ? " (sent on to the permission prompt)" : ""), tokens,
       })
       if (!ok) throw new Error("BLOCKED by safety layer: log not writable")
+      if (res.mark && final === "allow") markDelete(input.callID, input.sessionID)
       if (final !== "allow")
         throw new Error("BLOCKED by safety layer: " + (res.v === "ask" ? "needs Jack: " : "") + res.why)
+    },
+    // OpenCode 2.x permission.evaluate hook (DGS-408): escalate-only. A marked delete/move, or metadata that shows a deleted file, becomes ask; never allow, never touches a deny.
+    "permission.evaluate": (input) => {
+      if (input?.action !== "edit" || input.effect === "deny") return
+      const files = Array.isArray(input.metadata?.files) ? input.metadata.files : []
+      if (!(marked(input.source?.id, input.sessionID) || files.some((f) => f && (f.status === "deleted" || f.type === "delete")))) return
+      input.effect = "ask"
+      input.message = "Delete or move: needs Jack"
+      log({ event: "evaluate", session: input.sessionID, verdict: "ask", reason: "delete or move forced to the permission prompt" })
     },
     "permission.ask": async (input, output) => {
       log({ event: "permission.ask", tool: input?.type || input?.tool, status: output?.status })

@@ -8,7 +8,7 @@ Root: `/Users/workbox/Workspace/Jazurite/DigiSmith`. Read with the read tool, no
 - Runbook: `.digismith/sessions/workbox.md`, `.digismith/sessions/workbox-macos.md`
 - Orders from the Master: `.digismith/sessions/DigiSmith/order-*.md`; worker briefs: `.digismith/sessions/<agent>/brief.md`
 - Board: `.digismith/board/<ticket>/` (worker reports in `worker-<agent>/`)
-- You may write ONLY: worker briefs `.digismith/sessions/dgs-<n>/brief.md`, board folders `.digismith/board/<ticket>/` (files directly in it and in its `worker-*/` folders), and your notes and drafts under `.digismith/sessions/opencode-maestro/`. Nothing else, no repo file.
+- You may edit any file in the DigiSmith repo with `patch` (worktrees included): orders `.digismith/sessions/DigiSmith/order-*.md`, worker briefs `.digismith/sessions/dgs-<n>/brief.md`, board files, notes. Denied: secret-like names, `opencode.json`, `.opencode/maestro/`, `.opencode/safety/`, `.opencode/prompts/`, `scripts/opencode-boot/`, `.claude/settings*.json`, `.claude/hooks/`, any `.git` path, `node_modules`, and everything outside the repo. A `*** Delete File` or a `*** Move to:` (a move drops the source) opens Jack's approval prompt for that exact target (or is blocked with "needs Jack"): never try to get around it.
 
 ## Tools you have
 - herdr: only `HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws <agent|pane|tab> <verb> ...` (workspace w2 only). `tab create`, `agent start`, `agent prompt`, `agent wait` run without a prompt; `close`, `stop`, `run`, `send`, `rename`, `focus` need Jack's approval in the app. Never an empty `pane run` (it presses Enter). Never touch tabs `maestro` (tab 1) or `scout-backlog`, nor `digismith-maestro`, `emma-maestro`, `soveron-maestro`.
