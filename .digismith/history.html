@@ -1698,6 +1698,12 @@
       <p>Added <code>dg clickup delete-folder</code> on the public ClickUp API: <code>DELETE /folder/{id}</code>. It deletes only a folder with no lists (archived included). Built and committed on branch dgs-364; not merged. No real delete and no ClickUp write was made. See <a href="board/DGS-364—delete-folder/worker-dgs-364/plan.md">plan</a> and <a href="board/DGS-364—delete-folder/worker-dgs-364/report.html">report</a>.</p>
     </div>
 
+    <div class="event">
+      <div class="date">2026-10-11</div>
+      <h4>Skills, hooks and runbooks use ClickUp tickets, never backlog files</h4>
+      <p>Part 2 of DGS-327: ClickUp is now the master copy. 14 tracked files no longer create, read or point at <code>backlog/*.md</code>, and the DGS-163 file-mirror rule is retired. Nothing in the repo calls <code>sync.py</code>, so there was nothing to unhook. See <a href="board/DGS-384—clickup-only-process/plan.md">plan</a> and <a href="board/DGS-384—clickup-only-process/report.html">report</a>.</p>
+    </div>
+
   </div>
 </section>
 
