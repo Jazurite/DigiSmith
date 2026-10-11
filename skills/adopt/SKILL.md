@@ -7,8 +7,8 @@ description: Invoked internally by digismith:init when a ticket's spec and plan 
 
 ## Overview
 
-Resolves the recurring friction Jack captured as
-`backlog/mid-development-workflow-injection.md` (retired once this shipped —
+Resolves the recurring friction Jack captured as the
+`mid-development-workflow-injection` item (it never had a ClickUp ticket; retired once this shipped —
 see `.digismith/history.html`'s 2026-08-16 entry):
 a ticket ID pulled through an external source (e.g. an Atlassian MCP
 connector) plus a spec and plan already written by vanilla

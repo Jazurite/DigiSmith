@@ -30,7 +30,7 @@ If either command in that chain fails, say so plainly — the plugin cache was n
 Cache flush skipped on purpose. Old version directories under
 `~/.claude/plugins/cache/jazurite/digismith/` are never deleted by this hook — a running session
 may still be loading its skills from one of them, and there is no signal yet for "no session uses
-this version anymore." See `backlog/auto-update-plugin-after-merge.md`, point 3. Clear old
+this version anymore." See DGS-161, point 3. Clear old
 versions by hand if disk space becomes a problem.
 
 Then print this reminder plainly:

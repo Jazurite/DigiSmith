@@ -101,7 +101,7 @@ used by this skill's own test suite, but it's not the only purpose.
 - A single-key `get` operation — the store stays small and is always read as
   a unit via `list`; add one only if a real need for it shows up.
 - Any trigger point beyond `digismith:brainstorming` — deferred, see
-  `backlog/toolchain-general-trigger-scope.md`.
+  DGS-298.
 - Auto-persisting an override back to the file when Jack overrides a stated
   assumption in the moment — that turn's choice is used as-is, not written
   back without a separate explicit confirmation.

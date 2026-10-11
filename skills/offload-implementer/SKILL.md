@@ -416,7 +416,7 @@ to send.
 
 **Only runs when Step 5's `parse-result.ts` output has `xtmlLeakDetected: true`** — TokenReply's
 `kimi-k3` route returned raw, unconverted tool-call text instead of executing anything (see
-`backlog/tokenreply-kimi-k3-tool-calling-failure.md`). Skip this step entirely otherwise.
+DGS-103). Skip this step entirely otherwise.
 
 **For the `claude-code` runner, this step should no longer trigger in practice** — the
 Agentic Bridge proxy (map item K.9, wired in at Step 2/4 above) repairs the leak before

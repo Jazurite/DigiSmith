@@ -236,7 +236,7 @@ tier's own cheap-model default) — never back to `kimi-k3`. Brief the fix-round
 the open findings and a pointer to the original attempt's report file, the same way rounds 4-5's
 escalation already hands a fresh implementer the prior report to read; the only difference here
 is that this substitution happens on round 1, not round 4. This bounds `kimi-k3`'s exposure to
-its known tool-calling bug (see `backlog/tokenreply-kimi-k3-tool-calling-failure.md`) to a single
+its known tool-calling bug (see DGS-103) to a single
 clean attempt, and puts every correction in the reliable model's hands regardless of how many
 rounds it takes.
 
