@@ -8,6 +8,7 @@ import {
   findChangedReports,
   parseReport,
   buildReferenceLinks,
+  findDeadLinks,
   buildEventHtml,
   insertTimelineEntries,
   bumpLastUpdated,
@@ -308,94 +309,6 @@ describe("parseReport", () => {
   });
 });
 
-describe("buildReferenceLinks", () => {
-  it("links design, plan, and report with an Oxford comma when all three exist", () => {
-    const dir = makeTmpDir("update-history-test-");
-    const slugDir = path.join(dir, ".digismith", "docs", "sample-feature");
-    fs.mkdirSync(slugDir, { recursive: true });
-    fs.writeFileSync(path.join(slugDir, "design.html"), "");
-    fs.writeFileSync(path.join(slugDir, "plan.md"), "");
-
-    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
-
-    expect(result).toBe(
-      `See <a href="${PL}/.digismith/docs/sample-feature/design.html">design</a>, <a href="${PL}/.digismith/docs/sample-feature/plan.md">plan</a>, and <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`,
-    );
-
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("omits design when design.html is missing", () => {
-    const dir = makeTmpDir("update-history-test-");
-    const slugDir = path.join(dir, ".digismith", "docs", "sample-feature");
-    fs.mkdirSync(slugDir, { recursive: true });
-    fs.writeFileSync(path.join(slugDir, "plan.md"), "");
-
-    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
-
-    expect(result).toBe(
-      `See <a href="${PL}/.digismith/docs/sample-feature/plan.md">plan</a> and <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`,
-    );
-
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("falls back to just the report link when both design.html and plan.md are missing", () => {
-    const dir = makeTmpDir("update-history-test-");
-    fs.mkdirSync(path.join(dir, ".digismith", "docs", "sample-feature"), { recursive: true });
-
-    const result = buildReferenceLinks("sample-feature", "docs", dir, PL);
-
-    expect(result).toBe(`See <a href="${PL}/.digismith/docs/sample-feature/report.html">report</a>.`);
-
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("links a board-based report under board/, not docs/", () => {
-    const dir = makeTmpDir("update-history-test-");
-    const slug = "DGS-159—ticket-naming-script-layer";
-    const slugDir = path.join(dir, ".digismith", "board", slug);
-    fs.mkdirSync(slugDir, { recursive: true });
-    fs.writeFileSync(path.join(slugDir, "design.html"), "");
-
-    const result = buildReferenceLinks(slug, "board", dir, PL);
-
-    expect(result).toBe(
-      `See <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/design.html">design</a> and <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/report.html">report</a>.`,
-    );
-
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe("buildReferenceLinks encoding", () => {
-  it("keeps the slash of a nested board slug and encodes each segment", () => {
-    const dir = makeTmpDir("update-history-test-");
-    const slug = "DGS-159—x/script-layer";
-    fs.mkdirSync(path.join(dir, ".digismith", "board", slug), { recursive: true });
-
-    const result = buildReferenceLinks(slug, "board", dir, PL);
-
-    expect(result).toBe(
-      'See <a href="https://github.com/Jazurite/DigiSmith/blob/abc123/.digismith/board/DGS-159%E2%80%94x/script-layer/report.html">report</a>.',
-    );
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("encodes #, ? and % in a path", () => {
-    const dir = makeTmpDir("update-history-test-");
-    const slug = "a#b?c%d";
-    fs.mkdirSync(path.join(dir, ".digismith", "docs", slug), { recursive: true });
-
-    const result = buildReferenceLinks(slug, "docs", dir, PL);
-
-    expect(result).toBe(
-      'See <a href="https://github.com/Jazurite/DigiSmith/blob/abc123/.digismith/docs/a%23b%3Fc%25d/report.html">report</a>.',
-    );
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-});
-
 describe("isAlreadyRecorded", () => {
   const page = '<h4>Sample Feature</h4><p>See <a href="https://x/blob/s1/.digismith/board/DGS-1%E2%80%94x/report.html">report</a>.</p>';
 
@@ -496,7 +409,157 @@ function runScript(cwd: string, args: string[]) {
   return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
 }
 
-describe("findChangedReports", () => {
+describe// A real git repo: `tracked` files are committed (the head), `onDisk` files are written after the
+// commit and stay untracked, `late` files are committed AFTER the returned head sha.
+function makeLinkRepo(opts: { tracked?: string[]; onDisk?: string[]; late?: string[] }): { dir: string; head: string } {
+  const dir = makeTmpDir("update-history-links-");
+  spawnSync("git", ["init", "-q"], { cwd: dir });
+  spawnSync("git", ["config", "user.email", "test@example.com"], { cwd: dir });
+  spawnSync("git", ["config", "user.name", "Test"], { cwd: dir });
+  const put = (rel: string) => {
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), "x");
+  };
+  put("README.md");
+  for (const rel of opts.tracked ?? []) put(rel);
+  spawnSync("git", ["add", "-A"], { cwd: dir });
+  spawnSync("git", ["commit", "-q", "-m", "head"], { cwd: dir });
+  const head = revParseHead(dir);
+  for (const rel of opts.onDisk ?? []) put(rel);
+  for (const rel of opts.late ?? []) put(rel);
+  if (opts.late?.length) {
+    spawnSync("git", ["add", "-A"], { cwd: dir });
+    spawnSync("git", ["commit", "-q", "-m", "after head"], { cwd: dir });
+  }
+  return { dir, head };
+}
+
+describe("buildReferenceLinks", () => {
+  const D = ".digismith/docs/sample-feature";
+
+  it("links design, plan, and report with an Oxford comma when all three are at head", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/design.html`, `${D}/plan.md`, `${D}/report.html`] });
+    try {
+      const result = buildReferenceLinks("sample-feature", "docs", dir, PL, head);
+
+      expect(result).toBe(
+        `See <a href="${PL}/${D}/design.html">design</a>, <a href="${PL}/${D}/plan.md">plan</a>, and <a href="${PL}/${D}/report.html">report</a>.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("omits design when design.html is absent on disk and at head", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/plan.md`, `${D}/report.html`] });
+    try {
+      const result = buildReferenceLinks("sample-feature", "docs", dir, PL, head);
+
+      expect(result).toBe(`See <a href="${PL}/${D}/plan.md">plan</a> and <a href="${PL}/${D}/report.html">report</a>.`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to just the report link when design.html and plan.md are absent everywhere", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/report.html`] });
+    try {
+      expect(buildReferenceLinks("sample-feature", "docs", dir, PL, head)).toBe(
+        `See <a href="${PL}/${D}/report.html">report</a>.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("links a board-based report under board/, not docs/", () => {
+    const slug = "DGS-159—ticket-naming-script-layer";
+    const B = `.digismith/board/${slug}`;
+    const { dir, head } = makeLinkRepo({ tracked: [`${B}/design.html`, `${B}/report.html`] });
+    try {
+      expect(buildReferenceLinks(slug, "board", dir, PL, head)).toBe(
+        `See <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/design.html">design</a> and <a href="${PL}/.digismith/board/DGS-159%E2%80%94ticket-naming-script-layer/report.html">report</a>.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the slash of a nested board slug and encodes each segment", () => {
+    const slug = "DGS-159—x/script-layer";
+    const { dir, head } = makeLinkRepo({ tracked: [`.digismith/board/${slug}/report.html`] });
+    try {
+      expect(buildReferenceLinks(slug, "board", dir, PL, head)).toBe(
+        `See <a href="${PL}/.digismith/board/DGS-159%E2%80%94x/script-layer/report.html">report</a>.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("encodes #, ? and % in a path", () => {
+    const slug = "a#b?c%d";
+    const { dir, head } = makeLinkRepo({ tracked: [`.digismith/docs/${slug}/report.html`] });
+    try {
+      expect(buildReferenceLinks(slug, "docs", dir, PL, head)).toBe(
+        `See <a href="${PL}/.digismith/docs/a%23b%3Fc%25d/report.html">report</a>.`,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("throws DEAD <path> for a plan.md on disk but untracked", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/report.html`], onDisk: [`${D}/plan.md`] });
+    try {
+      expect(() => buildReferenceLinks("sample-feature", "docs", dir, PL, head)).toThrow(`DEAD ${D}/plan.md`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("throws DEAD for a plan.md committed after the head sha", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/report.html`], late: [`${D}/plan.md`] });
+    try {
+      expect(() => buildReferenceLinks("sample-feature", "docs", dir, PL, head)).toThrow(`DEAD ${D}/plan.md`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("findDeadLinks", () => {
+  const D = ".digismith/docs/sample-feature";
+
+  it("lists only the files that are on disk but not at head", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/design.html`, `${D}/report.html`], onDisk: [`${D}/plan.md`] });
+    try {
+      expect(findDeadLinks("sample-feature", "docs", dir, head)).toEqual([`${D}/plan.md`]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("is empty when every file on disk is at head, and for a file absent everywhere", () => {
+    const { dir, head } = makeLinkRepo({ tracked: [`${D}/report.html`, `${D}/plan.md`] });
+    try {
+      expect(findDeadLinks("sample-feature", "docs", dir, head)).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("flags a report.html that is not at head", () => {
+    const { dir, head } = makeLinkRepo({});
+    try {
+      expect(findDeadLinks("sample-feature", "docs", dir, head)).toEqual([`${D}/report.html`]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+("findChangedReports", () => {
   it("returns an empty array when no report.html changed", () => {
     const dir = makeTmpDir("update-history-repo-");
     try {
@@ -837,6 +900,101 @@ describe("main (CLI) with the depot history home", () => {
       expect(second.stdout).toContain("NOTHING (already recorded)");
       expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(afterFirst);
       expect(afterFirst.split("<h4>Sample Feature (Z)</h4>")).toHaveLength(2);
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("main (CLI) refuses a link to a file that is not at the pinned commit", () => {
+  const SLUG = "DGS-396—history-links-exist";
+
+  function makeBoardRepo(planCommitted: boolean): { dir: string; baseSha: string; headSha: string; historyDir: string } {
+    const dir = makeTmpDir("update-history-dead-");
+    initHistoryFixtureRepo(dir);
+    const baseSha = revParseHead(dir);
+    const folder = path.join(dir, ".digismith", "board", SLUG);
+    fs.mkdirSync(folder, { recursive: true });
+    writeReportFixture(path.join(folder, "report.html"));
+    if (planCommitted) fs.writeFileSync(path.join(folder, "plan.md"), "");
+    spawnSync("git", ["add", "-A"], { cwd: dir });
+    spawnSync("git", ["commit", "-q", "-m", "add report"], { cwd: dir });
+    if (!planCommitted) fs.writeFileSync(path.join(folder, "plan.md"), "");
+    const historyDir = makeTmpDir("update-history-home-");
+    fs.writeFileSync(path.join(historyDir, "history.html"), HISTORY_FIXTURE);
+    return { dir, baseSha, headSha: revParseHead(dir), historyDir };
+  }
+
+  it("exits 1, prints DEAD <path> and writes nothing when plan.md is on disk but not at head", () => {
+    const { dir, baseSha, headSha, historyDir } = makeBoardRepo(false);
+    const bare = addOrigin(dir, true);
+    try {
+      const result = runScript(dir, ["--base", baseSha, "--head", headSha, "--history-dir", historyDir]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(`DEAD .digismith/board/${SLUG}/plan.md`);
+      expect(result.stdout).not.toContain("APPENDED");
+      expect(fs.readFileSync(path.join(historyDir, "history.html"), "utf8")).toBe(HISTORY_FIXTURE);
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("writes the pinned full-sha plan link when plan.md is at head", () => {
+    const { dir, baseSha, headSha, historyDir } = makeBoardRepo(true);
+    const bare = addOrigin(dir, true);
+    try {
+      const result = runScript(dir, ["--base", baseSha, "--head", headSha, "--history-dir", historyDir]);
+
+      expect(result.status).toBe(0);
+      const page = fs.readFileSync(path.join(historyDir, "history.html"), "utf8");
+      expect(page).toContain(
+        `https://github.com/Jazurite/DigiSmith/blob/${headSha}/.digismith/board/DGS-396%E2%80%94history-links-exist/plan.md`,
+      );
+      expect(headSha).toMatch(/^[0-9a-f]{40}$/);
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("skips a report already in the page BEFORE the check, so an old dead entry never fails a re-run", () => {
+    const { dir, baseSha, headSha, historyDir } = makeBoardRepo(true);
+    const bare = addOrigin(dir, true);
+    try {
+      const args = ["--base", baseSha, "--head", headSha, "--history-dir", historyDir];
+      expect(runScript(dir, args).stdout).toContain("APPENDED 1");
+      // the plan is now gone from head's reach: delete it from the index view by pinning to a head without it
+      const folder = path.join(dir, ".digismith", "board", SLUG);
+      fs.rmSync(path.join(folder, "plan.md"));
+      fs.writeFileSync(path.join(folder, "plan.md"), "again");
+      spawnSync("git", ["update-index", "--force-remove", `.digismith/board/${SLUG}/plan.md`], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "drop plan"], { cwd: dir });
+      const laterHead = revParseHead(dir);
+      const rerun = runScript(dir, ["--base", baseSha, "--head", laterHead, "--history-dir", historyDir, "--allow-unpushed", "true"]);
+
+      expect(rerun.status).toBe(0);
+      expect(rerun.stdout).toContain("NOTHING (already recorded)");
+    } finally {
+      for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("lists the dead paths of every report in range", () => {
+    const { dir, baseSha, historyDir } = makeBoardRepo(false);
+    const bare = addOrigin(dir, true);
+    try {
+      const other = path.join(dir, ".digismith", "board", "DGS-397—other");
+      fs.mkdirSync(other, { recursive: true });
+      writeReportFixture(path.join(other, "report.html"), { title: "Other Feature (Y)" });
+      spawnSync("git", ["add", `.digismith/board/DGS-397—other/report.html`], { cwd: dir });
+      spawnSync("git", ["commit", "-q", "-m", "second report"], { cwd: dir });
+      fs.writeFileSync(path.join(other, "design.html"), "");
+
+      const result = runScript(dir, ["--base", baseSha, "--head", revParseHead(dir), "--history-dir", historyDir]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(`DEAD .digismith/board/${SLUG}/plan.md`);
+      expect(result.stderr).toContain("DEAD .digismith/board/DGS-397—other/design.html");
     } finally {
       for (const d of [dir, historyDir, bare]) fs.rmSync(d, { recursive: true, force: true });
     }
