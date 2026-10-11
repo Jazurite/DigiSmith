@@ -8,10 +8,11 @@ describe("createListTaskTypesCommand", () => {
     vi.restoreAllMocks();
   });
 
-  it("prints id, name, plural and description of each type", async () => {
+  it("prints id, name, plural, description and icon of each type", async () => {
     const getTaskTypes = vi.fn().mockResolvedValue([
       { id: 1, name: "Milestone", name_plural: "Milestones", description: null, avatar: null },
-      { id: 1030, name: "Epic", name_plural: "Epics", description: "A big thing", avatar: null },
+      { id: 1030, name: "Epic", name_plural: "Epics", description: "A big thing", avatar: { source: "fas", value: "flag" } },
+      { id: 1031, name: "Blank", name_plural: "Blanks", description: null, avatar: { source: null, value: null } },
     ]);
     const out: string[] = [];
     vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
@@ -19,9 +20,10 @@ describe("createListTaskTypesCommand", () => {
 
     await (command.handler as () => Promise<void>)();
 
-    expect(out[0]).toBe("0\tTask\tTasks\t");
-    expect(out[1]).toBe("1\tMilestone\tMilestones\t");
-    expect(out[2]).toBe("1030\tEpic\tEpics\tA big thing");
+    expect(out[0]).toBe("0\tTask\tTasks\t\t-");
+    expect(out[1]).toBe("1\tMilestone\tMilestones\t\t-");
+    expect(out[2]).toBe("1030\tEpic\tEpics\tA big thing\tfas flag");
+    expect(out[3]).toBe("1031\tBlank\tBlanks\t\t-");
     expect(process.exitCode).toBe(0);
   });
 
