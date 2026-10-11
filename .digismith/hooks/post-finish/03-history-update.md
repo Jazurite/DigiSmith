@@ -28,20 +28,38 @@ HISTORY_DIR="${DIGISMITH_HISTORY_DIR:-$HOME/.digismith-depot/history}"
 PIN="refs/digismith/post-finish/<feature-branch>"
 BASE_SHA=$(git rev-parse --verify --quiet "$PIN/base") || { echo "MISSING PIN $PIN/base — this hook reads the merge range finishing-a-development-branch Option 1 pins right after git merge; fire it from there, or pin by hand first (fire-lifecycle-hook.md, \"Merge-range pins\"). Stopping." >&2; exit 1; }
 HEAD_SHA=$(git rev-parse --verify --quiet "$PIN/head") || { echo "MISSING PIN $PIN/head — the base pin exists but the head pin does not; pin by hand first (fire-lifecycle-hook.md, \"Merge-range pins\"). Stopping." >&2; exit 1; }
+if [ -f "$HISTORY_DIR/history.html" ] && [ ! -d "$HISTORY_DIR/.git" ]; then
+  # first use: the page as it stands BEFORE the append is committed on its own, so a manual edit is not swept into the append commit
+  git -C "$HISTORY_DIR" init -q && git -C "$HISTORY_DIR" add history.html && \
+  git -C "$HISTORY_DIR" commit -q -m "docs(history): import" -- history.html || { echo "Depot import commit failed — fix it (git user.name/email, locked index) and re-run. Stopping." >&2; exit 1; }
+fi
 UPDATE_OUTPUT=$(node --experimental-strip-types .digismith/hooks/post-finish/scripts/update-history.ts --base "$BASE_SHA" --head "$HEAD_SHA")
 UPDATE_STATUS=$?
 echo "$UPDATE_OUTPUT"
 if [ "$UPDATE_STATUS" -ne 0 ]; then
   echo "History update script failed — stop here, do not commit, and investigate." >&2
+  exit "$UPDATE_STATUS"
 fi
 if [[ "$UPDATE_OUTPUT" == APPENDED* ]]; then
-  [ -d "$HISTORY_DIR/.git" ] || git -C "$HISTORY_DIR" init -q
   git -C "$HISTORY_DIR" add history.html && \
   git -C "$HISTORY_DIR" commit -m "docs(history): record shipped features" -- history.html
 fi
 ```
 
-This hook never commits to or pushes the public repo. It commits only in the depot repo.
+This hook never commits to or pushes the public repo. It commits only in the depot repo. The script
+treats an empty or blank `DIGISMITH_HISTORY_DIR` as unset (like `:-` above) and expands a leading `~`.
+
+**First use.** When the page exists but the depot has no `.git`, the hook runs `git init` and commits
+the page as it stands as `docs(history): import` **before** the script appends. The append is then its
+own `docs(history): record shipped features` commit, so a manual edit made earlier is not swept in.
+
+**If the depot commit fails** (no `user.name`/`user.email` in a fresh repo, a locked index): stop,
+fix the commit, or run `git -C "$HISTORY_DIR" checkout -- history.html` to drop the uncommitted
+append, and only then re-run. A re-run is safe either way: the script skips a report whose title
+and report link are already in the page (`NOTHING (already recorded)`), so nothing is appended twice.
+
+**Links.** The permalink root is `https://github.com/Jazurite/DigiSmith`; the env var
+`DIGISMITH_HISTORY_REPO_URL` overrides it (tests, a fork).
 
 **Where the push happens.** The new entry's links are GitHub permalinks pinned to `HEAD_SHA`
 (`https://github.com/Jazurite/DigiSmith/blob/<HEAD_SHA>/.digismith/...`), so a moved file never breaks
@@ -54,7 +72,7 @@ hand fixes only). The depot repo is never pushed.
 
 **Depot page missing.** If `$HISTORY_DIR/history.html` is missing the script stops with
 `NO HISTORY HOME <dir>` and never invents a page. If the page exists but has no `.git`, the hook
-runs `git init` there. Only the Workbox writes the page for now: the depot repo has no remote, and a
+runs `git init` there (see First use). Only the Workbox writes the page for now: the depot repo has no remote, and a
 second node reads it with `git clone <workbox>:~/.digismith-depot/history` until "our server"
 (DGS-336) takes over as the one home.
 

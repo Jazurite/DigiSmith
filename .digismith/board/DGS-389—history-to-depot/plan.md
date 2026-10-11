@@ -2,6 +2,11 @@
 
 2026-10-11. Worker `dgs-389`. Status: waiting for "approved: checkpoint 1".
 
+> **Superseded by the checkpoint 1 decisions (Jack, 2026-10-11).** Section 2 below proposed GitHub URLs on `main`.
+> Decided instead: permalinks **pinned to a commit SHA** (`/blob/<sha>/...`): the migration SHA for old entries, the merge head SHA from the
+> pins for new ones; the base is overridable with `DIGISMITH_HISTORY_REPO_URL`; a link builder stops when the SHA is not on origin.
+> The 9 dead links are **fixed** (pointed at the current path), not just listed. Setting stays `DIGISMITH_HISTORY_DIR` (`--history-dir` for tests).
+
 ## Facts read
 - Page: `.digismith/history.html`, 170,932 bytes, 103 commits of history, LF/CRLF handled by the script.
 - 271 `href`s: 2 external, 4 `#` anchors, 265 file links.
