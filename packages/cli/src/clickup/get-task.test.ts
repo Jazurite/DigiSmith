@@ -22,6 +22,19 @@ describe("createGetTaskCommand", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it("asks for the Markdown description with --markdown", async () => {
+    const get = vi.fn().mockResolvedValue({ id: "abc" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createGetTaskCommand(() => ({ get }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({
+      task: "abc",
+      markdown: true,
+    });
+
+    expect(get).toHaveBeenCalledWith("/task/abc?include_markdown_description=true");
+  });
+
   it("errors and sets exitCode 1 when the client throws", async () => {
     const get = vi.fn().mockRejectedValue(new Error("HTTP 404"));
     const fakeClient = { get } as unknown as ClickUpClient;

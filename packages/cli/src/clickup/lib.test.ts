@@ -55,6 +55,38 @@ describe("buildTaskWriteBody", () => {
     expect(body).toEqual({ name: "Just a name" });
   });
 
+  it("sends --markdown-description as markdown_description", () => {
+    expect(buildTaskWriteBody({ markdownDescription: "# Title\n\n**bold**" })).toEqual({
+      markdown_description: "# Title\n\n**bold**",
+    });
+  });
+
+  it("reads --markdown-description-file as UTF-8", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dg-clickup-md-"));
+    try {
+      const file = join(dir, "d.md");
+      writeFileSync(file, "- one — dash\n", "utf8");
+      expect(buildTaskWriteBody({ markdownDescriptionFile: file })).toEqual({
+        markdown_description: "- one — dash\n",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("errors when --markdown-description-file cannot be read", () => {
+    expect(() => buildTaskWriteBody({ markdownDescriptionFile: join(tmpdir(), "no-such-dir", "x.md") })).toThrow(
+      /cannot read --markdown-description-file/
+    );
+  });
+
+  it("refuses two description flags together", () => {
+    const msg = "use only one of --description, --markdown-description, --markdown-description-file";
+    expect(() => buildTaskWriteBody({ description: "a", markdownDescription: "b" })).toThrow(msg);
+    expect(() => buildTaskWriteBody({ description: "a", markdownDescriptionFile: "b.md" })).toThrow(msg);
+    expect(() => buildTaskWriteBody({ markdownDescription: "a", markdownDescriptionFile: "b.md" })).toThrow(msg);
+  });
+
   it("carries --parent as the parent task id", () => {
     expect(buildTaskWriteBody({ parent: "abc123" })).toEqual({ parent: "abc123" });
   });

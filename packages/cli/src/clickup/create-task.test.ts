@@ -126,4 +126,27 @@ describe("createCreateTaskCommand", () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  it("sends --markdown-description as markdown_description", async () => {
+    const write = vi.fn().mockResolvedValue({ id: "abc" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createCreateTaskCommand(() => ({ createTask: write, updateTask: write }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: object) => Promise<void>)({ list: "l1", name: "n", markdownDescription: "**hi**" });
+
+    expect(write).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ markdown_description: "**hi**" }));
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("refuses --description with --markdown-description before any write", async () => {
+    const write = vi.fn();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const command = createCreateTaskCommand(() => ({ createTask: write, updateTask: write }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: object) => Promise<void>)({ list: "l1", name: "n", description: "a", markdownDescription: "b" });
+
+    expect(write).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("use only one of --description"));
+    expect(process.exitCode).toBe(1);
+  });
 });

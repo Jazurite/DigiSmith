@@ -1,4 +1,5 @@
 import { ClickUpClient, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
+import { readFileSync } from "node:fs";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
 
 export function createClient(envPath?: string): ClickUpClient {
@@ -29,6 +30,8 @@ export function createDigiSmithSpace(client: ClickUpClient = createClient()): Sp
 export interface TaskFieldArgv {
   name?: string;
   description?: string;
+  markdownDescription?: string;
+  markdownDescriptionFile?: string;
   status?: string;
   startDate?: string;
   dueDate?: string;
@@ -39,7 +42,19 @@ export interface TaskFieldArgv {
 export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
   const body: ClickUpTaskWriteBody = {};
   if (argv.name !== undefined) body.name = argv.name;
+  const descriptionFlags = [argv.description, argv.markdownDescription, argv.markdownDescriptionFile];
+  if (descriptionFlags.filter((v) => v !== undefined).length > 1) {
+    throw new Error("use only one of --description, --markdown-description, --markdown-description-file");
+  }
   if (argv.description !== undefined) body.description = argv.description;
+  if (argv.markdownDescription !== undefined) body.markdown_description = argv.markdownDescription;
+  if (argv.markdownDescriptionFile !== undefined) {
+    try {
+      body.markdown_description = readFileSync(argv.markdownDescriptionFile, "utf8");
+    } catch (err) {
+      throw new Error(`cannot read --markdown-description-file ${argv.markdownDescriptionFile}: ${(err as Error).message}`);
+    }
+  }
   if (argv.status !== undefined) body.status = argv.status;
   if (argv.startDate !== undefined) {
     const startDate = new Date(argv.startDate).getTime();

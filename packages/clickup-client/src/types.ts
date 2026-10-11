@@ -234,6 +234,8 @@ export interface ClickUpListDetail {
 export interface ClickUpTaskWriteBody {
   name?: string;
   description?: string;
+  /** Rendered as Markdown by ClickUp; use instead of description, not with it. */
+  markdown_description?: string;
   start_date?: number;
   start_date_time?: boolean;
   due_date?: number;

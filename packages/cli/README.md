@@ -25,8 +25,8 @@ digismith clickup check-credentials                                # verify Clic
 digismith clickup list-tasks --list <id>                           # list every task on a list
 digismith clickup get-task <task>                                  # fetch a single task by ID
 digismith clickup get-lists --space <id>                           # list a space's folders and folderless lists
-digismith clickup create-task --list <id> --name <name> [options]  # create a new task on a list (--parent <task> for a subtask, --type <name or id>)
-digismith clickup update-task --task <id> [options]                # update an existing task (--parent <task> sets, "" clears; --type <name or id>)
+digismith clickup create-task --list <id> --name <name> [options]  # create a new task on a list (--parent <task> for a subtask, --type <name or id>, --markdown-description <text> or --markdown-description-file <path> instead of --description)
+digismith clickup update-task --task <id> [options]                # update an existing task (--parent <task> sets, "" clears; --type <name or id>; --markdown-description[-file] as on create-task)
 digismith clickup list-task-types                                   # list the workspace task types (id, name, plural, description)
 digismith clickup move-task --task <id> --list <id> [options]      # move a task to another List (--status-map, --move-custom-fields)
 digismith clickup create-folder --name <name>                      # create a new Folder in the DigiSmith space
@@ -45,6 +45,8 @@ digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked re
 
 digismith --version
 ```
+
+`--description`, `--markdown-description` and `--markdown-description-file` are mutually exclusive; the Markdown ones send `markdown_description`, which ClickUp renders. Read it back with `get-task <id> --markdown`.
 
 `--field` on create-task and update-task also takes Relationship values: `--field "Epic=DGS-343"` (keys or ids, comma-separated; a `-` prefix removes, `Epic=-DGS-343`).
 
