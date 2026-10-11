@@ -3,7 +3,7 @@
 Jack's personal SDLC plugin — ticket to delivery, built on top of
 [Superpowers](https://github.com/obra/superpowers). See
 [`MEMORY.md`](MEMORY.md) for the full philosophy and roadmap,
-[`.digismith/history.html`](.digismith/history.html) for a live progress tracker
+the history page (kept in the Workbox depot, outside this repo) for a live progress tracker
 across every map item, and [`docs/getting-started.md`](docs/getting-started.md)
 for the first-run walkthrough in a brand-new repo.
 
@@ -32,7 +32,7 @@ doesn't create the PR, and writes nothing to JIRA itself —
 `jira-progress-write-back` (I.1) picks up these captured URLs from here.
 See
 [`skills/capture-ephemeral-url/SKILL.md`](skills/capture-ephemeral-url/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+for the exact process, or the history page (kept in the Workbox depot, outside this repo) for
 its status.
 
 **`report-implementation`** (map item **N**). It triggers the moment a
@@ -45,7 +45,7 @@ all of that detail lives. It also covers a `digismith:executing-plans`
 (inline-execution) plan, firing right before that skill hands off to
 `finishing-a-development-branch`. See
 [`skills/report-implementation/SKILL.md`](skills/report-implementation/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+for the exact process, or the history page (kept in the Workbox depot, outside this repo) for
 its status.
 
 **`telemetry`** (map item **P**). It triggers right after
@@ -59,7 +59,7 @@ capture, not analysis: the point is building the corpus a later pass can
 mine for how the process actually behaves. With `logging: false` (or no
 profile) it does nothing at all. See
 [`skills/telemetry/SKILL.md`](skills/telemetry/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+for the exact process, or the history page (kept in the Workbox depot, outside this repo) for
 its status.
 
 **`jira-progress-write-back`** (map item **I.1**). Right after
@@ -72,7 +72,7 @@ JIRA ADF formatting instead of a markdown approximation. Confirms the
 full draft with you before either write, every time. Single repo/ticket
 at a time, no status transitions ever — that stays manual by design. See
 [`skills/jira-progress-write-back/SKILL.md`](skills/jira-progress-write-back/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+for the exact process, or the history page (kept in the Workbox depot, outside this repo) for
 its status.
 
 **`offload-implementer`** (map item **K.2**). Right when explicitly
@@ -89,7 +89,7 @@ than silently falling back to Claude. Review stays exactly the same
 `task-reviewer` dispatch and `review-package` script any other task
 gets. See
 [`skills/offload-implementer/SKILL.md`](skills/offload-implementer/SKILL.md)
-for the exact process, or [`.digismith/history.html`](.digismith/history.html) for
+for the exact process, or the history page (kept in the Workbox depot, outside this repo) for
 its status.
 
 ## Install
@@ -226,7 +226,7 @@ brainstorming hand-off; the mid-stream slice (`adopt`) is scoped to one
 recurring case — ticket known, spec written, plan written, nothing built
 yet. Joining before a spec/plan exists, or mid-build, is still out of
 scope, and full stage-order enforcement across every future stage is still
-not built. Check [`.digismith/history.html`](.digismith/history.html) for
+not built. Check the history page (kept in the Workbox depot, outside this repo) for
 what's shipped so far and what's still ahead.
 
 ## Full Skill Reference

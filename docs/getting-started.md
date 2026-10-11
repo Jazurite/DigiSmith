@@ -2,7 +2,7 @@
 
 Terse first-run walkthrough plus a profile/map-item reference. Philosophy
 lives in [`MEMORY.md`](../MEMORY.md); live per-item status lives in
-[`.digismith/history.html`](../.digismith/history.html). This doc doesn't
+the history page (kept in the Workbox depot, outside this repo). This doc doesn't
 repeat either — just what to actually do and expect the first time
 DigiSmith touches a new repo.
 
@@ -110,5 +110,5 @@ trigger point inside the chain above, gated by the active profile:
 
 ## 7. Check status
 
-[`.digismith/history.html`](../.digismith/history.html) — live progress
+The history page (kept in the Workbox depot, outside this repo) — live progress
 per map item and per tier.
