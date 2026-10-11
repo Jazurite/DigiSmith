@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8"><title>DGS-230 report</title>
+<h1>dg clickup --markdown-description — Implementation Report</h1>
+<p>Ticket: <strong>DGS-230</strong> <span>Date: 2026-10-11</span></p>
+<section id="summary"><p><code>dg clickup create-task</code> and <code>update-task</code> now take <code>--markdown-description &lt;text&gt;</code> and <code>--markdown-description-file &lt;path&gt;</code> (public API field <code>markdown_description</code>), so ClickUp renders Markdown instead of showing it raw. The DGS-327 bulk move of about 150 backlog files into ticket descriptions needs this.</p></section>
+<h2>What it ships</h2>
+<ul>
+<li>The three description flags (<code>--description</code>, <code>--markdown-description</code>, <code>--markdown-description-file</code>) are mutually exclusive.</li>
+<li><code>get-task --markdown</code> sends <code>include_markdown_description=true</code>.</li>
+<li>Guards: a BOM is stripped; empty text, or an empty or BOM-only file, is refused; a repeated flag is refused. The request body is built before the client, so a flag conflict or a missing file needs no credentials.</li>
+<li>README updated.</li>
+</ul>
+<h2>Commits (all on main)</h2>
+<ul>
+<li>f2ae6ce feat: the flags</li>
+<li>07c63ef docs(dgs-230): plan</li>
+<li>a05b5ae fix: the guard (BOM, empty, repeated flag)</li>
+<li>6173e62 fix: body built before the client</li>
+<li>b7d601a docs: option text and README</li>
+</ul>
+<p>Merged by fast-forward, then the version bump 6dd5cab (0.100.0-beta).</p>
+<h2>Live proof</h2>
+<p>DGS-230's own description was updated from a BOM-prefixed file and read back with <code>get-task --markdown</code>: 2,498 characters, Markdown intact, BOM gone. An empty <code>--markdown-description</code> was refused with exit 1 and no write.</p>
+<h2>Review</h2>
+<p>Claude whole-branch review by a read-only Claude worker (Read, Grep, Glob only), because Sol is paused (OpenCode v2 stalls on agent runs). Verdict: ready after fixes, 7 minor findings (BOM, client built before body, empty value sent an empty description, repeated flag, option text, test gaps, README get-task line). The maestro verified findings 2 and 3 in the code. All were fixed test-first.</p>
+<h2>Tests</h2>
+<p>1254 of 1255 pass. The one failure is the known e2e <code>--help</code> colour test.</p>
+<h2>Open</h2>
+<p>The first real use is the DGS-327 Part 1 writes (DGS-383). The history hook returned nothing at merge time because no report existed; this report fixes that.</p>
