@@ -84,6 +84,15 @@ export class FrontdoorClient {
     return this.request<FrontdoorField>("GET", `/customFields/v2/field/${id}`);
   }
 
+  /** How many tasks hold one option of a dropdown (the web app asks before a removal). Read only; ClickUp answers a string. */
+  async getFieldValueCount(id: string, optionId: string): Promise<number> {
+    const res = await this.request<{ value_count?: string | number }>(
+      "GET",
+      `/customFields/v2/field/${id}?count_values=true&option_id=${optionId}`,
+    );
+    return Number(res.value_count ?? 0);
+  }
+
   updateField(id: string, body: FrontdoorFieldPutBody): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("PUT", `/customFields/v2/field/${id}`, body);
   }

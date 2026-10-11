@@ -77,6 +77,18 @@ describe("FrontdoorClient", () => {
     expect(field.name).toBe("Bucket");
   });
 
+  it("getFieldValueCount reads value_count for one option as a number", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", value_count: "3" } });
+    const n = await client.getFieldValueCount("f1", "o1");
+    expect(request).toHaveBeenCalledWith({
+      method: "GET",
+      url: "/customFields/v2/field/f1?count_values=true&option_id=o1",
+      data: undefined,
+    });
+    expect(n).toBe(3);
+  });
+
   it("updateField PUTs the full body to the field id", async () => {
     const client = makeClient();
     const body = { id: "f1", name: "N" } as never;
