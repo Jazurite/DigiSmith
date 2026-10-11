@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-397 MEMORY.md cleanup — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-397 MEMORY.md cleanup — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-397</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>MEMORY.md</code> keeps only the founding docs: Philosophy, Structure, What Superpowers already covers and Conventions. It went from 315 lines and 89,858 bytes to 197 lines and 11,658 bytes. The tracker and personal parts moved to ClickUp first, and each read back.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>The frozen clan-letter map, build order and open questions are the attachment <code>frozen-letter-map.md</code> on DGS-356 (byte-identical), named in a new section of its description.</li>
+<li>The career-notes section is DGS-398 in Notes (personal, it left the public repo). The open questions live in DGS-167, DGS-168 and the new DGS-399 (<code>{{MAP_ITEM}}</code> gap).</li>
+<li>"Where work is tracked now" and the status line say: ClickUp is the only tracker, <code>backlog/</code> is gone, shipped work goes to the depot history page through hook 03, the frozen map is on DGS-356.</li>
+<li>README, <code>docs/getting-started.md</code> and ten lines of <code>vendored/PROVENANCE.md</code> no longer point at a removed section. No script or test changed.</li>
+<li>Public check: <code>MEMORY.md</code> has no secret and no Emma or Career text except the file name <code>emma.yml</code> and the ruled Philosophy wording.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: ordered by the maestro, not yet run when this report was written.</p>
+</section>
+</body>
+</html>
