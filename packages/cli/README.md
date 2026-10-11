@@ -27,7 +27,7 @@ digismith clickup get-task <task> [--markdown]                    # fetch a sing
 digismith clickup get-lists --space <id>                           # list a space's folders and folderless lists
 digismith clickup create-task --list <id> --name <name> [options]  # create a new task on a list (--parent <task> for a subtask, --type <name or id>, --markdown-description <text> or --markdown-description-file <path> instead of --description)
 digismith clickup update-task --task <id> [options]                # update an existing task (--parent <task> sets, "" clears; --type <name or id>; --markdown-description[-file] as on create-task)
-digismith clickup list-task-types                                   # list the workspace task types (id, name, plural, description)
+digismith clickup list-task-types                                   # list the workspace task types (id, name, plural, description, icon)
 digismith clickup move-task --task <id> --list <id> [options]      # move a task to another List (--status-map, --move-custom-fields)
 digismith clickup create-folder --name <name>                      # create a new Folder in the DigiSmith space
 digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
