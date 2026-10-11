@@ -1,10 +1,12 @@
 import type { CommandModule } from "yargs";
-import type { FrontdoorClient, FrontdoorTaskTypeBody } from "@digismith/clickup-client";
-import { createFrontdoorClient } from "./lib.ts";
-import { assertNameFree, printCall } from "./task-type-write.ts";
+import type { ClickUpClient, FrontdoorClient, FrontdoorTaskTypeBody } from "@digismith/clickup-client";
+import { createClient, createFrontdoorClient } from "./lib.ts";
+import { assertNameFree, credentialsTeamId, printCall } from "./task-type-write.ts";
 
 export function createCreateTaskTypeCommand(
-  clientFactory: () => FrontdoorClient = createFrontdoorClient
+  frontdoorFactory: () => FrontdoorClient = createFrontdoorClient,
+  publicFactory: () => ClickUpClient = createClient,
+  teamId: () => string = credentialsTeamId
 ): CommandModule {
   return {
     command: "create-task-type",
@@ -18,10 +20,9 @@ export function createCreateTaskTypeCommand(
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
-        const client = clientFactory();
         const name = argv.name as string;
         const plural = argv.plural as string;
-        assertNameFree(await client.getTaskTypes(), [name, plural]);
+        assertNameFree(await publicFactory().getTaskTypes(), [name, plural]);
         const body: FrontdoorTaskTypeBody = {
           avatar_source: "fas",
           avatar_value: (argv.icon as string | undefined) ?? "user-alt",
@@ -30,10 +31,10 @@ export function createCreateTaskTypeCommand(
           name_plural: plural,
         };
         if (!argv.yes) {
-          printCall("POST", `/tasks/v1/${client.teamId}/customItem`, body);
+          printCall("POST", `/tasks/v1/${teamId()}/customItem`, body);
           console.log("nothing sent; add --yes to send");
         } else {
-          console.log(JSON.stringify(await client.createTaskType(body), null, 2));
+          console.log(JSON.stringify(await frontdoorFactory().createTaskType(body), null, 2));
         }
         process.exitCode = 0;
       } catch (err) {

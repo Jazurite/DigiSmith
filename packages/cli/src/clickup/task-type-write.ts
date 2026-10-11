@@ -1,4 +1,4 @@
-import type { ClickUpTaskType } from "@digismith/clickup-client";
+import { checkCredentials, type ClickUpTaskType } from "@digismith/clickup-client";
 import { PLAIN_TASK_TYPE } from "./task-types.ts";
 
 /** Built-in task types (Task, Milestone, form response, ...) have ids below 1000. Only custom types are edited or removed. */
@@ -27,4 +27,9 @@ export function assertNameFree(types: ClickUpTaskType[], names: string[], except
 export function printCall(method: string, path: string, body: unknown): void {
   console.log(`${method} ${path}`);
   if (body !== undefined) console.log(JSON.stringify(body, null, 2));
+}
+
+/** Team id for the printed dry-run path: the env file only, no Frontdoor session, no network. */
+export function credentialsTeamId(): string {
+  return checkCredentials().teamId;
 }
