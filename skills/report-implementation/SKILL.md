@@ -622,12 +622,12 @@ rendered empty.
      `git add -f`.
    - **Not ignored (exit 1)** → commit as normal:
      ```bash
-     git add <target folder>/report.html
+     git add <target folder>/report.html [<target folder>/plan.md] [<target folder>/design.html]
      git commit -m "docs: add <feature> (<ticket>) implementation report"
      ```
      Commit `plan.md` and `design.html` together with `report.html`, before
      the merge — name each one that exists in the target folder in the same
-     `git add`. The history hook links them at the merged commit and stops on
+     `git add` (leave out the brackets and any file that does not exist or is not linked). The history hook links them at the merged commit and stops on
      a file that is on disk but not committed, and after the merge that stop
      has no recovery while the head pin is fixed.
 
