@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-333 task-type commands: dry run without a Frontdoor session — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-333 task-type commands: dry run without a Frontdoor session — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-333</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>create-task-type</code>, <code>update-task-type</code> and <code>delete-task-type</code> now read the task types through the public API (<code>GET /team/{id}/custom_item</code>). They build the Frontdoor client only in the <code>--yes</code> branch. A dry run needs no Frontdoor session.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Each command takes a Frontdoor factory, a public factory and (create, update) a team-id function. The default team id comes from <code>checkCredentials()</code>: the env file only.</li>
+<li>delete-task-type builds the Frontdoor client after the <code>--confirm-count</code> check, so a stale count fails before any session is needed.</li>
+<li>Same body as before: the public read has the same fields the PUT needs (id, name, name_plural, description, avatar source and value), the same <code>ClickUpTaskType</code> type. Tests pin the exact POST and PUT bodies, including the <code>fas</code> / <code>user-alt</code> fallback.</li>
+<li>No edit in <code>packages/clickup-client</code>.</li>
+</ul>
+</section>
+<section id="tests">
+<h2>Tests</h2>
+<p>Per describe, base to branch: create-task-type 3 to 6, update-task-type 6 to 9, delete-task-type 6 to 9. Full run: 609 passed, 1 failed (the known e2e <code>--help</code> colour test). Build clean.</p>
+</section>
+</body>
+</html>
