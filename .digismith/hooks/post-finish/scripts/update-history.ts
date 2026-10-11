@@ -105,7 +105,10 @@ export function resolveHistoryDir(
   env: NodeJS.ProcessEnv = process.env,
   home: string = os.homedir(),
 ): string {
-  return args["history-dir"] ?? env.DIGISMITH_HISTORY_DIR ?? path.join(home, ".digismith-depot", "history");
+  const chosen = args["history-dir"]?.trim() || env.DIGISMITH_HISTORY_DIR?.trim();
+  if (!chosen) return path.join(home, ".digismith-depot", "history");
+  if (chosen === "~") return home;
+  return chosen.startsWith("~/") ? path.join(home, chosen.slice(2)) : chosen;
 }
 
 // Permalink root pinned to one commit, so a file that moves later never breaks the link.
@@ -126,6 +129,19 @@ export function isPublished(sha: string, cwd: string = process.cwd()): boolean {
 
 function encodePath(p: string): string {
   return p.split("/").map(encodeURIComponent).join("/");
+}
+
+// A report is already in the page when its title and its report link are both there, whatever
+// the commit sha in the link. A re-run after a failed depot commit must not append it twice.
+export function isAlreadyRecorded(
+  historyHtml: string,
+  title: string,
+  base: "docs" | "board",
+  slug: string,
+): boolean {
+  if (!historyHtml.includes(`<h4>${title}</h4>`)) return false;
+  const tail = `${base}/${slug}/report.html"`;
+  return historyHtml.includes(tail) || historyHtml.includes(`${base}/${encodePath(slug)}/report.html"`);
 }
 
 export function buildReferenceLinks(
@@ -227,10 +243,16 @@ export function main(): void {
     for (const relPath of changedReports) {
       const absPath = path.join(cwd, relPath);
       const parsed = parseReport(absPath);
+      if (isAlreadyRecorded(historyHtml, parsed.featureTitle, parsed.base, parsed.slug)) continue;
       const links = buildReferenceLinks(parsed.slug, parsed.base, cwd, permalinkBase);
       const body = `${parsed.summary} ${links}`;
       eventsHtml.push(buildEventHtml({ date: parsed.date, title: parsed.featureTitle, body }, nl));
       titles.push(parsed.featureTitle);
+    }
+
+    if (eventsHtml.length === 0) {
+      console.log("NOTHING (already recorded)");
+      return;
     }
 
     historyHtml = insertTimelineEntries(historyHtml, eventsHtml);
