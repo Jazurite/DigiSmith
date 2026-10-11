@@ -152,6 +152,11 @@ export class ClickUpClient {
     await this.delete(`/task/${taskId}`);
   }
 
+  /** DELETE /list/{id}. ClickUp answers {}. Trash or permanent is not known yet (DGS-83). */
+  async deleteList(listId: string): Promise<void> {
+    await this.delete(`/list/${listId}`);
+  }
+
   /** Reads a task by ClickUp id, or by custom id (DGS-343): keys need custom_task_ids and the team id. */
   getTaskByRef(ref: string): Promise<ClickUpTask> {
     const params = CUSTOM_ID.test(ref) ? { custom_task_ids: true, team_id: this.teamId } : undefined;

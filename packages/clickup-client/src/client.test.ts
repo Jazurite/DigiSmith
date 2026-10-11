@@ -365,6 +365,20 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(folders[0].lists[0].name).toBe("CW-30: 20/7 - 26/7");
   });
 
+  it("deleteList() sends DELETE /list/{id} and returns nothing", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await expect(client.deleteList("42")).resolves.toBeUndefined();
+
+    expect(request).toHaveBeenCalledWith({
+      method: "DELETE",
+      url: "/list/42",
+      params: undefined,
+      data: undefined,
+    });
+  });
+
   it("moveFolder() PUTs parent_folder_id to the folder's position path", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });
