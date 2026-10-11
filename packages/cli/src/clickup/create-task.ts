@@ -61,8 +61,8 @@ export function createCreateTaskCommand(
         }),
     handler: async (argv) => {
       try {
-        const client = clientFactory();
         const body = buildTaskWriteBody(argv as unknown as Parameters<typeof buildTaskWriteBody>[0]);
+        const client = clientFactory();
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
         }

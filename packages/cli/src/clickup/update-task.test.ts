@@ -1,8 +1,15 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createUpdateTaskCommand } from "./update-task.ts";
 
 describe("createUpdateTaskCommand", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     process.exitCode = 0;
     vi.restoreAllMocks();
@@ -128,26 +135,66 @@ describe("createUpdateTaskCommand", () => {
     });
   });
 
-  it("sends --markdown-description as markdown_description", async () => {
-    const write = vi.fn().mockResolvedValue({ id: "abc" });
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const command = createUpdateTaskCommand(() => ({ createTask: write, updateTask: write }) as unknown as ClickUpClient);
+  describe("markdown description", () => {
+    const run = (argv: object, factory: () => ClickUpClient) =>
+      (createUpdateTaskCommand(factory).handler as (a: object) => Promise<void>)({ task: "abc", ...argv });
+    const fake = (write = vi.fn().mockResolvedValue({ id: "abc" })) => ({
+      write,
+      factory: () => ({ updateTask: write }) as unknown as ClickUpClient,
+    });
+    const throwingFactory = vi.fn(() => {
+      throw new Error("no credentials");
+    });
 
-    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", markdownDescription: "**hi**" });
+    it("sends --markdown-description as exactly markdown_description", async () => {
+      const { write, factory } = fake();
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
-    expect(write).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ markdown_description: "**hi**" }));
-    expect(process.exitCode).toBe(0);
-  });
+      await run({ markdownDescription: "**hi**" }, factory);
 
-  it("refuses --description with --markdown-description before any write", async () => {
-    const write = vi.fn();
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const command = createUpdateTaskCommand(() => ({ createTask: write, updateTask: write }) as unknown as ClickUpClient);
+      expect(write).toHaveBeenCalledWith("abc", { markdown_description: "**hi**" });
+      expect(write.mock.calls[0][1]).not.toHaveProperty("description");
+      expect(process.exitCode).toBe(0);
+    });
 
-    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", description: "a", markdownDescription: "b" });
+    it("sends the content of --markdown-description-file", async () => {
+      const dir = mkdtempSync(join(tmpdir(), "dg-md-handler-"));
+      try {
+        const file = join(dir, "d.md");
+        writeFileSync(file, "\uFEFFa\r\nb\n", "utf8");
+        const { write, factory } = fake();
+        vi.spyOn(console, "log").mockImplementation(() => {});
 
-    expect(write).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("use only one of --description"));
-    expect(process.exitCode).toBe(1);
+        await run({ markdownDescriptionFile: file }, factory);
+
+        expect(write).toHaveBeenCalledWith("abc", { markdown_description: "a\r\nb\n" });
+        expect(write.mock.calls[0][1]).not.toHaveProperty("description");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it.each([
+      ["--description and --markdown-description", { description: "a", markdownDescription: "b" }],
+      ["--markdown-description and the file flag", { markdownDescription: "a", markdownDescriptionFile: "b.md" }],
+    ])("refuses %s together, with no client and no write", async (_label, argv) => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await run(argv, throwingFactory);
+
+      expect(throwingFactory).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("use only one of --description"));
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("reports a missing file with exit 1, no client and no write", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await run({ markdownDescriptionFile: join(tmpdir(), "no-such-dir", "x.md") }, throwingFactory);
+
+      expect(throwingFactory).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("cannot read --markdown-description-file"));
+      expect(process.exitCode).toBe(1);
+    });
   });
 });

@@ -17,7 +17,8 @@ describe("createGetTaskCommand", () => {
 
     await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "abc" });
 
-    expect(get).toHaveBeenCalledWith("/task/abc");
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get.mock.calls[0]).toEqual(["/task/abc"]);
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task, null, 2));
     expect(process.exitCode).toBe(0);
   });
