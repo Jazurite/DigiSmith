@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-401 let the OpenCode Maestro dispatch — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-401 let the OpenCode Maestro dispatch — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-401</strong></span><span>Date: 2026-10-11</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The OpenCode Maestro (agents <code>maestro</code> and <code>maestro-review</code>) can now write worker briefs and board files and run <code>tab create</code>, <code>agent start</code>, <code>agent prompt</code> and <code>agent wait</code> in w2 without being blocked. Installed live and proven by Jack's probes, including the first use (one tab created and closed).</p>
+</section>
+<section id="cause">
+<h2>Cause</h2>
+<p>The config was not the problem; the safety plugin blocked the calls after the config allowed them or Jack approved them.</p>
+<ul>
+<li>Every write in an allowed folder went to the Haiku reviewer, which used all 400 output tokens and returned no text; the plugin failed closed.</li>
+<li>The v2 adapter stubs the session messages, so the reviewer saw no user request and blocked <code>tab create</code>.</li>
+<li>The edit check used a hard-coded folder list and ignored the config's allow globs.</li>
+<li><code>opencode-boot</code> rebuilds <code>v2/</code> from the payload at every start, so the fix goes in the repo, then <code>install.sh</code>, then the restart.</li>
+</ul>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Writes are allowed by rules, no model, on the real path (no <code>..</code>, symlinks resolved): <code>opencode-maestro/*</code>, <code>dgs-&lt;n&gt;/brief.md</code>, files directly in <code>board/&lt;ticket&gt;/</code> and its <code>worker-*/</code> folders. Secret paths, outside-root paths, secret text, deletes and moves out block first.</li>
+<li>The four dispatch verbs are allowed by rules. <code>close stop run send rename focus</code> stay on ask and go to the reviewer (1500 tokens; a bad reply or a down gateway still blocks).</li>
+<li>Config: edit and bash allows placed before the deny block, so a deny still wins. The plugin throws before OpenCode can grant anything.</li>
+<li>Prompt: active Maestro, new role words, today's rules.</li>
+<li>Tests, written first: <code>test-dgs-401.mjs</code> 60, <code>test-config-order.mjs</code>, <code>test-rules.mjs</code> 50 (free, no model).</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Jack restarted <code>opencode-boot</code>. Probes passed: write <code>dgs-999/brief.md</code>, <code>agent list</code>, <code>tab create</code> (no prompt) and <code>tab close</code> (Jack approved): one tab created and closed. A write to <code>.claude/settings.json</code>, a read of a <code>.env</code> path and <code>ls /etc</code> stayed blocked. Backups carry the suffix <code>.before-dgs-401-20261011</code>; <code>restore.md</code> lists the restore commands.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review. Fixed with tests: a dangling symlink at the last path component passed the symlink check; duplicate <code>--workspace</code> / <code>--pane</code>, <code>-w</code> and <code>=</code> forms passed the workspace check. Not fixed: no per-verb flag whitelist (herdr's flags are unverified; the wrapper pins workspace and pane). The review fixes reach the live server with the next <code>opencode-boot</code>.</p>
+</section>
+<section id="scope">
+<h2>Scope</h2>
+<p>DGS-346 stays its own ticket; only the deny shapes were run here.</p>
+</section>
+</body>
+</html>
