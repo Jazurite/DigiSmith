@@ -5,7 +5,7 @@ Three layers, same idea as Claude Code auto mode.
    (web app or `opencode attach`) as a pending bash permission with the full command. The session waits. Nothing runs until he answers.
    Do NOT click "Always": its pattern is `herdr-ws *` and would stop the prompt for every herdr-ws verb (the plugin still reviews each call).
 2. **Reviewer plugin** (`maestro-safety.js`, hook `tool.execute.before`, runs before the permission check). Fixed rules decide read-only and clearly bad calls with no model.
-   Calls that change things (writes inside the session folder, `herdr-ws` change verbs) go to a small model (default `claude-haiku-5-5` through TokenReply).
+   Writes and the dispatch verbs are decided by the rules alone (DGS-401): a write is allowed only on the REAL path (no `..`, symlinks resolved, relative to a project root) `.digismith/sessions/opencode-maestro/*`, `.digismith/sessions/dgs-<n>/brief.md`, files directly in `.digismith/board/<ticket>/` and its `worker-*/` folders; `herdr-ws tab create`, `agent start`, `agent prompt`, `agent wait` in an allowed workspace. Secret paths, outside-root paths, secret text, deletes and moves out always block first. The other `herdr-ws` change verbs (`create` of other groups, `run close stop send rename focus`) go to a small model (default `claude-haiku-5-5` through TokenReply, 1500 output tokens; it sees no chat and blocks only the clearly harmful).
    Verdicts: allow, ask, block. Fail closed: key missing, gateway error, timeout (15 s), bad reply, plugin error, log not writable = block.
    A plugin cannot open a prompt. A reviewer `ask` on a `herdr-ws` change verb goes on to the config prompt (layer 1). Any other `ask` becomes a block "needs Jack".
    Log: `~/.digismith-depot/opencode/verdicts.jsonl` (mode 600, times UTC+7, args cut to 120 characters and redacted, never a key).
@@ -28,6 +28,6 @@ The plugin does nothing unless the server starts with `OPENCODE_SAFETY=1`. **The
 4. `SAFETY_ALLOWED_WS` lists the herdr workspaces the plugin accepts; the per-project permission block still pins one workspace per agent (DGS-225).
 
 ## Tests (all on a throwaway server, port 4213, fresh random password; live 4198 untouched)
-- `node test-rules.mjs` free, no model: 50 calls (reviewer URL dead on purpose).
+- `node test-rules.mjs` free, no model: 50 calls (reviewer URL dead on purpose). `node test-dgs-401.mjs` (write path-exactness, traversal, symlinks, dispatch verbs; builds its own temp root) and `node test-config-order.mjs` (last-match-wins check of the config for both agents). Where a deny wins: the plugin throws before OpenCode's permission check can grant anything, and the config's deny block sits after every allow, so the last matching rule is the deny.
 - (Needs a port to v2, DGS-346: the throwaway server and probe agents `serve-safety.py` made are gone; these scripts speak the 1.x REST API.) `../probes/run_probes.py probe-open <port>` (config allows everything, only the plugin guards),
   `run-steering.py <agent> <port> [summarize|follow]`, `run-ask.py <port>`, `run-outage.py <port>`, `compare-reviewers.mjs <model>...`, `cost.py`.

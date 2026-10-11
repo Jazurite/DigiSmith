@@ -31,6 +31,8 @@
         "edit": {
           "*": "deny",
           "*/.digismith/sessions/opencode-maestro/*": "allow",
+          "*/.digismith/sessions/dgs-*/brief.md": "allow",
+          "*/.digismith/board/*": "allow",
           "*/.digismith/board/*/worker-opencode-maestro/*": "allow"
         },
         "bash": {
@@ -56,6 +58,10 @@
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename *": "ask",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus": "ask",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws tab create *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent start *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent prompt *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent wait *": "allow",
           "ls": "allow",
           "ls *": "allow",
           "git status": "allow",
@@ -173,6 +179,8 @@
         "edit": {
           "*": "deny",
           "*/.digismith/sessions/opencode-maestro/*": "allow",
+          "*/.digismith/sessions/dgs-*/brief.md": "allow",
+          "*/.digismith/board/*": "allow",
           "*/.digismith/board/*/worker-opencode-maestro/*": "allow"
         },
         "bash": {
@@ -198,6 +206,10 @@
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * rename *": "ask",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus": "ask",
           "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws * focus *": "ask",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws tab create *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent start *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent prompt *": "allow",
+          "HERDR_WS=w2 /Users/workbox/.digismith-depot/bin/herdr-ws agent wait *": "allow",
           "ls": "allow",
           "ls *": "allow",
           "git status": "allow",

@@ -46,8 +46,8 @@ const cases = [
   ["edit-repo", "edit", { filePath: `${R}/README.md`, oldString: "a", newString: "b" }, "block"],
   ["write-secret-text", "write", { filePath: `${R}/.digismith/sessions/opencode-maestro/x.md`, content: "key sk-abcdefghijklmnopqrstuvwx" }, "block"],
   ["patch-delete", "apply_patch", { patchText: "*** Begin Patch\n*** Delete File: " + R + "/.digismith/sessions/opencode-maestro/x.md\n*** End Patch" }, "block"],
-  ["write-own-folder", "write", { filePath: `${R}/.digismith/sessions/opencode-maestro/x.md`, content: "hello" }, "block-review"],
-  ["herdr-tab-create", "bash", { command: `HERDR_WS=w2 ${H} tab create --workspace w2 --label x` }, "block-review"],
+  ["write-own-folder", "write", { filePath: `${R}/.digismith/sessions/opencode-maestro/x.md`, content: "hello" }, "allow"],
+  ["herdr-tab-create", "bash", { command: `HERDR_WS=w2 ${H} tab create --workspace w2 --label x` }, "allow"], // DGS-401: dispatch verb, rules decide
   ["herdr-list", "bash", { command: `HERDR_WS=w2 ${H} agent list` }, "allow"],
   ["herdr-pane-read", "bash", { command: `HERDR_WS=w2 ${H} pane read w2:p1 --source recent --lines 20` }, "allow"],
   ["ok-ls", "bash", { command: `ls ${R}/backlog` }, "allow"],
