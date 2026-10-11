@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared Task-Field Options — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready for review</span>
+  <h1>Shared Task-Field Options — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-11</span>
+    <span>Ticket: <strong>DGS-13</strong></span>
+    <span>Also closes: <strong>DGS-14</strong> (use <code>TaskFieldArgv</code>)</span>
+    <span>Commit range: <code>e16a3d5..cc78e2f</code> plus the report commit</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Two pure refactors of <code>dg clickup create-task</code> and <code>update-task</code>, with no behaviour change. DGS-14: both commands now cast <code>argv</code> to the named <code>TaskFieldArgv</code> type, which was exported but never imported. DGS-13: the ten shared yargs options moved into one helper, <code>withTaskFieldOptions(y, { parentDescribe })</code> in <code>lib.ts</code>; each command still declares <code>--list</code>/<code>--task</code> and <code>--name</code> itself, so the <code>--help</code> order stays.</p>
+  <p>Checked before and after each commit: the <code>--help</code> text of both commands and the <code>buildTaskWriteBody</code> output for 14 argv cases are byte-identical to the base. Executed directly in this session, one commit per ticket, with the new tests written first and seen failing.</p>
+  <p>Reference documents: the <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">DGS-14</div><h4>Use TaskFieldArgv</h4><p>Both commands cast to <code>TaskFieldArgv</code> instead of <code>Parameters&lt;typeof buildTaskWriteBody&gt;[0]</code>.</p></div>
+    <div class="card"><div class="tag">DGS-13</div><h4>withTaskFieldOptions helper</h4><p>One declaration of <code>description</code> through <code>field</code>; only the <code>--parent</code> wording differs per command.</p></div>
+    <div class="card"><div class="tag">DGS-13</div><h4>Drift tests</h4><p>A helper describe in <code>lib.test.ts</code> and one test per command that the option keys and order match.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed directly in this session, task by task, with a self-check after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Self-check</th></tr>
+    <tr><td>DGS-14</td><td>Named type in both commands</td><td>Type check clean; <code>--help</code> and 14 body cases identical; 312 tests in <code>src/clickup</code> pass</td></tr>
+    <tr><td>DGS-13</td><td>Helper, both commands rewired, 6 new tests</td><td>Tests failed first (<code>withTaskFieldOptions is not a function</code>), then passed; type check clean; <code>--help</code> and 14 body cases identical</td></tr>
+  </table>
+  </div>
+  <p>Test counts against the base: <code>lib.test.ts</code> 24 to 28, <code>create-task.test.ts</code> 14 to 15, <code>update-task.test.ts</code> 19 to 20, <code>src/clickup</code> 312 to 318 in 32 files. No existing test or assertion changed. Full suite: 606 passed, 1 failed. The failure is the known e2e <code>--help</code> colour test; main already carries its fix (DGS-290).</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">0a88759</span> refactor(clickup): use TaskFieldArgv in task commands</li>
+    <li><span class="sha">cc78e2f</span> refactor(clickup): share task-field yargs options</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-13—task-field-options-dry/report.html</footer>
+
+</body>
+</html>
