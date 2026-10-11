@@ -27,6 +27,7 @@ const EDIT_DENY = [
 const GIT_OK = /^git (status( --short| --porcelain)?|diff( --stat| --name-only| HEAD)?|log --oneline( -\d{1,2})?|branch( -a| -vv)?)$/
 const HERDR_READ = new Set(["list", "get", "read"])
 const HERDR_DISPATCH = new Set(["tab create", "agent start", "agent prompt", "agent wait"]) // allowed by the rules (config still decides the prompt); the other write verbs go to the reviewer
+const HERDR_ASK = new Set(["close", "stop", "run", "send", "rename", "focus"]) // DGS-408: no reviewer; straight to Jack's prompt (the evaluate hook sets ask, never allow)
 const HERDR_WRITE = new Set(["create", "start", "prompt", "run", "close", "stop", "send", "wait", "rename", "focus"])
 const PASS_TOOLS = new Set(["todowrite", "skill"])
 const WRITE_TOOLS = new Set(["edit", "write", "apply_patch", "patch", "multiedit"])
@@ -174,6 +175,11 @@ export const MaestroSafety = async (ctx) => {
         if (/--workspace/.test(m[5]) && !new RegExp("--workspace " + m[1] + "(\\s|$)").test(m[5])) return { v: "block", why: "other workspace" }
         if (HERDR_READ.has(m[4])) return { v: "allow", why: "herdr-ws read verb" }
         if (HERDR_DISPATCH.has(m[3] + " " + m[4])) return { v: "allow", why: "herdr-ws dispatch verb in an allowed workspace" }
+        if (HERDR_ASK.has(m[4])) {
+          if (m[4] === "close" && /(^|\s)w\d+:t1(\s|$)/.test(m[5])) return { v: "block", why: "tab 1 (maestro) cannot be closed here" }
+          if (!ctx?.canAsk) return { v: "block", why: "needs Jack: herdr-ws " + m[4] + " (no permission hook to ask with)" }
+          return { v: "ask", why: "herdr-ws " + m[4] + ": straight to Jack's prompt, no reviewer", prompt: true, markId: true }
+        }
         if (HERDR_WRITE.has(m[4])) return { v: "review", why: "herdr-ws changes things", prompt: true }
         return { v: "block", why: "herdr-ws verb unknown" }
       }
@@ -252,12 +258,15 @@ export const MaestroSafety = async (ctx) => {
       })
       if (!ok) throw new Error("BLOCKED by safety layer: log not writable")
       if (res.mark && final === "allow") markDelete(input.callID, input.sessionID)
+      if (res.markId && final === "allow") markIds.set(input.callID, Date.now() + markTtl)
       if (final !== "allow")
         throw new Error("BLOCKED by safety layer: " + (res.v === "ask" ? "needs Jack: " : "") + res.why)
     },
-    // OpenCode 2.x permission.evaluate hook (DGS-408): escalate-only. A marked delete/move, or metadata that shows a deleted file, becomes ask; never allow, never touches a deny.
+    // OpenCode 2.x permission.evaluate hook (DGS-408): escalate-only. A marked call (delete/move, or one of the six herdr verbs) by call id, or metadata that shows a deleted file, becomes ask; never allow, never touches a deny.
     "permission.evaluate": (input) => {
-      if (input?.action !== "edit" || input.effect === "deny") return
+      if (!input || input.effect === "deny") return
+      if (markIds.get(input.source?.id) > Date.now()) { input.effect = "ask"; input.message = "Needs Jack"; log({ event: "evaluate", session: input.sessionID, verdict: "ask", reason: "marked call forced to the permission prompt" }); return }
+      if (input.action !== "edit") return
       const files = Array.isArray(input.metadata?.files) ? input.metadata.files : []
       if (!(marked(input.source?.id, input.sessionID) || files.some((f) => f && (f.status === "deleted" || f.type === "delete")))) return
       input.effect = "ask"

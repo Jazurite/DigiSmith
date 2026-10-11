@@ -1,4 +1,4 @@
-// DGS-401 free test (no model), DGS-408: repo-wide edits are now allowed (see test-dgs-408.mjs); write allow is path-exact (no .., symlinks resolved), the four dispatch verbs pass by rule, the six ask verbs still go to the reviewer, denies win.
+// DGS-401 free test (no model), DGS-408: repo-wide edits are now allowed (see test-dgs-408.mjs); write allow is path-exact (no .., symlinks resolved), the four dispatch verbs pass by rule, the six ask verbs no longer reach the reviewer (DGS-408: blocked "needs Jack" without the hook), denies win.
 // Usage: node test-dgs-401.mjs   (builds a temp root, reviewer pointed at a closed port, so every "review" case ends as a block "reviewer-down")
 import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, realpathSync } from "node:fs"
 import { tmpdir, homedir } from "node:os"
@@ -63,7 +63,7 @@ const cases = [
   ["delete-patch", ["patch", { patchText: `*** Begin Patch\n*** Delete File: ${R}/${S}/dgs-346/brief.md\n*** End Patch` }], "block"],
   ["move-out", ["patch", { patchText: `*** Begin Patch\n*** Update File: ${R}/${S}/dgs-346/brief.md\n*** Move to: ${R}/.claude/settings.json\n*** End Patch` }], "block"],
   ["write-no-path", ["write", { content: "x" }], "block"],
-  // herdr: the four dispatch verbs pass by rule; the six ask verbs still go to the reviewer (down here = block); other workspace = block
+  // herdr: the four dispatch verbs pass by rule; the six ask verbs no longer reach the reviewer (DGS-408: blocked "needs Jack" without the hook) (down here = block); other workspace = block
   ["tab-create", ["bash", { command: `HERDR_WS=w2 ${H} tab create --workspace w2 --cwd ${R} --label dgs-346` }], "allow"],
   ["agent-start", ["bash", { command: `HERDR_WS=w2 ${H} agent start dgs-346 --workspace w2 --agent claude` }], "allow"],
   ["agent-prompt", ["bash", { command: `HERDR_WS=w2 ${H} agent prompt dgs-346 "Read brief and follow it."` }], "allow"],
@@ -78,12 +78,12 @@ const cases = [
   ["tab-create-w3", ["bash", { command: `HERDR_WS=w3 ${H} tab create --label x` }], "block"],
   ["tab-create-flag-w3", ["bash", { command: `HERDR_WS=w2 ${H} tab create --workspace w3 --label x` }], "block"],
   ["pane-create-not-listed", ["bash", { command: `HERDR_WS=w2 ${H} pane create --label x` }], "block-review"],
-  ["tab-close", ["bash", { command: `HERDR_WS=w2 ${H} tab close w2:t9` }], "block-review"],
-  ["agent-stop", ["bash", { command: `HERDR_WS=w2 ${H} agent stop dgs-346` }], "block-review"],
-  ["pane-run", ["bash", { command: `HERDR_WS=w2 ${H} pane run w2:p1 ls` }], "block-review"],
-  ["agent-send", ["bash", { command: `HERDR_WS=w2 ${H} agent send dgs-346 hi` }], "block-review"],
-  ["tab-rename", ["bash", { command: `HERDR_WS=w2 ${H} tab rename w2:t9 x` }], "block-review"],
-  ["tab-focus", ["bash", { command: `HERDR_WS=w2 ${H} tab focus w2:t9` }], "block-review"],
+  ["tab-close", ["bash", { command: `HERDR_WS=w2 ${H} tab close w2:t9` }], "block"],
+  ["agent-stop", ["bash", { command: `HERDR_WS=w2 ${H} agent stop dgs-346` }], "block"],
+  ["pane-run", ["bash", { command: `HERDR_WS=w2 ${H} pane run w2:p1 ls` }], "block"],
+  ["agent-send", ["bash", { command: `HERDR_WS=w2 ${H} agent send dgs-346 hi` }], "block"],
+  ["tab-rename", ["bash", { command: `HERDR_WS=w2 ${H} tab rename w2:t9 x` }], "block"],
+  ["tab-focus", ["bash", { command: `HERDR_WS=w2 ${H} tab focus w2:t9` }], "block"],
   ["tab-create-meta", ["bash", { command: `HERDR_WS=w2 ${H} tab create --label $(id)` }], "block"],
   ["tab-create-secret", ["bash", { command: `HERDR_WS=w2 ${H} tab create --label token-x` }], "block"],
   ["herdr-list", ["bash", { command: `HERDR_WS=w2 ${H} agent list` }], "allow"],

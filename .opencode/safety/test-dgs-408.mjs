@@ -30,7 +30,7 @@ let n = 0
 async function run(h, [tool, args], over = {}) {
   const id = "c" + ++n, sessionID = over.sessionID || sess(n)
   try { await h["tool.execute.before"]({ tool, sessionID, callID: id }, { args }) } catch (e) { return "block:" + e.message }
-  const ev = { sessionID, action: "edit", resources: ["x"], source: { type: "tool", id: over.sourceId ?? id }, metadata: over.metadata, effect: "allow" }
+  const ev = { sessionID, action: over.action || (tool === "bash" ? "bash" : "edit"), resources: ["x"], source: { type: "tool", id: over.sourceId ?? id }, metadata: over.metadata, effect: "allow" }
   h["permission.evaluate"](ev)
   return ev.effect
 }
@@ -113,11 +113,31 @@ blk("delete-lower-env", raw(`*** Begin Patch\n*** delete file: ${A(".env")}\n***
 for (const [id, c] of [["delete", patch(hunk.del(A("README.md")))], ["move", patch(hunk.mv(A("README.md"), A("packages/r.md")))], ["mixed", patch(hunk.add(A("new.md")), hunk.del(A("README.md")))], ["lower", raw(`*** Begin Patch\n*** delete file: ${A("README.md")}\n*** End Patch`)], ["space", raw(`*** Begin Patch\n  *** Delete File: ${A("README.md")}\n*** End Patch`)]])
   cases.push(["noask-" + id, c, "block-needs-jack", noAsk])
 cases.push(["noask-plain-edit-still-ok", patch(hunk.upd(A("README.md"))), "allow", noAsk])
+// ---- the six reviewed herdr verbs skip the reviewer (URL is dead: "reviewer-down" would show) and go to Jack's prompt; no hook = block "needs Jack"
+const HW = `HERDR_WS=w2 ${process.env.HOME}/.digismith-depot/bin/herdr-ws`
+const six = { "tab-close": "tab close w2:t9", "agent-stop": "agent stop dgs-346", "pane-run": "pane run w2:p1 ls", "agent-send": "agent send dgs-346 hi", "tab-rename": "tab rename w2:t9 x", "tab-focus": "tab focus w2:t9" }
+for (const [id, c] of Object.entries(six)) {
+  ask("six-" + id, ["bash", { command: `${HW} ${c}` }])
+  cases.push(["six-noask-" + id, ["bash", { command: `${HW} ${c}` }], "block-needs-jack", noAsk])
+  blk("six-w3-" + id, ["bash", { command: `HERDR_WS=w3 ${process.env.HOME}/.digismith-depot/bin/herdr-ws ${c}` }])
+  blk("six-pipe-" + id, ["bash", { command: `${HW} ${c} | cat` }])
+  blk("six-semicolon-" + id, ["bash", { command: `${HW} ${c} ; ls` }])
+  blk("six-redirect-" + id, ["bash", { command: `${HW} ${c} > x` }])
+  blk("six-ws-flag-" + id, ["bash", { command: `${HW} ${c} --workspace w3` }])
+  blk("six-ws-dup-" + id, ["bash", { command: `${HW} ${c} --workspace w2 --workspace w3` }])
+  blk("six-pane-dup-" + id, ["bash", { command: `${HW} ${c} --pane w2:p1 --pane w3:p1` }])
+  blk("six-bare-herdr-" + id, ["bash", { command: `herdr ${c}` }])
+}
+blk("six-tab1-close", ["bash", { command: `${HW} tab close w2:t1` }])
+blk("six-tab1-close-flag", ["bash", { command: `${HW} tab close --workspace w2 w2:t1` }])
+cases.push(["six-tab1-noask", ["bash", { command: `${HW} tab close w2:t1` }], "block", noAsk])
+cases.push(["other-write-verb-still-reviewer", ["bash", { command: `${HW} pane create --label x` }], "block-reviewer", withAsk])
+cases.push(["dispatch-verb-still-by-rule", ["bash", { command: `${HW} tab create --workspace w2 --label x` }], "allow", noAsk])
 let fail = 0
 const report = (id, ok2, got) => { if (!ok2) fail++; console.log(ok2 ? "PASS" : "FAIL", id.padEnd(34), String(got).slice(0, 90)) }
 for (const [id, call, expect, h = withAsk] of cases) {
   const got = await run(h, call)
-  const good = expect === "allow" ? got === "allow" : expect === "ask" ? got === "ask" : expect === "block" ? got.startsWith("block:") && !/needs Jack/.test(got) : got.startsWith("block:") && /needs Jack/.test(got)
+  const good = expect === "allow" ? got === "allow" : expect === "ask" ? got === "ask" : expect === "block" ? got.startsWith("block:") && !/needs Jack/.test(got) && !/reviewer-down/.test(got) : expect === "block-reviewer" ? /reviewer-down/.test(got) : got.startsWith("block:") && /needs Jack/.test(got)
   report(id, good, got)
 }
 // ---- the evaluate hook on its own (escalate-only)
