@@ -409,7 +409,7 @@ function runScript(cwd: string, args: string[]) {
   return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
 }
 
-describe// A real git repo: `tracked` files are committed (the head), `onDisk` files are written after the
+// A real git repo: `tracked` files are committed (the head), `onDisk` files are written after the
 // commit and stay untracked, `late` files are committed AFTER the returned head sha.
 function makeLinkRepo(opts: { tracked?: string[]; onDisk?: string[]; late?: string[] }): { dir: string; head: string } {
   const dir = makeTmpDir("update-history-links-");
@@ -559,7 +559,7 @@ describe("findDeadLinks", () => {
   });
 });
 
-("findChangedReports", () => {
+describe("findChangedReports", () => {
   it("returns an empty array when no report.html changed", () => {
     const dir = makeTmpDir("update-history-repo-");
     try {
