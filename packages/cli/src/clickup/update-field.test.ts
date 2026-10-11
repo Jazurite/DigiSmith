@@ -358,3 +358,60 @@ describe("update-field", () => {
     expect(process.exitCode).toBe(1);
   });
 });
+
+describe("update-field argv (parsed by yargs)", () => {
+  afterEach(() => {
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+  });
+
+  const parse = async (client: unknown, args: string[]) => {
+    const { default: yargs } = await import("yargs");
+    await yargs(["update-field", "--field", "f1", ...args])
+      .command(createUpdateFieldCommand(() => client as FrontdoorClient))
+      .fail(false)
+      .exitProcess(false)
+      .parseAsync();
+  };
+
+  it("--remove-option A --remove-option B needs a confirm for each", async () => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await parse(client, ["--remove-option", "Frontdoor API", "--remove-option", "Public API", "--confirm-remove", "Frontdoor API", "--yes"]);
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--confirm-remove "Public API"/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("--remove-option A B (greedy array) removes both, and each still needs its --confirm-remove", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await parse(client, ["--remove-option", "o1", "o2", "--confirm-remove", "Frontdoor API", "--yes"]);
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    expect(err.mock.calls[0][0]).toMatch(/--confirm-remove "Public API"/);
+    process.exitCode = 0;
+    await parse(client, ["--remove-option", "o1", "o2", "--confirm-remove", "Frontdoor API", "--confirm-remove", "Public API", "--yes"]);
+    expect(client.updateField.mock.calls[0][1].type_config.options.rem).toEqual(["o1", "o2"]);
+  });
+
+  it("an empty --remove-option value is an unknown option and sends nothing", async () => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await parse(client, ["--remove-option", "", "--yes"]);
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    expect(err.mock.calls[0][0]).toMatch(/unknown option ""/);
+  });
+
+  it("a value starting with a dash: '--add-option -x' is refused by yargs, '--add-option=-x' adds it", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(parse(client, ["--add-option", "-x", "--yes"])).rejects.toThrow(/Not enough arguments/);
+    expect(client.updateField).not.toHaveBeenCalled();
+    await parse(client, ["--add-option=-x", "--yes"]);
+    expect(client.updateField.mock.calls[0][1].type_config.options.add[0].name).toBe("-x");
+  });
+});
