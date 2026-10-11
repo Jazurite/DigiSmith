@@ -1,11 +1,13 @@
 import type { CommandModule } from "yargs";
-import type { FrontdoorClient, FrontdoorTaskTypeBody } from "@digismith/clickup-client";
-import { createFrontdoorClient } from "./lib.ts";
-import { assertCustomType, assertNameFree, printCall } from "./task-type-write.ts";
+import type { ClickUpClient, FrontdoorClient, FrontdoorTaskTypeBody } from "@digismith/clickup-client";
+import { createClient, createFrontdoorClient } from "./lib.ts";
+import { assertCustomType, assertNameFree, credentialsTeamId, printCall } from "./task-type-write.ts";
 import { resolveTaskType } from "./task-types.ts";
 
 export function createUpdateTaskTypeCommand(
-  clientFactory: () => FrontdoorClient = createFrontdoorClient
+  frontdoorFactory: () => FrontdoorClient = createFrontdoorClient,
+  publicFactory: () => ClickUpClient = createClient,
+  teamId: () => string = credentialsTeamId
 ): CommandModule {
   return {
     command: "update-task-type",
@@ -20,8 +22,7 @@ export function createUpdateTaskTypeCommand(
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
-        const client = clientFactory();
-        const types = await client.getTaskTypes();
+        const types = await publicFactory().getTaskTypes();
         const type = resolveTaskType(types, argv.type as string);
         assertCustomType(type);
         const changes = [argv.name, argv.plural, argv.description, argv.icon];
@@ -40,10 +41,10 @@ export function createUpdateTaskTypeCommand(
           name_plural: plural,
         };
         if (!argv.yes) {
-          printCall("PUT", `/tasks/v1/${client.teamId}/customItem/${type.id}`, body);
+          printCall("PUT", `/tasks/v1/${teamId()}/customItem/${type.id}`, body);
           console.log("nothing sent; add --yes to send");
         } else {
-          console.log(JSON.stringify(await client.updateTaskType(type.id, body), null, 2));
+          console.log(JSON.stringify(await frontdoorFactory().updateTaskType(type.id, body), null, 2));
         }
         process.exitCode = 0;
       } catch (err) {
