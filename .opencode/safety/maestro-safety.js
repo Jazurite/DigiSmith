@@ -15,7 +15,7 @@ const SECRET_TEXT = /(sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|-----BEGIN [A-Z
 const META = /[|<>;&$`\\\n\r]/
 // DGS-408: a write is allowed anywhere inside the repo root (worktrees included), judged on the REAL path (normalized, no `..`, symlinks resolved, no dangling symlink),
 // EXCEPT these classes, checked on the lowercased relative path (macOS is case-insensitive): the agent's own config and instructions, git internals, node_modules, Claude's permission surface.
-// Secret-like names are blocked by SECRET_PATH (also case-insensitive). Deletes and moves are never allowed by rule: they go to Jack's prompt (see markDelete / permission.evaluate).
+// Secret-like names are blocked by SECRET_PATH (also case-insensitive). Deletes and moves (and six herdr verbs) are BLOCKED "needs Jack" by this plugin alone: the ask route failed open live (DGS-408c) and is removed.
 const EDIT_DENY = [
   /(^|\/)opencode\.json/,
   /(^|\/)\.opencode\/(maestro|safety|prompts)(\/|$)/,
@@ -27,7 +27,7 @@ const EDIT_DENY = [
 const GIT_OK = /^git (status( --short| --porcelain)?|diff( --stat| --name-only| HEAD)?|log --oneline( -\d{1,2})?|branch( -a| -vv)?)$/
 const HERDR_READ = new Set(["list", "get", "read"])
 const HERDR_DISPATCH = new Set(["tab create", "agent start", "agent prompt", "agent wait"]) // allowed by the rules (config still decides the prompt); the other write verbs go to the reviewer
-const HERDR_ASK = new Set(["close", "stop", "run", "send", "rename", "focus"]) // DGS-408: no reviewer; straight to Jack's prompt (the evaluate hook sets ask, never allow)
+const HERDR_ASK = new Set(["close", "stop", "run", "send", "rename", "focus"]) // DGS-408c: no reviewer and no ask route (it failed open live): blocked "needs Jack" by the plugin alone
 const HERDR_WRITE = new Set(["create", "start", "prompt", "run", "close", "stop", "send", "wait", "rename", "focus"])
 const PASS_TOOLS = new Set(["todowrite", "skill"])
 const WRITE_TOOLS = new Set(["edit", "write", "apply_patch", "patch", "multiedit"])
@@ -116,11 +116,6 @@ export const MaestroSafety = async (ctx) => {
       return !EDIT_DENY.some((re) => re.test(rel.toLowerCase()) || re.test(relGiven))
     })
   }
-  // Delete / move marks (DGS-408): set when a patch with a Delete File or Move to passed the path rules; permission.evaluate turns the server's decision into ask for them.
-  const markTtl = Number(process.env.SAFETY_MARK_TTL_MS || 120000)
-  const markIds = new Map(), markSessions = new Map()
-  const markDelete = (callID, sessionID) => { const until = Date.now() + markTtl; if (callID) markIds.set(callID, until); if (sessionID) markSessions.set(sessionID, until) }
-  const marked = (id, sessionID) => { const now = Date.now(); return (id && markIds.get(id) > now) || markSessions.get(sessionID) > now }
   const key = loadKey()
 
   function log(rec) {
@@ -137,6 +132,8 @@ export const MaestroSafety = async (ctx) => {
   // fixed rules: returns {v: allow|block|review, why}
   function fixed(tool, a) {
     if (PASS_TOOLS.has(tool)) return { v: "allow", why: "plain tool" }
+    // DGS-408c delete guard, first and on every path: a patch with a Delete File or Move to hunk (a move drops the source) is blocked whole. No ask route: the plugin alone decides.
+    if (PATCH_TOOLS.has(tool) && patchInfo(patchText(a)).del) return { v: "block", why: "needs Jack: delete or move in a patch" }
     const paths = pathsOf(tool, a)
     for (const p of paths) {
       if (SECRET_PATH.test(p) || SECRET_PATH.test(real(p))) return { v: "block", why: "secret-like path" }
@@ -148,11 +145,6 @@ export const MaestroSafety = async (ctx) => {
       if (!paths.length) return { v: "block", why: "write without a path" }
       for (const p of paths) if (!editOk(p)) return { v: "block", why: "write outside the repo or on a protected path" }
       if (SECRET_TEXT.test(JSON.stringify(a))) return { v: "block", why: "secret-like text in a write" }
-      // delete guard (DGS-408), independent of the path allow: never allowed by rule, on any path
-      if (PATCH_TOOLS.has(tool) && patchInfo(patchText(a)).del) {
-        if (!ctx?.canAsk) return { v: "block", why: "needs Jack: delete or move in a patch (no permission hook to ask with)" }
-        return { v: "ask", why: "delete or move in a patch: goes to Jack's prompt", prompt: true, mark: true }
-      }
       return { v: "allow", why: "write inside the repo on an unprotected path (DGS-408: rules decide, no model)" }
     }
     if (tool === "bash") {
@@ -175,11 +167,7 @@ export const MaestroSafety = async (ctx) => {
         if (/--workspace/.test(m[5]) && !new RegExp("--workspace " + m[1] + "(\\s|$)").test(m[5])) return { v: "block", why: "other workspace" }
         if (HERDR_READ.has(m[4])) return { v: "allow", why: "herdr-ws read verb" }
         if (HERDR_DISPATCH.has(m[3] + " " + m[4])) return { v: "allow", why: "herdr-ws dispatch verb in an allowed workspace" }
-        if (HERDR_ASK.has(m[4])) {
-          if (m[4] === "close" && /(^|\s)w\d+:t1(\s|$)/.test(m[5])) return { v: "block", why: "tab 1 (maestro) cannot be closed here" }
-          if (!ctx?.canAsk) return { v: "block", why: "needs Jack: herdr-ws " + m[4] + " (no permission hook to ask with)" }
-          return { v: "ask", why: "herdr-ws " + m[4] + ": straight to Jack's prompt, no reviewer", prompt: true, markId: true }
-        }
+        if (HERDR_ASK.has(m[4])) return { v: "block", why: "needs Jack: herdr-ws " + m[4] + " is blocked until the ask route is proven" }
         if (HERDR_WRITE.has(m[4])) return { v: "review", why: "herdr-ws changes things", prompt: true }
         return { v: "block", why: "herdr-ws verb unknown" }
       }
@@ -257,21 +245,8 @@ export const MaestroSafety = async (ctx) => {
         args: redact(JSON.stringify(output.args || {}).slice(0, 120)), step, verdict: res.v, final, reason: res.why + (final === "allow" && res.v === "ask" ? " (sent on to the permission prompt)" : ""), tokens,
       })
       if (!ok) throw new Error("BLOCKED by safety layer: log not writable")
-      if (res.mark && final === "allow") markDelete(input.callID, input.sessionID)
-      if (res.markId && final === "allow") markIds.set(input.callID, Date.now() + markTtl)
       if (final !== "allow")
         throw new Error("BLOCKED by safety layer: " + (res.v === "ask" ? "needs Jack: " : "") + res.why)
-    },
-    // OpenCode 2.x permission.evaluate hook (DGS-408): escalate-only. A marked call (delete/move, or one of the six herdr verbs) by call id, or metadata that shows a deleted file, becomes ask; never allow, never touches a deny.
-    "permission.evaluate": (input) => {
-      if (!input || input.effect === "deny") return
-      if (markIds.get(input.source?.id) > Date.now()) { input.effect = "ask"; input.message = "Needs Jack"; log({ event: "evaluate", session: input.sessionID, verdict: "ask", reason: "marked call forced to the permission prompt" }); return }
-      if (input.action !== "edit") return
-      const files = Array.isArray(input.metadata?.files) ? input.metadata.files : []
-      if (!(marked(input.source?.id, input.sessionID) || files.some((f) => f && (f.status === "deleted" || f.type === "delete")))) return
-      input.effect = "ask"
-      input.message = "Delete or move: needs Jack"
-      log({ event: "evaluate", session: input.sessionID, verdict: "ask", reason: "delete or move forced to the permission prompt" })
     },
     "permission.ask": async (input, output) => {
       log({ event: "permission.ask", tool: input?.type || input?.tool, status: output?.status })

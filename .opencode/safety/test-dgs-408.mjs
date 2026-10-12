@@ -1,4 +1,4 @@
-// DGS-408 free test (no model): broad repo edits by rule, path classes denied (case-insensitive), Delete File / Move to go to Jack's prompt (ask) or are blocked "needs Jack".
+// DGS-408 free test (no model): broad repo edits by rule, path classes denied (case-insensitive), Delete File / Move to and six herdr verbs are BLOCKED "needs Jack" by the plugin alone (hook present or absent: no difference).
 // Usage: node test-dgs-408.mjs   (builds a temp root; reviewer URL dead; log in the temp dir, never the live log)
 import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, realpathSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -31,13 +31,14 @@ async function run(h, [tool, args], over = {}) {
   const id = "c" + ++n, sessionID = over.sessionID || sess(n)
   try { await h["tool.execute.before"]({ tool, sessionID, callID: id }, { args }) } catch (e) { return "block:" + e.message }
   const ev = { sessionID, action: over.action || (tool === "bash" ? "bash" : "edit"), resources: ["x"], source: { type: "tool", id: over.sourceId ?? id }, metadata: over.metadata, effect: "allow" }
-  h["permission.evaluate"](ev)
+  h["permission.evaluate"]?.(ev)
   return ev.effect
 }
 const cases = []
 const ok = (id, call) => cases.push([id, call, "allow"])
 const blk = (id, call, h = withAsk) => cases.push([id, call, "block", h])
-const ask = (id, call) => cases.push([id, call, "ask"])
+// DGS-408c: the ask route is removed (it failed open live): every delete / move / listed herdr verb is BLOCKED "needs Jack" by the plugin alone, in BOTH hook states
+const ask = (id, call) => { cases.push([id, call, "block-needs-jack", withAsk]); cases.push([id + "/nohook", call, "block-needs-jack", noAsk]) }
 // ---- broad allow, three tool shapes
 ok("repo-readme-patch", patch(hunk.upd(A("README.md"))))
 ok("repo-readme-write", w(A("README.md")))
@@ -102,13 +103,13 @@ ask("context-line-marker", raw(`*** Begin Patch\n*** Update File: ${A("README.md
 ask("delete-apply_patch-tool", ["apply_patch", { patchText: `*** Begin Patch\n*** Delete File: ${A("README.md")}\n*** End Patch` }])
 ask("odd-leading-space-add-hidden-delete", raw(`*** Begin Patch\n*** Add File: ${A("a.md")}\n+x\n *** Delete File: ${A("README.md")}\n*** End Patch`))
 // ---- delete / move on a denied path or to a denied target: always block
-blk("delete-env", patch(hunk.del(A(".env"))))
-blk("delete-git", patch(hunk.del(A(".git/config"))))
-blk("delete-self-config", patch(hunk.del(A(".opencode/maestro/opencode.json"))))
-blk("delete-outside", patch(hunk.del("/tmp/x.md")))
-blk("move-to-git", patch(hunk.mv(A("README.md"), A(".git/hooks/x"))))
-blk("move-from-git", patch(hunk.mv(A(".git/config"), A("README.md"))))
-blk("delete-lower-env", raw(`*** Begin Patch\n*** delete file: ${A(".env")}\n*** End Patch`))
+ask("delete-env", patch(hunk.del(A(".env"))))
+ask("delete-git", patch(hunk.del(A(".git/config"))))
+ask("delete-self-config", patch(hunk.del(A(".opencode/maestro/opencode.json"))))
+ask("delete-outside", patch(hunk.del("/tmp/x.md")))
+ask("move-to-git", patch(hunk.mv(A("README.md"), A(".git/hooks/x"))))
+ask("move-from-git", patch(hunk.mv(A(".git/config"), A("README.md"))))
+ask("delete-lower-env", raw(`*** Begin Patch\n*** delete file: ${A(".env")}\n*** End Patch`))
 // ---- no hook registered: every delete / move is blocked "needs Jack"
 for (const [id, c] of [["delete", patch(hunk.del(A("README.md")))], ["move", patch(hunk.mv(A("README.md"), A("packages/r.md")))], ["mixed", patch(hunk.add(A("new.md")), hunk.del(A("README.md")))], ["lower", raw(`*** Begin Patch\n*** delete file: ${A("README.md")}\n*** End Patch`)], ["space", raw(`*** Begin Patch\n  *** Delete File: ${A("README.md")}\n*** End Patch`)]])
   cases.push(["noask-" + id, c, "block-needs-jack", noAsk])
@@ -128,9 +129,8 @@ for (const [id, c] of Object.entries(six)) {
   blk("six-pane-dup-" + id, ["bash", { command: `${HW} ${c} --pane w2:p1 --pane w3:p1` }])
   blk("six-bare-herdr-" + id, ["bash", { command: `herdr ${c}` }])
 }
-blk("six-tab1-close", ["bash", { command: `${HW} tab close w2:t1` }])
-blk("six-tab1-close-flag", ["bash", { command: `${HW} tab close --workspace w2 w2:t1` }])
-cases.push(["six-tab1-noask", ["bash", { command: `${HW} tab close w2:t1` }], "block", noAsk])
+ask("six-tab1-close", ["bash", { command: `${HW} tab close w2:t1` }])
+ask("six-tab1-close-flag", ["bash", { command: `${HW} tab close --workspace w2 w2:t1` }])
 cases.push(["other-write-verb-still-reviewer", ["bash", { command: `${HW} pane create --label x` }], "block-reviewer", withAsk])
 cases.push(["dispatch-verb-still-by-rule", ["bash", { command: `${HW} tab create --workspace w2 --label x` }], "allow", noAsk])
 let fail = 0
@@ -140,24 +140,5 @@ for (const [id, call, expect, h = withAsk] of cases) {
   const good = expect === "allow" ? got === "allow" : expect === "ask" ? got === "ask" : expect === "block" ? got.startsWith("block:") && !/needs Jack/.test(got) && !/reviewer-down/.test(got) : expect === "block-reviewer" ? /reviewer-down/.test(got) : got.startsWith("block:") && /needs Jack/.test(got)
   report(id, good, got)
 }
-// ---- the evaluate hook on its own (escalate-only)
-const ev = (h, o) => { const i = { sessionID: "e", action: "edit", resources: ["x"], effect: "allow", ...o }; h["permission.evaluate"](i); return i }
-{ // signal 1: call id
-  const id = "cid-1"; await withAsk["tool.execute.before"]({ tool: "patch", sessionID: "e1", callID: id }, { args: patch(hunk.del(A("README.md")))[1] })
-  report("eval-by-call-id", ev(withAsk, { sessionID: "zz", source: { id } }).effect === "ask", "")
-  report("eval-message", /needs Jack/.test(ev(withAsk, { sessionID: "e1", source: { id: "other" } }).message || ""), "")
-}
-{ // signal 2: session mark, call id does not match
-  await withAsk["tool.execute.before"]({ tool: "patch", sessionID: "e2", callID: "k" }, { args: patch(hunk.del(A("README.md")))[1] })
-  report("eval-by-session", ev(withAsk, { sessionID: "e2", source: { id: "nomatch" } }).effect === "ask", "")
-  await new Promise((r) => setTimeout(r, 400))
-  report("eval-mark-expires", ev(withAsk, { sessionID: "e2", source: { id: "nomatch" } }).effect === "allow", "")
-}
-report("eval-by-metadata-status", ev(withAsk, { sessionID: "e3", metadata: { files: [{ status: "deleted" }] } }).effect === "ask", "")
-report("eval-by-metadata-type", ev(withAsk, { sessionID: "e3", metadata: { files: [{ type: "delete" }] } }).effect === "ask", "")
-report("eval-plain-edit-untouched", ev(withAsk, { sessionID: "e4", metadata: { files: [{ status: "added" }] } }).effect === "allow", "")
-report("eval-other-action-untouched", ev(withAsk, { sessionID: "e2", action: "read", source: { id: "k" } }).effect === "allow", "")
-report("eval-never-allows-a-deny", ev(withAsk, { sessionID: "e5", effect: "deny" }).effect === "deny", "")
-report("eval-ask-stays-ask", ev(withAsk, { sessionID: "e5", effect: "ask" }).effect === "ask", "")
 console.log(fail ? "FAILED " + fail : "ALL PASS")
 process.exit(fail ? 1 : 0)
