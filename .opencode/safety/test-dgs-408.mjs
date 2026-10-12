@@ -8,6 +8,9 @@ const R = join(tmp, "repo"), OUT = join(tmp, "outside")
 for (const d of [".digismith/sessions/DigiSmith", ".digismith/sessions/dgs-404", ".digismith/board/DGS-408—x/worker-dgs-408", ".worktrees/dgs-408/packages/cli", ".worktrees/dgs-408/.git-not", "packages/cli", ".claude/hooks", ".claude/commands", ".claude/agents", ".git/hooks", "node_modules/x", ".github", "a/.git", ".opencode/safety", ".opencode/maestro", ".opencode/prompts", "scripts/opencode-boot", ".husky", ".githooks"]) mkdirSync(join(R, d), { recursive: true })
 mkdirSync(OUT, { recursive: true })
 writeFileSync(join(R, ".git/config"), "x"); writeFileSync(join(R, "README.md"), "x")
+writeFileSync(join(R, "AGENTS.md"), "x")
+symlinkSync(join(R, "AGENTS.md"), join(R, "agentslink.md"))   // file -> AGENTS.md
+symlinkSync(join(R, ".opencode"), join(R, "oclink"))          // dir -> .opencode
 symlinkSync(OUT, join(R, "linkdir"))                        // dir -> outside
 symlinkSync(join(R, ".git"), join(R, "gitlink"))            // dir -> .git
 symlinkSync(join(R, ".git/config"), join(R, "cfglink.md"))  // file -> .git file
@@ -66,6 +69,7 @@ for (const [id, p] of Object.entries({
   oc: "opencode.json", OC: "OPENCODE.JSON", ocdeep: "a/opencode.json", maestro: ".opencode/maestro/x.md", safety: ".opencode/safety/maestro-safety.js", SAFETY: ".OPENCODE/Safety/x.js",
   settings: ".claude/settings.json", settings2: ".claude/Settings.local.json", chooks: ".claude/hooks/x.sh", CHOOKS: ".CLAUDE/Hooks/x.sh",
   git: ".git/config", GIT: ".GIT/hooks/x", gitdeep: "a/.git/config", gitptr: ".worktrees/dgs-408/.git", nm: "node_modules/x/y.js", NM: "Node_Modules/x/y.js",
+  ocplug: ".opencode/plugins/x.js", ocagent: ".opencode/agent/maestro.md", ocskill: ".opencode/skills/x/SKILL.md", OCUP: ".OPENCODE/x", ocroot: ".opencode/package.json", agents: "AGENTS.md", agentsub: "sub/AGENTS.md", agentslow: "agents.md", claude: "CLAUDE.md", claudedeep: "a/b/CLAUDE.md", claudecase: "Claude.MD", wtagents: ".worktrees/dgs-408/AGENTS.md", linkagents: "agentslink.md", linkoc: "oclink/plugins/x.js",
   boot: "scripts/opencode-boot/install.sh", prompts: ".opencode/prompts/maestro.md",
   "slash-oddity": ".//.git/x", "dbl-slash": "x//.git/x",
 })) { blk("deny-" + id, patch(hunk.add(A(p)))); blk("denyw-" + id, w(A(p))) }
@@ -81,6 +85,21 @@ blk("dangling", w(A("dangling.md")))
 blk("secret-text", ["write", { filePath: A("n.md"), content: "k sk-abcdefghijklmnopqrstuvwx" }])
 blk("no-path", ["write", { content: "x" }])
 blk("denied-one-hunk-of-many", patch(hunk.add(A("ok.md")), hunk.add(A(".git/hooks/x"))))
+// ---- multiedit: EVERY path inside it is checked (top-level and each edits[] entry); an unparsable entry blocks (fail closed)
+const me = (top, edits) => ["multiedit", { filePath: top, edits }]
+const e1 = (f, k = "filePath") => ({ [k]: f, oldString: "a", newString: "b" })
+ok("multiedit-all-allowed", me(A("README.md"), [e1(A("README.md")), e1(A("packages/cli/x.ts"))]))
+ok("multiedit-no-nested-path", me(A("README.md"), [{ oldString: "a", newString: "b" }]))
+blk("multiedit-nested-denied", me(A("README.md"), [e1(A("README.md")), e1(A(".opencode/safety/maestro-safety.js"))]))
+blk("multiedit-nested-path-key", me(A("README.md"), [e1(A(".git/hooks/x"), "path")]))
+blk("multiedit-nested-agents", me(A("README.md"), [e1(A("AGENTS.md"))]))
+blk("multiedit-nested-outside", me(A("README.md"), [e1("/tmp/x.md")]))
+blk("multiedit-nested-trav", me(A("README.md"), [e1(A("a/../../x.md"))]))
+blk("multiedit-nested-symlink", me(A("README.md"), [e1(A("linkdir/x.md"))]))
+blk("multiedit-entry-not-object", me(A("README.md"), ["x"]))
+blk("multiedit-path-not-string", me(A("README.md"), [{ filePath: { a: 1 }, oldString: "a", newString: "b" }]))
+blk("multiedit-files-key", ["multiedit", { files: [{ path: A(".env"), edits: [] }] }])
+blk("multiedit-top-denied", me(A(".env"), [e1(A("README.md"))]))
 // ---- delete / move: ask when the hook is present
 ask("delete-allowed", patch(hunk.del(A("README.md"))))
 ask("delete-brief", patch(hunk.del(A(".digismith/sessions/dgs-404/brief.md"))))

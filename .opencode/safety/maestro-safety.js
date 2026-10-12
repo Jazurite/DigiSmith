@@ -14,11 +14,12 @@ const SECRET_PATH = /(\.env(?!\.example)|password|passwd|auth\.json|\.ssh|token|
 const SECRET_TEXT = /(sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY|CANARY-DENY|TOKENREPLY_API_KEY|CLAUDE_CODE_OAUTH)/
 const META = /[|<>;&$`\\\n\r]/
 // DGS-408: a write is allowed anywhere inside the repo root (worktrees included), judged on the REAL path (normalized, no `..`, symlinks resolved, no dangling symlink),
-// EXCEPT these classes, checked on the lowercased relative path (macOS is case-insensitive): the agent's own config and instructions, git internals, node_modules, Claude's permission surface.
+// EXCEPT these classes (DGS-408d: all of .opencode, AGENTS.md and CLAUDE.md anywhere), checked on the lowercased relative path (macOS is case-insensitive): the agent's own config and instructions, git internals, node_modules, Claude's permission surface.
 // Secret-like names are blocked by SECRET_PATH (also case-insensitive). Deletes and moves (and six herdr verbs) are BLOCKED "needs Jack" by this plugin alone: the ask route failed open live (DGS-408c) and is removed.
 const EDIT_DENY = [
   /(^|\/)opencode\.json/,
-  /(^|\/)\.opencode\/(maestro|safety|prompts)(\/|$)/,
+  /(^|\/)\.opencode(\/|$)/,                 // DGS-408d: ALL of .opencode (config, plugins, agents, skills, prompts): the agent must not widen itself
+  /(^|\/)(agents|claude)\.md$/,                // AGENTS.md and CLAUDE.md anywhere (instruction files OpenCode or Claude load)
   /(^|\/)\.claude\/(settings[^/]*\.json|hooks(\/|$))/,
   /(^|\/)scripts\/opencode-boot(\/|$)/,
   /(^|\/)\.git(\/|$)/,
@@ -74,9 +75,20 @@ function patchInfo(text) {
 }
 const patchText = (a) => Object.values(a || {}).filter((v) => typeof v === "string").join("\n")
 
+const PATH_KEYS = ["filePath", "path", "file", "dir", "workdir", "cwd"]
+// multiedit (DGS-408d): every path inside it counts, the top-level keys AND each entry of any array value (edits, files, ...). Anything that is not a plain object entry, or a path key that is not a string, is unparsable: the call is blocked (fail closed).
+function nestedPaths(a, out, depth = 0) {
+  if (depth > 4) throw new Error("multiedit too deep")
+  for (const [k, v] of Object.entries(a || {})) {
+    if (PATH_KEYS.includes(k)) { if (typeof v !== "string") throw new Error("path key not a string"); out.push(v); continue }
+    if (Array.isArray(v)) for (const e of v) { if (!e || typeof e !== "object" || Array.isArray(e)) throw new Error("entry not an object"); nestedPaths(e, out, depth + 1) }
+    else if (v && typeof v === "object") nestedPaths(v, out, depth + 1)
+  }
+}
 function pathsOf(tool, a) {
   const out = []
-  for (const k of ["filePath", "path", "file", "dir", "workdir", "cwd"]) if (typeof a?.[k] === "string") out.push(a[k])
+  if (tool === "multiedit") { nestedPaths(a, out); return out }
+  for (const k of PATH_KEYS) if (typeof a?.[k] === "string") out.push(a[k])
   if (PATCH_TOOLS.has(tool)) out.push(...patchInfo(patchText(a)).paths)
   return out
 }
