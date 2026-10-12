@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-408 the OpenCode Maestro edits the repo, deletes stay with Jack — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-408 the OpenCode Maestro edits the repo, deletes stay with Jack — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-408</strong></span><span>Date: 2026-10-12</span></div>
+</header>
+<p>Status: built, installed live (three installs, probes passed on the 408c version), reviewed, merged. Ticket line: DGS-408. Installs after the review fix (408d) need one more restart and a live probe (see Live proof).</p>
+<section id="cause">
+<h2>Cause</h2>
+<p><code>patch</code>, <code>edit</code> and <code>write</code> all ask the permission <code>edit</code>, and the resource is the path relative to the project directory, with no leading slash (for example <code>.digismith/sessions/dgs-404/brief.md</code>); it is absolute only outside the directory. Rules are globs where <code>*</code> crosses <code>/</code> and the last match wins. Our config globs started with <code>*/.digismith/...</code>, which needs a <code>/</code> before <code>.digismith</code>: they could never match, <code>"*": "deny"</code> won and the call failed with <code>Permission denied: edit</code>. The safety plugin had logged "allow" because it is a separate layer. The gpt model (<code>maestro</code>) gets <code>patch</code>; the sonnet model (<code>maestro-review</code>) gets <code>edit</code> and <code>write</code>.</p>
+<p>DGS-401 probe (a) was NOT proven: the log has no <code>dgs-999</code> row and the file does not exist; the old globs could not have matched.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Config (both agents): <code>"*": allow</code> over relative resources, then denies (absolute and <code>../</code> paths, <code>.git</code>, <code>node_modules</code>, secret-like names, <code>opencode.json</code>, all of <code>.opencode/**</code>, <code>AGENTS.md</code> and <code>CLAUDE.md</code> anywhere, <code>scripts/opencode-boot/**</code>, <code>.claude/settings*.json</code>, <code>.claude/hooks/**</code>). <code>.husky</code>, <code>.githooks</code>, <code>.claude/commands</code> and <code>.claude/agents</code> stay allowed.</li>
+<li>Plugin: edits are allowed by rule inside the real repo root (worktrees included): normalized, no <code>..</code>, symlinks resolved, no dangling symlink, deny classes checked case-insensitive (macOS). Patch text is read like OpenCode's parser plus a looser scan. Every path of a <code>multiedit</code> counts; an entry it cannot parse blocks the call.</li>
+<li>Deletes: a patch with <code>*** Delete File</code> or <code>*** Move to:</code> (any casing, spacing, CRLF) is blocked whole, "needs Jack", on every path. <code>herdr-ws close stop run send rename focus</code> are blocked "needs Jack" the same way (they used to go to the Haiku reviewer, which timed out live).</li>
+<li><code>herdr-ws</code> (source <code>scripts/opencode-boot/herdr-ws</code>, installed by <code>install.sh</code>): the OpenCode server runs with its own <code>XDG_CONFIG_HOME</code>, so herdr looked for its socket there (<code>server_not_running</code>). The wrapper now runs herdr with <code>XDG_CONFIG_HOME=/Users/workbox/.config</code>, for the subprocess only. Proven: of the four XDG variables only this one matters. Every guard is unchanged.</li>
+<li>Prompt and <code>SAFETY.md</code> updated.</li>
+</ul>
+</section>
+<section id="the-ask-route-failed-open-and-was-removed">
+<h2>The ask route FAILED OPEN and was REMOVED</h2>
+<p>First version: the plugin marked a delete/move and the six verbs and <code>ctx.permission.hook("evaluate")</code> was to set <code>ask</code>. Live probe e: the patch <code>*** Delete File: .digismith/sessions/opencode-maestro/probe-408.md</code> ran with NO prompt and deleted the dummy file. The linkage (call id against <code>source.id</code>, the deleted-file marker in <code>metadata.files</code>) was unproven and did not hold. The route and the hook registration are removed: nothing relies on it. Until the ask linkage is proven, deletes, moves and the six verbs are blocked by the plugin alone. Follow-up ticket (C.5): prove the hook on a throwaway server, then re-enable ask, never allow.</p>
+</section>
+<section id="tests-free-no-model-written-first-and-seen-to-fail">
+<h2>Tests (free, no model; written first and seen to fail)</h2>
+<p><code>test-dgs-408.mjs</code> (new, ~230 cases: broad allow in three tool shapes, each deny class with case variants, symlinks, dangling, traversal, delete/move/mixed/odd markers in both hook states, the six verbs and their guards, multiedit), <code>test-config-order.mjs</code> (rewritten with a copy of the server's own matcher and relative resources), <code>test-dgs-401.mjs</code> (60) and <code>test-rules.mjs</code> (50) with moved expectations, <code>scripts/opencode-boot/test-herdr-ws.mjs</code> (read-only herdr calls under the normal and the server env; the old wrapper fails it). <code>FORCE_COLOR=1 pnpm test</code>: 108 files, 1493 tests, pass; CLI build clean.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review (subagent). No bypass of the delete guard, the verb block, case, symlink, dangling or <code>..</code> handling, or the patch parser. Verified and fixed with tests: (1) the deny list missed other OpenCode config surfaces (<code>.opencode/plugins</code>, <code>.opencode/agent</code>, <code>AGENTS.md</code> were allowed): now all of <code>.opencode/**</code>, <code>AGENTS.md</code>, <code>CLAUDE.md</code> anywhere are denied in plugin and config; (2) <code>multiedit</code> nested paths were not checked: every path is checked, unparsable entries block. Left as is (cosmetic): a file literally named <code>..foo</code> is blocked; <code>.env.examplefoo</code> is allowed.</p>
+</section>
+<section id="live-proof">
+<h2>Live proof</h2>
+<p>Backups <code>.before-dgs-408-</code>, <code>-408b-</code>, <code>-408c-</code>, <code>-408d-</code> with the date suffix; <code>restore.md</code> lists the restores. Jack restarted <code>opencode-boot</code> on the 408c version; the Maestro verified in the decision log: the first use passed (the OpenCode Maestro updated the dgs-404 brief with <code>patch</code> and dispatched dgs-404, after the <code>herdr-ws</code> XDG fix), four patches passed, <code>agent list</code> and <code>tab create</code> passed, the delete (20:16), the move (20:17) and the mixed patch (20:18) were each <code>patch | rule | block | needs Jack</code>, and the tab-1 close was refused. NOT run live: probe d (denied paths: proven by tests only) and probe h (the six verbs: proven by tests only). The 408d change (all of <code>.opencode</code>, <code>AGENTS.md</code>, <code>CLAUDE.md</code>, multiedit) reaches the live server with the next <code>opencode-boot</code>; probe: a write to <code>.opencode/x</code> and to <code>AGENTS.md</code> must be blocked. The dummy <code>probe-408.md</code> stays (a delete needs Jack).</p>
+</section>
+</body>
+</html>
