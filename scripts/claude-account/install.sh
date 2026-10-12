@@ -9,5 +9,8 @@ if [ -f "$BIN/claude-account" ] && [ ! -e "$BIN/claude-account.before-dgs-224-20
   cp -p "$BIN/claude-account" "$BIN/claude-account.before-dgs-224-20261012"
 fi
 cp "$SRC/claude-account" "$BIN/claude-account"; chmod 755 "$BIN/claude-account"
+if [ -f "$SHARE/sources.conf" ] && ! cmp -s "$SRC/sources.conf" "$SHARE/sources.conf" && [ ! -e "$SHARE/sources.conf.before-dgs-224-20261012" ]; then
+  cp -p "$SHARE/sources.conf" "$SHARE/sources.conf.before-dgs-224-20261012"   # keep local edits
+fi
 cp "$SRC/sources.conf" "$SHARE/sources.conf"
 echo "installed: $BIN/claude-account, $SHARE/sources.conf"

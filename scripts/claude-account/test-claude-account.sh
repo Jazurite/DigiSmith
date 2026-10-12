@@ -87,7 +87,7 @@ for sh in /bin/bash zsh; do
 done
 
 # .env parsing variants (key must come out exact; .env is never sourced)
-for variant in 'plain:IZANAMI_API_KEY=abc def' 'export:export IZANAMI_API_KEY=abc def' 'dq:IZANAMI_API_KEY="abc def"' 'sq:IZANAMI_API_KEY='"'"'abc def'"'"'' 'crlf:IZANAMI_API_KEY=abc def\r'; do
+for variant in 'plain:IZANAMI_API_KEY=abc def' 'export:export IZANAMI_API_KEY=abc def' 'dq:IZANAMI_API_KEY="abc def"' 'sq:IZANAMI_API_KEY='"'"'abc def'"'"'' 'crlf:IZANAMI_API_KEY=abc def\r' 'trail:IZANAMI_API_KEY=abc def   ' 'cmt:IZANAMI_API_KEY="abc def" # note'; do
   nm="${variant%%:*}"; line="${variant#*:}"
   printf "$line\n" > "$ENVF"
   R=$(eval_in_sub /bin/bash env izanami)
@@ -194,6 +194,14 @@ check "list on a clash: exit 1" [ "$RC" = 1 ]
 mv "$A/izanami.token" "$T/izanami.token.aside"
 printf '%s\n' jack > "$A/active"
 
+# review fixes: stale active, add onto a gateway name
+printf '%s\n' ghost > "$A/active"; run status
+check "status with a stale active name says not found" grep -q 'not found' "$OUT" && ! grep -q '(seat)' "$OUT"
+printf '%s\n' jack > "$A/active"
+run add izanami "$TOK_JACK"
+check "add refuses a gateway name" [ "$RC" = 1 ] && [ ! -f "$A/izanami.token" ]
+no_secret "add onto gateway name"
+
 # ---------- 6. next skips gateways; rename refuses a gateway ----------
 run next
 check "next goes to the next seat" active_is dev0
@@ -259,6 +267,9 @@ check "install copied the script" cmp -s "$SCRIPT" "$IH/.local/bin/claude-accoun
 check "install copied sources.conf" cmp -s "$HERE/sources.conf" "$IH/.local/share/claude-account/sources.conf"
 HOME="$IH" sh "$HERE/install.sh" >/dev/null 2>&1
 check "second install keeps the first backup" [ "$(cat "$IH/.local/bin/claude-account.before-dgs-224-20261012")" = OLD ]
+printf 'local edit\n' > "$IH/.local/share/claude-account/sources.conf"; HOME="$IH" sh "$HERE/install.sh" >/dev/null 2>&1
+check "install keeps a locally edited sources.conf as a backup" [ "$(cat "$IH/.local/share/claude-account/sources.conf.before-dgs-224-20261012")" = "local edit" ] && cmp -s "$HERE/sources.conf" "$IH/.local/share/claude-account/sources.conf"
+rm_aside="$IH/.local/share/claude-account/sources.conf.before-dgs-224-20261012"; mv "$rm_aside" "$T/sources.backup.aside"
 check "install touched nothing else in HOME" [ "$(cd "$IH" && find . -type f | sort | tr '\n' ' ')" = "./.local/bin/claude-account ./.local/bin/claude-account.before-dgs-224-20261012 ./.local/share/claude-account/sources.conf " ]
 check "install wrote no Claude config" [ ! -e "$IH/.claude" ] && [ ! -e "$IH/.zshrc" ]
 

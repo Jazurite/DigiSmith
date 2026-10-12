@@ -94,6 +94,9 @@ read_key() {
     { line = $0; sub(/\r$/, "", line); sub(/^export[ \t]+/, "", line)
       if (index(line, k "=") == 1) { val = substr(line, length(k) + 2); found = 1 } }
     END { if (!found) exit 3
+          if (val ~ /^"[^"]*"[ \t]*(#.*)?$/) { sub(/^"/, "", val); sub(/".*$/, "", val); printf "%s", val; exit }
+          if (val ~ /^\047[^\047]*\047[ \t]*(#.*)?$/) { sub(/^\047/, "", val); sub(/\047.*$/, "", val); printf "%s", val; exit }
+          sub(/[ \t]+$/, "", val)
           n = length(val)
           if (n >= 2) { f = substr(val, 1, 1); l = substr(val, n, 1); if ((f == "\"" || f == "\047") && f == l) val = substr(val, 2, n - 2) }
           printf "%s", val }' "$ef")" || { KEYERR="$kv is not set in $ef"; return 1; }
@@ -106,6 +109,7 @@ save_token() { # name token
   local name="$1" tok="$2"
   [[ "$tok" == sk-ant-oat01-* ]] || die "that doesn't look like a setup-token (expected it to start with sk-ant-oat01-); nothing saved"
   [ "${#tok}" -ge 100 ] || die "token is only ${#tok} characters; a setup token is about 108, so the paste was probably cut off. Nothing saved"
+  is_gateway "$name" && die "'$name' is a gateway source name; pick another name for the seat"
   ensure_dir
   if has "$name" && [ "${FORCE:-0}" != 1 ]; then
     die "'$name' already exists; re-run with FORCE=1 to overwrite it"
@@ -185,6 +189,7 @@ cmd_list() {
 }
 cmd_use() {
   local name="${1:-}"; valid_name "$name"
+  kind_of "$name" >/dev/null
   case "$(kind_of "$name")" in
     seat) ;;
     gateway)
@@ -224,7 +229,9 @@ cmd_next() {
 cmd_status() {
   local cur kind; cur="$(active_name)"
   if [ -z "$cur" ]; then echo "active account: (none)"; return 0; fi
+  kind_of "$cur" >/dev/null
   kind="$(kind_of "$cur")"
+  if [ "$kind" = none ]; then echo "active account: $cur (not found: no such seat or gateway; see: claude-account list)"; return 0; fi
   if [ "$kind" = gateway ]; then
     echo "active account: $cur (gateway)"
     if [ -z "${ANTHROPIC_BASE_URL:-}" ]; then
@@ -261,6 +268,7 @@ cmd_status() {
 }
 cmd_check() {
   local name="${1:-$(active_name)}"; valid_name "$name"
+  kind_of "$name" >/dev/null
   case "$(kind_of "$name")" in
     gateway) check_gateway "$name"; return ;;
     seat) ;;
@@ -298,10 +306,12 @@ cmd_env() {
   local name="${1:-}" cur kind v
   if [ -n "$name" ]; then
     valid_name "$name"
+    kind_of "$name" >/dev/null
     kind="$(kind_of "$name")"; [ "$kind" != none ] || die "no account named '$name' (see: claude-account list)"
   else
     cur="$(active_name)"
     [ -n "$cur" ] || return 0
+    kind_of "$cur" >/dev/null
     kind="$(kind_of "$cur")"; [ "$kind" != none ] || return 0
     name="$cur"
   fi
