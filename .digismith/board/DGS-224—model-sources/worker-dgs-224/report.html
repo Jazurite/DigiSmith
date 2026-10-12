@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-224 claude-account switches the model source (seat or gateway) — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-224 claude-account switches the model source (seat or gateway) — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-224</strong></span><span>Date: 2026-10-12</span></div>
+</header>
+<p>Status: built, reviewed, merged. Ticket line: DGS-224. First use is Jack&#x27;s (see probe.md); DGS-224 is not set done.</p>
+<h2>Summary</h2>
+<p><code>claude-account</code> now has two kinds of source. A seat is an OAuth token, as before. A gateway is data in <code>sources.conf</code>: base URL, the NAME of the key variable, the env file, and a model map. Izanami is the first entry (opus <code>claude-opus-5-5</code>, sonnet and haiku <code>claude-sonnet-5-5</code>). <code>claude-account use izanami</code> makes the next shell use Izanami; <code>use jack</code> goes back. The tool now lives in the repo at <code>scripts/claude-account/</code> with <code>install.sh</code> (mkdir and cp, dated backup of the old file).</p>
+<h2>Built</h2>
+<ul>
+<li><code>env [name]</code>: a gateway unsets <code>CLAUDE_CODE_OAUTH_TOKEN</code> and <code>ANTHROPIC_API_KEY</code> and exports <code>ANTHROPIC_BASE_URL</code>, <code>ANTHROPIC_AUTH_TOKEN</code> (read from the env file when <code>env</code> runs, never stored) and the three <code>ANTHROPIC_DEFAULT_*_MODEL</code>. A seat unsets those five and exports the token as before. <code>env &lt;name&gt;</code> never writes the <code>active</code> file. Unknown name or missing key: exit 1, empty stdout.</li>
+<li>Safe parsing: all values go through <code>printf %q</code>; the depot <code>.env</code> is parsed with awk (exact key line, <code>export </code>, quotes, CRLF, trailing text, control characters refused) and never sourced.</li>
+<li><code>list</code> and <code>status</code> show the kind. <code>check izanami</code> is one <code>GET /v1/models</code>, key to curl on stdin, prints the status and model ids only. <code>next</code> skips gateways. <code>add</code> and <code>rename</code> refuse a gateway name. <code>use</code> warns when the key is missing.</li>
+<li>Per shell only: nothing writes <code>~/.claude/settings.json</code> or any other Claude config.</li>
+<li>Left out: TokenReply and Anthropic key entries (one block each later; Anthropic needs an <code>auth_var</code> field), spend caps, OpenCode switch, the VPS copy, the <code>~/.zshrc</code> line (Jack&#x27;s file, not approved yet).</li>
+</ul>
+<h2>Tests (written first, seen to fail: 57 of 91 failed)</h2>
+<p><code>test-claude-account.sh</code> (97 checks, run with <code>/bin/bash</code> 3.2.57; also zsh for the eval checks), wrapped by <code>claude-account.test.ts</code> so <code>pnpm test</code> runs it. Temp HOME, fake <code>.env</code>, fake token folder, local fake HTTP server. Hostile fake key (space, quotes, dollar, backticks, semicolon, command substitutions): exact value after eval, marker files absent. <code>list</code>, <code>status</code>, <code>use</code>, <code>check</code> and every error: stdout and stderr grepped for the fake token and key.</p>
+<h2>Review</h2>
+<p>Claude whole-branch review (subagent): no secret leak, injection or bash 3.2 break. Verified and fixed with tests: <code>status</code> with a stale <code>active</code> name said &quot;seat&quot;; <code>add</code>/<code>adopt</code> could create a name clash with a gateway (then <code>list</code> and <code>env</code> died); the <code>.env</code> parser kept trailing spaces and a trailing comment after a quoted value; <code>install.sh</code> overwrote local edits of <code>sources.conf</code> without a backup. Not changed: <code>read -t 0.5</code> in <code>add</code> fails on bash 3.2 (old code, unchanged, not a regression); the RETURN trap leaves nothing secret.</p>
+<h2>Next</h2>
+<p>The conductor will switch its dispatch routine from <code>claude-account use &lt;seat&gt;</code> plus eval to <code>eval &quot;$(claude-account env &lt;seat&gt;)&quot;</code> after this merge, so a worker start never touches Jack&#x27;s chosen default. Jack&#x27;s first use: probe.md. The <code>~/.zshrc</code> line: <code>eval &quot;$(claude-account env 2&gt;/dev/null)&quot;</code>, Jack adds it himself after approval.</p>
+</body>
+</html>
