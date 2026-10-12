@@ -19,6 +19,10 @@
 <div class="meta"><span>Ticket: <strong>DGS-408</strong></span><span>Date: 2026-10-12</span></div>
 </header>
 <p>Status: built, installed live (three installs, probes passed on the 408c version), reviewed, merged. Ticket line: DGS-408. Installs after the review fix (408d) need one more restart and a live probe (see Live proof).</p>
+<section id="summary">
+<h2>Summary</h2>
+<p>The OpenCode Maestro (agents <code>maestro</code> and <code>maestro-review</code>) can now edit any file in the repo with <code>patch</code>, <code>edit</code> and <code>write</code> except secret-like names, all of <code>.opencode/**</code>, <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>.git</code>, <code>node_modules</code>, <code>scripts/opencode-boot</code> and Claude's settings and hooks. Deletes, moves and six herdr verbs are blocked &quot;needs Jack&quot; by the plugin alone; an ask route built first failed open live and was removed. <code>herdr-ws</code> now finds herdr's socket under the server's XDG home.</p>
+</section>
 <section id="cause">
 <h2>Cause</h2>
 <p><code>patch</code>, <code>edit</code> and <code>write</code> all ask the permission <code>edit</code>, and the resource is the path relative to the project directory, with no leading slash (for example <code>.digismith/sessions/dgs-404/brief.md</code>); it is absolute only outside the directory. Rules are globs where <code>*</code> crosses <code>/</code> and the last match wins. Our config globs started with <code>*/.digismith/...</code>, which needs a <code>/</code> before <code>.digismith</code>: they could never match, <code>"*": "deny"</code> won and the call failed with <code>Permission denied: edit</code>. The safety plugin had logged "allow" because it is a separate layer. The gpt model (<code>maestro</code>) gets <code>patch</code>; the sonnet model (<code>maestro-review</code>) gets <code>edit</code> and <code>write</code>.</p>

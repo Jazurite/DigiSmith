@@ -2,6 +2,9 @@
 
 Status: built, installed live (three installs, probes passed on the 408c version), reviewed, merged. Ticket line: DGS-408. Installs after the review fix (408d) need one more restart and a live probe (see Live proof).
 
+## Summary
+The OpenCode Maestro (agents `maestro` and `maestro-review`) can now edit any file in the repo with `patch`, `edit` and `write` except secret-like names, all of `.opencode/**`, `AGENTS.md`, `CLAUDE.md`, `.git`, `node_modules`, `scripts/opencode-boot` and Claude's settings and hooks. Deletes, moves and six herdr verbs are blocked "needs Jack" by the plugin alone; an ask route built first failed open live and was removed. `herdr-ws` now finds herdr's socket under the server's XDG home.
+
 ## Cause
 `patch`, `edit` and `write` all ask the permission `edit`, and the resource is the path relative to the project directory, with no leading slash (for example `.digismith/sessions/dgs-404/brief.md`); it is absolute only outside the directory. Rules are globs where `*` crosses `/` and the last match wins. Our config globs started with `*/.digismith/...`, which needs a `/` before `.digismith`: they could never match, `"*": "deny"` won and the call failed with `Permission denied: edit`. The safety plugin had logged "allow" because it is a separate layer. The gpt model (`maestro`) gets `patch`; the sonnet model (`maestro-review`) gets `edit` and `write`.
 DGS-401 probe (a) was NOT proven: the log has no `dgs-999` row and the file does not exist; the old globs could not have matched.
