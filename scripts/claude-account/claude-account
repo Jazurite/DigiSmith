@@ -5,13 +5,19 @@
 #   claude-account add <name> ['<token>']   store a token: pass it in single quotes, or omit it
 #                                  to be asked (hidden input). Input is cleaned/normalized first.
 #   claude-account adopt <name>    store the token already exported in THIS shell as <name>
-#   claude-account list            accounts on file, * marks the active one (no secrets shown)
-#   claude-account use <name>      make <name> the active account
+#   claude-account list            sources on file with their kind (seat or gateway), * marks the active one (no secrets shown)
+#   claude-account use <name>      make <name> (a seat or a gateway such as izanami) the active source
 #   claude-account rename <old> <new>   rename an account (keeps it active if it was)
-#   claude-account next            switch to the next account on file (wraps around)
-#   claude-account status          active account, and whether this shell matches it
-#   claude-account check [name]    ask Claude Code which account a stored token belongs to
-#   claude-account env             print `export CLAUDE_CODE_OAUTH_TOKEN=...` for the active account
+#   claude-account next            switch to the next seat on file (wraps around; never picks a gateway)
+#   claude-account status          active source and kind, and whether this shell matches it
+#   claude-account check [name]    seat: ask Claude Code which account a stored token belongs to;
+#                                  gateway: GET /v1/models with its key, print the model ids
+#   claude-account env [name]      print shell code for <name> (default: the active source); it never writes `active`
+#
+# Two kinds of source. A seat is an OAuth token in ~/.config/claude-accounts/<name>.token.
+# A gateway (base URL + key variable name + model map) is data in sources.conf
+# ($CLAUDE_ACCOUNT_SOURCES, default ~/.local/share/claude-account/sources.conf); its key is read from
+# the env_file named there (the depot .env) only when `env`/`check` runs and is never stored again.
 #
 # Tokens live in ~/.config/claude-accounts/<name>.token (dir 700, files 600).
 # Wire it into new shells by replacing any hardcoded CLAUDE_CODE_OAUTH_TOKEN line in ~/.bashrc with:
@@ -22,6 +28,8 @@ set -euo pipefail
 
 DIR="${CLAUDE_ACCOUNTS_DIR:-$HOME/.config/claude-accounts}"
 ACTIVE="$DIR/active"
+SOURCES="${CLAUDE_ACCOUNT_SOURCES:-$HOME/.local/share/claude-account/sources.conf}"
+GATEWAY_VARS="ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL"
 
 die() { echo "claude-account: $*" >&2; exit 1; }
 
@@ -43,6 +51,56 @@ active_name() { [ -f "$ACTIVE" ] && tr -d '[:space:]' < "$ACTIVE" || true; }
 token_of() { cat "$DIR/$1.token"; }
 
 has() { [ -f "$DIR/$1.token" ]; }
+
+# ---- gateway sources: data in $SOURCES, parsed with awk (never sourced, never eval'd) ----
+src_get() { # name field -> value of `name.field=value` (first match), empty if none
+  [ -f "$SOURCES" ] || return 0
+  awk -v k="$1.$2" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }' "$SOURCES"
+}
+
+is_gateway() { [ -n "$(src_get "$1" kind)" ] && [ "$(src_get "$1" kind)" = gateway ]; }
+
+gateway_names() {
+  [ -f "$SOURCES" ] || return 0
+  awk -F= '$1 ~ /^[a-z][a-z0-9_-]*\.kind$/ && $2 == "gateway" { sub(/\.kind$/, "", $1); print $1 }' "$SOURCES" | sort
+}
+
+# seat | gateway | none; dies when a name is both (the two namespaces must not clash)
+kind_of() {
+  local n="$1"
+  if has "$n" && is_gateway "$n"; then die "'$n' is both a seat and a gateway source; rename the seat (claude-account rename) or the gateway entry"; fi
+  if has "$n"; then echo seat; elif is_gateway "$n"; then echo gateway; else echo none; fi
+}
+
+# A gateway entry must be complete; prints the reason and returns 1 when it is not.
+gateway_complete() {
+  local n="$1" f
+  for f in base_url key_var model.opus model.sonnet model.haiku; do
+    [ -n "$(src_get "$n" "$f")" ] || { echo "gateway '$n' has no $f in $SOURCES" >&2; return 1; }
+  done
+  [[ "$(src_get "$n" key_var)" =~ ^[A-Z_][A-Z0-9_]*$ ]] || { echo "gateway '$n': key_var must look like IZANAMI_API_KEY" >&2; return 1; }
+}
+
+# Reads the key of gateway $1 into KEYVAL. The env_file is parsed, never sourced: only the exact key_var line
+# is read (optional `export `, optional single or double quotes, CRLF tolerated, a control character refused).
+# On failure it sets KEYERR (names the variable and the file, never a value) and returns 1.
+read_key() {
+  local n="$1" kv ef v
+  KEYVAL=""; KEYERR=""
+  kv="$(src_get "$n" key_var)"; ef="$(src_get "$n" env_file)"; [ -n "$ef" ] || ef="$HOME/.digismith-depot/.env"
+  case "$ef" in "~/"*) ef="$HOME/${ef#\~/}" ;; esac
+  [ -f "$ef" ] || { KEYERR="$kv is not set: $ef does not exist"; return 1; }
+  v="$(awk -v k="$kv" '
+    { line = $0; sub(/\r$/, "", line); sub(/^export[ \t]+/, "", line)
+      if (index(line, k "=") == 1) { val = substr(line, length(k) + 2); found = 1 } }
+    END { if (!found) exit 3
+          n = length(val)
+          if (n >= 2) { f = substr(val, 1, 1); l = substr(val, n, 1); if ((f == "\"" || f == "\047") && f == l) val = substr(val, 2, n - 2) }
+          printf "%s", val }' "$ef")" || { KEYERR="$kv is not set in $ef"; return 1; }
+  [ -n "$v" ] || { KEYERR="$kv is empty in $ef"; return 1; }
+  if printf '%s' "$v" | LC_ALL=C grep -q '[[:cntrl:]]'; then KEYERR="$kv in $ef contains a control character (for example a line break); refused"; return 1; fi
+  KEYVAL="$v"
+}
 
 save_token() { # name token
   local name="$1" tok="$2"
@@ -118,30 +176,37 @@ cmd_adopt() {
 cmd_list() {
   local cur n any=0; cur="$(active_name)"
   while IFS= read -r n; do
+    [ -n "$n" ] || continue
     any=1
-    printf '%s %s\n' "$([ "$n" = "$cur" ] && echo '*' || echo ' ')" "$n"
-  done < <(names)
+    kind_of "$n" >/dev/null
+    printf '%s %-10s %s\n' "$([ "$n" = "$cur" ] && echo '*' || echo ' ')" "$n" "$(kind_of "$n")"
+  done < <( { names; gateway_names; } | sort -u )
   [ "$any" = 1 ] || echo "(no accounts yet — add one with: claude-account add <name>)"
 }
-
 cmd_use() {
   local name="${1:-}"; valid_name "$name"
-  has "$name" || die "no account named '$name' (see: claude-account list)"
+  case "$(kind_of "$name")" in
+    seat) ;;
+    gateway)
+      gateway_complete "$name" || exit 1
+      if ! read_key "$name"; then echo "claude-account: warning: $KEYERR (switching anyway; 'env' will fail until it is set)" >&2; fi
+      KEYVAL="" ;;
+    *) die "no account named '$name' (see: claude-account list)" ;;
+  esac
   ensure_dir
   ( umask 077; printf '%s\n' "$name" > "$ACTIVE" )
   echo "Active account is now '$name'."
   echo "New shells and panes will use it. Agents already running keep their old account until restarted."
 }
-
 cmd_rename() {
   local old="${1:-}" new="${2:-}"; valid_name "$old"; valid_name "$new"
-  has "$old" || die "no account named '$old'"
+  has "$old" || die "no seat named '$old' (gateways are renamed in $SOURCES)"
   has "$new" && die "'$new' already exists"
+  is_gateway "$new" && die "'$new' is a gateway source name"
   mv "$DIR/$old.token" "$DIR/$new.token"
   if [ "$(active_name)" = "$old" ]; then ( umask 077; printf '%s\n' "$new" > "$ACTIVE" ); fi
   echo "Renamed '$old' to '$new'."
 }
-
 cmd_next() {
   local cur n first="" pick="" seen=0
   cur="$(active_name)"
@@ -157,9 +222,27 @@ cmd_next() {
 }
 
 cmd_status() {
-  local cur; cur="$(active_name)"
+  local cur kind; cur="$(active_name)"
   if [ -z "$cur" ]; then echo "active account: (none)"; return 0; fi
-  echo "active account: $cur"
+  kind="$(kind_of "$cur")"
+  if [ "$kind" = gateway ]; then
+    echo "active account: $cur (gateway)"
+    if [ -z "${ANTHROPIC_BASE_URL:-}" ]; then
+      echo "this shell:     no gateway variables exported (Claude Code uses its stored login)"
+    elif [ "$ANTHROPIC_BASE_URL" = "$(src_get "$cur" base_url)" ]; then
+      local keynote="no key exported"
+      if [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+        keynote="key differs from the file"
+        if read_key "$cur" && [ "$ANTHROPIC_AUTH_TOKEN" = "$KEYVAL" ]; then keynote="key matches the file"; fi
+        KEYVAL=""
+      fi
+      echo "this shell:     matches the active account ($keynote)"
+    else
+      echo "this shell:     differs from the active account (its ANTHROPIC_BASE_URL is another one); open a new shell/pane or restart the agent"
+    fi
+    return 0
+  fi
+  echo "active account: $cur (seat)"
   if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
     echo "this shell:     no CLAUDE_CODE_OAUTH_TOKEN exported (Claude Code uses its stored login)"
   elif has "$cur" && [ "$CLAUDE_CODE_OAUTH_TOKEN" = "$(token_of "$cur")" ]; then
@@ -172,23 +255,71 @@ cmd_status() {
     local holds="an unrecognised token"; [ -z "$match" ] || holds="'$match'"
     echo "this shell:     differs from the active account (it holds $holds); open a new shell/pane or restart the agent"
   fi
+  if [ -n "${ANTHROPIC_BASE_URL:-}${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+    echo "this shell:     also has gateway variables exported; they override the seat. Open a new shell/pane"
+  fi
 }
-
 cmd_check() {
   local name="${1:-$(active_name)}"; valid_name "$name"
-  has "$name" || die "no account named '$name'"
+  case "$(kind_of "$name")" in
+    gateway) check_gateway "$name"; return ;;
+    seat) ;;
+    *) die "no account named '$name'" ;;
+  esac
   command -v claude >/dev/null || die "claude isn't on PATH"
-  local tmp; tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' RETURN
+  local tmp; tmp="$(mktemp -d)"; trap '[ -z "${tmp:-}" ] || rm -rf "$tmp"' RETURN
   echo "Asking Claude Code which account token '$name' belongs to..."
   CLAUDE_CONFIG_DIR="$tmp" CLAUDE_CODE_OAUTH_TOKEN="$(token_of "$name")" claude auth status 2>&1 | head -12 || true
 }
 
-cmd_env() {
-  local cur; cur="$(active_name)"
-  [ -n "$cur" ] && has "$cur" || return 0
-  printf 'export CLAUDE_CODE_OAUTH_TOKEN=%q\n' "$(token_of "$cur")"
+# One GET <base_url>/v1/models with the key. The key goes to curl on stdin (-K -), so it is not in `ps`, and
+# nothing but the status code and the model ids is printed.
+check_gateway() {
+  local name="$1" base code tmp esc
+  gateway_complete "$name" || exit 1
+  read_key "$name" || die "$name: $KEYERR"
+  command -v curl >/dev/null || die "curl isn't on PATH"
+  base="$(src_get "$name" base_url)"; base="${base%/}"
+  tmp="$(mktemp -d)"; trap '[ -z "${tmp:-}" ] || rm -rf "$tmp"' RETURN
+  esc="${KEYVAL//\\/\\\\}"; esc="${esc//\"/\\\"}"
+  echo "Asking '$name' ($base) for its models..."
+  code="$(printf 'header = "Authorization: Bearer %s"\n' "$esc" | curl -sS -m 20 -K - -o "$tmp/body" -w '%{http_code}' "$base/v1/models" 2>"$tmp/err")" || {
+    KEYVAL=""; esc=""
+    echo "claude-account: $name: could not reach $base" >&2; return 1; }
+  KEYVAL=""; esc=""
+  echo "HTTP $code"
+  [ "$code" = 200 ] || return 1
+  perl -MJSON::PP -e 'local $/; my $d = eval { decode_json(<STDIN>) } or exit 2;
+    my $l = ref $d eq "HASH" ? $d->{data} : $d; exit 2 unless ref $l eq "ARRAY";
+    print "$_\n" for grep { defined && !ref && /^[A-Za-z0-9._:\/-]+$/ } map { ref $_ eq "HASH" ? $_->{id} : $_ } @$l' < "$tmp/body" \
+    || { echo "claude-account: $name: the answer was not a model list" >&2; return 1; }
 }
-
+cmd_env() {
+  local name="${1:-}" cur kind v
+  if [ -n "$name" ]; then
+    valid_name "$name"
+    kind="$(kind_of "$name")"; [ "$kind" != none ] || die "no account named '$name' (see: claude-account list)"
+  else
+    cur="$(active_name)"
+    [ -n "$cur" ] || return 0
+    kind="$(kind_of "$cur")"; [ "$kind" != none ] || return 0
+    name="$cur"
+  fi
+  if [ "$kind" = seat ]; then
+    printf 'unset %s\n' "$GATEWAY_VARS"
+    printf 'export CLAUDE_CODE_OAUTH_TOKEN=%q\n' "$(token_of "$name")"
+    return 0
+  fi
+  gateway_complete "$name" || exit 1
+  read_key "$name" || die "$name: $KEYERR"
+  printf 'unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY\n'
+  printf 'export ANTHROPIC_BASE_URL=%q\n' "$(src_get "$name" base_url)"
+  printf 'export ANTHROPIC_AUTH_TOKEN=%q\n' "$KEYVAL"
+  printf 'export ANTHROPIC_DEFAULT_OPUS_MODEL=%q\n' "$(src_get "$name" model.opus)"
+  printf 'export ANTHROPIC_DEFAULT_SONNET_MODEL=%q\n' "$(src_get "$name" model.sonnet)"
+  printf 'export ANTHROPIC_DEFAULT_HAIKU_MODEL=%q\n' "$(src_get "$name" model.haiku)"
+  KEYVAL=""
+}
 case "${1:-help}" in
   add)    shift; cmd_add "$@" ;;
   adopt)  shift; cmd_adopt "$@" ;;
@@ -198,6 +329,6 @@ case "${1:-help}" in
   next)   cmd_next ;;
   status) cmd_status ;;
   check)  shift; cmd_check "$@" ;;
-  env)    cmd_env ;;
-  help|-h|--help|*) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+  env)    shift; cmd_env "$@" ;;
+  help|-h|--help|*) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
