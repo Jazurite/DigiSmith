@@ -56,7 +56,7 @@ describe("createGetTaskCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetTaskCommand(() => ({ get, getTaskByRef }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "DGS-81" });
+    await handlerOf<{ task: string }>(command)({ task: "DGS-81" });
 
     expect(getTaskByRef).toHaveBeenCalledWith("DGS-81", undefined);
     expect(get).not.toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe("createGetTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetTaskCommand(() => ({ getTaskByRef }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({ task: "DGS-81", markdown: true });
+    await handlerOf<{ task: string; markdown?: boolean }>(command)({ task: "DGS-81", markdown: true });
 
     expect(getTaskByRef).toHaveBeenCalledWith("DGS-81", { include_markdown_description: true });
   });
@@ -79,7 +79,7 @@ describe("createGetTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetTaskCommand(() => ({ get, getTaskByRef }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({ task: "abc", markdown: true });
+    await handlerOf<{ task: string; markdown?: boolean }>(command)({ task: "abc", markdown: true });
 
     expect(getTaskByRef).not.toHaveBeenCalled();
     expect(get).toHaveBeenCalledWith("/task/abc?include_markdown_description=true");

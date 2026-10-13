@@ -44,7 +44,7 @@ describe("createCreateFolderCommand --parent-folder", () => {
   type Argv = { name: string; parentFolder?: string; yes?: boolean };
   const PARENT = "1301150000001850";
   const run = (cmd: ReturnType<typeof createCreateFolderCommand>, argv: Argv) =>
-    (cmd.handler as (a: Argv) => Promise<void>)(argv);
+    handlerOf<Argv>(cmd)(argv);
   const fakeClient = (over: Record<string, unknown> = {}) =>
     ({
       createFolder: vi.fn().mockResolvedValue({ id: "f9", name: "X: New", hidden: false }),

@@ -41,7 +41,7 @@ describe("createUploadAttachmentCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUploadAttachmentCommand(() => ({ uploadAttachment, getTaskByRef }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string; file: string }) => Promise<void>)({ task: "DGS-81", file: "/tmp/a.pdf" });
+    await handlerOf<{ task: string; file: string }>(command)({ task: "DGS-81", file: "/tmp/a.pdf" });
 
     expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
     expect(uploadAttachment).toHaveBeenCalledWith("14zcebru2pr", "/tmp/a.pdf");
@@ -53,7 +53,7 @@ describe("createUploadAttachmentCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUploadAttachmentCommand(() => ({ uploadAttachment, getTaskByRef }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string; file: string }) => Promise<void>)({ task: "abc", file: "/tmp/a.pdf" });
+    await handlerOf<{ task: string; file: string }>(command)({ task: "abc", file: "/tmp/a.pdf" });
 
     expect(getTaskByRef).not.toHaveBeenCalled();
   });

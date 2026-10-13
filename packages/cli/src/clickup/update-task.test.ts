@@ -75,7 +75,7 @@ describe("createUpdateTaskCommand", () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
       const command = createUpdateTaskCommand(() => ({ updateTask, getTaskByRef }) as unknown as ClickUpClient);
 
-      await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "DGS-81", status: "done" });
+      await handlerOf<{ task: string; status?: string }>(command)({ task: "DGS-81", status: "done" });
 
       expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
       expect(updateTask).toHaveBeenCalledWith("14zcebru2pr", { status: "done" });
@@ -127,7 +127,7 @@ describe("createUpdateTaskCommand", () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
       const command = createUpdateTaskCommand(() => ({ updateTask, getTaskByRef }) as unknown as ClickUpClient);
 
-      await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "abc", status: "done" });
+      await handlerOf<{ task: string; status?: string }>(command)({ task: "abc", status: "done" });
 
       expect(getTaskByRef).not.toHaveBeenCalled();
     });
