@@ -40,6 +40,7 @@ digismith clickup add-dependency --task <id|key> (--waiting-on <id|key> | --bloc
 digismith clickup remove-dependency --task <id|key> (--waiting-on <id|key> | --blocking <id|key>) [--yes]  # remove a dependency, never a task (dry run without --yes; no allow rule)
 digismith clickup add-link --task <id|key> --to <id|key> [--yes]   # link two tasks (public API; dry run without --yes; has an allow rule)
 digismith clickup remove-link --task <id|key> --to <id|key> [--yes]  # remove a link, never a task (dry run without --yes; no allow rule)
+digismith clickup add-comment --task <id|key> (--text <s> | --markdown-file <path>) [--yes]  # post a comment (public API; dry run without --yes; file sent as plain text, not converted; a second --yes posts a second comment; no allow rule)
 digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session of a Proxyman capture in ~/.digismith-depot/.env (no secret printed)
 digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
 

@@ -7,6 +7,8 @@ import type {
   ClickUpCustomField,
   ClickUpFolderWithLists,
   ClickUpFoldersResponse,
+  ClickUpComment,
+  ClickUpCommentCreated,
   ClickUpFieldsResponse,
   ClickUpListDetail,
   ClickUpListSummary,
@@ -188,6 +190,17 @@ export class ClickUpClient {
 
   async addLink(taskId: string, linksTo: string): Promise<void> {
     await this.post(`/task/${taskId}/link/${linksTo}`);
+  }
+
+  /** POST /task/{id}/comment. notify_all false: a comment must not ping everyone on the task. Not idempotent. */
+  addTaskComment(taskId: string, text: string): Promise<ClickUpCommentCreated> {
+    return this.post<ClickUpCommentCreated>(`/task/${taskId}/comment`, { data: { comment_text: text, notify_all: false } });
+  }
+
+  /** GET /task/{id}/comment: the newest comments first (one page, 25 rows). */
+  async getTaskComments(taskId: string): Promise<ClickUpComment[]> {
+    const res = await this.get<{ comments?: ClickUpComment[] }>(`/task/${taskId}/comment`);
+    return res.comments ?? [];
   }
 
   async removeLink(taskId: string, linksTo: string): Promise<void> {

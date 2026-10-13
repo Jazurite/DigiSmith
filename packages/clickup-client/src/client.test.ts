@@ -649,6 +649,25 @@ describe("ClickUpClient relations", () => {
     expect(request).toHaveBeenNthCalledWith(2, { method: "DELETE", url: "/task/a/link/b", params: undefined, data: undefined });
   });
 
+  it("addTaskComment() posts comment_text with notify_all false; getTaskComments() reads the list", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: 77, hist_id: "h", date: 1 } });
+    request.mockResolvedValueOnce({ data: { comments: [{ id: "77", comment_text: "hi" }] } });
+
+    const created = await client.addTaskComment("a", "hi");
+    const list = await client.getTaskComments("a");
+
+    expect(created.id).toBe(77);
+    expect(list).toEqual([{ id: "77", comment_text: "hi" }]);
+    expect(request).toHaveBeenNthCalledWith(1, {
+      method: "POST",
+      url: "/task/a/comment",
+      params: undefined,
+      data: { comment_text: "hi", notify_all: false },
+    });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/task/a/comment", params: undefined, data: undefined });
+  });
+
   it("adds ClickUp's error body to the message and keeps the original error and response", async () => {
     const client = makeClient();
     const err = Object.assign(new Error("Request failed with status code 400"), {

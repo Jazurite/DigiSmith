@@ -280,6 +280,20 @@ export interface ClickUpMoveTaskResponse {
   data: { task_id: string; new_list_id: string };
 }
 
+/** Answer of POST /task/{task_id}/comment. */
+export interface ClickUpCommentCreated {
+  id: number | string;
+  hist_id?: string;
+  date?: number | string;
+}
+
+/** One row of GET /task/{task_id}/comment (the fields we read). */
+export interface ClickUpComment {
+  id: number | string;
+  comment_text?: string;
+  [key: string]: unknown;
+}
+
 /** Response shape from POST /task/{task_id}/attachment. */
 export interface ClickUpAttachment {
   id: string;
