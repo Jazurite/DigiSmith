@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-422 Conductor queryable state and the Maestro consult flow — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-422 Conductor queryable state and the Maestro consult flow — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-422</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Added <code>scripts/conductor/</code> (plain TypeScript, <code>node --experimental-strip-types</code>, no build, no <code>packages/cli</code> change): <code>state</code> (one answer to "what is going on"), <code>state-write</code> (the conductor writes its structured block), <code>consult</code> (local, or remote over plain ssh). All read-only except <code>state-write</code>, which touches only the text between its markers in the note.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>state-block.ts</code>: markers <code>&lt;!-- digismith:conductor-state v1 --&gt;</code> ... <code>&lt;!-- /digismith:conductor-state --&gt;</code>; parser and renderer for the template's line formats (DGS-427 names); <code>writeStateBlock(notePath, body, marker)</code> with a parameterized marker (DGS-428's catch-up blocks, one per identity), atomic, mode kept, symlinks followed, bytes outside the markers untouched. Errors name the note line and the expected format.</li>
+<li><code>state.ts</code>: <code>collectState</code> from the note, <code>git log origin/main</code>, herdr (server, tabs) and open cards (cross-check, stub until DGS-417 merges). A failing source gives a partial answer plus <code>sources</code> and <code>warnings</code>. Note path: <code>--note</code>, env <code>DIGISMITH_CONDUCTOR_NOTE</code>, <code>&lt;depot&gt;/conductors.json</code>, depot default.</li>
+<li><code>runner.ts</code>: one Runner and a read-only guard (herdr status/agent/pane/tab reads, git log/rev-parse with only <code>--since=</code>/<code>--format=</code> flags, the single fixed ssh state form with charset-checked values).</li>
+<li><code>consult.ts</code>, <code>cli.ts</code>: consult, text and JSON output, <code>--machine</code> for the live pane list.</li>
+<li>Tests: 110 new (temp depot, fake note, fake runner, no real ssh); repo suite 1595 pass with <code>FORCE_COLOR=1</code> before the fixes; typecheck of the new files clean.</li>
+</ul>
+</section>
+<section id="design-deviation">
+<h2>Design deviation</h2>
+<p><code>herdr --remote</code> only opens the interactive UI (probed: "--remote can only be used with the default launch command"). The remote consult uses plain ssh (BatchMode, ConnectTimeout) running the same script on the Workbox; <code>herdr --machine &lt;label&gt; agent list</code> adds live panes. Settled as S9.</p>
+</section>
+<section id="alignment">
+<h2>Alignment</h2>
+<p>Matches the conductor's settled interfaces S1 to S12: 417's card API (<code>listCards(project, {scope:"open"})</code>), 427's <code>CatchUp</code> field types, 428's marker pair through <code>writeStateBlock(notePath, text, marker)</code>, 418's <code>## Session end</code> text left alone, code only under <code>scripts/</code>.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review (subagent). Verified and fixed with tests: git guard let <code>git log --output=&lt;file&gt;</code> through (now only <code>--since=</code>/<code>--format=</code>; herdr status args checked); a symlinked note was replaced by a regular file; impossible dates (31 Feb) were accepted; <code>Updated:</code> was stored unnormalized and <code>1.5x speed</code> lost its number in Next. Not bugs: no shell injection over ssh, no change outside the markers.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Pending the merge: commands in <code>probe.md</code> (conductors.json entry, conductor's state-write, local consult, one remote consult over ssh). If ssh is not allowed from the Desktop session the remote half is parked with the reason.</p>
+</section>
+<section id="left-out">
+<h2>Left out</h2>
+<p>ClickUp reads, the <code>dg</code> wrapper, moving the note into the depot (DGS-424), any allow rule (read-only commands; Jack adds one if wanted).</p>
+</section>
+</body>
+</html>
