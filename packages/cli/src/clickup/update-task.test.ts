@@ -329,6 +329,7 @@ describe("createUpdateTaskCommand", () => {
 
     it.each([
       ["--name", "n"],
+      ["--name", ""],
       ["--description", "d"],
       ["--markdown-description", "# m"],
       ["--status", "done"],
@@ -347,14 +348,16 @@ describe("createUpdateTaskCommand", () => {
         updateTask: vi.fn().mockResolvedValue({ id: "abc" }),
         getTaskTypes: vi.fn().mockResolvedValue([{ id: 0, name: "Task", name_plural: "Tasks" }]),
         get: vi.fn().mockResolvedValue({ list: { id: "l1" }, id: "abc" }),
-        getListFields: vi.fn().mockResolvedValue([]),
+        getListFields: vi.fn().mockResolvedValue([{ id: "f1", name: "Lesson", type: "text", type_config: {} }]),
+        setCustomField: vi.fn().mockResolvedValue(undefined),
       } as unknown as ClickUpClient;
       const factory = vi.fn(() => client);
 
       await (createUpdateTaskCommand(factory).handler as Handler)(parse(["--task", "abc", flag, value]));
 
       expect(factory).toHaveBeenCalled();
-      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(0);
     });
 
     it("is not a no-op with --markdown-description-file alone", async () => {
@@ -372,7 +375,8 @@ describe("createUpdateTaskCommand", () => {
         rmSync(dir, { recursive: true, force: true });
       }
       expect(factory).toHaveBeenCalled();
-      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(0);
     });
   });
 });
