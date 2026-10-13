@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import { randomBytes } from "node:crypto";
 import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
@@ -11,6 +12,43 @@ export class FrontdoorAuthError extends Error {
   constructor() {
     super("Frontdoor session expired or not enough, capture a new one");
   }
+}
+
+const ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/** The id form the web app gives a new line: "block-" and 10 letters or digits. */
+function newBlockId(): string {
+  const bytes = randomBytes(10);
+  let id = "block-";
+  for (const b of bytes) id += ALPHANUM[b % ALPHANUM.length];
+  return id;
+}
+
+/**
+ * A folder description as the Quill delta ClickUp keeps, as a JSON string: per line one text op
+ * (none for an empty line) and one "\n" op with its own block-id. A final newline is added when missing.
+ */
+export function folderDescriptionDelta(text: string): string {
+  const lines = (text.endsWith("\n") ? text : `${text}\n`).split("\n").slice(0, -1);
+  const ops: Array<{ insert: string; attributes?: { "block-id": string } }> = [];
+  for (const line of lines) {
+    if (line !== "") ops.push({ insert: line });
+    ops.push({ insert: "\n", attributes: { "block-id": newBlockId() } });
+  }
+  return JSON.stringify({ ops });
+}
+
+/** The plain text of a delta string: the text inserts joined, formatting and embeds dropped. */
+export function folderDescriptionText(content: string): string {
+  let delta: unknown;
+  try {
+    delta = JSON.parse(content);
+  } catch {
+    throw new Error("folder content is not a delta (not JSON)");
+  }
+  const ops = (delta as { ops?: unknown }).ops;
+  if (!Array.isArray(ops)) throw new Error("folder content is not a delta (no ops list)");
+  return ops.map((o) => (typeof (o as { insert?: unknown }).insert === "string" ? (o as { insert: string }).insert : "")).join("");
 }
 
 export interface FrontdoorClientConfig {
@@ -134,6 +172,18 @@ export class FrontdoorClient {
         ...(target.folderId !== undefined ? { category: target.folderId } : {}),
       },
     );
+  }
+
+  /** Sets a folder's description (plain text; the public API has no such field). ClickUp answers the folder. */
+  async setFolderDescription(folderId: string, text: string): Promise<void> {
+    await this.request("PUT", `/hierarchy/v1/category/${folderId}`, { content: folderDescriptionDelta(text) });
+  }
+
+  /** The description as plain text, with the final newline the editor always keeps. A folder with null content reads as "". */
+  async getFolderDescription(folderId: string): Promise<string> {
+    const folder = await this.request<{ content?: string | null }>("GET", `/hierarchy/v1/category/${folderId}`);
+    if (folder?.content === undefined) throw new Error(`folder ${folderId} answered with no content field`);
+    return folder.content === null ? "" : folderDescriptionText(folder.content);
   }
 
   /** Restores a deleted List from the Trash, with its tasks (the web app's undo of a delete). ClickUp answers {}. */

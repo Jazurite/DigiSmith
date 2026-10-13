@@ -5,7 +5,7 @@ export { Space } from "./space.ts";
 export { RateLimiter } from "./rate-limiter.ts";
 export type { Clock, Sleep } from "./rate-limiter.ts";
 export { checkCredentials, CredentialsError, readFrontdoorAuth, parseEnvFile } from "./credentials.ts";
-export { FrontdoorClient, FrontdoorAuthError, DEFAULT_FRONTDOOR_HOST } from "./frontdoor.ts";
+export { FrontdoorClient, FrontdoorAuthError, DEFAULT_FRONTDOOR_HOST, folderDescriptionDelta, folderDescriptionText } from "./frontdoor.ts";
 export type { FrontdoorClientConfig } from "./frontdoor.ts";
 export type { Credentials } from "./credentials.ts";
 export * from "./types.ts";

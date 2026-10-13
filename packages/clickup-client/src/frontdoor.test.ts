@@ -9,6 +9,8 @@ import {
   FrontdoorClient,
   FrontdoorAuthError,
   DEFAULT_FRONTDOOR_HOST,
+  folderDescriptionDelta,
+  folderDescriptionText,
 } from "./frontdoor.ts";
 import { readFrontdoorAuth } from "./credentials.ts";
 
@@ -153,6 +155,69 @@ describe("FrontdoorClient", () => {
       data: { position: 2, include_archived: false },
     });
     expect(Object.keys(request.mock.calls[0][0].data)).not.toContain("category");
+  });
+
+  it("setFolderDescription PUTs the folder path with the delta as a JSON string in content", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { category: { id: "42" } } });
+    await client.setFolderDescription("42", "hello");
+    const call = request.mock.calls[0][0];
+    expect(call.method).toBe("PUT");
+    expect(call.url).toBe("/hierarchy/v1/category/42");
+    expect(Object.keys(call.data)).toEqual(["content"]);
+    expect(typeof call.data.content).toBe("string");
+    const ops = JSON.parse(call.data.content).ops;
+    expect(ops[0]).toEqual({ insert: "hello" });
+    expect(ops[1].insert).toBe("\n");
+    expect(ops[1].attributes["block-id"]).toMatch(/^block-[A-Za-z0-9]{10}$/);
+  });
+
+  it("getFolderDescription GETs the plain folder path and returns the text of the delta", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "42", content: JSON.stringify({ ops: [{ insert: "a" }, { insert: "\n" }] }) } });
+    expect(await client.getFolderDescription("42")).toBe("a\n");
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/hierarchy/v1/category/42", data: undefined });
+  });
+
+  it("getFolderDescription reads null content as empty and refuses a missing or broken content", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "42", content: null } });
+    expect(await client.getFolderDescription("42")).toBe("");
+    request.mockResolvedValueOnce({ data: { id: "42" } });
+    await expect(client.getFolderDescription("42")).rejects.toThrow(/no content/);
+    request.mockResolvedValueOnce({ data: { id: "42", content: "not json" } });
+    await expect(client.getFolderDescription("42")).rejects.toThrow(/not a delta/);
+  });
+
+  it.each([
+    ["plain", "hello"],
+    ["quotes", 'say "hi" and \'bye\''],
+    ["backslashes", "C:\\path\\to \\n not a newline"],
+    ["newlines", "line one\nline two\n\nline four"],
+    ["unicode", "Lò phản ứng ⚛ 🔥"],
+    ["trailing newline", "done\n"],
+    ["only newlines", "\n\n"],
+  ])("round trip (%s): get returns what set sent, with one trailing newline", async (_n, text) => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+    await client.setFolderDescription("42", text);
+    request.mockResolvedValueOnce({ data: { content: request.mock.calls[0][0].data.content } });
+    expect(await client.getFolderDescription("42")).toBe(text.endsWith("\n") ? text : `${text}\n`);
+  });
+
+  it("folderDescriptionDelta sends one text op and one newline op per line, each newline with its own block id", () => {
+    const ops = JSON.parse(folderDescriptionDelta("a\nb\n\nc")).ops;
+    expect(ops.map((o: { insert: string }) => o.insert)).toEqual(["a", "\n", "b", "\n", "\n", "c", "\n"]);
+    const ids = ops.filter((o: { insert: string }) => o.insert === "\n").map((o: { attributes: Record<string, string> }) => o.attributes["block-id"]);
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
+    for (const id of ids) expect(id).toMatch(/^block-[A-Za-z0-9]{10}$/);
+    expect(ops.filter((o: { insert: string }) => o.insert !== "\n").every((o: object) => !("attributes" in o))).toBe(true);
+  });
+
+  it("folderDescriptionText ignores formatting attributes and non-string inserts", () => {
+    const content = JSON.stringify({ ops: [{ insert: "x", attributes: { bold: true } }, { insert: { image: "u" } }, { insert: "\n" }] });
+    expect(folderDescriptionText(content)).toBe("x\n");
   });
 
   it("restoreList PUTs the subcategory undo path with the captured body", async () => {
