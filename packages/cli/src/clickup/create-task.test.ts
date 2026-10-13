@@ -238,7 +238,7 @@ describe("createCreateTaskCommand", () => {
       const factory = vi.fn(() => ({ createTask: write }) as unknown as ClickUpClient);
       vi.spyOn(console, "log").mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      await yargs([]).command(createCreateTaskCommand(factory)).parseAsync(["create-task", ...args, ...["--list","901","--name","x"]]);
+      await yargs([]).command(createCreateTaskCommand(factory)).parseAsync(["create-task", ...args, "--list", "901", "--name", "x"]);
       return { write, factory, errorSpy };
     };
 
@@ -251,6 +251,7 @@ describe("createCreateTaskCommand", () => {
     });
 
     it.each(["1", "2", "3", "4"])("accepts --priority %s", async (flag) => {
+      process.exitCode = 1;
       const { write } = await run(["--priority", flag]);
       expect(write).toHaveBeenCalledTimes(1);
       expect(write.mock.calls[0].at(-1)).toMatchObject({ priority: Number(flag) });
