@@ -30,6 +30,14 @@ describe("hook-cli", () => {
     expect(run("end", e).status).toBe(0);
     expect(listCards("P", { env, scope: "archive" })[0].card.status).toBe("closed");
   });
+  it("still works when the script is reached through a symlink", () => {
+    const link = path.join(depot, "lnk");
+    fs.symlinkSync(path.dirname(CLI), link);
+    const e = JSON.stringify({ session_id: "s7", cwd: depot });
+    const r = spawnSync("node", ["--experimental-strip-types", path.join(link, "hook-cli.ts"), "start"], { input: e, env, encoding: "utf8" });
+    expect(r.status).toBe(0);
+    expect(listCards("P", { env, scope: "open" })).toHaveLength(1);
+  });
   it("exits 0 on garbage input and an unknown command", () => {
     expect(run("start", "not json").status).toBe(0);
     expect(run("bogus", "{}").status).toBe(0);

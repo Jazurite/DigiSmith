@@ -58,6 +58,10 @@ describe("startHook", () => {
     expect(r.reason).toMatch(/DIGISMITH_ROLE/);
     expect(listCards("DigiSmith", { env })).toEqual([]);
   });
+  it("writes no card when an env value holds a newline (field injection)", () => {
+    env.DIGISMITH_MANDATE = "x\nstatus: closed";
+    expect(startHook(ev(), env, { now: T0 }).wrote).toBe(false);
+  });
   it("writes no card when the card would be invalid", () => {
     delete env.DIGISMITH_CREATED_BY;
     expect(startHook(ev(), env, { now: T0 }).wrote).toBe(false);

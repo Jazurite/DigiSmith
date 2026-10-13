@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { listCards, markLost } from "./cards.ts";
@@ -11,7 +12,8 @@ export const DEFAULT_STALE_MIN = 30;
 export function liveSessionsFromAgentList(stdout: string): Live {
   try {
     const agents = JSON.parse(stdout)?.result?.agents;
-    if (!Array.isArray(agents)) return { ok: false, error: "no agents array in herdr output" };
+    if (!Array.isArray(agents) || agents.length === 0) return { ok: false, error: "herdr listed no agents: cannot tell what is alive" };
+    if (agents.some((a) => typeof a?.agent_session?.value !== "string")) return { ok: false, error: "an agent has no agent_session yet: list incomplete" };
     const sessions = new Set<string>();
     for (const a of agents) if (typeof a?.agent_session?.value === "string") sessions.add(a.agent_session.value);
     return { ok: true, sessions };
@@ -32,13 +34,16 @@ export function sweep(opts: {
   project: string; now?: Date; env?: NodeJS.ProcessEnv; apply?: boolean; staleMin?: number; live?: Live;
 }): SweepRow[] {
   const now = opts.now ?? new Date();
-  const staleMs = (opts.staleMin ?? DEFAULT_STALE_MIN) * 60_000;
+  const staleMin = opts.staleMin ?? DEFAULT_STALE_MIN;
+  if (!Number.isFinite(staleMin) || staleMin < 0) throw new Error(`stale threshold must be a number of minutes >= 0, got ${staleMin}`);
+  const staleMs = staleMin * 60_000;
   const live = opts.live ?? readLiveSessions();
   const rows: SweepRow[] = [];
   for (const { card } of listCards(opts.project, { scope: "open", env: opts.env })) {
     const row = (verdict: Verdict, reason: string) => rows.push({ id: card.id, session: card.session, verdict, reason });
     if (!card.runs_on.startsWith("herdr")) { row("unverifiable", "not on herdr"); continue; }
     if (!live.ok) { row("unverifiable", `herdr read failed: ${live.error}`); continue; }
+    if (Number.isNaN(Date.parse(card.last_seen))) { row("unverifiable", "last_seen is not a date"); continue; }
     if (now.getTime() - Date.parse(card.last_seen) < staleMs) { row("kept", "heartbeat is fresh"); continue; }
     if (live.sessions.has(card.session)) { row("kept", "stale but the engine session is alive"); continue; }
     row("lost", "stale heartbeat and the engine session is gone");
@@ -52,7 +57,7 @@ function arg(name: string): string | undefined {
   return i > 0 ? process.argv[i + 1] : undefined;
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (process.argv[1] && import.meta.filename === fs.realpathSync(process.argv[1])) {
   const project = arg("--project");
   if (!project) {
     console.error("usage: session-sweep.ts --project <p> [--apply] [--stale-min 30] [--json]");

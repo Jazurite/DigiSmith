@@ -57,7 +57,7 @@ export function main(command: string | undefined, stdin: string, env: NodeJS.Pro
   return "";
 }
 
-if (import.meta.filename === process.argv[1]) {
+if (process.argv[1] && import.meta.filename === fs.realpathSync(process.argv[1])) {
   let stdin = "";
   try {
     stdin = fs.readFileSync(0, "utf8");

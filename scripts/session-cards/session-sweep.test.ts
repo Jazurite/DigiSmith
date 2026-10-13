@@ -61,10 +61,24 @@ describe("sweep", () => {
   });
 });
 
+describe("sweep guards (review fixes)", () => {
+  it("a NaN stale threshold or unparseable last_seen marks nothing", () => {
+    writeCard(card("a"), env);
+    expect(() => sweep({ project: "P", now: NOW, env, staleMin: Number("abc"), live: alive() })).toThrow(/stale/);
+    writeCard(card("b", { last_seen: "garbage" }), env);
+    const r = sweep({ project: "P", now: NOW, env, apply: true, live: alive() });
+    expect(r.find((x) => x.id === "b")?.verdict).toBe("unverifiable");
+  });
+  it("an empty herdr list or an agent without agent_session is unverifiable, not 'gone'", () => {
+    expect(liveSessionsFromAgentList(JSON.stringify({ result: { agents: [] } })).ok).toBe(false);
+    expect(liveSessionsFromAgentList(JSON.stringify({ result: { agents: [{ name: "x" }] } })).ok).toBe(false);
+  });
+});
+
 describe("liveSessionsFromAgentList", () => {
   it("reads agent_session values from herdr-ws JSON", () => {
-    const out = JSON.stringify({ result: { agents: [{ agent_session: { value: "x1" } }, { name: "none" }] } });
-    expect(liveSessionsFromAgentList(out)).toEqual({ ok: true, sessions: new Set(["x1"]) });
+    const out = JSON.stringify({ result: { agents: [{ agent_session: { value: "x1" } }, { agent_session: { value: "x2" } }] } });
+    expect(liveSessionsFromAgentList(out)).toEqual({ ok: true, sessions: new Set(["x1", "x2"]) });
   });
   it("fails on garbage", () => {
     expect(liveSessionsFromAgentList("nope").ok).toBe(false);

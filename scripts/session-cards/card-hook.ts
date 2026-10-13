@@ -43,6 +43,8 @@ export function startHook(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDe
     last_seen: t,
     status: "open",
   };
+  const bad = Object.entries(card).find(([, val]) => typeof val === "string" && /[\r\n]/.test(val));
+  if (bad) return { wrote: false, reason: `env value for ${bad[0]} holds a line break: no card written` };
   const v = validateCard(card);
   if (!v.ok) return { wrote: false, reason: `card invalid, none written: ${v.errors.join("; ")}` };
   writeCard(v.card, env);
