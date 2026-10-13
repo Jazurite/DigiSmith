@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ClickUpClient } from "@digismith/clickup-client";
+import { ClickUpApiError, type ClickUpClient } from "@digismith/clickup-client";
 import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue } from "./field-set.ts";
 
 const dd = (id: string, name: string, options: { id: string; name: string }[]) => ({
@@ -106,7 +106,7 @@ describe("applyFields", () => {
     expect(client.getListFields).toHaveBeenCalledTimes(1);
   });
   it("names the field and shows ClickUp's error body when a write fails", async () => {
-    const err = Object.assign(new Error("Request failed with status code 404"), { body: { err: "Field not found" } });
+    const err = new ClickUpApiError("Request failed with status code 404", { method: "POST", path: "/task/t1/field/f1", status: 404, body: { err: "Field not found" } });
     const client = { setCustomField: vi.fn().mockRejectedValue(err) } as unknown as ClickUpClient;
     await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(
       /setting field "ClickUp API Type" on task t1 failed: Request failed with status code 404 \{"err":"Field not found"\}/
@@ -116,7 +116,7 @@ describe("applyFields", () => {
 
 describe("applyFields with a client error that already carries the body", () => {
   it("does not print the body twice", async () => {
-    const err = Object.assign(new Error('Request failed with status code 400: {"err":"bad"}'), { body: { err: "bad" } });
+    const err = new ClickUpApiError('Request failed with status code 400: {"err":"bad"}', { method: "POST", path: "/task/t1/field/f1", status: 400, body: { err: "bad" } });
     const client = { setCustomField: vi.fn().mockRejectedValue(err) } as unknown as ClickUpClient;
     await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(
       /^setting field "ClickUp API Type" on task t1 failed: Request failed with status code 400: \{"err":"bad"\}$/
@@ -126,7 +126,7 @@ describe("applyFields with a client error that already carries the body", () => 
 
 describe("applyFields with a string error body", () => {
   it("does not print the body twice", async () => {
-    const err = Object.assign(new Error("Request failed with status code 400: Bad input"), { body: "Bad input" });
+    const err = new ClickUpApiError("Request failed with status code 400: Bad input", { method: "POST", path: "/task/t1/field/f1", status: 400, body: "Bad input" });
     const client = { setCustomField: vi.fn().mockRejectedValue(err) } as unknown as ClickUpClient;
     await expect(applyFields(client, "t1", [{ field: fields[0], value: "o1" }])).rejects.toThrow(/400: Bad input$/);
   });
