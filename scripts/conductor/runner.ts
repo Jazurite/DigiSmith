@@ -100,7 +100,7 @@ export function readOnlyRunner(inner: Runner): Runner {
     else if (cmd === "git") {
       if (!["log", "rev-parse"].includes(args[0])) refuse(`git ${args[0] ?? ""} (not read-only)`);
       // git log can write (--output) or run helpers (--ext-diff): only the flags the state needs
-      const bad = args.slice(1).find((a) => a.startsWith("-") && !/^--(since|format)=/.test(a));
+      const bad = args.slice(1).find((a) => a.startsWith("-") && !/^--((since|format)=|max-count=\d+$)/.test(a));
       if (bad) refuse(`git flag ${bad}`);
     } else if (cmd === "ssh") checkSsh(args);
     else refuse(`command ${cmd}`);

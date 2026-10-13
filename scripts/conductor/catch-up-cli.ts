@@ -13,6 +13,8 @@ import { collectState, resolveNotePath } from "./state.ts";
 import { writeStateBlock } from "./state-block.ts";
 import { execRunner, readOnlyRunner } from "./runner.ts";
 import { isSafeName } from "./safe-name.ts";
+import { taskIdForKey, ticketStatus } from "./ticket-status.ts";
+import { refreshState } from "./refresh.ts";
 
 const run = promisify(execFile);
 
@@ -58,24 +60,7 @@ export function parseArgs(argv: string[]): CliArgs {
   };
 }
 
-const KEY = /^DGS-\d+$/;
-const TASK_ID = /\b(14z[a-z0-9]{8,})\b/;
-
-/** S12: a key needs its task id first: read it from the board folder (ticket.md or plan.md); else unresolved. */
-export function taskIdForKey(key: string, repoRoot: string): string | undefined {
-  const board = path.join(repoRoot, ".digismith", "board");
-  if (!KEY.test(key) || !fs.existsSync(board)) return undefined;
-  for (const dir of fs.readdirSync(board).filter((d) => d.startsWith(`${key}—`) || d.startsWith(`${key}-`))) {
-    for (const f of ["ticket.md", "plan.md"]) {
-      const p = path.join(board, dir, f);
-      if (fs.existsSync(p)) {
-        const m = TASK_ID.exec(fs.readFileSync(p, "utf8"));
-        if (m) return m[1];
-      }
-    }
-  }
-  return undefined;
-}
+export { taskIdForKey };
 
 async function clickup(keys: string[]): Promise<ClickUpInfo[]> {
   const root = process.cwd();
@@ -96,13 +81,28 @@ async function clickup(keys: string[]): Promise<ClickUpInfo[]> {
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
-export function realDeps(args: Pick<CliArgs, "now" | "note">, env: NodeJS.ProcessEnv = process.env): CatchUpDeps {
+export function realDeps(args: Pick<CliArgs, "now" | "note"> & { conductor?: string; project?: string }, env: NodeJS.ProcessEnv = process.env): CatchUpDeps {
   const now = () => (args.now ? new Date(args.now) : new Date());
   return {
     listCards: (project) => listCards(project, { env }).map((r: { card: SessionCard }) => r.card),
     collectState: (o) =>
       collectState({ project: o.project, conductor: o.conductor, note: o.notePath, since: o.since, repoDir: REPO_ROOT, herdrWorkspace: env.HERDR_WS }, { runner: readOnlyRunner(execRunner), now, env }),
     renderCatchUp,
+    refresh: async () => {
+      const r = await refreshState(
+        { project: args.project ?? "DigiSmith", conductor: args.conductor ?? "digismith-conductor", note: args.note, repoDir: REPO_ROOT, herdrWorkspace: env.HERDR_WS },
+        { runner: readOnlyRunner(execRunner), now, env, listCards: (p, o) => listCards(p, { ...o, env }), ticketStatus: (k) => ticketStatus(k, REPO_ROOT) },
+      );
+      return r.warnings;
+    },
+    newestMergeTime: async () => {
+      const r = await readOnlyRunner(execRunner)("git", ["log", "origin/main", "--max-count=20", "--format=%cI%x09%s"], { cwd: REPO_ROOT });
+      for (const row of r.code === 0 ? r.stdout.split("\n") : []) {
+        const [t, ...sub] = row.split("\t");
+        if (t && Date.parse(t) <= now().getTime() && !/^chore: bump plugin version/.test(sub.join("\t"))) return t;
+      }
+      return undefined;
+    },
     // 422's resolver always returns a path; the catch-up only writes into a note that exists.
     resolveNotePath: (project, conductor) => {
       const p = resolveNotePath({ project, conductor, note: args.note }, env);

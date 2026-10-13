@@ -16,7 +16,11 @@ export interface ClickUpInfo {
 
 export interface CatchUpDeps {
   listCards(project: string): CardRow[];
-  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart & { warnings?: string[] }>;
+  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart & { warnings?: string[]; note?: { updated?: string; stale?: boolean } }>;
+  /** DGS-462: refresh the conductor's state block before collecting; returns its warnings. Absent = no refresh. */
+  refresh?(): Promise<string[]>;
+  /** DGS-462: commit time of the newest merge on origin/main (ISO), undefined if unknown. */
+  newestMergeTime?(): Promise<string | undefined>;
   renderCatchUp(data: CatchUp): string;
   resolveNotePath(project: string, conductor: string): string | undefined;
   readNote(notePath: string): string | undefined;
@@ -81,18 +85,35 @@ export async function buildCatchUp(opts: CatchUpOptions, deps: CatchUpDeps): Pro
   const notePath = deps.resolveNotePath(opts.project, opts.conductor);
   if (!notePath) warnings.push(`conductor note not found for ${opts.project}/${opts.conductor}: catch-up not written`);
 
+  const newest = deps.newestMergeTime ? await deps.newestMergeTime().catch(() => undefined) : undefined;
   if (notePath && !opts.refresh) {
     const note = deps.readNote(notePath);
     const block = note === undefined ? undefined : readCatchUpBlock(note, opts.identity);
     const writtenMs = block ? Date.parse(block.written) : NaN;
-    if (block && !Number.isNaN(writtenMs) && now.getTime() - writtenMs >= 0 && now.getTime() - writtenMs <= opts.maxAgeMin * 60_000) {
+    const mergedSince = newest !== undefined && Date.parse(newest) > writtenMs; // a merge after the catch-up was written: never reuse it
+    if (block && !mergedSince && !Number.isNaN(writtenMs) && now.getTime() - writtenMs >= 0 && now.getTime() - writtenMs <= opts.maxAgeMin * 60_000) {
       return { text: `${block.text}\n\n(from note, written ${block.written})`, reused: true, noteWritten: false, warnings };
     }
   }
 
+  if (deps.refresh && notePath && !opts.noWrite) {
+    try {
+      for (const w of await deps.refresh()) warnings.push(`state-refresh: ${w}`);
+    } catch (err) {
+      warnings.push(`state-refresh failed: ${(err as Error).message}`);
+    }
+  }
   const cards = deps.listCards(opts.project) as WindowCard[];
   const window = computeWindow({ cards, identity: opts.identity, askingSession: opts.session, now });
-  const state = await withClickUp(await deps.collectState({ project: opts.project, conductor: opts.conductor, since: window.from, notePath }), deps);
+  const collected = await deps.collectState({ project: opts.project, conductor: opts.conductor, since: window.from, notePath });
+  const state = await withClickUp(collected, deps);
+  const updated = collected.note?.updated;
+  if (updated) {
+    const mins = Math.max(0, Math.round((now.getTime() - Date.parse(updated)) / 60_000));
+    const age = mins < 90 ? `${mins} min` : `${Math.round(mins / 60)} h`;
+    const note = `state block updated ${toUtc7(new Date(updated))}, ${age} old${collected.note?.stale ? ", OLDER than the newest merge" : ""}`;
+    state.health = { ...state.health, server: `${state.health.server}; ${note}` };
+  }
   const data: CatchUp = {
     done: state.done, running: state.running, waiting: state.waiting, decided: state.decided, parked: state.parked, next: state.next, health: state.health,
     conductor: opts.conductor, window: { from: window.from, to: window.to }, identity: opts.identity, askedBy: opts.session,

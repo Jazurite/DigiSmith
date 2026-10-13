@@ -14,6 +14,7 @@ describe("readOnlyRunner", () => {
     ["herdr", ["--machine", "workbox", "agent", "list"]],
     ["git", ["log", "origin/main", "--since=2026-10-13T00:00:00+07:00"]],
     ["git", ["rev-parse", "HEAD"]],
+    ["git", ["log", "origin/main", "--max-count=20", "--format=%H%x09%cI%x09%s"]],
   ];
   for (const [cmd, args] of allowed) {
     it(`allows ${cmd} ${args.join(" ")}`, async () => {
@@ -24,6 +25,8 @@ describe("readOnlyRunner", () => {
   }
 
   const denied: [string, string[]][] = [
+    ["git", ["log", "origin/main", "--max-count=x"]],
+    ["git", ["log", "origin/main", "-1"]],
     ["herdr", ["--session", "default", "agent", "prompt", "w2:p1", "rm"]],
     ["herdr", ["--session", "default", "agent", "send-keys", "w2:p1", "x"]],
     ["herdr", ["--session", "default", "pane", "send-keys", "w2:p1", "x"]],

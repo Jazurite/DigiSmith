@@ -5,6 +5,7 @@ import { depotDir } from "../depot-dir.ts";
 import type { CatchUp } from "../catch-up.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, type DecidedRow, type ParkedRow, type RunningRow, type Seat, type WaitingRow } from "./state-block.ts";
 import type { Runner } from "./runner.ts";
+import { stripMarkers } from "./markers.ts";
 
 export interface DoneRow {
   key: string;
@@ -22,7 +23,9 @@ export interface State extends CatchUpState {
   project: string;
   conductor: string;
   asOf: string;
-  note: { path: string; found: boolean; blockFound: boolean; updated?: string };
+  note: { path: string; found: boolean; blockFound: boolean; updated?: string; stale?: boolean };
+  /** newest merge on origin/main (plugin version bumps do not count) */
+  newestMerge?: { time: string; hash: string };
   done: DoneRow[];
   running: RunningRow[];
   waiting: WaitingRow[];
@@ -44,7 +47,7 @@ export interface CollectOpts {
 }
 
 export interface CardRef {
-  card: { name?: string; role?: string; domain?: string; id?: string };
+  card: { name?: string; role?: string; domain?: string; id?: string; under?: string; started: string };
   path: string;
 }
 
@@ -127,8 +130,15 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     } else {
       const { state: s, problems } = parseStateBody(block.body, text.slice(0, block.bodyStart).split("\n").length);
       state.sources.note = "ok";
-      Object.assign(state, { running: s.running, waiting: s.waiting, decided: s.decided, parked: s.parked, next: s.next });
+      Object.assign(state, {
+        running: s.running,
+        waiting: s.waiting.map((w) => ({ ...w, question: stripMarkers(w.question) })),
+        decided: s.decided,
+        parked: s.parked.map((p) => ({ ...p, what: stripMarkers(p.what) })),
+        next: s.next.map(stripMarkers),
+      });
       state.health.seats = s.seats;
+      if (s.ownerUnknown?.length) state.health.server = `owner unknown: ${s.ownerUnknown.join(", ")}`;
       if (s.updated) state.note.updated = s.updated;
       warnings.push(...problems.map((p) => `note block: ${p}`));
     }
@@ -162,6 +172,25 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     warnings.push(`git log origin/main failed: ${(e as Error).message}`);
   }
 
+  // the newest merge on origin/main against the block's age (DGS-462)
+  try {
+    const r = await deps.runner("git", ["log", "origin/main", "--max-count=20", "--format=%H%x09%cI%x09%s"], { cwd: opts.repoDir });
+    if (r.code === 0) {
+      for (const row of r.stdout.split("\n")) {
+        const [hash, time, ...subject] = row.split("\t");
+        if (!hash || !time || Date.parse(time) > now.getTime() || /^chore: bump plugin version/.test(subject.join("\t"))) continue;
+        state.newestMerge = { time, hash: hash.slice(0, 7) };
+        break;
+      }
+    }
+  } catch {
+    // the age check is skipped; the git section above reports a failing git
+  }
+  if (state.note.blockFound && state.note.updated && state.newestMerge && Date.parse(state.newestMerge.time) > Date.parse(state.note.updated)) {
+    state.note.stale = true;
+    warnings.push(`state block updated ${state.note.updated}, older than the newest merge ${state.newestMerge.time} (${state.newestMerge.hash}): run state-refresh`);
+  }
+
   // herdr: server and open tabs
   try {
     const st = await deps.runner("herdr", ["--session", "default", "status", "server"]);
@@ -170,7 +199,8 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
       state.sources.herdr = "failed";
       warnings.push(`herdr status failed: ${st.stderr.trim() || `exit ${st.code}`}`);
     } else {
-      state.health.server = /^status:\s*(.+)$/m.exec(st.stdout)?.[1].trim() ?? "unknown";
+      const up = /^status:\s*(.+)$/m.exec(st.stdout)?.[1].trim() ?? "unknown";
+      state.health.server = state.health.server === "unknown" ? up : `${up}; ${state.health.server}`;
       const args = ["--session", "default", "tab", "list", ...(opts.herdrWorkspace ? ["--workspace", opts.herdrWorkspace] : [])];
       const tl = await deps.runner("herdr", args);
       if (tl.code !== 0) throw new Error(tl.stderr.trim() || `tab list exit ${tl.code}`);

@@ -27,4 +27,9 @@ describe("skills/catch-up", () => {
     expect(text).toContain("~/.digismith-depot/sessions/<project>/cards/<id>--<session>.yml");
     expect(text).not.toMatch(/get_session/);
   });
+  it("tells the Maestro what the block-age line means and where the conductor routine is (DGS-462)", () => {
+    expect(text).toContain("OLDER than the newest merge");
+    expect(text).toContain("docs/conductor-state.md");
+    expect(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "docs", "conductor-state.md"), "utf8")).toContain("[resolves: ticket DGS-411]");
+  });
 });

@@ -18,3 +18,5 @@ Jack's intent is "I want to catch up". Match the meaning, not a phrase: there is
 5. If Jack wants it re-collected now, add `--refresh`.
 
 The same text also runs by itself before your answer when this session has been idle (another session of your identity was active since): then give the catch-up first, then answer Jack's message.
+
+The Health line may end with `state block updated <time>, <age> old` and, when the conductor's block is behind the newest merge, `OLDER than the newest merge`. The catch-up refreshes the conductor's state block itself before it collects (`scripts/conductor/cli.ts state-refresh`, DGS-462), so that warning means the refresh failed: say so in one line after the catch-up. How the conductors keep the block, and the `[resolves: ...]` markers, are in `docs/conductor-state.md`.

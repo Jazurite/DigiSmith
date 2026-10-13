@@ -203,3 +203,20 @@ describe("writeStateBlock", () => {
     expect(fs.statSync(note).mode & 0o777).toBe(0o640);
   });
 });
+
+describe("Workers header and Owner unknown line (DGS-462)", () => {
+  it("round-trips both", () => {
+    const body = renderStateBody({ conductor: "c", workers: ["dgs-1", "dgs-2"], ownerUnknown: ["x"], running: [], waiting: [], decided: [], parked: [], next: [], seats: [] });
+    expect(body).toContain("Workers: dgs-1, dgs-2");
+    expect(body).toContain("- Owner unknown: x");
+    const { state, problems } = parseStateBody(body);
+    expect(problems).toEqual([]);
+    expect(state.workers).toEqual(["dgs-1", "dgs-2"]);
+    expect(state.ownerUnknown).toEqual(["x"]);
+  });
+  it("reads 'Workers: none' as an empty list and omits both when unset", () => {
+    expect(parseStateBody("Workers: none\n").state.workers).toEqual([]);
+    const body = renderStateBody({ running: [], waiting: [], decided: [], parked: [], next: [], seats: [] });
+    expect(body).not.toMatch(/Workers:|Owner unknown/);
+  });
+});

@@ -124,3 +124,45 @@ describe("readCatchUpBlock", () => {
     expect(readCatchUpBlock(note, "m2")).toBeUndefined();
   });
 });
+
+describe("buildCatchUp: the state block (DGS-462)", () => {
+  it("refreshes the conductor's block before collecting, and not when it only reuses", async () => {
+    const order: string[] = [];
+    const { deps } = fakeDeps({
+      refresh: async () => { order.push("refresh"); return ["herdr failed"]; },
+      collectState: async () => { order.push("collect"); return state; },
+    });
+    const r = await buildCatchUp(opts, deps);
+    expect(order).toEqual(["refresh", "collect"]);
+    expect(r.warnings).toContain("state-refresh: herdr failed");
+    await buildCatchUp(opts, { ...deps, now: () => new Date("2026-10-13T08:10:00Z") });
+    expect(order).toEqual(["refresh", "collect"]); // reused: nothing ran
+  });
+  it("does not refresh with --no-write, and survives a failing refresh", async () => {
+    let n = 0;
+    const { deps } = fakeDeps({ refresh: async () => { n++; throw new Error("boom"); } });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(n).toBe(0);
+    const r = await buildCatchUp(opts, deps);
+    expect(r.warnings).toContain("state-refresh failed: boom");
+    expect(r.text).toContain("# Catch-up");
+  });
+  it("never reuses a catch-up written before the newest merge, but still reuses one written after it", async () => {
+    const { deps, calls } = fakeDeps({ newestMergeTime: async () => "2026-10-13T14:30+07:00" });
+    await buildCatchUp(opts, deps); // written 15:00
+    const reused = await buildCatchUp(opts, { ...deps, now: () => new Date("2026-10-13T08:10:00Z") });
+    expect(reused.reused).toBe(true);
+    const merged = await buildCatchUp(opts, { ...deps, newestMergeTime: async () => "2026-10-13T15:05+07:00", now: () => new Date("2026-10-13T08:10:00Z") });
+    expect(merged.reused).toBe(false);
+    expect(calls.collect).toBe(2);
+  });
+  it("shows the block's age and says when it is older than the newest merge", async () => {
+    const collect = (stale: boolean) => async () => ({ ...state, note: { updated: "2026-10-13T14:00+07:00", stale } });
+    const { deps, calls } = fakeDeps({ collectState: collect(true) });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(calls.rendered[0].health.server).toBe("up; state block updated 2026-10-13T14:00+07:00, 60 min old, OLDER than the newest merge");
+    const f = fakeDeps({ collectState: collect(false) });
+    await buildCatchUp({ ...opts, noWrite: true }, f.deps);
+    expect(f.calls.rendered[0].health.server).toBe("up; state block updated 2026-10-13T14:00+07:00, 60 min old");
+  });
+});

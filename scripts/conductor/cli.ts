@@ -9,6 +9,8 @@ import { execRunner, readOnlyRunner, type Runner } from "./runner.ts";
 import { collectState, iso7, resolveNotePath, type CardRef } from "./state.ts";
 import { fluxMain, transcriptDirFor } from "./flux-cli.ts";
 import { resolveMainRoot } from "../lineage-handoff.ts";
+import { refreshState, renderRefresh } from "./refresh.ts";
+import { ticketStatus } from "./ticket-status.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, writeStateBlock } from "./state-block.ts";
 
 export interface Io {
@@ -23,7 +25,11 @@ const USAGE = `Usage: node --experimental-strip-types scripts/conductor/cli.ts <
   state        [--project P] [--conductor C] [--note path] [--since iso] [--json]
   state-write  --from <file or -> [--project P] [--conductor C] [--note path]
   flux         <agent> | --all [--dry-run] [--log] [--json] [--project P] [--brief path] [--note path] [--wake text]
+  state-refresh [--project P] [--conductor C] [--note path] [--herdr-workspace W] [--workers a,b,c] [--dry-run]
   consult      [--project P] [--conductor C] [--remote <ssh-target>] [--remote-repo path] [--machine <herdr label>] [--json]
+state-refresh rebuilds Running from herdr and the open cards, keeps the hand-written parts, and drops an item only when its
+  marker says it is resolved, e.g. "- Waiting text [resolves: ticket DGS-411] | since ... | pane w2:p1"; markers: ticket DGS-n (ClickUp
+  done), merged DGS-n (on origin/main), gone <path>, exists <path> (paths relative to the repo). --workers lists this conductor's workers.
 state and consult only read; flux sends /clear to a conductor (night only, see flux). state-write writes only the block between the digismith:conductor-state markers in the note.
 `;
 
@@ -33,6 +39,8 @@ const OPTIONS = {
   note: { type: "string" },
   since: { type: "string" },
   json: { type: "boolean" },
+  "dry-run": { type: "boolean" },
+  workers: { type: "string" },
   repo: { type: "string" },
   from: { type: "string" },
   remote: { type: "string" },
@@ -43,13 +51,13 @@ const OPTIONS = {
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export async function main(argv: string[], io: Io & { runner?: Runner; listCards?: (p: string, o: { scope: "open" }) => CardRef[] }): Promise<number> {
+export async function main(argv: string[], io: Io & { runner?: Runner; ticketStatus?: (key: string) => Promise<string | undefined>; listCards?: (p: string, o: { scope: "open" }) => CardRef[] }): Promise<number> {
   const [command, ...rest] = argv;
   if (command === "flux") {
     const repoRoot = resolveMainRoot(REPO_ROOT);
     return fluxMain(rest, { stdout: io.stdout, stderr: io.stderr, now: io.now, env: io.env, repoRoot, transcriptDir: transcriptDirFor(repoRoot) });
   }
-  if (!command || !["state", "state-write", "consult"].includes(command)) {
+  if (!command || !["state", "state-write", "state-refresh", "consult"].includes(command)) {
     io.stderr(USAGE);
     return 1;
   }
@@ -73,6 +81,22 @@ export async function main(argv: string[], io: Io & { runner?: Runner; listCards
     if (command === "state") {
       const s = await collect();
       io.stdout(v.json ? `${JSON.stringify(s)}\n` : renderText(s));
+      return 0;
+    }
+    if (command === "state-refresh") {
+      const r = await refreshState(
+        {
+          project, conductor, note: v.note, repoDir, dryRun: v["dry-run"],
+          herdrWorkspace: v["herdr-workspace"] ?? io.env.HERDR_WS,
+          workers: v.workers === undefined ? undefined : v.workers.split(",").map((x) => x.trim()).filter(Boolean),
+        },
+        {
+          runner, now: io.now, env: io.env,
+          listCards: io.listCards ?? ((p, o) => listCards(p, { ...o, env: io.env })),
+          ticketStatus: io.ticketStatus ?? ((k) => ticketStatus(k, repoDir)),
+        },
+      );
+      io.stdout(renderRefresh(r));
       return 0;
     }
     if (command === "state-write") {

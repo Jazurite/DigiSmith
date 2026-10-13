@@ -92,6 +92,10 @@ export interface Seat { seat: string; fiveHourPct: number; weeklyPct: number }
 export interface NoteState {
   updated?: string;
   conductor?: string;
+  /** the worker names the conductor passed to state-refresh; the next refresh reuses them */
+  workers?: string[];
+  /** panes in the conductor's workspace that no card and no --workers list assigns (computed by state-refresh) */
+  ownerUnknown?: string[];
   running: RunningRow[];
   waiting: WaitingRow[];
   decided: DecidedRow[];
@@ -171,7 +175,9 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
     if (section === undefined) {
       const u = prefixed(line, "Updated:");
       const c = prefixed(line, "Conductor:");
-      if (u !== undefined) {
+      const w = prefixed(line, "Workers:");
+      if (w !== undefined) state.workers = isNone(w) ? [] : w.split(",").map((x) => x.trim()).filter(Boolean);
+      else if (u !== undefined) {
         const t = parseTime(u);
         if (t) state.updated = t;
         else problems.push(`line ${n}: Updated needs a time like 2026-10-13T14:05+07:00 (got "${u}")`);
@@ -226,6 +232,11 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
       case "Health": {
         const seats = prefixed(item, "Seats and usage:");
         if (seats === undefined) {
+          const ou = prefixed(item, "Owner unknown:");
+          if (ou !== undefined) {
+            state.ownerUnknown = isNone(ou) ? [] : ou.split(",").map((x) => x.trim()).filter(Boolean);
+            return;
+          }
           if (/^(Server|Open tabs):/.test(item)) return; // computed from herdr, not read from the note
           return bad("unknown Health line");
         }
@@ -245,7 +256,11 @@ function section(name: string, rows: string[]): string {
 }
 
 export function renderStateBody(s: NoteState): string {
-  const head = [s.updated ? `Updated: ${s.updated}` : "", s.conductor ? `Conductor: ${s.conductor}` : ""].filter(Boolean);
+  const head = [
+    s.updated ? `Updated: ${s.updated}` : "",
+    s.conductor ? `Conductor: ${s.conductor}` : "",
+    s.workers ? `Workers: ${s.workers.join(", ") || "none"}` : "",
+  ].filter(Boolean);
   const seats = s.seats.map((x) => `${x.seat}: 5h ${x.fiveHourPct}%, weekly ${x.weeklyPct}%`).join("; ");
   const parts = [
     section("Running", s.running.map((r) => `- ${r.worker} | ${r.key} | ${r.stage} | since ${r.since}`)),
@@ -253,7 +268,7 @@ export function renderStateBody(s: NoteState): string {
     section("Decided under the mandate", s.decided.map((r) => `- ${r.decision} | why: ${r.why} | allowed by: ${r.allowedBy}`)),
     section("Parked or failed", s.parked.map((r) => `- ${r.what} | why: ${r.why} | next step: ${r.next}`)),
     section("Next", s.next.map((r, i) => `${i + 1}. ${r}`)),
-    `## Health\n- Seats and usage: ${seats || "none"}\n`,
+    `## Health\n- Seats and usage: ${seats || "none"}\n${s.ownerUnknown?.length ? `- Owner unknown: ${s.ownerUnknown.join(", ")}\n` : ""}`,
   ];
   return (head.length ? `${head.join("\n")}\n\n` : "") + parts.join("\n");
 }
