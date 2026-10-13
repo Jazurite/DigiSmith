@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildCatchUp, catchUpMarker, readCatchUpBlock, type CatchUpDeps } from "./catch-up.ts";
-import type { CatchUp, StatePart } from "./deps-stub.ts";
+import type { CatchUp } from "../catch-up.ts";
+import { markerLines, type Marker } from "./state-block.ts";
+import type { StatePart } from "./catch-up.ts";
 
 const state: StatePart = {
   done: [{ key: "DGS-417", line: "card format merged" }],
@@ -9,7 +11,7 @@ const state: StatePart = {
 };
 
 function fakeDeps(over: Partial<CatchUpDeps> & { note?: string } = {}) {
-  const calls = { collect: 0, written: [] as { path: string; text: string; marker: { open: string; close: string } }[], rendered: [] as CatchUp[] };
+  const calls = { collect: 0, written: [] as { path: string; text: string; marker: Marker }[], rendered: [] as CatchUp[] };
   let note = over.note;
   const deps: CatchUpDeps = {
     listCards: () => [
@@ -21,7 +23,7 @@ function fakeDeps(over: Partial<CatchUpDeps> & { note?: string } = {}) {
     renderCatchUp: (d) => { calls.rendered.push(d); return `# Catch-up: ${d.conductor}\nWindow: ${d.window.from} to ${d.window.to}`; },
     resolveNotePath: () => "/depot/sessions/DigiSmith/c/note.md",
     readNote: () => note,
-    writeStateBlock: (path, text, marker) => { calls.written.push({ path, text, marker }); note = `${marker.open}\n${text}\n${marker.close}`; },
+    writeStateBlock: (path, text, marker) => { calls.written.push({ path, text, marker }); const l = markerLines(marker); note = `${l.open}\n${text}\n${l.close}`; },
     clickup: async () => [],
     now: () => new Date("2026-10-13T08:00:00Z"),
     ...over,
@@ -69,7 +71,8 @@ describe("buildCatchUp", () => {
     expect(calls.collect).toBe(3);
   });
   it("ignores another identity's block", async () => {
-    const other = `${catchUpMarker("m2").open}\nWritten: 2026-10-13T14:59+07:00\nold\n${catchUpMarker("m2").close}`;
+    const l2 = markerLines(catchUpMarker("m2"));
+    const other = `${l2.open}\nWritten: 2026-10-13T14:59+07:00\nold\n${l2.close}`;
     const { deps, calls } = fakeDeps({ note: other });
     const r = await buildCatchUp(opts, deps);
     expect(r.reused).toBe(false);
@@ -115,7 +118,7 @@ describe("buildCatchUp", () => {
 
 describe("readCatchUpBlock", () => {
   it("returns the written time and text of the identity's block only", () => {
-    const m = catchUpMarker("m1");
+    const m = markerLines(catchUpMarker("m1"));
     const note = `top\n${m.open}\nWritten: 2026-10-13T15:00+07:00\nbody\nline2\n${m.close}\nbottom`;
     expect(readCatchUpBlock(note, "m1")).toEqual({ written: "2026-10-13T15:00+07:00", text: "body\nline2" });
     expect(readCatchUpBlock(note, "m2")).toBeUndefined();

@@ -155,3 +155,7 @@ Disagreements left: none new. 418's `## Session end` text sits outside every mar
 ## Unresolved by me, said plainly
 - Conductor-note marker and 422's `writeStateBlock` signature: if 422 merges a different one I adapt at rebase.
 - OpenCode text (for report/probe only): prompt rule: "If Jack wants to catch up, in any words, run `node --experimental-strip-types scripts/conductor/catch-up-cli.ts --maestro <id> --session <session> --conductor <id>` and answer with the output unchanged." Idle idea: an OpenCode plugin `chat.message` event doing the same check as `idle-check.ts`: DGS-430.
+
+
+# Merge-time notes (2026-10-13)
+Stubs replaced by the real 417, 422 and 427 modules; `writeStateBlock(notePath, body, Marker)` adopted; `idleHandler` registered in `PRE_PROMPT_HANDLERS`; `--note` added for scratch runs; `conductorFor` = `<domain lowercased>-conductor` or `DIGISMITH_CONDUCTOR`.

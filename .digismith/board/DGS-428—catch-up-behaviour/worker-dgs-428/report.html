@@ -31,16 +31,20 @@
 <li><code>catch-up.ts</code> and <code>catch-up-cli.ts</code>: build, render, write the block, reuse under 30 minutes, <code>--refresh</code>; exit codes 0, 2, 3, 4.</li>
 <li><code>idle-check.ts</code>: the second trigger, a pre-prompt handler (registered in DGS-418's hook list at merge).</li>
 <li><code>skills/catch-up/SKILL.md</code>: the intent skill, no keyword list.</li>
-<li><code>deps-stub.ts</code>: temporary stand-ins for DGS-417, 422 and 427.</li>
+<li>Real modules from DGS-417, 422 and 427 (stubs deleted); <code>idleHandler</code> is registered in DGS-418's <code>PRE_PROMPT_HANDLERS</code>, and a test through the real <code>runPrompt</code> shows it runs before the heartbeat.</li>
 </ul>
 </section>
 <section id="not-done">
 <h2>Not done</h2>
-<p>The idle handler is registered after DGS-418 merges. OpenCode is text only (DGS-430). ClickUp comments are not read, only status.</p>
+<p>OpenCode is text only (DGS-430). ClickUp comments are not read, only status. First-use limits: the Maestro's Desktop session has no env and no card, so the idle trigger cannot fire there until DGS-411; it can be proven live only in a throwaway Maestro-role session with env.</p>
 </section>
 <section id="review">
 <h2>Review</h2>
 <p>Claude whole-branch review, three findings, all fixed with tests: an orphan open marker could erase note text on a second write, path traversal through <code>--project</code> and <code>--conductor</code>, and unchecked card values in the idle hint.</p>
+</section>
+<section id="tests">
+<h2>Tests</h2>
+<p><code>FORCE_COLOR=1 pnpm test</code>: 127 files, 1779 tests, green. CLI build clean.</p>
 </section>
 </body>
 </html>

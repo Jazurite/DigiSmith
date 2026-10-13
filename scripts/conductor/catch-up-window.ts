@@ -7,6 +7,12 @@ export interface WindowCard {
   status: string;
 }
 
+/** The card fields the catch-up reads (a SessionCard from scripts/session-card.ts fits). */
+export interface CardRow extends WindowCard {
+  domain: string;
+  role?: string;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UTC7_MS = 7 * 60 * 60 * 1000;
 

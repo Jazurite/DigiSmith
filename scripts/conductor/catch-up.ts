@@ -1,8 +1,12 @@
 // Catch-up behaviour (DGS-428, design section 7): window, collect, render, write ONE block per
 // identity into the conductor's note. Dependencies are injected; deps-stub.ts holds the real
 // ones until DGS-417, 422 and 427 merge.
-import { computeWindow, toUtc7, type WindowCard } from "./catch-up-window.ts";
-import type { CardRow, CatchUp, StatePart } from "./deps-stub.ts";
+import { computeWindow, toUtc7, type CardRow, type WindowCard } from "./catch-up-window.ts";
+import type { CatchUp } from "../catch-up.ts";
+import { catchUpMarker, extractBlock, type Marker } from "./state-block.ts";
+import type { CatchUpState } from "./state.ts";
+
+export type StatePart = CatchUpState;
 
 export interface ClickUpInfo {
   key: string;
@@ -12,11 +16,11 @@ export interface ClickUpInfo {
 
 export interface CatchUpDeps {
   listCards(project: string): CardRow[];
-  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart>;
+  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart & { warnings?: string[] }>;
   renderCatchUp(data: CatchUp): string;
   resolveNotePath(project: string, conductor: string): string | undefined;
   readNote(notePath: string): string | undefined;
-  writeStateBlock(notePath: string, text: string, marker: { open: string; close: string }): void;
+  writeStateBlock(notePath: string, body: string, marker: Marker): void;
   clickup(keys: string[]): Promise<ClickUpInfo[]>;
   now(): Date;
 }
@@ -38,25 +42,22 @@ export interface CatchUpResult {
   warnings: string[];
 }
 
-export function catchUpMarker(identity: string): { open: string; close: string } {
-  return {
-    open: `<!-- digismith:catch-up v1 maestro=${identity} -->`,
-    close: `<!-- /digismith:catch-up maestro=${identity} -->`,
-  };
-}
+export { catchUpMarker };
 
 export function readCatchUpBlock(note: string, identity: string): { written: string; text: string } | undefined {
-  const { open, close } = catchUpMarker(identity);
-  const start = note.indexOf(open);
-  if (start === -1) return undefined;
-  const end = note.indexOf(close, start);
-  if (end === -1) return undefined;
-  const inner = note.slice(start + open.length, end).replace(/^\n/, "").replace(/\n$/, "");
+  let match;
+  try {
+    match = extractBlock(note, catchUpMarker(identity));
+  } catch {
+    return undefined; // a damaged block is not reused; the next write reports it
+  }
+  if (!match.found) return undefined;
+  const inner = match.body.replace(/^\n/, "").replace(/\n$/, "");
   const m = /^Written: (\S+)\n([\s\S]*)$/.exec(inner);
   return m ? { written: m[1], text: m[2] } : undefined;
 }
 
-async function withClickUp(state: StatePart, deps: CatchUpDeps): Promise<StatePart> {
+async function withClickUp<T extends StatePart>(state: T, deps: CatchUpDeps): Promise<T> {
   if (state.done.length === 0) return state;
   let info: ClickUpInfo[];
   try {
@@ -92,7 +93,11 @@ export async function buildCatchUp(opts: CatchUpOptions, deps: CatchUpDeps): Pro
   const cards = deps.listCards(opts.project) as WindowCard[];
   const window = computeWindow({ cards, identity: opts.identity, askingSession: opts.session, now });
   const state = await withClickUp(await deps.collectState({ project: opts.project, conductor: opts.conductor, since: window.from, notePath }), deps);
-  const data: CatchUp = { ...state, conductor: opts.conductor, window: { from: window.from, to: window.to }, identity: opts.identity, askedBy: opts.session };
+  const data: CatchUp = {
+    done: state.done, running: state.running, waiting: state.waiting, decided: state.decided, parked: state.parked, next: state.next, health: state.health,
+    conductor: opts.conductor, window: { from: window.from, to: window.to }, identity: opts.identity, askedBy: opts.session,
+  };
+  for (const w of state.warnings ?? []) warnings.push(w);
   const text = deps.renderCatchUp(data);
 
   let noteWritten = false;

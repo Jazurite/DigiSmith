@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { idleCheck, IDLE_CONTEXT_MARKER } from "./idle-check.ts";
-import type { CardRow } from "./deps-stub.ts";
+import type { CardRow } from "./catch-up-window.ts";
 
 const row = (o: Partial<CardRow>): CardRow => ({ id: "m1", session: "s-me", last_seen: "2026-10-13T10:00+07:00", status: "open", domain: "DigiSmith", role: "maestro", ...o });
 const mk = (cards: CardRow[], own: CardRow | undefined = cards[0]) => ({

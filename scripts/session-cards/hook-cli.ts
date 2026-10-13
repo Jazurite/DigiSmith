@@ -1,12 +1,13 @@
 import * as fs from "node:fs";
 import { endHook, startHook, touchHook } from "./card-hook.ts";
 import type { HookDeps, HookEvent } from "./card-hook.ts";
+import { idleHandler } from "../conductor/idle-check.ts";
 
 // Pre-prompt extension point (S7). Handlers run in order, in this one process, BEFORE the heartbeat
 // refreshes last_seen. A handler may return text, which goes to stdout as prompt context.
 // DGS-428 registers its idle catch-up check here.
 export type PrePromptHandler = (event: HookEvent, env: NodeJS.ProcessEnv) => string | void;
-export const PRE_PROMPT_HANDLERS: PrePromptHandler[] = [];
+export const PRE_PROMPT_HANDLERS: PrePromptHandler[] = [idleHandler];
 
 export function runPrompt(
   event: HookEvent,

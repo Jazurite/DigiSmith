@@ -11,10 +11,10 @@ A Maestro can now be caught up on its conductor's domain. A skill matches the in
 - `scripts/conductor/catch-up-cli.ts`: the command. Exit 0 ok, 2 bad arguments, 3 note missing, 4 note write failed (3 and 4 still print the catch-up). Names are checked (letters, digits, `.` `_` `-`).
 - `scripts/conductor/idle-check.ts`: pre-prompt handler; silent unless an open Maestro card is older than its identity's other cards.
 - `skills/catch-up/SKILL.md`: the intent skill, no keyword list.
-- `scripts/conductor/deps-stub.ts`: stand-ins for DGS-417 (cards), 422 (state, note path, `writeStateBlock`), 427 (`renderCatchUp`); removed at rebase.
+- Real modules after the rebase: 417 cards (`listCards`, `findCardBySession`), 422 (`collectState`, `resolveNotePath`, `writeStateBlock(notePath, body, Marker)`, `catchUpMarker`, `extractBlock`), 427 (`renderCatchUp`, `CatchUp`). The stubs are deleted. `--note <path>` selects a scratch note.
+- `idleHandler` is registered in 418's `PRE_PROMPT_HANDLERS` (`scripts/session-cards/hook-cli.ts`); `conductorFor` = `<domain lowercased>-conductor`, override `DIGISMITH_CONDUCTOR`, unknown = silent. A test through the real `runPrompt` shows the idle check runs before the heartbeat. The hint prints only fixed text plus charset-checked values, single-quoted.
 
 ## Not done (by design)
-- The idle handler is not yet in DGS-418's `hook-cli.ts` list: added at merge, after 418.
 - OpenCode: text only (prompt rule and idle idea in `probe.md`); follow-up DGS-430.
 - ClickUp comments are not read; status only, and unresolved keys show in Health.
 
@@ -22,4 +22,7 @@ A Maestro can now be caught up on its conductor's domain. A skill matches the in
 Claude whole-branch review: 3 findings. Fixed with tests: an orphan open marker made a second write erase text after it (the same guard is needed in DGS-422's real `writeStateBlock`); path traversal through `--project` and `--conductor`; unchecked card values in the idle hint. Window, idle, reuse, exit codes and secrets: no issue.
 
 ## Tests
-`FORCE_COLOR=1 pnpm test` green; new tests in `scripts/conductor/*.test.ts` (42).
+`FORCE_COLOR=1 pnpm test`: 127 files, 1779 tests, green. `pnpm --filter @digismith/cli build` clean (packages/cli untouched).
+
+## Honest limits of the first use
+(a) The Maestro's live Desktop session has no env and no card, so the hooks (idle trigger) cannot fire in it until the identity work DGS-411; the Maestro writes a Maestro card by hand for the catch-up command. (b) The idle trigger can be proven live only in a throwaway Maestro-role session with env (two sessions of one identity); the conductor starts it. Use a scratch note (`--note`) for any throwaway run.

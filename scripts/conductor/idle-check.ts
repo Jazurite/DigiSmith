@@ -3,7 +3,8 @@
 // refreshes last_seen. It never throws and never writes; any doubt = silent (undefined).
 import { isIdle, type WindowCard } from "./catch-up-window.ts";
 import { isSafeName } from "./safe-name.ts";
-import type { CardRow } from "./deps-stub.ts";
+import { findCardBySession, listCards } from "../session-card.ts";
+import type { CardRow } from "./catch-up-window.ts";
 
 export const IDLE_CONTEXT_MARKER = "[digismith catch-up: idle Maestro session]";
 
@@ -42,4 +43,13 @@ export function idleCheck(event: { session_id?: string }, deps: IdleDeps): strin
   } catch {
     return undefined;
   }
+}
+
+/** The handler for DGS-418's pre-prompt list (scripts/session-cards/hook-cli.ts). It reads the card BEFORE the heartbeat. */
+export function idleHandler(event: { session_id?: string }, env: NodeJS.ProcessEnv): string | undefined {
+  return idleCheck(event, {
+    findCardBySession: (session) => findCardBySession(session, undefined, env)?.card,
+    listCards: (project) => listCards(project, { env }).map((r) => r.card),
+    conductorFor: (card) => defaultConductorFor(card, env),
+  });
 }

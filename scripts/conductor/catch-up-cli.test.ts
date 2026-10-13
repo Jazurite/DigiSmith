@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "./catch-up-cli.ts";
+import { formatCard, type SessionCard } from "../session-card.ts";
 
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), "catch-up-cli.ts");
 
@@ -28,20 +29,21 @@ describe("catch-up-cli (temp depot)", () => {
     depot = fs.mkdtempSync(path.join(os.tmpdir(), "dgs428-"));
     const cards = path.join(depot, "sessions", "DigiSmith", "cards");
     fs.mkdirSync(cards, { recursive: true });
-    fs.writeFileSync(path.join(cards, "m1--s-old.yml"), "id: m1\nsession: s-old\nlast_seen: 2026-10-13T12:00+07:00\nstatus: closed\ndomain: DigiSmith\nrole: maestro\n");
+    const card: SessionCard = { name: "maestro", role: "maestro", id: "m1", session: "s-old", domain: "DigiSmith", state: "note.md", runs_on: "desktop", machine: "mac", created_by: "jack", started: "2026-10-13T09:00+07:00", last_seen: "2026-10-13T12:00+07:00", status: "open" };
+    fs.writeFileSync(path.join(cards, "m1--s-old.yml"), formatCard(card));
     fs.mkdirSync(path.join(depot, "sessions", "DigiSmith", "c"), { recursive: true });
     fs.writeFileSync(path.join(depot, "sessions", "DigiSmith", "c", "note.md"), "# note\nkeep me\n");
   });
   afterEach(() => fs.rmSync(depot, { recursive: true, force: true }));
   const run = (extra: string[]) =>
     spawnSync("node", ["--experimental-strip-types", CLI, "--maestro", "m1", "--session", "s-me", "--conductor", "c", "--now", "2026-10-13T08:00:00Z", ...extra], {
-      env: { ...process.env, DIGISMITH_DEPOT_DIR: depot }, encoding: "utf8",
+      env: { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`, DIGISMITH_DEPOT_DIR: depot }, encoding: "utf8",
     });
 
   it("prints the catch-up with its window and writes one block into the note, keeping the rest", () => {
     const r = run([]);
     expect(r.status).toBe(0);
-    expect(r.stdout).toContain("Window: 2026-10-13T12:00+07:00 to 2026-10-13T15:00+07:00");
+    expect(r.stdout).toContain("Window: 2026-10-13 12:00 UTC+7 to 2026-10-13 15:00 UTC+7");
     const note = fs.readFileSync(path.join(depot, "sessions", "DigiSmith", "c", "note.md"), "utf8");
     expect(note.startsWith("# note\nkeep me\n")).toBe(true);
     expect(note.match(/digismith:catch-up v1 maestro=m1/g)).toHaveLength(1);
@@ -82,21 +84,5 @@ describe("parseArgs path safety (review)", () => {
     expect(() => parseArgs(["--maestro", "m", "--session", "s", "--conductor", "../../x"])).toThrow(/--conductor/);
     expect(() => parseArgs([...base, "--project", ".."])).toThrow(/--project/);
     expect(() => parseArgs(["--maestro", "m; ls", "--session", "s", "--conductor", "c"])).toThrow(/--maestro/);
-  });
-});
-import { writeStateBlock } from "./deps-stub.ts";
-describe("stub writeStateBlock with an orphan open marker (review)", () => {
-  it("never eats the text after an orphan open marker", () => {
-    const d = fs.mkdtempSync(path.join(os.tmpdir(), "dgs428-orphan-"));
-    const f = path.join(d, "note.md");
-    const m = { open: "<!-- o -->", close: "<!-- /o -->" };
-    fs.writeFileSync(f, "head\n<!-- o -->\nhalf\n## Roster\nIMPORTANT\n");
-    writeStateBlock(f, "one", m);
-    writeStateBlock(f, "two", m);
-    const out = fs.readFileSync(f, "utf8");
-    expect(out).toContain("IMPORTANT");
-    expect(out).toContain("two");
-    expect(out.split(m.open)).toHaveLength(2);
-    fs.rmSync(d, { recursive: true, force: true });
   });
 });

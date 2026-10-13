@@ -7,7 +7,11 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { buildCatchUp, type CatchUpDeps, type ClickUpInfo } from "./catch-up.ts";
-import * as stub from "./deps-stub.ts";
+import { listCards, type SessionCard } from "../session-card.ts";
+import { renderCatchUp } from "../catch-up.ts";
+import { collectState, resolveNotePath } from "./state.ts";
+import { writeStateBlock } from "./state-block.ts";
+import { execRunner, readOnlyRunner } from "./runner.ts";
 import { isSafeName } from "./safe-name.ts";
 
 const run = promisify(execFile);
@@ -20,10 +24,11 @@ export interface CliArgs {
   maxAgeMin: number;
   refresh: boolean;
   noWrite: boolean;
+  note?: string;
   now?: string;
 }
 
-const VALUE_FLAGS = new Set(["--maestro", "--session", "--conductor", "--project", "--max-age-min", "--now"]);
+const VALUE_FLAGS = new Set(["--maestro", "--session", "--conductor", "--project", "--max-age-min", "--now", "--note"]);
 const BOOL_FLAGS = new Set(["--refresh", "--no-write"]);
 
 export function parseArgs(argv: string[]): CliArgs {
@@ -49,7 +54,7 @@ export function parseArgs(argv: string[]): CliArgs {
   if (now !== undefined && Number.isNaN(Date.parse(now))) throw new Error("--now must be an ISO time");
   return {
     identity: v.get("--maestro")!, session: v.get("--session")!, conductor: v.get("--conductor")!,
-    project: v.get("--project") ?? "DigiSmith", maxAgeMin, refresh: b.has("--refresh"), noWrite: b.has("--no-write"), now,
+    project: v.get("--project") ?? "DigiSmith", maxAgeMin, refresh: b.has("--refresh"), noWrite: b.has("--no-write"), note: v.get("--note"), now,
   };
 }
 
@@ -89,16 +94,24 @@ async function clickup(keys: string[]): Promise<ClickUpInfo[]> {
   return out;
 }
 
-export function realDeps(nowIso?: string): CatchUpDeps {
+const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+
+export function realDeps(args: Pick<CliArgs, "now" | "note">, env: NodeJS.ProcessEnv = process.env): CatchUpDeps {
+  const now = () => (args.now ? new Date(args.now) : new Date());
   return {
-    listCards: stub.listCards,
-    collectState: stub.collectState,
-    renderCatchUp: stub.renderCatchUp,
-    resolveNotePath: stub.resolveNotePath,
+    listCards: (project) => listCards(project, { env }).map((r: { card: SessionCard }) => r.card),
+    collectState: (o) =>
+      collectState({ project: o.project, conductor: o.conductor, note: o.notePath, since: o.since, repoDir: REPO_ROOT, herdrWorkspace: env.HERDR_WS }, { runner: readOnlyRunner(execRunner), now, env }),
+    renderCatchUp,
+    // 422's resolver always returns a path; the catch-up only writes into a note that exists.
+    resolveNotePath: (project, conductor) => {
+      const p = resolveNotePath({ project, conductor, note: args.note }, env);
+      return fs.existsSync(p) ? p : undefined;
+    },
     readNote: (p) => (fs.existsSync(p) ? fs.readFileSync(p, "utf8") : undefined),
-    writeStateBlock: stub.writeStateBlock,
+    writeStateBlock,
     clickup,
-    now: () => (nowIso ? new Date(nowIso) : new Date()),
+    now,
   };
 }
 
@@ -113,7 +126,7 @@ export async function main(argv: string[]): Promise<number> {
   try {
     const r = await buildCatchUp(
       { project: args.project, conductor: args.conductor, identity: args.identity, session: args.session, maxAgeMin: args.maxAgeMin, refresh: args.refresh, noWrite: args.noWrite },
-      realDeps(args.now),
+      realDeps(args),
     );
     console.log(r.text);
     for (const w of r.warnings) console.error(`catch-up: ${w}`);
