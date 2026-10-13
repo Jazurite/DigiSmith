@@ -15,4 +15,6 @@
 <tr><td>full cli suite / build</td><td>725 pass / build ok</td></tr></table>
 <h2>First use</h2>
 <p><code>dg clickup update-task --task &lt;id&gt; --priority 7</code> is refused before any call.</p>
+<h2>Review</h2>
+<p>Claude whole-branch review: ready to merge. Two cosmetic test fixes: (a) the "accepts" parser tests set <code>process.exitCode = 1</code> before the run, so <code>toBe(0)</code> proves the handler set it; (b) the argument spread is written inline. Clickup tests after the fixes: 417 pass.</p>
 </body></html>

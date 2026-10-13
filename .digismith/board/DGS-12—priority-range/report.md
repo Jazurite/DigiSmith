@@ -19,3 +19,6 @@ test(dgs-12): priority range tests (seen failing: 8 lib/handler cases), fix(dgs-
 
 ## First use (conductor, after merge)
 `dg clickup update-task --task <id> --priority 7` is refused before any call.
+
+## Review
+Claude whole-branch review: ready to merge. Two cosmetic test fixes made: (a) the "accepts" parser tests now set `process.exitCode = 1` before the run, so `toBe(0)` proves the handler set it; (b) the argument spread is written inline (`"--list", "901", "--name", "x"`). Clickup tests after the fixes: 34 files, 417 tests pass.
