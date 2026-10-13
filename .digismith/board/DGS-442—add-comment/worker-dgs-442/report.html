@@ -1,7 +1,10 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Report: DGS-442 add-comment</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-442 dg clickup add-comment — Implementation Report</title>
 <style>body{font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em}</style></head><body>
-<h1>Report: DGS-442 <code>dg clickup add-comment</code></h1>
+<header>
+<h1>DGS-442 dg clickup add-comment — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-442</strong></span><span>Date: 2026-10-13</span></div>
+</header>
 <section id="summary">
 <h2>Summary</h2>
 <p><code>dg clickup add-comment --task &lt;id|key&gt; (--text | --markdown-file) [--yes]</code> is built, tested and merge-ready. It is a dry run unless <code>--yes</code>. With <code>--yes</code> it posts the comment, then reads the comments back and looks for the new id. <code>notify_all</code> is always false. A second <code>--yes</code> posts a second comment, and the dry run says so. <code>--markdown-file</code> is read as plain text; ClickUp does not convert it.</p>
