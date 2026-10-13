@@ -10,7 +10,7 @@ Ticket: DGS-81
 ## Change
 - `refs.ts`: add `resolveTaskId(client, ref)`: if `KEY` matches, `(await client.getTaskByRef(ref)).id`; else return ref untouched, no extra call (raw id behaves exactly as before). Key pattern reused from `KEY` in refs.ts.
 - get-task: key goes through `getTaskByRef(ref, extraParams)`; client.ts gets one optional second argument so `--markdown` still works with a key. Raw id path unchanged (`/task/abc`, no params).
-- update-task, upload-attachment, move-task: resolve the id once at the top of the handler, then use the raw id for every later call. Describe text: "ClickUp task ID or key like DGS-411".
+- update-task, upload-attachment, move-task: resolve the id once (update-task: after `buildTaskWriteBody` and `clientFactory`, before any task call; also a non-empty `--parent`), then use the raw id for every later call. Describe text: "ClickUp task ID or key like DGS-411".
 
 ## Tests (injected-client pattern)
 - get-task: key sends `custom_task_ids: true` and `team_id`; raw id sends no params; key + `--markdown` sends both.

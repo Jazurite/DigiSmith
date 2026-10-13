@@ -15,8 +15,22 @@ describe("resolveTaskId", () => {
     expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
   });
 
-  it("treats a lowercase key as a key", async () => {
+  it("detects a lowercase key and sends it unchanged; ClickUp decides", async () => {
     const getTaskByRef = vi.fn().mockResolvedValue({ id: "x1" });
     expect(await resolveTaskId({ getTaskByRef } as unknown as ClickUpClient, "dgs-81")).toBe("x1");
+    expect(getTaskByRef).toHaveBeenCalledWith("dgs-81");
+  });
+
+  it("says a key was not found on a 404", async () => {
+    const getTaskByRef = vi.fn().mockRejectedValue(Object.assign(new Error("Request failed with status code 404"), { response: { status: 404 } }));
+    await expect(resolveTaskId({ getTaskByRef } as unknown as ClickUpClient, "DGS-999")).rejects.toThrow(
+      "task key DGS-999 not found (checked with custom_task_ids and the team id)",
+    );
+  });
+
+  it("keeps other errors unchanged", async () => {
+    const err = Object.assign(new Error("Request failed with status code 500"), { response: { status: 500 } });
+    const getTaskByRef = vi.fn().mockRejectedValue(err);
+    await expect(resolveTaskId({ getTaskByRef } as unknown as ClickUpClient, "DGS-81")).rejects.toBe(err);
   });
 });

@@ -6,6 +6,11 @@
 <li><code>client.ts</code>: <code>getTaskByRef(ref, extraParams?)</code> only.</li>
 <li><code>get-task</code>: a key uses <code>getTaskByRef</code> (also with <code>--markdown</code>); a raw id keeps the old call.</li>
 <li><code>update-task</code>, <code>upload-attachment</code>, <code>move-task</code>: resolve <code>--task</code> once. In update-task the lookup runs after the body is built, before any task call. In move-task <code>--list</code> is not resolved.</li></ul>
-<h2>Tests</h2><p>12 new tests: 1851 to 1863 passing. get-task 3→5, update-task 19→21, upload-attachment 2→4, move-task 4→6, refs 0→3, client +1. One failure: the <code>claude-account</code> bash test, also failing on the base run.</p>
+<h2>Also changed after review</h2><ul>
+<li><code>--parent</code> (update-task): a non-empty value other than <code>none</code> is resolved; an empty value still clears.</li>
+<li>A 404 on a key: "task key DGS-999 not found (checked with custom_task_ids and the team id)"; other errors unchanged.</li>
+<li>A lower-case key is detected and sent unchanged; ClickUp decides. No promise it works.</li></ul>
+<h2>Review</h2><p>Claude whole-branch review: "ready after fixes". Fixed: update-task key test with <code>--field</code> and one date flag, <code>--parent</code>, key 404 message, lower-case wording, get-task raw id with <code>--markdown</code> test, plan.md placement.</p>
+<h2>Tests</h2><p>18 new tests: 1851 to 1869 passing, 0 failures. get-task 3→6, update-task 19→23, upload-attachment 2→4, move-task 4→6, refs 0→5, client +1.</p>
 <h2>First use</h2><p>After merge: <code>dg clickup get-task DGS-411</code> prints the ticket.</p>
 </body></html>

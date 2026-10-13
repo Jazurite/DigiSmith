@@ -71,4 +71,16 @@ describe("createGetTaskCommand", () => {
 
     expect(getTaskByRef).toHaveBeenCalledWith("DGS-81", { include_markdown_description: true });
   });
+
+  it("sends a raw id with --markdown as a plain get, never getTaskByRef", async () => {
+    const get = vi.fn().mockResolvedValue({ id: "abc" });
+    const getTaskByRef = vi.fn();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createGetTaskCommand(() => ({ get, getTaskByRef }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({ task: "abc", markdown: true });
+
+    expect(getTaskByRef).not.toHaveBeenCalled();
+    expect(get).toHaveBeenCalledWith("/task/abc?include_markdown_description=true");
+  });
 });

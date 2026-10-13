@@ -82,6 +82,46 @@ describe("createUpdateTaskCommand", () => {
       expect(updateTask).toHaveBeenCalledWith("14zcebru2pr", { status: "done" });
     });
 
+    it("uses the real id for the date read, the field list read and the field write", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const get = vi.fn().mockResolvedValue({ id: "real1", list: { id: "L" }, due_date: null, start_date: null });
+      const client = {
+        get,
+        getTaskByRef: vi.fn().mockResolvedValue({ id: "real1" }),
+        getListFields: vi.fn().mockResolvedValue([
+          { id: "f1", name: "ClickUp API Type", type: "drop_down", type_config: { options: [{ id: "o1", name: "Frontdoor" }] } },
+        ]),
+        updateTask: vi.fn().mockResolvedValue({ id: "real1" }),
+        setCustomField: vi.fn().mockResolvedValue(undefined),
+      };
+      const command = createUpdateTaskCommand(() => client as unknown as ClickUpClient);
+
+      await (command.handler as (argv: object) => Promise<void>)({ task: "DGS-81", startDate: "2026-10-01", field: ["ClickUp API Type=Frontdoor"] });
+
+      expect(get.mock.calls.length).toBeGreaterThanOrEqual(3);
+      for (const call of get.mock.calls) expect(call[0]).toBe("/task/real1");
+      expect(client.updateTask).toHaveBeenCalledWith("real1", expect.anything());
+      expect(client.setCustomField).toHaveBeenCalledWith("real1", "f1", "o1");
+      expect(process.exitCode).toBe(0);
+    });
+
+    it("resolves a --parent key to its real id; an empty --parent still clears", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const getTaskByRef = vi.fn(async (r: string) => ({ id: r === "DGS-12" ? "real12" : r }));
+      const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
+      const command = createUpdateTaskCommand(() => ({ updateTask, getTaskByRef }) as unknown as ClickUpClient);
+      const handler = command.handler as (argv: object) => Promise<void>;
+
+      await handler({ task: "abc", parent: "DGS-12" });
+      await handler({ task: "abc", parent: "" });
+      await handler({ task: "abc", parent: "p1" });
+
+      expect(updateTask).toHaveBeenNthCalledWith(1, "abc", { parent: "real12" });
+      expect(updateTask).toHaveBeenNthCalledWith(2, "abc", { parent: "none" });
+      expect(updateTask).toHaveBeenNthCalledWith(3, "abc", { parent: "p1" });
+      expect(getTaskByRef).toHaveBeenCalledTimes(1);
+    });
+
     it("does not look a raw id up", async () => {
       const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
       const getTaskByRef = vi.fn();

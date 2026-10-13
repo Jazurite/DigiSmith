@@ -31,6 +31,8 @@ export function createUpdateTaskCommand(
         const client = clientFactory();
         // The key lookup needs the client: it runs after the body is built and checked, before any task call.
         const taskId = await resolveTaskId(client, argv.task as string);
+        // --parent takes a task id or key too; "none" (an empty value) clears it and stays as built.
+        if (typeof body.parent === "string" && body.parent !== "none") body.parent = await resolveTaskId(client, body.parent);
         await checkAgainstStoredDate(client, taskId, body);
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
