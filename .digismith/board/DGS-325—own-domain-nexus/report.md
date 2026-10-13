@@ -23,8 +23,11 @@ gets its certificates by DNS challenge, and also serves `workbox.tail730dcf.ts.n
 - Live OpenCode server through a throwaway Caddy (`127.0.0.1:18445`, no sudo): `/` 200, `/api/event` 401 and a websocket upgrade 401, same as direct.
 
 ## Known gaps
-The authenticated SSE and websocket proof on the live server is not done: it needs the server password, which no agent reads. The staging certificate needs Jack's Cloudflare token. The `ts.net` certificate through
+The authenticated SSE and websocket proof on the live server is not done: it needs the server password, which no agent reads.  The `ts.net` certificate through
 Caddy is untested until the loopback proof. Desktop-app pairing can only be tested at the cut-over (J7).
+
+## Staging certificate (task 4, 2026-10-13)
+`scripts/caddy/staging-cert.sh` with `Caddyfile.staging` (Let's Encrypt staging, DNS challenge through Cloudflare, `127.0.0.1:18443`, `skip_install_trust`, temp data dir, no sudo) obtained certificates for `pazurite.com` and `opencode.pazurite.com`. The token was read like `caddy-run.sh` reads it and never printed. Caddy stopped afterwards; no service, no LaunchAgent.
 
 ## Review
 An independent read-only Claude review found no LAN exposure and no secret leak. Verified findings fixed: `install.sh` ignored the pin only with `DGS_CADDY_TEST=1` now, refuses odd depot paths, downloads next to the target (atomic move, trap on INT and TERM) and prints the J6 commands; `caddy-run.sh` strips a CR and one pair of quotes; the apex "no reverse_proxy" test no longer checks a port that never appears; both tests kill Caddy on exit and the stream test requires a LAN address and counts only a refusal as refused; plan text now matches the code (`@DEPOT@`, real `caddy-run.sh`, port 18444). Left alone: a stricter `.env`-printing regex (low, scripts are clean).

@@ -1,0 +1,15 @@
+{
+	admin off
+	https_port 18443
+	skip_install_trust
+	auto_https disable_redirects
+	default_bind 127.0.0.1
+	acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+pazurite.com, opencode.pazurite.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	respond "staging"
+}

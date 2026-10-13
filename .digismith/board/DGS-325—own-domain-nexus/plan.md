@@ -117,7 +117,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
    `bin/caddy` (mode 755); renders the plist to `~/.digismith-depot/caddy/`. Refuses on a hash mismatch. Prints the next commands for Jack.
    Test: run with `DEPOT` pointing at a temp folder (the script takes `DEPOT` from the environment, default `~/.digismith-depot`).
 3. **Stream test in the repo**: commit `test-stream.mjs` (exists).
-4. **Staging certificate** (needs Jack's token, step J4): a second Caddyfile `Caddyfile.staging` in the repo with `acme_ca
+4. **Staging certificate** (done 2026-10-13, `scripts/caddy/staging-cert.sh`; needed Jack's token, step J4): a second Caddyfile `Caddyfile.staging` in the repo with `acme_ca
    https://acme-staging-v02.api.letsencrypt.org/directory`, `skip_install_trust`, `https_port 18443`, `default_bind 127.0.0.1`, site
    `pazurite.com`; run with a temp data dir; success = a log line "certificate obtained successfully"; stop Caddy. No sudo, no
    trust-store change.
@@ -153,7 +153,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
 - J5. **Nameserver switch**: Namecheap > Domain List > Manage `pazurite.com` > Nameservers > Custom DNS: the two Cloudflare names (no
   DNSSEC, so no DS record to remove). Wait for Cloudflare's "active" email. Check `dig NS`, `dig MX`, `dig A pazurite.com` and
   `dig A opencode.pazurite.com` (`100.108.1.19`), `dig AAAA pazurite.com` and `dig www.pazurite.com` (empty). Send a test mail both ways.
-  Rollback: Nameservers back to "Namecheap BasicDNS" (the Namecheap zone, Shopify rows included, was never touched).
+  Rollback: Nameservers back to "Namecheap BasicDNS" (the Namecheap zone still has the Shopify apex A `23.227.38.65` and AAAA `2620:127:f00f:5::` and the Google MX and TXT rows, but no `www`: Jack removed it there on 2026-10-13 16:47 UTC+7. After a rollback the apex answers with Shopify's address again).
 
 **After the build order has put the files in the depot (the build order runs Task 4 staging after J5)**
 - J6. Install the LaunchAgent:

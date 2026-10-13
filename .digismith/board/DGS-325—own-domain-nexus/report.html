@@ -23,8 +23,12 @@
 <h2>Known gaps</h2>
 <ul>
 <li>Done: <code>Caddyfile</code>, <code>caddy-run.sh</code>, plist template, <code>install.sh</code>, <code>test-config.mjs</code> and <code>test-stream.mjs</code>, all passing; <code>install.sh</code> ran for real.</li><li>Open: the authenticated SSE and websocket proof on the live OpenCode server needs its password, which no agent reads. Through a throwaway Caddy, <code>/</code>, <code>/api/event</code> (401) and a websocket upgrade (401) match the direct answers.</li>
-<li>The staging certificate needs Jack's Cloudflare token.</li>
+
 <li>The <code>ts.net</code> certificate through Caddy is untested until the loopback proof; Desktop-app pairing can only be tested at the cut-over.</li>
 </ul>
+</section>
+<section id="staging">
+<h2>Staging certificate</h2>
+<p><code>scripts/caddy/staging-cert.sh</code> obtained Let's Encrypt staging certificates for <code>pazurite.com</code> and <code>opencode.pazurite.com</code> by DNS challenge through Cloudflare, on loopback only with <code>skip_install_trust</code> and a temp data dir. The token was never printed. No service was loaded.</p>
 </section>
 </body></html>

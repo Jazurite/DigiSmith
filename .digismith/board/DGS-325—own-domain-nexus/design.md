@@ -77,8 +77,7 @@ Steps:
    `dig A pazurite.com` and `dig A opencode.pazurite.com` (`100.108.1.19`), `dig AAAA pazurite.com` and `dig www.pazurite.com` (empty).
    Send a test mail both ways.
 
-Rollback: at Namecheap set Nameservers back to "Namecheap BasicDNS". The Namecheap zone is untouched, so mail and Shopify resume after the
-TTL. (Changes made in Cloudflare do not touch the Namecheap zone.)
+Rollback: at Namecheap set Nameservers back to "Namecheap BasicDNS". The Namecheap zone keeps the Shopify apex A and AAAA, the Google MX and the TXT rows, but no `www` (Jack removed it there on 2026-10-13 16:47 UTC+7), so mail resumes after the TTL and the apex points to Shopify again. (Changes made in Cloudflare do not touch the Namecheap zone.)
 
 ## 3. API token
 - Cloudflare API token (not the Global Key). Permissions: Zone > DNS > Edit, plus Zone > Zone > Read (listed in the
