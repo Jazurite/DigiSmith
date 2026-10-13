@@ -392,6 +392,15 @@ describe("ClickUpClient domain write/read methods", () => {
     expect(folders[0].lists[0].name).toBe("CW-30: 20/7 - 26/7");
   });
 
+  it("deleteTask() sends DELETE /task/{id} and returns nothing (mocked transport)", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await expect(client.deleteTask("abc")).resolves.toBeUndefined();
+
+    expect(request).toHaveBeenCalledWith({ method: "DELETE", url: "/task/abc", params: undefined, data: undefined });
+  });
+
   it("deleteList() sends DELETE /list/{id} and returns nothing", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: {} });
@@ -584,6 +593,32 @@ describe("ClickUpClient uploadAttachment", () => {
     expect(sentForm.get("attachment")).toBeInstanceOf(Blob);
     expect(result.id).toBe("att1");
     expect(result.title).toBe("report.pdf");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("sends the file's base name as the attachment filename, not its path", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "att1" } });
+    const tmpDir = mkdtempSync(join(tmpdir(), "clickup-client-upload-"));
+    const filePath = join(tmpDir, "report.pdf");
+    writeFileSync(filePath, Buffer.from([1, 2, 3]));
+
+    await client.uploadAttachment("abc", filePath);
+
+    const sentForm = request.mock.calls[0][0].data as FormData;
+    expect((sentForm.get("attachment") as File).name).toBe("report.pdf");
+
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("rejects a missing local file before any HTTP request", async () => {
+    const client = makeClient();
+    const tmpDir = mkdtempSync(join(tmpdir(), "clickup-client-upload-"));
+
+    await expect(client.uploadAttachment("abc", join(tmpDir, "missing.pdf"))).rejects.toThrow(/ENOENT/);
+
+    expect(request).not.toHaveBeenCalled();
 
     rmSync(tmpDir, { recursive: true, force: true });
   });
