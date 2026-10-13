@@ -20,33 +20,25 @@
 <h1>DGS-417 session card format — Implementation Report</h1>
 <div class="meta"><span>Ticket: <strong>DGS-417</strong></span><span>Date: 2026-10-13</span></div>
 </header>
-<section id="summary
-the-session-card-is-a-machine-checked-format-with-a-shared-store-in-the-global-depot.-`scripts/depot-dir.ts`-owns-`depotdir()`-(env-`digismith_depot_dir`).-`scripts/session-card.ts`-holds-the-card-type,-`validatecard`,-parse-and-format,-and-the-store:-`writecard`,-`readcard`,-`listcards`,-`touchcard`,-`closecard`,-`marklost`,-`newestlastseen`,-`findcardbysession`.-`scripts/session-card-cli.ts`-writes-and-checks-cards-by-hand-(`new`,-`write`,-`validate`,-`read`,-`find`,-`list`,-`touch`,-`close`,-`lost`).
-
-##-built
---cards:-`<depot>/sessions/<project>/cards/<id>--<session>.yml`;-closed-and-lost-cards-move-to-`archive/`-and-are-never-deleted-or-overwritten-(numbered-names-`--<n>`).-atomic-writes-(temp-file-in-the-same-folder,-fsync,-rename).
---validator:-14-design-fields-plus-optional-`ended`-and-`result`;-role-rules;-timestamps-with-an-offset;-secret-like-values-refused-without-echoing-them;-safe-names-against-path-traversal.
---tests:-76-in-`scripts/session-card.test.ts`-and-`scripts/depot-dir.test.ts`;-full-suite-1570-passed-(`force_color=1-pnpm-test`).
-
-##-not-done
-cross-card-tree-checks-(need-two-cards;-`legal_parent_roles`-is-exported),-identity-records-(dgs-411),-a-`dg`-wrapper,-a-registry.
-
-##-review
-a-review-subagent-on-the-diff-found-five-points;-fixed-with-tests:-secret-check-false-positives-(sha,-hex-id,-"bearer"-prose,-"sk-learn"),-`writecard`-overwrite,-case-folded-names,-fractional-seconds,-the-touch/close-race.-dgs-418's-review-added:-archive-never-overwritten,-result-on-close-and-lost,-a-touch-never-resurrects-a-card.-one-residual:-a-microsecond-window-between-touch's-existence-check-and-its-rename-(documented-in-the-plan).">
-<h2>Summary
-The session card is a machine-checked format with a shared store in the global depot. `scripts/depot-dir.ts` owns `depotDir()` (env `DIGISMITH_DEPOT_DIR`). `scripts/session-card.ts` holds the card type, `validateCard`, parse and format, and the store: `writeCard`, `readCard`, `listCards`, `touchCard`, `closeCard`, `markLost`, `newestLastSeen`, `findCardBySession`. `scripts/session-card-cli.ts` writes and checks cards by hand (`new`, `write`, `validate`, `read`, `find`, `list`, `touch`, `close`, `lost`).
-
-## Built
-- Cards: `<depot>/sessions/<project>/cards/<id>--<session>.yml`; closed and lost cards move to `archive/` and are never deleted or overwritten (numbered names `--<n>`). Atomic writes (temp file in the same folder, fsync, rename).
-- Validator: 14 design fields plus optional `ended` and `result`; role rules; timestamps with an offset; secret-like values refused without echoing them; safe names against path traversal.
-- Tests: 76 in `scripts/session-card.test.ts` and `scripts/depot-dir.test.ts`; full suite 1570 passed (`FORCE_COLOR=1 pnpm test`).
-
-## Not done
-Cross-card tree checks (need two cards; `LEGAL_PARENT_ROLES` is exported), identity records (DGS-411), a `dg` wrapper, a registry.
-
-## Review
-A review subagent on the diff found five points; fixed with tests: secret-check false positives (sha, hex id, "Bearer" prose, "sk-learn"), `writeCard` overwrite, case-folded names, fractional seconds, the touch/close race. dgs-418's review added: archive never overwritten, result on close and lost, a touch never resurrects a card. One residual: a microsecond window between touch's existence check and its rename (documented in the plan).</h2>
-<p></p>
+<section id="summary">
+<h2>Summary</h2>
+<p>The session card is a machine-checked format with a shared store in the global depot. <code>scripts/depot-dir.ts</code> owns <code>depotDir()</code> (env <code>DIGISMITH_DEPOT_DIR</code>). <code>scripts/session-card.ts</code> holds the card type, <code>validateCard</code>, parse and format, and the store: <code>writeCard</code>, <code>readCard</code>, <code>listCards</code>, <code>touchCard</code>, <code>closeCard</code>, <code>markLost</code>, <code>newestLastSeen</code>, <code>findCardBySession</code>. <code>scripts/session-card-cli.ts</code> writes and checks cards by hand (<code>new</code>, <code>write</code>, <code>validate</code>, <code>read</code>, <code>find</code>, <code>list</code>, <code>touch</code>, <code>close</code>, <code>lost</code>).</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>Cards: <code>&lt;depot&gt;/sessions/&lt;project&gt;/cards/&lt;id&gt;--&lt;session&gt;.yml</code>; closed and lost cards move to <code>archive/</code> and are never deleted or overwritten (numbered names <code>--&lt;n&gt;</code>). Atomic writes (temp file in the same folder, fsync, rename).</li>
+<li>Validator: 14 design fields plus optional <code>ended</code> and <code>result</code>; role rules; timestamps with an offset; secret-like values refused without echoing them; safe names against path traversal.</li>
+<li>Tests: 76 in <code>scripts/session-card.test.ts</code> and <code>scripts/depot-dir.test.ts</code>; full suite 1570 passed (<code>FORCE_COLOR=1 pnpm test</code>).</li>
+</ul>
+</section>
+<section id="not-done">
+<h2>Not done</h2>
+<p>Cross-card tree checks (need two cards; <code>LEGAL_PARENT_ROLES</code> is exported), identity records (DGS-411), a <code>dg</code> wrapper, a registry.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>A review subagent on the diff found five points; fixed with tests: secret-check false positives (sha, hex id, &quot;Bearer&quot; prose, &quot;sk-learn&quot;), <code>writeCard</code> overwrite, case-folded names, fractional seconds, the touch/close race. dgs-418&#x27;s review added: archive never overwritten, result on close and lost, a touch never resurrects a card. One residual: a microsecond window between touch&#x27;s existence check and its rename (documented in the plan).</p>
 </section>
 </body>
 </html>
