@@ -1,8 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-88 — Implementation Report</title>
 <style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style></head><body>
-<h1>DGS-88 — Implementation Report</h1>
-<p>Ticket: <strong>DGS-88</strong></p>
+<header>
+<h1>DGS-88 Token out of errors — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-88</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Failed ClickUp and Frontdoor calls now throw a small <code>ClickUpApiError</code> (method, path, status, ClickUp's body) instead of the raw axios error, so the API token and the Frontdoor auth can no longer leak through a thrown error. Leak tests cover a real AxiosError; the whole suite passes (1895).</p>
+</section>
 <h2>What changed</h2>
 <ul>
 <li><code>ClickUpApiError</code> (new <code>errors.ts</code>, exported from the client index): <code>method</code>, <code>path</code>, <code>status</code>, <code>body</code>, <code>code</code>. No config, headers, request, response or cause.</li>
