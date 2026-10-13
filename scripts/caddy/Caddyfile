@@ -1,0 +1,34 @@
+{
+	admin off
+	https_port 8443
+	auto_https disable_redirects
+	default_bind 127.0.0.1
+}
+
+(opencode_routes) {
+	reverse_proxy 127.0.0.1:4198
+}
+
+opencode.pazurite.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	import opencode_routes
+}
+
+pazurite.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	# later, DGS-324: handle /api/v1/power-metrics* { basic_auth { jack {env.NEXUS_BASIC_AUTH_HASH} }  reverse_proxy 127.0.0.1:4300 }
+	handle {
+		respond "Not found" 404
+	}
+}
+
+workbox.tail730dcf.ts.net {
+	tls {
+		get_certificate tailscale
+	}
+	import opencode_routes
+}
