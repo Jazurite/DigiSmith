@@ -8,9 +8,11 @@
 <p>One helper, <code>handlerOf&lt;A&gt;(command)</code> in <code>clickup/handler-of.test-util.ts</code>: one <code>as unknown as</code>, no <code>any</code>, no behaviour change. The build excludes <code>*.test-util.ts</code>; <code>dist</code> has no helper. Out of scope and unchanged: 5 TS2551 and 1 TS2345 (<code>card-hook.ts</code>).</p>
 <h2>DGS-16</h2>
 <p>Three mocked tests added: attachment filename is the base name; a missing file rejects before any request; <code>deleteTask</code> sends DELETE. The first two were seen failing under a brief mutation.</p>
-<p>Coverage (grep-based, no coverage provider installed): client.ts has 38 methods; only the base <code>delete</code> helper has no direct test (reached through deleteTask, deleteList, deleteFolder). space, frontdoor, credentials, rate-limiter: none missing.</p>
+<p>Coverage (grep-based, no coverage provider installed): client.ts has 37 methods (38 members with the constructor); only the base <code>delete</code> helper has no direct test (reached through deleteTask, deleteList, deleteFolder). space, frontdoor, credentials, rate-limiter: none missing.</p>
 <h2>Tests</h2>
 <p>Full run 1855 tests, 0 failed. Per describe vs base: only "domain write/read methods" 27 → 28 and "uploadAttachment" 1 → 3 changed; 72 other describes equal.</p>
+<h2>Review fixes</h2>
+<p>Whole-branch review: ready after fixes, all minor. <code>handlerOf&lt;unknown&gt;</code> sites now <code>handlerOf&lt;object&gt;</code>; helper comment and real signature in plan.md and report; temp-dir cleanup in try/finally for the two new tests; method count corrected.</p>
 <h2>Before merge</h2>
 <p>Merges last. After the rebase, re-run tsc and fix new casts with <code>handlerOf</code>.</p>
 </body></html>

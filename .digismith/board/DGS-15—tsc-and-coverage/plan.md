@@ -11,7 +11,8 @@ Command: `pnpm --filter @digismith/clickup-client build` then `pnpm exec tsc --n
 ## Helper design
 One small shared helper: `packages/cli/src/clickup/handler-of.test-util.ts`:
 ```ts
-export function handlerOf<A>(command: CommandModule<object, A>): (argv: A) => Promise<void> {
+/** A is the test's own assertion about the argv it passes; it is not inferred from the command. */
+export function handlerOf<A>(command: CommandModule<object, A> | CommandModule): (argv: A) => Promise<void> {
   return command.handler as unknown as (argv: A) => Promise<void>;
 }
 ```
