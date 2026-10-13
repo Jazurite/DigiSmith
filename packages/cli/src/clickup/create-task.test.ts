@@ -63,7 +63,7 @@ describe("createCreateTaskCommand", () => {
     const createTask = vi.fn();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => ({ createTask }) as unknown as ClickUpClient);
-    await handlerOf<unknown>(command)({ list: "901", name: "x", startDate: "2026-10-12", dueDate: "2026-10-11" });
+    await handlerOf<object>(command)({ list: "901", name: "x", startDate: "2026-10-12", dueDate: "2026-10-11" });
     expect(createTask).not.toHaveBeenCalled();
     expect(errorSpy.mock.calls[0][0]).toMatch(/is before the start date/);
     expect(process.exitCode).toBe(1);

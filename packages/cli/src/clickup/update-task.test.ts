@@ -140,7 +140,7 @@ describe("createUpdateTaskCommand", () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const command = createUpdateTaskCommand(() => ({ updateTask, get }) as unknown as ClickUpClient);
-      await handlerOf<unknown>(command)({ task: "abc", ...argv });
+      await handlerOf<object>(command)({ task: "abc", ...argv });
       return { updateTask, get, errorSpy };
     };
 
