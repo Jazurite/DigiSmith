@@ -7,6 +7,8 @@ import { listCards } from "../session-card.ts";
 import { consult, DEFAULT_REMOTE_REPO, renderText } from "./consult.ts";
 import { execRunner, readOnlyRunner, type Runner } from "./runner.ts";
 import { collectState, iso7, resolveNotePath, type CardRef } from "./state.ts";
+import { fluxMain, transcriptDirFor } from "./flux-cli.ts";
+import { resolveMainRoot } from "../lineage-handoff.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, writeStateBlock } from "./state-block.ts";
 
 export interface Io {
@@ -20,8 +22,9 @@ export interface Io {
 const USAGE = `Usage: node --experimental-strip-types scripts/conductor/cli.ts <command> [options]
   state        [--project P] [--conductor C] [--note path] [--since iso] [--json]
   state-write  --from <file or -> [--project P] [--conductor C] [--note path]
+  flux         <agent> | --all [--dry-run] [--log] [--json] [--project P] [--brief path] [--note path] [--wake text]
   consult      [--project P] [--conductor C] [--remote <ssh-target>] [--remote-repo path] [--machine <herdr label>] [--json]
-state and consult only read. state-write writes only the block between the digismith:conductor-state markers in the note.
+state and consult only read; flux sends /clear to a conductor (night only, see flux). state-write writes only the block between the digismith:conductor-state markers in the note.
 `;
 
 const OPTIONS = {
@@ -42,6 +45,10 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 
 export async function main(argv: string[], io: Io & { runner?: Runner; listCards?: (p: string, o: { scope: "open" }) => CardRef[] }): Promise<number> {
   const [command, ...rest] = argv;
+  if (command === "flux") {
+    const repoRoot = resolveMainRoot(REPO_ROOT);
+    return fluxMain(rest, { stdout: io.stdout, stderr: io.stderr, now: io.now, env: io.env, repoRoot, transcriptDir: transcriptDirFor(repoRoot) });
+  }
   if (!command || !["state", "state-write", "consult"].includes(command)) {
     io.stderr(USAGE);
     return 1;
