@@ -58,7 +58,7 @@ describe("cli", () => {
     withNote();
     const i = io();
     expect(await main(["state", "--note", note, "--repo", tmp], { ...i, runner })).toBe(0);
-    expect(i.out).toMatch(/^# State: digismith-conductor/);
+    expect(i.out).toMatch(/^# Catch-up: digismith-conductor/);
     expect(i.out).toMatch(/## Health/);
   });
   it("state-write writes a validated block from stdin and leaves the rest alone", async () => {

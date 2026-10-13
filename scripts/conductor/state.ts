@@ -1,7 +1,8 @@
 // collectState: one answer to "what is going on", from the conductor's note, git, herdr and the session cards.
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { depotDir } from "./depot-stub.ts";
+import { depotDir } from "../depot-dir.ts";
+import type { CatchUp } from "../catch-up.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, type DecidedRow, type ParkedRow, type RunningRow, type Seat, type WaitingRow } from "./state-block.ts";
 import type { Runner } from "./runner.ts";
 
@@ -13,7 +14,10 @@ export interface DoneRow {
 
 export type SourceState = "ok" | "missing" | "failed" | "skipped" | "stub";
 
-export interface State {
+/** DGS-427's CatchUp fields, minus the four that DGS-428 adds (conductor, window, identity, askedBy). */
+export type CatchUpState = Omit<CatchUp, "window" | "identity" | "askedBy" | "conductor">;
+
+export interface State extends CatchUpState {
   version: 1;
   project: string;
   conductor: string;

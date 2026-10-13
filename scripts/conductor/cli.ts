@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { listCards } from "../session-card.ts";
 import { consult, DEFAULT_REMOTE_REPO, renderText } from "./consult.ts";
 import { execRunner, readOnlyRunner, type Runner } from "./runner.ts";
 import { collectState, iso7, resolveNotePath, type CardRef } from "./state.ts";
@@ -39,16 +40,6 @@ const OPTIONS = {
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-async function realListCards(): Promise<((project: string, o: { scope: "open" }) => CardRef[]) | undefined> {
-  try {
-    const mod = "../session-card.ts"; // DGS-417; absent until it merges
-    const m = (await import(mod)) as { listCards?: (p: string, o: { scope: "open" }) => CardRef[] };
-    return m.listCards;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function main(argv: string[], io: Io & { runner?: Runner; listCards?: (p: string, o: { scope: "open" }) => CardRef[] }): Promise<number> {
   const [command, ...rest] = argv;
   if (!command || !["state", "state-write", "consult"].includes(command)) {
@@ -69,7 +60,7 @@ export async function main(argv: string[], io: Io & { runner?: Runner; listCards
   const collect = async () =>
     collectState(
       { project, conductor, note: v.note, since: v.since, herdrWorkspace: v["herdr-workspace"] ?? io.env.HERDR_WS, repoDir },
-      { runner, now: io.now, env: io.env, listCards: io.listCards ?? (await realListCards()) },
+      { runner, now: io.now, env: io.env, listCards: io.listCards ?? ((p, o) => listCards(p, { ...o, env: io.env })) },
     );
   try {
     if (command === "state") {

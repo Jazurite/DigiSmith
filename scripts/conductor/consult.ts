@@ -1,6 +1,7 @@
 // The Maestro's consult: the conductor's state, locally or over plain ssh (read-only, Observer-grade).
 import type { Runner } from "./runner.ts";
 import { sshStateArgs } from "./runner.ts";
+import { renderCatchUp } from "../catch-up.ts";
 import type { State } from "./state.ts";
 
 const SECTION_KEYS = ["done", "running", "waiting", "decided", "parked", "next"] as const;
@@ -28,42 +29,18 @@ export function parseRemoteState(stdout: string): State {
   return parsed as State;
 }
 
-const pretty = (iso: string): string => {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2})?\+07:00$/.exec(iso);
-  return m ? `${m[1]} ${m[2]} UTC+7` : iso;
-};
-const list = (rows: string[]) => (rows.length ? rows.join("\n") : "none");
-
-/** Text in the shape of the catch-up template (DGS-427); the catch-up itself is DGS-428's. */
+/** The seven sections come from DGS-427's renderCatchUp; the warnings are added below them. */
 export function renderText(s: State): string {
-  const seats = s.health.seats.map((x) => `${x.seat}: 5h ${x.fiveHourPct}%, weekly ${x.weeklyPct}%`).join("; ");
-  const out = [
-    `# State: ${s.conductor}`,
-    `As of: ${pretty(s.asOf)}   Project: ${s.project}   Note: ${s.note.path}`,
-    "",
-    "## Done",
-    list(s.done.map((d) => `- ${d.key}: ${d.line}.${d.report ? ` Report: ${d.report}` : ""}`)),
-    "",
-    "## Running",
-    list(s.running.map((r) => `- ${r.worker} | ${r.key} | ${r.stage} | since ${pretty(r.since)}`)),
-    "",
-    "## Waiting for Jack",
-    list(s.waiting.map((r) => `- ${r.question} | since ${pretty(r.since)} | pane ${r.pane}`)),
-    "",
-    "## Decided under the mandate",
-    list(s.decided.map((r) => `- ${r.decision} | why: ${r.why} | allowed by: ${r.allowedBy}`)),
-    "",
-    "## Parked or failed",
-    list(s.parked.map((r) => `- ${r.what} | why: ${r.why} | next step: ${r.next}`)),
-    "",
-    "## Next",
-    list(s.next.slice(0, 3).map((r, i) => `${i + 1}. ${r}`)),
-    "",
-    "## Health",
-    `- Seats and usage: ${seats || "none"}`,
-    `- Server: ${s.health.server}`,
-    `- Open tabs: ${s.health.tabs.length}${s.health.tabs.length ? `: ${s.health.tabs.join(", ")}` : ""}`,
-  ];
+  const day = `${s.asOf.slice(0, 10)}T00:00:00+07:00`;
+  const body = renderCatchUp({
+    conductor: s.conductor,
+    window: { from: day, to: s.asOf },
+    identity: "consult",
+    askedBy: "consult",
+    done: s.done, running: s.running, waiting: s.waiting, decided: s.decided,
+    parked: s.parked, next: s.next, health: s.health,
+  });
+  const out = [body];
   const degraded = Object.entries(s.sources).filter(([, v]) => v !== "ok" && v !== "skipped");
   if (s.warnings.length || degraded.length) {
     out.push("", "## Warnings");
