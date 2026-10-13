@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-325 own domain for Nexus — Implementation Report</title>
+<style>body{font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em;border-radius:3px}</style></head>
+<body>
+<header>
+<h1>DGS-325 own domain for Nexus — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-325</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>pazurite.com</code> (Nexus, <code>/api/v1/...</code>) and <code>opencode.pazurite.com</code> (OpenCode at <code>/</code>) become DNS-only Cloudflare records that point to the Workbox's tailnet address <code>100.108.1.19</code>, so only Jack's devices with Tailscale on reach them. Tailscale Serve keeps port 443 and forwards the raw TCP stream to Caddy on <code>127.0.0.1:8443</code>. Caddy ends TLS, gets its certificates by DNS challenge, and also serves <code>workbox.tail730dcf.ts.net</code>. Caddy listens on loopback only. The design and plan are approved by Jack; the build is in progress.</p>
+</section>
+<section id="findings">
+<h2>Findings that shaped the design</h2>
+<ul>
+<li>A non-root process on macOS 26.7.1 cannot bind port 443 on a specific address; only <code>0.0.0.0</code> works, and that includes the company LAN. Hence the raw TCP forward.</li>
+<li>Caddy <code>v2.11.7</code> with <code>caddy-dns/cloudflare</code> <code>v0.2.4</code> comes pre-built from Caddy's download service, and the hash is reproducible.</li>
+<li>A throwaway Caddy on <code>127.0.0.1:18443</code> streams SSE, passes a websocket upgrade, and refuses connections on the LAN and tailnet addresses.</li>
+<li>Tailscale Serve did not answer on the IPv6 address from the Mac, so the Shopify AAAA is removed instead of repointed.</li>
+</ul>
+</section>
+<section id="gaps">
+<h2>Known gaps</h2>
+<ul>
+<li>Not built yet: <code>test-config.mjs</code>, <code>install.sh</code>, the Caddyfile in the repo.</li>
+<li>The staging certificate needs Jack's Cloudflare token.</li>
+<li>The <code>ts.net</code> certificate through Caddy is untested until the loopback proof; Desktop-app pairing can only be tested at the cut-over.</li>
+</ul>
+</section>
+</body></html>
