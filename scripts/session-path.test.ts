@@ -18,6 +18,7 @@ import {
   listDepotNoteNames,
   listUnmovedNoteNames,
   noteLocation,
+  resolveNote,
 } from "./session-path.ts";
 
 describe("isSafeSessionName", () => {
@@ -200,5 +201,23 @@ describe("depot note paths (DGS-443)", () => {
     write(conductorNotePath("P", "digismith-conductor", env));
     expect(listDepotNoteNames("P", env)).toEqual(["DigiSmith"]);
     expect(listUnmovedNoteNames(main, env)).toEqual([]);
+  });
+
+  it("resolveNote: depot if the note exists there, else the old copy, else none", () => {
+    const main = path.join(tmp, "P");
+    const depotPath = maestroNotePath("P", "Scheduling", env);
+    const oldPath = path.join(main, SESSIONS_DIR_PATH, "Scheduling", "note.md");
+    expect(resolveNote(main, "Scheduling", env)).toEqual({ source: "none", path: depotPath, writePath: depotPath });
+    write(oldPath);
+    expect(resolveNote(main, "Scheduling", env)).toEqual({ source: "old", path: oldPath, writePath: depotPath });
+    write(depotPath);
+    expect(resolveNote(main, "Scheduling", env)).toEqual({ source: "depot", path: depotPath, writePath: depotPath });
+  });
+
+  it("resolveNote follows the shared DigiSmith note and refuses an unsafe title", () => {
+    const main = path.join(tmp, "P");
+    write(conductorNotePath("P", "digismith-conductor", env));
+    expect(resolveNote(main, "DigiSmith", env).source).toBe("depot");
+    expect(() => resolveNote(main, "A.1: Primitives", env)).toThrow();
   });
 });

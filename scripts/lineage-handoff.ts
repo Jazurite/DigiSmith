@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "./cli-args.ts";
-import { listDepotNoteNames, listUnmovedNoteNames, noteLocation, projectName } from "./session-path.ts";
+import { listDepotNoteNames, listUnmovedNoteNames, projectName, resolveNote } from "./session-path.ts";
 
 // This module only ever knows the old clan/lineage fallback convention (DGS-158's own doc still
 // calls it a bridge, kept so the six existing fallback notes stay readable until Part 6 of
@@ -127,7 +127,7 @@ export function main(): void {
       }
       case "maestro-path": {
         requireArgs(args, ["title"]);
-        console.log(noteLocation(projectName(mainRoot), args.title));
+        console.log(JSON.stringify(resolveNote(mainRoot, args.title)));
         break;
       }
       case "ensure-excluded": {

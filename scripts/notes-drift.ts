@@ -1,40 +1,42 @@
-// Read-only check for DGS-443: after a note moved into the depot, did anyone still write the old copy?
-// Never writes, never deletes. Prints the old files whose copy is missing or older than the old file.
+// Read-only check for DGS-443: did anyone write an old note after its switch time (recorded by notes-switch.ts)?
+// Never writes, never deletes. Exit code 1 only when drift is found.
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { listNoteSessionNames, noteLocation, projectName, sessionsRoot, SESSIONS_DIR_PATH } from "./session-path.ts";
+import { listNoteSessionNames, projectName, SESSIONS_DIR_PATH } from "./session-path.ts";
+import { noteTarget, readSwitches, RUNBOOKS } from "./notes-switch.ts";
 
-export const RUNBOOKS = ["workbox.md", "workbox-macos.md"];
+export type Drift = {
+  key: string;
+  old: string;
+  copy: string;
+  problem: "old path written after the switch" | "depot copy missing" | "old note missing";
+  detail: string;
+};
 
-export type Drift = { title: string; old: string; copy: string; problem: "no depot copy" | "old copy changed after the depot copy" };
-
-function check(title: string, old: string, copy: string, out: Drift[]): void {
-  if (!fs.existsSync(copy)) return void out.push({ title, old, copy, problem: "no depot copy" });
-  if (fs.readFileSync(old).equals(fs.readFileSync(copy))) return;
-  if (fs.statSync(old).mtimeMs > fs.statSync(copy).mtimeMs) out.push({ title, old, copy, problem: "old copy changed after the depot copy" });
-}
-
-export function findDrift(mainRoot: string, env: NodeJS.ProcessEnv = process.env): Drift[] {
+export function findDrift(mainRoot: string, env: NodeJS.ProcessEnv = process.env): { drift: Drift[]; pending: string[] } {
   const project = projectName(mainRoot);
+  const switches = readSwitches(project, env);
+  const drift: Drift[] = [];
+  for (const [key, rec] of Object.entries(switches)) {
+    const base = { key, old: rec.old, copy: rec.copy };
+    if (!fs.existsSync(rec.copy)) drift.push({ ...base, problem: "depot copy missing", detail: "" });
+    if (!fs.existsSync(rec.old)) continue; // an old file removed later (by Jack) is not a write
+    const mtime = fs.statSync(rec.old).mtimeMs;
+    if (mtime > Date.parse(rec.at)) {
+      drift.push({ ...base, problem: "old path written after the switch", detail: `old modified ${new Date(mtime).toISOString()}, switched ${rec.at}` });
+    }
+  }
   const oldDir = path.join(mainRoot, ...SESSIONS_DIR_PATH.split("/"));
-  const out: Drift[] = [];
-  for (const title of listNoteSessionNames(mainRoot)) {
-    const old = path.join(oldDir, title, "note.md");
-    const copy = noteLocation(project, title, env);
-    check(title, old, copy, out);
-  }
-  for (const name of RUNBOOKS) {
-    const old = path.join(oldDir, name);
-    if (fs.existsSync(old)) check(name, old, path.join(sessionsRoot(project, env), name), out);
-  }
-  return out;
+  const keys = [...listNoteSessionNames(mainRoot), ...RUNBOOKS.filter((n) => fs.existsSync(path.join(oldDir, n)))];
+  const pending = keys.filter((key) => !switches[key] && fs.existsSync(noteTarget(mainRoot, key, env).old));
+  return { drift, pending };
 }
 
 export function main(): void {
-  const mainRoot = process.argv[2] ?? process.cwd();
-  const drift = findDrift(mainRoot);
-  for (const d of drift) console.log(`${d.problem}: ${d.old} -> ${d.copy}`);
+  const { drift, pending } = findDrift(process.argv[2] ?? process.cwd());
+  for (const d of drift) console.log(`${d.problem}: ${d.key}: ${d.old} -> ${d.copy} ${d.detail}`.trimEnd());
+  if (pending.length > 0) console.log(`not switched yet: ${pending.join(", ")}`);
   if (drift.length === 0) console.log("notes-drift: no drift");
   process.exitCode = drift.length === 0 ? 0 : 1;
 }

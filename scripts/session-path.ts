@@ -137,3 +137,15 @@ export function listUnmovedNoteNames(mainRoot: string, env: NodeJS.ProcessEnv = 
   const moved = new Set(listDepotNoteNames(projectName(mainRoot), env));
   return listNoteSessionNames(mainRoot).filter((name) => !moved.has(name));
 }
+
+export type ResolvedNote = { source: "depot" | "old" | "none"; path: string; writePath: string };
+
+// The one choice the handoff skill follows: the depot note if it exists, else the old copy (read-only;
+// the owner must be switched before anything is written), else none (create `writePath`).
+export function resolveNote(mainRoot: string, title: string, env: NodeJS.ProcessEnv = process.env): ResolvedNote {
+  const writePath = noteLocation(projectName(mainRoot), title, env);
+  if (hasFile(path.dirname(writePath), NOTE_FILENAME)) return { source: "depot", path: writePath, writePath };
+  const old = path.join(mainRoot, ...noteRelPath(title).split("/"));
+  if (hasFile(path.dirname(old), NOTE_FILENAME)) return { source: "old", path: old, writePath };
+  return { source: "none", path: writePath, writePath };
+}

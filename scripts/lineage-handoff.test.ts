@@ -328,14 +328,18 @@ describe("CLI", () => {
     expect(result.stdout.trim().split(/\r?\n/)).toEqual(["Nexus", "Scheduling", "DigiSmith"]);
   });
 
-  it("--action maestro-path prints the depot note path for a title", () => {
+  it("--action maestro-path prints the resolved choice as JSON: none, then old, then depot", () => {
     const main = path.join(tmpDir, "main");
     initRepo(main);
+    const depotPath = path.join(tmpDir, "depot", "sessions", "main", "maestros", "Token Economics", "note.md");
+    const run = () => JSON.parse(runCli(main, "--action", "maestro-path", "--title", "Token Economics").stdout);
 
-    const result = runCli(main, "--action", "maestro-path", "--title", "Token Economics");
-
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe(path.join(tmpDir, "depot", "sessions", "main", "maestros", "Token Economics", "note.md"));
+    expect(run()).toEqual({ source: "none", path: depotPath, writePath: depotPath });
+    const oldPath = path.join(fs.realpathSync.native(main), ".digismith", "sessions", "Token Economics", "note.md");
+    writeNote(main, ".digismith/sessions/Token Economics/note.md", "# Note\n");
+    expect(run()).toEqual({ source: "old", path: oldPath, writePath: depotPath });
+    writeNote(tmpDir, "depot/sessions/main/maestros/Token Economics/note.md", "# Note\n");
+    expect(run()).toEqual({ source: "depot", path: depotPath, writePath: depotPath });
   });
 
   it("--action maestro-path refuses a lineage-key title", () => {

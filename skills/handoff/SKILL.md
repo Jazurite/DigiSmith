@@ -19,7 +19,7 @@ conductor or Maestro session keeps one living note that says where the session s
 .digismith/docs/_unlettered/handoff.md         any other title          (fallback)
 ```
 
-`<notes-folder>` is `maestros`. `<depot>` is `~/.digismith-depot` (`DIGISMITH_DEPOT_DIR` overrides it); `<project>` is the main checkout's folder name. `--action maestro-path --title '<title>'` prints the current path, so never build it by hand. The old `.digismith/sessions/` copies stay as they were when the note moved; a note found only there is an unmoved note.
+`<notes-folder>` is `maestros`. `<depot>` is `~/.digismith-depot` (`DIGISMITH_DEPOT_DIR` overrides it); `<project>` is the main checkout's folder name. `--action maestro-path --title '<title>'` prints one JSON line `{source, path, writePath}`: the choice is made there, never by hand (see Resolve the Note). The old `.digismith/sessions/` copies stay as they were when the note moved; a note found only there is an unmoved note.
 
 The first two lines are DGS-443 (the DGS-158 convention moved into the depot). The three fallback lines are the old clan and
 lineage notes: the script, the SessionStart line and the exclude patterns still know only those
@@ -80,18 +80,20 @@ note lands in the main checkout's `.digismith/docs/`, the current note in the de
    the session name. If the call fails or the title is empty or blank, go to step 5.
 2. If the name is one safe path segment (non-empty, no `/` or `\`, not `.` or `..`, and not a
    lineage-key title matching `^\s*[A-Z](\.\d+)?\s*(:|$)`, like "A.1: Primitives" or "K:
-   Maestro"), the current note path is the output of `--action maestro-path --title '<name>'`, a file
-   in the depot, outside every git repo. If that command fails, stop and say so.
-3. Write mode writes to the current path only: never to the old `.digismith/sessions/` copy.
-   If the current note does not exist but an old copy does (a note not moved yet), do not start
-   a second note: say so and ask for the owner's switch (copy, `cmp`, then write the new path).
-   With no note anywhere, create it at the current path. Resume mode reads the current note if it
-   exists, then the old `.digismith/sessions/<name>/note.md` (say it is the old copy), and
-   otherwise falls back: run `--action path --title '<title>'` and use that old note if it
-   exists. If that command fails because the fallback path is tracked by git, stop and tell the
-   human partner the same, and do not read or write it. Write mode has the same stop whenever it
-   runs `--action path`. A fallback note found for a safe name may belong to another session
-   (the `_unlettered` note is shared), so say where it came from when showing it.
+   Maestro"), run `--action maestro-path --title '<name>'` and follow its `source`. If the command
+   fails, stop and say so.
+   - `depot`: `path` is the current note. Resume reads it; write mode writes it.
+   - `old`: the note was not switched into the depot yet. Resume reads `path` and says it is the
+     old copy. Write mode writes nothing: tell the human partner the owner's switch is due (the
+     conductor runs `notes-switch.ts`), and do not start a second note.
+   - `none`: no note anywhere. Resume says so (then step 3's fallback); write mode creates
+     `writePath`.
+3. Write mode only ever writes `writePath`, never an old `.digismith/sessions/` copy. Resume mode
+   with `source` `none` falls back: run `--action path --title '<title>'` and use that old
+   note if it exists. If that command fails because the fallback path is tracked by git, stop and
+   tell the human partner the same, and do not read or write it. A fallback note found for a safe
+   name may belong to another session (the `_unlettered` note is shared), so say where it came
+   from when showing it.
 4. If the title is not blank but is not one safe path segment (or it is a lineage-key title), use
    the fallback path from `--action path` for both modes, exactly as before, with the same stop if
    git tracks it. If that path is under `_unlettered`, say so in the reply, so a wrong title is

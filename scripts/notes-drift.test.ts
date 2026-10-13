@@ -3,17 +3,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { findDrift } from "./notes-drift.ts";
+import { switchNote } from "./notes-switch.ts";
 
-let tmp: string;
-let main: string;
-let env: NodeJS.ProcessEnv;
-const put = (file: string, text: string, mtime?: Date) => {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, text);
-  if (mtime) fs.utimesSync(file, mtime, mtime);
-};
-const oldNote = (title: string) => path.join(main, ".digismith/sessions", title, "note.md");
-const newNote = (title: string) => path.join(tmp, "depot/sessions/Proj/maestros", title, "note.md");
+let tmp: string, main: string, env: NodeJS.ProcessEnv;
+const put = (f: string, t: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, t); };
+const old = (t: string) => path.join(main, ".digismith/sessions", t, "note.md");
+const at = (t: string, iso: string) => { const d = new Date(iso); fs.utimesSync(old(t), d, d); };
+const T0 = new Date("2026-10-13T10:00:00.000Z");
 
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dgs443-drift-"));
@@ -23,39 +19,41 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 describe("findDrift", () => {
-  it("reports nothing when old and new are identical", () => {
-    put(oldNote("Scheduling"), "a");
-    put(newNote("Scheduling"), "a");
-    expect(findDrift(main, env)).toEqual([]);
+  it("lists an old note with no switch record as pending, not as drift", () => {
+    put(old("Scheduling"), "a");
+    expect(findDrift(main, env)).toEqual({ drift: [], pending: ["Scheduling"] });
   });
 
-  it("reports a missing depot copy", () => {
-    put(oldNote("Scheduling"), "a");
-    expect(findDrift(main, env)).toEqual([
-      { title: "Scheduling", old: oldNote("Scheduling"), copy: newNote("Scheduling"), problem: "no depot copy" },
-    ]);
+  it("reports nothing for a switched note whose old file is unchanged", () => {
+    put(old("Nexus"), "a"); at("Nexus", "2026-10-13T09:00:00Z");
+    switchNote(main, "Nexus", { env, now: () => T0 });
+    expect(findDrift(main, env)).toEqual({ drift: [], pending: [] });
   });
 
-  it("reports an old file written after the copy (a lost write)", () => {
-    put(newNote("Nexus"), "a", new Date("2026-10-13T10:00:00Z"));
-    put(oldNote("Nexus"), "a plus a late line", new Date("2026-10-13T11:00:00Z"));
-    const [d] = findDrift(main, env);
-    expect(d.problem).toBe("old copy changed after the depot copy");
+  it("flags ANY old-path write after the recorded switch time, even with the same content", () => {
+    put(old("Nexus"), "a"); at("Nexus", "2026-10-13T09:00:00Z");
+    switchNote(main, "Nexus", { env, now: () => T0 });
+    at("Nexus", "2026-10-13T10:05:00Z");
+    expect(findDrift(main, env).drift).toMatchObject([{ key: "Nexus", problem: "old path written after the switch" }]);
   });
 
-  it("stays quiet when the old file differs but is older than the copy (the new note moved on)", () => {
-    put(oldNote("Nexus"), "a", new Date("2026-10-13T10:00:00Z"));
-    put(newNote("Nexus"), "a and more", new Date("2026-10-13T11:00:00Z"));
-    expect(findDrift(main, env)).toEqual([]);
+  it("still flags a stray old write when the depot copy was written later", () => {
+    put(old("Nexus"), "a"); at("Nexus", "2026-10-13T09:00:00Z");
+    const r = switchNote(main, "Nexus", { env, now: () => T0 });
+    fs.appendFileSync(old("Nexus"), "stray"); at("Nexus", "2026-10-13T10:05:00Z");
+    fs.appendFileSync(r.copy, "newer depot write");
+    expect(findDrift(main, env).drift).toHaveLength(1);
   });
 
-  it("maps the shared DigiSmith note to the conductor path", () => {
-    put(oldNote("DigiSmith"), "a");
-    expect(findDrift(main, env)[0].copy).toBe(path.join(tmp, "depot/sessions/Proj/digismith-conductor/note.md"));
+  it("flags a recorded switch whose depot copy is gone", () => {
+    put(old("Nexus"), "a"); at("Nexus", "2026-10-13T09:00:00Z");
+    const r = switchNote(main, "Nexus", { env, now: () => T0 });
+    fs.rmSync(r.copy);
+    expect(findDrift(main, env).drift).toMatchObject([{ key: "Nexus", problem: "depot copy missing" }]);
   });
 
   it("covers the runbooks", () => {
     put(path.join(main, ".digismith/sessions/workbox.md"), "a");
-    expect(findDrift(main, env)[0].copy).toBe(path.join(tmp, "depot/sessions/Proj/workbox.md"));
+    expect(findDrift(main, env).pending).toEqual(["workbox.md"]);
   });
 });
