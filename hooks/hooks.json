@@ -6,7 +6,31 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cards/hook-cli.ts\" start"
+          },
+          {
+            "type": "command",
             "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-init.ts\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cards/hook-cli.ts\" prompt"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cards/hook-cli.ts\" end"
           }
         ]
       }
