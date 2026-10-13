@@ -53,6 +53,12 @@ const waitUp = async () => { for (let i = 0; i < 50; i++) { try { await new Prom
 const finish = () => { caddy.kill('SIGTERM'); backend.close(); process.exit(failed ? 1 : 0) }
 try {
   await waitUp()
+  // the internal certificate is issued after the listener is up: wait until a TLS handshake works
+  for (let i = 0; i < 50; i++) {
+    const up = await new Promise(ok => https.get({ host: '127.0.0.1', port: FRONT, path: '/', servername: 'localhost', rejectUnauthorized: false, headers: { host: 'localhost' } }, r => { r.resume(); ok(true) }).on('error', () => ok(false)))
+    if (up) break
+    await new Promise(r => setTimeout(r, 200))
+  }
   check('no sudo or trust-store attempt', !/sudo|installing root certificate/.test(log))
 
   // SSE: events must arrive spread out in time, not buffered into one chunk
