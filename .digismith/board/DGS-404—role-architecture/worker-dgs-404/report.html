@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-404 role architecture — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-404 role architecture — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-404</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The role architecture is designed and approved by Jack: Maestro (outside herdr, manual), Conductor (inside herdr, persistent, automated) and Worker, with Scout, Reviewer and Observer as read-only helpers. Authority is a fixed ceiling per role that a mandate can only narrow, and deletes follow an ownership rule. The design adds the session card, the Catch-up report and a lifecycle for session data. Design only, no code.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>design.md</code> and <code>design.html</code>: the role table, the authority ladder, the session card, how roles talk, Catch-up, state locations, lifecycle, enforcement, open questions and follow-ups.</li>
+<li>Twelve follow-up tickets, each linked to DGS-402 and DGS-404: DGS-417 to DGS-428 (I.7 Identity: 417, 418, 424; I.6 Roles and Permissions: 419 to 423, 425, 426, 428; E.5 Templates: 427, also linked to DGS-416 and DGS-428).</li>
+</ul>
+</section>
+<section id="not-done">
+<h2>Not done</h2>
+<p>No code. The old role tickets are closed out by DGS-425 and the old session folders migrated by DGS-424. Eight open questions stay open in design section 11.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>No whole-branch review: a design-only change, by Jack's order. Jack approved the design after revisions to the Catch-up section.</p>
+</section>
+</body>
+</html>
