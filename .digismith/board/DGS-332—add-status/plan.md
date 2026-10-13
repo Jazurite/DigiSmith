@@ -29,7 +29,7 @@ Pure function `planStatusAdd(current, {name, type, color})`:
 - `--type`: `custom|done|open|closed` as ClickUp names them. The ticket said `open|closed`; the capture shows the useful types are `custom` and `done`. `--type done` = the ticket's "closed-type" discarded. `--color` default `#87909e` (grey).
 
 ## Levels
-Only the SPACE level is captured. Folder and list calls are NOT captured ([134] only READS statuses per folder). I build ONLY `--space <id>`. `--folder` and `--list` are not options (a clear yargs error); they need Jack's capture. No guessing.
+Only the SPACE level is captured. Folder and list calls are NOT captured ([134] only READS statuses per folder). I build ONLY `--space <id>`. `--folder` and `--list` are not declared options; the handler refuses them with a clear message (they need Jack's capture). No guessing.
 
 ## Command
 `dg clickup add-status --space <id> --name <n> --type custom|done|open|closed [--color #hex] [--yes]`. Dry run unless `--yes`.
@@ -67,3 +67,10 @@ Propose NONE. A real add changes Jack's workspace; keep the prompt. The conducto
 
 ## First use (conductor, after merge)
 DRY RUN ONLY on the DigiSmith space (1301150000001271), printing the planned set. A real add needs Jack.
+
+## Review fixes (Claude whole-branch review, NOT READY, 9 findings)
+- The status read throws unless `statuses` is a non-empty array; `planStatusAdd` refuses an empty set, a status without id, a missing or shared orderindex.
+- The plan sorts a COPY of the read by orderindex (relative order kept), inserts, renumbers. Fields the read carries (id, status, type, orderindex, color, and any other) are sent back as read.
+- Position: before the closed status. The capture shows this for a `done` status only; for `custom` it is assumed, and the dry run says so ("position: before the closed status (assumed ...)").
+- Verify after the PUT: count = previous + 1; every previous status same id, name, type, color and planned orderindex; exactly one new status with the requested name, type, color. Any difference: exit 1, the previous set printed again.
+- `--space` must be digits only. A failed read-back says the PUT WAS SENT. A 4xx on the PUT adds "re-run to read the current set".

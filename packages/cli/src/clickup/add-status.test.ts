@@ -56,7 +56,7 @@ describe("planStatusAdd", () => {
   });
 
   it("refuses a status without id, an orderindex that is missing, and two statuses with the same orderindex", () => {
-    expect(() => planStatusAdd([{ ...current[0], id: undefined }, ...current.slice(1)], add)).toThrow(/no id.*backlog/);
+    expect(() => planStatusAdd([{ ...current[0], id: undefined }, ...current.slice(1)], add)).toThrow(/backlog.*no id/);
     expect(() => planStatusAdd([{ ...current[0], orderindex: undefined as unknown as number }, ...current.slice(1)], add)).toThrow(/orderindex/);
     expect(() => planStatusAdd([current[0], { ...current[1], orderindex: 0 }, ...current.slice(2)], add)).toThrow(/same orderindex/);
   });
