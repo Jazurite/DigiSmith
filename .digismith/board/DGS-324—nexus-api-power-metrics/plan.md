@@ -25,6 +25,8 @@ Depot after `install.sh`: `~/.digismith-depot/nexus-api/src/`, `bin/nexus-api`, 
 8. **install.sh** (`test-install.test.ts`): depot only, no tests or fixtures copied, node path baked in, plist passes `plutil -lint`, staged sudoers rule equals `sudoersLine(user)`, the depot copy serves a request with a fake run, no `sudo`/`launchctl`/`/etc/` in the script.
 
 ## Jack's step list (every step is Jack's; an agent never runs them)
+**Status 2026-10-13: J1 done, J2 done, J3 done, J4 dropped (no login, DGS-458), J5 done, J6 done: first use passed at about 18:46 UTC+7 (full JSON, `source.status: "ok"`, CPU die 85.03 C, fan 1845.6 rpm, 45.55 W). J1b not run.**
+
 `$D` = `~/.digismith-depot`. J1 is done: `fixture-powermetrics.txt` (sample time 2026-10-13 17:56:14 UTC+7) is in the depot and the parser is tested on it.
 
 **J1b (optional, one sudo; times the final command and records the thermal section, which the default run lacks):**
@@ -34,7 +36,7 @@ wc -c ~/.digismith-depot/nexus/fixture-final.txt
 ```
 Tell the Nexus Maestro the `real` time; the API timeout is 10 s (one number in `command.ts`).
 
-**J2. The sudoers rule (root; the only root step):**
+**[done] J2. The sudoers rule (root; the only root step):**
 ```
 cat ~/.digismith-depot/nexus/digismith-nexus.sudoers
 visudo -cf ~/.digismith-depot/nexus/digismith-nexus.sudoers
@@ -45,7 +47,7 @@ sudo -n /usr/bin/powermetrics --samplers tasks,battery,network,disk,cpu_power,gp
 `install` copies the file to a root-owned, mode 0440 file: never symlink the depot file into `/etc/sudoers.d` (the depot copy is yours to write, so a link would let any process of yours rewrite a root rule). `cat` must show one line: `workbox ALL=(root) NOPASSWD: /usr/bin/powermetrics --samplers tasks\,battery\,network\,disk\,cpu_power\,gpu_power\,gpu_agpm_stats\,smc\,thermal -i 1000 -n 1`. The last command runs without a password prompt (`sudo -n` fails at once if the rule is wrong).
 Check the rule is narrow: `sudo -n /usr/bin/powermetrics -n 1` must fail with `sudo: a password is required`.
 
-**J3. Start the API (LaunchAgent, your user):**
+**[done] J3. Start the API (LaunchAgent, your user):**
 ```
 cp ~/.digismith-depot/nexus/com.jazurite.digismith.nexus-api.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jazurite.digismith.nexus-api.plist
@@ -55,12 +57,12 @@ JSON with `source.status: "ok"`, temperatures and `topTasks`. (`source.status: "
 
 **J4. (dropped)** No login for now: Jack's decision, the login design is DGS-458. Nothing to do; no hash goes into `.env`.
 
-**J5. Caddy takes the new route** (needs the DGS-325 front door running; the build already copied the new `Caddyfile` and `caddy-run` to the depot; this restart is what loads the `/api/*` route):
+**[done] J5. Caddy takes the new route** (needs the DGS-325 front door running; the build already copied the new `Caddyfile` and `caddy-run` to the depot; this restart is what loads the `/api/*` route):
 ```
 launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.caddy
 tail -5 ~/.digismith-depot/caddy/logs/caddy.log
 ```
-**J6. First use (laptop, Tailscale on):** `curl https://pazurite.com/api/v1/power-metrics` returns the JSON (no password). In a browser the URL just loads. In a page on the same origin: `fetch('https://pazurite.com/api/v1/power-metrics')`
+**[done] J6. First use (laptop, Tailscale on):** `curl https://pazurite.com/api/v1/power-metrics` returns the JSON (no password). In a browser the URL just loads. In a page on the same origin: `fetch('https://pazurite.com/api/v1/power-metrics')`
 (another origin needs `Access-Control-Allow-Origin`, not in this ticket). `curl https://pazurite.com/` answers 404. Tailscale off: no connection. Refresh test: ten calls in one second leave `source.ageSeconds` under 5.
 
 **Order:** J2 -> J3 -> J5 -> J6. Caddy last, so the route never points at nothing.

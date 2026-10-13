@@ -29,10 +29,13 @@ No blocking bug. Fixed after it, each with a test that failed first: a timed-out
 Left as is: the API has no login at all now (any device on the tailnet and any local process can read it; at most one root run per 5 s). `package power` parsing is Intel-only (this Mac).
 The reviewer could not run the tests from its working directory (the root Vitest config excludes `.worktrees`); they run from the worktree root.
 
+## Cut-over and first use
+- J2 (sudoers rule), J3 (API LaunchAgent) and J5 (Caddy restart) done by Jack on 2026-10-13; J4 was dropped (no login, DGS-458).
+- **First use passed at about 18:46 UTC+7:** from his laptop with Tailscale on, `https://pazurite.com/api/v1/power-metrics` returned the full JSON: `source.status: "ok"`, `ageSeconds` 1, CPU die 85.03 C, fan 1845.6 rpm, 45.55 W package power, all sections.
+- The wall time of the nine-sampler command and the live sudoers rule are therefore proven in use; J1b (the separate timing run) was not needed.
+
 ## Not verified
-- The wall time of the final nine-sampler command (the J1 run sampled 1033 ms); J1b times it. The API timeout is 10 s.
-- The sudoers rule on the live system and the LaunchAgent: Jack's steps J2, J3.
-- End to end through Tailscale and Caddy: J6.
+- The exact wall time of the nine-sampler command (the J1 run sampled 1033 ms; first use answered within the 10 s timeout and the 5 s cache, `ageSeconds` 1). J1b was not run.
 - Battery, network, disk, GPU and AGPM lines are kept raw on purpose; `Battery: percent_charge: 6821` is not a plain percentage.
 - Thermal pressure names other than `Nominal` (unseen).
 
@@ -40,4 +43,4 @@ The reviewer could not run the tests from its working directory (the root Vitest
 During the design I ran `sudo -n true` once to see whether a password was needed (answer: yes; nothing changed). The order forbids sudo; no sudo ran after that, and no test or script of this ticket calls sudo (a guard test checks `install.sh`).
 
 ## Jack's steps
-J2 sudoers rule, J3 API LaunchAgent, J4 dropped (no login), J5 Caddy restart, J6 first use; J1b optional. Exact text in `plan.md`.
+All done (J2, J3, J5, J6; J4 dropped; J1b not needed). Exact text in `plan.md`.
