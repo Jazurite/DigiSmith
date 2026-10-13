@@ -9,12 +9,13 @@
 <p><code>GET /api/&lt;version&gt;/power-metrics</code> now starts with <code>verdict</code>: <code>status</code> (ok, busy, hot, throttling, unknown; the worst wins), a one-sentence <code>summary</code> and <code>reasons</code>. A pure function computes it from fields the API already reads.</p>
 <ul>
 <li>Hot: CPU or GPU at 90 C or more, fan at 4503 rpm or more (85 % of the measured 5297 rpm maximum).</li>
+<li>Hot, too: CPU at 85 C or more while the fan is within 10 % of its real minimum (1836 rpm, so at most 2019.6 rpm): "The CPU is at 94 C but the fan is still at its slowest speed."</li>
 <li>Busy: memory under 15 % free, or CPU under 20 % idle.</li>
 <li>Throttling: thermal pressure above Nominal, a power limit, prochots, or a thermal/power cause in <code>performanceLimitedDueTo</code> (<code>MAX_TURBO_LIMIT</code> is normal and counts as ok).</li>
 <li>Unknown: the powermetrics read failed or timed out; the live fields still count.</li>
 <li>Load average and <code>cpuThermalLevel</code> are not judged.</li>
 </ul>
-<p>Tests: 100 pass. Review: no findings. On a scratch port the depot copy reported this Mac as throttling (thermal pressure Moderate, CPU 94 C).</p>
+<p>Tests: 106 pass. Review: no findings. On a scratch port the depot copy reported this Mac as throttling (thermal pressure Moderate, CPU 94 C).</p>
 </section>
 <section id="jack">
 <h2>Jack's step</h2>

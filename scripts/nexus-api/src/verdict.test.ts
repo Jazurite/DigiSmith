@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAN_NEAR_MAX_RPM, HOT_C, IDLE_BUSY_BELOW_PCT, MEMORY_LOW_BELOW_PCT, computeVerdict } from './verdict.ts'
+import { FAN_NEAR_MAX_RPM, FAN_SLOW_MAX_RPM, FAN_SLOW_MIN_C, HOT_C, IDLE_BUSY_BELOW_PCT, MEMORY_LOW_BELOW_PCT, computeVerdict } from './verdict.ts'
 import type { PowerMetrics } from './types.ts'
 
 type Reading = Omit<PowerMetrics, 'verdict'>
@@ -26,7 +26,7 @@ describe('computeVerdict: ok', () => {
     expect(computeVerdict(with_({ load: { load1: 31, load5: 20, load15: 10 } })).status).toBe('ok')
   })
   it('the 85 C burst with thermal level 35 and pressure Nominal is ok (cpuThermalLevel is not judged)', () => {
-    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 85, cpuThermalLevel: 35 } })).status).toBe('ok')
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 85, cpuThermalLevel: 35, fanRpm: 3000 } })).status).toBe('ok')
   })
 })
 
@@ -62,8 +62,8 @@ describe('computeVerdict: throttling', () => {
 
 describe('computeVerdict: hot (limits are inclusive)', () => {
   it('CPU one step under the limit is ok, at the limit is hot', () => {
-    expect(computeVerdict(with_({ thermal: { cpuDieTempC: HOT_C - 0.01 } })).status).toBe('ok')
-    const v = computeVerdict(with_({ thermal: { cpuDieTempC: HOT_C } }))
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: HOT_C - 0.01, fanRpm: 3000 } })).status).toBe('ok')
+    const v = computeVerdict(with_({ thermal: { cpuDieTempC: HOT_C, fanRpm: 3000 } }))
     expect(v.status).toBe('hot'); expect(v.summary).toBe('The Mac is running hot.')
     expect(v.reasons).toEqual(['The CPU is at 90 C; the chip protects itself at 100 C.'])
   })
@@ -76,6 +76,33 @@ describe('computeVerdict: hot (limits are inclusive)', () => {
     expect(computeVerdict(with_({ thermal: { fanRpm: FAN_NEAR_MAX_RPM - 1 } })).status).toBe('ok')
     const v = computeVerdict(with_({ thermal: { fanRpm: 5200 } }))
     expect(v.status).toBe('hot'); expect(v.reasons).toEqual(['The fan is at 5200 rpm, close to its maximum.'])
+  })
+})
+
+describe('computeVerdict: hot, the fan is not answering the heat', () => {
+  it('limits: 85 C, and 10 % above the real fan minimum of 1836 rpm', () => {
+    expect(FAN_SLOW_MIN_C).toBe(85)
+    expect(FAN_SLOW_MAX_RPM).toBeCloseTo(2019.6, 5)
+  })
+  it('94 C with the fan at 1830 rpm: hot, with both numbers', () => {
+    const v = computeVerdict(with_({ thermal: { cpuDieTempC: 94, fanRpm: 1830 } }))
+    expect(v.status).toBe('hot')
+    expect(v.reasons).toContain('The CPU is at 94 C but the fan is still at its slowest speed (1830 rpm).')
+  })
+  it('85 C edge: at 85 C it counts, just under does not', () => {
+    const slow = { fanRpm: 1840 }
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 85, ...slow } })).status).toBe('hot')
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 84.99, ...slow } })).status).toBe('ok')
+  })
+  it('fan edge: within 10 % of the minimum counts, just above does not', () => {
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 90, fanRpm: 2019.6 } })).reasons).toContain('The CPU is at 90 C but the fan is still at its slowest speed (2020 rpm).')
+    const v = computeVerdict(with_({ thermal: { cpuDieTempC: 88, fanRpm: 2019.7 } }))
+    expect(v.status).toBe('ok')
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 88, fanRpm: 2019.6 } })).status).toBe('hot')
+  })
+  it('a missing temperature or fan reading is not judged', () => {
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: null, fanRpm: 1830 } })).status).toBe('ok')
+    expect(computeVerdict(with_({ thermal: { cpuDieTempC: 94, fanRpm: null } })).reasons).toEqual(['The CPU is at 94 C; the chip protects itself at 100 C.'])
   })
 })
 
@@ -98,7 +125,7 @@ describe('computeVerdict: busy (limits are strict)', () => {
 
 describe('computeVerdict: worst wins, one reason per signal', () => {
   it('throttling beats hot beats busy, and every bad signal is listed', () => {
-    const v = computeVerdict(with_({ thermal: { prochots: 2, cpuDieTempC: 95 }, memory: { freePct: 5 }, load: { cpuIdlePct: 3 } }))
+    const v = computeVerdict(with_({ thermal: { prochots: 2, cpuDieTempC: 95, fanRpm: 3000 }, memory: { freePct: 5 }, load: { cpuIdlePct: 3 } }))
     expect(v.status).toBe('throttling')
     expect(v.reasons).toEqual(['The chip has cut its speed to cool down (2 times).', 'The CPU is at 95 C; the chip protects itself at 100 C.', 'Only 5 % of memory is free.', 'The CPU is only 3 % idle.'])
   })
