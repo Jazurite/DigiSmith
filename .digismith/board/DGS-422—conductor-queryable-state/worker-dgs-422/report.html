@@ -29,7 +29,8 @@
 <li><code>state.ts</code>: <code>collectState</code> from the note, <code>git log origin/main</code>, herdr (server, tabs) and open cards (cross-check, stub until DGS-417 merges). A failing source gives a partial answer plus <code>sources</code> and <code>warnings</code>. Note path: <code>--note</code>, env <code>DIGISMITH_CONDUCTOR_NOTE</code>, <code>&lt;depot&gt;/conductors.json</code>, depot default.</li>
 <li><code>runner.ts</code>: one Runner and a read-only guard (herdr status/agent/pane/tab reads, git log/rev-parse with only <code>--since=</code>/<code>--format=</code> flags, the single fixed ssh state form with charset-checked values).</li>
 <li><code>consult.ts</code>, <code>cli.ts</code>: consult, text and JSON output, <code>--machine</code> for the live pane list.</li>
-<li>Tests: 110 new (temp depot, fake note, fake runner, no real ssh); repo suite 1595 pass with <code>FORCE_COLOR=1</code> before the fixes; typecheck of the new files clean.</li>
+<li>After the rebase the stubs are gone: <code>depotDir</code> from <code>scripts/depot-dir.ts</code>, <code>listCards</code> from <code>scripts/session-card.ts</code>, the seven sections from <code>renderCatchUp</code> (<code>scripts/catch-up.ts</code>), whose <code>CatchUp</code> type the state extends.</li>
+<li>Tests: 110 new (temp depot, fake note, fake runner, no real ssh). Full repo suite after the rebase and the review fixes: 117 files, 1697 tests pass with <code>FORCE_COLOR=1</code>. Typecheck: no error in <code>scripts/</code>.</li>
 </ul>
 </section>
 <section id="design-deviation">
@@ -46,7 +47,8 @@
 </section>
 <section id="first-use">
 <h2>First use</h2>
-<p>Pending the merge: commands in <code>probe.md</code> (conductors.json entry, conductor's state-write, local consult, one remote consult over ssh). If ssh is not allowed from the Desktop session the remote half is parked with the reason.</p>
+<p>My part, run locally on 2026-10-13 ~13:53 UTC+7 with the <code>conductors.json</code> entry pointing at the existing note (read-only; no <code>state-write</code> on the real note): <code>state --project DigiSmith</code> returned Done (DGS-427, DGS-417, DGS-404 with report links), Server <code>running</code>, 9 open tabs, and a warning that the note has no state block yet (the conductor adds it). Running, Waiting, Decided, Parked, Next say <code>none</code> for the same reason.</p>
+<p>The Maestro's part: commands in <code>probe.md</code> (conductors.json entry, conductor's state-write, local consult, one remote consult over ssh). If ssh is not allowed from the Desktop session the remote half is parked with the reason.</p>
 </section>
 <section id="left-out">
 <h2>Left out</h2>
