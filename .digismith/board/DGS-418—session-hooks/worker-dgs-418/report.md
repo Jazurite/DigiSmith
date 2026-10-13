@@ -14,7 +14,7 @@ Fixed with tests: the entry guard failed through a symlinked plugin root (compar
 Documented, not fixed:
 - A nested `claude -p` inherits `DIGISMITH_*` and writes a second card with the same id; its end appends to the parent's note. The starter should unset the env for children; follow-up.
 - `touchCard` racing `closeCard` can leave a ghost open card (narrow window); the fix belongs in 417's `touchCard` (touch only if the file still exists).
-- Resuming a session whose card is already archived writes a new open card with the same file name; closing it overwrites the archived one (417's archive rename).
+- The real DGS-417 API never overwrites an archived card (a second close writes `<id>--<session>--<n>.yml`), so that review point is closed by 417.
 - `state` is not checked as a path; only the starter's own env can set it.
 - The sweep ignores `machine`: a card from another machine is checked against this machine's herdr list.
 
