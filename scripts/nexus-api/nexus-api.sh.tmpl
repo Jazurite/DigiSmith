@@ -1,0 +1,3 @@
+#!/bin/sh
+# Starts the Nexus API (DGS-324). Runs as the workbox user; no root. Installed into the depot by install.sh (node path baked in).
+exec "@NODE@" --experimental-strip-types "@DEPOT@/nexus-api/src/server.ts"

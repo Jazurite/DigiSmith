@@ -1,0 +1,17 @@
+
+
+**** Network activity ****
+
+in:  12.50 packets/s, 3400.00 bytes/s
+out: 9.00 packets/s, 1200.00 bytes/s
+
+
+**** Disk activity ****
+
+read:  3.00 ops/s, 24.00 KBytes/s
+write: 6.00 ops/s, 88.00 KBytes/s
+
+
+**** Battery and backlight usage ****
+
+Battery: percent_charge: 100, time_remaining_minutes: 0, is_charging: 0

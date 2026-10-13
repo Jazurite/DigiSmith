@@ -20,7 +20,15 @@ pazurite.com {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
-	# later, DGS-324: handle /api/v1/power-metrics* { basic_auth { jack {env.NEXUS_BASIC_AUTH_HASH} }  reverse_proxy 127.0.0.1:4300 }
+	# Nexus API (DGS-324): the whole /api/* space sits behind one login; the API itself names the version.
+	handle /api/* {
+		basic_auth {
+			jack {env.NEXUS_BASIC_AUTH_HASH}
+		}
+		reverse_proxy 127.0.0.1:4300 {
+			header_up -Authorization
+		}
+	}
 	handle {
 		respond "Not found" 404
 	}

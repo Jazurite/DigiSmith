@@ -1,0 +1,314 @@
+Machine model: MacBookPro16,1
+SMC version: Unknown
+EFI version: 2103.2.0
+OS version: 25G241
+Boot arguments: 
+Boot time: Fri Oct  9 18:45:31 2026
+
+
+
+*** Sampled system activity (Tue Oct 13 17:56:14 2026 +0700) (1033.18ms elapsed) ***
+
+*** Running tasks ***
+
+Name                               ID     CPU ms/s  User%  Deadlines (<2 ms, 2-5 ms)  Wakeups (Intr, Pkg idle)
+DEAD_TASKS                         -1     564.77    54.79  9.68    0.00               10.65   4.84              
+node                               53587  276.68    23.06  53.18   0.00               66.71   6.77              
+2.1.295-8a43ebfa49b7               99582  247.45    84.66  3.87    1.93               29.97   11.60             
+node                               53596  138.51    18.02  83.15   0.00               97.65   4.83              
+kernel_task                        0      39.71     0.00   0.00    0.00               513.39  137.29            
+2.1.296                            11957  38.92     82.97  6.77    11.60              87.02   28.04             
+2.1.296                            58554  37.89     88.11  0.97    5.80               79.28   26.10             
+mega-cmd                           25464  41.37     96.26  0.00    0.00               48.34   8.70              
+herdr                              319    22.25     58.86  8.70    2.90               68.65   35.77             
+fseventsd                          101    23.41     16.16  0.00    0.00               16.44   0.97              
+powermetrics                       60099  22.63     16.24  0.00    0.00               0.97    0.97              
+2.1.295-8a43ebfa49b7               95762  17.33     95.10  0.00    2.90               29.97   6.77              
+tailscaled                         320    17.22     41.71  225.27  0.00               227.21  3.87              
+2.1.295                            18586  15.93     87.96  0.00    0.00               10.64   4.83              
+2.1.295                            14278  10.24     76.27  1.93    4.83               81.21   20.30             
+2.1.295-8a43ebfa49b7               73930  13.66     97.26  0.97    0.00               9.67    0.97              
+opendirectoryd                     139    11.03     49.47  0.00    0.00               0.00    0.00              
+opencode                           22183  9.17      70.82  0.97    0.00               40.61   7.73              
+notifyd                            166    9.78      64.35  0.00    0.00               0.00    0.00              
+2.1.295-8a43ebfa49b7               96397  5.24      83.14  0.00    0.00               29.01   9.67              
+2.1.293                            14926  5.23      84.84  0.97    0.00               29.01   5.80              
+logd                               96     5.22      28.80  0.00    0.00               1.93    0.97              
+launchd                            1      4.93      55.66  0.00    0.00               0.00    0.00              
+2.1.296                            38249  4.07      69.25  0.00    0.00               9.67    3.87              
+ssh                                60101  4.57      81.83  0.00    0.00               0.00    0.00              
+2.1.296                            56693  3.53      81.18  0.00    0.00               15.47   4.83              
+2.1.296                            57691  3.49      83.52  1.93    0.00               12.57   4.83              
+2.1.296                            67648  3.06      67.93  0.00    0.00               8.70    6.77              
+ClickUp Helper (Renderer)          24061  3.20      89.64  0.00    1.93               24.17   2.90              
+2.1.296                            48883  2.98      75.90  0.97    0.97               9.67    3.87              
+2.1.295-8a43ebfa49b7               12860  2.37      77.90  0.00    0.00               12.57   6.77              
+2.1.295-8a43ebfa49b7               47698  2.52      77.40  0.00    0.00               12.57   5.80              
+2.1.296                            34129  3.45      73.15  0.97    0.00               10.64   0.97              
+2.1.296                            6277   3.06      79.12  0.00    0.00               9.67    2.90              
+2.1.296                            7112   3.02      75.93  0.97    0.00               11.60   2.90              
+2.1.295                            10976  3.00      70.02  0.97    0.00               10.64   2.90              
+2.1.295                            19062  2.41      78.69  0.00    0.00               13.54   5.80              
+2.1.296                            39463  2.57      78.99  0.00    0.00               8.70    4.83              
+2.1.295                            18095  2.74      77.05  0.00    0.00               10.64   3.87              
+2.1.296                            26698  2.45      73.48  0.00    0.00               8.70    4.83              
+2.1.295                            72728  2.64      81.16  0.97    0.97               9.67    3.87              
+2.1.296                            97833  2.42      69.84  0.97    0.97               11.60   4.83              
+2.1.295-8a43ebfa49b7               68024  2.47      77.89  0.00    0.97               9.67    3.87              
+2.1.296                            93895  2.52      75.12  0.00    0.00               8.70    2.90              
+2.1.293                            14673  2.28      79.60  0.97    0.97               12.57   3.87              
+2.1.296                            40117  2.46      75.53  0.00    0.00               9.67    2.90              
+2.1.295                            11651  2.85      69.48  0.97    0.00               12.57   0.97              
+2.1.296                            14176  2.39      75.98  0.00    0.00               7.73    2.90              
+2.1.296                            37504  2.51      80.45  0.00    0.00               10.64   1.93              
+sleep                              60108  3.81      48.40  0.00    0.00               0.00    0.00              
+mDNSResponder                      246    2.08      56.70  9.67    0.00               16.44   2.90              
+2.1.295-8a43ebfa49b7               73618  1.87      72.56  0.00    0.00               8.70    3.87              
+2.1.296                            31153  2.06      70.22  0.97    0.00               9.67    2.90              
+zsh                                12678  2.50      22.43  0.00    0.00               0.00    0.00              
+2.1.295-8a43ebfa49b7               4289   1.89      83.10  0.00    0.00               9.67    2.90              
+2.1.295-8a43ebfa49b7               8996   1.89      75.21  0.00    0.00               8.70    2.90              
+2.1.296                            63481  1.83      70.95  0.97    0.00               9.67    2.90              
+2.1.295-8a43ebfa49b7               3490   1.97      75.78  0.00    0.00               7.73    1.93              
+2.1.293-370ec8bae31c               23946  1.75      77.81  0.00    0.00               7.73    2.90              
+sshd-session                       36833  2.04      39.32  0.00    0.00               0.00    0.00              
+loginwindow                        211    1.14      61.45  0.00    0.00               12.57   3.87              
+airportd                           228    1.29      53.52  0.00    0.00               2.90    1.93              
+taskgated                          321    1.27      43.79  0.00    0.00               0.00    0.00              
+mds                                126    1.21      47.08  0.00    0.00               8.70    0.00              
+runningboardd                      220    1.34      64.20  0.00    0.00               1.93    0.00              
+Safari                             24302  0.56      73.83  0.00    0.00               6.77    2.90              
+ClickUp Helper                     23638  0.81      76.40  0.00    0.00               0.97    0.97              
+com.apple.WebKit.GPU               24323  0.37      69.16  0.00    0.00               5.80    2.90              
+distnoted                          2572   0.86      86.61  0.00    0.00               0.00    0.00              
+audioclocksyncd                    291    0.83      46.38  0.00    0.00               0.00    0.00              
+distnoted                          155    0.94      56.28  0.00    0.00               0.00    0.00              
+logd_helper                        2974   0.74      9.58   0.00    0.00               0.00    0.00              
+diskarbitrationd                   129    0.73      57.15  0.00    0.00               0.00    0.00              
+caddy                              48254  0.69      44.47  14.50   0.00               14.50   0.00              
+server                             3091   0.68      47.94  21.27   0.00               21.27   0.00              
+bluetoothd                         165    0.52      49.57  0.00    0.00               0.97    0.97              
+com.apple.WebKit.GPU               21311  0.60      65.88  0.00    0.00               9.67    0.00              
+Finder                             2617   0.57      42.84  0.00    0.00               0.00    0.00              
+remoted                            116    0.55      50.82  0.00    0.00               0.00    0.00              
+sshd-session                       94082  0.45      41.73  0.00    0.00               0.00    0.00              
+lockoutagent                       2667   0.24      42.84  0.00    0.00               0.97    0.97              
+sharingd                           2661   0.44      63.63  0.00    0.00               0.00    0.00              
+server                             94083  0.39      39.75  13.54   0.00               13.54   0.00              
+wifip2pd                           352    0.39      41.69  0.00    0.00               0.00    0.00              
+gamecontrolleragentd               2990   0.17      32.68  0.00    0.00               1.93    0.97              
+gamepolicyd                        24832  0.28      62.24  0.00    0.00               0.97    0.00              
+amsengagementd                     2636   0.35      34.48  0.00    0.00               0.97    0.00              
+UserEventAgent                     2589   0.27      12.89  0.00    0.00               0.00    0.00              
+watchdogd                          122    0.25      38.57  0.00    0.00               0.97    0.00              
+nsurlsessiond                      255    0.06      30.37  0.00    0.00               0.97    0.97              
+WindowServer                       206    0.20      33.53  0.97    0.00               0.97    0.00              
+configd                            109    0.16      21.44  0.00    0.00               0.00    0.00              
+locationd                          146    0.20      41.68  0.00    0.00               1.93    0.00              
+distnoted                          277    0.16      39.78  0.00    0.00               0.00    0.00              
+ClickUp Helper                     23640  0.16      62.22  0.00    0.00               0.00    0.00              
+PerfPowerServices                  60734  0.18      58.67  0.00    0.00               0.97    0.00              
+distnoted                          252    0.14      27.59  0.00    0.00               0.00    0.00              
+syslogd                            133    0.16      26.04  0.00    0.00               0.97    0.00              
+distnoted                          268    0.12      28.08  0.00    0.00               0.00    0.00              
+distnoted                          324    0.12      29.45  0.00    0.00               0.00    0.00              
+distnoted                          345    0.11      29.14  0.00    0.00               0.00    0.00              
+sandboxd                           167    0.11      23.96  0.00    0.00               0.97    0.00              
+distnoted                          2895   0.11      29.83  0.00    0.00               0.00    0.00              
+distnoted                          365    0.11      28.72  0.00    0.00               0.00    0.00              
+distnoted                          7129   0.11      28.98  0.00    0.00               0.00    0.00              
+distnoted                          325    0.11      24.10  0.00    0.00               0.00    0.00              
+distnoted                          24866  0.10      29.90  0.00    0.00               0.00    0.00              
+distnoted                          383    0.09      29.69  0.00    0.00               0.00    0.00              
+distnoted                          368    0.09      28.04  0.00    0.00               0.00    0.00              
+distnoted                          2547   0.08      29.67  0.00    0.00               0.00    0.00              
+distnoted                          74848  0.08      29.21  0.00    0.00               0.00    0.00              
+distnoted                          2986   0.08      32.39  0.00    0.00               0.00    0.00              
+nsurlsessiond                      2652   0.10      27.53  0.00    0.00               0.97    0.00              
+distnoted                          1423   0.08      30.23  0.00    0.00               0.00    0.00              
+distnoted                          3031   0.08      29.67  0.00    0.00               0.00    0.00              
+mDNSResponderHelper                256    0.05      42.61  0.00    0.00               0.97    0.00              
+trustd                             229    0.05      34.33  0.00    0.00               0.97    0.00              
+com.apple.WebKit.WebContent        24426  0.05      80.79  0.00    0.00               0.97    0.00              
+UVCAssistant                       333    0.04      30.99  0.00    0.00               0.97    0.00              
+ALL_TASKS                          -2     1699.61   53.36  468.46  36.78              1958.03 463.62            
+
+
+**** Battery and backlight usage ****
+
+Battery: percent_charge: 6821
+Backlight level: 613 (range 0-1024)
+
+
+**** Network activity ****
+
+out: 263.26 packets/s, 62526.26 bytes/s
+in:  301.01 packets/s, 32042.76 bytes/s
+
+
+**** Disk activity ****
+
+read: 4.84 ops/s 47.57 KBytes/s
+write: 8.71 ops/s 79.29 KBytes/s
+
+****  Interrupt distribution ****
+
+CPU 0:
+	Vector 0x46(SMC): 19.36 interrupts/sec
+	Vector 0x77(ANS2): 12.58 interrupts/sec
+	Vector 0x7c(ARPT): 227.45 interrupts/sec
+	Vector 0x8c(IOBC): 66.78 interrupts/sec
+	Vector 0xdd(TMR): 809.15 interrupts/sec
+	Vector 0xde(IPI): 752.05 interrupts/sec
+	Vector 0xdf(PMI): 0.97 interrupts/sec
+CPU 1:
+	Vector 0xdd(TMR): 33.88 interrupts/sec
+	Vector 0xde(IPI): 937.88 interrupts/sec
+CPU 2:
+	Vector 0xdd(TMR): 503.30 interrupts/sec
+	Vector 0xde(IPI): 645.58 interrupts/sec
+CPU 3:
+	Vector 0xdd(TMR): 34.84 interrupts/sec
+	Vector 0xde(IPI): 650.42 interrupts/sec
+CPU 4:
+	Vector 0xdd(TMR): 519.75 interrupts/sec
+	Vector 0xde(IPI): 602.02 interrupts/sec
+CPU 5:
+	Vector 0xdd(TMR): 24.20 interrupts/sec
+	Vector 0xde(IPI): 453.94 interrupts/sec
+CPU 6:
+	Vector 0xdd(TMR): 516.85 interrupts/sec
+	Vector 0xde(IPI): 587.51 interrupts/sec
+	Vector 0xdf(PMI): 0.97 interrupts/sec
+CPU 7:
+	Vector 0xdd(TMR): 24.20 interrupts/sec
+	Vector 0xde(IPI): 394.90 interrupts/sec
+CPU 8:
+	Vector 0xdd(TMR): 407.48 interrupts/sec
+	Vector 0xde(IPI): 517.82 interrupts/sec
+CPU 9:
+	Vector 0xdd(TMR): 31.94 interrupts/sec
+	Vector 0xde(IPI): 373.60 interrupts/sec
+CPU 10:
+	Vector 0xdd(TMR): 385.22 interrupts/sec
+	Vector 0xde(IPI): 479.10 interrupts/sec
+CPU 11:
+	Vector 0xdd(TMR): 22.26 interrupts/sec
+	Vector 0xde(IPI): 386.19 interrupts/sec
+
+
+
+**** Processor usage ****
+
+Intel energy model derived package power (CPUs+GT+SA): 8.97W
+
+LLC flushed residency: 30.9%
+
+System Average frequency as fraction of nominal: 110.23% (2865.93 Mhz)
+Package 0 C-state residency: 31.67% (C2: 4.96% C3: 0.06% C6: 1.79% C7: 24.86% C8: 0.00% C9: 0.00% C10: 0.00% )
+CPU/GPU Overlap: 0.00%
+Cores Active: 62.73%
+GPU Active: 0.00%
+Avg Num of Cores Active: 1.49
+
+Core 0 C-state residency: 56.10% (C3: 0.65% C6: 0.00% C7: 55.45% )
+
+CPU 0 duty cycles/s: active/idle [< 16 us: 794.63/735.59] [< 32 us: 154.86/163.57] [< 64 us: 148.09/218.74] [< 128 us: 190.67/145.18] [< 256 us: 167.44/73.56] [< 512 us: 96.79/58.07] [< 1024 us: 42.59/69.69] [< 2048 us: 23.23/61.94] [< 4096 us: 14.52/93.88] [< 8192 us: 10.65/26.13] [< 16384 us: 2.90/1.94] [< 32768 us: 0.97/0.00] 
+CPU Average frequency as fraction of nominal: 108.42% (2818.85 Mhz)
+
+CPU 1 duty cycles/s: active/idle [< 16 us: 2699.43/1219.53] [< 32 us: 137.44/605.90] [< 64 us: 110.34/428.77] [< 128 us: 71.62/293.27] [< 256 us: 31.94/142.28] [< 512 us: 11.61/90.01] [< 1024 us: 6.78/77.43] [< 2048 us: 0.00/67.75] [< 4096 us: 0.00/81.30] [< 8192 us: 0.00/51.30] [< 16384 us: 0.00/8.71] [< 32768 us: 0.00/2.90] 
+CPU Average frequency as fraction of nominal: 110.10% (2862.59 Mhz)
+
+Core 1 C-state residency: 65.81% (C3: 0.59% C6: 0.00% C7: 65.22% )
+
+CPU 2 duty cycles/s: active/idle [< 16 us: 1265.99/1230.18] [< 32 us: 312.63/103.56] [< 64 us: 172.28/232.29] [< 128 us: 164.54/152.93] [< 256 us: 120.99/118.08] [< 512 us: 84.21/72.59] [< 1024 us: 30.00/58.07] [< 2048 us: 11.61/79.37] [< 4096 us: 10.65/98.72] [< 8192 us: 3.87/32.91] [< 16384 us: 4.84/2.90] [< 32768 us: 0.97/0.00] 
+CPU Average frequency as fraction of nominal: 108.69% (2825.90 Mhz)
+
+CPU 3 duty cycles/s: active/idle [< 16 us: 3074.00/1346.33] [< 32 us: 84.21/688.17] [< 64 us: 102.60/476.20] [< 128 us: 60.98/301.01] [< 256 us: 33.88/160.67] [< 512 us: 13.55/112.27] [< 1024 us: 5.81/60.98] [< 2048 us: 0.00/79.37] [< 4096 us: 0.00/86.14] [< 8192 us: 0.00/53.23] [< 16384 us: 0.00/10.65] [< 32768 us: 0.00/0.00] 
+CPU Average frequency as fraction of nominal: 110.36% (2869.46 Mhz)
+
+Core 2 C-state residency: 69.32% (C3: 2.07% C6: 0.00% C7: 67.25% )
+
+CPU 4 duty cycles/s: active/idle [< 16 us: 1079.19/934.98] [< 32 us: 185.83/112.27] [< 64 us: 179.06/244.87] [< 128 us: 181.96/156.80] [< 256 us: 124.86/74.53] [< 512 us: 69.69/69.69] [< 1024 us: 19.36/58.07] [< 2048 us: 12.58/77.43] [< 4096 us: 7.74/90.01] [< 8192 us: 5.81/43.55] [< 16384 us: 2.90/5.81] [< 32768 us: 0.00/0.00] 
+CPU Average frequency as fraction of nominal: 108.49% (2820.83 Mhz)
+
+CPU 5 duty cycles/s: active/idle [< 16 us: 3578.27/1676.37] [< 32 us: 60.01/678.49] [< 64 us: 87.11/562.34] [< 128 us: 54.20/321.34] [< 256 us: 34.84/159.70] [< 512 us: 10.65/113.24] [< 1024 us: 3.87/71.62] [< 2048 us: 0.00/94.85] [< 4096 us: 0.00/91.95] [< 8192 us: 0.00/51.30] [< 16384 us: 0.00/7.74] [< 32768 us: 0.00/0.00] 
+CPU Average frequency as fraction of nominal: 110.52% (2873.40 Mhz)
+
+Core 3 C-state residency: 70.57% (C3: 1.02% C6: 0.00% C7: 69.55% )
+
+CPU 6 duty cycles/s: active/idle [< 16 us: 987.24/838.19] [< 32 us: 219.71/130.66] [< 64 us: 150.99/227.45] [< 128 us: 144.21/131.63] [< 256 us: 97.76/55.17] [< 512 us: 53.23/49.36] [< 1024 us: 16.45/53.23] [< 2048 us: 14.52/76.46] [< 4096 us: 7.74/79.37] [< 8192 us: 4.84/49.36] [< 16384 us: 1.94/6.78] [< 32768 us: 0.97/0.97] 
+CPU Average frequency as fraction of nominal: 109.61% (2849.85 Mhz)
+
+CPU 7 duty cycles/s: active/idle [< 16 us: 1530.22/579.76] [< 32 us: 48.39/259.39] [< 64 us: 64.85/264.23] [< 128 us: 53.23/225.52] [< 256 us: 33.88/145.18] [< 512 us: 8.71/58.07] [< 1024 us: 3.87/46.46] [< 2048 us: 0.00/43.55] [< 4096 us: 0.00/48.39] [< 8192 us: 0.00/48.39] [< 16384 us: 0.00/17.42] [< 32768 us: 0.00/6.78] 
+CPU Average frequency as fraction of nominal: 108.81% (2828.97 Mhz)
+
+Core 4 C-state residency: 70.64% (C3: 1.10% C6: 0.00% C7: 69.54% )
+
+CPU 8 duty cycles/s: active/idle [< 16 us: 685.26/584.60] [< 32 us: 142.28/49.36] [< 64 us: 160.67/182.93] [< 128 us: 123.89/136.47] [< 256 us: 86.14/62.91] [< 512 us: 41.62/48.39] [< 1024 us: 21.29/55.17] [< 2048 us: 13.55/48.39] [< 4096 us: 4.84/57.11] [< 8192 us: 3.87/50.33] [< 16384 us: 6.78/11.61] [< 32768 us: 0.00/2.90] 
+CPU Average frequency as fraction of nominal: 113.02% (2938.64 Mhz)
+
+CPU 9 duty cycles/s: active/idle [< 16 us: 2188.39/883.68] [< 32 us: 44.52/446.19] [< 64 us: 62.91/404.58] [< 128 us: 50.33/225.52] [< 256 us: 30.00/128.73] [< 512 us: 11.61/66.78] [< 1024 us: 3.87/60.98] [< 2048 us: 0.00/47.43] [< 4096 us: 0.00/57.11] [< 8192 us: 0.00/47.43] [< 16384 us: 0.00/16.45] [< 32768 us: 0.00/6.78] 
+CPU Average frequency as fraction of nominal: 108.85% (2830.17 Mhz)
+
+Core 5 C-state residency: 72.03% (C3: 0.02% C6: 0.00% C7: 72.00% )
+
+CPU 10 duty cycles/s: active/idle [< 16 us: 741.40/578.79] [< 32 us: 106.47/72.59] [< 64 us: 127.76/170.35] [< 128 us: 114.21/124.86] [< 256 us: 72.59/62.91] [< 512 us: 38.72/37.75] [< 1024 us: 14.52/43.55] [< 2048 us: 13.55/42.59] [< 4096 us: 8.71/44.52] [< 8192 us: 5.81/48.39] [< 16384 us: 0.97/18.39] [< 32768 us: 1.94/1.94] 
+CPU Average frequency as fraction of nominal: 114.99% (2989.64 Mhz)
+
+CPU 11 duty cycles/s: active/idle [< 16 us: 1820.59/881.74] [< 32 us: 50.33/331.98] [< 64 us: 58.07/295.20] [< 128 us: 49.36/204.22] [< 256 us: 24.20/93.88] [< 512 us: 8.71/37.75] [< 1024 us: 2.90/36.78] [< 2048 us: 0.97/25.16] [< 4096 us: 0.00/37.75] [< 8192 us: 0.00/37.75] [< 16384 us: 0.00/21.29] [< 32768 us: 0.00/10.65] 
+CPU Average frequency as fraction of nominal: 111.17% (2890.30 Mhz)
+
+**** GPU usage ****
+
+GPU 0 name IntelIG
+GPU 0 C-state residency: 100.05% (0.00%, 100.05%)
+GPU 0 P-state residency: 1150MHz: 0.00%, 1100MHz: 0.00%, 1050MHz: 0.00%, 1000MHz: 0.00%, 950MHz: 0.00%, 900MHz: 0.00%, 850MHz: 0.00%, 800MHz: 0.00%, 750MHz: 0.00%, 700MHz: 0.00%, 650MHz: 0.00%, 600MHz: 0.00%, 550MHz: 0.00%, 500MHz: 0.00%, 450MHz: 0.00%, 400MHz: 0.00%, 350MHz: 0.00%
+GPU 0 average active frequency as fraction of nominal (350.00Mhz): 0.00% (0.00Mhz)
+GPU 0 HW average active frequency   : 0.00%
+GPU 0 GPU Busy                      : 0.00%
+GPU 0 DC6 Residency                 : 0.00%
+GPU 0 [PSR] GPU + TCON are Off      : 0.00%
+GPU 0 [PSR] Only GPU is On          : 100.00%
+GPU 0 [PSR] Only TCON is On         : 0.00%
+GPU 0 [PSR] GPU + TCON are On       : 0.00%
+GPU 0 [PSR] StateMachine Bypass     : 100.00%
+GPU 0 [PSR] StateMachine FIFO       : 0.00%
+GPU 0 [PSR] StateMachine Others     : 0.00%
+GPU 0 DPB Strong On                 : 0.00%
+GPU 0 DPB Weak On                   : 0.00%
+GPU 0 PPFM on                       : 0.00%
+GPU 0 Throttle High Priority(%): 0
+GPU 0 Throttle NormalHi Priority(%): 0
+GPU 0 Throttle Normal Priority(%): 0
+GPU 0 Throttle Low Priority(%): 0
+GPU 0 Slice switch                  : 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Flip: 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Register: 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Gamma: 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Interrupt: 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Cursor: 0 (0.00/second)
+GPU 0 DC6 Exit Reason - Render: 0 (0.00/second)
+GPU 0 FB Test Case 0
+
+**** AGPM Stats ****
+
+Accelerator Type: IntelAccelerator
+Plimit: 0.00 (GPU Frequency headroom limited on average by 0 MHz)
+
+Accelerator Type: AMDRadeonX6000_AMDNavi14GraphicsAccelerator
+Plimit: 0.00 (GPU Frequency headroom N/A)
+
+
+
+**** SMC sensors ****
+
+CPU Thermal level: 0
+GPU Thermal level: 0
+IO Thermal level: 0
+Fan: 1843.65 rpm
+CPU die temperature: 59.07 C
+GPU die temperature: 48.00 C
+CPU Plimit: 0.00
+GPU Plimit (Int): 0.00 
+Number of prochots: 0
