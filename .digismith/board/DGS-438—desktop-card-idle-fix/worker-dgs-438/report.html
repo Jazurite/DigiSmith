@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-438 desktop card and idle catch-up — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-438 desktop card and idle catch-up — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-438</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>A Claude Desktop Maestro card now says <code>runs_on: desktop</code>. The idle catch-up ignores messages that did not come from Jack, and it asks for a catch-up only when Jack has been away from this session for 30 minutes and the project changed since the last catch-up (the repo head moved or the conductor state block was updated). It no longer reads other sessions' activity and never repeats an unchanged catch-up.</p>
+</section>
+<h2>What was built</h2>
+<ul>
+<li><code>scripts/identity.ts</code>: <code>CLAUDE_CODE_ENTRYPOINT=claude-desktop</code> wins over an inherited <code>SSH_CONNECTION</code>.</li>
+<li><code>scripts/session-cards/prompt-identity.ts</code>: header comment corrected; fallback kept.</li>
+<li><code>scripts/session-cards/prompt-kind.ts</code>: <code>isHarnessNotice</code> by known wrapper only; an empty prompt is a real prompt.</li>
+<li><code>scripts/conductor/idle-check.ts</code> and <code>idle-stamp.ts</code>: per-session stamp in the depot (last real Jack prompt, head and <code>Updated:</code> at the last catch-up); <code>IDLE_MIN</code> = 30.</li>
+</ul>
+<h2>Verification</h2>
+<p>Tests first for each part; full suite 148 files, 2104 tests pass. An independent Claude whole-branch review found no bug in the trigger path; its one verified finding (empty prompt treated as a notice) is fixed.</p>
+</body>
+</html>
