@@ -19,25 +19,30 @@ export const RUNBOOKS = ["workbox.md", "workbox-macos.md"];
 export type SwitchRecord = { old: string; copy: string; at: string; bytes: number };
 export type Switches = Record<string, SwitchRecord>;
 
-export function switchesFile(project: string, env: NodeJS.ProcessEnv = process.env): string {
-  return path.join(sessionsRoot(project, env), "switches.json");
+// One record file per key (<depot>/sessions/<project>/switches/<key>.json): no shared read-modify-write,
+// and a second run for the same key cannot claim it twice (the record is created with flag wx).
+export function switchesDir(project: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(sessionsRoot(project, env), "switches");
 }
 
 export function readSwitches(project: string, env: NodeJS.ProcessEnv = process.env): Switches {
+  const dir = switchesDir(project, env);
+  const out: Switches = Object.create(null);
+  let names: string[];
   try {
-    return JSON.parse(fs.readFileSync(switchesFile(project, env), "utf8")) as Switches;
+    names = fs.readdirSync(dir).filter((n) => n.endsWith(".json") && !n.startsWith("."));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return out;
     throw err;
   }
+  for (const name of names.sort()) out[name.slice(0, -".json".length)] = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")) as SwitchRecord;
+  return out;
 }
 
-function writeSwitches(project: string, switches: Switches, env: NodeJS.ProcessEnv): void {
-  const file = switchesFile(project, env);
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(tmp, `${JSON.stringify(switches, null, 2)}\n`, { flag: "wx" });
-  fs.renameSync(tmp, file);
+function writeSwitch(project: string, key: string, record: SwitchRecord, env: NodeJS.ProcessEnv): void {
+  const dir = switchesDir(project, env);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `${key}.json`), `${JSON.stringify(record, null, 2)}\n`, { flag: "wx" });
 }
 
 // Old and new location of a note (a session title) or a runbook (a file name).
@@ -56,31 +61,48 @@ export function switchNote(mainRoot: string, key: string, opts: SwitchOpts = {})
   const project = projectName(mainRoot);
   const { old, copy } = noteTarget(mainRoot, key, env);
   const recorded = readSwitches(project, env)[key];
-  if (recorded) throw new Error(`${key} already switched at ${recorded.at}`);
+  if (recorded !== undefined) throw new Error(`${key} already switched at ${recorded.at}`);
   if (!fs.existsSync(old)) throw new Error(`no old note at ${old}`);
   if (fs.existsSync(copy)) throw new Error(`${copy} already exists; this command never overwrites it`);
   const at = (opts.now ?? (() => new Date()))().toISOString();
   const data = fs.readFileSync(old);
   const mtime = fs.statSync(old).mtimeMs;
+  // The copy is built under a hidden temp name and renamed into place only after it is verified, so a
+  // failed or interrupted run never leaves a half-written or stale file where resolveNote looks.
   fs.mkdirSync(path.dirname(copy), { recursive: true });
-  fs.writeFileSync(copy, data, { flag: "wx" });
+  const tmp = path.join(path.dirname(copy), `.${path.basename(copy)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`);
+  fs.writeFileSync(tmp, data, { flag: "wx" });
   opts.afterCopy?.();
-  if (!fs.readFileSync(copy).equals(data)) throw new Error(`the copy differs from what was read: ${copy}`);
+  if (!fs.readFileSync(tmp).equals(data)) throw new Error(`the copy differs from what was read; unfinished file ${tmp} (not the note)`);
   if (!fs.readFileSync(old).equals(data) || fs.statSync(old).mtimeMs !== mtime) {
-    throw new Error(`${old} changed during the copy: pause the owner, then move the unrecorded copy ${copy} aside by hand (needs Jack) and rerun`);
+    throw new Error(`${old} changed during the copy: pause the owner and rerun; unfinished file ${tmp} is not the note (remove needs Jack)`);
   }
+  if (fs.existsSync(copy)) throw new Error(`${copy} appeared during the copy; unfinished file ${tmp} (not the note)`);
+  fs.renameSync(tmp, copy);
   const record: SwitchRecord = { old, copy, at, bytes: data.length };
-  const all = readSwitches(project, env);
-  all[key] = record;
-  writeSwitches(project, all, env);
+  writeSwitch(project, key, record, env);
   return record;
 }
 
-function rewriteState(file: string, from: string[], to: string): boolean {
+function canon(file: string): string {
+  try {
+    return fs.realpathSync.native(file);
+  } catch {
+    return path.resolve(file);
+  }
+}
+
+// `state:` value as YAML would give it: no trailing comment, no surrounding quotes.
+function stateValue(raw: string): string {
+  return raw.replace(/\s+#.*$/, "").trim().replace(/^(["'])(.*)\1$/, "$2");
+}
+
+function rewriteState(file: string, mainRoot: string, old: string, to: string): boolean {
   const text = fs.readFileSync(file, "utf8");
   let changed = false;
-  const next = text.replace(/^state:[ \t]*(.*)$/m, (line, value: string) => {
-    if (!from.includes(value.trim())) return line;
+  const next = text.replace(/^state:[ \t]*(.*)$/m, (line, raw: string) => {
+    const value = stateValue(raw);
+    if (value === "" || canon(path.resolve(mainRoot, value)) !== canon(old)) return line;
     changed = true;
     return `state: ${to}`;
   });
@@ -109,11 +131,10 @@ export function repointState(
   const project = projectName(mainRoot);
   const record = readSwitches(project, env)[key];
   if (!record) throw new Error(`${key} not switched yet: run the switch step first`);
-  const from = [record.old, path.relative(mainRoot, record.old)];
   const cards = ymlFiles(cardsDir(project, env)).filter(
-    (f) => /^status:[ \t]*open[ \t]*$/m.test(fs.readFileSync(f, "utf8")) && rewriteState(f, from, record.copy),
+    (f) => /^status:[ \t]*open[ \t]*$/m.test(fs.readFileSync(f, "utf8")) && rewriteState(f, mainRoot, record.old, record.copy),
   );
-  const identities = opts.identities ? ymlFiles(identitiesDir(env)).filter((f) => rewriteState(f, from, record.copy)) : [];
+  const identities = opts.identities ? ymlFiles(identitiesDir(env)).filter((f) => rewriteState(f, mainRoot, record.old, record.copy)) : [];
   return { cards, identities };
 }
 

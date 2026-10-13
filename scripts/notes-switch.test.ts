@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { switchNote, repointState, readSwitches, switchesFile } from "./notes-switch.ts";
+import { resolveNote } from "./session-path.ts";
+import { switchNote, repointState, readSwitches, switchesDir } from "./notes-switch.ts";
 
 let tmp: string, main: string, env: NodeJS.ProcessEnv, depot: string;
 const put = (f: string, t: string) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, t); };
@@ -54,6 +55,25 @@ describe("switchNote", () => {
     put(old("Nexus"), "a");
     expect(() => switchNote(main, "Nexus", { env, now: () => NOW, afterCopy: () => fs.appendFileSync(old("Nexus"), "late") })).toThrow(/changed during the copy/);
     expect(readSwitches("Proj", env)["Nexus"]).toBeUndefined();
+    // the live path stays empty, so the skill still sees "old" and never writes a half copy
+    expect(fs.existsSync(copy("Nexus"))).toBe(false);
+    expect(resolveNote(main, "Nexus", env).source).toBe("old");
+  });
+
+  it("keeps one record file per key: two switches never drop each other", () => {
+    put(old("Alpha"), "a");
+    put(old("Beta"), "b");
+    switchNote(main, "Alpha", { env, now: () => NOW });
+    switchNote(main, "Beta", { env, now: () => NOW });
+    expect(Object.keys(readSwitches("Proj", env)).sort()).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("can switch a title like __proto__ or constructor", () => {
+    put(old("__proto__"), "a");
+    put(old("constructor"), "c");
+    switchNote(main, "__proto__", { env, now: () => NOW });
+    switchNote(main, "constructor", { env, now: () => NOW });
+    expect(Object.keys(readSwitches("Proj", env)).sort()).toEqual(["__proto__", "constructor"]);
   });
 
   it("refuses an unsafe title and a missing old note", () => {
@@ -90,6 +110,18 @@ describe("repointState", () => {
     expect(fs.readFileSync(archived, "utf8")).toContain(old("Scheduling"));
   });
 
+  it("matches a quoted value, a trailing comment and a symlinked spelling of the old path", () => {
+    put(old("Scheduling"), "a");
+    switchNote(main, "Scheduling", { env, now: () => NOW });
+    const link = path.join(tmp, "link");
+    fs.symlinkSync(main, link);
+    const quoted = card("m--q.yml", `"${old("Scheduling")}" # mine`);
+    const viaLink = card("m--l.yml", path.join(link, ".digismith/sessions/Scheduling/note.md"));
+    const dot = card("m--d.yml", "./.digismith/sessions/Scheduling/note.md");
+    expect(repointState(main, "Scheduling", { env }).cards.sort()).toEqual([quoted, viaLink, dot].sort());
+    expect(fs.readFileSync(quoted, "utf8")).toContain(`state: ${copy("Scheduling")}\n`);
+  });
+
   it("matches a card whose state is relative to the main checkout", () => {
     put(old("Scheduling"), "a");
     switchNote(main, "Scheduling", { env, now: () => NOW });
@@ -113,6 +145,6 @@ describe("repointState", () => {
     card("m--s.yml", old("Scheduling"));
     repointState(main, "Scheduling", { env });
     expect(repointState(main, "Scheduling", { env }).cards).toEqual([]);
-    expect(fs.existsSync(switchesFile("Proj", env))).toBe(true);
+    expect(fs.readdirSync(switchesDir("Proj", env))).toEqual(["Scheduling.json"]);
   });
 });

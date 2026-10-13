@@ -86,3 +86,6 @@ Original questions:
 ## 8. Order of work
 
 1. Plan checkpoint 1 (this file). 2. TDD for session-path, session-init, handoff list. 3. Skills text. 4. `notes-drift.ts`. 5. Report.md + report.html (`<section id="summary">`), committed with plan.md by named paths. 6. Review, fixes. 7. On "go: merge": hooks 01 bump, 02 `claude plugin update digismith@jazurite`, 03 depot history; push; remove worktree and branch. 8. Per-owner copy and switch (first use); ticket stays open for the conductor to set done.
+
+## 9. Round 2 (Scheduling Maestro, Jack's rule)
+Drift uses a recorded switch time (`switches/<key>.json`, written by `scripts/notes-switch.ts` at the copy); `maestro-path` returns `{source, path, writePath}`; one repeatable command per owner: `notes-switch.ts <key>` then, after the owner's "switch now", `notes-switch.ts <key> --repoint`. First owner: Scheduling.
