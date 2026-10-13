@@ -14,6 +14,14 @@ export interface IdleDeps {
   conductorFor(card: CardRow): string | undefined;
 }
 
+/** 422's convention: '<domain lowercased>-conductor', overridable by DIGISMITH_CONDUCTOR; unknown = undefined (never guess). */
+export function defaultConductorFor(card: CardRow, env: NodeJS.ProcessEnv = process.env): string | undefined {
+  if (env.DIGISMITH_CONDUCTOR) return env.DIGISMITH_CONDUCTOR;
+  return card.domain ? `${card.domain.toLowerCase()}-conductor` : undefined;
+}
+
+// Values printed below are fixed text plus card values that passed the charset check (isSafeName),
+// quoted as data. At rebase this check also calls 417's validateCard (secret-like and charset rules).
 export function idleCheck(event: { session_id?: string }, deps: IdleDeps): string | undefined {
   try {
     if (!event.session_id) return undefined;
@@ -28,7 +36,7 @@ export function idleCheck(event: { session_id?: string }, deps: IdleDeps): strin
       IDLE_CONTEXT_MARKER,
       "Another session of this Maestro identity has been active since this one last was.",
       "Before you answer Jack's message, run:",
-      `node --experimental-strip-types scripts/conductor/catch-up-cli.ts --maestro ${own.id} --session ${own.session} --conductor ${conductor} --project ${own.domain}`,
+      `node --experimental-strip-types scripts/conductor/catch-up-cli.ts --maestro '${own.id}' --session '${own.session}' --conductor '${conductor}' --project '${own.domain}'`,
       "Give its output first, unchanged, then answer Jack's message.",
     ].join("\n");
   } catch {

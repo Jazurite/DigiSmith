@@ -43,3 +43,18 @@ describe("idleCheck unsafe card values (review)", () => {
     expect(idleCheck({ session_id: "s-me" }, { ...mk([row({}), row({ session: "s-b", last_seen: "2026-10-13T12:00+07:00" })]), conductorFor: () => "../x" })).toBeUndefined();
   });
 });
+
+import { defaultConductorFor } from "./idle-check.ts";
+describe("defaultConductorFor (422 convention)", () => {
+  it("is '<domain lowercased>-conductor', or the env override, else undefined", () => {
+    expect(defaultConductorFor(row({ domain: "DigiSmith" }), {})).toBe("digismith-conductor");
+    expect(defaultConductorFor(row({}), { DIGISMITH_CONDUCTOR: "other-conductor" })).toBe("other-conductor");
+    expect(defaultConductorFor(row({ domain: "" }), {})).toBeUndefined();
+  });
+});
+describe("idleCheck prints values as quoted data", () => {
+  it("quotes id, session, conductor and project", () => {
+    const out = idleCheck({ session_id: "s-me" }, mk([row({}), row({ session: "s-b", last_seen: "2026-10-13T12:00+07:00" })]));
+    expect(out).toContain("--maestro 'm1' --session 's-me' --conductor 'digismith-conductor' --project 'DigiSmith'");
+  });
+});
