@@ -18,7 +18,7 @@ export interface Verdict { status: VerdictStatus; summary: string; reasons: stri
 | throttling | `thermal.pressure` | not "Nominal" (null is not judged) | powermetrics; Nominal in every fixture |
 | throttling | `thermal.cpuPlimit` or `gpuPlimit` | above 0 | 0 in every fixture |
 | throttling | `thermal.prochots` | above 0 | 0 in every reading |
-| throttling | `cpu.performanceLimitedDueTo` | text names thermal, power or prochot (`/thermal\|power\|prochot\|plimit\|PL1\|PL2/i`) | see below |
+| throttling | `cpu.performanceLimitedDueTo` | text names thermal, power or prochot (`/thermal\|power\|prochot\|plimit\|PL[12](?!\d)/i`) | see below |
 | hot | CPU or GPU die temperature | 90 C or more | Intel's maximum for the i7-9750H is 100 C; today's burst peak was 85 C, called normal |
 | hot | `thermal.fanRpm` | 4503 rpm or more | 85 % of this Mac's real fan 0 maximum, 5297.4 rpm (see below) |
 | busy | `memory.freePct` | under 15 % | ticket proposal; readings were 73 to 77 % |

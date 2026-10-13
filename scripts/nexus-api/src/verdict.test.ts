@@ -51,7 +51,7 @@ describe('computeVerdict: throttling', () => {
     expect(v.status).toBe('throttling'); expect(v.reasons).toEqual(['The chip has cut its speed to cool down (3 times).'])
     expect(computeVerdict(with_({ thermal: { prochots: 1 } })).reasons).toEqual(['The chip has cut its speed to cool down (1 time).'])
   })
-  it.each(['CPU LIMIT THERMAL', 'CPU LIMIT POWER_LIMIT', 'PROCHOT'])('performanceLimitedDueTo "%s" names a real cause', text => {
+  it.each(['CPU LIMIT THERMAL', 'CPU LIMIT POWER_LIMIT', 'PROCHOT', 'PL1_LIMIT'])('performanceLimitedDueTo "%s" names a real cause', text => {
     const v = computeVerdict(with_({ cpu: { performanceLimitedDueTo: text } }))
     expect(v.status).toBe('throttling'); expect(v.reasons).toEqual([`The chip reports a limit: ${text}.`])
   })

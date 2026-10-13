@@ -8,7 +8,7 @@ export const FAN_NEAR_MAX_RPM = 4503
 export const MEMORY_LOW_BELOW_PCT = 15
 export const IDLE_BUSY_BELOW_PCT = 20
 // "CPU LIMIT MAX_TURBO_LIMIT" is the chip's normal top speed and shows in every reading; only a thermal, power or prochot cause counts.
-const REAL_LIMIT = /thermal|power|prochot|plimit|\bPL[12]\b/i
+const REAL_LIMIT = /thermal|power|prochot|plimit|PL[12](?!\d)/i
 
 const RANK: Record<VerdictStatus, number> = { ok: 0, unknown: 1, busy: 2, hot: 3, throttling: 4 }
 const SUMMARY: Record<VerdictStatus, string> = {
