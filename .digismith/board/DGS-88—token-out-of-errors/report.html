@@ -13,7 +13,9 @@
 </ul>
 <h2>Tests</h2>
 <p>Leak tests check JSON, <code>util.inspect</code>, stack, message and <code>toJSON()</code> for the token and the Frontdoor auth, plus a network error with no response.</p>
-<p>Counts vs base: client.test.ts 46 → 48; frontdoor.test.ts 26 → 28; field-set.test.ts 30 → 30; clickup-client package 84 → 88.</p>
+<p>Counts vs base: client.test.ts 46 → 51; frontdoor.test.ts 26 → 29; field-set.test.ts 30 → 30; clickup-client package 84 → 92. Full suite: 132 files, 1860 tests, all pass.</p>
+<h2>Whole-branch review</h2>
+<p>Claude review: ready to merge, nothing critical or important. Six hardening fixes, test first: (1) only <code>isAxiosError === true</code> errors are wrapped; (2) plain Errors rethrown unchanged, tested for both clients; (3) leak test with a real <code>AxiosError</code>; (4) dead mock lines removed; (5) unserializable body (circular, BigInt) cannot replace the real error; (6) <code>field-set</code> tests build <code>ClickUpApiError</code>.</p>
 <h2>First use</h2>
 <p>After the merge: a command with a bogus token in a temporary HOME <code>.env</code> prints an error with no token.</p>
 </body></html>
