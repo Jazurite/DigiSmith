@@ -1,9 +1,12 @@
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { endHook, readStarterEnv, startHook, touchHook } from "./card-hook.ts";
 import { findCardBySession, listCards } from "./cards.ts";
+import { writeIdentity } from "../identity.ts";
+import { main } from "./hook-cli.ts";
 
 let depot: string;
 let env: NodeJS.ProcessEnv;
@@ -126,5 +129,83 @@ describe("endHook", () => {
     endHook(ev(), env, { now: T0 });
     expect(endHook(ev(), env, { now: T0 }).closed).toBe(false);
     expect(endHook(ev("zzz"), env, { now: T0 }).closed).toBe(false);
+  });
+});
+
+describe("startHook identity branch (DGS-411)", () => {
+  let repo: string;
+  const record = () => ({
+    id: "digismith-maestro", name: "DigiSmith Maestro", owner: "jack", project: "DigiSmith", folder: repo,
+    conductors: ["digismith-conductor"], role: "maestro", machine: "jack-desktop", state: path.join(repo, "note.md"), created: "2026-10-13T15:00+07:00",
+  });
+  const bare = () => ({ DIGISMITH_DEPOT_DIR: depot } as NodeJS.ProcessEnv);
+  beforeEach(() => {
+    repo = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "dgs411-repo-")));
+    execFileSync("git", ["init", "-q", repo]);
+    execFileSync("git", ["-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "i"]);
+  });
+  afterEach(() => fs.rmSync(repo, { recursive: true, force: true }));
+
+  it("writes the card from the record and returns the context line", () => {
+    writeIdentity(record(), bare());
+    const r = startHook({ session_id: "d1", cwd: repo }, bare(), { now: T0 });
+    expect(r.wrote).toBe(true);
+    expect(r.context).toContain("DigiSmith Maestro");
+    expect(r.context).toContain("session d1");
+    expect(r.context).toContain("conductor digismith-conductor");
+    expect(r.context).toContain("No other open session");
+    const c = findCardBySession("d1", "DigiSmith", bare())!.card;
+    expect(c).toMatchObject({ role: "maestro", id: "digismith-maestro", domain: "DigiSmith", status: "open" });
+  });
+  it("a cwd inside a worktree maps to the main checkout's record", () => {
+    writeIdentity(record(), bare());
+    const wt = path.join(repo, ".worktrees", "w");
+    execFileSync("git", ["-C", repo, "worktree", "add", "-q", "-b", "w", wt]);
+    expect(startHook({ session_id: "d2", cwd: wt }, bare(), { now: T0 }).wrote).toBe(true);
+  });
+  it("a second session shows the first in the context line; a resume reprints without a second card", () => {
+    writeIdentity(record(), bare());
+    startHook({ session_id: "d1", cwd: repo }, bare(), { now: T0 });
+    const second = startHook({ session_id: "d2", cwd: repo }, bare(), { now: T0 });
+    expect(second.context).toContain("Other open sessions of this identity: d1");
+    const again = startHook({ session_id: "d2", cwd: repo }, bare(), { now: T0 });
+    expect(again.wrote).toBe(false);
+    expect(again.context).toContain("session d2");
+    expect(listCards("DigiSmith", { scope: "open", env: bare() })).toHaveLength(2);
+  });
+  it("two records naming the folder: no card, a note", () => {
+    writeIdentity(record(), bare());
+    writeIdentity({ ...record(), id: "second-maestro", name: "Second" }, bare());
+    const r = startHook({ session_id: "d1", cwd: repo }, bare(), { now: T0 });
+    expect(r.wrote).toBe(false);
+    expect(r.context).toBeUndefined();
+    expect(r.reason).toContain("digismith-maestro, second-maestro");
+    expect(listCards("DigiSmith", { env: bare() })).toHaveLength(0);
+  });
+  it("inside herdr, or with DIGISMITH_ROLE set, the identity branch stays silent", () => {
+    writeIdentity(record(), bare());
+    expect(startHook({ session_id: "d1", cwd: repo }, { ...bare(), HERDR_PANE_ID: "w2:p1" }).context).toBeUndefined();
+    expect(startHook({ session_id: "d1", cwd: repo }, { ...bare(), DIGISMITH_ROLE: "bogus" }).wrote).toBe(false);
+  });
+  it("env sessions are unchanged and print no context", () => {
+    writeIdentity(record(), bare());
+    const r = startHook(ev("w1", { cwd: repo }), env, { now: T0 });
+    expect(r.wrote).toBe(true);
+    expect(r.context).toBeUndefined();
+    expect(findCardBySession("w1", "DigiSmith", env)!.card.role).toBe("worker");
+  });
+  it("no record, an unrelated folder, a broken record: no card, no throw", () => {
+    expect(startHook({ session_id: "d1", cwd: repo }, bare()).wrote).toBe(false);
+    fs.mkdirSync(path.join(depot, "identities"), { recursive: true });
+    fs.writeFileSync(path.join(depot, "identities", "bad.yml"), "garbage\n");
+    expect(startHook({ session_id: "d1", cwd: repo }, bare()).wrote).toBe(false);
+    expect(startHook({ session_id: "d1", cwd: "/nonexistent/dir" }, bare()).wrote).toBe(false);
+    expect(startHook({ session_id: "d1" }, bare()).wrote).toBe(false);
+  });
+  it("the hook CLI main prints the context and never throws", () => {
+    writeIdentity(record(), bare());
+    const out = main("start", JSON.stringify({ session_id: "d9", cwd: repo }), bare());
+    expect(out).toContain("[digismith identity]");
+    expect(main("start", JSON.stringify({ session_id: "d9", cwd: repo }), { DIGISMITH_DEPOT_DIR: "/dev/null/x" } as NodeJS.ProcessEnv)).toBe("");
   });
 });

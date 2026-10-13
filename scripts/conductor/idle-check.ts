@@ -4,6 +4,7 @@
 import { isIdle, type WindowCard } from "./catch-up-window.ts";
 import { isSafeName } from "./safe-name.ts";
 import { findCardBySession, listCards } from "../session-card.ts";
+import { readIdentity } from "../identity.ts";
 import type { CardRow } from "./catch-up-window.ts";
 
 export const IDLE_CONTEXT_MARKER = "[digismith catch-up: idle Maestro session]";
@@ -18,6 +19,8 @@ export interface IdleDeps {
 /** 422's convention: '<domain lowercased>-conductor', overridable by DIGISMITH_CONDUCTOR; unknown = undefined (never guess). */
 export function defaultConductorFor(card: CardRow, env: NodeJS.ProcessEnv = process.env): string | undefined {
   if (env.DIGISMITH_CONDUCTOR) return env.DIGISMITH_CONDUCTOR;
+  const fromRecord = readIdentity(card.id, env)?.conductors[0]; // DGS-411: a Maestro's record names its conductors
+  if (fromRecord) return fromRecord;
   return card.domain ? `${card.domain.toLowerCase()}-conductor` : undefined;
 }
 

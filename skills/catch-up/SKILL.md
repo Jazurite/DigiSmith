@@ -7,12 +7,10 @@ description: Use when Jack, in a Maestro session, wants to be brought up to date
 
 Jack's intent is "I want to catch up". Match the meaning, not a phrase: there is no keyword list.
 
-1. Find your own values. There is no card tool: read the environment and the card file.
-   - Role and identity: the env vars `DIGISMITH_ROLE` and `DIGISMITH_ID`. Role `maestro`: continue. Any other role: stop, this skill is for a Maestro. Your role is the card's role, not where you run (a Maestro session may run in herdr).
-   - Project: `DIGISMITH_PROJECT`.
-   - Session id: the `session` field of your open card, the file `~/.digismith-depot/sessions/<project>/cards/<id>--<session>.yml` (take the newest `started` if several are open).
-   - Conductor id: `DIGISMITH_CONDUCTOR`, else `<project lowercased>-conductor`.
-   - No env and no card (a Desktop Maestro before the identity work, DGS-411): ask Jack for the identity, the session id and the conductor id, or for a hand-written Maestro card.
+1. Find your own values. There is no card tool.
+   - First, the context line `[digismith identity] You are <name> (id <id>, role maestro), project <project>, session <session id>, conductor <conductor id>.` that the session-start hook printed (a Desktop or SSH Maestro session in a folder with an identity record, DGS-411). Take id, project, session id and conductor id from it. If another session of the identity is listed, that is normal: any session may give orders.
+   - Otherwise (a Maestro session started with env): role and identity are the env vars `DIGISMITH_ROLE` and `DIGISMITH_ID`; role `maestro` continues, any other role stops (this skill is for a Maestro; your role is the card's role, not where you run). Project: `DIGISMITH_PROJECT`. Session id: the `session` field of your open card, the file `~/.digismith-depot/sessions/<project>/cards/<id>--<session>.yml` (newest `started` if several are open). Conductor id: `DIGISMITH_CONDUCTOR`, else the first conductor of `~/.digismith-depot/identities/<id>.yml`, else `<project lowercased>-conductor`.
+   - No context line, no env and no card: no identity record names this folder. Ask Jack for the identity, the session id and the conductor id, or tell him to create the record with `scripts/identity-cli.ts write`.
 2. Run the command with those values:
    `node --experimental-strip-types scripts/conductor/catch-up-cli.ts --maestro <id> --session <session id> --conductor <conductor id> --project <project>`
 3. Answer with the output exactly as printed. The section order is fixed; do not summarise, reorder or add sections. A line `(from note, ...)` means a fresh catch-up of this identity already existed; say nothing about it.

@@ -58,3 +58,22 @@ describe("idleCheck prints values as quoted data", () => {
     expect(out).toContain("--maestro 'm1' --session 's-me' --conductor 'digismith-conductor' --project 'DigiSmith'");
   });
 });
+
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { writeIdentity } from "../identity.ts";
+describe("defaultConductorFor with an identity record (DGS-411)", () => {
+  it("uses the record's first conductor; env still wins", () => {
+    const depot = fs.mkdtempSync(path.join(os.tmpdir(), "dgs411-idle-"));
+    try {
+      const env = { DIGISMITH_DEPOT_DIR: depot };
+      writeIdentity({ id: "digismith-maestro", name: "DigiSmith Maestro", owner: "jack", project: "DigiSmith", folder: "/x", conductors: ["ds-boss"], role: "maestro", machine: "m", state: "/x/n.md", created: "2026-10-13T15:00+07:00" }, env);
+      expect(defaultConductorFor(row({ id: "digismith-maestro", domain: "DigiSmith" }), env)).toBe("ds-boss");
+      expect(defaultConductorFor(row({ id: "digismith-maestro", domain: "DigiSmith" }), { ...env, DIGISMITH_CONDUCTOR: "other" })).toBe("other");
+      expect(defaultConductorFor(row({ id: "no-record", domain: "DigiSmith" }), env)).toBe("digismith-conductor");
+    } finally {
+      fs.rmSync(depot, { recursive: true, force: true });
+    }
+  });
+});

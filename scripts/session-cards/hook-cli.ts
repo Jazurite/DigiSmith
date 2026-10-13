@@ -45,6 +45,7 @@ export function main(command: string | undefined, stdin: string, env: NodeJS.Pro
     if (command === "start") {
       const r = startHook(event, env);
       if (!r.wrote && r.reason && !r.reason.startsWith("card exists")) console.error(`session-cards: ${r.reason}`);
+      if (r.context) return r.context;
     } else if (command === "prompt") {
       return runPrompt(event, env);
     } else if (command === "end") {

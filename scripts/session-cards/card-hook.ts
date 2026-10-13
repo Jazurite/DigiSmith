@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { resolveMainRoot } from "../lineage-handoff.ts";
-import { ROLES, closeCard, findCardBySession, nowIso, touchCard, validateCard, writeCard } from "./cards.ts";
+import { ROLES, closeCard, findCardBySession, listCards, nowIso, touchCard, validateCard, writeCard } from "./cards.ts";
+import { cardFromIdentity, findByFolder } from "../identity.ts";
+import type { Identity } from "../identity.ts";
 import type { SessionCard } from "./cards.ts";
 
 export type HookEvent = { session_id?: string; cwd?: string; source?: string; reason?: string };
@@ -19,9 +21,49 @@ function ref(card: SessionCard) {
   return { project: card.domain, id: card.id, session: card.session };
 }
 
-export function startHook(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDeps = {}): { wrote: boolean; reason?: string } {
+export type StartResult = { wrote: boolean; reason?: string; context?: string };
+
+// DGS-411: a session with no card env, outside herdr, in a folder that one identity record names,
+// IS that Maestro. Any read or parse problem means no card (never a failed session start).
+function identityStart(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDeps): StartResult {
+  const none = { wrote: false, reason: "no valid DIGISMITH_ROLE and DIGISMITH_PROJECT: no card written" };
+  if (env.HERDR_PANE_ID || env.DIGISMITH_ROLE || !event.session_id || !event.cwd) return none;
+  let identity: Identity;
+  try {
+    const r = findByFolder(resolveMainRoot(event.cwd), env);
+    if (r.ambiguous) return { wrote: false, reason: `more than one identity record names this folder (${r.ambiguous.join(", ")}): no card written` };
+    if (!r.found) return none;
+    identity = r.found;
+  } catch {
+    return none;
+  }
+  const session = event.session_id;
+  let wrote = false;
+  if (!findCardBySession(session, identity.project, env)) {
+    const v = validateCard(cardFromIdentity(identity, session, deps.now ?? new Date(), env));
+    if (!v.ok) return { wrote: false, reason: `identity card invalid, none written: ${v.errors.join("; ")}` };
+    writeCard(v.card, env);
+    wrote = true;
+  }
+  return { wrote, context: identityContext(identity, session, env) };
+}
+
+function identityContext(identity: Identity, session: string, env: NodeJS.ProcessEnv): string {
+  const others = listCards(identity.project, { scope: "open", env })
+    .map((r) => r.card)
+    .filter((c) => c.id === identity.id && c.session !== session);
+  return [
+    `[digismith identity] You are ${identity.name} (id ${identity.id}, role maestro), project ${identity.project}, session ${session}, conductor ${identity.conductors[0]}.`,
+    others.length === 0
+      ? "No other open session of this identity."
+      : `Other open sessions of this identity: ${others.map((c) => `${c.session} (last seen ${c.last_seen})`).join(", ")}.`,
+    "Any session of this identity may give orders; shared state lives in the conductor and the depot, not in this chat.",
+  ].join("\n");
+}
+
+export function startHook(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDeps = {}): StartResult {
   const starter = readStarterEnv(env);
-  if (!starter) return { wrote: false, reason: "no valid DIGISMITH_ROLE and DIGISMITH_PROJECT: no card written" };
+  if (!starter) return identityStart(event, env, deps);
   if (!event.session_id) return { wrote: false, reason: "no session_id in the event: no card written" };
   if (findCardBySession(event.session_id, starter.project, env)) return { wrote: false, reason: "card exists for this session" };
   const t = nowIso(deps.now);
