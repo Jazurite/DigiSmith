@@ -23,7 +23,7 @@ export interface State extends CatchUpState {
   project: string;
   conductor: string;
   asOf: string;
-  note: { path: string; found: boolean; blockFound: boolean; updated?: string; stale?: boolean };
+  note: { path: string; found: boolean; blockFound: boolean; updated?: string; stale?: boolean; main?: string };
   /** newest merge on origin/main (plugin version bumps do not count) */
   newestMerge?: { time: string; hash: string };
   done: DoneRow[];
@@ -47,7 +47,7 @@ export interface CollectOpts {
 }
 
 export interface CardRef {
-  card: { name?: string; role?: string; domain?: string; id?: string; under?: string; started: string };
+  card: { name?: string; role?: string; domain?: string; id?: string; under?: string; runs_on?: string; started: string };
   path: string;
 }
 
@@ -140,6 +140,7 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
       state.health.seats = s.seats;
       if (s.ownerUnknown?.length) state.health.server = `owner unknown: ${s.ownerUnknown.join(", ")}`;
       if (s.updated) state.note.updated = s.updated;
+      state.note.main = s.main;
       warnings.push(...problems.map((p) => `note block: ${p}`));
     }
   } catch (e) {
@@ -186,9 +187,11 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
   } catch {
     // the age check is skipped; the git section above reports a failing git
   }
-  if (state.note.blockFound && state.note.updated && state.newestMerge && Date.parse(state.newestMerge.time) > Date.parse(state.note.updated)) {
+  // a recorded hash is exact (a fast-forward keeps its old commit date); without one, compare times
+  const behind = state.newestMerge && (state.note.main ? state.note.main !== state.newestMerge.hash : !!state.note.updated && Date.parse(state.newestMerge.time) > Date.parse(state.note.updated));
+  if (state.note.blockFound && behind && state.newestMerge) {
     state.note.stale = true;
-    warnings.push(`state block updated ${state.note.updated}, older than the newest merge ${state.newestMerge.time} (${state.newestMerge.hash}): run state-refresh`);
+    warnings.push(`state block updated ${state.note.updated}, older than the newest merge ${state.newestMerge.time} (${state.newestMerge.hash}; the block saw ${state.note.main ?? "no merge hash"}): run state-refresh`);
   }
 
   // herdr: server and open tabs

@@ -94,6 +94,8 @@ export interface NoteState {
   conductor?: string;
   /** the worker names the conductor passed to state-refresh; the next refresh reuses them */
   workers?: string[];
+  /** newest merge (short hash) on origin/main when the block was refreshed */
+  main?: string;
   /** panes in the conductor's workspace that no card and no --workers list assigns (computed by state-refresh) */
   ownerUnknown?: string[];
   running: RunningRow[];
@@ -176,13 +178,15 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
       const u = prefixed(line, "Updated:");
       const c = prefixed(line, "Conductor:");
       const w = prefixed(line, "Workers:");
-      if (w !== undefined) state.workers = isNone(w) ? [] : w.split(",").map((x) => x.trim()).filter(Boolean);
+      const mh = prefixed(line, "Main:");
+      if (mh !== undefined) state.main = mh;
+      else if (w !== undefined) state.workers = isNone(w) ? [] : w.split(",").map((x) => x.trim()).filter(Boolean);
       else if (u !== undefined) {
         const t = parseTime(u);
         if (t) state.updated = t;
         else problems.push(`line ${n}: Updated needs a time like 2026-10-13T14:05+07:00 (got "${u}")`);
       } else if (c !== undefined) state.conductor = c;
-      else problems.push(`line ${n}: text before the first "## " heading; only "Updated:" and "Conductor:" are allowed there`);
+      else problems.push(`line ${n}: text before the first "## " heading; only "Updated:", "Conductor:", "Workers:" and "Main:" are allowed there`);
       return;
     }
     if (section === "unknown") return;
@@ -259,6 +263,7 @@ export function renderStateBody(s: NoteState): string {
   const head = [
     s.updated ? `Updated: ${s.updated}` : "",
     s.conductor ? `Conductor: ${s.conductor}` : "",
+    s.main ? `Main: ${s.main}` : "",
     s.workers ? `Workers: ${s.workers.join(", ") || "none"}` : "",
   ].filter(Boolean);
   const seats = s.seats.map((x) => `${x.seat}: 5h ${x.fiveHourPct}%, weekly ${x.weeklyPct}%`).join("; ");

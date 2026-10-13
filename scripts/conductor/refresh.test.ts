@@ -42,7 +42,7 @@ ${extra}
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dgs462-"));
   repo = path.join(tmp, "repo");
-  fs.mkdirSync(repo);
+  fs.mkdirSync(path.join(repo, ".digismith"), { recursive: true });
   note = path.join(tmp, "note.md");
   const m = markerLines(STATE_MARKER);
   fs.writeFileSync(note, `# free\ntext\n\n${m.open}\n${BODY()}${m.close}\n\n## Session end\nResult: ok\n`);
@@ -107,7 +107,7 @@ describe("refreshState: Running", () => {
     const cards = () => [card({ name: "d3-worker", id: "w1", domain: "DigiSmith" }), card({ name: "gone-worker", id: "w2", domain: "DGS-77" }), card({ name: "alien", id: "w3", under: "someone-else" })];
     const r = await refreshState(opts({ workers: ["dgs-438"] }), deps(runner(), { listCards: cards }));
     const rows = Object.fromEntries(r.state.running.map((x) => [x.worker, x]));
-    expect(rows["d3-worker"].since).toBe("2026-10-13T10:00+07:00");
+    expect(rows["d3-worker"].since).toBe("2026-10-13T10:00:00+07:00");
     expect(rows["dgs-438"].since).toBe("2026-10-13T19:00:00+07:00");
     expect(rows["gone-worker"]).toMatchObject({ stage: "card open, no pane", key: "DGS-77" });
     expect(rows["alien"]).toBeUndefined();
@@ -199,7 +199,7 @@ describe("a stale block and a newer merge (the ticket's test)", () => {
     const stale = await collect();
     expect(stale.note.stale).toBe(true);
     expect(stale.newestMerge).toEqual({ time: "2026-10-13T18:50:27+07:00", hash: "aaa1111" }); // the version bump does not count
-    expect(stale.warnings.join("\n")).toMatch(/older than the newest merge 2026-10-13T18:50:27\+07:00 \(aaa1111\): run state-refresh/);
+    expect(stale.warnings.join("\n")).toMatch(/older than the newest merge 2026-10-13T18:50:27\+07:00 \(aaa1111; the block saw no merge hash\): run state-refresh/);
     expect(stale.running).toEqual([]);
     await refreshState(opts(), deps(runner()));
     const fresh = await collect();
@@ -223,5 +223,65 @@ describe("cli state-refresh", () => {
     expect(o.out).toMatch(/refreshed the state block/);
     expect(o.out).toMatch(/\+ dgs-462 \| DGS-462 \| working/);
     expect(block().state.workers).toEqual(["dgs-462", "dgs-438"]);
+  });
+});
+
+describe("review findings (DGS-462)", () => {
+  it("does not evaluate path or ticket markers when the repo has no .digismith folder (plugin cache), and keeps the items", async () => {
+    fs.rmSync(path.join(repo, ".digismith"), { recursive: true });
+    fs.rmSync(path.join(repo, "stray.txt"));
+    const r = await refreshState(opts(), deps(runner(), { ticketStatus: async () => "done" }));
+    expect(r.state.waiting).toHaveLength(2);
+    expect(r.state.next).toHaveLength(2);
+    expect(r.warnings.join("\n")).toMatch(/no \.digismith folder/);
+  });
+  it("refuses to write when the block changed during the refresh", async () => {
+    const slow: Runner = async (cmd, args) => {
+      if (cmd === "herdr") fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("2. Do Y", "2. Do Y\n3. added meanwhile"));
+      return runner()(cmd, args);
+    };
+    await expect(refreshState(opts(), deps(slow))).rejects.toThrow(/changed while the refresh ran/);
+    expect(fs.readFileSync(note, "utf-8")).toContain("added meanwhile");
+  });
+  it("with no workspace pinned and no conductor card it keeps Running; the conductor card's runs_on supplies the workspace", async () => {
+    await refreshState(opts(), deps(runner()));
+    const r = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner({ agents: [] })));
+    expect(r.state.running).toHaveLength(2);
+    expect(r.warnings.join()).toMatch(/no herdr workspace pinned/);
+    const cards = () => [{ card: { role: "conductor", name: "digismith-conductor", id: "c1", runs_on: "herdr w2:p1", started: "2026-10-13T10:00+07:00" }, path: "x" }];
+    const r2 = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner(), { listCards: cards }));
+    expect(r2.state.running.map((x) => x.worker)).toEqual(["dgs-462", "dgs-438"]);
+  });
+  it("writes a card time with fractions or a Z in the block's format, and a missing one as now", async () => {
+    const cards = () => [{ card: { role: "worker", name: "dgs-462", id: "a", under: "digismith-conductor", started: "2026-10-13T03:00:05.123Z" }, path: "x" }];
+    await refreshState(opts(), deps(runner(), { listCards: cards }));
+    const b = block();
+    expect(b.problems).toEqual([]);
+    expect(b.state.running.find((x) => x.worker === "dgs-462")!.since).toBe("2026-10-13T10:00:05+07:00");
+    await refreshState(opts(), deps(runner())); // and the next refresh still reads it
+  });
+  it("refuses a note that does not exist unless --create", async () => {
+    const missing = path.join(tmp, "typo", "note.md");
+    await expect(refreshState(opts({ note: missing }), deps(runner()))).rejects.toThrow(/does not exist/);
+    expect(fs.existsSync(missing)).toBe(false);
+    await refreshState(opts({ note: missing, create: true }), deps(runner()));
+    expect(fs.existsSync(missing)).toBe(true);
+  });
+  it("warns about a marker outside the first field and in Decided", async () => {
+    fs.writeFileSync(note, fs.readFileSync(note, "utf-8").replace("why: w | next step: n [", "why: w | next step: n [").replace("- Open thing | why: w | next step: n", "- Open thing | why: w | next step: n [resolves: gone stray.txt]"));
+    const r = await refreshState(opts(), deps(runner()));
+    const w = r.warnings.join("\n");
+    expect(w).toMatch(/Open thing.*not used/);
+    expect(w).toMatch(/A decision.*not used/);
+    expect(r.state.parked).toHaveLength(2);
+  });
+  it("detects a fast-forward merge with an old commit date by the recorded hash", async () => {
+    await refreshState(opts(), deps(runner())); // records Main: aaa1111
+    const collect = (git: string) => collectState({ project: "DigiSmith", conductor: "digismith-conductor", note, repoDir: repo }, { runner: runner({ git: { code: 0, stdout: git } }), now: () => NOW, env: { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") } });
+    expect((await collect(GIT)).note.stale).toBeFalsy();
+    const old = "fff9999\t2026-10-13T10:00:00+07:00\tfeat(dgs-999): merged late, committed early\n" + GIT;
+    const s = await collect(old);
+    expect(s.note.stale).toBe(true);
+    expect(s.newestMerge?.hash).toBe("fff9999");
   });
 });

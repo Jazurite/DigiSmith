@@ -41,6 +41,8 @@ export interface RefreshOpts {
   /** worker names this conductor owns; undefined = reuse the list stored in the block */
   workers?: string[];
   dryRun?: boolean;
+  /** allow creating a note that does not exist */
+  create?: boolean;
 }
 
 export interface RefreshDeps {
@@ -71,6 +73,11 @@ interface Agent {
 }
 
 const DONE_STATUS = new Set(["done", "closed", "complete", "completed"]);
+/** a card time in the block's own format (cards may carry seconds fractions or a Z) */
+function cardTime(raw?: string): string | undefined {
+  const t = raw ? Date.parse(raw) : NaN;
+  return Number.isNaN(t) ? undefined : iso7(new Date(t));
+}
 const isLead = (name: string) => /-(maestro|conductor)$/i.test(name);
 const rowText = (r: RunningRow) => `${r.worker} | ${r.key} | ${r.stage}`;
 
@@ -80,6 +87,10 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   const warnings: string[] = [];
   const notePath = resolveNotePath(opts, env);
 
+  if (!fs.existsSync(notePath) && !opts.create) {
+    throw new Error(`the note ${notePath} does not exist; check --conductor/--note, or pass --create`);
+  }
+  let blockText = "";
   let old: NoteState = { running: [], waiting: [], decided: [], parked: [], next: [], seats: [] };
   if (fs.existsSync(notePath)) {
     const text = fs.readFileSync(notePath, "utf-8");
@@ -90,17 +101,23 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
         throw new Error(`the block in ${notePath} is not valid, nothing was written:\n${parsed.problems.map((p) => `  ${p}`).join("\n")}`);
       }
       old = parsed.state;
+      blockText = block.body;
     }
   }
+  const repoOk = fs.existsSync(path.join(opts.repoDir, ".digismith"));
+  if (!repoOk) warnings.push(`${opts.repoDir} has no .digismith folder (a plugin cache or the wrong checkout?): path and ticket markers are not evaluated`);
   const workers = (opts.workers ?? old.workers ?? []).map((w) => w.toLowerCase());
 
   // git: merged keys (for [resolves: merged ...])
   const merged = new Set<string>();
+  let newestHash: string | undefined;
   let gitOk = true;
   try {
     const r = await deps.runner("git", ["log", "origin/main", "--max-count=300", "--format=%H%x09%cI%x09%s"], { cwd: opts.repoDir });
     if (r.code !== 0) throw new Error(r.stderr.trim() || `exit ${r.code}`);
     for (const row of r.stdout.split("\n")) {
+      const [h, , subj = ""] = row.split("\t");
+      if (h && !newestHash && !/^chore: bump plugin version/.test(subj)) newestHash = h.slice(0, 7);
       for (const m of row.split("\t").slice(2).join("\t").matchAll(/\bdgs-(\d+)/gi)) merged.add(`DGS-${m[1]}`);
     }
   } catch (e) {
@@ -126,12 +143,13 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   const cardOf = (name: string) => workerCards.find((c) => [c.name, c.domain, c.id].some((x) => x && String(x).toLowerCase() === name.toLowerCase()));
   const ownsCard = (c: { under?: string } | undefined) => !!c?.under && owners.has(c.under.toLowerCase());
 
+  const workspace = opts.herdrWorkspace ?? /^herdr (w\d+):/.exec(conductorCard?.runs_on ?? "")?.[1];
   try {
+    if (!workspace) throw new Error("no herdr workspace pinned (HERDR_WS or --herdr-workspace) and the conductor card names none");
     const r = await deps.runner("herdr", ["--session", "default", "agent", "list"]);
     if (r.code !== 0) throw new Error(r.stderr.trim() || `exit ${r.code}`);
     let agents = (JSON.parse(r.stdout) as { result?: { agents?: Agent[] } }).result?.agents ?? [];
-    if (opts.herdrWorkspace) agents = agents.filter((a) => a.workspace_id === opts.herdrWorkspace);
-    else warnings.push("no herdr workspace pinned (HERDR_WS or --herdr-workspace): agents of every workspace are considered");
+    agents = agents.filter((a) => a.workspace_id === workspace);
     const next: RunningRow[] = [];
     const seen = new Set<string>();
     for (const a of agents) {
@@ -146,11 +164,11 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
       seen.add(name.toLowerCase());
       const key = /DGS-\d+/i.exec(a.terminal_title_stripped ?? "")?.[0].toUpperCase() ?? /dgs-\d+/i.exec(name)?.[0].toUpperCase() ?? "-";
       const before = old.running.find((x) => x.worker.toLowerCase() === name.toLowerCase());
-      next.push({ worker: name, key, stage: a.agent_status ?? "unknown", since: card?.started ?? before?.since ?? iso7(now) });
+      next.push({ worker: name, key, stage: a.agent_status ?? "unknown", since: cardTime(card?.started) ?? before?.since ?? iso7(now) });
     }
     for (const c of workerCards) {
       if (!ownsCard(c) || [c.name, c.id].some((x) => x && seen.has(String(x).toLowerCase()))) continue;
-      next.push({ worker: c.name ?? c.id ?? "?", key: /DGS-\d+/i.exec(`${c.name} ${c.domain}`)?.[0].toUpperCase() ?? "-", stage: "card open, no pane", since: c.started });
+      next.push({ worker: c.name ?? c.id ?? "?", key: /DGS-\d+/i.exec(`${c.name} ${c.domain}`)?.[0].toUpperCase() ?? "-", stage: "card open, no pane", since: cardTime(c.started) ?? iso7(now) });
     }
     running = next;
   } catch (e) {
@@ -167,6 +185,7 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     for (const r of mk.resolvers) {
       let ok: boolean;
       try {
+        if (!repoOk && r.kind !== "merged") throw new Error("no .digismith folder in the repo");
         switch (r.kind) {
           case "gone":
           case "exists":
@@ -199,7 +218,16 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     for (const r of rows) if (!(await resolved(label, head(r)))) out.push(r);
     return out;
   };
+  const stray: [string, string][] = [
+    ...old.waiting.flatMap((r): [string, string][] => [[r.since, r.pane], [r.pane, r.pane]].map(([x]) => [x, r.question] as [string, string])),
+    ...old.parked.flatMap((r): [string, string][] => [[r.why, r.what], [r.next, r.what]]),
+    ...old.decided.map((r): [string, string] => [`${r.decision} ${r.why} ${r.allowedBy}`, r.decision]),
+  ];
+  for (const [field, owner] of stray) {
+    if (/\[resolves:/.test(field)) warnings.push(`"${stripMarkers(owner).slice(0, 50)}": a marker outside the first field (or in Decided) is not used`);
+  }
   const state: NoteState = {
+    main: newestHash ?? old.main,
     updated: iso7(now),
     conductor: old.conductor ?? opts.conductor,
     workers: opts.workers ?? old.workers,
@@ -216,6 +244,11 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   const after = new Set(state.running.map(rowText));
   const added = [...after].filter((x) => !before.has(x));
   const removed = [...before].filter((x) => !after.has(x));
+  if (!opts.dryRun) {
+    const nowText = fs.existsSync(notePath) ? fs.readFileSync(notePath, "utf-8") : "";
+    const nowBlock = extractBlock(nowText, STATE_MARKER);
+    if ((nowBlock.found ? nowBlock.body : "") !== blockText) throw new Error(`the block in ${notePath} changed while the refresh ran; nothing was written, run it again`);
+  }
   if (!opts.dryRun) writeStateBlock(notePath, renderStateBody(state), STATE_MARKER);
   return { notePath, written: !opts.dryRun, state, added, removed, dropped, warnings };
 }

@@ -15,14 +15,15 @@ node --experimental-strip-types scripts/conductor/cli.ts state-refresh --conduct
 - after you edit Waiting, Decided, Parked or Next,
 - before any catch-up (the catch-up also runs it first by itself).
 
-`--workers` is the list of worker pane names this conductor owns now. The next refresh without `--workers` reuses the stored list. A card whose `under` is this conductor also counts. A pane in neither is shown under Health as `owner unknown`, never as Running.
+`--workers` is the list of worker pane names this conductor owns now. The next refresh without `--workers` reuses the stored list. A card whose `under` is this conductor also counts. Without `HERDR_WS` the workspace comes from the conductor card's `runs_on` (`herdr w2:p1`); with neither, Running is kept as it was. A pane in neither is shown under Health as `owner unknown`, never as Running.
 
 ## What the refresh does
 
 - **Running** is rebuilt from `herdr agent list` (read only) and the open worker cards. Never kept from the old block.
 - **Waiting for Jack, Parked or failed, Next** keep every item, unless its marker says it is resolved.
 - **Decided under the mandate** and the seats are kept as they are.
-- It sets `Updated:` and writes only the block.
+- It sets `Updated:` and `Main:` (the newest merge it saw) and writes only the block. It refuses to write when the block changed while it ran, when the block is not valid, or when the note does not exist (`--create` allows a new note).
+- Path and ticket markers need a checkout with a `.digismith` folder; in a plugin cache copy they are not evaluated.
 
 ## Resolved items: `[resolves: ...]` markers
 
@@ -49,4 +50,4 @@ A bad marker, an unreadable ticket, a failed git read or a path outside the repo
 
 ## Age and the warning
 
-`state` and the catch-up show `state block updated <time>, <age> old`. When the block is older than the newest merge on origin/main (a plugin version bump does not count), they warn `older than the newest merge ... run state-refresh`.
+`state` and the catch-up show `state block updated <time>, <age> old`. When the block is older than the newest merge on origin/main (a plugin version bump does not count; the block's `Main:` hash is compared when it has one, else the commit time), they warn `older than the newest merge ... run state-refresh`.

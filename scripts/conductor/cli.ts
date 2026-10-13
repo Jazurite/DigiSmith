@@ -25,7 +25,7 @@ const USAGE = `Usage: node --experimental-strip-types scripts/conductor/cli.ts <
   state        [--project P] [--conductor C] [--note path] [--since iso] [--json]
   state-write  --from <file or -> [--project P] [--conductor C] [--note path]
   flux         <agent> | --all [--dry-run] [--log] [--json] [--project P] [--brief path] [--note path] [--wake text]
-  state-refresh [--project P] [--conductor C] [--note path] [--herdr-workspace W] [--workers a,b,c] [--dry-run]
+  state-refresh [--project P] [--conductor C] [--note path] [--herdr-workspace W] [--workers a,b,c] [--dry-run] [--create]
   consult      [--project P] [--conductor C] [--remote <ssh-target>] [--remote-repo path] [--machine <herdr label>] [--json]
 state-refresh rebuilds Running from herdr and the open cards, keeps the hand-written parts, and drops an item only when its
   marker says it is resolved, e.g. "- Waiting text [resolves: ticket DGS-411] | since ... | pane w2:p1"; markers: ticket DGS-n (ClickUp
@@ -40,6 +40,7 @@ const OPTIONS = {
   since: { type: "string" },
   json: { type: "boolean" },
   "dry-run": { type: "boolean" },
+  create: { type: "boolean" },
   workers: { type: "string" },
   repo: { type: "string" },
   from: { type: "string" },
@@ -86,7 +87,7 @@ export async function main(argv: string[], io: Io & { runner?: Runner; ticketSta
     if (command === "state-refresh") {
       const r = await refreshState(
         {
-          project, conductor, note: v.note, repoDir, dryRun: v["dry-run"],
+          project, conductor, note: v.note, repoDir, dryRun: v["dry-run"], create: v.create,
           herdrWorkspace: v["herdr-workspace"] ?? io.env.HERDR_WS,
           workers: v.workers === undefined ? undefined : v.workers.split(",").map((x) => x.trim()).filter(Boolean),
         },
