@@ -13,10 +13,24 @@ export interface StatusAdd {
 }
 
 /**
- * The PUT replaces the WHOLE set, so the body is every current status untouched plus the new one (no id),
- * placed before the closed status; orderindex is re-numbered dense from 0. No status_change_map: nothing is removed.
+ * The PUT replaces the WHOLE set, so the body is every current status untouched (all fields as read, id kept) plus the
+ * new one (no id), placed before the closed status; orderindex is re-numbered dense from 0 in the order of the read
+ * sorted by orderindex (the relative order never changes). No status_change_map: nothing is removed.
+ * Refuses what could make ClickUp lose or reorder a status: an empty set, a status without id, a missing or shared orderindex.
  */
 export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): FrontdoorStatusSetBody {
+  if (current.length === 0) throw new Error("the current status set is empty; refusing to build a set with only the new status");
+  for (const s of current) {
+    if (!s.id) throw new Error(`status "${s.status}" has no id; sent back without one ClickUp may treat it as new`);
+    if (typeof s.orderindex !== "number" || !Number.isFinite(s.orderindex)) {
+      throw new Error(`status "${s.status}" has no orderindex; its place in the set is not known`);
+    }
+  }
+  const seen = new Set<number>();
+  for (const s of current) {
+    if (seen.has(s.orderindex)) throw new Error(`two statuses have the same orderindex (${s.orderindex}); their order is not known`);
+    seen.add(s.orderindex);
+  }
   const name = add.name.trim();
   if (!name) throw new Error("--name must not be empty");
   if (!TYPES.includes(add.type)) throw new Error(`--type must be one of ${TYPES.join(", ")}`);
@@ -26,12 +40,20 @@ export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): Front
   if ((add.type === "open" || add.type === "closed") && current.some((s) => s.type === add.type)) {
     throw new Error(`the set already has a ${add.type} status; only one is kept (adding a second is not captured)`);
   }
-  const at = current.findIndex((s) => s.type === "closed");
-  const index = at === -1 ? current.length : at;
+  const sorted = [...current].sort((x, y) => x.orderindex - y.orderindex);
+  const at = sorted.findIndex((s) => s.type === "closed");
+  const index = at === -1 ? sorted.length : at;
   const created: FrontdoorStatus = { status: name, type: add.type, orderindex: 0, color: add.color };
-  const statuses = [...current.slice(0, index), created, ...current.slice(index)]
-    .map((s, i) => ({ ...s, orderindex: i }));
+  const statuses = [...sorted.slice(0, index), created, ...sorted.slice(index)].map((s, i) => ({ ...s, orderindex: i }));
   return { statuses };
+}
+
+/** Where the new status goes, for the dry run: only a done status before the closed one is seen in the capture. */
+function positionNote(current: FrontdoorStatus[], add: StatusAdd): string {
+  if (!current.some((s) => s.type === "closed")) return "position: at the end (the set has no closed status; assumed)";
+  return add.type === "done"
+    ? "position: before the closed status (as in the capture)"
+    : "position: before the closed status (assumed: the capture shows a done status there, not this type)";
 }
 
 function printSet(statuses: FrontdoorStatus[]): void {
@@ -41,18 +63,34 @@ function printSet(statuses: FrontdoorStatus[]): void {
   }
 }
 
-/** After the PUT: every previous status must still be there with the same name and type, and the new one must exist. */
-function verify(previous: FrontdoorStatus[], after: FrontdoorStatus[], add: StatusAdd): string[] {
+/**
+ * After the PUT, compared with the plan: same count + 1; every previous status (by id) with the same name, type, color and
+ * planned orderindex; exactly one new status, with the requested name, type, color and planned orderindex.
+ */
+function verify(planned: FrontdoorStatus[], previous: FrontdoorStatus[], after: FrontdoorStatus[], add: StatusAdd): string[] {
   const problems: string[] = [];
-  for (const p of previous) {
+  if (after.length !== previous.length + 1) problems.push(`COUNT is ${after.length}, expected ${previous.length + 1}`);
+  const previousIds = new Set(previous.map((p) => p.id));
+  for (const p of planned.filter((s) => s.id)) {
     const now = after.find((s) => s.id === p.id);
     if (!now) problems.push(`LOST status "${p.status}" (${p.id})`);
-    else if (now.status !== p.status || now.type !== p.type) {
-      problems.push(`CHANGED status "${p.status}" (${p.id}): now "${now.status}" type ${now.type}, was type ${p.type}`);
+    else if (now.status !== p.status || now.type !== p.type || now.color !== p.color || now.orderindex !== p.orderindex) {
+      problems.push(
+        `CHANGED status "${p.status}" (${p.id}): now "${now.status}" ${now.type} ${now.color} #${now.orderindex}, ` +
+          `planned ${p.type} ${p.color} #${p.orderindex}`
+      );
     }
   }
-  const added = after.find((s) => s.status.toLowerCase() === add.name.trim().toLowerCase() && s.type === add.type);
-  if (!added) problems.push(`the new status "${add.name}" is not in the set`);
+  const wanted = planned.find((s) => !s.id)!;
+  const fresh = after.filter((s) => !previousIds.has(s.id));
+  if (fresh.length !== 1) {
+    problems.push(`expected exactly one new status "${add.name.trim()}", found ${fresh.length}${fresh.map((s) => ` "${s.status}"`).join("")}`);
+  } else if (
+    fresh[0].status !== wanted.status || fresh[0].type !== wanted.type ||
+    fresh[0].color !== wanted.color || fresh[0].orderindex !== wanted.orderindex
+  ) {
+    problems.push(`the new status "${add.name.trim()}" is wrong: found "${fresh[0].status}" ${fresh[0].type} ${fresh[0].color} #${fresh[0].orderindex}`);
+  }
   return problems;
 }
 
@@ -72,7 +110,8 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
         if (argv.folder !== undefined || argv.list !== undefined) {
           throw new Error("--folder and --list wait for a capture of the web app call (Jack); only --space is built");
         }
-        const space = argv.space as string;
+        const space = argv.space as string | undefined;
+        if (space === undefined || !/^\d+$/.test(space)) throw new Error("--space must be the numeric space id");
         const add: StatusAdd = { name: argv.name as string, type: argv.type as string, color: argv.color as string };
         const fd = frontdoorFactory();
         const previous = await fd.getSpaceStatuses(space);
@@ -81,6 +120,7 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
         if (!argv.yes) {
           printCall("PUT", path, undefined);
           printSet(body.statuses);
+          console.log(positionNote(previous, add));
           console.log(JSON.stringify(body, null, 2));
           console.log("a real add replaces the whole status set: needs Jack's yes");
           console.log("nothing sent; add --yes to send");
@@ -88,12 +128,33 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
           return;
         }
         // The PUT replaces the whole set: keep the full previous set in the output, so a manual restore is possible.
+        const previousJson = JSON.stringify(previous, null, 2);
         console.log("previous status set (restore from this if needed):");
-        console.log(JSON.stringify(previous, null, 2));
-        await fd.putSpaceStatuses(space, body);
-        const problems = verify(previous, await fd.getSpaceStatuses(space), add);
+        console.log(previousJson);
+        try {
+          await fd.putSpaceStatuses(space, body);
+        } catch (err) {
+          const code = (err as { response?: { status?: number } }).response?.status;
+          const hint = code !== undefined && code >= 400 && code < 500 ? " (re-run to read the current set)" : "";
+          console.error(`clickup add-status: ${(err as Error).message}${hint}`);
+          process.exitCode = 1;
+          return;
+        }
+        let problems: string[];
+        try {
+          problems = verify(body.statuses, previous, await fd.getSpaceStatuses(space), add);
+        } catch (err) {
+          console.error(
+            `clickup add-status: the PUT WAS SENT, verification failed (${(err as Error).message}): ` +
+              "re-read the set with GET and compare with the previous set above"
+          );
+          process.exitCode = 1;
+          return;
+        }
         if (problems.length > 0) {
           console.error(`clickup add-status: THE STATUS SET IS NOT AS PLANNED after the PUT:\n${problems.join("\n")}`);
+          console.log("previous status set (for a manual restore):");
+          console.log(previousJson);
           process.exitCode = 1;
           return;
         }
