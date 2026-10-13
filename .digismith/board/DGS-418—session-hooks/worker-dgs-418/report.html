@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-418 session hooks, write, close and sweep cards — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-418 session hooks, write, close and sweep cards — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-418</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Plugin hooks write a session card at SessionStart, refresh it on each prompt (throttled to 60 s) and close and archive it at SessionEnd with a handoff in the state note. A read-only sweep script marks a dead card <code>lost</code>. Built on branch dgs-418, merge-ready, not merged.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul><li>Hooks in <code>hooks/hooks.json</code>: card writer first at SessionStart; one UserPromptSubmit command with a pre-prompt handler list then the heartbeat; SessionEnd. No <code>.claude/settings.json</code> change.</li><li>Fail safe: the card comes only from an env allow-list; no valid role and project, a line break in a value or an invalid card writes no card. Every hook exits 0.</li><li>Close: <code>ended</code> and <code>result</code> on the card, archived; handoff block appended at the end of the state note.</li><li>Sweep: <code>lost</code> only when the heartbeat is stale and the herdr session is gone; anything unverifiable is never marked; dry run by default; never deletes.</li><li>35 new tests with a temp depot and fake events; the card API is a stub of DGS-417's until it merges.</li></ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review. Fixed with tests: symlinked entry guard, NaN stale threshold and unparseable <code>last_seen</code>, empty or partial herdr list, line-break injection from env. Documented, not fixed: nested <code>claude -p</code> inherits the env; touch/close race and archive overwrite (DGS-417 module); <code>state</code> path not checked; <code>machine</code> ignored by the sweep.</p>
+</section>
+<section id="risks">
+<h2>Follow-ups</h2>
+<ul><li>DGS-430: OpenCode adapter (<code>session.created</code>, <code>session.idle</code>, <code>session.deleted</code> mapped to start, heartbeat, end).</li><li>DGS-431: <code>dg sessions sweep</code> wrapper.</li><li>Starters set <code>DIGISMITH_*</code> (boot script, Maestro identity); until then real sessions write no card.</li></ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>First use pending: a throwaway herdr worker with the env set writes and closes its card; a fake stale card in the real depot is swept to <code>lost</code> and archived; then DGS-418 is set done.</p>
+</section>
+</body>
+</html>
