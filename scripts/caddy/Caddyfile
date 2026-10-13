@@ -20,11 +20,8 @@ pazurite.com {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
-	# Nexus API (DGS-324): the whole /api/* space sits behind one login; the API itself names the version.
+	# Nexus API (DGS-324): the whole /api/* space goes to the API, which names the version. No login for now (tailnet only, read-only; login design: DGS-458).
 	handle /api/* {
-		basic_auth {
-			jack {env.NEXUS_BASIC_AUTH_HASH}
-		}
 		reverse_proxy 127.0.0.1:4300 {
 			header_up -Authorization
 		}

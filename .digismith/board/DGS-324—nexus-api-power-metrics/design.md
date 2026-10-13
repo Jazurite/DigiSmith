@@ -5,7 +5,7 @@ Date: 2026-10-13, rev 2 (Jack at checkpoint 2: no collector; the periodic root j
 ## Summary
 Each `GET /api/<version>/power-metrics` reads the machine on demand. Root-only values come from **one fixed command**, `sudo -n /usr/bin/powermetrics --samplers tasks,battery,network,disk,cpu_power,gpu_power,gpu_agpm_stats,smc,thermal -i 1000 -n 1`,
 allowed by **one narrow sudoers rule** that Jack installs (decided by Jack: option (a), because all the machine's metrics must be readable). The API (Node, LaunchAgent, no root, `127.0.0.1:4300`) runs that command through `execFile`
-(no shell, fixed arguments, nothing from a request), plus the live non-root readers (`top`, `sysctl`, `memory_pressure`, `ps`, `lsof`). Caddy gates `/api/*` with basic auth. The version prefix is one constant. Option (b) (SMC helper) is dropped; `probe-smc.c` stays only as a record.
+(no shell, fixed arguments, nothing from a request), plus the live non-root readers (`top`, `sysctl`, `memory_pressure`, `ps`, `lsof`). Caddy forwards `/api/*` to it with no login (decided by Jack 2026-10-13: the tailnet holds only his own devices and the API is read-only; the login design is DGS-458). The version prefix is one constant. Option (b) (SMC helper) is dropped; `probe-smc.c` stays only as a record.
 
 ## 1. Shape (TypeScript type for the front-end; the same text is `scripts/nexus-api/src/types.ts`)
 ```ts
@@ -60,31 +60,28 @@ Any other `powermetrics` argument list is refused by sudo, so a bug in the API c
 ## 4. API service
 - TypeScript on Node 24, no dependencies (`node:http`), `node --experimental-strip-types`; source `scripts/nexus-api/` (Vitest from the repo root), runtime copy in `~/.digismith-depot/nexus-api/` (DGS-265). No compiled code.
 - Bind `127.0.0.1:4300` only; GET only (405 otherwise); other paths 404. Version constant: `src/version.ts` `API_VERSION = 'v1'`, the one place.
-- CORS: none now. A page on another origin sending `Authorization` triggers a preflight that basic auth would answer 401; Caddy would have to answer `OPTIONS` before auth. Added when a real page needs it.
+- CORS: none now. Without a login a cross-origin `fetch` needs only `Access-Control-Allow-Origin` (a simple GET, no preflight); added when a real page on another origin needs it.
 
 ## 5. Caddy route
 Replace the commented line in the `pazurite.com` block of `scripts/caddy/Caddyfile`:
 ```
 handle /api/* {
-	basic_auth {
-		jack {env.NEXUS_BASIC_AUTH_HASH}
-	}
 	reverse_proxy 127.0.0.1:4300 {
 		header_up -Authorization
 	}
 }
 ```
-The API never sees the credentials (`header_up -Authorization`). Without `NEXUS_BASIC_AUTH_HASH` in `.env`, Caddy would refuse to start (empty `basic_auth` hash) and take the OpenCode front door down too; `caddy-run.sh` therefore gives `/api/*` a hash of a random password nobody knows (every login fails) and logs one line.
-`handle { respond "Not found" 404 }` stays last. Tests extend `scripts/caddy/test-config.mjs`: validate with a dummy hash; 401 without and with wrong credentials, 200 with right ones through a stub backend, `/` 404, no `basic_auth` on `opencode.pazurite.com`.
-Login: bcrypt hash in `~/.digismith-depot/.env` as `NEXUS_BASIC_AUTH_HASH` (DGS-325 section 7); `caddy-run.sh` already passes it.
+**No login for now** (Jack, 2026-10-13): the tailnet holds only his own devices, the API is read-only. The login design (basic auth, `NEXUS_BASIC_AUTH_HASH`, the empty-hash start-up failure and its fallback) moved to DGS-458 (C.5 backlog); nothing of it is in this ticket, and `caddy-run.sh` no longer reads that variable.
+`header_up -Authorization` stays: harmless, and the API never sees a client's credentials. `handle { respond "Not found" 404 }` stays last. Tests (`scripts/caddy/test-config.mjs`): validate; `/api/...` reaches a stub with no credentials; an `Authorization` header from a client does not reach the API; `/` and other paths 404; opencode unchanged; `caddy-run.sh` passes Caddy only the Cloudflare token and the data dirs, and ignores a leftover `NEXUS_BASIC_AUTH_HASH` line.
+Tailscale Serve forwards TCP, so Caddy sees `127.0.0.1` as the client: the tailnet itself is the only gate.
 
 ## 6. Jack's steps (exact text in plan.md)
-J1 fixture (done by Jack, 2026-10-13 17:56 UTC+7); J1b optional timing run; J2 the sudoers rule (one `sudo`); J3 the API LaunchAgent; J4 the login hash; J5 Caddy restart; J6 first use. No LaunchDaemon.
+J1 fixture (done by Jack, 2026-10-13 17:56 UTC+7); J1b optional timing run; J2 the sudoers rule (one `sudo`); J3 the API LaunchAgent; J4 (the login hash) dropped, DGS-458; J5 Caddy restart; J6 first use. No LaunchDaemon.
 
 ## 7. Proof
 Without root: parser tests on two real fixtures (2026-10-08 four samplers; J1 default samplers) plus a synthetic network/disk/battery block; reader tests with a fake run (ok, failed, timeout, concurrent calls share one run, 5 s cache, failure cached); API tests; Caddy tests
-(401/200, `/` 404, no login on opencode, the API never sees the Authorization header, unset hash does not stop Caddy); install test (depot only, sudoers staged and `visudo -cf` clean). Mutation checks: cache TTL, bind address, timeout. **No test runs `sudo`.**
-Needs Jack: the sudoers rule, the LaunchAgent, the end-to-end URL. **First use for Jack:** laptop, Tailscale on: `curl -u jack https://pazurite.com/api/v1/power-metrics` returns JSON with `source.status: "ok"`, `thermal.cpuDieTempC` and `topTasks`; ten refreshes in one second leave `source.ageSeconds` under 5; Tailscale off: no connection.
+(`/api/*` reaches the API with no login, `/` 404, opencode unchanged, the API never sees an Authorization header, `caddy-run.sh` passes no hash); install test (depot only, sudoers staged and `visudo -cf` clean). Mutation checks: cache TTL, bind address, timeout. **No test runs `sudo`.**
+Needs Jack: the sudoers rule, the LaunchAgent, the end-to-end URL. **First use for Jack:** laptop, Tailscale on: `curl https://pazurite.com/api/v1/power-metrics` returns JSON with `source.status: "ok"`, `thermal.cpuDieTempC` and `topTasks`; ten refreshes in one second leave `source.ageSeconds` under 5; Tailscale off: no connection.
 
 ## 8. Split with C.4
 Only the current reading, no history. DGS-322 stores and charts it; **DGS-455 (C.4) now owns the periodic root collector** with the Grafana dashboard and may poll this API or read the same SMC source.

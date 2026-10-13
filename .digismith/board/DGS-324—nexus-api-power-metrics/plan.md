@@ -10,7 +10,7 @@ scripts/nexus-api/src/  version.ts (API_VERSION, the one constant)   types.ts (P
                         live.ts (top, sysctl, memory_pressure, ps, lsof)   reading.ts   server.ts (127.0.0.1:4300)   print-sudoers.ts
                         fixtures/ (two real powermetrics outputs, one synthetic block)   *.test.ts
 scripts/nexus-api/      install.sh   nexus-api.sh.tmpl   com.jazurite.digismith.nexus-api.plist.tmpl   test-install.test.ts
-scripts/caddy/          Caddyfile (the /api/* route)   caddy-run.sh (placeholder hash)   test-config.mjs (route tests)
+scripts/caddy/          Caddyfile (the /api/* route)   caddy-run.sh (no hash)   test-config.mjs (route tests)
 ```
 Depot after `install.sh`: `~/.digismith-depot/nexus-api/src/`, `bin/nexus-api`, `nexus/com.jazurite.digismith.nexus-api.plist`, `nexus/digismith-nexus.sudoers` (staged, not installed), `nexus/logs/`; `scripts/caddy/install.sh` refreshed `caddy/Caddyfile` and `bin/caddy-run` (the running Caddy is untouched until Jack restarts it).
 
@@ -21,7 +21,7 @@ Depot after `install.sh`: `~/.digismith-depot/nexus-api/src/`, `bin/nexus-api`, 
 4. **On-demand source** (`source.test.ts`, `powermetrics-source.test.ts`): ten concurrent callers, one run; reuse for 5 s, new run after; a failure is cached too; timeout after the limit aborts the run; wiring test that the real source uses the 5 s cache.
 5. **Live readers** (`live.test.ts`): load, memory, top 5 by RSS, OpenCode RSS; one failing reader nulls only its fields; fixed absolute paths; 5 s cache; smoke test on the real commands.
 6. **Reading and server** (`reading.test.ts`, `server.test.ts`): 200 with source ok, failed, timeout; 503 `no_reading` only when everything fails; 405 with `Allow`, 404 for every other path (unversioned, other version, extra segment); `127.0.0.1` bind; no-store.
-7. **Caddy route** (`scripts/caddy/test-config.mjs`): `handle /api/* { basic_auth ... reverse_proxy 127.0.0.1:4300 { header_up -Authorization } }`; 401 without, wrong password, wrong user; 200 with the right login (dummy password from `caddy hash-password`); `/` 404 without login; no login on `opencode.pazurite.com`; the API never sees `Authorization`; `caddy-run.sh` without a hash still starts Caddy (random unguessable placeholder).
+7. **Caddy route** (`scripts/caddy/test-config.mjs`): `handle /api/* { reverse_proxy 127.0.0.1:4300 { header_up -Authorization } }`, no login (DGS-458); `/api/...` reaches the API stub with no credentials; a client's `Authorization` header never reaches it; `/` 404; opencode unchanged; `caddy-run.sh` passes Caddy no login hash and ignores a leftover one.
 8. **install.sh** (`test-install.test.ts`): depot only, no tests or fixtures copied, node path baked in, plist passes `plutil -lint`, staged sudoers rule equals `sudoersLine(user)`, the depot copy serves a request with a fake run, no `sudo`/`launchctl`/`/etc/` in the script.
 
 ## Jack's step list (every step is Jack's; an agent never runs them)
@@ -53,22 +53,22 @@ curl -s http://127.0.0.1:4300/api/v1/power-metrics | head -c 800
 ```
 JSON with `source.status: "ok"`, temperatures and `topTasks`. (`source.status: "failed"` means J2 is wrong or missing.)
 
-**J4. The login:** `~/.digismith-depot/bin/caddy hash-password` (asks the password twice, prints a hash starting `$2a$`); add one line to `~/.digismith-depot/.env`: `NEXUS_BASIC_AUTH_HASH=<the whole hash>`. Do not paste the hash or password into a chat. User name: `jack`.
+**J4. (dropped)** No login for now: Jack's decision, the login design is DGS-458. Nothing to do; no hash goes into `.env`.
 
-**J5. Caddy takes the new route** (needs the DGS-325 front door running; the build already copied the new `Caddyfile` and `caddy-run` to the depot):
+**J5. Caddy takes the new route** (needs the DGS-325 front door running; the build already copied the new `Caddyfile` and `caddy-run` to the depot; this restart is what loads the `/api/*` route):
 ```
 launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.caddy
 tail -5 ~/.digismith-depot/caddy/logs/caddy.log
 ```
-**J6. First use (laptop, Tailscale on):** `curl -u jack https://pazurite.com/api/v1/power-metrics` asks the password and returns the JSON. In a browser the URL asks once. In a page on the same origin: `fetch(url, { headers: { Authorization: 'Basic ' + btoa('jack:<password>') } })`
-(another origin needs the CORS change, not in this ticket). Without credentials: 401. Tailscale off: no connection. Refresh test: ten calls in one second leave `source.ageSeconds` under 5.
+**J6. First use (laptop, Tailscale on):** `curl https://pazurite.com/api/v1/power-metrics` returns the JSON (no password). In a browser the URL just loads. In a page on the same origin: `fetch('https://pazurite.com/api/v1/power-metrics')`
+(another origin needs `Access-Control-Allow-Origin`, not in this ticket). `curl https://pazurite.com/` answers 404. Tailscale off: no connection. Refresh test: ten calls in one second leave `source.ageSeconds` under 5.
 
-**Order:** J2 -> J3 -> J4 -> J5 -> J6. Caddy last, so the route never points at nothing.
+**Order:** J2 -> J3 -> J5 -> J6. Caddy last, so the route never points at nothing.
 **Uninstall (each a delete: Jack runs it himself):** `launchctl bootout gui/$(id -u)/com.jazurite.digismith.nexus-api` and `rm ~/Library/LaunchAgents/com.jazurite.digismith.nexus-api.plist`; `sudo rm /etc/sudoers.d/digismith-nexus`; restore the earlier Caddyfile and kickstart Caddy.
 
 ## Risks, not verified
 - The wall time of the nine-sampler command (J1b); the real run took 1033 ms of sampling. Thermal pressure level names come from the 2026-10-08 probe (`Nominal`); other levels are unseen.
 - `gpu_agpm_stats` and `gpu_power` text is kept raw; the typed fields stay at the four proven samplers.
 - Any `workbox` process can run this one read-only command as root (accepted by Jack). A macOS update that changes `powermetrics` arguments breaks the rule and the API together (source `failed`, never a wrong number).
-- Tailscale Serve forwards TCP, so Caddy sees `127.0.0.1` as the client: no gate uses the client IP (DGS-325). Basic auth is a second lock behind the tailnet.
+- Tailscale Serve forwards TCP, so Caddy sees `127.0.0.1` as the client: no gate uses the client IP (DGS-325). The tailnet is the only gate; any device on it can read the API (Jack's decision; login design DGS-458).
 - I ran `sudo -n true` once during the design (it answered "a password is required" and changed nothing); no sudo ran after that.

@@ -14,9 +14,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CADDY = process.env.CADDY_BIN
 if (!CADDY) { console.error('set CADDY_BIN'); process.exit(2) }
-const TEST_PW = 'nexus-test-password'
-const TEST_HASH = spawnSync(CADDY, ['hash-password', '--plaintext', TEST_PW], { encoding: 'utf8' }).stdout.trim()   // dummy password, never a real login
-const DUMMY = { ...process.env, CLOUDFLARE_API_TOKEN: 'a'.repeat(40), NEXUS_BASIC_AUTH_HASH: TEST_HASH }
+const DUMMY = { ...process.env, CLOUDFLARE_API_TOKEN: 'a'.repeat(40) }
 const tmp = mkdtempSync(join(os.tmpdir(), 'caddy-config-test-'))
 let failed = 0
 const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${ok ? '' : extra}`); if (!ok) failed++ }
@@ -43,7 +41,7 @@ if (existsSync(cf)) {
   check('apex route exists', apex.length === 1)
   const apexJson = JSON.stringify(apex[0] ?? {})
   check('apex proxies only /api/* to 127.0.0.1:4300', (apexJson.match(/reverse_proxy/g) ?? []).length === 1 && apexJson.includes('127.0.0.1:4300') && apexJson.includes('/api/*'))
-  check('basic_auth sits on the apex /api/* route only, not on opencode', (json.match(/http_basic/g) ?? []).length === 1 && /http_basic/.test(apexJson) && !/opencode/.test(apexJson))
+  check('no login anywhere: no basic_auth in the config (login design: DGS-458)', !/http_basic|basic_auth/.test(json))
 
   // route table by SNI against a stub backend
   const BACK = 18510, BACK2 = 18511, FRONT = 18444
@@ -65,14 +63,11 @@ if (existsSync(cf)) {
   for (let i = 0; i < 50; i++) { const [c] = await get('pazurite.com', '/'); if (c) break; await new Promise(r => setTimeout(r, 200)) }   // certificates are issued after the listener is up
   { const [c, b] = await get('pazurite.com', '/'); check('pazurite.com/ -> 404 (no login needed)', c === 404, `got ${c} ${b}`) }
   for (const p of ['/api/v1/power-metrics', '/api/anything', '/api/']) {
-    const [c] = await get('pazurite.com', p); check(`pazurite.com${p} without credentials -> 401`, c === 401, `got ${c}`)
-    const [w] = await get('pazurite.com', p, 'jack:wrong'); check(`pazurite.com${p} with a wrong password -> 401`, w === 401, `got ${w}`)
-    const [u] = await get('pazurite.com', p, `root:${TEST_PW}`); check(`pazurite.com${p} with a wrong user -> 401`, u === 401, `got ${u}`)
-    const [k, kb] = await get('pazurite.com', p, `jack:${TEST_PW}`); check(`pazurite.com${p} with the right login -> API stub 200`, k === 200 && kb.startsWith(`api-ok ${p}`), `got ${k} ${kb}`)
+    const [k, kb] = await get('pazurite.com', p); check(`pazurite.com${p} -> API stub 200, no login`, k === 200 && kb.startsWith(`api-ok ${p}`), `got ${k} ${kb}`)
   }
-  { const [, kb] = await get('pazurite.com', '/api/v1/power-metrics', `jack:${TEST_PW}`); check('the API never sees the Authorization header', kb.endsWith('auth-header-seen-by-api=no'), kb) }
-  { const [c, b] = await get('pazurite.com', '/other', `jack:${TEST_PW}`); check('pazurite.com/other with credentials -> 404', c === 404, `got ${c} ${b}`) }
-  { const [c] = await get('opencode.pazurite.com', '/'); check('opencode.pazurite.com/ needs no basic auth', c === 200, `got ${c}`) }
+  { const [, kb] = await get('pazurite.com', '/api/v1/power-metrics', 'jack:whatever'); check('an Authorization header sent by a client never reaches the API', kb.endsWith('auth-header-seen-by-api=no'), kb) }
+  { const [c, b] = await get('pazurite.com', '/other'); check('pazurite.com/other -> 404', c === 404, `got ${c} ${b}`) }
+  { const [c] = await get('opencode.pazurite.com', '/'); check('opencode.pazurite.com/ -> 200', c === 200, `got ${c}`) }
   for (const h of ['opencode.pazurite.com']) { const [c, b] = await get(h, '/'); check(`${h}/ -> stub 200`, c === 200 && b === 'stub-ok', `got ${c} ${b}`) }
   check('test Caddy tried no sudo or trust-store install', !/sudo|installing root certificate/.test(log))
   caddy.kill('SIGTERM'); stub.close(); api.close()
@@ -91,19 +86,15 @@ const runner = join(HERE, 'caddy-run.sh')
 check('caddy-run.sh exists', existsSync(runner))
 if (existsSync(runner)) {
   const dep = join(tmp, 'run-depot'); mkdirSync(join(dep, 'bin'), { recursive: true }); mkdirSync(join(dep, 'caddy'), { recursive: true })
-  writeFileSync(join(dep, '.env'), 'OTHER_SECRET=nope\nCLOUDFLARE_API_TOKEN=tok123\nNEXUS_BASIC_AUTH_HASH=$2a$14$abc\n')
-  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\n[ "$1" = hash-password ] && { echo \'$2a$14$fakehashfakehash\'; exit 0; }\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
+  writeFileSync(join(dep, '.env'), 'OTHER_SECRET=nope\nCLOUDFLARE_API_TOKEN=tok123\n')
+  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
   chmodSync(join(dep, 'bin', 'caddy'), 0o755)
   const r = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
-  check('caddy-run.sh gives Caddy the token, the hash and a data dir', /CLOUDFLARE_API_TOKEN set/.test(r.stdout) && /NEXUS_BASIC_AUTH_HASH set/.test(r.stdout) && /XDG_DATA_HOME set/.test(r.stdout), r.stdout + r.stderr)
+  check('caddy-run.sh gives Caddy the token and a data dir, and no login hash', /CLOUDFLARE_API_TOKEN set/.test(r.stdout) && !/NEXUS_BASIC_AUTH_HASH/.test(r.stdout) && /XDG_DATA_HOME set/.test(r.stdout), r.stdout + r.stderr)
   check('caddy-run.sh does not pass other .env values', !/OTHER_SECRET/.test(r.stdout))
-  writeFileSync(join(dep, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\n')
-  const nohash = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
-  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\n[ "$1" = hash-password ] && exit 1\nenv | grep -E "^NEXUS_BASIC_AUTH_HASH=" | sed "s/=.*/ set/"\n')
-  const failhash = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
-  check('caddy-run.sh still starts Caddy when hashing itself fails (fixed placeholder)', failhash.status === 0 && /NEXUS_BASIC_AUTH_HASH set/.test(failhash.stdout), failhash.stdout + failhash.stderr)
-  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\n[ "$1" = hash-password ] && { echo \'$2a$14$fakehashfakehash\'; exit 0; }\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
-  check('caddy-run.sh without a hash still starts Caddy, with an unguessable placeholder, and says so', nohash.status === 0 && /NEXUS_BASIC_AUTH_HASH set/.test(nohash.stdout) && /rejects every login/.test(nohash.stderr), nohash.stdout + nohash.stderr)
+  writeFileSync(join(dep, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\nNEXUS_BASIC_AUTH_HASH=$2a$14$leftover\n')   // an old line in .env is not passed on either
+  const old = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
+  check('caddy-run.sh ignores a leftover NEXUS_BASIC_AUTH_HASH line', !/NEXUS_BASIC_AUTH_HASH/.test(old.stdout), old.stdout)
   check('caddy-run.sh runs the depot Caddyfile', /args: run --config .*caddy\/Caddyfile --adapter caddyfile/.test(r.stdout), r.stdout)
 }
 
