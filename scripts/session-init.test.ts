@@ -173,7 +173,7 @@ describe("buildLineagePointer", () => {
   });
 
   it("returns undefined when there are no notes", () => {
-    expect(buildLineagePointer(tmpDir)).toBeUndefined();
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBeUndefined();
   });
 
   it("names every note in one line", () => {
@@ -184,32 +184,53 @@ describe("buildLineagePointer", () => {
     );
   });
 
-  it("names a current-convention session note on its own, once no fallback notes exist", () => {
-    // The scenario the fallback-only reading would have missed: once Part 6 of DGS-159 moves
-    // the six live handoff.md fallback notes away, listNotes(mainRoot) returns [] — a fresh
-    // maestro must still get pointed at its own sessions/<name>/note.md.
-    writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
-    expect(buildLineagePointer(tmpDir)).toBe(
-      `DigiSmith: session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
+  const POINTER_TAIL = ` — read the one matching your session title (get_session self), or say "resume"`;
+  const depotEnv = () => ({ DIGISMITH_DEPOT_DIR: path.join(tmpDir, "depot") });
+  const depotNote = (title: string) => writeNote(path.join(tmpDir, "depot"), `sessions/${path.basename(tmpDir)}/maestros/${title}/note.md`);
+
+  it("names a Maestro note held in the depot", () => {
+    depotNote("Scheduling");
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
+      `DigiSmith: session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: Scheduling${POINTER_TAIL}`,
     );
   });
 
-  it("combines fallback notes and current-convention session notes in one line", () => {
+  it("combines fallback notes and depot session notes in one line", () => {
     writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
-    writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
-    expect(buildLineagePointer(tmpDir)).toBe(
+    depotNote("Scheduling");
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
       `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.1; ` +
-        `session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
+        `session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: Scheduling${POINTER_TAIL}`,
     );
   });
 
-  it("excludes a worker's brief-only session folder from the session-notes clause", () => {
+  it("still names an old-location note that has no depot copy yet", () => {
+    writeNote(tmpDir, ".digismith/sessions/Scheduling/note.md");
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
+      `DigiSmith: session notes not yet moved to the depot, in ${path.join(tmpDir, ".digismith", "sessions")}: Scheduling${POINTER_TAIL}`,
+    );
+  });
+
+  it("names the shared DigiSmith note at the conductor path, not under maestros", () => {
+    writeNote(path.join(tmpDir, "depot"), `sessions/${path.basename(tmpDir)}/digismith-conductor/note.md`);
+    depotNote("Scheduling");
+    const root = path.join(tmpDir, "depot", "sessions", path.basename(tmpDir));
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
+      `DigiSmith: session notes in ${path.join(root, "maestros")}: Scheduling; ` +
+        `the shared DigiSmith note is ${path.join(root, "digismith-conductor", "note.md")}${POINTER_TAIL}`,
+    );
+  });
+
+  it("does not list an old-location note once its depot copy exists", () => {
     writeNote(tmpDir, ".digismith/sessions/DigiSmith/note.md");
+    depotNote("DigiSmith");
+    expect(buildLineagePointer(tmpDir, depotEnv())).not.toContain("not yet moved");
+  });
+
+  it("excludes a worker's brief-only session folder", () => {
     fs.mkdirSync(path.join(tmpDir, ".digismith", "sessions", "dgs-161"), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, ".digismith", "sessions", "dgs-161", "brief.md"), "# Brief\n");
-    expect(buildLineagePointer(tmpDir)).toBe(
-      `DigiSmith: session notes in ${path.join(tmpDir, ".digismith", "sessions")}: DigiSmith — read the one matching your session title (get_session self), or say "resume"`,
-    );
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBeUndefined();
   });
 
   it("reads the main checkout's notes when resolved from a worktree", () => {

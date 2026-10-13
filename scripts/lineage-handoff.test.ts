@@ -43,7 +43,11 @@ function writeNote(root: string, relPath: string, content = "# Note\n"): void {
 }
 
 function runCli(cwd: string, ...args: string[]) {
-  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
+  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, DIGISMITH_DEPOT_DIR: path.join(tmpDir, "depot") },
+  });
 }
 
 let tmpDir: string;
@@ -308,6 +312,44 @@ describe("CLI", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.1", "DigiSmith"]);
+  });
+
+  it("--action list prints depot Maestro names too, each name once", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/sessions/DigiSmith/note.md", "# Note\n");
+    writeNote(main, ".digismith/sessions/Nexus/note.md", "# Note\n");
+    writeNote(tmpDir, "depot/sessions/main/maestros/Nexus/note.md", "# Note\n");
+    writeNote(tmpDir, "depot/sessions/main/maestros/Scheduling/note.md", "# Note\n");
+
+    const result = runCli(main, "--action", "list");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim().split(/\r?\n/)).toEqual(["Nexus", "Scheduling", "DigiSmith"]);
+  });
+
+  it("--action maestro-path prints the resolved choice as JSON: none, then old, then depot", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    const depotPath = path.join(tmpDir, "depot", "sessions", "main", "maestros", "Token Economics", "note.md");
+    const run = () => JSON.parse(runCli(main, "--action", "maestro-path", "--title", "Token Economics").stdout);
+
+    expect(run()).toEqual({ source: "none", path: depotPath, writePath: depotPath });
+    const oldPath = path.join(fs.realpathSync.native(main), ".digismith", "sessions", "Token Economics", "note.md");
+    writeNote(main, ".digismith/sessions/Token Economics/note.md", "# Note\n");
+    expect(run()).toEqual({ source: "old", path: oldPath, writePath: depotPath });
+    writeNote(tmpDir, "depot/sessions/main/maestros/Token Economics/note.md", "# Note\n");
+    expect(run()).toEqual({ source: "depot", path: depotPath, writePath: depotPath });
+  });
+
+  it("--action maestro-path refuses a lineage-key title", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+
+    const result = runCli(main, "--action", "maestro-path", "--title", "A.1: Primitives");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("unsafe session title");
   });
 
   it("--action ensure-excluded prints the result", () => {

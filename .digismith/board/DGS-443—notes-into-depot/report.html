@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-443 notes into depot — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:1.5rem 16px; }
+  h1 { font-size:1.6rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<header><h1>DGS-443 report: live session notes into the depot</h1><div style="color:var(--muted)">Ticket: <strong>DGS-443</strong> · Date: 2026-10-13</div></header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Notes are read and written in the depot now: <code>~/.digismith-depot/sessions/&lt;project&gt;/maestros/&lt;title&gt;/note.md</code> for Maestros, <code>&lt;conductor&gt;/note.md</code> for the conductor (the DigiSmith Maestro shares it, answer A; split = DGS-447), <code>orders/</code> for orders. The old <code>.digismith/sessions/</code> copies are never written, renamed or deleted by any code. No file was copied yet: each owner&#x27;s copy, <code>cmp</code> and switch happens after the merge, on that owner&#x27;s idle word.</p>
+</section>
+<section id="built-tdd-tests-pass-pnpm-vitest-run">
+<h2>Built (TDD, 1887 tests pass, <code>pnpm vitest run</code>)</h2>
+<ul>
+<li><code>scripts/session-path.ts</code>: <code>sessionsRoot</code>, <code>maestroNotePath</code>, <code>conductorNotePath</code>, <code>ordersDir</code>, <code>noteLocation</code> (shared-note map <code>SHARED_NOTES</code>), <code>listDepotNoteNames</code>, <code>listUnmovedNoteNames</code>; names checked with <code>isSafeName</code>/<code>isSafeSessionName</code>.</li>
+<li><code>scripts/lineage-handoff.ts</code>: <code>--action list</code> prints depot names, then unmoved old names; new <code>--action maestro-path --title</code>.</li>
+<li><code>scripts/session-init.ts</code>: the SessionStart pointer names the depot folder, the shared note at its conductor path, and old notes not yet moved.</li>
+<li><code>scripts/notes-switch.ts</code>: the per-owner switch, one repeatable command: <code>node --experimental-strip-types scripts/notes-switch.ts &lt;title|workbox.md&gt; --main &lt;repo root&gt;</code> copies the old note into the depot (never over an existing file, built under a hidden temp name and renamed into place only after a byte check, aborts if the old note changed meanwhile), and records the switch time in <code>&lt;depot&gt;/sessions/&lt;project&gt;/switches/&lt;key&gt;.json</code> (one file per key, created with <code>wx</code>). After the owner confirms &quot;switch now&quot;, the same command with <code>--repoint</code> (and <code>--identities</code> for the identity record) rewrites the <code>state:</code> line of open cards whose path names the old note (quotes, comment, <code>./</code>, symlink spelling are matched).</li>
+<li><code>scripts/notes-drift.ts</code>: read-only; flags ANY write to an old path after the recorded switch time (a later depot write does not hide it), a recorded switch whose depot copy is gone, and lists notes not switched yet.</li>
+<li><code>maestro-path</code> returns <code>{source: depot|old|none, path, writePath}</code>; the handoff skill follows that result and never decides by hand.</li>
+<li>Skills <code>handoff</code> and <code>finishing-a-development-branch</code>, and <code>CLAUDE.md</code> (orders go to <code>orders/</code>): current path = depot; old copy = read-only resume fallback; write mode never writes the old path.</li>
+<li>Already depot-based, unchanged: <code>scripts/conductor/state.ts</code> default path; its <code>conductors.json</code> override and the <code>state:</code> fields are data edits at each owner&#x27;s switch.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Independent Claude reviews (separate read-only agents), two rounds: whole branch, then a focused one on the fix commit. Done.</p>
+<ul>
+<li>Round 1: 1 medium, 3 low. Fixed: the SessionStart hook threw for a repo folder name that fails <code>isSafeName</code> (now no depot notes, test); the pointer listed the shared DigiSmith note under <code>maestros/</code> (now its conductor path, test). Open lows taken in round 2 on the Scheduling Maestro&#x27;s order: drift now uses the recorded switch time; <code>maestro-path</code> returns the resolved choice.</li>
+<li>Round 2 (on the fix commit): 2 medium, 2 low-ish, rest info. Fixed, with tests: (a) a failed or interrupted copy left a stale copy that <code>maestro-path</code> would call the live note: the copy is now built under a hidden temp name and renamed in only after verification; (b) <code>switches.json</code> read-modify-write could drop a record: one record file per key now; (c) <code>--repoint</code> skipped quoted, commented, <code>./</code> or symlink-spelled <code>state:</code> values: now matched by real path; (d) a title like <code>__proto__</code> could never switch: records live in a null-prototype map.</li>
+<li>Not fixed: <code>--repoint</code> rewrites a card file by read and rename, so a card heartbeat in that few-millisecond window could be overwritten (lost <code>last_seen</code>): run it while the owner is idle. A writer that preserves the old file&#x27;s mtime (<code>rsync -t</code>) would escape drift. A failed switch leaves a hidden <code>.note.md.*.tmp</code> file that only Jack may remove.</li>
+<li>Note for the switch: the SessionEnd card hook appends a handoff block to the card&#x27;s <code>state:</code> path, so repoint the card before the owner&#x27;s session ends, or that block lands in the old file (drift would flag it).</li>
+</ul>
+</section>
+<section id="not-done-for-the-owners">
+<h2>Not done / for the owners</h2>
+<ul>
+<li>MEGA: <code>~/.digismith-depot</code> is in none of the four syncs (<code>~/Workspace</code>, <code>~/Obsidian</code>, <code>~/Downloads</code>, <code>~/CoWorkspace</code>). Jack: no sync (answer B). <strong>Moved notes have NO backup until DGS-446 (encrypted backup).</strong> The old copies stay byte-for-byte untouched and remain the backed-up copy under <code>~/Workspace</code>; they go stale after each switch.</li>
+<li>Per-owner switch after merge (<code>notes-switch.ts &lt;key&gt;</code>, then &quot;switch now&quot;, then <code>--repoint</code>; <code>conductors.json</code> is a by-hand edit for the conductor&#x27;s own switch): Scheduling, Token Economics, DigiSmith Maestro and conductor (<code>digismith-conductor/note.md</code>); Nexus, b3-maestro and d3-maestro copied when someone resumes them. <code>workbox.md</code> and <code>workbox-macos.md</code> are copied to <code>&lt;project&gt;/workbox.md</code>; no code reads them yet.</li>
+<li>Not moved: old loose orders and briefs (DGS-424), the two rule files (answer D).</li>
+<li>dgs-439&#x27;s allow-list covers this layout (its tests, per the conductor).</li>
+</ul>
+</section>
+</body>
+</html>
