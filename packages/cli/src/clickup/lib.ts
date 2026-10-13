@@ -120,7 +120,7 @@ export function buildTaskWriteBody(argv: TaskFieldArgv): ClickUpTaskWriteBody {
   }
   assertDateOrder(body.start_date, body.due_date);
   if (argv.priority !== undefined) {
-    if (!Number.isInteger(argv.priority)) {
+    if (!Number.isInteger(argv.priority) || argv.priority < 1 || argv.priority > 4) {
       throw new Error(`invalid --priority "${argv.priority}" — expected an integer 1-4`);
     }
     body.priority = argv.priority;
