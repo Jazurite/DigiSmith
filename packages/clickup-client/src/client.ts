@@ -44,6 +44,11 @@ export interface ClickUpClientConfig {
   CLICKUP_API_TOKEN: string;
 }
 
+/** The body of POST /task/{id}/comment; the CLI dry run prints this same object. */
+export function commentBody(text: string): { comment_text: string; notify_all: false } {
+  return { comment_text: text, notify_all: false };
+}
+
 export class ClickUpClient {
   protected readonly teamId: string;
   private readonly http: AxiosInstance;
@@ -194,7 +199,7 @@ export class ClickUpClient {
 
   /** POST /task/{id}/comment. notify_all false: a comment must not ping everyone on the task. Not idempotent. */
   addTaskComment(taskId: string, text: string): Promise<ClickUpCommentCreated> {
-    return this.post<ClickUpCommentCreated>(`/task/${taskId}/comment`, { data: { comment_text: text, notify_all: false } });
+    return this.post<ClickUpCommentCreated>(`/task/${taskId}/comment`, { data: commentBody(text) });
   }
 
   /** GET /task/{id}/comment: the newest comments first (one page, 25 rows). */

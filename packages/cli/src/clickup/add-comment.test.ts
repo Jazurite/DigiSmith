@@ -29,6 +29,17 @@ describe("parseCommentArgv", () => {
       rmSync(dir, { recursive: true });
     }
   });
+  it("refuses a flag given twice and strips a leading BOM", () => {
+    expect(() => parseCommentArgv({ task: "a1", text: ["a", "b"] as unknown as string })).toThrow("once");
+    const dir = mkdtempSync(join(tmpdir(), "dg442-"));
+    try {
+      const f = join(dir, "b.md");
+      writeFileSync(f, "\uFEFFhi");
+      expect(parseCommentArgv({ task: "a1", markdownFile: f }).text).toBe("hi");
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
   it("needs exactly one of --text and --markdown-file", () => {
     expect(() => parseCommentArgv({ task: "a1" })).toThrow("exactly one");
     expect(() => parseCommentArgv({ task: "a1", text: "x", markdownFile: "f" })).toThrow("exactly one");
@@ -119,6 +130,22 @@ describe("add-comment command", () => {
     });
     expect(addTaskComment).toHaveBeenCalled();
     expect(out(err)).toContain("read-back");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("a failed read-back after the post says it was sent and not to send again", async () => {
+    const getTaskByRef = vi.fn().mockResolvedValue(task("a1", "K-1"));
+    const addTaskComment = vi.fn().mockResolvedValue({ id: 9 });
+    const getTaskComments = vi.fn().mockRejectedValue(new Error("status code 429"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createAddCommentCommand(() => ({ getTaskByRef, addTaskComment, getTaskComments }) as unknown as ClickUpClient), {
+      task: "a1",
+      text: "x",
+      yes: true,
+    });
+    expect(out(err)).toContain("sent (comment 9)");
+    expect(out(err)).toContain("do not send again");
     expect(process.exitCode).toBe(1);
   });
 

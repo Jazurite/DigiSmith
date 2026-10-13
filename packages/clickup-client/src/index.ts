@@ -1,4 +1,4 @@
-export { ClickUpClient } from "./client.ts";
+export { ClickUpClient, commentBody } from "./client.ts";
 export type { ClickUpClientConfig, RequestOptions } from "./client.ts";
 export { Space } from "./space.ts";
 export { RateLimiter } from "./rate-limiter.ts";

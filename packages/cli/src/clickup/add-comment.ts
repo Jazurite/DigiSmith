@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { CommandModule } from "yargs";
-import type { ClickUpClient } from "@digismith/clickup-client";
+import { commentBody, type ClickUpClient } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
 import { REF, KEY } from "./refs.ts";
 import { printCall } from "./task-type-write.ts";
@@ -21,6 +21,7 @@ export interface CommentRequest {
 export function parseCommentArgv(argv: CommentArgv): CommentRequest {
   const task = argv.task === undefined ? "" : String(argv.task).trim();
   if (!REF.test(task)) throw new Error(`--task must be a task id or a key like DGS-12, got "${task}"`);
+  if (Array.isArray(argv.text) || Array.isArray(argv.markdownFile)) throw new Error("give --text or --markdown-file once, not several times");
   if ((argv.text === undefined) === (argv.markdownFile === undefined)) throw new Error("give exactly one of --text or --markdown-file");
   let text: string;
   if (argv.markdownFile !== undefined) {
@@ -32,6 +33,7 @@ export function parseCommentArgv(argv: CommentArgv): CommentRequest {
   } else {
     text = String(argv.text);
   }
+  text = text.replace(/^\uFEFF/, "");
   if (text.trim() === "") throw new Error("the comment text is empty");
   return { task, text };
 }
@@ -52,7 +54,7 @@ export function createAddCommentCommand(clientFactory: () => ClickUpClient = cre
     handler: async (argv) => {
       try {
         const req = parseCommentArgv(argv as unknown as CommentArgv);
-        const body = { comment_text: req.text, notify_all: false };
+        const body = commentBody(req.text);
         const warn = "a second --yes posts a second comment (no duplicate check)";
         if (!argv.yes && !KEY.test(req.task)) {
           // Plain id and no --yes: a dry run with no network and no credentials.
@@ -71,7 +73,12 @@ export function createAddCommentCommand(clientFactory: () => ClickUpClient = cre
           console.log("nothing sent; add --yes to send");
         } else {
           const created = await client.addTaskComment(t.id, req.text);
-          const rows = await client.getTaskComments(t.id);
+          let rows;
+          try {
+            rows = await client.getTaskComments(t.id);
+          } catch (err) {
+            throw new Error(`sent (comment ${created.id}), but the read-back failed: ${(err as Error).message}; do not send again, check it in ClickUp`);
+          }
           if (!rows.some((r) => String(r.id) === String(created.id))) {
             throw new Error(`sent (comment ${created.id}), but read-back of ${t.id} does not show it; check it in ClickUp`);
           }
