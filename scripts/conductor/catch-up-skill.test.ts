@@ -19,4 +19,12 @@ describe("skills/catch-up", () => {
     expect(text).toMatch(/no keyword list/);
     expect(text).not.toMatch(/regex|\bmatch(es)? (the )?(word|phrase)s?\b: /i);
   });
+  it("says where the card, the identity, the project and the conductor come from", () => {
+    expect(text).toContain("DIGISMITH_ROLE");
+    expect(text).toContain("DIGISMITH_ID");
+    expect(text).toContain("DIGISMITH_PROJECT");
+    expect(text).toContain("DIGISMITH_CONDUCTOR");
+    expect(text).toContain("~/.digismith-depot/sessions/<project>/cards/<id>--<session>.yml");
+    expect(text).not.toMatch(/get_session/);
+  });
 });
