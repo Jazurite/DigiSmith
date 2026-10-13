@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DGS-12 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}td,th{border:1px solid #ccc;padding:.4rem .6rem}table{border-collapse:collapse}h1,h2{color:#6b3fa0}</style></head><body>
+<h1>DGS-12 — Implementation Report</h1>
+<p>Ticket: DGS-12</p>
+<h2>What changed</h2>
+<p><code>buildTaskWriteBody</code> now rejects any priority outside the integers 1 to 4, with the message <code>invalid --priority "&lt;v&gt;" — expected an integer 1-4</code>. create-task and update-task share it and call it before the client is built: no call, exit 1.</p>
+<h2>yargs and a non-number</h2>
+<p><code>--priority abc</code> reaches the helper as NaN, so the message shows "NaN".</p>
+<h2>Tests</h2>
+<table><tr><th>Where</th><th>Cases</th></tr>
+<tr><td>lib.test.ts priority</td><td>accepts 1-4; rejects 0, -1, 5, 7, NaN, 2.5, Infinity, "3"</td></tr>
+<tr><td>create-task and update-task, real yargs parser</td><td>7, 0, abc: no client, no write, exit 1; 1-4 write and exit 0 (7 each)</td></tr>
+<tr><td>clickup dir total</td><td>392 → 417 (+25), no describe lost</td></tr>
+<tr><td>full cli suite / build</td><td>725 pass / build ok</td></tr></table>
+<h2>First use</h2>
+<p><code>dg clickup update-task --task &lt;id&gt; --priority 7</code> is refused before any call.</p>
+</body></html>
