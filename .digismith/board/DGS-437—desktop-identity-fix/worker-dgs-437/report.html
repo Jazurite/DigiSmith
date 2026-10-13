@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-437 desktop identity fix — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-437 desktop identity fix — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-437</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<h2>What was built</h2>
+<ul>
+<li><code>scripts/session-cards/prompt-identity.ts</code>: pre-prompt handler, FIRST in <code>PRE_PROMPT_HANDLERS</code> (the one UserPromptSubmit entry; <code>hooks.json</code> unchanged). A session with no <code>HERDR_PANE_ID</code>, no <code>DIGISMITH_ROLE</code> and a folder named by one identity record gets its Maestro card on its first prompt (same identity branch as DGS-411) and the identity line as context. Idempotent: a session with a card gets nothing.</li>
+<li>Catch-up intent on the prompt that wrote the card: runs <code>catch-up-cli.ts</code> (identity, session, conductor, project from the record; same output and note write as DGS-428); exit 3 or 4 still count as output; if it fails, <code>cli.ts consult --project</code> as the fallback. Total budget 20 s. Any error = no text, exit 0, prompt never blocked.</li>
+<li><code>card-hook.ts</code>: <code>StartResult</code> also returns the <code>identity</code>.</li>
+<li><code>CLAUDE.md</code> (new, shared file, Jack's yes): the backup that needs no hooks.</li>
+</ul>
+<h2>Rules kept</h2>
+<ul>
+<li>Herdr sessions with env win; the conductor and workers never reach the identity branch (tests: herdr pane, <code>DIGISMITH_ROLE</code>, no record: no card, no command run).</li>
+<li>The regex is narrow on purpose (the whole prompt must be the catch-up phrase, under 80 characters). It is only the fallback for a session that has no card yet; once the session has its card, the skill <code>digismith:catch-up</code> handles any wording. A miss costs nothing.</li>
+</ul>
+<h2>Hook events</h2>
+<p>Hook events not measured separately: classifier blocked the logging hook; measured by the first use. If Jack's new desktop session writes a card on its first message, UserPromptSubmit fires there; if not, the <code>CLAUDE.md</code> line is the working path. (Step 1 was dropped by the Maestro.)</p>
+<h2>Review</h2>
+<p>Claude whole-branch review (independent subagent), 3 verified findings, all fixed:</p>
+<ul>
+<li>The regex matched the bare word "status" anywhere ("git status"): now the whole prompt must be the phrase.</li>
+<li>Catch-up also ran for a session that already had a card (double catch-up with the idle handler or the skill): now only on the prompt that wrote the card.</li>
+<li>From the plugin cache, <code>catch-up-cli.ts</code> finds its repo from its own path (git log and reports would fail): the handler now uses the identity folder's own <code>scripts/conductor/</code> script when it exists.</li>
+</ul>
+<p>No security findings (args array, no shell, <code>isSafeName</code> on every value).</p>
+<h2>Tests</h2>
+<p>Full suite 1818 pass before the fixes; <code>scripts/session-cards</code> 54 pass after (new: handler, intent matcher, own-folder script, no catch-up with an existing card).</p>
+<h2>First use</h2>
+<p>See probe.md.</p>
+</body>
+</html>

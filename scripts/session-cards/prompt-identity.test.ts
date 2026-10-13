@@ -29,11 +29,11 @@ afterEach(() => {
 
 describe("isCatchUpPrompt", () => {
   it("matches the narrow catch-up wordings", () => {
-    for (const p of ["how's it going?", "How is it going", "catch me up", "catch-up please", "what did I miss?", "what's the status?", "status?", "what is the update"])
+    for (const p of ["how's it going?", "How is it going", "catch me up", "catch me up please", "catch-up please", "what did I miss?", "what's the status?", "status?", "what is the update"])
       expect(isCatchUpPrompt(p), p).toBe(true);
   });
   it("does not match other prompts or long ones", () => {
-    for (const p of ["merge DGS-12 and tell me the status of DGS-12 when it is done in the usual way please, thanks", "list the files", "", undefined])
+    for (const p of ["git status", "fix the status bar", "run catch-up tests", "merge DGS-12 and tell me the status of DGS-12 when it is done in the usual way please, thanks", "list the files", "", undefined])
       expect(isCatchUpPrompt(p as string | undefined), String(p)).toBe(false);
   });
 });
@@ -75,13 +75,21 @@ describe("identityPromptHandler", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].join(" ")).toMatch(/catch-up-cli\.ts --maestro digismith-maestro --session d1 --conductor digismith-conductor --project DigiSmith/);
   });
-  it("catch-up on a session that already has its card still runs it, without the identity line", () => {
+  it("a session that already has its card gets no catch-up here (the skill and the idle handler own that)", () => {
     writeIdentity(record(), bare());
     identityPromptHandler(ev({ prompt: "hi" }), bare());
-    const run: CliRun = () => ({ status: 0, stdout: "body" });
-    const out = identityPromptHandler(ev({ prompt: "catch me up" }), bare(), { run })!;
-    expect(out).not.toContain("[digismith identity]");
-    expect(out).toContain("body");
+    const calls: string[][] = [];
+    const out = identityPromptHandler(ev({ prompt: "catch me up" }), bare(), { run: (a) => { calls.push(a); return { status: 0, stdout: "body" }; } });
+    expect(out).toBeUndefined();
+    expect(calls).toEqual([]);
+  });
+  it("uses the catch-up script of the identity's own folder when it has one, else the plugin's", () => {
+    writeIdentity(record(), bare());
+    fs.mkdirSync(path.join(repo, "scripts", "conductor"), { recursive: true });
+    fs.writeFileSync(path.join(repo, "scripts", "conductor", "catch-up-cli.ts"), "");
+    const calls: string[][] = [];
+    identityPromptHandler(ev({ prompt: "catch me up" }), bare(), { run: (a) => { calls.push(a); return { status: 0, stdout: "b" }; } });
+    expect(calls[0][0]).toBe(path.join(repo, "scripts", "conductor", "catch-up-cli.ts"));
   });
   it("exit 3 and 4 (note not saved) still count as output", () => {
     writeIdentity(record(), bare());
