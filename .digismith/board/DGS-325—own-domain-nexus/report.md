@@ -1,6 +1,6 @@
 # DGS-325 report: own domain for Nexus (design and plan)
 
-Ticket: DGS-325. Date: 2026-10-13. Status: design and plan approved by Jack (2026-10-13, J7 cut-over included). Build tasks 1-3 done; task 4 waits for Jack's Cloudflare token.
+Ticket: DGS-325. Date: 2026-10-13. Status: built, cut over and first use passed (2026-10-13).
 
 ## Summary
 `pazurite.com` (Nexus, `/api/v1/...`) and `opencode.pazurite.com` (OpenCode at `/`) become DNS-only Cloudflare records pointing to the Workbox's
@@ -23,7 +23,7 @@ gets its certificates by DNS challenge, Caddy listens on loopback only. The `wor
 - Live OpenCode server through a throwaway Caddy (`127.0.0.1:18445`, no sudo): `/` 200, `/api/event` 401 and a websocket upgrade 401, same as direct.
 
 ## Known gaps
-The authenticated SSE and websocket proof on the live server is not done: it needs the server password, which no agent reads.  The `ts.net` certificate through
+The authenticated SSE and websocket check was done by Jack in J7 (no agent touched the password).  The `ts.net` certificate through
 Caddy is untested until the loopback proof. Desktop-app pairing can only be tested at the cut-over (J7).
 
 ## Staging certificate (task 4, 2026-10-13)
@@ -31,6 +31,12 @@ Caddy is untested until the loopback proof. Desktop-app pairing can only be test
 
 ## Loopback proof on the running Caddy (task 5, 2026-10-13)
 `opencode.pazurite.com` 200 and `pazurite.com` 404 with real Let's Encrypt certificates (expire 2027-01-11); the OpenCode body hash matches the server direct; `/api/event` and a websocket upgrade give 401, same as direct; `192.168.103.45:8443` and `100.108.1.19:8443` refuse. The `ts.net` name failed and was dropped.
+
+## Cut-over and first use (Jack's steps, 2026-10-13)
+- J6 (LaunchAgent) done: Caddy runs on `127.0.0.1:8443` only with real Let's Encrypt certificates for `pazurite.com` and `opencode.pazurite.com`.
+- J7 done at about 17:32 UTC+7: Tailscale Serve is a single TCP forward from 443 to `127.0.0.1:8443`; Caddy was restarted with the two-name config. Undo reference: `~/.digismith-depot/caddy/serve-before.json`; the rollback in the plan brings the old `ts.net` mapping back.
+- First use passed at about 17:4x: Jack logged in at `https://opencode.pazurite.com` with the server password and streaming works (live events and the terminal view). The Nexus Maestro's checks: 200 with a valid certificate for opencode, 404 on `pazurite.com`, LAN 443 and 8443 refused.
+- The `workbox.tail730dcf.ts.net` URL no longer works (accepted); the Desktop app is re-paired with the new name.
 
 ## Review
 An independent read-only Claude review found no LAN exposure and no secret leak. Verified findings fixed: `install.sh` ignored the pin only with `DGS_CADDY_TEST=1` now, refuses odd depot paths, downloads next to the target (atomic move, trap on INT and TERM) and prints the J6 commands; `caddy-run.sh` strips a CR and one pair of quotes; the apex "no reverse_proxy" test no longer checks a port that never appears; both tests kill Caddy on exit and the stream test requires a LAN address and counts only a refusal as refused; plan text now matches the code (`@DEPOT@`, real `caddy-run.sh`, port 18444). Left alone: a stricter `.env`-printing regex (low, scripts are clean).

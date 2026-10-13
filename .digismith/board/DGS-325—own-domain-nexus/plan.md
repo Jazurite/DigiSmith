@@ -149,7 +149,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
   Rollback: Nameservers back to "Namecheap BasicDNS" (the Namecheap zone still has the Shopify apex A `23.227.38.65` and AAAA `2620:127:f00f:5::` and the Google MX and TXT rows, but no `www`: Jack removed it there on 2026-10-13 16:47 UTC+7. After a rollback the apex answers with Shopify's address again).
 
 **After the build order has put the files in the depot (the build order runs Task 4 staging after J5)**
-- J6. Install the LaunchAgent:
+- J6. **Done 2026-10-13 (Jack): LaunchAgent running, listening on 127.0.0.1:8443 only, real Let's Encrypt certificates for both names.** Install the LaunchAgent:
   ```
   cp ~/.digismith-depot/caddy/com.jazurite.digismith.caddy.plist ~/Library/LaunchAgents/
   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jazurite.digismith.caddy.plist
@@ -160,7 +160,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
   Caddy now listens on `127.0.0.1:8443` only; nothing else changed. The agent runs Task 5 (loopback proof).
 
 **Cut-over: touches the live OpenCode server's front door (C.1). Do it when no worker session needs the server for a minute.**
-- J7. First restart Caddy so it loads the new Caddyfile (no `ts.net` site): `launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.caddy`.
+- J7. **Done 2026-10-13 ~17:32 UTC+7 (Jack): Serve is one TCP forward 443 -> 127.0.0.1:8443; the undo reference is `~/.digismith-depot/caddy/serve-before.json`.** First restart Caddy so it loads the new Caddyfile (no `ts.net` site): `launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.caddy`.
   Then save the current Serve config: `tailscale serve status --json > ~/.digismith-depot/caddy/serve-before.json`.
   Then: `tailscale serve --https=443 off` and `tailscale serve --bg --tcp=443 tcp://127.0.0.1:8443`.
   **After this step `https://workbox.tail730dcf.ts.net/` stops working (accepted by Jack).** Re-pair the OpenCode Desktop app with
@@ -171,7 +171,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
   log in, open a session, and see live events (the event stream) and the terminal view (the websocket). On any failure, run the rollback below.
   **Rollback (exact):** `tailscale serve --tcp=443 off` then `tailscale serve --bg --https=443 http://127.0.0.1:4198`, then
   `tailscale serve status` shows `https://workbox.tail730dcf.ts.net` with `/ proxy http://127.0.0.1:4198` again, and the `ts.net` link works again.
-- J8. First use: laptop, Tailscale on: `https://opencode.pazurite.com/` loads with a valid certificate and shows the OpenCode login;
+- J8. **Done ~17:4x UTC+7 (Jack): logged in at `https://opencode.pazurite.com` with the server password; streaming works. Maestro checks: 200 with a valid Let's Encrypt certificate for opencode, 404 on `pazurite.com`, LAN 443 and 8443 refused.** First use: laptop, Tailscale on: `https://opencode.pazurite.com/` loads with a valid certificate and shows the OpenCode login;
   `https://pazurite.com/` answers 404. Tailscale off: neither connects.
 
 ## Not in this plan
