@@ -15,9 +15,20 @@ Ticket: DGS-332
 Open point: a pure add has no capture; `status_change_map` is omitted. The first real add (Jack) will show whether ClickUp accepts that.
 
 ## Tests (mocks only, no write)
-- `add-status.test.ts`: 15 new (planStatusAdd 7, add-status 8): exact PUT body with all statuses kept in order; post-read lost a status → exit 1 naming it; changed status; missing new status; conflict; folder/list refused; dry run sends no PUT.
-- `frontdoor.test.ts`: FrontdoorClient 18 → 20, readFrontdoorAuth unchanged (26 → 28 in the file).
-- Full run: 133 files, 1869 tests pass (base 1852 + 17). One earlier full run had one timeout in a 120 s spawn test under load; the rerun was clean.
+- `add-status.test.ts`: 26 new after the review fixes (planStatusAdd 11, add-status 9, verification after the PUT 6): exact PUT body with all statuses kept in order; post-read lost a status → exit 1 naming it; changed status; missing new status; conflict; folder/list refused; dry run sends no PUT.
+- `frontdoor.test.ts`: FrontdoorClient 18 → 21, readFrontdoorAuth unchanged (26 → 29 in the file).
+- Full run: 133 files, 1881 tests pass (base 1852 + 29). One earlier full run had one timeout in a 120 s spawn test under load; the rerun was clean.
 
 ## First use (conductor, after the merge)
 DRY RUN ONLY on the DigiSmith space `1301150000001271`. A real add needs Jack. No allow rule proposed.
+
+## Review (Claude whole-branch review: NOT READY, 9 findings; all fixed, test first)
+1. The status read threw nothing on a missing or empty list, so a `--yes` could send a set with only the new status and wipe the space. Now `getSpaceStatuses` throws unless `statuses` is a non-empty array, and `planStatusAdd` refuses an empty set. Failing test seen first.
+2. Order: the plan sorts a copy by orderindex and keeps the relative order; a missing or shared orderindex is refused.
+3. Verify compares id, name, type, colour and orderindex of every previous status, the count (previous + 1) and exactly one new status with the requested name, type and colour; any difference exits 1 and prints the previous set again.
+4. A status without id is refused.
+5. `--space` must be digits only.
+6. A failed read-back says "the PUT WAS SENT, verification failed"; a 4xx on the PUT adds "re-run to read the current set".
+7. Position: the capture shows a `done` status before the closed one; for `custom` it is assumed, and the dry run says so.
+8. Tests added for each (empty and malformed read, unsorted input, id-less status, extra fields kept, literal 9-status PUT body, no `--space`).
+9. plan.md wording: the handler refuses `--folder` and `--list`, not yargs.
