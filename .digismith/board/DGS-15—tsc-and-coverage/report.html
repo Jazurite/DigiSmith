@@ -1,8 +1,15 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>DGS-15 report: tsc clean in CLI tests</title>
+<html lang="en"><head><meta charset="utf-8"><title>DGS-15 — Implementation Report</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}h1,h2{color:#6b3fa0}</style></head><body>
-<h1>DGS-15: tsc TS2352 in CLI tests — Implementation Report</h1>
-<p>Ticket: DGS-15. Also DGS-16 (missing clickup-client test coverage). Branch <code>dgs-15-tsc-and-coverage</code>, base <code>3d972f5</code>. Plan: <code>plan.md</code>; details: <code>report.md</code>.</p>
+<header>
+<h1>DGS-15 tsc clean in CLI tests — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-15</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The 24 TS2352 errors in 10 CLI test files are gone: one <code>handlerOf</code> test helper replaces the handler casts, with no behaviour change. DGS-16 is on the same branch: three mocked client tests (attachment filename, missing file skips the request, deleteTask) and a coverage note. Full suite passes (1855).</p>
+</section>
+<p>Branch <code>dgs-15-tsc-and-coverage</code>, base <code>3d972f5</code>. Plan: <code>plan.md</code>; details: <code>report.md</code>.</p>
 <h2>DGS-15</h2>
 <table><tr><th></th><th>TS2352</th></tr><tr><td>Baseline (10 CLI test files)</td><td>24</td></tr><tr><td>After</td><td>0</td></tr></table>
 <p>One helper, <code>handlerOf&lt;A&gt;(command)</code> in <code>clickup/handler-of.test-util.ts</code>: one <code>as unknown as</code>, no <code>any</code>, no behaviour change. The build excludes <code>*.test-util.ts</code>; <code>dist</code> has no helper. Out of scope and unchanged: 5 TS2551 and 1 TS2345 (<code>card-hook.ts</code>).</p>
