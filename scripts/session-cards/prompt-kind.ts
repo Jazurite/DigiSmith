@@ -1,5 +1,6 @@
 // DGS-438 (c): which UserPromptSubmit prompts did NOT come from Jack. Positive evidence only: a known
-// harness wrapper at the very start of the prompt, or an empty prompt. Anything else is a real prompt,
+// harness wrapper at the very start of the prompt. An empty prompt is NOT evidence (an image-only message
+// from Jack arrives empty; review finding). Anything else is a real prompt,
 // so a real message is never dropped. Wrappers seen in recorded transcripts (2026-10-13).
 const NOTICE_START = [
   "<task-notification",
@@ -13,5 +14,5 @@ const NOTICE_START = [
 export function isHarnessNotice(prompt: string | undefined): boolean {
   if (typeof prompt !== "string") return false;
   const p = prompt.trimStart();
-  return p === "" || NOTICE_START.some((w) => p.startsWith(w));
+  return NOTICE_START.some((w) => p.startsWith(w));
 }

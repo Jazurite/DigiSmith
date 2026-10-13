@@ -10,8 +10,6 @@ describe("isHarnessNotice (DGS-438 c)", () => {
     "<system-reminder>The user named...</system-reminder>",
     "<local-command-caveat>Caveat: the messages below</local-command-caveat>",
     "<local-command-stdout>Set model</local-command-stdout>",
-    "",
-    "   \n",
   ])("is a notice: %j", (p) => expect(isHarnessNotice(p)).toBe(true));
 
   it.each([
@@ -22,6 +20,8 @@ describe("isHarnessNotice (DGS-438 c)", () => {
     '<pasted_content id="9844"> M file</pasted_content> fix it',
     "/reload-plugins",
     "SYSTEM NOTIFICATION without the bracket",
+    "",
+    "   \n", // an image-only message of Jack arrives empty
   ])("is a real prompt: %j", (p) => expect(isHarnessNotice(p)).toBe(false));
 
   it("a missing prompt field is not evidence: treated as real", () => {
