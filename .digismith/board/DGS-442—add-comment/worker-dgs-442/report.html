@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Report: DGS-442 add-comment</title>
+<style>body{font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em}</style></head><body>
+<h1>Report: DGS-442 <code>dg clickup add-comment</code></h1>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup add-comment --task &lt;id|key&gt; (--text | --markdown-file) [--yes]</code> is built, tested and merge-ready. It is a dry run unless <code>--yes</code>. With <code>--yes</code> it posts the comment, then reads the comments back and looks for the new id. <code>notify_all</code> is always false. A second <code>--yes</code> posts a second comment, and the dry run says so. <code>--markdown-file</code> is read as plain text; ClickUp does not convert it.</p>
+</section>
+<h2>What changed</h2>
+<ul><li>Client: <code>addTaskComment</code>, <code>getTaskComments</code>, <code>commentBody</code>.</li><li>CLI: <code>add-comment.ts</code>, its test, the registration and a README line.</li><li>Tests: 84 client and 681 CLI, all pass.</li></ul>
+<h2>Review</h2>
+<p>Review done by an independent code-review agent: 8 findings. Fixed: a failed read-back after the post, a flag given twice, dry-run body drift, a leading BOM. Left: the first-page and order assumption (checked on first use), shared scaffolding, <code>exitCode</code> style, import placement.</p>
+<h2>Not done</h2>
+<p>No allow rule yet. First use on DGS-436 waits for the merge.</p>
+</body></html>
