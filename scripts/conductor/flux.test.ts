@@ -46,6 +46,7 @@ class FakeHerdr implements FluxHerdr {
   clearDelayPolls = 1;
   wakeStalls = false;
   wakeReply = true;
+  busyOnGet = false;
   private polls = 0;
   private cleared = false;
   constructor(private ctx: { onClear?: () => void; onWake?: () => void }) {}
@@ -62,7 +63,8 @@ class FakeHerdr implements FluxHerdr {
         }
       }
     }
-    return this.agents.find((a) => a.name === name);
+    const found = this.agents.find((a) => a.name === name);
+    return this.busyOnGet && !this.cleared && found ? { ...found, agent_status: "working" } : found;
   }
   async readInput(pane: string) { this.calls.push(`readInput ${pane}`); return this.box; }
   async sendPrompt(name: string, text: string, o: { wait?: boolean } = {}) {
@@ -146,6 +148,10 @@ describe("pure readers", () => {
     expect(inputBoxState("────\n❯ \x1b[2msuggest\x1b[0m\x1b[22m typed\n────\n")).toBe("typed");
     expect(inputBoxState("────\n❯ \n────\n")).toBe("empty");
     expect(inputBoxState("nothing like a box")).toBe("unreadable");
+    // colour codes carry a literal 2 (truecolor) or 5;2: that is not the dim flag
+    expect(inputBoxState("────\n❯ \x1b[38;2;215;119;87mtyped\x1b[0m\n────\n")).toBe("typed");
+    expect(inputBoxState("────\n❯ \x1b[48;5;2mtyped\x1b[0m\n────\n")).toBe("typed");
+    expect(inputBoxState("────\n❯ \x1b[2;38;5;244msuggest\x1b[0m\n────\n")).toBe("empty");
   });
   it("scanNoteInFlight: only sections after the last handoff; no handoff = newest section only", () => {
     const old = "## old\n- DGS-9 is building now\n\n";
@@ -172,6 +178,9 @@ describe("wake text", () => {
     expect(w).toContain("read the Current section first, then wait");
     expect(w).toContain(brief);
     expect(w).toContain(note);
+  });
+  it("a wake that starts with a dash gets a prefix (herdr would read a flag)", () => {
+    expect(buildWake(target({ wake: `-x ${brief} ${note}` })).startsWith("-")).toBe(false);
   });
   it("a wake that already names both paths is used as it is", () => {
     const own = `read ${brief} and ${note} then wait`;
@@ -230,6 +239,14 @@ describe("skips", () => {
   it("a note older than the last work (transcript or card)", async () => {
     fs.utimesSync(note, new Date("2026-10-13T09:00:00Z"), new Date("2026-10-13T09:00:00Z"));
     await skipped("note_stale");
+  });
+  it("status that changes between the checks and the send", async () => {
+    herdr.busyOnGet = true;
+    await skipped("changed_before_clear");
+  });
+  it("an agent that herdr shows with no session id", async () => {
+    herdr.agents[0].session = "";
+    await skipped("no_session");
   });
   it("a missing transcript or brief", async () => {
     fs.rmSync(path.join(tdir, `${OLD}.jsonl`));
@@ -375,6 +392,12 @@ describe("flux", () => {
     expect(row).toMatchObject({ v: 1, job: "conductor-flux", agent: "tec", result: "fluxed", session_old: OLD, session_new: NEW, tokens_before: 206693, tokens_after: 9103, dry_run: false });
     expect(row.ts).toMatch(/\+07:00$/);
     expect(r.result).toBe("fluxed");
+  });
+  it("a log write that fails does not undo or hide the flux", async () => {
+    fs.writeFileSync(path.join(tmp, "depot", "runs"), "a file where the folder should go");
+    const r = await fluxConductor(target(), { log: true }, deps());
+    expect(r.result).toBe("fluxed");
+    expect(r.checks.log_error).toBeTruthy();
   });
   it("a dry run writes no log by default", async () => {
     await fluxConductor(target(), { dryRun: true }, deps());

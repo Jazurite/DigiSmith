@@ -158,8 +158,11 @@ export function inputBoxState(ansi: string): "empty" | "typed" | "unreadable" {
     if (line[i] === "\x1b") {
       const m = /^\x1b\[([0-9;]*)m/.exec(line.slice(i));
       if (m) {
-        for (const p of m[1] === "" ? ["0"] : m[1].split(";")) {
-          if (p === "2") dim = true;
+        const ps = m[1] === "" ? ["0"] : m[1].split(";");
+        for (let k = 0; k < ps.length; k++) {
+          const p = ps[k];
+          if (p === "38" || p === "48" || p === "58") k += ps[k + 1] === "5" ? 2 : ps[k + 1] === "2" ? 4 : 0; // colour sub-parameters are not flags
+          else if (p === "2") dim = true;
           else if (p === "0" || p === "22") dim = false;
         }
         i += m[0].length;
@@ -203,7 +206,8 @@ export function buildWake(t: FluxTarget): string {
   const fill = (s: string) => s.replaceAll("{brief}", t.brief).replaceAll("{note}", t.note);
   let w = t.wake ? fill(t.wake) : fill(DEFAULT_WAKE);
   if (t.wake && !(w.includes(t.brief) && w.includes(t.note))) w = `Brief: ${t.brief}. Note: ${t.note}. ${w}`;
-  return w.replace(/\s*\n\s*/g, " ").trim();
+  w = w.replace(/\s*\n\s*/g, " ").trim();
+  return w.startsWith("-") ? `Wake: ${w}` : w; // herdr reads a leading dash as a flag
 }
 
 // ---------- the job ----------
@@ -243,7 +247,13 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
     res.reason = reason;
     res.needs_attention = attention;
     res.duration_s = Math.round((deps.now().getTime() - started.getTime()) / 1000);
-    if (opts.log) appendLog(res, deps);
+    if (opts.log) {
+      try {
+        appendLog(res, deps);
+      } catch (e) {
+        checks.log_error = (e as Error).message; // a failed log write never undoes or hides a finished flux
+      }
+    }
     return res;
   };
   const skip = (reason: string) => finish("skipped", reason);
@@ -263,6 +273,7 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
     if (found.length > 1) return skip("agent_ambiguous");
     const agent = found[0];
     res.session_old = agent.session;
+    if (!agent.session) return skip("no_session");
     const oldCard = findCardBySession(agent.session, target.project, deps.env)?.card;
     if (oldCard && oldCard.role === "maestro") return skip("refused_target");
     checks.card = oldCard ? `${oldCard.id} open` : "n/a (no open card for this session)";
@@ -325,13 +336,18 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
       return skip("dry_run");
     }
 
+    // 7a. one last look right before the send: the conductor may have started a turn or someone may be typing
+    const last = await deps.herdr.get(agent.name);
+    if (!last || !["idle", "done"].includes(last.agent_status) || last.session !== agent.session) return skip("changed_before_clear");
+    if ((await deps.herdr.readInput(last.pane_id).then(inputBoxState)) !== "empty") return skip("changed_before_clear");
+
     // 7. flux: /clear without --wait (herdr stalls on it), then watch the session id
     const clear = await deps.herdr.sendPrompt(agent.name, "/clear", {});
     if (!clear.ok) checks.clear_send = clear.code ?? "error";
     let renewed: HerdrAgent | undefined;
     for (let i = 0; i < CLEAR_POLLS; i++) {
       const a = await deps.herdr.get(agent.name);
-      if (a && a.session !== agent.session && ["idle", "done"].includes(a.agent_status)) {
+      if (a && a.session && a.session !== agent.session && ["idle", "done"].includes(a.agent_status)) {
         renewed = a;
         break;
       }

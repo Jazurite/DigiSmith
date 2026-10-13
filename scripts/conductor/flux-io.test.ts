@@ -70,6 +70,8 @@ describe("createFluxHerdr", () => {
     ]);
     expect((await h.get("tec"))?.session).toBe("sess-1");
     expect(await h.get("ghost")).toBeUndefined();
+    const bad = createFluxHerdr(fluxRunner(async () => ok("not json"), { allowPrompt: false }));
+    expect(await bad.get("tec")).toBeUndefined();
     expect(await h.readInput("w2:pK")).toContain("box");
     expect(calls[3]).toEqual(["pane", "read", "w2:pK", "--source", "visible", "--format", "ansi"]);
   });
@@ -193,6 +195,9 @@ describe("fluxMain (the CLI)", () => {
       const r = await run(["one", f]);
       expect(r.code).toBe(1);
     }
+  });
+  it("--all refuses the per-agent flags", async () => {
+    for (const f of [["--brief", "/b"], ["--note", "/n"], ["--wake", "x"], ["--project", "P"]]) expect((await run(["--all", ...f])).code).toBe(1);
   });
   it("needs an agent or --all, and HERDR_WS for a real herdr", async () => {
     expect((await run([])).code).toBe(1);

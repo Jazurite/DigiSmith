@@ -62,8 +62,12 @@ export function createFluxHerdr(run: Runner = fluxRunner(execRunner, { allowProm
     async get(name) {
       const r = await run(HERDR_WS_BIN, ["agent", "get", name]);
       if (r.code !== 0) return undefined;
-      const a = (JSON.parse(r.stdout) as { result?: { agent?: Record<string, unknown> } }).result?.agent;
-      return a ? toAgent(a) : undefined;
+      try {
+        const a = (JSON.parse(r.stdout) as { result?: { agent?: Record<string, unknown> } }).result?.agent;
+        return a ? toAgent(a) : undefined;
+      } catch {
+        return undefined; // one bad reply must not end a flux between the clear and the wake: the caller polls again
+      }
     },
     async readInput(pane) {
       const r = await run(HERDR_WS_BIN, ["pane", "read", pane, "--source", "visible", "--format", "ansi"]);

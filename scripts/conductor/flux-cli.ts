@@ -63,6 +63,10 @@ export async function fluxMain(argv: string[], io: FluxCliIo): Promise<number> {
     io.stderr(FLUX_USAGE);
     return 1;
   }
+  if (o.all && (o.project || o.brief || o.note || o.wake)) {
+    io.stderr(`--project, --brief, --note and --wake name one agent; they do not go with --all\n${FLUX_USAGE}`);
+    return 1;
+  }
   const dryRun = !!o["dry-run"];
   if (!io.env.HERDR_WS) {
     io.stderr("flux needs HERDR_WS (for example HERDR_WS=w2): herdr is touched only through herdr-ws\n");
