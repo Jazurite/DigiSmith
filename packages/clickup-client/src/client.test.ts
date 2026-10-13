@@ -602,25 +602,29 @@ describe("ClickUpClient uploadAttachment", () => {
     request.mockResolvedValueOnce({ data: { id: "att1" } });
     const tmpDir = mkdtempSync(join(tmpdir(), "clickup-client-upload-"));
     const filePath = join(tmpDir, "report.pdf");
-    writeFileSync(filePath, Buffer.from([1, 2, 3]));
+    try {
+      writeFileSync(filePath, Buffer.from([1, 2, 3]));
 
-    await client.uploadAttachment("abc", filePath);
+      await client.uploadAttachment("abc", filePath);
 
-    const sentForm = request.mock.calls[0][0].data as FormData;
-    expect((sentForm.get("attachment") as File).name).toBe("report.pdf");
-
-    rmSync(tmpDir, { recursive: true, force: true });
+      const sentForm = request.mock.calls[0][0].data as FormData;
+      expect((sentForm.get("attachment") as File).name).toBe("report.pdf");
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
   it("rejects a missing local file before any HTTP request", async () => {
     const client = makeClient();
     const tmpDir = mkdtempSync(join(tmpdir(), "clickup-client-upload-"));
 
-    await expect(client.uploadAttachment("abc", join(tmpDir, "missing.pdf"))).rejects.toThrow(/ENOENT/);
+    try {
+      await expect(client.uploadAttachment("abc", join(tmpDir, "missing.pdf"))).rejects.toThrow(/ENOENT/);
 
-    expect(request).not.toHaveBeenCalled();
-
-    rmSync(tmpDir, { recursive: true, force: true });
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 
