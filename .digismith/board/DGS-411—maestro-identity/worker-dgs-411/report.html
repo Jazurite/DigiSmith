@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-411 Maestro identity — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-411 Maestro identity — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-411</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>A Claude Desktop or SSH Maestro session now learns it IS a given Maestro without hand-set env. An identity record in the depot names the project folder; the existing session-start hook writes the card from it and prints one context line (identity, project, session id, conductor, other open sessions of the identity). No settings, <code>hooks.json</code> or config change.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>scripts/identity.ts</code>: the record <code>~/.digismith-depot/identities/&lt;id&gt;.yml</code> (id, name, owner, project, folder, conductors, role, machine, state, created); validated, no secrets, never overwritten, a broken record never breaks a session start.</li>
+<li><code>scripts/identity-cli.ts</code>: <code>write</code>, <code>list</code>, <code>show</code>, <code>resolve</code>.</li>
+<li><code>card-hook.ts</code>: identity branch. A session with no <code>DIGISMITH_ROLE</code>, no <code>HERDR_PANE_ID</code> and a cwd whose main checkout (worktrees included) equals exactly one record's folder is that Maestro. <strong>Herdr sessions with env still win</strong> and print nothing. Two records for one folder: no card, a stderr note. Any error: no card, exit 0.</li>
+<li><code>idle-check.ts</code>: the conductor comes from the record; <code>skills/catch-up/SKILL.md</code> reads the context line first.</li>
+</ul>
+</section>
+<section id="not-done">
+<h2>Not done</h2>
+<p>OpenCode Maestros. The real <code>digismith-maestro</code> record is live depot data, created at first use with <code>identity-cli.ts write</code> (see probe.md). A crashed sibling stays open in the context line until marked lost; the line shows its last_seen.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: no bugs. One minor note fixed: <code>state</code> must be an absolute path.</p>
+</section>
+<section id="tests">
+<h2>Tests</h2>
+<p>Full suite green (1808 tests before rebase). New: identity, identity-cli, the hook identity branch (worktree cwd, two records, herdr silent, env sessions unchanged, broken record, resume), idle conductor from the record.</p>
+</section>
+</body>
+</html>
