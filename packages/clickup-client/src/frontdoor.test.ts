@@ -169,7 +169,7 @@ describe("FrontdoorClient", () => {
   it("restoreList puts ClickUp's error body in the message of a 404", async () => {
     const client = makeClient();
     request.mockRejectedValueOnce(
-      Object.assign(new Error("Request failed with status code 404"), { response: { status: 404, data: { err: "not in trash" } } }),
+      Object.assign(new Error("Request failed with status code 404"), { isAxiosError: true, response: { status: 404, data: { err: "not in trash" } } }),
     );
     await expect(client.restoreList("1")).rejects.toThrow('status code 404: {"err":"not in trash"}');
   });
@@ -177,7 +177,7 @@ describe("FrontdoorClient", () => {
   it("puts ClickUp's error body in the message of a 400", async () => {
     const client = makeClient();
     request.mockRejectedValueOnce(
-      Object.assign(new Error("Request failed with status code 400"), { response: { status: 400, data: { err: "bad position" } } }),
+      Object.assign(new Error("Request failed with status code 400"), { isAxiosError: true, response: { status: 400, data: { err: "bad position" } } }),
     );
     await expect(client.moveList("1", { position: 1 })).rejects.toThrow('status code 400: {"err":"bad position"}');
   });
@@ -185,7 +185,6 @@ describe("FrontdoorClient", () => {
   it.each([401, 403])("turns HTTP %i into one clear session error", async (status) => {
     const client = makeClient();
     request.mockRejectedValueOnce({ isAxiosError: true, response: { status }, message: "x" });
-    vi.mocked(axios.isAxiosError).mockReturnValue(true);
     await expect(client.getTaskTypes()).rejects.toThrow(FrontdoorAuthError);
     await Promise.resolve();
     request.mockRejectedValueOnce({ isAxiosError: true, response: { status }, message: "x" });
@@ -209,6 +208,15 @@ describe("FrontdoorClient", () => {
     const err = e as Error & { toJSON?: () => unknown };
     return [JSON.stringify(err), inspect(err, { depth: null, showHidden: true }), String(err.stack), err.message, JSON.stringify(err.toJSON?.() ?? null)];
   }
+
+  it("rethrows a plain Error that only has a response field, unchanged", async () => {
+    const client = makeClient();
+    const err = Object.assign(new Error("my own bug"), { response: { status: 500, data: "x" } });
+    request.mockRejectedValueOnce(err);
+    const caught = await client.getTaskTypes().catch((e: unknown) => e);
+    expect(caught).toBe(err);
+    expect(caught).not.toBeInstanceOf(ClickUpApiError);
+  });
 
   it("turns other errors into a ClickUpApiError without the auth value", async () => {
     const client = makeClient();

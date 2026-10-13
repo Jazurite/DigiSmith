@@ -721,6 +721,48 @@ describe("ClickUpClient relations", () => {
     for (const view of everyView(caught)) expect(view).not.toContain("tok_123");
   });
 
+  it("rethrows a plain Error that only has a response field, unchanged", async () => {
+    const client = makeClient();
+    const err = Object.assign(new Error("my own bug"), { response: { status: 500, data: "x" } });
+    request.mockRejectedValueOnce(err);
+    const caught = await client.get("/x").catch((e: unknown) => e);
+    expect(caught).toBe(err);
+    expect(caught).not.toBeInstanceOf(ClickUpApiError);
+  });
+
+  it("keeps the token out when the error is a REAL AxiosError", async () => {
+    const { AxiosError } = await vi.importActual<typeof import("axios")>("axios");
+    const config = { headers: { Authorization: "tok_123" } } as never;
+    const real = new AxiosError(
+      "Request failed with status code 400",
+      "ERR_BAD_REQUEST",
+      config,
+      { _header: "GET /x HTTP/1.1\r\nAuthorization: tok_123\r\n" },
+      { status: 400, statusText: "Bad Request", headers: {}, config, data: { err: "bad", ECODE: "X" } },
+    );
+    expect(JSON.stringify(real)).toContain("tok_123"); // the premise: axios itself leaks
+    const client = makeClient();
+    request.mockRejectedValueOnce(real);
+    const caught = await client.get("/task/x").catch((e: unknown) => e);
+    expect(caught).toBeInstanceOf(ClickUpApiError);
+    expect((caught as ClickUpApiError).status).toBe(400);
+    for (const view of everyView(caught)) expect(view).not.toContain("tok_123");
+  });
+
+  it("does not let an unserializable body replace the real error", async () => {
+    const client = makeClient();
+    const circular: Record<string, unknown> = { err: "loop" };
+    circular.self = circular;
+    request.mockRejectedValueOnce(axiosLike(400, circular));
+    const caught = await client.get("/x").catch((e: unknown) => e);
+    expect(caught).toBeInstanceOf(ClickUpApiError);
+    expect((caught as ClickUpApiError).status).toBe(400);
+    expect((caught as Error).message).toContain("Request failed with status code 400");
+    request.mockRejectedValueOnce(axiosLike(400, { n: 10n }));
+    const caught2 = await client.get("/x").catch((e: unknown) => e);
+    expect(caught2).toBeInstanceOf(ClickUpApiError);
+  });
+
   it("leaves an error without a response body untouched", async () => {
     const client = makeClient();
     const err = new Error("connect ECONNREFUSED");
