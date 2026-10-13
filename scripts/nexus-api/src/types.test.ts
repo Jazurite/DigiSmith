@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { PowerMetrics } from './types.ts'
 
 const base: PowerMetrics = {
+  verdict: { status: 'ok', summary: 'The Mac is fine: cool, not throttling, plenty of memory.', reasons: [] },
   readAt: '2026-10-13T11:02:15.000Z', readAtUtc7: '2026-10-13 18:02:15',
   source: { status: 'ok', readAt: '2026-10-13T11:02:14.000Z', ageSeconds: 1 },
   machine: { model: 'MacBookPro16,1', osBuild: '25G241' },

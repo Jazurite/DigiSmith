@@ -3,6 +3,9 @@ import type { AddressInfo } from 'node:net'
 import { API_VERSION } from './version.ts'
 import { createApiServer, HOST, parsePort } from './server.ts'
 import type { PowerMetrics } from './types.ts'
+import { buildReading } from './reading.ts'
+import { parsePowermetrics } from './parse-powermetrics.ts'
+import { readFileSync } from 'node:fs'
 
 const reading = { readAt: 'x' } as unknown as PowerMetrics
 let server: ReturnType<typeof createApiServer> | undefined
@@ -27,6 +30,16 @@ describe('server', () => {
     expect(r.headers.get('content-type')).toBe('application/json; charset=utf-8')
     expect(r.headers.get('cache-control')).toBe('no-store')
     expect(await r.json()).toEqual(reading)
+  })
+  it('the response body starts with verdict, then the raw fields', async () => {
+    const parsed = parsePowermetrics(readFileSync(new URL('./fixtures/powermetrics-real-sample.txt', import.meta.url), 'utf8'))
+    const live = { anyOk: true, load: { cpuIdlePct: 85, load1: 3, load5: 3, load15: 3 }, memory: { freePct: 74 }, topProcesses: [], opencodeServer: { port: 4198, rssMb: null } }
+    const { base } = await start(async () => buildReading(Date.now(), { status: 'ok', value: parsed, at: Date.now() }, live))
+    const text = await (await fetch(base + PATH)).text()
+    expect(text.startsWith('{"verdict":{"status":"ok"')).toBe(true)
+    const body = JSON.parse(text)
+    expect(Object.keys(body).slice(0, 2)).toEqual(['verdict', 'readAt'])
+    expect(body.verdict).toEqual({ status: 'ok', summary: 'The Mac is fine: cool, not throttling, plenty of memory.', reasons: [] })
   })
   it('503 no_reading with Retry-After when nothing can be read', async () => {
     const { base } = await start(async () => null)

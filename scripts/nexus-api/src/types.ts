@@ -1,7 +1,17 @@
 // The JSON of GET /api/<version>/power-metrics. Copy this type into the front-end.
 export type SourceStatus = 'ok' | 'failed' | 'timeout'
 
+export type VerdictStatus = 'ok' | 'busy' | 'hot' | 'throttling' | 'unknown'   // the worst one wins: throttling > hot > busy > unknown > ok
+
+// The plain-language answer to "is the Mac fine?". Show summary first; reasons has one sentence per signal that is not fine (empty when ok).
+export interface Verdict {
+  status: VerdictStatus
+  summary: string             // one sentence, plain English
+  reasons: string[]
+}
+
 export interface PowerMetrics {
+  verdict: Verdict            // first in the JSON
   readAt: string              // ISO UTC, when the API answered
   readAtUtc7: string          // same moment, "2026-10-13 18:02:15"
   source: {                   // the powermetrics read behind machine/power/cpu/thermal/topTasks/extraSections

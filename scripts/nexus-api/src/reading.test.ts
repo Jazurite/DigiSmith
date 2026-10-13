@@ -39,6 +39,16 @@ describe('buildReading', () => {
     expect(r.extraSections).toEqual([])
     expect(r.memory.freePct).toBe(77)
   })
+  it('verdict is the first key, ok for the real fixture', () => {
+    const r = buildReading(NOW, { status: 'ok', value: parsed, at: NOW }, live())!
+    expect(Object.keys(r)[0]).toBe('verdict')
+    expect(Object.keys(JSON.parse(JSON.stringify(r)))[0]).toBe('verdict')
+    expect(r.verdict.status).toBe('ok')
+  })
+  it('a failed source gives unknown, a low-memory reading on top gives busy', () => {
+    expect(buildReading(NOW, { status: 'failed', at: NOW }, live())!.verdict.status).toBe('unknown')
+    expect(buildReading(NOW, { status: 'timeout', at: NOW }, { ...live(), memory: { freePct: 9 } })!.verdict.status).toBe('busy')
+  })
   it('null when nothing at all could be read', () => {
     expect(buildReading(NOW, { status: 'failed', at: NOW }, live(false))).toBeNull()
   })
