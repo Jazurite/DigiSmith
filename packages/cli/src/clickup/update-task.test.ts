@@ -380,6 +380,18 @@ describe("createUpdateTaskCommand", () => {
       expect(process.exitCode).toBe(1);
     });
 
+    it("errors for a key with no change flag, before any client or lookup", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const factory = vi.fn();
+      const command = createUpdateTaskCommand(factory);
+
+      await (command.handler as Handler)({ task: "DGS-81" });
+
+      expect(factory).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+      expect(process.exitCode).toBe(1);
+    });
+
     it("errors for the argv the real yargs parser gives for --task alone (no default adds a change)", async () => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const factory = vi.fn();
