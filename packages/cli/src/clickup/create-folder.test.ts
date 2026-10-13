@@ -97,6 +97,7 @@ describe("createCreateFolderCommand --parent-folder", () => {
     const text = out(errSpy);
     expect(text).toContain("clickup create-folder: HTTP 500");
     expect(text).toContain('folder f9 "X: New" was created at the top level');
+    expect(text).toContain("nothing was deleted");
     expect(text).toContain(`dg clickup move-folder --folder f9 --parent ${PARENT} --yes`);
     expect(client.getFolder).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
@@ -119,16 +120,63 @@ describe("createCreateFolderCommand --parent-folder", () => {
     expect(process.exitCode).toBe(0);
   });
 
-  it("rejects a non-numeric --parent-folder and --yes without --parent-folder, before any call", async () => {
+  it("rejects a non-numeric --parent-folder before any call", async () => {
     const factory = vi.fn();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const cmd = createCreateFolderCommand(noSpace, factory as unknown as () => ClickUpClient);
-    await run(cmd, { name: "X", parentFolder: "Clans" });
+    await run(createCreateFolderCommand(noSpace, factory as unknown as () => ClickUpClient), { name: "X", parentFolder: "Clans" });
     expect(out(errSpy)).toContain("--parent-folder must be a folder id (digits only)");
+    expect(factory).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
-    errSpy.mockClear();
-    await run(cmd, { name: "X", yes: true });
+  });
+
+  it("rejects --yes without --parent-folder before any call", async () => {
+    const factory = vi.fn();
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createCreateFolderCommand(noSpace, factory as unknown as () => ClickUpClient), { name: "X", yes: true });
     expect(out(errSpy)).toContain("--yes needs --parent-folder");
     expect(factory).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each(["", "   "])("rejects an empty name %j, in a dry run too, before any call", async (name) => {
+    const factory = vi.fn();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createCreateFolderCommand(noSpace, factory as unknown as () => ClickUpClient), { name, parentFolder: PARENT });
+    expect(out(errSpy)).toContain("--name needs a non-empty name");
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(factory).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("create answers no id: stops before the move and names the folder", async () => {
+    const client = fakeClient({ createFolder: vi.fn().mockResolvedValue({ name: "X: New" }) });
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createCreateFolderCommand(noSpace, () => client), { name: "X: New", parentFolder: PARENT, yes: true });
+    expect(client.moveFolder).not.toHaveBeenCalled();
+    expect(out(errSpy)).toContain('folder "X: New" was created but the response has no id: check dg clickup get-lists');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("read-back shows another parent: MISMATCH warning with the finishing command, exit 1", async () => {
+    const client = fakeClient({ getFolder: vi.fn().mockResolvedValue({ id: "f9", parent_folder: { id: "777", name: "Other" } }) });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(createCreateFolderCommand(noSpace, () => client), { name: "X: New", parentFolder: PARENT, yes: true });
+    const text = out(errSpy);
+    expect(text).toContain(`MISMATCH: folder f9 "X: New" is in folder 777, not ${PARENT}`);
+    expect(text).toContain(`dg clickup move-folder --folder f9 --parent ${PARENT} --yes`);
+    expect(out(logSpy)).not.toContain("inside folder");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("read-back has no parent: says 'not confirmed', never 'inside'", async () => {
+    const client = fakeClient({ getFolder: vi.fn().mockResolvedValue({ id: "f9", parent_folder: null }) });
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(createCreateFolderCommand(noSpace, () => client), { name: "X: New", parentFolder: PARENT, yes: true });
+    const text = out(logSpy);
+    expect(text).toContain("parent not confirmed");
+    expect(text).not.toContain("inside folder");
+    expect(process.exitCode).toBe(0);
   });
 });
