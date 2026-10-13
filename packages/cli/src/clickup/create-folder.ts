@@ -43,6 +43,7 @@ export function createCreateFolderCommand(
           process.exitCode = 0;
           return;
         }
+        if (name.trim() === "") throw new Error("--name needs a non-empty name");
         if (!ID.test(parent)) throw new Error("--parent-folder must be a folder id (digits only)");
         if (!argv.yes) {
           printCall("POST", `/space/${DIGISMITH_SPACE_ID}/folder`, { name });
@@ -53,18 +54,37 @@ export function createCreateFolderCommand(
         }
         const client = clientFactory();
         const folder = await client.createFolder(DIGISMITH_SPACE_ID, name);
+        if (!folder?.id) {
+          throw new Error(`folder "${name}" was created but the response has no id: check dg clickup get-lists`);
+        }
         createdId = folder.id;
         await client.moveFolder(folder.id, { parentFolderId: parent });
         createdId = undefined;
-        let note: string;
+        let back: FolderReadBack | undefined;
+        let readBackError: string | undefined;
         try {
-          const back = (await client.getFolder(folder.id)) as unknown as FolderReadBack;
-          const p = back.parent_folder;
-          note = p?.id ? `parent_folder: ${p.id}${p.name ? ` (${p.name})` : ""}` : "check it with dg clickup get-lists (parent_folder)";
+          back = (await client.getFolder(folder.id)) as unknown as FolderReadBack;
         } catch (err) {
-          note = `read-back failed: ${(err as Error).message}; check it with dg clickup get-lists (parent_folder)`;
+          readBackError = (err as Error).message;
         }
-        console.log(`created folder ${folder.id} "${folder.name}" inside folder ${parent}; ${note}`);
+        const actual = back?.parent_folder?.id;
+        if (actual !== undefined && actual !== parent) {
+          console.error(
+            `MISMATCH: folder ${folder.id} "${folder.name}" is in folder ${actual}, not ${parent}. Fix with:\n` +
+              `dg clickup move-folder --folder ${folder.id} --parent ${parent} --yes`
+          );
+          process.exitCode = 1;
+          return;
+        }
+        if (actual === parent) {
+          const pn = back?.parent_folder?.name;
+          console.log(`created folder ${folder.id} "${folder.name}" inside folder ${parent}${pn ? ` (${pn})` : ""}`);
+        } else {
+          const why = readBackError !== undefined ? `read-back failed: ${readBackError}` : "parent not confirmed by the read-back";
+          console.log(
+            `created folder ${folder.id} "${folder.name}" and sent the move into folder ${parent}; ${why}; check it with dg clickup get-lists (parent_folder)`
+          );
+        }
         process.exitCode = 0;
       } catch (err) {
         console.error(`clickup create-folder: ${(err as Error).message}`);
