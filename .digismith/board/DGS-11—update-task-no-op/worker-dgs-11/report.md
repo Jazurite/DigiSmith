@@ -13,5 +13,8 @@ The real yargs parser gives no default for any change flag: for `--task X` alone
 ## Tests
 `update-task.test.ts`, per describe (base to now): top level 7 to 7, date order 5 to 5, `--field` 4 to 4, markdown description 5 to 5, new "no-op write" 0 to 15. File 21 to 36. One old test called the handler with `--task` only to reach the client; it now passes `--status`. Whole repo: the only failure before that fix was that test; CLI build clean.
 
+## Review
+Claude whole-branch review: ready to merge. Four small fixes: (1) the "each flag alone" tests now assert no error at all and exit 0, and the `--field` case has a matching field; (2) `--name ""` added (a change); (3) plan.md now describes the real helper; (4) README line says at least one change flag is required. The "no-op write" describe is now 16 tests (file 37). The clickup tests pass: 34 files, 408 tests.
+
 ## First use
 By the conductor after the merge: `dg clickup update-task --task <id>` with no change flag errors.

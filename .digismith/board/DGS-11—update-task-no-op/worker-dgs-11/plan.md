@@ -23,8 +23,7 @@ Exit 1 (existing catch block).
 
 ## Where
 `packages/cli/src/clickup/update-task.ts` only: right after `buildTaskWriteBody` and before `clientFactory()`:
-`if (Object.keys(body).length === 0 && argv.type === undefined && !fieldArgs.length) throw new Error(...)`.
-`fieldArgs` moves up two lines. The client is not built, so no call and no credential read. `lib.ts` is untouched (DGS-12 edits it).
+one named helper, `assertSomethingToUpdate(body, argv)`, called right after `buildTaskWriteBody` and before `clientFactory()` (DGS-81 adds key resolution after it). It throws when `Object.keys(body).length === 0`, `argv.type === undefined` and `argv.field` is empty. `fieldArgs` stays where it is. The client is not built, so no call and no credential read. `lib.ts` is untouched (DGS-12 edits it).
 
 ## Tests (update-task.test.ts, new describe "no-op write")
 - no flags: exit 1, message, factory not called, no update.

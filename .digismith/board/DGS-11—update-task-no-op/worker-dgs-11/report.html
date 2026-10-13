@@ -30,6 +30,10 @@
 <h2>Tests</h2>
 <p><code>update-task.test.ts</code> goes from 21 to 36 tests: a new "no-op write" describe holds 15; the other four describes keep their counts (7, 5, 4, 5). One old test now passes <code>--status</code> so it still reaches the client.</p>
 </section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: ready to merge. Four fixes: the "each flag alone" tests assert no error and exit 0 (the <code>--field</code> case has a matching field); <code>--name ""</code> added; plan.md describes the real helper; the README line says at least one change flag is required. The "no-op write" describe is now 16 tests (file 37). Clickup tests: 34 files, 408 tests pass.</p>
+</section>
 <section id="first-use">
 <h2>First use</h2>
 <p>After the merge: <code>dg clickup update-task --task &lt;id&gt;</code> with no change flag errors.</p>
