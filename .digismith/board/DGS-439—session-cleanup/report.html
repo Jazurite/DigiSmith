@@ -5,7 +5,7 @@
 <h1>DGS-439: <code>dg sessions cleanup</code></h1>
 <section id="summary">
 <h2>Summary</h2>
-<p><code>dg sessions cleanup [--project &lt;p&gt;] [--yes]</code> deletes archived closed or lost session cards whose <code>ended</code> is strictly older than <code>CLEANUP_DAYS</code> (3, one constant). It is a dry run by default. A real run appends one line per deleted file to <code>sessions/cleanup.log</code>. 16 new tests pass and the whole suite passes.</p>
+<p><code>dg sessions cleanup [--project &lt;p&gt;] [--yes]</code> deletes archived closed or lost session cards whose <code>ended</code> is strictly older than <code>CLEANUP_DAYS</code> (3, one constant). It is a dry run by default. A real run appends one line per deleted file to <code>sessions/cleanup.log</code>. 19 new tests pass and the whole suite passes (770). An independent whole-branch review found two low issues; both are fixed.</p>
 </section>
 <section id="allow-list">
 <h2>Allow-list</h2>
@@ -16,8 +16,11 @@
 <ul>
 <li>No worker-scratch folder exists, so there is no scratch rule. A named path is a later ticket.</li>
 <li>The conductor log part waits: no separate log exists.</li>
-<li>DGS-443 had no plan.md yet, so its note-path test is not added. Re-check before merge.</li>
 <li>The nightly trigger is DGS-434, not this ticket.</li>
 </ul>
+</section>
+<section id="review">
+<h2>Review and confirmations</h2>
+<p>An independent read-only Claude review found no path outside the allow-list. It found two low issues, both fixed with tests: impossible <code>ended</code> dates (Feb 31, 24:00) and duplicate or stub cards not counting as parse errors. The strict rule (exactly 3 days stays, just under stays, just over goes) is in. A missing or unreadable <code>ended</code> stays. A test pins DGS-443's note layout (<code>maestros/&lt;title&gt;/note.md</code>, <code>&lt;conductor&gt;/note.md</code>, <code>orders/</code>, runbooks).</p>
 </section>
 </body></html>

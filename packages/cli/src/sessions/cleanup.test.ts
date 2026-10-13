@@ -86,6 +86,26 @@ describe("planCleanup", () => {
     for (const k of keep) expect(fs.existsSync(path.join(depot, k))).toBe(true);
   });
 
+  it("keeps DGS-443's final note layout when old: maestros/<title>/note.md, <conductor>/note.md, orders/, runbooks", () => {
+    const keep = [
+      "sessions/DigiSmith/maestros/Scheduling/note.md",
+      "sessions/DigiSmith/maestros/Token Economics/note.md",
+      "sessions/DigiSmith/maestros/archive/note.md",
+      "sessions/DigiSmith/maestros/b3-maestro/note.md",
+      "sessions/DigiSmith/digismith-conductor/note.md",
+      "sessions/DigiSmith/orders/order-scheduling-442-439-443.md",
+      "sessions/DigiSmith/workbox.md",
+      "sessions/DigiSmith/workbox-macos.md",
+    ];
+    for (const k of keep) {
+      const f = put(k, "old");
+      fs.utimesSync(f, new Date(0), new Date(0));
+    }
+    expect(planCleanup(depot, NOW).delete).toEqual([]);
+    expect(runCleanup({ depot, now: NOW, yes: true }).lines).toEqual([]);
+    for (const k of keep) expect(fs.existsSync(path.join(depot, k))).toBe(true);
+  });
+
   it("skips a symlink in archive/ and never follows it", () => {
     const target = put("elsewhere/real.yml", card("closed", ago(30 * DAY)));
     fs.mkdirSync(path.join(depot, "sessions/P/archive"), { recursive: true });
@@ -98,6 +118,22 @@ describe("planCleanup", () => {
     const plan = planCleanup(depot, NOW);
     expect(plan.delete).toEqual([]);
     expect(plan.errors).toHaveLength(1);
+  });
+
+  it("keeps an impossible ended date (Feb 31, 24:00)", () => {
+    put("sessions/P/archive/feb--1.yml", card("closed", "2026-02-31T10:00:00Z"));
+    put("sessions/P/archive/h24--1.yml", card("closed", "2026-01-01T24:00:00Z"));
+    const plan = planCleanup(depot, NOW);
+    expect(plan.delete).toEqual([]);
+    expect(plan.kept).toHaveLength(2);
+  });
+
+  it("a duplicate field or a stub card is a parse error: kept and reported", () => {
+    put("sessions/P/archive/dup--1.yml", card("closed", ago(1 * DAY), `ended: ${ago(30 * DAY)}`));
+    put("sessions/P/archive/stub--1.yml", `status: closed\nended: ${ago(30 * DAY)}\n`);
+    const plan = planCleanup(depot, NOW);
+    expect(plan.delete).toEqual([]);
+    expect(plan.errors).toHaveLength(2);
   });
 
   it("limits to one project with a filter", () => {

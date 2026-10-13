@@ -18,6 +18,20 @@ export function depotDir(env: NodeJS.ProcessEnv = process.env): string {
   return o !== undefined && o !== "" ? o : path.join(os.homedir(), ".digismith-depot");
 }
 
+const REQUIRED = ["name", "role", "id", "session", "domain", "runs_on", "created_by", "started", "last_seen", "status"];
+
+// A real calendar time: the shape, then a round trip so Feb 31 and 24:00 are refused (Date.parse rolls them over).
+function parseEnded(value: string): number {
+  const m = TS_RE.exec(value);
+  if (!m) return NaN;
+  const [Y, M, D, H, I, S] = [value.slice(0, 4), value.slice(5, 7), value.slice(8, 10), value.slice(11, 13), value.slice(14, 16), value.slice(17, 19) || "0"].map(Number);
+  const c = new Date(Date.UTC(Y, M - 1, D));
+  if (c.getUTCFullYear() !== Y || c.getUTCMonth() !== M - 1 || c.getUTCDate() !== D || H > 23 || I > 59 || S > 59) return NaN;
+  const off = m[1];
+  if (off !== "Z" && (Number(off.slice(1, 3)) > 14 || Number(off.slice(4, 6)) > 59)) return NaN;
+  return Date.parse(value);
+}
+
 // Reads status and ended from a card file. Throws on a line that is not "key: value" or a bad status.
 function readCard(text: string): { status: string; ended?: string } {
   const fields: Record<string, string> = {};
@@ -29,8 +43,10 @@ function readCard(text: string): { status: string; ended?: string } {
     if (v.startsWith('"')) {
       try { v = JSON.parse(v) as string; } catch { throw new Error(`line ${i + 1}: bad quoted value`); }
     }
+    if (m[1] in fields) throw new Error(`${m[1]}: duplicate field`);
     fields[m[1]] = v;
   });
+  for (const f of REQUIRED) if (!fields[f]) throw new Error(`${f}: required`);
   if (!["open", "closed", "lost"].includes(fields.status)) throw new Error("status: must be open, closed or lost");
   return { status: fields.status, ended: fields.ended };
 }
@@ -64,7 +80,7 @@ export function planCleanup(depot: string, now: Date, project?: string): Plan {
       }
       if (card.status === "open") { plan.kept.push({ path: file, reason: "open card" }); continue; }
       if (card.ended === undefined) { plan.kept.push({ path: file, reason: "no ended" }); continue; }
-      const t = TS_RE.test(card.ended) ? Date.parse(card.ended) : NaN;
+      const t = parseEnded(card.ended);
       if (Number.isNaN(t)) { plan.kept.push({ path: file, reason: "ended unreadable" }); continue; }
       if (now.getTime() - t > CLEANUP_DAYS * DAY_MS) {
         plan.delete.push({ path: file, reason: `${card.status}, ended ${card.ended}` });
@@ -85,6 +101,8 @@ export function runCleanup(opts: { depot: string; now?: Date; yes: boolean; proj
   const logFd = opts.yes && plan.delete.length > 0 ? fs.openSync(logFile, "a") : undefined;
   for (const d of plan.delete) {
     if (!opts.yes) { lines.push(`would delete ${d.path} (${d.reason})`); continue; }
+    // Re-check right before the delete: still a regular file, not swapped for a symlink.
+    if (!fs.lstatSync(d.path).isFile()) continue;
     fs.unlinkSync(d.path);
     const line = `deleted ${d.path} (${d.reason})`;
     fs.writeSync(logFd!, `${now.toISOString()} ${line}\n`);
