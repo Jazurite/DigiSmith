@@ -21,7 +21,7 @@ function ref(card: SessionCard) {
   return { project: card.domain, id: card.id, session: card.session };
 }
 
-export type StartResult = { wrote: boolean; reason?: string; context?: string };
+export type StartResult = { wrote: boolean; reason?: string; context?: string; identity?: Identity };
 
 // DGS-411: a session with no card env, outside herdr, in a folder that one identity record names,
 // IS that Maestro. Any read or parse problem means no card (never a failed session start).
@@ -45,7 +45,7 @@ function identityStart(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDeps)
     writeCard(v.card, env);
     wrote = true;
   }
-  return { wrote, context: identityContext(identity, session, env) };
+  return { wrote, context: identityContext(identity, session, env), identity };
 }
 
 function identityContext(identity: Identity, session: string, env: NodeJS.ProcessEnv): string {

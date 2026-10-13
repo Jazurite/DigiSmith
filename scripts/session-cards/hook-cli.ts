@@ -2,12 +2,14 @@ import * as fs from "node:fs";
 import { endHook, startHook, touchHook } from "./card-hook.ts";
 import type { HookDeps, HookEvent } from "./card-hook.ts";
 import { idleHandler } from "../conductor/idle-check.ts";
+import { identityPromptHandler } from "./prompt-identity.ts";
 
 // Pre-prompt extension point (S7). Handlers run in order, in this one process, BEFORE the heartbeat
 // refreshes last_seen. A handler may return text, which goes to stdout as prompt context.
-// DGS-428 registers its idle catch-up check here.
-export type PrePromptHandler = (event: HookEvent, env: NodeJS.ProcessEnv) => string | void;
-export const PRE_PROMPT_HANDLERS: PrePromptHandler[] = [idleHandler];
+// DGS-428 registers its idle catch-up check here. DGS-437: identityPromptHandler runs first (desktop
+// sessions fire no SessionStart, so the first prompt writes the Maestro card).
+export type PrePromptHandler = (event: HookEvent & { prompt?: string }, env: NodeJS.ProcessEnv) => string | void;
+export const PRE_PROMPT_HANDLERS: PrePromptHandler[] = [identityPromptHandler, idleHandler];
 
 export function runPrompt(
   event: HookEvent,
