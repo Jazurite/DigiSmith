@@ -119,7 +119,7 @@ describe("createUpdateTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => fakeClient);
 
-    await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "abc" });
+    await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "abc", status: "done" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup update-task: HTTP 404");
     expect(process.exitCode).toBe(1);
@@ -291,6 +291,88 @@ describe("createUpdateTaskCommand", () => {
       expect(write).toHaveBeenCalledTimes(1);
       expect(write.mock.calls[0].at(-1)).toMatchObject({ priority: Number(flag) });
       expect(process.exitCode).toBe(0);
+    });
+  });
+
+  describe("no-op write", () => {
+    type Handler = (argv: Record<string, unknown>) => Promise<void>;
+    const parse = (args: string[]) => {
+      const builder = createUpdateTaskCommand().builder as (y: ReturnType<typeof yargs>) => ReturnType<typeof yargs>;
+      return builder(yargs(args)).exitProcess(false).parseSync() as Record<string, unknown>;
+    };
+
+    it("errors before any client or call when no change flag is given", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const factory = vi.fn();
+      const command = createUpdateTaskCommand(factory);
+
+      await (command.handler as Handler)({ task: "abc" });
+
+      expect(factory).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("--markdown-description-file"));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("--field"));
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("errors for the argv the real yargs parser gives for --task alone (no default adds a change)", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const factory = vi.fn();
+      const argv = parse(["--task", "abc"]);
+
+      await (createUpdateTaskCommand(factory).handler as Handler)(argv);
+
+      expect(factory).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+      expect(process.exitCode).toBe(1);
+    });
+
+    it.each([
+      ["--name", "n"],
+      ["--description", "d"],
+      ["--markdown-description", "# m"],
+      ["--status", "done"],
+      ["--start-date", "2026-10-01"],
+      ["--due-date", "2026-10-02"],
+      ["--priority", "2"],
+      ["--parent", "p1"],
+      ["--parent", ""],
+      ["--description", ""],
+      ["--type", "0"],
+      ["--field", "Lesson=x"],
+    ])("is not a no-op with %s %j alone", async (flag, value) => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const client = {
+        updateTask: vi.fn().mockResolvedValue({ id: "abc" }),
+        getTaskTypes: vi.fn().mockResolvedValue([{ id: 0, name: "Task", name_plural: "Tasks" }]),
+        get: vi.fn().mockResolvedValue({ list: { id: "l1" }, id: "abc" }),
+        getListFields: vi.fn().mockResolvedValue([]),
+      } as unknown as ClickUpClient;
+      const factory = vi.fn(() => client);
+
+      await (createUpdateTaskCommand(factory).handler as Handler)(parse(["--task", "abc", flag, value]));
+
+      expect(factory).toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
+    });
+
+    it("is not a no-op with --markdown-description-file alone", async () => {
+      const dir = mkdtempSync(join(tmpdir(), "dgs11-"));
+      const file = join(dir, "d.md");
+      writeFileSync(file, "# hi");
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const factory = vi.fn(() => ({ updateTask: vi.fn().mockResolvedValue({}) }) as unknown as ClickUpClient);
+      try {
+        await (createUpdateTaskCommand(factory).handler as Handler)(
+          parse(["--task", "abc", "--markdown-description-file", file])
+        );
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+      expect(factory).toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nothing to update"));
     });
   });
 });

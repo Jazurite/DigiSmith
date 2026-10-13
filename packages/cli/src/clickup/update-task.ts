@@ -26,6 +26,7 @@ export function createUpdateTaskCommand(
     handler: async (argv) => {
       try {
         const body = buildTaskWriteBody(argv as unknown as TaskFieldArgv);
+        assertSomethingToUpdate(body, argv as unknown as { type?: string; field?: string[] });
         const client = clientFactory();
         await checkAgainstStoredDate(client, argv.task as string, body);
         if (argv.type !== undefined) {
@@ -50,6 +51,14 @@ export function createUpdateTaskCommand(
       }
     },
   };
+}
+
+/** Refuse an update that changes nothing, before any client is built. Every task flag present puts a key in the body. */
+function assertSomethingToUpdate(body: ClickUpTaskWriteBody, argv: { type?: string; field?: string[] }): void {
+  if (Object.keys(body).length > 0 || argv.type !== undefined || (argv.field?.length ?? 0) > 0) return;
+  throw new Error(
+    "nothing to update: pass at least one of --name, --description, --markdown-description, --markdown-description-file, --status, --start-date, --due-date, --priority, --parent, --type, --field"
+  );
 }
 
 /** With only one of start or due given, read the task and check the order against the stored other date. */
