@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody } from "./types.ts";
+import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 export const DEFAULT_FRONTDOOR_HOST = "frontdoor-prod-ap-southeast-2-2.clickup.com";
@@ -45,11 +46,8 @@ export class FrontdoorClient {
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
       if (status === 401 || status === 403) throw new FrontdoorAuthError();
-      // Same as ClickUpClient: keep the error object, only show ClickUp's body in the message.
-      const body = (err as { response?: { data?: unknown } }).response?.data;
-      if (err instanceof Error && body !== undefined && body !== "") {
-        err.message += `: ${typeof body === "string" ? body : JSON.stringify(body)}`;
-      }
+      // Same as ClickUpClient: plain fields only, never the request headers.
+      if (isAxiosLike(err)) throw toApiError(err, method, url);
       throw err;
     }
   }

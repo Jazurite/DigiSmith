@@ -25,6 +25,7 @@ import type {
   DependencyRelation,
   MoveFolderTarget,
 } from "./types.ts";
+import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
 const BASE_URL = "https://api.clickup.com/api/v2";
@@ -64,6 +65,7 @@ export class ClickUpClient {
     this.limiter = new RateLimiter(RATE_LIMIT, RATE_LIMIT / RATE_WINDOW_SEC);
   }
 
+  /** Throws ClickUpApiError (plain fields, never the request headers) for a failed call; other errors pass through. */
   async request<T>(
     method: "GET" | "POST" | "PUT" | "DELETE",
     path: string,
@@ -79,11 +81,7 @@ export class ClickUpClient {
       });
       return data;
     } catch (err) {
-      // Keep the same error object (response, cause, isAxiosError stay available); only show ClickUp's body in the message.
-      const body = (err as { response?: { data?: unknown } }).response?.data;
-      if (err instanceof Error && body !== undefined && body !== "") {
-        err.message += `: ${typeof body === "string" ? body : JSON.stringify(body)}`;
-      }
+      if (isAxiosLike(err)) throw toApiError(err, method, path);
       throw err;
     }
   }
@@ -92,10 +90,12 @@ export class ClickUpClient {
     return this.request<T>("GET", path, opts);
   }
 
+  /** The body goes in `{ data: body }`: a bare body is sent empty and ClickUp answers 400. */
   post<T>(path: string, opts?: RequestOptions): Promise<T> {
     return this.request<T>("POST", path, opts);
   }
 
+  /** The body goes in `{ data: body }`: a bare body is sent empty and ClickUp answers 400. */
   put<T>(path: string, opts?: RequestOptions): Promise<T> {
     return this.request<T>("PUT", path, opts);
   }

@@ -140,7 +140,7 @@ export async function applyFields(client: ClickUpClient, taskId: string, resolve
     try {
       await client.setCustomField(taskId, field.id, value);
     } catch (err) {
-      const body = (err as { response?: { data?: unknown } }).response?.data;
+      const body = (err as { body?: unknown }).body;
       const shown = body === undefined ? "" : JSON.stringify(body);
       // The client already appends the body to the message; show it once.
       const detail = shown === "" || (err as Error).message.includes(shown) || (typeof body === "string" && (err as Error).message.includes(body)) ? "" : ` ${shown}`;
