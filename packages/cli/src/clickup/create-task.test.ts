@@ -231,4 +231,30 @@ describe("createCreateTaskCommand", () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  describe("--priority through the real parser", () => {
+    const run = async (args: string[]) => {
+      const write = vi.fn().mockResolvedValue({ id: "abc" });
+      const factory = vi.fn(() => ({ createTask: write }) as unknown as ClickUpClient);
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      await yargs([]).command(createCreateTaskCommand(factory)).parseAsync(["create-task", ...args, ...["--list","901","--name","x"]]);
+      return { write, factory, errorSpy };
+    };
+
+    it.each([["7", "7"], ["0", "0"], ["abc", "NaN"]])("refuses --priority %s before any client is built", async (flag, shown) => {
+      const { write, factory, errorSpy } = await run(["--priority", flag]);
+      expect(factory).not.toHaveBeenCalled();
+      expect(write).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0]).toContain(`invalid --priority "${shown}" — expected an integer 1-4`);
+      expect(process.exitCode).toBe(1);
+    });
+
+    it.each(["1", "2", "3", "4"])("accepts --priority %s", async (flag) => {
+      const { write } = await run(["--priority", flag]);
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(write.mock.calls[0].at(-1)).toMatchObject({ priority: Number(flag) });
+      expect(process.exitCode).toBe(0);
+    });
+  });
 });

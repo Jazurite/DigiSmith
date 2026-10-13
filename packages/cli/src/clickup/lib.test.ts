@@ -199,9 +199,18 @@ describe("buildTaskWriteBody", () => {
     expect(() => buildTaskWriteBody({ startDate: "2026-10-11", dueDate: "2026-10-11" })).not.toThrow();
   });
 
-  it("throws when priority is not an integer", () => {
-    expect(() => buildTaskWriteBody({ priority: Number.NaN })).toThrow(
-      /invalid --priority "NaN" — expected an integer 1-4/
+  describe("priority", () => {
+    it.each([1, 2, 3, 4])("accepts %i", (priority) => {
+      expect(buildTaskWriteBody({ priority }).priority).toBe(priority);
+    });
+
+    it.each([0, -1, 5, 7, Number.NaN, 2.5, Number.POSITIVE_INFINITY, "3" as unknown as number])(
+      "rejects %s",
+      (priority) => {
+        expect(() => buildTaskWriteBody({ priority })).toThrow(
+          new RegExp(`invalid --priority "${String(priority)}" — expected an integer 1-4`)
+        );
+      }
     );
   });
 });
