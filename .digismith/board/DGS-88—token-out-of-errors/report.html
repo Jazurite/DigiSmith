@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-88 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style></head><body>
+<h1>DGS-88 — Implementation Report</h1>
+<p>Ticket: DGS-88</p>
+<h2>What changed</h2>
+<ul>
+<li><code>ClickUpApiError</code> (new <code>errors.ts</code>, exported from the client index): <code>method</code>, <code>path</code>, <code>status</code>, <code>body</code>, <code>code</code>. No config, headers, request, response or cause.</li>
+<li><code>ClickUpClient.request</code> and <code>FrontdoorClient.request</code> rethrow axios-shaped errors as <code>ClickUpApiError</code>. Message unchanged: axios text plus ClickUp's body. Frontdoor 401/403 still throw <code>FrontdoorAuthError</code>, with no auth value.</li>
+<li>Frontdoor had the same flaw: fixed with the same two lines.</li>
+<li><code>field-set.ts</code> reads <code>err.body</code>. CLI commands print only <code>err.message</code>: unchanged.</li>
+<li>JSDoc on <code>post()</code>/<code>put()</code> (<code>{ data: body }</code>) and on <code>request()</code>.</li>
+</ul>
+<h2>Tests</h2>
+<p>Leak tests check JSON, <code>util.inspect</code>, stack, message and <code>toJSON()</code> for the token and the Frontdoor auth, plus a network error with no response.</p>
+<p>Counts vs base: client.test.ts 46 → 48; frontdoor.test.ts 26 → 28; field-set.test.ts 30 → 30; clickup-client package 84 → 88.</p>
+<h2>First use</h2>
+<p>After the merge: a command with a bogus token in a temporary HOME <code>.env</code> prints an error with no token.</p>
+</body></html>
