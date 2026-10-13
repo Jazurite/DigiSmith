@@ -30,16 +30,26 @@ interface AxiosLike {
   response?: { status?: unknown; data?: unknown };
 }
 
-/** axios is mocked whole in tests, so axios.isAxiosError is not usable: check the shape. */
+/** axios is mocked whole in tests, so axios.isAxiosError is not usable: real axios errors set isAxiosError === true. */
 export function isAxiosLike(err: unknown): err is AxiosLike {
-  return typeof err === "object" && err !== null && ("isAxiosError" in err || "response" in err);
+  return typeof err === "object" && err !== null && (err as AxiosLike).isAxiosError === true;
+}
+
+/** A body that cannot be serialized (circular, BigInt) must not replace the real error. */
+function showBody(body: unknown): string {
+  if (typeof body === "string") return body;
+  try {
+    return JSON.stringify(body);
+  } catch {
+    return String(body);
+  }
 }
 
 /** Turns an axios-shaped error into a ClickUpApiError; the message is axios's text plus ClickUp's body. */
 export function toApiError(err: AxiosLike, method: string, path: string): ClickUpApiError {
   const body = err.response?.data;
   const text = typeof err.message === "string" ? err.message : "request failed";
-  const shown = body === undefined || body === "" ? "" : `: ${typeof body === "string" ? body : JSON.stringify(body)}`;
+  const shown = body === undefined || body === "" ? "" : `: ${showBody(body)}`;
   return new ClickUpApiError(`${text}${shown}`, {
     method,
     path,
