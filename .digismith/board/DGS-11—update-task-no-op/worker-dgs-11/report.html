@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-11 update-task no-op write — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-11 update-task no-op write — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-11</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>update-task</code> with no change flag now errors <code>nothing to update</code> (exit 1) before any client is built, instead of sending an empty PUT.</p>
+</section>
+<section id="rule">
+<h2>Rule</h2>
+<p>A no-op is an empty task body with no <code>--type</code> and no <code>--field</code>. <code>--parent ""</code> and <code>--description ""</code> are changes. The check is the helper <code>assertSomethingToUpdate</code> in <code>update-task.ts</code>; <code>lib.ts</code> is untouched. The real yargs parser adds no default for a change flag.</p>
+</section>
+<section id="tests">
+<h2>Tests</h2>
+<p><code>update-task.test.ts</code> goes from 21 to 36 tests: a new "no-op write" describe holds 15; the other four describes keep their counts (7, 5, 4, 5). One old test now passes <code>--status</code> so it still reaches the client.</p>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>After the merge: <code>dg clickup update-task --task &lt;id&gt;</code> with no change flag errors.</p>
+</section>
+</body>
+</html>
