@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DGS-332 add-status — Implementation Report</title>
+<style>:root{--bg:#fff;--fg:#1b1f24}@media(prefers-color-scheme:dark){:root{--bg:#14171a;--fg:#e6e8ea}}body{background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;max-width:46rem;margin:0 auto;padding:1rem}code{font-family:ui-monospace,monospace}</style></head>
+<body>
+<h1>DGS-332 add-status — Implementation Report</h1>
+<p>Ticket: DGS-332</p>
+<h2>What was built</h2>
+<p><code>dg clickup add-status --space &lt;id&gt; --name &lt;n&gt; --type custom|done|open|closed [--color #rrggbb] [--yes]</code> (Frontdoor). Dry run unless <code>--yes</code>.</p>
+<ul>
+<li>Client methods <code>getSpaceStatuses</code> and <code>putSpaceStatuses</code>.</li>
+<li>The PUT replaces the whole set, so the body is every current status untouched plus the new one (no id), before the closed status, <code>orderindex</code> re-numbered.</li>
+<li>Dry run prints the planned set with the new status marked and "a real add replaces the whole status set: needs Jack's yes".</li>
+<li><code>--yes</code> prints the full previous set, sends one PUT, reads the set again, and exits 1 naming any status that is lost or changed.</li>
+<li>A conflict prints ClickUp's message and exits 1.</li>
+</ul>
+<h2>Not built</h2>
+<p><code>--folder</code> and <code>--list</code> wait for a capture (Jack). A pure add has no capture: <code>status_change_map</code> is omitted; the first real add will show if ClickUp accepts that.</p>
+<h2>Tests</h2>
+<p>15 new in <code>add-status.test.ts</code>, 2 new in <code>frontdoor.test.ts</code> (FrontdoorClient 18 → 20). Full run: 133 files, 1869 tests pass (base 1852). Mocks only, no write.</p>
+<h2>First use</h2>
+<p>Dry run only on the DigiSmith space <code>1301150000001271</code>. A real add needs Jack.</p>
+</body></html>
