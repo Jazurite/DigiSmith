@@ -13,7 +13,7 @@
 </style>
 </head>
 <body>
-<header><h1>DGS-443 report: live session notes into the depot</h1><div style="color:var(--muted)">Ticket: <strong>DGS-443</strong> · Date: 2026-10-13</div></header>
+<header><h1>DGS-443 notes into depot — Implementation Report</h1><div style="color:var(--muted)">Ticket: <strong>DGS-443</strong> · Date: 2026-10-13</div></header>
 <section id="summary">
 <h2>Summary</h2>
 <p>Notes are read and written in the depot now: <code>~/.digismith-depot/sessions/&lt;project&gt;/maestros/&lt;title&gt;/note.md</code> for Maestros, <code>&lt;conductor&gt;/note.md</code> for the conductor (the DigiSmith Maestro shares it, answer A; split = DGS-447), <code>orders/</code> for orders. The old <code>.digismith/sessions/</code> copies are never written, renamed or deleted by any code. No file was copied yet: each owner&#x27;s copy, <code>cmp</code> and switch happens after the merge, on that owner&#x27;s idle word.</p>
