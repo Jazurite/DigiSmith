@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, ClickUpAttachment } from "@digismith/clickup-client";
 import { createUploadAttachmentCommand } from "./upload-attachment.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createUploadAttachmentCommand", () => {
   afterEach(() => {
@@ -15,9 +16,7 @@ describe("createUploadAttachmentCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUploadAttachmentCommand(() => fakeClient);
 
-    await (
-      command.handler as (argv: { task: string; file: string }) => Promise<void>
-    )({ task: "abc", file: "/tmp/report.pdf" });
+    await handlerOf<{ task: string; file: string }>(command)({ task: "abc", file: "/tmp/report.pdf" });
 
     expect(uploadAttachment).toHaveBeenCalledWith("abc", "/tmp/report.pdf");
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(attachment, null, 2));
@@ -30,9 +29,7 @@ describe("createUploadAttachmentCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createUploadAttachmentCommand(() => fakeClient);
 
-    await (
-      command.handler as (argv: { task: string; file: string }) => Promise<void>
-    )({ task: "abc", file: "/tmp/missing.pdf" });
+    await handlerOf<{ task: string; file: string }>(command)({ task: "abc", file: "/tmp/missing.pdf" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup upload-attachment: ENOENT: no such file");
     expect(process.exitCode).toBe(1);

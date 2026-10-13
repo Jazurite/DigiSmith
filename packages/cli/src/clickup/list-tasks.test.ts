@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createListTasksCommand } from "./list-tasks.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createListTasksCommand", () => {
   afterEach(() => {
@@ -15,7 +16,7 @@ describe("createListTasksCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createListTasksCommand(() => fakeClient);
 
-    await (command.handler as (argv: { list: string }) => Promise<void>)({ list: "901" });
+    await handlerOf<{ list: string }>(command)({ list: "901" });
 
     expect(getAllListTasks).toHaveBeenCalledWith("901");
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(tasks, null, 2));
@@ -28,7 +29,7 @@ describe("createListTasksCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createListTasksCommand(() => fakeClient);
 
-    await (command.handler as (argv: { list: string }) => Promise<void>)({ list: "901" });
+    await handlerOf<{ list: string }>(command)({ list: "901" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup list-tasks: HTTP 401");
     expect(process.exitCode).toBe(1);

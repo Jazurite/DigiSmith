@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, Space } from "@digismith/clickup-client";
 import { createCreateFolderCommand } from "./create-folder.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createCreateFolderCommand", () => {
   afterEach(() => {
@@ -15,7 +16,7 @@ describe("createCreateFolderCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateFolderCommand(() => fakeSpace);
 
-    await (command.handler as (argv: { name: string }) => Promise<void>)({
+    await handlerOf<{ name: string }>(command)({
       name: "W: New Clan",
     });
 
@@ -30,7 +31,7 @@ describe("createCreateFolderCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateFolderCommand(() => fakeSpace);
 
-    await (command.handler as (argv: { name: string }) => Promise<void>)({
+    await handlerOf<{ name: string }>(command)({
       name: "W: New Clan",
     });
 

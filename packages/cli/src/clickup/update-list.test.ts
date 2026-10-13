@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createUpdateListCommand } from "./update-list.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 type Argv = {
   list: string;
@@ -15,7 +16,7 @@ type Argv = {
 function setup(updateList = vi.fn().mockResolvedValue({ id: "l1", name: "Town Hall" })) {
   const clientFactory = vi.fn(() => ({ updateList }) as unknown as ClickUpClient);
   const command = createUpdateListCommand(clientFactory);
-  const run = (argv: Argv) => (command.handler as (a: Argv) => Promise<void>)(argv);
+  const run = (argv: Argv) => handlerOf<Argv>(command)(argv);
   return { updateList, clientFactory, run };
 }
 

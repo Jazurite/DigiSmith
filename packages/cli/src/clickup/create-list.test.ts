@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, Space } from "@digismith/clickup-client";
 import { createCreateListCommand } from "./create-list.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createCreateListCommand", () => {
   afterEach(() => {
@@ -16,9 +17,7 @@ describe("createCreateListCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateListCommand(() => fakeClient, spaceFactory);
 
-    await (
-      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
-    )({ name: "V.8", folder: "f1" });
+    await handlerOf<{ name: string; folder?: string }>(command)({ name: "V.8", folder: "f1" });
 
     expect(createListInFolder).toHaveBeenCalledWith("f1", "V.8");
     expect(spaceFactory).not.toHaveBeenCalled();
@@ -34,9 +33,7 @@ describe("createCreateListCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateListCommand(clientFactory, () => fakeSpace);
 
-    await (
-      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
-    )({ name: "Pavilion 2" });
+    await handlerOf<{ name: string; folder?: string }>(command)({ name: "Pavilion 2" });
 
     expect(createList).toHaveBeenCalledWith("Pavilion 2");
     expect(clientFactory).not.toHaveBeenCalled();
@@ -50,9 +47,7 @@ describe("createCreateListCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateListCommand(() => fakeClient, vi.fn());
 
-    await (
-      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
-    )({ name: "V.8", folder: "f1" });
+    await handlerOf<{ name: string; folder?: string }>(command)({ name: "V.8", folder: "f1" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup create-list: HTTP 404");
     expect(process.exitCode).toBe(1);
@@ -64,9 +59,7 @@ describe("createCreateListCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateListCommand(clientFactory, spaceFactory);
 
-    await (
-      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
-    )({ name: "V.8", folder: "" });
+    await handlerOf<{ name: string; folder?: string }>(command)({ name: "V.8", folder: "" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup create-list: --folder needs a folder ID");
     expect(process.exitCode).toBe(1);
@@ -80,9 +73,7 @@ describe("createCreateListCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateListCommand(clientFactory, spaceFactory);
 
-    await (
-      command.handler as (argv: { name: string; folder?: string }) => Promise<void>
-    )({ name: "V.8", folder: "   " });
+    await handlerOf<{ name: string; folder?: string }>(command)({ name: "V.8", folder: "   " });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup create-list: --folder needs a folder ID");
     expect(process.exitCode).toBe(1);

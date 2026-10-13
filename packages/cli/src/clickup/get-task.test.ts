@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createGetTaskCommand } from "./get-task.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createGetTaskCommand", () => {
   afterEach(() => {
@@ -15,7 +16,7 @@ describe("createGetTaskCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetTaskCommand(() => fakeClient);
 
-    await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "abc" });
+    await handlerOf<{ task: string }>(command)({ task: "abc" });
 
     expect(get).toHaveBeenCalledTimes(1);
     expect(get.mock.calls[0]).toEqual(["/task/abc"]);
@@ -28,7 +29,7 @@ describe("createGetTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetTaskCommand(() => ({ get }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({
+    await handlerOf<{ task: string; markdown?: boolean }>(command)({
       task: "abc",
       markdown: true,
     });
@@ -42,7 +43,7 @@ describe("createGetTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createGetTaskCommand(() => fakeClient);
 
-    await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "abc" });
+    await handlerOf<{ task: string }>(command)({ task: "abc" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup get-task: HTTP 404");
     expect(process.exitCode).toBe(1);

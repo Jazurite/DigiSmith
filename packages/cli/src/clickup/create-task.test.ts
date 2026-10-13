@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createCreateTaskCommand } from "./create-task.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createCreateTaskCommand", () => {
   beforeEach(() => {
@@ -47,13 +48,11 @@ describe("createCreateTaskCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => fakeClient);
 
-    await (
-      command.handler as (argv: {
+    await handlerOf<{
         list: string;
         name: string;
         status?: string;
-      }) => Promise<void>
-    )({ list: "901", name: "V.1", status: "done" });
+      }>(command)({ list: "901", name: "V.1", status: "done" });
 
     expect(createTask).toHaveBeenCalledWith("901", { name: "V.1", status: "done" });
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task, null, 2));
@@ -64,7 +63,7 @@ describe("createCreateTaskCommand", () => {
     const createTask = vi.fn();
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => ({ createTask }) as unknown as ClickUpClient);
-    await (command.handler as (a: unknown) => Promise<void>)({ list: "901", name: "x", startDate: "2026-10-12", dueDate: "2026-10-11" });
+    await handlerOf<unknown>(command)({ list: "901", name: "x", startDate: "2026-10-12", dueDate: "2026-10-11" });
     expect(createTask).not.toHaveBeenCalled();
     expect(errorSpy.mock.calls[0][0]).toMatch(/is before the start date/);
     expect(process.exitCode).toBe(1);
@@ -75,7 +74,7 @@ describe("createCreateTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => ({ createTask }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: { list: string; name: string; parent?: string }) => Promise<void>)({
+    await handlerOf<{ list: string; name: string; parent?: string }>(command)({
       list: "901",
       name: "Child",
       parent: "p1",
@@ -90,9 +89,7 @@ describe("createCreateTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => fakeClient);
 
-    await (
-      command.handler as (argv: { list: string; name: string }) => Promise<void>
-    )({ list: "901", name: "V.1" });
+    await handlerOf<{ list: string; name: string }>(command)({ list: "901", name: "V.1" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup create-task: HTTP 400");
     expect(process.exitCode).toBe(1);
@@ -106,7 +103,7 @@ describe("createCreateTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => ({ createTask, getTaskTypes }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: object) => Promise<void>)({ list: "901", name: "V.1", type: "epic" });
+    await handlerOf<object>(command)({ list: "901", name: "V.1", type: "epic" });
 
     expect(createTask).toHaveBeenCalledWith("901", { name: "V.1", custom_item_id: 1030 });
   });
@@ -117,7 +114,7 @@ describe("createCreateTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createCreateTaskCommand(() => ({ createTask, getTaskTypes }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: object) => Promise<void>)({ list: "901", name: "V.1", type: "saga" });
+    await handlerOf<object>(command)({ list: "901", name: "V.1", type: "saga" });
 
     expect(createTask).not.toHaveBeenCalled();
     expect(errorSpy.mock.calls[0][0]).toMatch(/clickup create-task: unknown task type "saga"/);

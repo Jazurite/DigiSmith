@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient, ClickUpFolderWithLists, ClickUpListSummary } from "@digismith/clickup-client";
 import { createGetListsCommand } from "./get-lists.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createGetListsCommand", () => {
   afterEach(() => {
@@ -17,7 +18,7 @@ describe("createGetListsCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createGetListsCommand(() => fakeClient);
 
-    await (command.handler as (argv: { space: string }) => Promise<void>)({ space: "90165960730" });
+    await handlerOf<{ space: string }>(command)({ space: "90165960730" });
 
     expect(getSpaceFolders).toHaveBeenCalledWith("90165960730");
     expect(getFolderlessLists).toHaveBeenCalledWith("90165960730");
@@ -32,7 +33,7 @@ describe("createGetListsCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createGetListsCommand(() => fakeClient);
 
-    await (command.handler as (argv: { space: string }) => Promise<void>)({ space: "90165960730" });
+    await handlerOf<{ space: string }>(command)({ space: "90165960730" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup get-lists: HTTP 403");
     expect(process.exitCode).toBe(1);

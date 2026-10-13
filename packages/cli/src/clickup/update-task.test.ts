@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClickUpClient, ClickUpTask } from "@digismith/clickup-client";
 import { createUpdateTaskCommand } from "./update-task.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 describe("createUpdateTaskCommand", () => {
   beforeEach(() => {
@@ -47,9 +48,7 @@ describe("createUpdateTaskCommand", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => fakeClient);
 
-    await (
-      command.handler as (argv: { task: string; status?: string }) => Promise<void>
-    )({ task: "abc", status: "done" });
+    await handlerOf<{ task: string; status?: string }>(command)({ task: "abc", status: "done" });
 
     expect(updateTask).toHaveBeenCalledWith("abc", { status: "done" });
     expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task, null, 2));
@@ -60,7 +59,7 @@ describe("createUpdateTaskCommand", () => {
     const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => ({ updateTask }) as unknown as ClickUpClient);
-    const handler = command.handler as (argv: { task: string; parent?: string }) => Promise<void>;
+    const handler = handlerOf<{ task: string; parent?: string }>(command);
 
     await handler({ task: "abc", parent: "p1" });
     await handler({ task: "abc", parent: "" });
@@ -141,7 +140,7 @@ describe("createUpdateTaskCommand", () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const command = createUpdateTaskCommand(() => ({ updateTask, get }) as unknown as ClickUpClient);
-      await (command.handler as (a: unknown) => Promise<void>)({ task: "abc", ...argv });
+      await handlerOf<unknown>(command)({ task: "abc", ...argv });
       return { updateTask, get, errorSpy };
     };
 
@@ -184,7 +183,7 @@ describe("createUpdateTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => fakeClient);
 
-    await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "abc", status: "done" });
+    await handlerOf<{ task: string; status?: string }>(command)({ task: "abc", status: "done" });
 
     expect(errorSpy).toHaveBeenCalledWith("clickup update-task: HTTP 404");
     expect(process.exitCode).toBe(1);
@@ -198,7 +197,7 @@ describe("createUpdateTaskCommand", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => ({ updateTask, getTaskTypes }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", type: "epic" });
+    await handlerOf<object>(command)({ task: "abc", type: "epic" });
 
     expect(updateTask).toHaveBeenCalledWith("abc", { custom_item_id: 1030 });
   });
@@ -209,7 +208,7 @@ describe("createUpdateTaskCommand", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const command = createUpdateTaskCommand(() => ({ updateTask, getTaskTypes }) as unknown as ClickUpClient);
 
-    await (command.handler as (argv: object) => Promise<void>)({ task: "abc", type: "saga" });
+    await handlerOf<object>(command)({ task: "abc", type: "saga" });
 
     expect(updateTask).not.toHaveBeenCalled();
     expect(errorSpy.mock.calls[0][0]).toMatch(/clickup update-task: unknown task type "saga"/);

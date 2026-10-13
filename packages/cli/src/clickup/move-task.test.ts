@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createMoveTaskCommand } from "./move-task.ts";
+import { handlerOf } from "./handler-of.test-util.ts";
 
 type Argv = { task: string; list: string; statusMap?: string[]; moveCustomFields?: boolean };
 
 function run(command: ReturnType<typeof createMoveTaskCommand>, argv: Argv): Promise<void> {
-  return (command.handler as (argv: Argv) => Promise<void>)(argv);
+  return handlerOf<Argv>(command)(argv);
 }
 
 describe("createMoveTaskCommand", () => {
