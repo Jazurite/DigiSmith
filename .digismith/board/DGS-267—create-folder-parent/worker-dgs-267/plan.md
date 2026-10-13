@@ -29,9 +29,12 @@ Built with the existing `printCall`. The client factory is never called (test pr
 
 ## Failure handling
 - Create fails: nothing was written; error, exit 1.
-- Create ok, move fails: half-done state. Print on stderr: the new folder id, that it sits at the top level of the space, and the exact finishing command `dg clickup move-folder --folder <id> --parent <parent> --yes`. Exit 1. Never delete the folder, never retry.
-- Both ok, read-back fails: print "created and moved folder <id>; read-back failed: <msg>"; exit 0 (the writes succeeded).
-- Both ok: print `created folder <id> "<name>" inside folder <parent>`, and `parent_folder` from the read-back (id and name if the API returns them; if not, say "check with dg clickup get-lists").
+- Create ok, move fails: half-done state. Print on stderr: the new folder id and name, that it was created at the top level, `nothing was deleted`, and the exact finishing command `dg clickup move-folder --folder <id> --parent <parent> --yes`. Exit 1. Never delete the folder, never retry.
+- Both ok, read-back confirms the parent: print `created folder <id> "<name>" inside folder <parent> (<parent name>)`; exit 0.
+- Both ok, read-back shows ANOTHER parent: stderr `MISMATCH: folder <id> "<name>" is in folder <actual>, not <parent>`, plus the move-folder command; exit 1.
+- Both ok, read-back has no parent or fails: print `created folder <id> "<name>" and sent the move into folder <parent>; parent not confirmed by the read-back` (or `read-back failed: <msg>`), and "check it with dg clickup get-lists (parent_folder)"; exit 0. Never the word "inside" without confirmation.
+- Create answers no id: stop before the move; error `folder "<name>" was created but the response has no id: check dg clickup get-lists`; exit 1.
+- Empty or whitespace `--name` on the `--parent-folder` path: refused before the dry run (`--name needs a non-empty name`). The old path (no `--parent-folder`) is left untouched and has the same gap.
 - Errors go through the existing token-masking path of the client (DGS-88 lands first); no header is ever printed.
 
 ## Tests (mocks only, vitest)
