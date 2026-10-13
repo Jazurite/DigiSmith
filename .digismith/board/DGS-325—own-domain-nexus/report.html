@@ -8,7 +8,7 @@
 </header>
 <section id="summary">
 <h2>Summary</h2>
-<p><code>pazurite.com</code> (Nexus, <code>/api/v1/...</code>) and <code>opencode.pazurite.com</code> (OpenCode at <code>/</code>) become DNS-only Cloudflare records that point to the Workbox's tailnet address <code>100.108.1.19</code>, so only Jack's devices with Tailscale on reach them. Tailscale Serve keeps port 443 and forwards the raw TCP stream to Caddy on <code>127.0.0.1:8443</code>. Caddy ends TLS, gets its certificates by DNS challenge, and also serves <code>workbox.tail730dcf.ts.net</code>. Caddy listens on loopback only. The design and plan are approved by Jack; the build is in progress.</p>
+<p><code>pazurite.com</code> (Nexus, <code>/api/v1/...</code>) and <code>opencode.pazurite.com</code> (OpenCode at <code>/</code>) become DNS-only Cloudflare records that point to the Workbox's tailnet address <code>100.108.1.19</code>, so only Jack's devices with Tailscale on reach them. Tailscale Serve keeps port 443 and forwards the raw TCP stream to Caddy on <code>127.0.0.1:8443</code>. Caddy ends TLS, gets its certificates by DNS challenge, and also serves <code>workbox.tail730dcf.ts.net</code>. Caddy listens on loopback only. The design and plan are approved by Jack. Build tasks 1-3 are done and on the branch (not merged); the depot holds the pinned Caddy, the Caddyfile, <code>caddy-run</code> and the rendered plist, and no service is loaded.</p>
 </section>
 <section id="findings">
 <h2>Findings that shaped the design</h2>
@@ -22,7 +22,7 @@
 <section id="gaps">
 <h2>Known gaps</h2>
 <ul>
-<li>Not built yet: <code>test-config.mjs</code>, <code>install.sh</code>, the Caddyfile in the repo.</li>
+<li>Done: <code>Caddyfile</code>, <code>caddy-run.sh</code>, plist template, <code>install.sh</code>, <code>test-config.mjs</code> and <code>test-stream.mjs</code>, all passing; <code>install.sh</code> ran for real.</li><li>Open: the authenticated SSE and websocket proof on the live OpenCode server needs its password, which no agent reads. Through a throwaway Caddy, <code>/</code>, <code>/api/event</code> (401) and a websocket upgrade (401) match the direct answers.</li>
 <li>The staging certificate needs Jack's Cloudflare token.</li>
 <li>The <code>ts.net</code> certificate through Caddy is untested until the loopback proof; Desktop-app pairing can only be tested at the cut-over.</li>
 </ul>

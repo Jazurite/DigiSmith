@@ -120,9 +120,11 @@ The value in `.env` is written without quotes. Nothing prints it.
    - Both names answer through loopback, for example
      `curl --resolve opencode.pazurite.com:8443:127.0.0.1 https://opencode.pazurite.com:8443/` (OpenCode login), the same for the `ts.net`
      name, and `pazurite.com` (404); the `ts.net` certificate must be issued (the main risk; fallback in design.md section 6).
-   - **OpenCode streaming through Caddy:** a real OpenCode session on the live server through `https://opencode.pazurite.com:8443/` via
-     `--resolve` (read-only use of the server, one short prompt): the event stream (SSE) keeps delivering events and a websocket-based feature
-     (the terminal or PTY view) works.
+   - **OpenCode streaming through Caddy (changed by the Nexus Maestro, 2026-10-13):** read-only on the live server: open the event stream (SSE,
+     `/api/event`) and a websocket upgrade through Caddy only. No prompt is sent and no session is created. Both need the server's password.
+     The unauthenticated part is done (throwaway Caddy, production routing, `tls internal`, `127.0.0.1:18445`): `/` 200 text/html and
+     `/api/event` 401 application/json, and a websocket upgrade 401, identical direct and through Caddy. The authenticated stream is open:
+     it needs a way to use the password without any agent reading it (Jack or the Maestro decides).
    - **OpenCode Desktop pairing through Caddy:** the Desktop app runs on Jack's laptop, which cannot reach loopback, so it is tested at the
      cut-over (J7) with the rollback ready. Before that, the agent proves SSE and websocket through Caddy against the throwaway backend (done)
      and the live server (above); that covers the transports the pairing uses.
