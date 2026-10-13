@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DGS-15 report: tsc clean in CLI tests</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}h1,h2{color:#6b3fa0}</style></head><body>
+<h1>DGS-15: tsc TS2352 in CLI tests — Implementation Report</h1>
+<p>Ticket: DGS-15. Also DGS-16 (missing clickup-client test coverage). Branch <code>dgs-15-tsc-and-coverage</code>, base <code>3d972f5</code>. Plan: <code>plan.md</code>; details: <code>report.md</code>.</p>
+<h2>DGS-15</h2>
+<table><tr><th></th><th>TS2352</th></tr><tr><td>Baseline (10 CLI test files)</td><td>24</td></tr><tr><td>After</td><td>0</td></tr></table>
+<p>One helper, <code>handlerOf&lt;A&gt;(command)</code> in <code>clickup/handler-of.test-util.ts</code>: one <code>as unknown as</code>, no <code>any</code>, no behaviour change. The build excludes <code>*.test-util.ts</code>; <code>dist</code> has no helper. Out of scope and unchanged: 5 TS2551 and 1 TS2345 (<code>card-hook.ts</code>).</p>
+<h2>DGS-16</h2>
+<p>Three mocked tests added: attachment filename is the base name; a missing file rejects before any request; <code>deleteTask</code> sends DELETE. The first two were seen failing under a brief mutation.</p>
+<p>Coverage (grep-based, no coverage provider installed): client.ts has 38 methods; only the base <code>delete</code> helper has no direct test (reached through deleteTask, deleteList, deleteFolder). space, frontdoor, credentials, rate-limiter: none missing.</p>
+<h2>Tests</h2>
+<p>Full run 1855 tests, 0 failed. Per describe vs base: only "domain write/read methods" 27 → 28 and "uploadAttachment" 1 → 3 changed; 72 other describes equal.</p>
+<h2>Before merge</h2>
+<p>Merges last. After the rebase, re-run tsc and fix new casts with <code>handlerOf</code>.</p>
+</body></html>
