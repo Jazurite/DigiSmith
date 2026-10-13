@@ -31,6 +31,7 @@ describe("validateIdentity", () => {
       { ...base, name: "a\nb" },
       { ...base, folder: "relative/dir" },
       { ...base, role: "worker" },
+      { ...base, state: "note.md" },
       { ...base, conductors: [] },
       { ...base, id: "Bad Id" },
       { ...base, conductors: ["Bad Id"] },

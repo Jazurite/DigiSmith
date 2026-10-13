@@ -55,6 +55,7 @@ export function validateIdentity(input: unknown): { ok: true; identity: Identity
   if (s.id !== undefined && (!ID_RE.test(s.id) || s.id.length > 64)) errors.push("id: must be lowercase words joined by hyphens, at most 64 characters");
   if (s.project !== undefined && (!SAFE_RE.test(s.project) || s.project.length > 128)) errors.push("project: must be a folder-name-like word");
   if (s.folder !== undefined && !path.isAbsolute(s.folder)) errors.push("folder: must be an absolute path");
+  if (s.state !== undefined && !path.isAbsolute(s.state)) errors.push("state: must be an absolute path");
   if (s.role !== undefined && s.role !== "maestro") errors.push("role: must be maestro");
   if (s.created !== undefined && !TS_RE.test(s.created)) errors.push("created: must be an ISO 8601 date and time with an explicit offset");
   const cond = c.conductors;
