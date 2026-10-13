@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-435 conductor flux — Implementation Report</title>
+<style>body{font-family:system-ui,sans-serif;max-width:46rem;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em}</style></head><body>
+<header>
+<h1>DGS-435 conductor flux — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-435</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<p>Ticket: DGS-435. Date: 2026-10-13. Branch <code>dgs-435</code>. Not run against a real conductor.</p>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>fluxConductor(target, opts, deps)</code> and <code>fluxAll(...)</code> in <code>scripts/conductor/flux.ts</code> are a job module the Nexus scheduler can call. <code>cli.ts flux &lt;agent&gt; | --all [--dry-run] [--log] [--json]</code> is the manual entry. Per conductor: night window (one constant, 23:30 to 02:00 UTC+7, no override) -&gt; agent found -&gt; status idle/done -&gt; input box empty (ANSI: dim = suggestion, normal = typed) -&gt; no worker (cards, <code>workers</code> list, note Running/Waiting rows) -&gt; nothing in flight in the note after the last handoff -&gt; note written after the last work -&gt; context size from the last transcript <code>usage</code> -&gt; a last look -&gt; <code>/clear</code> without <code>--wait</code> -&gt; poll the session id (60 s) -&gt; wake prompt naming brief and note -&gt; verify (new id, reply, idle, new card open by the NEW session id, old card closed in the archive, card state = note) -&gt; one JSON line in <code>~/.digismith-depot/runs/conductor-flux/&lt;UTC+7 date&gt;.jsonl</code>.</p>
+</section>
+<h2>Hard limits, in code</h2>
+<ul>
+<li>herdr only through <code>herdr-ws</code> with a closed verb set (<code>agent list</code>, <code>agent get</code>, <code>pane read ... --format ansi</code>, <code>agent prompt</code>). No close, kill, start, focus or send-keys exists; the runner guard refuses them (tested). The flux never closes a tab.</li>
+<li>A dry run builds the herdr WITHOUT <code>agent prompt</code>; both the module and the runner refuse a send (tested). It logs only with <code>--log</code>.</li>
+<li><code>--all</code> prints its targets first and never includes <code>digismith-conductor</code>; a maestro card is refused. No daytime flag (a test tries <code>--force</code>, <code>--day</code>, <code>--now</code>, <code>--override</code>).</li>
+<li>Nothing in the module deletes.</li>
+</ul>
+<h2>Decisions</h2>
+<ul>
+<li><code>/clear</code>, not <code>/new</code> (Claude Code; DGS-214 case 6). No <code>--wait</code> on <code>/clear</code>; the poll decides. The wake uses <code>--wait --until idle --until done --timeout 180000</code> and is never resent.</li>
+<li>Targets: <code>~/.digismith-depot/flux-targets.json</code> (<code>{agent: {project, brief, note, wake, workers}}</code>), flags override for one named agent, <code>conductors.json</code> as fallback. The wake text is per target with a generic default; paths are prepended if missing.</li>
+<li>Token registry (DGS-214): keyed by ticket; a conductor has none; nothing is written. The old to new id goes in the run log.</li>
+<li>Window and log path are constants at the top of <code>flux.ts</code> (<code>NIGHT_WINDOW</code>, <code>FLUX_RUN_LOG_DIR</code>).</li>
+</ul>
+<h2>Run log line</h2>
+<p><code>{v, job:"conductor-flux", run_id, ts (UTC+7), ts_utc, agent, dry_run, result: fluxed|skipped|failed, reason, needs_attention, tokens_before, tokens_after, session_old, session_new, checks{}, would_send?, duration_s}</code>. Exit code 2 when a conductor failed.</p>
+<h2>Nexus later (DGS-457)</h2>
+<p>The functions take and return plain data. <code>POST /jobs/conductor-flux/run</code> with <code>{agents: [...]|"all", dryRun}</code> calls <code>fluxAll</code> in the Nexus process with the same deps and returns the results array. <code>dg conductor flux</code> then POSTs and prints. The night rule stays in the module, so a wrong cron entry cannot flux by day.</p>
+<h2>Review</h2>
+<p>Independent review agent: 9 findings. Fixed: colour codes read as dim (typed text could look empty); a failed log write turned a finished flux into an error; a wake starting with <code>-</code> was refused only after <code>/clear</code>; an empty session id counted as renewed; no last status look before <code>/clear</code>; one bad <code>agent get</code> reply ended the run; <code>--all</code> ignored per-agent flags. Not changed: <code>--timeout</code> is milliseconds per <code>herdr agent prompt --help</code>, repeated <code>--until</code> is documented. Left to the first use: that <code>/clear</code> through <code>agent prompt</code> lands as a command.</p>
+<h2>Tests</h2>
+<p>New: <code>flux.test.ts</code>, <code>flux-io.test.ts</code> (91 tests, fakes only: fake herdr, temp depot, fake clock). Full suite 2138+ pass; no real herdr or pane was touched by a test.</p>
+<h2>For the first use</h2>
+<p>Put <code>token-economics-conductor</code> in <code>flux-targets.json</code> with brief <code>.digismith/sessions/b3-maestro/brief.md</code>, note <code>.digismith/sessions/b3-maestro/note.md</code>, its wake text, and a <code>workers</code> list (it has no card, so the list and the note are its worker evidence). Run <code>HERDR_WS=w2 node --experimental-strip-types scripts/conductor/cli.ts flux token-economics-conductor --dry-run</code> first (read-only).</p>
+</body></html>
