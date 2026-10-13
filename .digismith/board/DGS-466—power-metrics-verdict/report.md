@@ -14,3 +14,6 @@ Date: 2026-10-13. Branch `dgs-466` (worktree `.worktrees/dgs-466`). Not merged. 
 
 ## Jack's step
 `launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.nexus-api`, then `curl https://pazurite.com/api/v1/power-metrics`: the JSON starts with `verdict`.
+
+## First use (passed)
+About 19:3x UTC+7 (2026-10-13) the Nexus API was restarted on Jack's word (pid 49118). The JSON starts with `verdict`: status `ok`, "The Mac is fine: cool, not throttling, plenty of memory.", `reasons` empty (CPU 52.5 C, fan 1825 rpm, pressure Nominal). Reported by the Nexus Maestro.
