@@ -9,8 +9,8 @@ store, so the apex and `www` leave Shopify.
 ## Summary
 `pazurite.com` (the Nexus API) and `opencode.pazurite.com` (the OpenCode server) are Cloudflare DNS-only A records pointing to
 `100.108.1.19`, a tailnet address, so only Jack's devices with Tailscale on can reach them. Tailscale Serve keeps owning port 443 on the
-tailnet address but forwards the raw TCP stream to Caddy on `127.0.0.1:8443`. Caddy ends TLS, serves `pazurite.com`,
-`opencode.pazurite.com` and `workbox.tail730dcf.ts.net`, and routes to services on `127.0.0.1`. Nothing listens on the LAN.
+tailnet address but forwards the raw TCP stream to Caddy on `127.0.0.1:8443`. Caddy ends TLS, serves `pazurite.com` and
+`opencode.pazurite.com`, and routes to services on `127.0.0.1`. Nothing listens on the LAN.
 
 ## Facts found (2026-10-13)
 - macOS 26.7.1, Intel (x86_64). Not installed: Caddy, Go, xcaddy, brew.
@@ -21,14 +21,13 @@ tailnet address but forwards the raw TCP stream to Caddy on `127.0.0.1:8443`. Ca
   with `/` -> `http://127.0.0.1:4198` (OpenCode server).
 - The Caddy download service builds `caddy-dns/cloudflare` for darwin/amd64: Caddy `v2.11.7`, cloudflare module `v0.2.4`
   (libdns/cloudflare `v0.2.2`), SHA-256 `f7f2a3cb2b913d4a68eecb8462384306e7248be2719eedcd8b768606b821763f`. The same URL with
-  `&version=v2.11.7` gave the same hash twice, so the pin is reproducible. The binary also contains `tls.get_certificate.tailscale`.
+  `&version=v2.11.7` gave the same hash twice, so the pin is reproducible. The binary also contains `tls.get_certificate.tailscale`, which does not work here (see section 6).
 
 ## 1. Names (decided by Jack)
 | Name | Serves |
 |---|---|
 | `pazurite.com` (apex) | Nexus: `/api/v1/...` (first: `/api/v1/power-metrics`, DGS-324); `/` answers 404 for now, kept for a Nexus index |
 | `opencode.pazurite.com` | the OpenCode server (`127.0.0.1:4198`) at its root `/` |
-| `workbox.tail730dcf.ts.net` | keeps `/` = OpenCode (today's address stays working) |
 
 - Both `pazurite.com` names are DNS-only A records to `100.108.1.19`. Each gets its own certificate by DNS challenge; no wildcard is needed.
 - This replaces DGS-323's "one name, many paths" example for the own domain. DGS-323 (C.1) still owns the Workbox-wide scheme and is not
@@ -117,20 +116,22 @@ address with PROXY protocol v2 (`--proxy-protocol`) if ever needed.
 
 ## 6. Port 443 handover (touches the live OpenCode front door: Jack's step, at the end of the plan)
 Today: `tailscale serve` holds `https://workbox.tail730dcf.ts.net` with `/` -> `http://127.0.0.1:4198`. Both cannot own 443.
-New: Serve forwards 443 as raw TCP to Caddy; Caddy serves all three names by SNI.
-Before: save `tailscale serve status --json`; start Caddy; prove all three names through loopback (plan, Task 5).
+New: Serve forwards 443 as raw TCP to Caddy; Caddy serves the two `pazurite.com` names by SNI. **The `workbox.tail730dcf.ts.net` name is dropped (Jack, 2026-10-13): after the cut-over that URL stops working, and Jack re-pairs the OpenCode Desktop app with `https://opencode.pazurite.com`.** The rollback below brings it back.
+Before: save `tailscale serve status --json`; start Caddy; prove both names through loopback (plan, Task 5).
 Cut-over: `tailscale serve --https=443 off`, then `tailscale serve --bg --tcp=443 tcp://127.0.0.1:8443`.
 Rollback: `tailscale serve --tcp=443 off`, then `tailscale serve --bg --https=443 http://127.0.0.1:4198`; check with
 `tailscale serve status`. Exact flags are re-read from `tailscale serve --help` in the plan; nothing was run against the live Serve.
-Risk: Caddy's `get_certificate tailscale` must reach the Tailscale app's local API as Jack's user. Fallback: `tailscale cert` writes
-files, Caddy loads them with `tls <cert> <key>`.
+Why the `ts.net` name is dropped: Caddy's `get_certificate tailscale` looks for the Tailscale macOS app's local API on a TCP port taken from the stale
+`/Library/Tailscale/ipnport` (50925, from the GUI app on 2026-10-07); the Workbox now runs `/usr/local/bin/tailscaled` with
+`/var/run/tailscaled.socket`, so the getter gets "connection refused" and the handshake fails (tested 2026-10-13, with and without `TS_SOCKET`).
+The `tailscale cert` files option works but was not chosen. The stale `ipnport` file stays untouched.
 
 ## 7. Login for services without one
 Caddy `basic_auth` on each Nexus path whose service has no login (`/api/v1/power-metrics*`), bcrypt hash (`caddy hash-password`) in `.env` as
 `NEXUS_BASIC_AUTH_HASH`.
 - Tailnet identity headers need Tailscale Serve to end the connection; with a raw TCP forward they do not exist.
 - A Caddy Tailscale-auth module is third-party code and one more custom build.
-- Never on `opencode.pazurite.com` or the `ts.net` name: OpenCode keeps its own password, and both would use the `Authorization` header.
+- Never on `opencode.pazurite.com`: OpenCode keeps its own password, and both would use the `Authorization` header.
 - The tailnet is the main gate; basic auth covers another tailnet device or a shared laptop.
 The first Caddyfile has no such path yet; DGS-324 (power metrics) adds `/api/v1/power-metrics` with this gate.
 

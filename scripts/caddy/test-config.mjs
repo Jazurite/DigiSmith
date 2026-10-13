@@ -32,10 +32,11 @@ if (existsSync(cf)) {
   const listens = servers.flatMap(s => s.listen ?? [])
   check('every listen address is 127.0.0.1:8443', listens.length > 0 && listens.every(l => l === '127.0.0.1:8443'), JSON.stringify(listens))
   const hosts = servers.flatMap(s => s.routes ?? []).flatMap(r => (r.match ?? []).flatMap(m => m.host ?? [])).sort()
-  check('exactly the three host names', JSON.stringify(hosts) === JSON.stringify(['opencode.pazurite.com', 'pazurite.com', 'workbox.tail730dcf.ts.net']), JSON.stringify(hosts))
+  check('exactly the two host names (no ts.net name)', JSON.stringify(hosts) === JSON.stringify(['opencode.pazurite.com', 'pazurite.com']), JSON.stringify(hosts))
+  check('no Tailscale certificate getter', !JSON.stringify(adapted).includes('tailscale'))
   const json = JSON.stringify(adapted)
   check('no port 80 and no 0.0.0.0', !/:80"|0\.0\.0\.0/.test(json))
-  check('OpenCode names proxy to 127.0.0.1:4198', (json.match(/127\.0\.0\.1:4198/g) ?? []).length === 2)
+  check('OpenCode names proxy to 127.0.0.1:4198', (json.match(/127\.0\.0\.1:4198/g) ?? []).length === 1)
   const apex = servers.flatMap(s => s.routes ?? []).filter(r => (r.match ?? []).some(m => (m.host ?? []).includes('pazurite.com')))
   check('apex route exists and has no reverse_proxy', apex.length === 1 && !JSON.stringify(apex[0]).includes('reverse_proxy'))
 
@@ -55,7 +56,7 @@ if (existsSync(cf)) {
   const get = (host, path) => new Promise(ok => https.get({ host: '127.0.0.1', port: FRONT, path, servername: host, rejectUnauthorized: false, headers: { host } }, res => { let b = ''; res.on('data', d => { b += d }); res.on('end', () => ok([res.statusCode, b])) }).on('error', e => ok([0, e.message])))
   for (let i = 0; i < 50; i++) { const [c] = await get('pazurite.com', '/'); if (c) break; await new Promise(r => setTimeout(r, 200)) }   // certificates are issued after the listener is up
   for (const p of ['/', '/api/v1/anything', '/api/anything']) { const [c, b] = await get("pazurite.com", p); check(`pazurite.com${p} -> 404`, c === 404, `got ${c} ${b}`) }
-  for (const h of ['opencode.pazurite.com', 'workbox.tail730dcf.ts.net']) { const [c, b] = await get(h, '/'); check(`${h}/ -> stub 200`, c === 200 && b === 'stub-ok', `got ${c} ${b}`) }
+  for (const h of ['opencode.pazurite.com']) { const [c, b] = await get(h, '/'); check(`${h}/ -> stub 200`, c === 200 && b === 'stub-ok', `got ${c} ${b}`) }
   check('test Caddy tried no sudo or trust-store install', !/sudo|installing root certificate/.test(log))
   caddy.kill('SIGTERM'); stub.close()
 }

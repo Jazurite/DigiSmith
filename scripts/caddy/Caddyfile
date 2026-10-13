@@ -25,10 +25,3 @@ pazurite.com {
 		respond "Not found" 404
 	}
 }
-
-workbox.tail730dcf.ts.net {
-	tls {
-		get_certificate tailscale
-	}
-	import opencode_routes
-}

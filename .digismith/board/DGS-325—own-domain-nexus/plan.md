@@ -19,7 +19,7 @@ touch the live OpenCode server (4198).
 ## Files (repo `scripts/caddy/`, following `scripts/opencode-boot`)
 | File | Role |
 |---|---|
-| `Caddyfile` | routes for the three names; no secrets in it |
+| `Caddyfile` | routes for the two names; no secrets in it |
 | `caddy-run.sh` | wrapper: reads only `CLOUDFLARE_API_TOKEN` (and `NEXUS_BASIC_AUTH_HASH` once it exists) from `~/.digismith-depot/.env`, sets `XDG_DATA_HOME`, `exec`s Caddy |
 | `com.jazurite.digismith.caddy.plist.tmpl` | LaunchAgent template, `@DEPOT@` replaced by `install.sh` |
 | `install.sh` | copies into the depot, downloads and checks the pinned binary; never loads a service; `CADDY_URL`/`CADDY_SHA256` overrides only with `DGS_CADDY_TEST=1` |
@@ -58,15 +58,8 @@ pazurite.com {
 		respond "Not found" 404
 	}
 }
-
-workbox.tail730dcf.ts.net {
-	tls {
-		get_certificate tailscale
-	}
-	import opencode_routes
-}
 ```
-Route table: `opencode.pazurite.com/` and `workbox.tail730dcf.ts.net/` = OpenCode (4198); `pazurite.com` = Nexus: `/api/v1/...` only (first
+Route table: `opencode.pazurite.com/` = OpenCode (4198); the `workbox.tail730dcf.ts.net` name is dropped (Jack, 2026-10-13); `pazurite.com` = Nexus: `/api/v1/...` only (first
 `/api/v1/power-metrics`, DGS-324; a breaking change gets `/api/v2/`, old versions stay until Jack drops them), 404 everywhere else, `/` included.
 
 ### caddy-run.sh (source: `scripts/caddy/caddy-run.sh`)
@@ -107,7 +100,7 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
 1. **Config tests first** (`test-config.mjs`, `CADDY_BIN` env). Failing first, then the Caddyfile makes them pass:
    - `caddy validate` passes with a 40-character dummy `CLOUDFLARE_API_TOKEN`.
    - The adapted JSON (`caddy adapt`) has every `listen` address on `127.0.0.1:8443` and no `:80`, and no `0.0.0.0`.
-   - It contains exactly the three host names. `opencode.pazurite.com` and the `ts.net` name route to `127.0.0.1:4198`;
+   - It contains exactly the two host names and no Tailscale certificate getter. `opencode.pazurite.com` routes to `127.0.0.1:4198`;
      the apex `pazurite.com` has no `reverse_proxy` and answers 404.
    - A throwaway run (`127.0.0.1:18444`, `tls internal`, `skip_install_trust`, backend stub on a high port) checks the route table by SNI:
      `Host: pazurite.com` -> 404 for `/`, `/api/v1/anything` and an unversioned `/api/anything`; `Host: opencode...` -> the stub's 200.
@@ -123,8 +116,8 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
    trust-store change.
 5. **Loopback proof before the cut-over** (Caddy as a LaunchAgent on `127.0.0.1:8443`, Serve untouched):
    - Both names answer through loopback, for example
-     `curl --resolve opencode.pazurite.com:8443:127.0.0.1 https://opencode.pazurite.com:8443/` (OpenCode login), the same for the `ts.net`
-     name, and `pazurite.com` (404); the `ts.net` certificate must be issued (the main risk; fallback in design.md section 6).
+     `curl --resolve opencode.pazurite.com:8443:127.0.0.1 https://opencode.pazurite.com:8443/` (OpenCode login) and `pazurite.com` (404).
+     Done 2026-10-13: both pass with Let's Encrypt certificates. The `ts.net` name failed (Caddy's Tailscale getter cannot reach a local API) and is dropped.
    - **OpenCode streaming through Caddy (changed by the Nexus Maestro, 2026-10-13):** read-only on the live server: open the event stream (SSE,
      `/api/event`) and a websocket upgrade through Caddy only. No prompt is sent and no session is created. Both need the server's password.
      The unauthenticated part is done (throwaway Caddy, production routing, `tls internal`, `127.0.0.1:18445`): `/` 200 text/html and
@@ -167,14 +160,17 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
   Caddy now listens on `127.0.0.1:8443` only; nothing else changed. The agent runs Task 5 (loopback proof).
 
 **Cut-over: touches the live OpenCode server's front door (C.1). Do it when no worker session needs the server for a minute.**
-- J7. Save the current Serve config: `tailscale serve status --json > ~/.digismith-depot/caddy/serve-before.json`.
+- J7. First restart Caddy so it loads the new Caddyfile (no `ts.net` site): `launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.caddy`.
+  Then save the current Serve config: `tailscale serve status --json > ~/.digismith-depot/caddy/serve-before.json`.
   Then: `tailscale serve --https=443 off` and `tailscale serve --bg --tcp=443 tcp://127.0.0.1:8443`.
-  Check: `tailscale serve status`; from the laptop with Tailscale on, `https://workbox.tail730dcf.ts.net/` and
-  `https://opencode.pazurite.com/` both show the OpenCode login, `https://pazurite.com/` answers 404; the Desktop app pairs and a session streams.
+  **After this step `https://workbox.tail730dcf.ts.net/` stops working (accepted by Jack).** Re-pair the OpenCode Desktop app with
+  `https://opencode.pazurite.com`.
+  Check: `tailscale serve status`; from the laptop with Tailscale on, `https://opencode.pazurite.com/` shows the OpenCode login,
+  `https://pazurite.com/` answers 404; the Desktop app pairs and a session streams.
   **Streaming check (Jack, replaces the agent proof):** in the browser and in the OpenCode Desktop app, through `https://opencode.pazurite.com/`:
   log in, open a session, and see live events (the event stream) and the terminal view (the websocket). On any failure, run the rollback below.
   **Rollback (exact):** `tailscale serve --tcp=443 off` then `tailscale serve --bg --https=443 http://127.0.0.1:4198`, then
-  `tailscale serve status` shows `https://workbox.tail730dcf.ts.net` with `/ proxy http://127.0.0.1:4198` again.
+  `tailscale serve status` shows `https://workbox.tail730dcf.ts.net` with `/ proxy http://127.0.0.1:4198` again, and the `ts.net` link works again.
 - J8. First use: laptop, Tailscale on: `https://opencode.pazurite.com/` loads with a valid certificate and shows the OpenCode login;
   `https://pazurite.com/` answers 404. Tailscale off: neither connects.
 

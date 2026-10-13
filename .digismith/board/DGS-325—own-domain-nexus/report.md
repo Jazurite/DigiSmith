@@ -5,7 +5,7 @@ Ticket: DGS-325. Date: 2026-10-13. Status: design and plan approved by Jack (202
 ## Summary
 `pazurite.com` (Nexus, `/api/v1/...`) and `opencode.pazurite.com` (OpenCode at `/`) become DNS-only Cloudflare records pointing to the Workbox's
 tailnet address `100.108.1.19`. Tailscale Serve keeps port 443 and forwards the raw TCP stream to Caddy on `127.0.0.1:8443`; Caddy ends TLS,
-gets its certificates by DNS challenge, and also serves `workbox.tail730dcf.ts.net`. Caddy listens on loopback only.
+gets its certificates by DNS challenge, Caddy listens on loopback only. The `workbox.tail730dcf.ts.net` name is dropped (Jack, 2026-10-13): Caddy's Tailscale certificate getter cannot reach the local `tailscaled` here; after the cut-over (J7) that URL stops working and Jack re-pairs the OpenCode Desktop app with `https://opencode.pazurite.com`. The rollback brings it back.
 
 ## Findings that shaped the design
 - A non-root process on macOS 26.7.1 cannot bind port 443 on a specific address (`100.108.1.19` and `127.0.0.1` both denied); only `0.0.0.0` works,
@@ -28,6 +28,9 @@ Caddy is untested until the loopback proof. Desktop-app pairing can only be test
 
 ## Staging certificate (task 4, 2026-10-13)
 `scripts/caddy/staging-cert.sh` with `Caddyfile.staging` (Let's Encrypt staging, DNS challenge through Cloudflare, `127.0.0.1:18443`, `skip_install_trust`, temp data dir, no sudo) obtained certificates for `pazurite.com` and `opencode.pazurite.com`. The token was read like `caddy-run.sh` reads it and never printed. Caddy stopped afterwards; no service, no LaunchAgent.
+
+## Loopback proof on the running Caddy (task 5, 2026-10-13)
+`opencode.pazurite.com` 200 and `pazurite.com` 404 with real Let's Encrypt certificates (expire 2027-01-11); the OpenCode body hash matches the server direct; `/api/event` and a websocket upgrade give 401, same as direct; `192.168.103.45:8443` and `100.108.1.19:8443` refuse. The `ts.net` name failed and was dropped.
 
 ## Review
 An independent read-only Claude review found no LAN exposure and no secret leak. Verified findings fixed: `install.sh` ignored the pin only with `DGS_CADDY_TEST=1` now, refuses odd depot paths, downloads next to the target (atomic move, trap on INT and TERM) and prints the J6 commands; `caddy-run.sh` strips a CR and one pair of quotes; the apex "no reverse_proxy" test no longer checks a port that never appears; both tests kill Caddy on exit and the stream test requires a LAN address and counts only a refusal as refused; plan text now matches the code (`@DEPOT@`, real `caddy-run.sh`, port 18444). Left alone: a stricter `.env`-printing regex (low, scripts are clean).
