@@ -10,10 +10,11 @@
   body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:1.5rem 16px; }
   h1 { font-size:1.6rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
   code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; overflow-wrap:anywhere; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
 </style>
 </head>
 <body>
-<header><h1>DGS-443 notes into depot — Implementation Report</h1><div style="color:var(--muted)">Ticket: <strong>DGS-443</strong> · Date: 2026-10-13</div></header>
+<header><h1>DGS-443 notes into depot — Implementation Report</h1><div class="meta"><span>Ticket: <strong>DGS-443</strong></span> <span>Date: 2026-10-13</span></div></header>
 <section id="summary">
 <h2>Summary</h2>
 <p>Notes are read and written in the depot now: <code>~/.digismith-depot/sessions/&lt;project&gt;/maestros/&lt;title&gt;/note.md</code> for Maestros, <code>&lt;conductor&gt;/note.md</code> for the conductor (the DigiSmith Maestro shares it, answer A; split = DGS-447), <code>orders/</code> for orders. The old <code>.digismith/sessions/</code> copies are never written, renamed or deleted by any code. No file was copied yet: each owner&#x27;s copy, <code>cmp</code> and switch happens after the merge, on that owner&#x27;s idle word.</p>
