@@ -75,3 +75,28 @@ describe("taskIdForKey (S12)", () => {
     fs.rmSync(root, { recursive: true, force: true });
   });
 });
+
+describe("parseArgs path safety (review)", () => {
+  const base = ["--maestro", "m", "--session", "s", "--conductor", "c"];
+  it("rejects values that could leave the depot folder or carry shell text", () => {
+    expect(() => parseArgs(["--maestro", "m", "--session", "s", "--conductor", "../../x"])).toThrow(/--conductor/);
+    expect(() => parseArgs([...base, "--project", ".."])).toThrow(/--project/);
+    expect(() => parseArgs(["--maestro", "m; ls", "--session", "s", "--conductor", "c"])).toThrow(/--maestro/);
+  });
+});
+import { writeStateBlock } from "./deps-stub.ts";
+describe("stub writeStateBlock with an orphan open marker (review)", () => {
+  it("never eats the text after an orphan open marker", () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "dgs428-orphan-"));
+    const f = path.join(d, "note.md");
+    const m = { open: "<!-- o -->", close: "<!-- /o -->" };
+    fs.writeFileSync(f, "head\n<!-- o -->\nhalf\n## Roster\nIMPORTANT\n");
+    writeStateBlock(f, "one", m);
+    writeStateBlock(f, "two", m);
+    const out = fs.readFileSync(f, "utf8");
+    expect(out).toContain("IMPORTANT");
+    expect(out).toContain("two");
+    expect(out.split(m.open)).toHaveLength(2);
+    fs.rmSync(d, { recursive: true, force: true });
+  });
+});

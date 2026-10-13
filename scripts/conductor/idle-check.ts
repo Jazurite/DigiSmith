@@ -2,6 +2,7 @@
 // added to DGS-418's hook-cli.ts handler list (S7), so it reads the card BEFORE the heartbeat
 // refreshes last_seen. It never throws and never writes; any doubt = silent (undefined).
 import { isIdle, type WindowCard } from "./catch-up-window.ts";
+import { isSafeName } from "./safe-name.ts";
 import type { CardRow } from "./deps-stub.ts";
 
 export const IDLE_CONTEXT_MARKER = "[digismith catch-up: idle Maestro session]";
@@ -22,6 +23,7 @@ export function idleCheck(event: { session_id?: string }, deps: IdleDeps): strin
     if (!isIdle({ cards, identity: own.id, askingSession: own.session })) return undefined;
     const conductor = deps.conductorFor(own);
     if (!conductor) return undefined;
+    if (![own.id, own.session, own.domain, conductor].every(isSafeName)) return undefined;
     return [
       IDLE_CONTEXT_MARKER,
       "Another session of this Maestro identity has been active since this one last was.",

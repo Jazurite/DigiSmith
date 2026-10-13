@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { pathToFileURL } from "node:url";
 import { buildCatchUp, type CatchUpDeps, type ClickUpInfo } from "./catch-up.ts";
 import * as stub from "./deps-stub.ts";
+import { isSafeName } from "./safe-name.ts";
 
 const run = promisify(execFile);
 
@@ -38,6 +39,10 @@ export function parseArgs(argv: string[]): CliArgs {
     } else throw new Error(`unknown argument ${a}`);
   }
   for (const req of ["--maestro", "--session", "--conductor"]) if (!v.get(req)) throw new Error(`${req} is required`);
+  for (const flag of ["--maestro", "--session", "--conductor", "--project"]) {
+    const val = v.get(flag);
+    if (val !== undefined && !isSafeName(val)) throw new Error(`${flag} may hold only letters, digits, . _ - (no ..)`);
+  }
   const maxAgeMin = v.has("--max-age-min") ? Number(v.get("--max-age-min")) : 30;
   if (!Number.isFinite(maxAgeMin) || maxAgeMin < 0) throw new Error("--max-age-min must be a number of minutes");
   const now = v.get("--now");

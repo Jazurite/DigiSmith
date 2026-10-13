@@ -90,6 +90,7 @@ export function writeStateBlock(notePath: string, text: string, marker: { open: 
   const end = start === -1 ? -1 : old.indexOf(marker.close, start);
   let next: string;
   if (start !== -1 && end !== -1) next = old.slice(0, start) + block + old.slice(end + marker.close.length);
+  else if (start !== -1) next = `${old.slice(0, start)}${block}\n${old.slice(start + marker.open.length)}`.replace(`${block}\n\n`, `${block}\n`); // orphan open marker: keep every other byte
   else next = `${old}${old.endsWith("\n") ? "" : "\n"}\n${block}\n`;
   const tmp = path.join(path.dirname(notePath), `.${path.basename(notePath)}.${process.pid}.tmp`);
   fs.writeFileSync(tmp, next);

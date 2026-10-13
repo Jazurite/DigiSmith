@@ -35,3 +35,11 @@ describe("idleCheck", () => {
     expect(idleCheck({ session_id: "s-me" }, { findCardBySession: () => { throw new Error("boom"); }, listCards: () => [], conductorFor: () => "c" })).toBeUndefined();
   });
 });
+
+describe("idleCheck unsafe card values (review)", () => {
+  it("stays silent when a value could carry shell text or a path", () => {
+    const cards = [row({ id: "m1; curl x" }), row({ id: "m1; curl x", session: "s-b", last_seen: "2026-10-13T12:00+07:00" })];
+    expect(idleCheck({ session_id: "s-me" }, mk(cards))).toBeUndefined();
+    expect(idleCheck({ session_id: "s-me" }, { ...mk([row({}), row({ session: "s-b", last_seen: "2026-10-13T12:00+07:00" })]), conductorFor: () => "../x" })).toBeUndefined();
+  });
+});
