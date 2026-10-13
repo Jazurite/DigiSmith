@@ -244,6 +244,14 @@ describe("FrontdoorClient", () => {
     expect(request).toHaveBeenCalledWith({ method: "GET", url: "/hierarchy/v1/project/1", data: undefined });
   });
 
+  it("getSpaceStatuses throws when statuses is missing, empty or not an array (an empty read would wipe the set)", async () => {
+    const client = makeClient();
+    for (const data of [{ id: "1" }, { id: "1", statuses: [] }, { id: "1", statuses: "x" }, { id: "1", statuses: null }]) {
+      request.mockResolvedValueOnce({ data });
+      await expect(client.getSpaceStatuses("1")).rejects.toThrow(/no statuses/);
+    }
+  });
+
   it("putSpaceStatuses PUTs the full set with checkConflict", async () => {
     const client = makeClient();
     const body = { statuses: [{ status: "x", type: "custom", orderindex: 0, color: "#fff000" }] };

@@ -103,7 +103,11 @@ export class FrontdoorClient {
   /** The space's status set (the same shape putSpaceStatuses takes). */
   async getSpaceStatuses(spaceId: string): Promise<FrontdoorStatus[]> {
     const space = await this.request<{ statuses?: FrontdoorStatus[] }>("GET", `/hierarchy/v1/project/${spaceId}`);
-    return space.statuses ?? [];
+    // An empty or missing list must never pass as "the set is empty": the PUT would then replace the set with one status.
+    if (!Array.isArray(space.statuses) || space.statuses.length === 0) {
+      throw new Error(`space ${spaceId} answered with no statuses (missing, empty or not a list); refusing to go on`);
+    }
+    return space.statuses;
   }
 
   /** Replaces the WHOLE status set of a space: a status missing from the body is removed. ClickUp answers {}. */
