@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-462 state block refresh — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-462 state block refresh — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-462</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The conductor's state block is now refreshed by a script. <code>cli.ts state-refresh</code> rebuilds Running from herdr and the open worker cards, keeps the hand-written parts, drops an item only when its explicit <code>[resolves: ...]</code> marker holds, and writes only the block. The catch-up refreshes first, shows the block's age, and warns when the block is behind the newest merge on origin/main.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>refresh.ts</code>, <code>markers.ts</code>, <code>ticket-status.ts</code> and the <code>state-refresh</code> command (<code>--workers</code>, <code>--dry-run</code>, <code>--create</code>).</li>
+<li>Ownership: <code>--workers</code> list (stored in the block) or a card whose <code>under</code> is the conductor; other panes show as owner unknown in Health.</li>
+<li>Markers: <code>ticket</code>, <code>merged</code>, <code>gone</code>, <code>exists</code>; Decided is never dropped; any doubt keeps the item and warns.</li>
+<li>Stale check by the recorded <code>Main:</code> hash; age line in Health; the catch-up does not reuse a catch-up older than the newest merge.</li>
+<li>Docs: <code>docs/conductor-state.md</code>, <code>skills/catch-up/SKILL.md</code>.</li>
+</ul>
+</section>
+<section id="tests">
+<h2>Tests and review</h2>
+<p>Full suite 147 files, 2103 tests pass; the ticket's test (stale block plus newer merge gives a warning, then a refreshed Running) is in <code>refresh.test.ts</code>. Most code was written before its tests, so they were not red first. An independent Claude review found seven issues; all were verified and fixed with tests (wrong checkout, lost update, unpinned workspace, fast-forward dates, fractional card times, stray note creation, silent markers).</p>
+</section>
+<section id="not-done">
+<h2>Not done</h2>
+<p>The d3-conductor's <code>conductors.json</code> entry and both conductors' routine lines are theirs. The catch-up reuse rule still compares times. One type error in <code>card-hook.ts</code> predates this branch.</p>
+</section>
+</body>
+</html>
