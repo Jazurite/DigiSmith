@@ -38,7 +38,7 @@ describe("sweep", () => {
     expect(sweep({ project: "P", now: NOW, env, apply: true, live: alive() })[0].verdict).toBe("kept");
   });
   it("reports non-herdr cards as unverifiable and never marks them", () => {
-    writeCard(card("m", { role: "maestro", under: undefined, runs_on: "workbox" }), env);
+    writeCard(card("m", { role: "maestro", under: undefined, runs_on: "workbox", machine: "mac", state: "n.md", mandate: undefined }), env);
     expect(sweep({ project: "P", now: NOW, env, apply: true, live: alive() })[0].verdict).toBe("unverifiable");
     expect(listCards("P", { env, scope: "open" })).toHaveLength(1);
   });
@@ -65,9 +65,8 @@ describe("sweep guards (review fixes)", () => {
   it("a NaN stale threshold or unparseable last_seen marks nothing", () => {
     writeCard(card("a"), env);
     expect(() => sweep({ project: "P", now: NOW, env, staleMin: Number("abc"), live: alive() })).toThrow(/stale/);
-    writeCard(card("b", { last_seen: "garbage" }), env);
-    const r = sweep({ project: "P", now: NOW, env, apply: true, live: alive() });
-    expect(r.find((x) => x.id === "b")?.verdict).toBe("unverifiable");
+    // the real card API refuses an unparseable last_seen, so such a file never reaches the sweep
+    expect(() => writeCard(card("b", { last_seen: "garbage" }), env)).toThrow();
   });
   it("an empty herdr list or an agent without agent_session is unverifiable, not 'gone'", () => {
     expect(liveSessionsFromAgentList(JSON.stringify({ result: { agents: [] } })).ok).toBe(false);

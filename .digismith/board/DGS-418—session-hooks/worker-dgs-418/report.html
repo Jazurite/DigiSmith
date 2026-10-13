@@ -24,11 +24,11 @@
 </section>
 <section id="built">
 <h2>Built</h2>
-<ul><li>Hooks in <code>hooks/hooks.json</code>: card writer first at SessionStart; one UserPromptSubmit command with a pre-prompt handler list then the heartbeat; SessionEnd. No <code>.claude/settings.json</code> change.</li><li>Fail safe: the card comes only from an env allow-list; no valid role and project, a line break in a value or an invalid card writes no card. Every hook exits 0.</li><li>Close: <code>ended</code> and <code>result</code> on the card, archived; handoff block appended at the end of the state note.</li><li>Sweep: <code>lost</code> only when the heartbeat is stale and the herdr session is gone; anything unverifiable is never marked; dry run by default; never deletes.</li><li>35 new tests with a temp depot and fake events; the card API is a stub of DGS-417's until it merges.</li></ul>
+<ul><li>Hooks in <code>hooks/hooks.json</code>: card writer first at SessionStart; one UserPromptSubmit command with a pre-prompt handler list then the heartbeat; SessionEnd. No <code>.claude/settings.json</code> change.</li><li>Fail safe: the card comes only from an env allow-list; no valid role and project, a line break in a value or an invalid card writes no card. Every hook exits 0.</li><li>Close: <code>ended</code> and <code>result</code> on the card, archived; handoff block appended at the end of the state note.</li><li>Sweep: <code>lost</code> only when the heartbeat is stale and the herdr session is gone; anything unverifiable is never marked; dry run by default; never deletes.</li><li>35 new tests with a temp depot and fake events; on DGS-417's real card API after the rebase; full suite 121 files, 1732 tests, CLI build clean.</li></ul>
 </section>
 <section id="review">
 <h2>Review</h2>
-<p>Claude whole-branch review. Fixed with tests: symlinked entry guard, NaN stale threshold and unparseable <code>last_seen</code>, empty or partial herdr list, line-break injection from env. Documented, not fixed: nested <code>claude -p</code> inherits the env; touch/close race and archive overwrite (DGS-417 module); <code>state</code> path not checked; <code>machine</code> ignored by the sweep.</p>
+<p>Claude whole-branch review. Fixed with tests: symlinked entry guard, NaN stale threshold and unparseable <code>last_seen</code>, empty or partial herdr list, line-break injection from env. Documented, not fixed: nested <code>claude -p</code> inherits the env; touch/close race (DGS-417 module); <code>state</code> path not checked; <code>machine</code> ignored by the sweep.</p>
 </section>
 <section id="risks">
 <h2>Follow-ups</h2>
