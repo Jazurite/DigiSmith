@@ -40,7 +40,8 @@ function clock(date: Date, offsetMs: number): { day: string; hm: string } {
 export function formatTime(t: TimeInput): string {
   const at = typeof t === "string" ? t : t.at;
   const date = new Date(at);
-  if (Number.isNaN(date.getTime())) throw new Error(`invalid time: ${JSON.stringify(at)}`);
+  // Without Z or an offset, Date reads the string in the host time zone: refuse it.
+  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(at) || Number.isNaN(date.getTime())) throw new Error(`invalid time: ${JSON.stringify(at)}`);
   const local = clock(date, OFFSET_MS);
   const text = `${local.day} ${local.hm} UTC+7`;
   return typeof t === "string" ? text : `${text} [${clock(date, 0).hm} UTC]`;
@@ -54,7 +55,29 @@ function orNone(value: string): string {
   return value.trim() === "" ? "none" : value;
 }
 
+const SECTIONS = ["done", "running", "waiting", "decided", "parked", "next"] as const;
+
+function assertShape(data: CatchUp): void {
+  for (const key of ["conductor", "identity", "askedBy"] as const) {
+    if (typeof data[key] !== "string" || data[key].trim() === "") {
+      throw new Error(`${key} must be a non-empty string`);
+    }
+  }
+  for (const key of SECTIONS) {
+    if (!Array.isArray(data[key])) throw new Error(`${key} must be an array`);
+  }
+  if (!data.health || !Array.isArray(data.health.seats) || !Array.isArray(data.health.tabs)) {
+    throw new Error("health must hold seats and tabs arrays");
+  }
+  for (const s of data.health.seats) {
+    if (!Number.isFinite(s.fiveHourPct) || !Number.isFinite(s.weeklyPct)) {
+      throw new Error(`seat ${s.seat}: usage must be finite numbers`);
+    }
+  }
+}
+
 export function renderCatchUp(data: CatchUp): string {
+  assertShape(data);
   const { health } = data;
   const seats = health.seats.map((s) => `${s.seat}: 5h ${s.fiveHourPct}%, weekly ${s.weeklyPct}%`);
   const values: Record<string, string> = {

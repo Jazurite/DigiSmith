@@ -115,6 +115,26 @@ Window: 2026-10-13 13:00 UTC+7 to 2026-10-13 15:30 UTC+7 (UTC+7)   Maestro ident
   });
 });
 
+describe("renderCatchUp shape checks", () => {
+  it("names a missing section", () => {
+    const bad = { ...EMPTY } as Partial<CatchUp>;
+    delete bad.running;
+    expect(() => renderCatchUp(bad as CatchUp)).toThrow("running must be an array");
+  });
+  it("refuses a missing health block", () => {
+    const bad = { ...EMPTY } as Partial<CatchUp>;
+    delete bad.health;
+    expect(() => renderCatchUp(bad as CatchUp)).toThrow(/health/);
+  });
+  it("refuses non-finite seat usage", () => {
+    const bad = { ...EMPTY, health: { ...EMPTY.health, seats: [{ seat: "x", fiveHourPct: NaN, weeklyPct: 1 }] } };
+    expect(() => renderCatchUp(bad)).toThrow(/finite/);
+  });
+  it("refuses an empty conductor name", () => {
+    expect(() => renderCatchUp({ ...EMPTY, conductor: "" })).toThrow(/conductor/);
+  });
+});
+
 describe("formatTime", () => {
   it("renders UTC+7", () => {
     expect(formatTime("2026-10-13T06:00:00Z")).toBe("2026-10-13 13:00 UTC+7");
@@ -129,6 +149,10 @@ describe("formatTime", () => {
     expect(formatTime({ at: "2026-10-13T18:00:00Z", fromTool: true })).toBe(
       "2026-10-14 01:00 UTC+7 [18:00 UTC]",
     );
+  });
+  it("refuses a time without Z or an offset", () => {
+    expect(() => formatTime("2026-10-13T10:00:00")).toThrow(/invalid time/);
+    expect(() => formatTime("2026-10-13")).toThrow(/invalid time/);
   });
   it("throws on an invalid time", () => {
     expect(() => formatTime("nope")).toThrow(/invalid time/);
