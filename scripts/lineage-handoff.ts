@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { parseArgs, requireArgs } from "./cli-args.ts";
-import { listNoteSessionNames } from "./session-path.ts";
+import { listDepotNoteNames, listUnmovedNoteNames, noteLocation, projectName } from "./session-path.ts";
 
 // This module only ever knows the old clan/lineage fallback convention (DGS-158's own doc still
 // calls it a bridge, kept so the six existing fallback notes stay readable until Part 6 of
@@ -125,6 +125,11 @@ export function main(): void {
         console.log(absPath);
         break;
       }
+      case "maestro-path": {
+        requireArgs(args, ["title"]);
+        console.log(noteLocation(projectName(mainRoot), args.title));
+        break;
+      }
       case "ensure-excluded": {
         requireArgs(args, ["title"]);
         console.log(`lineage-handoff: ${ensureExcluded(mainRoot, noteRelPath(parseLineageKey(args.title)))}`);
@@ -132,11 +137,12 @@ export function main(): void {
       }
       case "list": {
         for (const key of listNotes(mainRoot)) console.log(key);
-        for (const name of listNoteSessionNames(mainRoot)) console.log(name);
+        for (const name of listDepotNoteNames(projectName(mainRoot))) console.log(name);
+        for (const name of listUnmovedNoteNames(mainRoot)) console.log(name);
         break;
       }
       default:
-        throw new Error(`unknown --action "${args.action}" — expected path, ensure-excluded, or list`);
+        throw new Error(`unknown --action "${args.action}" — expected path, maestro-path, ensure-excluded, or list`);
     }
   } catch (err) {
     console.error(`lineage-handoff: ${(err as Error).message}`);

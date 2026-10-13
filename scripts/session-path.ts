@@ -3,6 +3,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { depotDir } from "./depot-dir.ts";
+import { isSafeName } from "./conductor/safe-name.ts";
 
 export const SESSIONS_DIR_PATH = ".digismith/sessions";
 export const NOTE_FILENAME = "note.md";
@@ -72,4 +74,64 @@ export function listNoteSessionNames(mainRoot: string): string[] {
   return subdirs(dir)
     .filter((name) => isSafeSessionName(name) && hasFile(path.join(dir, name), NOTE_FILENAME))
     .sort();
+}
+
+// DGS-443: the live notes live in the depot, `<depot>/sessions/<project>/`. The repo's
+// `.digismith/sessions/` copies stay as the old location (read-only fallback, never rewritten).
+export const MAESTROS_DIR_NAME = "maestros";
+export const ORDERS_DIR_NAME = "orders";
+
+export function projectName(mainRoot: string): string {
+  return path.basename(mainRoot);
+}
+
+function safeName(label: string, value: string): string {
+  if (!isSafeName(value)) throw new Error(`${label}: not a safe folder or file name`);
+  return value;
+}
+
+export function sessionsRoot(project: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(depotDir(env), "sessions", safeName("project", project));
+}
+
+function safeTitle(title: string): string {
+  if (!isSafeSessionName(title)) throw new Error(`unsafe session title: ${JSON.stringify(title)}`);
+  return title;
+}
+
+export function maestroNotePath(project: string, title: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME, safeTitle(title), NOTE_FILENAME);
+}
+
+export function conductorNotePath(project: string, conductor: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(sessionsRoot(project, env), safeName("conductor", conductor), NOTE_FILENAME);
+}
+
+export function ordersDir(project: string, env: NodeJS.ProcessEnv = process.env): string {
+  return path.join(sessionsRoot(project, env), ORDERS_DIR_NAME);
+}
+
+// DGS-443 answer A: the DigiSmith Maestro and the conductor share one note, held at the conductor's
+// path. The split is a later ticket (DGS-447); delete this entry then.
+export const SHARED_NOTES: Readonly<Record<string, string>> = { DigiSmith: "digismith-conductor" };
+
+// Where the note of the session with this title lives in the depot.
+export function noteLocation(project: string, title: string, env: NodeJS.ProcessEnv = process.env): string {
+  const conductor = Object.hasOwn(SHARED_NOTES, title) ? SHARED_NOTES[title] : undefined;
+  return conductor ? conductorNotePath(project, conductor, env) : maestroNotePath(project, title, env);
+}
+
+export function listDepotNoteNames(project: string, env: NodeJS.ProcessEnv = process.env): string[] {
+  const dir = path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME);
+  const names = subdirs(dir).filter((name) => isSafeSessionName(name) && hasFile(path.join(dir, name), NOTE_FILENAME));
+  for (const title of Object.keys(SHARED_NOTES)) {
+    if (hasFile(path.dirname(noteLocation(project, title, env)), NOTE_FILENAME) && !names.includes(title)) names.push(title);
+  }
+  return names.sort();
+}
+
+// Old-location notes whose depot copy does not exist yet: still readable by "resume".
+export function listUnmovedNoteNames(mainRoot: string, env: NodeJS.ProcessEnv = process.env): string[] {
+  const moved = new Set(listDepotNoteNames(projectName(mainRoot), env));
+  return listNoteSessionNames(mainRoot).filter((name) => !moved.has(name));
 }

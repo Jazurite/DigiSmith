@@ -10,6 +10,14 @@ import {
   noteRelPath,
   briefRelPath,
   listNoteSessionNames,
+  projectName,
+  sessionsRoot,
+  maestroNotePath,
+  conductorNotePath,
+  ordersDir,
+  listDepotNoteNames,
+  listUnmovedNoteNames,
+  noteLocation,
 } from "./session-path.ts";
 
 describe("isSafeSessionName", () => {
@@ -122,5 +130,68 @@ describe("listNoteSessionNames", () => {
     writeFile(tmpDir, `${SESSIONS_DIR_PATH}/DigiSmith/note.md`);
     writeFile(tmpDir, `${SESSIONS_DIR_PATH}/Emma/note.md`);
     expect(listNoteSessionNames(tmpDir)).toEqual(["DigiSmith", "Emma", "Soveron"]);
+  });
+});
+
+describe("depot note paths (DGS-443)", () => {
+  let tmp: string;
+  let env: NodeJS.ProcessEnv;
+  const write = (full: string) => {
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, "x");
+  };
+
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-depot-path-test-"));
+    env = { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") };
+  });
+  afterEach(() => {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it("names the project after the main checkout's folder", () => {
+    expect(projectName("/a/b/DigiSmith")).toBe("DigiSmith");
+  });
+
+  it("builds the DGS-443 layout under the depot", () => {
+    const root = path.join(tmp, "depot", "sessions", "DigiSmith");
+    expect(sessionsRoot("DigiSmith", env)).toBe(root);
+    expect(maestroNotePath("DigiSmith", "Token Economics", env)).toBe(path.join(root, "maestros", "Token Economics", "note.md"));
+    expect(conductorNotePath("DigiSmith", "digismith-conductor", env)).toBe(path.join(root, "digismith-conductor", "note.md"));
+    expect(ordersDir("DigiSmith", env)).toBe(path.join(root, "orders"));
+  });
+
+  it("refuses an unsafe project, title or conductor name", () => {
+    expect(() => maestroNotePath("DigiSmith", "../x", env)).toThrow();
+    expect(() => maestroNotePath("DigiSmith", "A.1: Primitives", env)).toThrow();
+    expect(() => conductorNotePath("DigiSmith", "a/b", env)).toThrow();
+    expect(() => sessionsRoot("..", env)).toThrow();
+  });
+
+  it("lists the Maestros that hold a note in the depot, sorted", () => {
+    write(maestroNotePath("P", "Scheduling", env));
+    write(maestroNotePath("P", "Nexus", env));
+    write(path.join(sessionsRoot("P", env), "maestros", "empty", "brief.md"));
+    expect(listDepotNoteNames("P", env)).toEqual(["Nexus", "Scheduling"]);
+    expect(listDepotNoteNames("Other", env)).toEqual([]);
+  });
+
+  it("lists old-location notes that have no depot copy yet", () => {
+    const main = path.join(tmp, "P");
+    write(path.join(main, SESSIONS_DIR_PATH, "Scheduling", "note.md"));
+    write(path.join(main, SESSIONS_DIR_PATH, "Nexus", "note.md"));
+    write(maestroNotePath("P", "Nexus", env));
+    expect(listUnmovedNoteNames(main, env)).toEqual(["Scheduling"]);
+  });
+
+  it("the DigiSmith note is shared: it lives at the conductor path and counts as moved", () => {
+    expect(noteLocation("P", "DigiSmith", env)).toBe(conductorNotePath("P", "digismith-conductor", env));
+    expect(noteLocation("P", "Nexus", env)).toBe(maestroNotePath("P", "Nexus", env));
+    const main = path.join(tmp, "P");
+    write(path.join(main, SESSIONS_DIR_PATH, "DigiSmith", "note.md"));
+    expect(listUnmovedNoteNames(main, env)).toEqual(["DigiSmith"]);
+    write(conductorNotePath("P", "digismith-conductor", env));
+    expect(listDepotNoteNames("P", env)).toEqual(["DigiSmith"]);
+    expect(listUnmovedNoteNames(main, env)).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOCS_DIR_PATH, listNotes, resolveMainRoot } from "./lineage-handoff.ts";
-import { SESSIONS_DIR_PATH, listNoteSessionNames } from "./session-path.ts";
+import { MAESTROS_DIR_NAME, SESSIONS_DIR_PATH, listDepotNoteNames, listUnmovedNoteNames, projectName, sessionsRoot } from "./session-path.ts";
 import { DEFAULT_DIR, resolve } from "./config.ts";
 import { ConfigError } from "./config-parse.ts";
 
@@ -23,19 +23,24 @@ export function isDigismithRepoRoot(pluginJsonPath: string): boolean {
   }
 }
 
-export function buildLineagePointer(mainRoot: string): string | undefined {
+export function buildLineagePointer(mainRoot: string, env: NodeJS.ProcessEnv = process.env): string | undefined {
   const keys = listNotes(mainRoot);
-  const sessionNames = listNoteSessionNames(mainRoot);
-  if (keys.length === 0 && sessionNames.length === 0) return undefined;
+  const project = projectName(mainRoot);
+  const depotNames = listDepotNoteNames(project, env);
+  const unmovedNames = listUnmovedNoteNames(mainRoot, env);
+  if (keys.length === 0 && depotNames.length === 0 && unmovedNames.length === 0) return undefined;
 
   const clauses: string[] = [];
   if (keys.length > 0) {
     const docsDir = path.join(mainRoot, ...DOCS_DIR_PATH.split("/"));
     clauses.push(`lineage handoff notes in ${docsDir}: ${keys.join(", ")}`);
   }
-  if (sessionNames.length > 0) {
-    const sessionsDir = path.join(mainRoot, ...SESSIONS_DIR_PATH.split("/"));
-    clauses.push(`session notes in ${sessionsDir}: ${sessionNames.join(", ")}`);
+  if (depotNames.length > 0) {
+    clauses.push(`session notes in ${path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME)}: ${depotNames.join(", ")}`);
+  }
+  if (unmovedNames.length > 0) {
+    const oldDir = path.join(mainRoot, ...SESSIONS_DIR_PATH.split("/"));
+    clauses.push(`session notes not yet moved to the depot, in ${oldDir}: ${unmovedNames.join(", ")}`);
   }
   return `DigiSmith: ${clauses.join("; ")} — read the one matching your session title (get_session self), or say "resume"`;
 }

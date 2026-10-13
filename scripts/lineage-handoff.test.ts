@@ -43,7 +43,11 @@ function writeNote(root: string, relPath: string, content = "# Note\n"): void {
 }
 
 function runCli(cwd: string, ...args: string[]) {
-  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], { cwd, encoding: "utf8" });
+  return spawnSync("node", ["--experimental-strip-types", SCRIPT_PATH, ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, DIGISMITH_DEPOT_DIR: path.join(tmpDir, "depot") },
+  });
 }
 
 let tmpDir: string;
@@ -308,6 +312,40 @@ describe("CLI", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout.trim().split(/\r?\n/)).toEqual(["A/A.1", "DigiSmith"]);
+  });
+
+  it("--action list prints depot Maestro names too, each name once", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+    writeNote(main, ".digismith/sessions/DigiSmith/note.md", "# Note\n");
+    writeNote(main, ".digismith/sessions/Nexus/note.md", "# Note\n");
+    writeNote(tmpDir, "depot/sessions/main/maestros/Nexus/note.md", "# Note\n");
+    writeNote(tmpDir, "depot/sessions/main/maestros/Scheduling/note.md", "# Note\n");
+
+    const result = runCli(main, "--action", "list");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim().split(/\r?\n/)).toEqual(["Nexus", "Scheduling", "DigiSmith"]);
+  });
+
+  it("--action maestro-path prints the depot note path for a title", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+
+    const result = runCli(main, "--action", "maestro-path", "--title", "Token Economics");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe(path.join(tmpDir, "depot", "sessions", "main", "maestros", "Token Economics", "note.md"));
+  });
+
+  it("--action maestro-path refuses a lineage-key title", () => {
+    const main = path.join(tmpDir, "main");
+    initRepo(main);
+
+    const result = runCli(main, "--action", "maestro-path", "--title", "A.1: Primitives");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("unsafe session title");
   });
 
   it("--action ensure-excluded prints the result", () => {

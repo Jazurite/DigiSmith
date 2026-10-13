@@ -11,13 +11,17 @@ The last stage of DigiSmith's ticket workflow, and a checkpoint you can take at 
 conductor or Maestro session keeps one living note that says where the session stands now:
 
 ```
-.digismith/sessions/<session-name>/note.md     title "DigiSmith"        → DigiSmith  (current)
+<depot>/sessions/<project>/<notes-folder>/<session-name>/note.md   title "Scheduling" → Scheduling (current, DGS-443)
+<depot>/sessions/<project>/<conductor>/note.md               title "DigiSmith"  → DigiSmith  (shared with the conductor)
+.digismith/sessions/<session-name>/note.md     old location: read-only fallback for "resume", never written
 .digismith/docs/<Clan>/<Lineage>/handoff.md    title "A.1: Primitives"  → A/A.1      (fallback)
 .digismith/docs/<Clan>/handoff.md              title "K: Maestro"       → K          (fallback)
 .digismith/docs/_unlettered/handoff.md         any other title          (fallback)
 ```
 
-The first line is the convention of DGS-158. The three fallback lines are the old clan and
+`<notes-folder>` is `maestros`. `<depot>` is `~/.digismith-depot` (`DIGISMITH_DEPOT_DIR` overrides it); `<project>` is the main checkout's folder name. `--action maestro-path --title '<title>'` prints the current path, so never build it by hand. The old `.digismith/sessions/` copies stay as they were when the note moved; a note found only there is an unmoved note.
+
+The first two lines are DGS-443 (the DGS-158 convention moved into the depot). The three fallback lines are the old clan and
 lineage notes: the script, the SessionStart line and the exclude patterns still know only those
 until DGS-159 migrates them, so this skill text and `scripts/lineage-handoff.ts` differ on
 purpose. The fallback keeps existing notes working.
@@ -46,7 +50,7 @@ Two modes:
   line lists. Otherwise ignore the line silently: no lookup, no mention of it. Also ignore it
   in a worker the conductor started with a brief (its first message tells it to read a brief
   file): a worker has no note and no resume. That line is built by the script and lists only
-  fallback notes: a note at `.digismith/sessions/<session-name>/note.md` is found by "resume" or
+  fallback notes: a note in the depot or at the old `.digismith/sessions/<session-name>/note.md` is found by "resume" or
   "Arise", not by that line.
 
 ## The Script
@@ -68,8 +72,7 @@ resolves it for the fallback; for the current path use
 `git rev-parse --path-format=absolute --git-common-dir` and take its parent directory).
 
 Run them from the repo being worked in: its main checkout or any of its worktrees. The fallback
-note lands in the main checkout's `.digismith/docs/`, the current note in its
-`.digismith/sessions/`.
+note lands in the main checkout's `.digismith/docs/`, the current note in the depot.
 
 ## Resolve the Note
 
@@ -77,11 +80,13 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
    the session name. If the call fails or the title is empty or blank, go to step 5.
 2. If the name is one safe path segment (non-empty, no `/` or `\`, not `.` or `..`, and not a
    lineage-key title matching `^\s*[A-Z](\.\d+)?\s*(:|$)`, like "A.1: Primitives" or "K:
-   Maestro"), the current note path is `<main-root>/.digismith/sessions/<name>/note.md`. If git
-   tracks that path (`git -C <main-root> --literal-pathspecs ls-files --error-unmatch -- <relative path>` exits 0),
-   stop: tell the human partner a file committed to git sits there which this skill did not
-   write, and do not read or write it.
-3. Write mode writes to the current path. Resume mode reads the current note if it exists, and
+   Maestro"), the current note path is the output of `--action maestro-path --title '<name>'`, a file
+   in the depot, outside every git repo. If that command fails, stop and say so.
+3. Write mode writes to the current path only: never to the old `.digismith/sessions/` copy.
+   If the current note does not exist but an old copy does (a note not moved yet), do not start
+   a second note: say so and ask for the owner's switch (copy, `cmp`, then write the new path).
+   With no note anywhere, create it at the current path. Resume mode reads the current note if it
+   exists, then the old `.digismith/sessions/<name>/note.md` (say it is the old copy), and
    otherwise falls back: run `--action path --title '<title>'` and use that old note if it
    exists. If that command fails because the fallback path is tracked by git, stop and tell the
    human partner the same, and do not read or write it. Write mode has the same stop whenever it
@@ -91,8 +96,8 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
    the fallback path from `--action path` for both modes, exactly as before, with the same stop if
    git tracks it. If that path is under `_unlettered`, say so in the reply, so a wrong title is
    noticed.
-5. If `get_session` fails or there is no title, run `--action list`, list the folders under
-   `.digismith/sessions/` that hold a `note.md`, and ask which session this is. Pass an answer
+5. If `get_session` fails or there is no title, run `--action list`, list the names it prints
+   (depot notes, then notes not moved yet), and ask which session this is. Pass an answer
    that is a fallback key as before (`A/A.1` → `--title 'A.1:'`). Do not guess: a wrong name
    overwrites another session's note.
 
@@ -120,10 +125,8 @@ note lands in the main checkout's `.digismith/docs/`, the current note in its
      - Something was filed for another session: that session got a pointer message.
    - Put every open thread and every missing item under Open problems, one line each. Do not do
      the chores themselves.
-5. For the fallback path, run `--action ensure-excluded --title '<title>'` as before. For the
-   current path, run `git -C <main-root> check-ignore -q --no-index <relative path>`; if it is
-   not ignored, say in the reply that the path is not git-excluded here yet (DGS-159 adds the
-   pattern) and that it must not be committed.
+5. For the fallback path, run `--action ensure-excluded --title '<title>'` as before. The
+   current path is in the depot, so there is nothing to exclude.
 6. Create the parent folder of the current path, then write the whole note to the resolved path.
    If the write fails, report it, do not clear, and stop.
 7. Show the note in the reply.
