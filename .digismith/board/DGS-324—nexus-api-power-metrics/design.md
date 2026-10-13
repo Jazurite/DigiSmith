@@ -11,7 +11,11 @@ allowed by **one narrow sudoers rule** that Jack installs (decided by Jack: opti
 ```ts
 export type SourceStatus = 'ok' | 'failed' | 'timeout'
 
+export type VerdictStatus = 'ok' | 'busy' | 'hot' | 'throttling' | 'unknown'   // worst wins: throttling > hot > busy > unknown > ok
+export interface Verdict { status: VerdictStatus; summary: string; reasons: string[] }   // DGS-466: plain-language answer, first in the JSON
+
 export interface PowerMetrics {
+  verdict: Verdict                            // DGS-466; see DGS-466 design for the limits
   readAt: string; readAtUtc7: string          // when the API answered (ISO UTC; "2026-10-13 18:02:15")
   source: { status: SourceStatus; readAt: string | null; ageSeconds: number | null }   // the powermetrics read; ageSeconds 0..5 (cache)
   // From powermetrics. All null / empty unless source.status === 'ok'.

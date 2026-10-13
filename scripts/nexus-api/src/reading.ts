@@ -2,6 +2,7 @@ import type { LiveReadings } from './live.ts'
 import type { Parsed } from './parse-powermetrics.ts'
 import type { Outcome } from './source.ts'
 import type { PowerMetrics } from './types.ts'
+import { computeVerdict } from './verdict.ts'
 
 const iso = (ms: number) => new Date(ms).toISOString()
 const utc7 = (ms: number) => new Date(ms + 7 * 3600_000).toISOString().replace('T', ' ').slice(0, 19)
@@ -19,7 +20,7 @@ const EMPTY: Pick<PowerMetrics, 'machine' | 'power' | 'cpu' | 'thermal' | 'topTa
 export function buildReading(now: number, source: Outcome<Parsed>, live: LiveReadings): PowerMetrics | null {
   if (source.status !== 'ok' && !live.anyOk) return null
   const root = source.status === 'ok' ? source.value : EMPTY
-  return {
+  const reading: Omit<PowerMetrics, 'verdict'> = {
     readAt: iso(now),
     readAtUtc7: utc7(now),
     source: source.status === 'ok'
@@ -28,4 +29,5 @@ export function buildReading(now: number, source: Outcome<Parsed>, live: LiveRea
     machine: root.machine, power: root.power, cpu: root.cpu, thermal: root.thermal, topTasks: root.topTasks, extraSections: root.extraSections,
     load: live.load, memory: live.memory, opencodeServer: live.opencodeServer, topProcesses: live.topProcesses,
   }
+  return { verdict: computeVerdict(reading), ...reading }
 }

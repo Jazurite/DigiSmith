@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-466 power metrics verdict — Implementation Report</title>
+<style>:root{--bg:#fff;--fg:#1a1a1a}@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#e8e8e8}}body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em;border-radius:3px}</style></head>
+<body>
+<h1>DGS-466 power metrics verdict — Implementation Report</h1>
+<p>Date: 2026-10-13. Branch <code>dgs-466</code>. Not merged; installed in the depot only.</p>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>GET /api/&lt;version&gt;/power-metrics</code> now starts with <code>verdict</code>: <code>status</code> (ok, busy, hot, throttling, unknown; the worst wins), a one-sentence <code>summary</code> and <code>reasons</code>. A pure function computes it from fields the API already reads.</p>
+<ul>
+<li>Hot: CPU or GPU at 90 C or more, fan at 4503 rpm or more (85 % of the measured 5297 rpm maximum).</li>
+<li>Hot, too: CPU at 85 C or more while the fan is within 10 % of its real minimum (1836 rpm, so at most 2019.6 rpm): "The CPU is at 94 C but the fan is still at its slowest speed."</li>
+<li>Busy: memory under 15 % free, or CPU under 20 % idle.</li>
+<li>Throttling: thermal pressure above Nominal, a power limit, prochots, or a thermal/power cause in <code>performanceLimitedDueTo</code> (<code>MAX_TURBO_LIMIT</code> is normal and counts as ok).</li>
+<li>Unknown: the powermetrics read failed or timed out; the live fields still count.</li>
+<li>Load average and <code>cpuThermalLevel</code> are not judged.</li>
+</ul>
+<p>Tests: 106 pass. Review: no findings. On a scratch port the depot copy reported this Mac as throttling (thermal pressure Moderate, CPU 94 C).</p>
+</section>
+<section id="jack">
+<h2>Jack's step</h2>
+<p><code>launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.nexus-api</code>, then <code>curl https://pazurite.com/api/v1/power-metrics</code>: the JSON starts with <code>verdict</code>.</p>
+</section>
+<section id="first-use">
+<h2>First use (passed)</h2>
+<p>About 19:3x UTC+7 (2026-10-13) the Nexus API was restarted on Jack's word (pid 49118). The JSON starts with <code>verdict</code>: status <code>ok</code>, "The Mac is fine: cool, not throttling, plenty of memory.", no reasons (CPU 52.5 C, fan 1825 rpm, pressure Nominal). Reported by the Nexus Maestro.</p>
+</section>
+</body></html>
