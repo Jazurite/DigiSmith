@@ -8,6 +8,13 @@ import { API_VERSION } from './version.ts'
 
 export const HOST = '127.0.0.1'
 const DEFAULT_PORT = 4300
+
+export function parsePort(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_PORT
+  const n = Number(value)
+  if (!/^\d+$/.test(value) || n < 1 || n > 65535) throw new Error(`PORT must be a whole number from 1 to 65535, got ${JSON.stringify(value)}`)
+  return n
+}
 const PATH = `/api/${API_VERSION}/power-metrics`
 
 function send(res: import('node:http').ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
@@ -40,6 +47,6 @@ export function createDefaultReader(run?: RunPowermetrics): () => Promise<PowerM
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const port = Number(process.env.PORT ?? DEFAULT_PORT)
+  const port = parsePort(process.env.PORT)
   createApiServer(createDefaultReader()).listen(port, HOST, () => console.log(`nexus-api listening on ${HOST}:${port}${PATH}`))
 }

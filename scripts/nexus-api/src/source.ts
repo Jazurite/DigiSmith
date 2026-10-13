@@ -15,7 +15,7 @@ export function createSingleFlight<T>(run: (signal: AbortSignal) => Promise<T>, 
     let timer: ReturnType<typeof setTimeout> | undefined
     const timeout = new Promise<'timeout'>(resolve => { timer = setTimeout(() => resolve('timeout'), opts.timeoutMs) })
     try {
-      const attempt = run(ctl.signal).then(value => ({ value }), (e: unknown) => ({ error: e }))
+      const attempt = (async () => run(ctl.signal))().then(value => ({ value }), (e: unknown) => ({ error: e }))
       const first = await Promise.race([attempt, timeout])
       if (first === 'timeout') { ctl.abort(); return { status: 'timeout', at: Date.now() } }
       if ('error' in first) return { status: 'failed', at: Date.now(), error: first.error instanceof Error ? first.error.message : String(first.error) }

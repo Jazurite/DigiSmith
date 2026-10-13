@@ -99,6 +99,10 @@ if (existsSync(runner)) {
   check('caddy-run.sh does not pass other .env values', !/OTHER_SECRET/.test(r.stdout))
   writeFileSync(join(dep, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\n')
   const nohash = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
+  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\n[ "$1" = hash-password ] && exit 1\nenv | grep -E "^NEXUS_BASIC_AUTH_HASH=" | sed "s/=.*/ set/"\n')
+  const failhash = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
+  check('caddy-run.sh still starts Caddy when hashing itself fails (fixed placeholder)', failhash.status === 0 && /NEXUS_BASIC_AUTH_HASH set/.test(failhash.stdout), failhash.stdout + failhash.stderr)
+  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\n[ "$1" = hash-password ] && { echo \'$2a$14$fakehashfakehash\'; exit 0; }\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
   check('caddy-run.sh without a hash still starts Caddy, with an unguessable placeholder, and says so', nohash.status === 0 && /NEXUS_BASIC_AUTH_HASH set/.test(nohash.stdout) && /rejects every login/.test(nohash.stderr), nohash.stdout + nohash.stderr)
   check('caddy-run.sh runs the depot Caddyfile', /args: run --config .*caddy\/Caddyfile --adapter caddyfile/.test(r.stdout), r.stdout)
 }

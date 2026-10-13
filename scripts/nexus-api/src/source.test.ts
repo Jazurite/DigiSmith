@@ -57,4 +57,11 @@ describe('createSingleFlight', () => {
     const r = await get()
     expect(r.at).toBe(Date.now())
   })
+  it('a run function that throws synchronously is a failure and does not wedge later calls', async () => {
+    let calls = 0
+    const get = createSingleFlight((() => { calls++; if (calls === 1) throw new Error('sync'); return Promise.resolve('x') }) as (s: AbortSignal) => Promise<string>, opts)
+    expect((await get()).status).toBe('failed')
+    await vi.advanceTimersByTimeAsync(5001)
+    expect((await get()).status).toBe('ok')
+  })
 })

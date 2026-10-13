@@ -42,7 +42,7 @@ sudo install -o root -g wheel -m 440 ~/.digismith-depot/nexus/digismith-nexus.su
 sudo visudo -c
 sudo -n /usr/bin/powermetrics --samplers tasks,battery,network,disk,cpu_power,gpu_power,gpu_agpm_stats,smc,thermal -i 1000 -n 1 | head -12
 ```
-`cat` must show one line: `workbox ALL=(root) NOPASSWD: /usr/bin/powermetrics --samplers tasks\,battery\,network\,disk\,cpu_power\,gpu_power\,gpu_agpm_stats\,smc\,thermal -i 1000 -n 1`. The last command runs without a password prompt (`sudo -n` fails at once if the rule is wrong).
+`install` copies the file to a root-owned, mode 0440 file: never symlink the depot file into `/etc/sudoers.d` (the depot copy is yours to write, so a link would let any process of yours rewrite a root rule). `cat` must show one line: `workbox ALL=(root) NOPASSWD: /usr/bin/powermetrics --samplers tasks\,battery\,network\,disk\,cpu_power\,gpu_power\,gpu_agpm_stats\,smc\,thermal -i 1000 -n 1`. The last command runs without a password prompt (`sudo -n` fails at once if the rule is wrong).
 Check the rule is narrow: `sudo -n /usr/bin/powermetrics -n 1` must fail with `sudo: a password is required`.
 
 **J3. Start the API (LaunchAgent, your user):**

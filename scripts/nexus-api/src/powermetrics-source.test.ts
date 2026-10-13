@@ -41,4 +41,18 @@ describe('createPowermetricsSource', () => {
       expect(n).toBe(2)
     } finally { vi.useRealTimers() }
   })
+  it('never starts a second run while the previous child is still alive (no pile-up of root processes)', async () => {
+    vi.useFakeTimers()
+    try {
+      let starts = 0
+      const get = createPowermetricsSource(() => { starts++; return new Promise<string>(() => {}) })   // a child that ignores the abort
+      const p = get()
+      await vi.advanceTimersByTimeAsync(10_001)
+      expect((await p).status).toBe('timeout')
+      await vi.advanceTimersByTimeAsync(5_001)
+      const again = await get()
+      expect(again.status).toBe('failed')
+      expect(starts).toBe(1)
+    } finally { vi.useRealTimers() }
+  })
 })

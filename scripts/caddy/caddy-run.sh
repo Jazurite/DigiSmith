@@ -10,7 +10,9 @@ NEXUS_BASIC_AUTH_HASH=$(val NEXUS_BASIC_AUTH_HASH)
 if [ -z "$NEXUS_BASIC_AUTH_HASH" ]; then
   # Caddy refuses to start with an empty basic_auth hash, which would take the OpenCode front door down too (DGS-324).
   # Without a login set, /api/* gets a hash of a random password nobody knows: every login fails, nothing else changes.
-  NEXUS_BASIC_AUTH_HASH=$("$D/bin/caddy" hash-password --plaintext "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')")
+  NEXUS_BASIC_AUTH_HASH=$("$D/bin/caddy" hash-password --plaintext "$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')" 2>/dev/null) || NEXUS_BASIC_AUTH_HASH=
+  # second fallback if hashing fails: a fixed bcrypt hash of a random password that was never kept
+  [ -n "$NEXUS_BASIC_AUTH_HASH" ] || NEXUS_BASIC_AUTH_HASH='$2a$14$UdHp.mZ0CVCTgd00ChgrtOHXaMxESFvZxxcFDxDNvIFsxwe8K3ZZi'
   echo "caddy-run: NEXUS_BASIC_AUTH_HASH is not set in the depot env file; /api/* rejects every login" >&2
 fi
 export NEXUS_BASIC_AUTH_HASH

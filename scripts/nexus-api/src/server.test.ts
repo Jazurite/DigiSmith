@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import { API_VERSION } from './version.ts'
-import { createApiServer, HOST } from './server.ts'
+import { createApiServer, HOST, parsePort } from './server.ts'
 import type { PowerMetrics } from './types.ts'
 
 const reading = { readAt: 'x' } as unknown as PowerMetrics
 let server: ReturnType<typeof createApiServer> | undefined
-afterEach(async () => { await new Promise(r => server?.close(r)); server = undefined })
+afterEach(async () => { if (server) await new Promise(r => server!.close(r)); server = undefined })
 
 async function start(get: () => Promise<PowerMetrics | null>) {
   server = createApiServer(get)
@@ -58,5 +58,10 @@ describe('server', () => {
     const { base } = await start(async () => { n++; return reading })
     await Promise.all(Array.from({ length: 20 }, () => fetch(base + PATH)))
     expect(n).toBe(20)
+  })
+  it('parsePort accepts a valid port, defaults when unset, and refuses nonsense', () => {
+    expect(parsePort(undefined)).toBe(4300)
+    expect(parsePort('4311')).toBe(4311)
+    for (const bad of ['abc', '0', '70000', '-1', '4300.5', '']) expect(() => parsePort(bad)).toThrow()
   })
 })

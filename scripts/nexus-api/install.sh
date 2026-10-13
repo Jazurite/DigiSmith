@@ -6,9 +6,9 @@
 set -eu
 SRC=$(cd "$(dirname "$0")" && pwd)
 DEPOT="${DEPOT:-$HOME/.digismith-depot}"
-case "$DEPOT" in *'|'*|*'&'*|*'<'*|*'>'*) echo "install: DEPOT may not contain | & < >" >&2; exit 1;; esac
+case "$DEPOT" in *'|'*|*'&'*|*'<'*|*'>'*|*'"'*|*'$'*|*'`'*|*'\'*) echo "install: DEPOT may not contain | & < > \" \$ \` or a backslash" >&2; exit 1;; esac
 NODE=$(command -v node) || { echo "install: node not found" >&2; exit 1; }
-case "$NODE" in *'|'*|*'&'*|*'<'*|*'>'*) echo "install: node path may not contain | & < >" >&2; exit 1;; esac
+case "$NODE" in *'|'*|*'&'*|*'<'*|*'>'*|*'"'*|*'$'*|*'`'*|*'\'*) echo "install: node path may not contain | & < > \" \$ \` or a backslash" >&2; exit 1;; esac
 USER_NAME=$(id -un)
 
 mkdir -p "$DEPOT/bin" "$DEPOT/nexus-api/src" "$DEPOT/nexus/logs"

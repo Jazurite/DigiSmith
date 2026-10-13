@@ -12,5 +12,13 @@ const realRun: RunPowermetrics = async signal =>
   (await execFileP(SUDO, SUDO_ARGS, { signal, maxBuffer: MAX_OUTPUT_BYTES, timeout: SOURCE_TIMEOUT_MS + 2000 })).stdout
 
 export function createPowermetricsSource(run: RunPowermetrics = realRun): () => Promise<Outcome<Parsed>> {
-  return createSingleFlight(async signal => parsePowermetrics(await run(signal)), { ttlMs: 5000, timeoutMs: SOURCE_TIMEOUT_MS })
+  // A timed-out run is only aborted, not proven dead. Never start a second one while the first child is still alive,
+  // so a hung root process cannot pile up (one every 15 s); the caller sees `failed` until the child is gone.
+  let alive = false
+  const guarded: RunPowermetrics = async signal => {
+    if (alive) throw new Error('the previous powermetrics run is still alive')
+    alive = true
+    try { return await run(signal) } finally { alive = false }
+  }
+  return createSingleFlight(async signal => parsePowermetrics(await guarded(signal)), { ttlMs: 5000, timeoutMs: SOURCE_TIMEOUT_MS })
 }

@@ -58,6 +58,11 @@ describe('install.sh', () => {
     expect(code).not.toMatch(/\bsudo\b|launchctl|LaunchAgents|\/etc\//)
     expect(readdirSync(home)).toEqual(['depot'])
   })
+  it.each(['"', '$', '`', '\\'])('refuses a depot path containing %s', ch => {
+    const bad = sh([join(HERE, 'install.sh')], { HOME: home, DEPOT: join(home, `dep${ch}ot`) })
+    expect(bad.status).not.toBe(0)
+    expect(existsSync(join(home, `dep${ch}ot`))).toBe(false)
+  })
   it('never prints .env', () => {
     expect(readFileSync(join(HERE, 'install.sh'), 'utf8')).not.toMatch(/(cat|echo|printf)[^\n|]*\.env/)
   })
