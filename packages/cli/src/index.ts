@@ -10,6 +10,7 @@ import depotCommand from "./depot/index.ts";
 import clickupCommand from "./clickup/index.ts";
 import shopeeCommand from "./shopee/index.ts";
 import tokensCommand from "./tokens/index.ts";
+import sessionsCommand from "./sessions/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -31,6 +32,7 @@ export function buildCli(argv: string[]): Argv {
     .command(clickupCommand)
     .command(shopeeCommand)
     .command(tokensCommand)
+    .command(sessionsCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
