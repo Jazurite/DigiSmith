@@ -128,6 +128,27 @@ describe("update-folder", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  describe("repeated flags and CRLF", () => {
+    it.each([
+      ["description", { description: ["a", "b"] }],
+      ["description-file", { descriptionFile: ["a.txt", "b.txt"] }],
+      ["name", { name: ["A", "B"] }],
+    ])("refuses --%s given twice", async (flag, extra) => {
+      capture();
+      await run(vi.fn(), { folder: "1", ...extra });
+      expect(err.join("\n")).toContain(`--${flag} was given more than once`);
+      expect(process.exitCode).toBe(1);
+    });
+
+    it("turns CRLF into LF before sending and comparing", async () => {
+      capture();
+      const fd = fakeFd("a\nb\n");
+      await run(() => fake(), { folder: "1", description: "a\r\nb", yes: true }, () => fd);
+      expect(fd.setFolderDescription).toHaveBeenCalledWith("1", "a\nb");
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   describe("--description", () => {
     it("dry run prints the Frontdoor call with the delta, builds no client, sends nothing", async () => {
       capture();

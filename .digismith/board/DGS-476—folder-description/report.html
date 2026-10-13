@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>DGS-476 folder description — Implementation Report</title>
+<style>:root{--bg:#fff;--fg:#1a1a1a}@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#e8e8e8}}body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}code{background:#8882;padding:0 .25em;border-radius:3px}</style></head>
+<body>
+<h1>DGS-476 folder description — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-476</strong></span> <span>Date: 2026-10-13</span></div>
+<p>Branch <code>DGS-476__folder-description</code>. Not merged.</p>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup update-folder --folder &lt;id&gt; [--name &lt;n&gt;] [--description &lt;text&gt; | --description-file &lt;path&gt;]</code>. A description goes through Frontdoor: <code>PUT /hierarchy/v1/category/{id}</code> with <code>{"content": "&lt;Quill delta string&gt;"}</code>. Dry run unless <code>--yes</code>; with <code>--yes</code> it reads the folder back and exits 1 when the text differs. <code>--name</code> alone works as before; with both, the rename goes first.</p>
+<ul>
+<li>Delta: one text op and one newline op per line; each newline carries <code>block-id</code> = "block-" + 10 letters or digits (all 4 newline ops in the capture had one; one edit only). CRLF becomes LF.</li>
+<li>Not verified, first use verifies: the plain <code>GET /hierarchy/v1/category/{id}</code> returns <code>content</code> (the capture shows only a GET with a long query; fallback <code>?standard=true&amp;v2=true</code>); ClickUp keeps the text unchanged; a newline op without block-id is never sent.</li>
+<li>Plain text only; repeated flags are refused; a text starting with <code>-</code> needs <code>--description=&lt;text&gt;</code> or <code>--description-file</code>.</li>
+<li>Tests: full suite 2274 pass before the review fixes; command and client tests pass after them; the CLI build passes. Review: no data bug; three findings fixed.</li>
+<li>Follow-up: <code>--clear-description</code> (not built).</li>
+</ul>
+</section>
+</body></html>

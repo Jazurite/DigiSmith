@@ -9,18 +9,21 @@ const ID = /^\d+$/;
 
 /** The description the folder should hold, or undefined when none was asked for. */
 function descriptionOf(argv: Record<string, unknown>, read: (path: string) => string): string | undefined {
+  for (const [key, flag] of [["description", "--description"], ["descriptionFile", "--description-file"]] as const) {
+    if (Array.isArray(argv[key])) throw new Error(`${flag} was given more than once`);
+  }
   if (argv.description !== undefined && argv.descriptionFile !== undefined) {
     throw new Error("--description and --description-file cannot be used together");
   }
   if (argv.description !== undefined) {
     const text = String(argv.description);
     if (text.trim() === "") throw new Error("--description needs a non-empty text");
-    return text;
+    return text.replace(/\r\n/g, "\n");
   }
   if (argv.descriptionFile !== undefined) {
     const text = read(String(argv.descriptionFile));
     if (text.trim() === "") throw new Error("--description-file is empty");
-    return text;
+    return text.replace(/\r\n/g, "\n");
   }
   return undefined;
 }
@@ -38,11 +41,12 @@ export function createUpdateFolderCommand(
       y
         .option("folder", { type: "string", requiresArg: true, demandOption: true, describe: "id of the folder to update" })
         .option("name", { type: "string", requiresArg: true, describe: "new folder name (optional when a description is given)" })
-        .option("description", { type: "string", requiresArg: true, describe: "new folder description, plain text (replaces the old one)" })
+        .option("description", { type: "string", requiresArg: true, describe: "new folder description, plain text (replaces the old one); a text starting with - needs --description=<text> or --description-file" })
         .option("description-file", { type: "string", requiresArg: true, describe: "read the description from this UTF-8 file; not with --description" })
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
+        if (Array.isArray(argv.name)) throw new Error("--name was given more than once");
         const folder = String(argv.folder);
         const name = argv.name === undefined ? undefined : String(argv.name).trim();
         if (!ID.test(folder)) throw new Error("--folder must be a folder id (digits only)");
