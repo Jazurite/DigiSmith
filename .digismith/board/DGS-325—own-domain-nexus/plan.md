@@ -128,8 +128,8 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
    - **OpenCode streaming through Caddy (changed by the Nexus Maestro, 2026-10-13):** read-only on the live server: open the event stream (SSE,
      `/api/event`) and a websocket upgrade through Caddy only. No prompt is sent and no session is created. Both need the server's password.
      The unauthenticated part is done (throwaway Caddy, production routing, `tls internal`, `127.0.0.1:18445`): `/` 200 text/html and
-     `/api/event` 401 application/json, and a websocket upgrade 401, identical direct and through Caddy. The authenticated stream is open:
-     it needs a way to use the password without any agent reading it (Jack or the Maestro decides).
+     `/api/event` 401 application/json, and a websocket upgrade 401, identical direct and through Caddy. The authenticated stream is not tested by an agent
+     (decided by the Nexus Maestro: no agent and no extra script touches the password); it moves to J7, done by Jack.
    - **OpenCode Desktop pairing through Caddy:** the Desktop app runs on Jack's laptop, which cannot reach loopback, so it is tested at the
      cut-over (J7) with the rollback ready. Before that, the agent proves SSE and websocket through Caddy against the throwaway backend (done)
      and the live server (above); that covers the transports the pairing uses.
@@ -171,6 +171,8 @@ The value in `.env` is written without quotes (one pair of quotes and a trailing
   Then: `tailscale serve --https=443 off` and `tailscale serve --bg --tcp=443 tcp://127.0.0.1:8443`.
   Check: `tailscale serve status`; from the laptop with Tailscale on, `https://workbox.tail730dcf.ts.net/` and
   `https://opencode.pazurite.com/` both show the OpenCode login, `https://pazurite.com/` answers 404; the Desktop app pairs and a session streams.
+  **Streaming check (Jack, replaces the agent proof):** in the browser and in the OpenCode Desktop app, through `https://opencode.pazurite.com/`:
+  log in, open a session, and see live events (the event stream) and the terminal view (the websocket). On any failure, run the rollback below.
   **Rollback (exact):** `tailscale serve --tcp=443 off` then `tailscale serve --bg --https=443 http://127.0.0.1:4198`, then
   `tailscale serve status` shows `https://workbox.tail730dcf.ts.net` with `/ proxy http://127.0.0.1:4198` again.
 - J8. First use: laptop, Tailscale on: `https://opencode.pazurite.com/` loads with a valid certificate and shows the OpenCode login;
