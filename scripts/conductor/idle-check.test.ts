@@ -14,9 +14,9 @@ describe("idleCheck", () => {
     const out = idleCheck({ session_id: "s-me" }, mk([row({}), row({ session: "s-b", last_seen: "2026-10-13T12:00+07:00" })]));
     expect(out).toContain(IDLE_CONTEXT_MARKER);
     expect(out).toContain("catch-up-cli.ts");
-    expect(out).toContain("--maestro m1");
-    expect(out).toContain("--session s-me");
-    expect(out).toContain("--conductor digismith-conductor");
+    expect(out).toContain("--maestro 'm1'");
+    expect(out).toContain("--session 's-me'");
+    expect(out).toContain("--conductor 'digismith-conductor'");
   });
   it("is silent when the session is current", () => {
     expect(idleCheck({ session_id: "s-me" }, mk([row({ last_seen: "2026-10-13T13:00+07:00" }), row({ session: "s-b", last_seen: "2026-10-13T12:00+07:00" })]))).toBeUndefined();
