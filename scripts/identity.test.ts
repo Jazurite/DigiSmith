@@ -100,4 +100,10 @@ describe("cardFromIdentity", () => {
     if (!v.ok) throw new Error("x");
     expect(cardFromIdentity(v.identity, "s", new Date(), { SSH_CONNECTION: "1 2 3 4" }).runs_on).toBe("ssh");
   });
+  it("runs_on is desktop in Claude Desktop, even when SSH_CONNECTION is inherited (DGS-438)", () => {
+    const v = validateIdentity(base);
+    if (!v.ok) throw new Error("x");
+    expect(cardFromIdentity(v.identity, "s", new Date(), { CLAUDE_CODE_ENTRYPOINT: "claude-desktop", SSH_CONNECTION: "1 2 3 4" }).runs_on).toBe("desktop");
+    expect(cardFromIdentity(v.identity, "s", new Date(), { CLAUDE_CODE_ENTRYPOINT: "cli", SSH_CONNECTION: "1 2 3 4" }).runs_on).toBe("ssh");
+  });
 });

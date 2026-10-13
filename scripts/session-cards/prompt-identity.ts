@@ -1,4 +1,6 @@
-// DGS-437: a Claude Desktop session fires no SessionStart hook, so its first prompt does the work:
+// DGS-437: the FALLBACK for a session that has no card yet. A Claude Desktop session does fire
+// SessionStart; the DGS-437 miss was a stale Desktop plugin copy (no hooks, DGS-437 report). A stale
+// copy or a missed event can still leave a session without a card, so the first prompt does the work:
 // write the Maestro card (DGS-411's identity branch) and print the identity line; on a catch-up
 // prompt also run the conductor's catch-up (DGS-428). Never blocks, never throws; any error = no text.
 import { spawnSync } from "node:child_process";
