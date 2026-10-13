@@ -1,8 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>DGS-12 — Implementation Report</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}td,th{border:1px solid #ccc;padding:.4rem .6rem}table{border-collapse:collapse}h1,h2{color:#6b3fa0}</style></head><body>
-<h1>DGS-12 — Implementation Report</h1>
-<p>Ticket: DGS-12</p>
+<header>
+<h1>DGS-12 Priority range — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-12</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>buildTaskWriteBody</code> now enforces the 1-4 priority range its message already claimed, for create-task and update-task, before any client is built. Parser-level tests cover 7, 0 and abc (NaN); the whole suite passes.</p>
+</section>
 <h2>What changed</h2>
 <p><code>buildTaskWriteBody</code> now rejects any priority outside the integers 1 to 4, with the message <code>invalid --priority "&lt;v&gt;" — expected an integer 1-4</code>. create-task and update-task share it and call it before the client is built: no call, exit 1.</p>
 <h2>yargs and a non-number</h2>
