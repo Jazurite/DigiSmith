@@ -62,16 +62,16 @@ export class CardError extends Error {
 
 const ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const SAFE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/; // a file or folder name part: no slash, no leading dot
-const TS_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-]\d{2}:\d{2})$/;
+const TS_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 const SECRET_PATTERNS: RegExp[] = [
-  /\bsk[-_][A-Za-z0-9_-]{16,}/,
+  
   /\bgh[pousr]_[A-Za-z0-9]{16,}/,
   /github_pat_[A-Za-z0-9_]{8,}/,
   /\bxox[abprs]-[A-Za-z0-9-]{8,}/,
   /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/,
   /\bAIza[A-Za-z0-9_-]{20,}/,
-  /\bBearer\s+\S+/i,
+  /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/i,
   /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/,
   /-----BEGIN [A-Z ]*KEY/,
   /:\/\/[^/\s:@]+:[^/\s@]+@/,
@@ -79,8 +79,12 @@ const SECRET_PATTERNS: RegExp[] = [
 
 export function looksSecret(value: string): boolean {
   if (SECRET_PATTERNS.some((re) => re.test(value))) return true;
+  for (const m of value.matchAll(/\bsk[-_][A-Za-z0-9_-]{16,}/g)) {
+    if (/[A-Za-z]/.test(m[0]) && /\d/.test(m[0])) return true; // a key mixes letters and digits; "sk-learn-..." does not
+  }
   // an unbroken run of 32+ base64-ish characters with both a letter and a digit
   for (const m of value.matchAll(/(?<![A-Za-z0-9+=])[A-Za-z0-9+=]{32,}(?![A-Za-z0-9+=])/g)) {
+    if (/^[0-9a-f]+$/.test(m[0])) continue; // a git sha or hex id is not a secret
     if (/[A-Za-z]/.test(m[0]) && /\d/.test(m[0])) return true;
   }
   return false;
@@ -170,7 +174,7 @@ export function validateCard(input: unknown): { ok: true; card: SessionCard } | 
 
 function assertValid(input: unknown): SessionCard {
   const r = validateCard(input);
-  if (!r.ok) throw new CardError(r.errors);
+  if (r.ok === false) throw new CardError(r.errors);
   return r.card;
 }
 
@@ -229,7 +233,9 @@ export function nowIso(now: Date = new Date()): string {
   return new Date(now.getTime() + 7 * 3600_000).toISOString().slice(0, 16) + "+07:00";
 }
 
-function writeAtomic(file: string, content: string): void {
+// onlyIfExists: the target must still exist right before the rename (touch must never
+// recreate a card a close has just archived). A skipped temp file is renamed aside, never deleted.
+function writeAtomic(file: string, content: string, opts: { onlyIfExists?: boolean; beforeRename?: () => void } = {}): boolean {
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const tmp = path.join(dir, `.${path.basename(file)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`);
@@ -240,8 +246,14 @@ function writeAtomic(file: string, content: string): void {
   } finally {
     fs.closeSync(fd);
   }
+  opts.beforeRename?.();
+  if (opts.onlyIfExists && !fs.existsSync(file)) {
+    fs.renameSync(tmp, tmp + ".abandoned");
+    return false;
+  }
   try {
     fs.renameSync(tmp, file);
+    return true;
   } catch (e) {
     try { fs.renameSync(tmp, tmp + ".failed"); } catch { /* leave the temp file; never delete */ }
     throw e;
@@ -255,6 +267,8 @@ export function readCard(file: string): SessionCard {
 export function writeCard(card: SessionCard, env: NodeJS.ProcessEnv = process.env): string {
   const content = formatCard(card); // validates first: nothing is written for a bad card
   const file = cardPath(card, env);
+  // Never replace a card: a refresh is touchCard. (Also catches names that fold together on a case-insensitive disk.)
+  if (fs.existsSync(file)) throw new Error(`an open card already exists: ${path.basename(file)}`);
   writeAtomic(file, content);
   return file;
 }
@@ -305,22 +319,36 @@ function refPaths(ref: CardRef, env: NodeJS.ProcessEnv): { open: string; archive
 // Finds one card by ref, open first, then archived.
 export function findCard(ref: CardRef, env: NodeJS.ProcessEnv = process.env): { card: SessionCard; path: string } | undefined {
   const p = refPaths(ref, env);
-  for (const file of [p.open, p.archived]) if (fs.existsSync(file)) return { card: readCard(file), path: file };
+  for (const file of [p.open, p.archived]) {
+    if (!fs.existsSync(file)) continue;
+    const card = readCard(file);
+    if (card.id === ref.id && card.session === ref.session) return { card, path: file };
+  }
   return undefined;
 }
 
-export function touchCard(ref: CardRef, now: Date = new Date(), env: NodeJS.ProcessEnv = process.env): SessionCard {
+export function touchCard(
+  ref: CardRef,
+  now: Date = new Date(),
+  env: NodeJS.ProcessEnv = process.env,
+  beforeRename?: () => void, // test seam: runs between the temp write and the rename
+): SessionCard {
   const p = refPaths(ref, env);
   if (!fs.existsSync(p.open)) throw new Error(`no open card for ${ref.id} (${ref.session}) in ${ref.project}`);
   const card = readCard(p.open);
   if (card.status !== "open") throw new Error(`card ${ref.id} is ${card.status}, not open`);
   const next = assertValid({ ...card, last_seen: nowIso(now) });
-  writeAtomic(p.open, formatCard(next));
+  // If a close archived the card meanwhile, the write is skipped: a touch never resurrects a card.
+  writeAtomic(p.open, formatCard(next), { onlyIfExists: true, beforeRename });
   return next;
 }
 
 // Rewrites the open card with its end state, then renames it into archive/. Nothing is deleted.
-function archiveWith(ref: CardRef, status: "closed" | "lost", opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv }): string {
+function archiveWith(
+  ref: CardRef,
+  status: "closed" | "lost",
+  opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv; betweenRewriteAndRename?: () => void },
+): string {
   const env = opts.env ?? process.env;
   const p = refPaths(ref, env);
   if (!fs.existsSync(p.open)) {
@@ -328,24 +356,29 @@ function archiveWith(ref: CardRef, status: "closed" | "lost", opts: { now?: Date
     throw new Error(`no card for ${ref.id} (${ref.session}) in ${ref.project}`);
   }
   const card = readCard(p.open);
-  const ended = nowIso(opts.now);
   const next = assertValid({
-    ...card, status, ended,
+    ...card, status, ended: nowIso(opts.now),
     ...(opts.result !== undefined ? { result: opts.result } : {}),
   });
   const content = formatCard(next);
-  if (fs.existsSync(p.archived)) throw new Error(`archive already holds ${path.basename(p.archived)}`);
   writeAtomic(p.open, content);
-  fs.mkdirSync(path.dirname(p.archived), { recursive: true });
-  fs.renameSync(p.open, p.archived);
-  return p.archived;
+  opts.betweenRewriteAndRename?.();
+  // An archived card is never overwritten: a second archive of the same session gets <id>--<session>--<n>.yml.
+  const base = p.archived;
+  let target = base;
+  for (let n = 2; fs.existsSync(target); n++) target = base.replace(/\.yml$/, `--${n}.yml`);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.renameSync(p.open, target);
+  // A stale touch may have landed between the rewrite and the rename: the archived card keeps the end state.
+  if (readCard(target).status !== status) writeAtomic(target, content);
+  return target;
 }
 
-export function closeCard(ref: CardRef, opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv } = {}): string {
+export function closeCard(ref: CardRef, opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv; betweenRewriteAndRename?: () => void } = {}): string {
   return archiveWith(ref, "closed", opts);
 }
 
-export function markLost(ref: CardRef, opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv } = {}): string {
+export function markLost(ref: CardRef, opts: { now?: Date; result?: string; env?: NodeJS.ProcessEnv; betweenRewriteAndRename?: () => void } = {}): string {
   return archiveWith(ref, "lost", opts);
 }
 

@@ -35,8 +35,10 @@ export function run(argv: string[]): number {
     return out;
   };
   const depot = take("--depot");
+  if (depot === "") fail("--depot needs a folder");
   if (depot !== undefined) process.env.DIGISMITH_DEPOT_DIR = depot;
   const scope = take("--scope") as "open" | "archive" | "all" | undefined;
+  if (scope !== undefined && !["open", "archive", "all"].includes(scope)) fail("--scope must be open, archive or all");
   const result = take("--result");
   const fields = takeAll("--field");
   const dry = args.includes("--dry");
@@ -64,7 +66,7 @@ export function run(argv: string[]): number {
           input[f.slice(0, i)] = f.slice(i + 1);
         }
         const r = validateCard(input);
-        if (!r.ok) {
+        if (r.ok === false) {
           console.error(r.errors.join("\n"));
           return 1;
         }

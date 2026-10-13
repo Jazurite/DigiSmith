@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   validateCard, parseCard, formatCard, readCard, writeCard, listCards, listCardProblems,
   touchCard, closeCard, markLost, newestLastSeen, nowIso, cardsDir, archiveDir, cardPath,
-  findCardBySession, LEGAL_PARENT_ROLES, CardError, type SessionCard,
+  findCardBySession, findCard, LEGAL_PARENT_ROLES, CardError, type SessionCard,
 } from "./session-card.ts";
 
 const conductor = (): SessionCard => ({
@@ -99,6 +99,17 @@ describe("validateCard", () => {
     expect(LEGAL_PARENT_ROLES.worker).toContain("conductor");
   });
 
+  it("review fixes: legitimate values pass", () => {
+    expect(errs({ ...conductor(), result: "merged at 5bdd337a1b2c3d4e5f60718293a4b5c6d7e8f90" })).toEqual([]);
+    expect(errs({ ...conductor(), session: "0123456789abcdef0123456789abcdef" })).toEqual([]);
+    expect(errs({ ...conductor(), mandate: "add Bearer auth handling to the client" })).toEqual([]);
+    expect(errs({ ...conductor(), mandate: "sk-learn-compatible-pipelines-review" })).toEqual([]);
+    expect(errs({ ...conductor(), started: "2026-10-13T13:00:00.123+07:00", last_seen: "2026-10-13T13:40:00.5+07:00" })).toEqual([]);
+  });
+  it("review fixes: still refuses real-looking secrets", () => {
+    expect(errs({ ...conductor(), result: "Bearer abcdefghijklmnop1234" }).length).toBeGreaterThan(0);
+    expect(errs({ ...conductor(), result: "sk-" + "Ab1Cd2Ef3Gh4Ij5Kl6" }).length).toBeGreaterThan(0);
+  });
   describe("secret-like values", () => {
     const fake = (s: string) => s; // all literals below are fabricated shapes
     it.each([
@@ -108,7 +119,7 @@ describe("validateCard", () => {
       ["slack", fake("xoxb-" + "123456789012")],
       ["aws", fake("AKIA" + "ABCDEFGHIJKLMNOP")],
       ["google", fake("AIza" + "SyABCDEFGHIJKLMNOPQRSTUV")],
-      ["bearer", "Bearer abc.def"],
+      ["bearer", "Bearer abc.def-ghi_jkl123456"],
       ["jwt", fake("eyJhbGciOiJI" + ".eyJzdWIiOiIx" + ".abcdEFGH")],
       ["pem", "-----BEGIN PRIVATE KEY-----"],
       ["url creds", "https://u:pw@host/x"],
@@ -219,6 +230,68 @@ describe("depot layout", () => {
     const a = markLost({ project: "DGS-417", id: "dgs-417-worker", session: "s-w1" }, { env });
     expect(readCard(a).status).toBe("lost");
     expect(a).toContain(`${path.sep}archive${path.sep}`);
+  });
+  it("never overwrites an archived card: a second close of a re-opened session gets a numbered name", () => {
+    const ref = { project: "DigiSmith", id: "dsm-conductor-01", session: conductor().session };
+    writeCard(conductor(), env);
+    const a1 = closeCard(ref, { result: "first", env });
+    writeCard({ ...conductor(), last_seen: "2026-10-13T16:00+07:00" }, env); // same session resumed
+    const a2 = closeCard(ref, { result: "second", env });
+    writeCard(conductor(), env);
+    const a3 = closeCard(ref, { result: "third", env });
+    expect(new Set([a1, a2, a3]).size).toBe(3);
+    expect(path.basename(a2)).toBe(`dsm-conductor-01--${conductor().session}--2.yml`);
+    expect(path.basename(a3)).toBe(`dsm-conductor-01--${conductor().session}--3.yml`);
+    expect([a1, a2, a3].map((f) => readCard(f).result)).toEqual(["first", "second", "third"]);
+    expect(listCards("DigiSmith", { scope: "archive", env }).length).toBe(3);
+    expect(newestLastSeen("DigiSmith", "dsm-conductor-01", env)).toBe("2026-10-13T16:00+07:00");
+  });
+  it("markLost also takes a result and never overwrites", () => {
+    const ref = { project: "DGS-417", id: "dgs-417-worker", session: "s-w1" };
+    writeCard(worker(), env);
+    const a1 = markLost(ref, { result: "pane gone", env });
+    writeCard(worker(), env);
+    const a2 = markLost(ref, { result: "again", env });
+    expect(a1).not.toBe(a2);
+    expect(readCard(a1).result).toBe("pane gone");
+    expect(readCard(a2).status).toBe("lost");
+  });
+  it("a touch after a close leaves no file in cards/", () => {
+    const ref = { project: "DigiSmith", id: "dsm-conductor-01", session: conductor().session };
+    writeCard(conductor(), env);
+    closeCard(ref, { env });
+    expect(() => touchCard(ref, undefined, env)).toThrow();
+    expect(fs.readdirSync(cardsDir("DigiSmith", env))).toEqual([]);
+  });
+  it("a touch that loses the race to a close does not resurrect the card", () => {
+    const ref = { project: "DigiSmith", id: "dsm-conductor-01", session: conductor().session };
+    writeCard(conductor(), env);
+    // the card disappears from cards/ after touch read it, before it renames: simulate by a hook
+    const out = touchCard(ref, undefined, env, () => { closeCard(ref, { env }); });
+    expect(out.status).toBe("open");
+    expect(fs.readdirSync(cardsDir("DigiSmith", env)).filter((f) => f.endsWith(".yml"))).toEqual([]);
+    expect(listCards("DigiSmith", { scope: "archive", env })[0].card.status).toBe("closed");
+  });
+  it("close keeps its status even when a stale touch lands between its rewrite and rename", () => {
+    const ref = { project: "DigiSmith", id: "dsm-conductor-01", session: conductor().session };
+    const p = writeCard(conductor(), env);
+    const a = closeCard(ref, { env, betweenRewriteAndRename: () => fs.writeFileSync(p, formatCard(conductor())) });
+    expect(readCard(a).status).toBe("closed");
+  });
+  it("writeCard refuses to overwrite an open card, and a case-folded session name on a case-insensitive disk", () => {
+    writeCard(conductor(), env);
+    expect(() => writeCard({ ...conductor(), mandate: "other.md" }, env)).toThrow(/already/);
+    expect(readCard(cardPath(conductor(), env)).mandate).toBe(conductor().mandate);
+    writeCard({ ...worker(), session: "AbC" }, env);
+    try { writeCard({ ...worker(), session: "abc" }, env); } catch (e) { expect((e as Error).message).toMatch(/already/); }
+    // whichever disk this is, the first card is intact and findCard never returns another session's card
+    expect(findCard({ project: "DGS-417", id: "dgs-417-worker", session: "AbC" }, env)?.card.session).toBe("AbC");
+  });
+  it("writeCard after a close (a resumed session) is allowed", () => {
+    const ref = { project: "DigiSmith", id: "dsm-conductor-01", session: conductor().session };
+    writeCard(conductor(), env);
+    closeCard(ref, { env });
+    expect(() => writeCard(conductor(), env)).not.toThrow();
   });
   it("close of an unknown card throws", () => {
     expect(() => closeCard({ project: "DigiSmith", id: "nope", session: "x" }, { env })).toThrow(/no card/);
