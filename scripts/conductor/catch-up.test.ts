@@ -1,0 +1,123 @@
+import { describe, it, expect } from "vitest";
+import { buildCatchUp, catchUpMarker, readCatchUpBlock, type CatchUpDeps } from "./catch-up.ts";
+import type { CatchUp, StatePart } from "./deps-stub.ts";
+
+const state: StatePart = {
+  done: [{ key: "DGS-417", line: "card format merged" }],
+  running: [], waiting: [], decided: [], parked: [], next: ["a"],
+  health: { seats: [], server: "up", tabs: [] },
+};
+
+function fakeDeps(over: Partial<CatchUpDeps> & { note?: string } = {}) {
+  const calls = { collect: 0, written: [] as { path: string; text: string; marker: { open: string; close: string } }[], rendered: [] as CatchUp[] };
+  let note = over.note;
+  const deps: CatchUpDeps = {
+    listCards: () => [
+      { id: "m1", session: "s-old", last_seen: "2026-10-13T12:00+07:00", status: "closed", domain: "DigiSmith" },
+      { id: "m1", session: "s-me", last_seen: "2026-10-13T14:59+07:00", status: "open", domain: "DigiSmith" },
+      { id: "m2", session: "x", last_seen: "2026-10-13T14:00+07:00", status: "open", domain: "DigiSmith" },
+    ],
+    collectState: async () => { calls.collect++; return state; },
+    renderCatchUp: (d) => { calls.rendered.push(d); return `# Catch-up: ${d.conductor}\nWindow: ${d.window.from} to ${d.window.to}`; },
+    resolveNotePath: () => "/depot/sessions/DigiSmith/c/note.md",
+    readNote: () => note,
+    writeStateBlock: (path, text, marker) => { calls.written.push({ path, text, marker }); note = `${marker.open}\n${text}\n${marker.close}`; },
+    clickup: async () => [],
+    now: () => new Date("2026-10-13T08:00:00Z"),
+    ...over,
+  };
+  return { deps, calls };
+}
+const opts = { project: "DigiSmith", conductor: "c", identity: "m1", session: "s-me", maxAgeMin: 30 };
+
+describe("buildCatchUp", () => {
+  it("builds a CatchUp from the state plus conductor, window, identity, askedBy and renders it", async () => {
+    const { deps, calls } = fakeDeps();
+    const r = await buildCatchUp(opts, deps);
+    expect(calls.rendered[0]).toMatchObject({ conductor: "c", identity: "m1", askedBy: "s-me", window: { from: "2026-10-13T12:00+07:00", to: "2026-10-13T15:00+07:00" }, done: state.done });
+    expect(r.reused).toBe(false);
+    expect(r.text).toContain("Window: 2026-10-13T12:00+07:00 to 2026-10-13T15:00+07:00");
+  });
+  it("writes ONE block for the identity into the note, with Written: and the text", async () => {
+    const { deps, calls } = fakeDeps();
+    await buildCatchUp(opts, deps);
+    expect(calls.written).toHaveLength(1);
+    expect(calls.written[0].marker).toEqual(catchUpMarker("m1"));
+    expect(calls.written[0].text.startsWith("Written: 2026-10-13T15:00+07:00\n")).toBe(true);
+  });
+  it("asks the state only for its window start (since)", async () => {
+    let seen: unknown;
+    const { deps } = fakeDeps({ collectState: async (o) => { seen = o; return state; } });
+    await buildCatchUp(opts, deps);
+    expect(seen).toMatchObject({ project: "DigiSmith", conductor: "c", since: "2026-10-13T12:00+07:00" });
+  });
+  it("reuses a fresh block of the same identity and collects nothing", async () => {
+    const { deps, calls } = fakeDeps();
+    await buildCatchUp(opts, deps); // writes the block at 15:00
+    const again = await buildCatchUp(opts, { ...deps, now: () => new Date("2026-10-13T08:10:00Z") });
+    expect(again.reused).toBe(true);
+    expect(calls.collect).toBe(1);
+    expect(again.text).toContain("from note");
+    expect(again.text).toContain("# Catch-up: c");
+  });
+  it("collects again when the block is older than the max age, or with refresh", async () => {
+    const { deps, calls } = fakeDeps();
+    await buildCatchUp(opts, deps);
+    const late = await buildCatchUp(opts, { ...deps, now: () => new Date("2026-10-13T08:31:00Z") });
+    expect(late.reused).toBe(false);
+    await buildCatchUp({ ...opts, refresh: true }, { ...deps, now: () => new Date("2026-10-13T08:32:00Z") });
+    expect(calls.collect).toBe(3);
+  });
+  it("ignores another identity's block", async () => {
+    const other = `${catchUpMarker("m2").open}\nWritten: 2026-10-13T14:59+07:00\nold\n${catchUpMarker("m2").close}`;
+    const { deps, calls } = fakeDeps({ note: other });
+    const r = await buildCatchUp(opts, deps);
+    expect(r.reused).toBe(false);
+    expect(calls.collect).toBe(1);
+  });
+  it("noWrite skips the note", async () => {
+    const { deps, calls } = fakeDeps();
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(calls.written).toHaveLength(0);
+  });
+  it("a missing note still prints the catch-up and reports it, nothing written", async () => {
+    const { deps } = fakeDeps({ resolveNotePath: () => undefined });
+    const r = await buildCatchUp(opts, deps);
+    expect(r.text).toContain("# Catch-up");
+    expect(r.noteWritten).toBe(false);
+    expect(r.warnings.join(" ")).toMatch(/note/);
+  });
+  it("a failed note write still prints the catch-up", async () => {
+    const { deps } = fakeDeps({ writeStateBlock: () => { throw new Error("disk full"); } });
+    const r = await buildCatchUp(opts, deps);
+    expect(r.noteWritten).toBe(false);
+    expect(r.warnings.join(" ")).toMatch(/disk full/);
+  });
+  it("never lists a card of another domain (cards come from the domain only)", async () => {
+    let asked = "";
+    const { deps } = fakeDeps({ listCards: (p) => { asked = p; return []; } });
+    await buildCatchUp(opts, deps);
+    expect(asked).toBe("DigiSmith");
+  });
+  it("adds ClickUp status to done lines and degrades softly to a Health note", async () => {
+    const { deps, calls } = fakeDeps({ clickup: async () => [{ key: "DGS-417", status: "done" }, { key: "DGS-999", unresolved: true }] });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    const data = calls.rendered[0];
+    expect(data.done[0].line).toContain("ClickUp: done");
+    expect(data.health.server).toContain("ClickUp unresolved: DGS-999");
+  });
+  it("a throwing ClickUp reader gives a Health note, not a failure", async () => {
+    const { deps, calls } = fakeDeps({ clickup: async () => { throw new Error("401"); } });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(calls.rendered[0].health.server).toContain("ClickUp unreachable");
+  });
+});
+
+describe("readCatchUpBlock", () => {
+  it("returns the written time and text of the identity's block only", () => {
+    const m = catchUpMarker("m1");
+    const note = `top\n${m.open}\nWritten: 2026-10-13T15:00+07:00\nbody\nline2\n${m.close}\nbottom`;
+    expect(readCatchUpBlock(note, "m1")).toEqual({ written: "2026-10-13T15:00+07:00", text: "body\nline2" });
+    expect(readCatchUpBlock(note, "m2")).toBeUndefined();
+  });
+});
