@@ -83,7 +83,10 @@ function checkHerdr(args: string[]): void {
     a = a.slice(2);
   }
   const [group, verb] = a;
-  if (group === "status") return;
+  if (group === "status") {
+    if (a.length > 2 || (verb !== undefined && !["server", "client"].includes(verb))) refuse("herdr status arguments");
+    return;
+  }
   if (group === "agent" && ["list", "get", "read"].includes(verb)) return;
   if (group === "pane" && ["list", "get", "read"].includes(verb)) return;
   if (group === "tab" && verb === "list") return;
@@ -96,6 +99,9 @@ export function readOnlyRunner(inner: Runner): Runner {
     if (cmd === "herdr") checkHerdr(args);
     else if (cmd === "git") {
       if (!["log", "rev-parse"].includes(args[0])) refuse(`git ${args[0] ?? ""} (not read-only)`);
+      // git log can write (--output) or run helpers (--ext-diff): only the flags the state needs
+      const bad = args.slice(1).find((a) => a.startsWith("-") && !/^--(since|format)=/.test(a));
+      if (bad) refuse(`git flag ${bad}`);
     } else if (cmd === "ssh") checkSsh(args);
     else refuse(`command ${cmd}`);
     return inner(cmd, args, opts);

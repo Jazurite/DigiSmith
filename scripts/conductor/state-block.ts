@@ -62,6 +62,7 @@ export function writeStateBlock(notePath: string, body: string, marker: Marker =
   let existing = "";
   let mode = 0o644;
   if (fs.existsSync(notePath)) {
+    notePath = fs.realpathSync(notePath); // a symlinked note: write next to the target and keep the link
     existing = fs.readFileSync(notePath, "utf-8");
     mode = fs.statSync(notePath).mode & 0o777;
   }
@@ -120,11 +121,15 @@ export function parseTime(raw: string): string | undefined {
   const h = HUMAN.exec(t);
   const iso = h ? `${h[1]}T${h[2]}:00+07:00` : t;
   if (!ISO.test(iso)) return undefined;
-  return Number.isNaN(Date.parse(iso)) ? undefined : iso;
+  if (Number.isNaN(Date.parse(iso))) return undefined;
+  // Date.parse rolls 31 Feb over to March: check the calendar date itself
+  const [y, mo, d] = iso.slice(0, 10).split("-").map(Number);
+  const cal = new Date(Date.UTC(y, mo - 1, d));
+  return cal.getUTCFullYear() === y && cal.getUTCMonth() === mo - 1 && cal.getUTCDate() === d ? iso : undefined;
 }
 
 function stripBullet(line: string): string {
-  return line.replace(/^\s*(?:-|\d+\.)\s*/, "").trim();
+  return line.replace(/^\s*(?:-\s+|\d+\.\s+)/, "").trim();
 }
 
 function isNone(s: string): boolean {
@@ -167,7 +172,8 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
       const u = prefixed(line, "Updated:");
       const c = prefixed(line, "Conductor:");
       if (u !== undefined) {
-        if (parseTime(u)) state.updated = u;
+        const t = parseTime(u);
+        if (t) state.updated = t;
         else problems.push(`line ${n}: Updated needs a time like 2026-10-13T14:05+07:00 (got "${u}")`);
       } else if (c !== undefined) state.conductor = c;
       else problems.push(`line ${n}: text before the first "## " heading; only "Updated:" and "Conductor:" are allowed there`);

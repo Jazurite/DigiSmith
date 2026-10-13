@@ -8,6 +8,7 @@ import {
   markerLines,
   extractBlock,
   parseStateBody,
+  parseTime,
   renderStateBody,
   writeStateBlock,
 } from "./state-block.ts";
@@ -74,6 +75,17 @@ describe("parseStateBody", () => {
       { seat: "jack", fiveHourPct: 19, weeklyPct: 59 },
       { seat: "dev0", fiveHourPct: 12, weeklyPct: 36 },
     ]);
+  });
+  it("rejects impossible dates", () => {
+    expect(parseTime("2026-02-31T10:00+07:00")).toBeUndefined();
+    expect(parseTime("2026-02-31 10:00 UTC+7")).toBeUndefined();
+    expect(parseTime("2026-10-13T10:00+07:00")).toBe("2026-10-13T10:00+07:00");
+  });
+  it("normalizes Updated to ISO with offset", () => {
+    expect(parseStateBody("Updated: 2026-10-13 14:05 UTC+7\n").state.updated).toBe("2026-10-13T14:05:00+07:00");
+  });
+  it("keeps a Next item that starts with a number but is not a list marker", () => {
+    expect(parseStateBody("## Next\n1.5x speed\n2. real step\n- 3.14 release\n").state.next).toEqual(["1.5x speed", "real step", "3.14 release"]);
   });
   it("reads none and empty sections as empty", () => {
     const { state, problems } = parseStateBody("## Running\nnone\n## Waiting for Jack\n## Next\n- none\n");
@@ -163,6 +175,15 @@ describe("writeStateBlock", () => {
     const deep = path.join(dir, "sub", "note.md");
     writeStateBlock(deep, "B\n", STATE_MARKER);
     expect(fs.readFileSync(deep, "utf-8")).toBe(`${open}\nB\n${close}\n`);
+  });
+  it("writes through a symlinked note: the link stays and the target gets the block", () => {
+    const real = path.join(dir, "real.md");
+    fs.writeFileSync(real, "hello\n");
+    fs.symlinkSync(real, note);
+    writeStateBlock(note, "B\n", STATE_MARKER);
+    expect(fs.lstatSync(note).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(real, "utf-8")).toContain(`${open}\nB\n${close}\n`);
+    expect(fs.readFileSync(real, "utf-8").startsWith("hello\n")).toBe(true);
   });
   it("refuses to write when there are two blocks, and changes nothing", () => {
     const t = `${open}\na\n${close}\n${open}\nb\n${close}\n`;
