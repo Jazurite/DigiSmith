@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import axios from "axios";
+import { inspect } from "node:util";
+import { ClickUpApiError } from "./errors.ts";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -192,12 +194,38 @@ describe("FrontdoorClient", () => {
     );
   });
 
-  it("rethrows other errors unchanged", async () => {
+  function axiosLike(status: number): Error {
+    const config = { headers: { Authorization: "Bearer abc" } };
+    return Object.assign(new Error(`Request failed with status code ${status}`), {
+      isAxiosError: true,
+      config,
+      request: { _header: "GET /x HTTP/1.1\r\nAuthorization: Bearer abc\r\n" },
+      response: { status, data: { err: "boom" }, config },
+      toJSON: () => ({ config }),
+    });
+  }
+
+  function everyView(e: unknown): string[] {
+    const err = e as Error & { toJSON?: () => unknown };
+    return [JSON.stringify(err), inspect(err, { depth: null, showHidden: true }), String(err.stack), err.message, JSON.stringify(err.toJSON?.() ?? null)];
+  }
+
+  it("turns other errors into a ClickUpApiError without the auth value", async () => {
     const client = makeClient();
-    const err = { isAxiosError: true, response: { status: 500 }, message: "boom" };
-    request.mockRejectedValueOnce(err);
-    vi.mocked(axios.isAxiosError).mockReturnValue(true);
-    await expect(client.getTaskTypes()).rejects.toBe(err);
+    request.mockRejectedValueOnce(axiosLike(500));
+    const caught = await client.getTaskTypes().catch((e: unknown) => e);
+    expect(caught).toBeInstanceOf(ClickUpApiError);
+    const e = caught as ClickUpApiError;
+    expect([e.method, e.path, e.status, e.body]).toEqual(["GET", "/tasks/v1/123/customItems", 500, { err: "boom" }]);
+    for (const view of everyView(caught)) expect(view).not.toContain("abc");
+  });
+
+  it.each([401, 403])("the HTTP %i FrontdoorAuthError carries no auth value", async (status) => {
+    const client = makeClient();
+    request.mockRejectedValueOnce(axiosLike(status));
+    const caught = await client.getTaskTypes().catch((e: unknown) => e);
+    expect(caught).toBeInstanceOf(FrontdoorAuthError);
+    for (const view of everyView(caught)) expect(view).not.toContain("abc");
   });
 });
 

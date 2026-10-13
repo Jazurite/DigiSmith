@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import axios from "axios";
+import { inspect } from "node:util";
 import { ClickUpClient, type ClickUpClientConfig } from "./client.ts";
+import { ClickUpApiError } from "./errors.ts";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -668,21 +670,55 @@ describe("ClickUpClient relations", () => {
     expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/task/a/comment", params: undefined, data: undefined });
   });
 
-  it("adds ClickUp's error body to the message and keeps the original error and response", async () => {
-    const client = makeClient();
-    const err = Object.assign(new Error("Request failed with status code 400"), {
-      response: { status: 400, data: { err: "Start date must be before due date", ECODE: "DATE_001" } },
+  /** An error shaped like an AxiosError: config, request header block and response all carry the token. */
+  function axiosLike(status: number | undefined, data?: unknown): Error {
+    const config = { headers: { Authorization: "tok_123" } };
+    return Object.assign(new Error(status ? `Request failed with status code ${status}` : "connect ECONNREFUSED"), {
+      isAxiosError: true,
+      code: status ? "ERR_BAD_REQUEST" : "ECONNREFUSED",
+      config,
+      request: { _header: "GET /x HTTP/1.1\r\nAuthorization: tok_123\r\n" },
+      response: status ? { status, data, config } : undefined,
+      toJSON: () => ({ config }),
     });
-    request.mockRejectedValueOnce(err);
+  }
 
+  function everyView(e: unknown): string[] {
+    const err = e as Error & { toJSON?: () => unknown };
+    return [JSON.stringify(err), inspect(err, { depth: null, showHidden: true }), String(err.stack), err.message, JSON.stringify(err.toJSON?.() ?? null)];
+  }
+
+  it("throws a ClickUpApiError with method, path, status and ClickUp's body in the message", async () => {
+    const client = makeClient();
+    const data = { err: "Start date must be before due date", ECODE: "DATE_001" };
+    request.mockRejectedValueOnce(axiosLike(400, data));
+
+    const caught = await client.post("/task/x", { data: {} }).catch((e: unknown) => e);
+
+    expect(caught).toBeInstanceOf(ClickUpApiError);
+    const e = caught as ClickUpApiError;
+    expect([e.method, e.path, e.status, e.body]).toEqual(["POST", "/task/x", 400, data]);
+    expect(e.message).toBe(`Request failed with status code 400: ${JSON.stringify(data)}`);
+  });
+
+  it("keeps the token out of the thrown error: JSON, inspect, stack, message, toJSON", async () => {
+    const client = makeClient();
+    request.mockRejectedValueOnce(axiosLike(400, { err: "bad", ECODE: "X" }));
     const caught = await client.get("/task/x").catch((e: unknown) => e);
+    for (const view of everyView(caught)) expect(view).not.toContain("tok_123");
+    const e = caught as Record<string, unknown>;
+    for (const key of ["config", "headers", "request", "response", "cause"]) expect(e[key]).toBeUndefined();
+  });
 
-    expect(caught).toBe(err);
-    expect((caught as Error).message).toBe(
-      'Request failed with status code 400: {"err":"Start date must be before due date","ECODE":"DATE_001"}',
-    );
-    expect((caught as typeof err).response.status).toBe(400);
-    expect((caught as typeof err).response.data.ECODE).toBe("DATE_001");
+  it("wraps a network error (no response) and drops its request headers", async () => {
+    const client = makeClient();
+    request.mockRejectedValueOnce(axiosLike(undefined));
+    const caught = await client.get("/x").catch((e: unknown) => e);
+    expect(caught).toBeInstanceOf(ClickUpApiError);
+    expect((caught as ClickUpApiError).status).toBeUndefined();
+    expect((caught as ClickUpApiError).code).toBe("ECONNREFUSED");
+    expect((caught as Error).message).toBe("connect ECONNREFUSED");
+    for (const view of everyView(caught)) expect(view).not.toContain("tok_123");
   });
 
   it("leaves an error without a response body untouched", async () => {
