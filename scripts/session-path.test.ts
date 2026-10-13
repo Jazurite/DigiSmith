@@ -184,6 +184,13 @@ describe("depot note paths (DGS-443)", () => {
     expect(listUnmovedNoteNames(main, env)).toEqual(["Scheduling"]);
   });
 
+  it("a project folder with an unsafe name has no depot notes and does not throw", () => {
+    const main = path.join(tmp, "my proj");
+    write(path.join(main, SESSIONS_DIR_PATH, "Nexus", "note.md"));
+    expect(listDepotNoteNames("my proj", env)).toEqual([]);
+    expect(listUnmovedNoteNames(main, env)).toEqual(["Nexus"]);
+  });
+
   it("the DigiSmith note is shared: it lives at the conductor path and counts as moved", () => {
     expect(noteLocation("P", "DigiSmith", env)).toBe(conductorNotePath("P", "digismith-conductor", env));
     expect(noteLocation("P", "Nexus", env)).toBe(maestroNotePath("P", "Nexus", env));

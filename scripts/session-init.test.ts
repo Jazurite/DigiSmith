@@ -189,18 +189,18 @@ describe("buildLineagePointer", () => {
   const depotNote = (title: string) => writeNote(path.join(tmpDir, "depot"), `sessions/${path.basename(tmpDir)}/maestros/${title}/note.md`);
 
   it("names a Maestro note held in the depot", () => {
-    depotNote("DigiSmith");
+    depotNote("Scheduling");
     expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
-      `DigiSmith: session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: DigiSmith${POINTER_TAIL}`,
+      `DigiSmith: session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: Scheduling${POINTER_TAIL}`,
     );
   });
 
   it("combines fallback notes and depot session notes in one line", () => {
     writeNote(tmpDir, ".digismith/docs/A/A.1/handoff.md");
-    depotNote("DigiSmith");
+    depotNote("Scheduling");
     expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
       `DigiSmith: lineage handoff notes in ${path.join(tmpDir, ".digismith", "docs")}: A/A.1; ` +
-        `session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: DigiSmith${POINTER_TAIL}`,
+        `session notes in ${path.join(tmpDir, "depot", "sessions", path.basename(tmpDir), "maestros")}: Scheduling${POINTER_TAIL}`,
     );
   });
 
@@ -208,6 +208,16 @@ describe("buildLineagePointer", () => {
     writeNote(tmpDir, ".digismith/sessions/Scheduling/note.md");
     expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
       `DigiSmith: session notes not yet moved to the depot, in ${path.join(tmpDir, ".digismith", "sessions")}: Scheduling${POINTER_TAIL}`,
+    );
+  });
+
+  it("names the shared DigiSmith note at the conductor path, not under maestros", () => {
+    writeNote(path.join(tmpDir, "depot"), `sessions/${path.basename(tmpDir)}/digismith-conductor/note.md`);
+    depotNote("Scheduling");
+    const root = path.join(tmpDir, "depot", "sessions", path.basename(tmpDir));
+    expect(buildLineagePointer(tmpDir, depotEnv())).toBe(
+      `DigiSmith: session notes in ${path.join(root, "maestros")}: Scheduling; ` +
+        `the shared DigiSmith note is ${path.join(root, "digismith-conductor", "note.md")}${POINTER_TAIL}`,
     );
   });
 

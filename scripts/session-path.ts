@@ -122,6 +122,8 @@ export function noteLocation(project: string, title: string, env: NodeJS.Process
 }
 
 export function listDepotNoteNames(project: string, env: NodeJS.ProcessEnv = process.env): string[] {
+  // The SessionStart hook runs in every repo: a folder name with a space or non-ASCII letter has no depot folder.
+  if (!isSafeName(project)) return [];
   const dir = path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME);
   const names = subdirs(dir).filter((name) => isSafeSessionName(name) && hasFile(path.join(dir, name), NOTE_FILENAME));
   for (const title of Object.keys(SHARED_NOTES)) {

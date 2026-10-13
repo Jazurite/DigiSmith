@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-443 notes into depot — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:1.5rem 16px; }
+  h1 { font-size:1.6rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; overflow-wrap:anywhere; }
+</style>
+</head>
+<body>
+<header><h1>DGS-443 report: live session notes into the depot</h1><div style="color:var(--muted)">Ticket: <strong>DGS-443</strong> · Date: 2026-10-13</div></header>
+<section id="summary">
+<h2>Summary</h2>
+<p>Notes are read and written in the depot now: <code>~/.digismith-depot/sessions/&lt;project&gt;/maestros/&lt;title&gt;/note.md</code> for Maestros, <code>&lt;conductor&gt;/note.md</code> for the conductor (the DigiSmith Maestro shares it, answer A; split = DGS-447), <code>orders/</code> for orders. The old <code>.digismith/sessions/</code> copies are never written, renamed or deleted by any code. No file was copied yet: each owner&#x27;s copy, <code>cmp</code> and switch happens after the merge, on that owner&#x27;s idle word.</p>
+</section>
+<section id="built-tdd-tests-pass-pnpm-vitest-run">
+<h2>Built (TDD, 1852 tests pass, <code>pnpm vitest run</code>)</h2>
+<ul>
+<li><code>scripts/session-path.ts</code>: <code>sessionsRoot</code>, <code>maestroNotePath</code>, <code>conductorNotePath</code>, <code>ordersDir</code>, <code>noteLocation</code> (shared-note map <code>SHARED_NOTES</code>), <code>listDepotNoteNames</code>, <code>listUnmovedNoteNames</code>; names checked with <code>isSafeName</code>/<code>isSafeSessionName</code>.</li>
+<li><code>scripts/lineage-handoff.ts</code>: <code>--action list</code> prints depot names, then unmoved old names; new <code>--action maestro-path --title</code>.</li>
+<li><code>scripts/session-init.ts</code>: the SessionStart pointer names the depot folder, the shared note at its conductor path, and old notes not yet moved.</li>
+<li><code>scripts/notes-drift.ts</code>: read-only check; reports an old note with no depot copy, or changed after its copy.</li>
+<li>Skills <code>handoff</code> and <code>finishing-a-development-branch</code>, and <code>CLAUDE.md</code> (orders go to <code>orders/</code>): current path = depot; old copy = read-only resume fallback; write mode never writes the old path.</li>
+<li>Already depot-based, unchanged: <code>scripts/conductor/state.ts</code> default path; its <code>conductors.json</code> override and the <code>state:</code> fields are data edits at each owner&#x27;s switch.</li>
+</ul>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Independent Claude whole-branch review (separate agent, read-only): done. Findings: 1 medium, 3 low. Fixed: (medium, verified by the reviewer) the SessionStart hook threw for a repo folder whose name fails <code>isSafeName</code> (space, non-ASCII) and lost all pointers: the depot lists now return nothing for such a project, test added; (low) the pointer listed the shared DigiSmith note under <code>maestros/</code>: it now prints the conductor path, test added. Not fixed, by design: the drift check flags an old file only when newer than the copy (plan rule; a stray old write made before a later depot write is not flagged); the skill does the &quot;depot, else old copy, else ask&quot; choice by hand because <code>maestro-path</code> returns a path whether or not it exists.</p>
+</section>
+<section id="not-done-for-the-owners">
+<h2>Not done / for the owners</h2>
+<ul>
+<li>MEGA: <code>~/.digismith-depot</code> is in none of the four syncs (<code>~/Workspace</code>, <code>~/Obsidian</code>, <code>~/Downloads</code>, <code>~/CoWorkspace</code>). Jack: no sync (answer B). <strong>Moved notes have NO backup until DGS-446 (encrypted backup).</strong> The old copies stay byte-for-byte untouched and remain the backed-up copy under <code>~/Workspace</code>; they go stale after each switch.</li>
+<li>Per-owner switch after merge (copy, <code>cmp</code>, then <code>state:</code> and <code>conductors.json</code>): Scheduling, Token Economics, DigiSmith Maestro and conductor (<code>digismith-conductor/note.md</code>); Nexus, b3-maestro and d3-maestro copied when someone resumes them. <code>workbox.md</code> and <code>workbox-macos.md</code> are copied to <code>&lt;project&gt;/workbox.md</code>; no code reads them yet.</li>
+<li>Not moved: old loose orders and briefs (DGS-424), the two rule files (answer D).</li>
+<li>dgs-439&#x27;s allow-list covers this layout (its tests, per the conductor).</li>
+</ul>
+</section>
+</body>
+</html>

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DOCS_DIR_PATH, listNotes, resolveMainRoot } from "./lineage-handoff.ts";
-import { MAESTROS_DIR_NAME, SESSIONS_DIR_PATH, listDepotNoteNames, listUnmovedNoteNames, projectName, sessionsRoot } from "./session-path.ts";
+import { MAESTROS_DIR_NAME, SHARED_NOTES, noteLocation, SESSIONS_DIR_PATH, listDepotNoteNames, listUnmovedNoteNames, projectName, sessionsRoot } from "./session-path.ts";
 import { DEFAULT_DIR, resolve } from "./config.ts";
 import { ConfigError } from "./config-parse.ts";
 
@@ -35,9 +35,12 @@ export function buildLineagePointer(mainRoot: string, env: NodeJS.ProcessEnv = p
     const docsDir = path.join(mainRoot, ...DOCS_DIR_PATH.split("/"));
     clauses.push(`lineage handoff notes in ${docsDir}: ${keys.join(", ")}`);
   }
-  if (depotNames.length > 0) {
-    clauses.push(`session notes in ${path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME)}: ${depotNames.join(", ")}`);
+  const sharedNames = depotNames.filter((name) => Object.hasOwn(SHARED_NOTES, name));
+  const maestroNames = depotNames.filter((name) => !sharedNames.includes(name));
+  if (maestroNames.length > 0) {
+    clauses.push(`session notes in ${path.join(sessionsRoot(project, env), MAESTROS_DIR_NAME)}: ${maestroNames.join(", ")}`);
   }
+  for (const name of sharedNames) clauses.push(`the shared ${name} note is ${noteLocation(project, name, env)}`);
   if (unmovedNames.length > 0) {
     const oldDir = path.join(mainRoot, ...SESSIONS_DIR_PATH.split("/"));
     clauses.push(`session notes not yet moved to the depot, in ${oldDir}: ${unmovedNames.join(", ")}`);
