@@ -235,6 +235,26 @@ describe("FrontdoorClient", () => {
     expect(caught).toBeInstanceOf(FrontdoorAuthError);
     for (const view of everyView(caught)) expect(view).not.toContain("abc");
   });
+
+  it("getSpaceStatuses GETs the space and returns its statuses", async () => {
+    const client = makeClient();
+    const statuses = [{ id: "p1_a", status: "backlog", type: "open", orderindex: 0, color: "#87909e" }];
+    request.mockResolvedValueOnce({ data: { id: "1", statuses } });
+    expect(await client.getSpaceStatuses("1")).toEqual(statuses);
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/hierarchy/v1/project/1", data: undefined });
+  });
+
+  it("putSpaceStatuses PUTs the full set with checkConflict", async () => {
+    const client = makeClient();
+    const body = { statuses: [{ status: "x", type: "custom", orderindex: 0, color: "#fff000" }] };
+    request.mockResolvedValueOnce({ data: {} });
+    await client.putSpaceStatuses("1", body);
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/hierarchy/v1/project/1/status?checkConflict=true",
+      data: body,
+    });
+  });
 });
 
 describe("readFrontdoorAuth", () => {

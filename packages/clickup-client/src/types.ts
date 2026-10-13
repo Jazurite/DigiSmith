@@ -408,6 +408,21 @@ export interface FrontdoorTaskTypeBody {
   name_plural: string;
 }
 
+/** One status of a Frontdoor status set. A new status has no id. */
+export interface FrontdoorStatus {
+  id?: string;
+  status: string;
+  type: string;
+  orderindex: number;
+  color: string;
+}
+
+/** Body of the Frontdoor space status call: the WHOLE set (a status left out is removed). */
+export interface FrontdoorStatusSetBody {
+  statuses: FrontdoorStatus[];
+  status_change_map?: Record<string, string>;
+}
+
 /** Where move-folder puts a folder: inside another folder, or at the top level of a space. position is optional. */
 export type MoveFolderTarget =
   | { parentFolderId: string; position?: number }

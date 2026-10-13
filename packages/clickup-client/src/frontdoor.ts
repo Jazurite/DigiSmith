@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody } from "./types.ts";
+import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
@@ -98,6 +98,17 @@ export class FrontdoorClient {
 
   updateField(id: string, body: FrontdoorFieldPutBody): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("PUT", `/customFields/v2/field/${id}`, body);
+  }
+
+  /** The space's status set (the same shape putSpaceStatuses takes). */
+  async getSpaceStatuses(spaceId: string): Promise<FrontdoorStatus[]> {
+    const space = await this.request<{ statuses?: FrontdoorStatus[] }>("GET", `/hierarchy/v1/project/${spaceId}`);
+    return space.statuses ?? [];
+  }
+
+  /** Replaces the WHOLE status set of a space: a status missing from the body is removed. ClickUp answers {}. */
+  async putSpaceStatuses(spaceId: string, body: FrontdoorStatusSetBody): Promise<void> {
+    await this.request("PUT", `/hierarchy/v1/project/${spaceId}/status?checkConflict=true`, body);
   }
 
   /** Creates a field. With category_id in the body it is scoped to that folder; no second location call is needed. */
