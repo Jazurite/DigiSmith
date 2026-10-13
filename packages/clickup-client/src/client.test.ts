@@ -618,6 +618,20 @@ describe("ClickUpClient relations", () => {
     });
   });
 
+  it("getTaskByRef() adds extra params next to the key params", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "abc" } });
+
+    await client.getTaskByRef("DGS-343", { include_markdown_description: true });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "GET",
+      url: "/task/DGS-343",
+      params: { custom_task_ids: true, team_id: "5738747", include_markdown_description: true },
+      data: undefined,
+    });
+  });
+
   it("addDependency() POSTs depends_on or dependency_of in the body", async () => {
     const client = makeClient();
     request.mockResolvedValue({ data: {} });

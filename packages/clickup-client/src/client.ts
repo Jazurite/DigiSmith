@@ -174,8 +174,9 @@ export class ClickUpClient {
   }
 
   /** Reads a task by ClickUp id, or by custom id (DGS-343): keys need custom_task_ids and the team id. */
-  getTaskByRef(ref: string): Promise<ClickUpTask> {
-    const params = CUSTOM_ID.test(ref) ? { custom_task_ids: true, team_id: this.teamId } : undefined;
+  getTaskByRef(ref: string, extraParams?: Record<string, string | number | boolean>): Promise<ClickUpTask> {
+    const keyParams = CUSTOM_ID.test(ref) ? { custom_task_ids: true, team_id: this.teamId } : undefined;
+    const params = keyParams || extraParams ? { ...keyParams, ...extraParams } : undefined;
     return this.get<ClickUpTask>(`/task/${ref}`, { params });
   }
 
