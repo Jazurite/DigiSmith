@@ -21,8 +21,8 @@ touch the live OpenCode server (4198).
 |---|---|
 | `Caddyfile` | routes for the three names; no secrets in it |
 | `caddy-run.sh` | wrapper: reads only `CLOUDFLARE_API_TOKEN` (and `NEXUS_BASIC_AUTH_HASH` once it exists) from `~/.digismith-depot/.env`, sets `XDG_DATA_HOME`, `exec`s Caddy |
-| `com.jazurite.digismith.caddy.plist.tmpl` | LaunchAgent template, `@HOME@` replaced by `install.sh` |
-| `install.sh` | copies into the depot, downloads and checks the pinned binary; never loads a service |
+| `com.jazurite.digismith.caddy.plist.tmpl` | LaunchAgent template, `@DEPOT@` replaced by `install.sh` |
+| `install.sh` | copies into the depot, downloads and checks the pinned binary; never loads a service; `CADDY_URL`/`CADDY_SHA256` overrides only with `DGS_CADDY_TEST=1` |
 | `test-stream.mjs` | exists already (design proof): SSE, websocket, loopback-only |
 | `test-config.mjs` | new: `caddy validate` on the Caddyfile and assertion tests (below) |
 
@@ -69,31 +69,36 @@ workbox.tail730dcf.ts.net {
 Route table: `opencode.pazurite.com/` and `workbox.tail730dcf.ts.net/` = OpenCode (4198); `pazurite.com` = Nexus: `/api/v1/...` only (first
 `/api/v1/power-metrics`, DGS-324; a breaking change gets `/api/v2/`, old versions stay until Jack drops them), 404 everywhere else, `/` included.
 
-### caddy-run.sh
+### caddy-run.sh (source: `scripts/caddy/caddy-run.sh`)
 ```sh
 #!/bin/sh
+# Starts the depot Caddy for the front door (DGS-325). Gives Caddy only its own variables from .env, never the rest of the file.
 set -eu
-D="$HOME/.digismith-depot"
-val() { sed -n "s/^$1=//p" "$D/.env" | head -n 1; }
-CLOUDFLARE_API_TOKEN=$(val CLOUDFLARE_API_TOKEN); export CLOUDFLARE_API_TOKEN
-XDG_DATA_HOME="$D/caddy/data"; XDG_CONFIG_HOME="$D/caddy/config"; export XDG_DATA_HOME XDG_CONFIG_HOME
+D="${DIGISMITH_DEPOT:-$HOME/.digismith-depot}"
+val() { sed -n "s/^$1=//p" "$D/.env" | head -n 1 | tr -d '\r' | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"; }   # tolerates CR and one pair of quotes
+CLOUDFLARE_API_TOKEN=$(val CLOUDFLARE_API_TOKEN)
+[ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "caddy-run: CLOUDFLARE_API_TOKEN is not set in the depot env file" >&2; exit 1; }
+export CLOUDFLARE_API_TOKEN
+NEXUS_BASIC_AUTH_HASH=$(val NEXUS_BASIC_AUTH_HASH)
+[ -z "$NEXUS_BASIC_AUTH_HASH" ] || export NEXUS_BASIC_AUTH_HASH
+export XDG_DATA_HOME="$D/caddy/data" XDG_CONFIG_HOME="$D/caddy/config"
 exec "$D/bin/caddy" run --config "$D/caddy/Caddyfile" --adapter caddyfile
 ```
-The value in `.env` is written without quotes. Nothing prints it.
+The value in `.env` is written without quotes (one pair of quotes and a trailing CR are tolerated). Nothing prints it.
 
-### LaunchAgent plist (template; `@HOME@` = `/Users/workbox`)
+### LaunchAgent plist (source: `scripts/caddy/com.jazurite.digismith.caddy.plist.tmpl`; `install.sh` replaces `@DEPOT@` with the depot path)
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key><string>com.jazurite.digismith.caddy</string>
-  <key>ProgramArguments</key><array><string>@HOME@/.digismith-depot/bin/caddy-run</string></array>
+  <key>ProgramArguments</key><array><string>@DEPOT@/bin/caddy-run</string></array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
-  <key>StandardOutPath</key><string>@HOME@/.digismith-depot/caddy/logs/caddy.log</string>
-  <key>StandardErrorPath</key><string>@HOME@/.digismith-depot/caddy/logs/caddy.log</string>
+  <key>StandardOutPath</key><string>@DEPOT@/caddy/logs/caddy.log</string>
+  <key>StandardErrorPath</key><string>@DEPOT@/caddy/logs/caddy.log</string>
 </dict>
 </plist>
 ```
@@ -104,7 +109,7 @@ The value in `.env` is written without quotes. Nothing prints it.
    - The adapted JSON (`caddy adapt`) has every `listen` address on `127.0.0.1:8443` and no `:80`, and no `0.0.0.0`.
    - It contains exactly the three host names. `opencode.pazurite.com` and the `ts.net` name route to `127.0.0.1:4198`;
      the apex `pazurite.com` has no `reverse_proxy` and answers 404.
-   - A throwaway run (`127.0.0.1:18443`, `tls internal`, `skip_install_trust`, backend stub on a high port) checks the route table by SNI:
+   - A throwaway run (`127.0.0.1:18444`, `tls internal`, `skip_install_trust`, backend stub on a high port) checks the route table by SNI:
      `Host: pazurite.com` -> 404 for `/`, `/api/v1/anything` and an unversioned `/api/anything`; `Host: opencode...` -> the stub's 200.
      When DGS-324 adds its route, its test adds: `/api/v1/power-metrics` without credentials -> 401, `/api/power-metrics` -> 404.
    - `caddy-run.sh` and `install.sh` never `echo` or `cat` `.env` (grep for it; `shellcheck` if present).

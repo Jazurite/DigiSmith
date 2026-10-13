@@ -36,7 +36,8 @@ if (existsSync(cf)) {
   const json = JSON.stringify(adapted)
   check('no port 80 and no 0.0.0.0', !/:80"|0\.0\.0\.0/.test(json))
   check('OpenCode names proxy to 127.0.0.1:4198', (json.match(/127\.0\.0\.1:4198/g) ?? []).length === 2)
-  check('apex has no reverse_proxy', !/"host":\["pazurite\.com"\][^]*?4300/.test(json))
+  const apex = servers.flatMap(s => s.routes ?? []).filter(r => (r.match ?? []).some(m => (m.host ?? []).includes('pazurite.com')))
+  check('apex route exists and has no reverse_proxy', apex.length === 1 && !JSON.stringify(apex[0]).includes('reverse_proxy'))
 
   // route table by SNI against a stub backend
   const BACK = 18510, FRONT = 18444
@@ -48,6 +49,7 @@ if (existsSync(cf)) {
   const stub = http.createServer((q, r) => r.end('stub-ok'))
   await new Promise(r => stub.listen(BACK, '127.0.0.1', r))
   const caddy = spawn(CADDY, ['run', '--config', tcf, '--adapter', 'caddyfile'], { env: { ...DUMMY, XDG_DATA_HOME: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'cfg') }, stdio: ['ignore', 'ignore', 'pipe'] })
+  process.on('exit', () => caddy.kill('SIGTERM'))
   let log = ''; caddy.stderr.on('data', d => { log += d })
   for (let i = 0; i < 50; i++) { if (await new Promise(ok => { const s = net.connect(FRONT, '127.0.0.1'); s.on('connect', () => { s.destroy(); ok(true) }); s.on('error', () => ok(false)) })) break; await new Promise(r => setTimeout(r, 200)) }
   const get = (host, path) => new Promise(ok => https.get({ host: '127.0.0.1', port: FRONT, path, servername: host, rejectUnauthorized: false, headers: { host } }, res => { let b = ''; res.on('data', d => { b += d }); res.on('end', () => ok([res.statusCode, b])) }).on('error', e => ok([0, e.message])))
@@ -86,7 +88,7 @@ check('install.sh exists', existsSync(inst))
 if (existsSync(inst)) {
   const fake = join(tmp, 'fake-caddy'); writeFileSync(fake, '#!/bin/sh\necho fake\n')
   const sha = createHash('sha256').update(readFileSync(fake)).digest('hex')
-  const env = (dep, s) => ({ PATH: process.env.PATH, HOME: tmp, DEPOT: dep, CADDY_URL: `file://${fake}`, CADDY_SHA256: s })
+  const env = (dep, s) => ({ PATH: process.env.PATH, HOME: tmp, DEPOT: dep, CADDY_URL: `file://${fake}`, CADDY_SHA256: s, DGS_CADDY_TEST: '1' })
   const dep = join(tmp, 'inst-depot')
   const ok = run('sh', [inst], { env: env(dep, sha) })
   check('install.sh succeeds with a matching hash', ok.status === 0, ok.stdout + ok.stderr)
@@ -94,6 +96,8 @@ if (existsSync(inst)) {
   const pl = join(dep, 'caddy/com.jazurite.digismith.caddy.plist')
   check('rendered plist has no placeholder and passes plutil', existsSync(pl) && !/@DEPOT@/.test(readFileSync(pl, 'utf8')) && run('plutil', ['-lint', pl]).status === 0)
   check('install.sh loads no service and writes no LaunchAgents', !/launchctl|LaunchAgents/.test(readFileSync(inst, 'utf8').replace(/^\s*#.*$/gm, '').replace(/echo[^\n]*\n/g, '')) )
+  const ign = run('sh', [inst], { env: { PATH: process.env.PATH, HOME: tmp, DEPOT: join(tmp, 'inst-depot3'), CADDY_URL: `file://${fake}`, CADDY_SHA256: sha } })
+  check('install.sh ignores CADDY_URL and CADDY_SHA256 without DGS_CADDY_TEST', ign.status !== 0 || !existsSync(join(tmp, 'inst-depot3/bin/caddy')) || run('shasum', ['-a', '256', join(tmp, 'inst-depot3/bin/caddy')]).stdout.startsWith('f7f2a3cb'), ign.stdout + ign.stderr)
   const dep2 = join(tmp, 'inst-depot2')
   const bad = run('sh', [inst], { env: env(dep2, '0'.repeat(64)) })
   check('install.sh refuses a hash mismatch and leaves no bin/caddy', bad.status !== 0 && !existsSync(join(dep2, 'bin/caddy')), bad.stdout + bad.stderr)

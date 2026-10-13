@@ -92,7 +92,7 @@ TTL. (Changes made in Cloudflare do not touch the Namecheap zone.)
   `https://caddyserver.com/api/download?os=darwin&arch=amd64&p=github.com/caddy-dns/cloudflare&version=v2.11.7`, checked against the
   pinned SHA-256 above. Checked in the scratchpad only; the depot copy belongs to the build order.
 - Repo (the factory, DGS-265), following the `scripts/opencode-boot` pattern: `scripts/caddy/` holds `Caddyfile`, `caddy-run.sh`,
-  `com.jazurite.digismith.caddy.plist.tmpl`, `install.sh`, `test-stream.mjs`.
+  `com.jazurite.digismith.caddy.plist.tmpl`, `install.sh`, `test-config.mjs`, `test-stream.mjs`.
 - Depot (runs it): `~/.digismith-depot/bin/caddy`, `bin/caddy-run`, `caddy/Caddyfile`, `caddy/data` (certificates), `caddy/logs/`.
   `install.sh` copies the files in and checks the SHA-256; it never installs a service.
 - Start: a LaunchAgent that Jack installs (`~/Library/LaunchAgents/com.jazurite.digismith.caddy.plist`), exact text in plan.md. A

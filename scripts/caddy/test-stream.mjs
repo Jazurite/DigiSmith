@@ -47,6 +47,7 @@ localhost {
 `)
 const caddy = spawn(CADDY, ['run', '--config', join(dir, 'Caddyfile'), '--adapter', 'caddyfile'], {
   env: { ...process.env, XDG_DATA_HOME: join(dir, 'data'), XDG_CONFIG_HOME: join(dir, 'cfg') }, stdio: ['ignore', 'ignore', 'pipe'] })
+process.on('exit', () => caddy.kill('SIGTERM'))
 let log = ''; caddy.stderr.on('data', d => { log += d })
 const waitUp = async () => { for (let i = 0; i < 50; i++) { try { await new Promise((ok, no) => { const s = net.connect(FRONT, '127.0.0.1', ok); s.on('error', no); s.end() }); return } catch { await new Promise(r => setTimeout(r, 200)) } } throw new Error('caddy did not start\n' + log) }
 
@@ -82,8 +83,9 @@ try {
 
   // loopback only: refuse on every non-loopback address of this Mac
   const others = Object.values(os.networkInterfaces()).flat().filter(a => a && a.family === 'IPv4' && !a.internal).map(a => a.address)
+  check('found a non-loopback address to test', others.length > 0)
   for (const ip of others) {
-    const refused = await new Promise(ok => { const s = net.connect({ host: ip, port: FRONT, timeout: 2000 }); s.on('connect', () => { s.destroy(); ok(false) }); s.on('error', () => ok(true)); s.on('timeout', () => { s.destroy(); ok(true) }) })
+    const refused = await new Promise(ok => { const s = net.connect({ host: ip, port: FRONT, timeout: 2000 }); s.on('connect', () => { s.destroy(); ok(false) }); s.on('error', e => ok(e.code === 'ECONNREFUSED')); s.on('timeout', () => { s.destroy(); ok(false) }) })
     check(`refused on ${ip}:${FRONT}`, refused)
   }
 } catch (e) { console.error(e.message); failed++ }

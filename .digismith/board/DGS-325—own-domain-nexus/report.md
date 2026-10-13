@@ -18,10 +18,13 @@ gets its certificates by DNS challenge, and also serves `workbox.tail730dcf.ts.n
 `design.md` (8 points, DNS table, names, version rule), `plan.md` (pins, files, build tasks, Jack's steps J1-J8), `scripts/caddy/test-stream.mjs`.
 
 ## Build done (branch `dgs-325-own-domain-nexus`, not merged)
-- `scripts/caddy/`: `Caddyfile`, `caddy-run.sh`, `com.jazurite.digismith.caddy.plist.tmpl`, `install.sh`, `test-config.mjs` (27 checks, written failing first), `test-stream.mjs` (5 checks). All pass.
+- `scripts/caddy/`: `Caddyfile`, `caddy-run.sh`, `com.jazurite.digismith.caddy.plist.tmpl`, `install.sh`, `test-config.mjs` (28 checks, written failing first), `test-stream.mjs` (6 checks). All pass.
 - `install.sh` ran for real: the depot has the pinned Caddy (SHA-256 matches), `bin/caddy-run`, `caddy/Caddyfile` and the rendered plist. No service loaded, nothing in `~/Library/LaunchAgents`.
 - Live OpenCode server through a throwaway Caddy (`127.0.0.1:18445`, no sudo): `/` 200, `/api/event` 401 and a websocket upgrade 401, same as direct.
 
 ## Known gaps
 The authenticated SSE and websocket proof on the live server is not done: it needs the server password, which no agent reads. The staging certificate needs Jack's Cloudflare token. The `ts.net` certificate through
 Caddy is untested until the loopback proof. Desktop-app pairing can only be tested at the cut-over (J7).
+
+## Review
+An independent read-only Claude review found no LAN exposure and no secret leak. Verified findings fixed: `install.sh` ignored the pin only with `DGS_CADDY_TEST=1` now, refuses odd depot paths, downloads next to the target (atomic move, trap on INT and TERM) and prints the J6 commands; `caddy-run.sh` strips a CR and one pair of quotes; the apex "no reverse_proxy" test no longer checks a port that never appears; both tests kill Caddy on exit and the stream test requires a LAN address and counts only a refusal as refused; plan text now matches the code (`@DEPOT@`, real `caddy-run.sh`, port 18444). Left alone: a stricter `.env`-printing regex (low, scripts are clean).
