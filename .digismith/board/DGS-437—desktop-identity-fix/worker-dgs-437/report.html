@@ -20,6 +20,10 @@
 <h1>DGS-437 desktop identity fix — Implementation Report</h1>
 <div class="meta"><span>Ticket: <strong>DGS-437</strong></span><span>Date: 2026-10-13</span></div>
 </header>
+<section id="summary">
+<h2>Summary</h2>
+<p>A Claude Desktop Code session fires no SessionStart hook, so it got no Maestro card. The first prompt now writes the card from the identity record and prints the identity line; a catch-up prompt on that first message also runs the conductor's catch-up. A new <code>CLAUDE.md</code> line is the backup that needs no hooks.</p>
+</section>
 <h2>What was built</h2>
 <ul>
 <li><code>scripts/session-cards/prompt-identity.ts</code>: pre-prompt handler, FIRST in <code>PRE_PROMPT_HANDLERS</code> (the one UserPromptSubmit entry; <code>hooks.json</code> unchanged). A session with no <code>HERDR_PANE_ID</code>, no <code>DIGISMITH_ROLE</code> and a folder named by one identity record gets its Maestro card on its first prompt (same identity branch as DGS-411) and the identity line as context. Idempotent: a session with a card gets nothing.</li>
