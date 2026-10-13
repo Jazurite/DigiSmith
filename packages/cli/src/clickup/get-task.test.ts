@@ -47,4 +47,28 @@ describe("createGetTaskCommand", () => {
     expect(errorSpy).toHaveBeenCalledWith("clickup get-task: HTTP 404");
     expect(process.exitCode).toBe(1);
   });
+
+  it("looks a key up with getTaskByRef and no raw get", async () => {
+    const task = { id: "14zcebru2pr" };
+    const getTaskByRef = vi.fn().mockResolvedValue(task);
+    const get = vi.fn();
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createGetTaskCommand(() => ({ get, getTaskByRef }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string }) => Promise<void>)({ task: "DGS-81" });
+
+    expect(getTaskByRef).toHaveBeenCalledWith("DGS-81", undefined);
+    expect(get).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task, null, 2));
+  });
+
+  it("asks for the Markdown description with a key and --markdown", async () => {
+    const getTaskByRef = vi.fn().mockResolvedValue({ id: "x" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createGetTaskCommand(() => ({ getTaskByRef }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string; markdown?: boolean }) => Promise<void>)({ task: "DGS-81", markdown: true });
+
+    expect(getTaskByRef).toHaveBeenCalledWith("DGS-81", { include_markdown_description: true });
+  });
 });

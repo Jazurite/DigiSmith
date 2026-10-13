@@ -69,6 +69,31 @@ describe("createUpdateTaskCommand", () => {
     expect(updateTask).toHaveBeenNthCalledWith(2, "abc", { parent: "none" });
   });
 
+  describe("custom task key", () => {
+    it("updates the real id when given a key", async () => {
+      const updateTask = vi.fn().mockResolvedValue({ id: "14zcebru2pr" });
+      const getTaskByRef = vi.fn().mockResolvedValue({ id: "14zcebru2pr" });
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const command = createUpdateTaskCommand(() => ({ updateTask, getTaskByRef }) as unknown as ClickUpClient);
+
+      await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "DGS-81", status: "done" });
+
+      expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
+      expect(updateTask).toHaveBeenCalledWith("14zcebru2pr", { status: "done" });
+    });
+
+    it("does not look a raw id up", async () => {
+      const updateTask = vi.fn().mockResolvedValue({ id: "abc" });
+      const getTaskByRef = vi.fn();
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      const command = createUpdateTaskCommand(() => ({ updateTask, getTaskByRef }) as unknown as ClickUpClient);
+
+      await (command.handler as (argv: { task: string; status?: string }) => Promise<void>)({ task: "abc", status: "done" });
+
+      expect(getTaskByRef).not.toHaveBeenCalled();
+    });
+  });
+
   describe("date order with one date given", () => {
     const run = async (argv: Record<string, unknown>, stored: { start_date: string | null; due_date: string | null }) => {
       const updateTask = vi.fn().mockResolvedValue({ id: "abc" });

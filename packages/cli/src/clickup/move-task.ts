@@ -5,6 +5,7 @@ import type {
   ClickUpMoveTaskStatusMapping,
 } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
+import { resolveTaskId } from "./refs.ts";
 
 function parseStatusMap(values: string[]): ClickUpMoveTaskStatusMapping[] {
   return values.map((value) => {
@@ -32,7 +33,7 @@ export function createMoveTaskCommand(
           type: "string",
           requiresArg: true,
           demandOption: true,
-          describe: "ClickUp task ID",
+          describe: "ClickUp task ID or key like DGS-411",
         })
         .option("list", {
           type: "string",
@@ -63,7 +64,8 @@ export function createMoveTaskCommand(
         if (statusMap.length > 0) options.status_mappings = parseStatusMap(statusMap);
         if (argv.moveCustomFields === true) options.move_custom_fields = true;
 
-        const result = await clientFactory().moveTask(taskId, listId, options);
+        const client = clientFactory();
+        const result = await client.moveTask(await resolveTaskId(client, taskId), listId, options);
         console.log(JSON.stringify(result, null, 2));
         process.exitCode = 0;
       } catch (err) {

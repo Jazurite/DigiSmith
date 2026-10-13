@@ -37,4 +37,27 @@ describe("createUploadAttachmentCommand", () => {
     expect(errorSpy).toHaveBeenCalledWith("clickup upload-attachment: ENOENT: no such file");
     expect(process.exitCode).toBe(1);
   });
+
+  it("resolves a key to the real id before uploading", async () => {
+    const uploadAttachment = vi.fn().mockResolvedValue({ id: "att1" });
+    const getTaskByRef = vi.fn().mockResolvedValue({ id: "14zcebru2pr" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createUploadAttachmentCommand(() => ({ uploadAttachment, getTaskByRef }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string; file: string }) => Promise<void>)({ task: "DGS-81", file: "/tmp/a.pdf" });
+
+    expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
+    expect(uploadAttachment).toHaveBeenCalledWith("14zcebru2pr", "/tmp/a.pdf");
+  });
+
+  it("does not look a raw id up", async () => {
+    const uploadAttachment = vi.fn().mockResolvedValue({ id: "att1" });
+    const getTaskByRef = vi.fn();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createUploadAttachmentCommand(() => ({ uploadAttachment, getTaskByRef }) as unknown as ClickUpClient);
+
+    await (command.handler as (argv: { task: string; file: string }) => Promise<void>)({ task: "abc", file: "/tmp/a.pdf" });
+
+    expect(getTaskByRef).not.toHaveBeenCalled();
+  });
 });

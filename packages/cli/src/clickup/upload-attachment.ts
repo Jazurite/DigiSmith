@@ -1,6 +1,7 @@
 import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient } from "./lib.ts";
+import { resolveTaskId } from "./refs.ts";
 
 export function createUploadAttachmentCommand(
   clientFactory: () => ClickUpClient = createClient
@@ -14,7 +15,7 @@ export function createUploadAttachmentCommand(
           type: "string",
           requiresArg: true,
           demandOption: true,
-          describe: "ClickUp task ID",
+          describe: "ClickUp task ID or key like DGS-411",
         })
         .option("file", {
           type: "string",
@@ -25,7 +26,7 @@ export function createUploadAttachmentCommand(
     handler: async (argv) => {
       try {
         const client = clientFactory();
-        const attachment = await client.uploadAttachment(argv.task as string, argv.file as string);
+        const attachment = await client.uploadAttachment(await resolveTaskId(client, argv.task as string), argv.file as string);
         console.log(JSON.stringify(attachment, null, 2));
         process.exitCode = 0;
       } catch (err) {

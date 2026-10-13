@@ -3,6 +3,7 @@ import type { ClickUpClient, ClickUpTask, ClickUpTaskWriteBody } from "@digismit
 import { createClient, buildTaskWriteBody, withTaskFieldOptions, type TaskFieldArgv } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
 import { assertDateOrder } from "./parse-date.ts";
+import { resolveTaskId } from "./refs.ts";
 import { resolveFieldArgs, applyFields } from "./field-set.ts";
 
 export function createUpdateTaskCommand(
@@ -18,7 +19,7 @@ export function createUpdateTaskCommand(
             type: "string",
             requiresArg: true,
             demandOption: true,
-            describe: "ClickUp task ID",
+            describe: "ClickUp task ID or key like DGS-411",
           })
           .option("name", { type: "string", requiresArg: true, describe: "task name" }),
         { parentDescribe: "parent task id (moves the task into the parent's list); empty value clears it" }
@@ -28,12 +29,13 @@ export function createUpdateTaskCommand(
         const body = buildTaskWriteBody(argv as unknown as TaskFieldArgv);
         assertSomethingToUpdate(body, argv as unknown as { type?: string; field?: string[] });
         const client = clientFactory();
-        await checkAgainstStoredDate(client, argv.task as string, body);
+        // The key lookup needs the client: it runs after the body is built and checked, before any task call.
+        const taskId = await resolveTaskId(client, argv.task as string);
+        await checkAgainstStoredDate(client, taskId, body);
         if (argv.type !== undefined) {
           body.custom_item_id = resolveTaskType(await client.getTaskTypes(), argv.type as string).id;
         }
         const fieldArgs = (argv.field as string[] | undefined) ?? [];
-        const taskId = argv.task as string;
         const resolved = fieldArgs.length
           ? await resolveFieldArgs(client, (await client.get<ClickUpTask>(`/task/${taskId}`)).list.id, fieldArgs)
           : [];

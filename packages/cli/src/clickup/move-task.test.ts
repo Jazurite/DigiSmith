@@ -103,4 +103,28 @@ describe("createMoveTaskCommand", () => {
     expect(errorSpy).toHaveBeenCalledWith("clickup move-task: HTTP 400");
     expect(process.exitCode).toBe(1);
   });
+
+  it("resolves a key to the real id; the list id stays as given", async () => {
+    const moveTask = vi.fn().mockResolvedValue({});
+    const getTaskByRef = vi.fn().mockResolvedValue({ id: "14zcebru2pr" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createMoveTaskCommand(() => ({ moveTask, getTaskByRef }) as unknown as ClickUpClient);
+
+    await run(command, { task: "DGS-81", list: "l1" });
+
+    expect(getTaskByRef).toHaveBeenCalledTimes(1);
+    expect(getTaskByRef).toHaveBeenCalledWith("DGS-81");
+    expect(moveTask).toHaveBeenCalledWith("14zcebru2pr", "l1", {});
+  });
+
+  it("does not look a raw id up", async () => {
+    const moveTask = vi.fn().mockResolvedValue({});
+    const getTaskByRef = vi.fn();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const command = createMoveTaskCommand(() => ({ moveTask, getTaskByRef }) as unknown as ClickUpClient);
+
+    await run(command, { task: "t1", list: "l1" });
+
+    expect(getTaskByRef).not.toHaveBeenCalled();
+  });
 });
