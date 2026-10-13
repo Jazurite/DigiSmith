@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-428 catch-up behaviour — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 5rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; padding-bottom:1rem; }
+  h1 { font-size:1.6rem; margin:0 0 .4rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-428 catch-up behaviour — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-428</strong></span><span>Date: 2026-10-13</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>A Maestro can be caught up on its conductor's domain. A skill matches the intent by meaning, the command <code>scripts/conductor/catch-up-cli.ts</code> builds the catch-up from the conductor state, the cards, git and ClickUp, and the finished text goes into the conductor's note as one block per Maestro identity.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li><code>catch-up-window.ts</code>: window and idle test (asking session excluded, 24 hours for a new identity).</li>
+<li><code>catch-up.ts</code> and <code>catch-up-cli.ts</code>: build, render, write the block, reuse under 30 minutes, <code>--refresh</code>; exit codes 0, 2, 3, 4.</li>
+<li><code>idle-check.ts</code>: the second trigger, a pre-prompt handler (registered in DGS-418's hook list at merge).</li>
+<li><code>skills/catch-up/SKILL.md</code>: the intent skill, no keyword list.</li>
+<li><code>deps-stub.ts</code>: temporary stand-ins for DGS-417, 422 and 427.</li>
+</ul>
+</section>
+<section id="not-done">
+<h2>Not done</h2>
+<p>The idle handler is registered after DGS-418 merges. OpenCode is text only (DGS-430). ClickUp comments are not read, only status.</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review, three findings, all fixed with tests: an orphan open marker could erase note text on a second write, path traversal through <code>--project</code> and <code>--conductor</code>, and unchecked card values in the idle hint.</p>
+</section>
+</body>
+</html>
