@@ -77,6 +77,157 @@ describe("planStatusAdd", () => {
   });
 });
 
+// The DigiSmith space as it is today, for the placement tests.
+const space: FrontdoorStatus[] = [
+  { id: "s_a", status: "backlog", type: "open", orderindex: 0, color: "#87909e" },
+  { id: "s_b", status: "concept", type: "custom", orderindex: 1, color: "#f8ae00" },
+  { id: "s_c", status: "discovery", type: "custom", orderindex: 2, color: "#3db88b" },
+  { id: "s_d", status: "to do", type: "custom", orderindex: 3, color: "#d33d44" },
+  { id: "s_e", status: "review", type: "custom", orderindex: 4, color: "#5f55ee" },
+  { id: "s_f", status: "release", type: "custom", orderindex: 5, color: "#d33d44" },
+  { id: "s_g", status: "done", type: "done", orderindex: 6, color: "#008844" },
+  { id: "s_h", status: "discarded", type: "done", orderindex: 7, color: "#e5484d" },
+  { id: "s_i", status: "Closed", type: "closed", orderindex: 8, color: "#008844" },
+];
+const names = (b: { statuses: FrontdoorStatus[] }) => b.statuses.map((s) => s.status);
+const custom = { name: "refinement", type: "custom", color: "#aabbcc" };
+const flag_type = (f: object) => (f as { type?: string }).type ?? "custom";
+
+describe("planStatusAdd placement", () => {
+  const cases: [string, object, string[]][] = [
+    ["--after in the middle", { after: "discovery" }, ["backlog", "concept", "discovery", "refinement", "to do", "review", "release", "done", "discarded", "Closed"]],
+    ["--before in the middle", { before: "to do" }, ["backlog", "concept", "discovery", "refinement", "to do", "review", "release", "done", "discarded", "Closed"]],
+    ["--after the open status", { after: "backlog" }, ["backlog", "refinement", "concept", "discovery", "to do", "review", "release", "done", "discarded", "Closed"]],
+    ["--before the closed status", { before: "Closed", name: "refinement", type: "done" }, ["backlog", "concept", "discovery", "to do", "review", "release", "done", "discarded", "refinement", "Closed"]],
+  ];
+  for (const [label, flag, order] of cases) {
+    it(`${label}: the new status is in place, no id, indexes dense`, () => {
+      const body = planStatusAdd(space, { ...custom, ...flag });
+      expect(names(body)).toEqual(order);
+      expect(body.statuses.map((s) => s.orderindex)).toEqual(order.map((_, i) => i));
+      expect(body.statuses.find((s) => s.status === "refinement")).toEqual({
+        status: "refinement", type: flag_type(flag), color: "#aabbcc", orderindex: order.indexOf("refinement"),
+      });
+    });
+    it(`${label}: the set is unchanged apart from the new status`, () => {
+      const body = planStatusAdd(space, { ...custom, ...flag });
+      const old = body.statuses.filter((s) => s.id);
+      expect(old.map((s) => [s.id, s.status, s.type, s.color])).toEqual(space.map((s) => [s.id, s.status, s.type, s.color]));
+      expect(body.statuses).toHaveLength(space.length + 1);
+    });
+  }
+
+  it("matches the anchor after trim, any case", () => {
+    expect(names(planStatusAdd(space, { ...custom, after: "  DISCOVERY " }))).toContain("refinement");
+  });
+
+  it("an unknown anchor is an error that lists the existing names", () => {
+    expect(() => planStatusAdd(space, { ...custom, after: "nope" })).toThrow(/"nope".*backlog.*concept.*Closed/);
+    expect(() => planStatusAdd(space, { ...custom, before: "nope" })).toThrow(/"nope".*backlog/);
+  });
+
+  it("refuses both --after and --before", () => {
+    expect(() => planStatusAdd(space, { ...custom, after: "concept", before: "review" })).toThrow(/--after.*--before/);
+  });
+
+  it("refuses a place before the open status", () => {
+    expect(() => planStatusAdd(space, { ...custom, before: "backlog" })).toThrow(/custom.*"backlog" \(open\)/);
+  });
+
+  it("refuses a place after the closed status", () => {
+    expect(() => planStatusAdd(space, { ...custom, after: "Closed" })).toThrow(/"Closed" \(closed\)/);
+  });
+
+  it("refuses a custom status among the done statuses, naming both neighbours", () => {
+    expect(() => planStatusAdd(space, { ...custom, after: "done" })).toThrow(/"done" \(done\).*"discarded" \(done\)/);
+    expect(() => planStatusAdd(space, { ...custom, before: "discarded" })).toThrow(/"done" \(done\).*"discarded" \(done\)/);
+  });
+
+  it("refuses a done status among the custom statuses", () => {
+    const done = { name: "shipped", type: "done", color: "#008844" };
+    expect(() => planStatusAdd(space, { ...done, after: "concept" })).toThrow(/"concept" \(custom\).*"discovery" \(custom\)/);
+  });
+
+  it("allows a done status between custom and done, and a custom one between custom and done", () => {
+    expect(names(planStatusAdd(space, { name: "shipped", type: "done", color: "#008844", after: "release" }))).toContain("shipped");
+    expect(names(planStatusAdd(space, { ...custom, after: "release" }))).toContain("refinement");
+  });
+
+  it("without a flag it is the old behaviour (before the closed status, no rule check)", () => {
+    expect(names(planStatusAdd(space, custom)).slice(-2)).toEqual(["refinement", "Closed"]);
+  });
+});
+
+describe("add-status placement through the handler", () => {
+  afterEach(() => {
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+  });
+  function fakeSpace(after?: FrontdoorStatus[]) {
+    const getSpaceStatuses = vi.fn().mockResolvedValueOnce(space);
+    if (after) getSpaceStatuses.mockResolvedValueOnce(after);
+    const putSpaceStatuses = vi.fn().mockResolvedValue(undefined);
+    const fd = { getSpaceStatuses, putSpaceStatuses } as unknown as FrontdoorClient;
+    return { getSpaceStatuses, putSpaceStatuses, factory: vi.fn(() => fd) };
+  }
+  const go = (f: ReturnType<typeof fakeSpace>, argv: object) =>
+    (createAddStatusCommand(f.factory).handler as (a: object) => Promise<void>)({ space: "1", ...custom, ...argv });
+  function cap() {
+    const out: string[] = [];
+    const err: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void err.push(a.join(" ")));
+    return { out, err };
+  }
+
+  it("dry run with --after: full new order, position line, nothing sent", async () => {
+    const f = fakeSpace();
+    const { out } = cap();
+    await go(f, { after: "DISCOVERY" });
+    expect(f.putSpaceStatuses).not.toHaveBeenCalled();
+    const text = out.join("\n");
+    expect(text).toContain('position: after "discovery"');
+    expect(text.indexOf("discovery")).toBeLessThan(text.indexOf("refinement"));
+    expect(text.indexOf("refinement")).toBeLessThan(text.indexOf("to do"));
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("dry run with --before says before", async () => {
+    const f = fakeSpace();
+    const { out } = cap();
+    await go(f, { before: "to do" });
+    expect(out.join("\n")).toContain('position: before "to do"');
+  });
+
+  it("an order-rule refusal and an unknown anchor send nothing, even with --yes", async () => {
+    for (const flag of [{ before: "backlog" }, { after: "nope" }, { after: "concept", before: "review" }]) {
+      const f = fakeSpace();
+      const { err } = cap();
+      await go(f, { ...flag, yes: true });
+      expect(process.exitCode).toBe(1);
+      expect(err.join("\n")).toMatch(/clickup add-status/);
+      expect(f.putSpaceStatuses).not.toHaveBeenCalled();
+      process.exitCode = 0;
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("--yes with --after sends the placed set and prints the set as read back", async () => {
+    const planned = planStatusAdd(space, { ...custom, after: "discovery" }).statuses;
+    const back = planned.map((s) => (s.id ? s : { ...s, id: "s_new" }));
+    const f = fakeSpace(back);
+    const { out } = cap();
+    await go(f, { after: "discovery", yes: true });
+    expect(f.putSpaceStatuses).toHaveBeenCalledWith("1", { statuses: planned });
+    expect(process.exitCode).toBe(0);
+    const text = out.join("\n");
+    expect(text).toContain("status added: refinement");
+    const tail = text.slice(text.indexOf("status added"));
+    expect(tail).toMatch(/ 3 refinement\s+custom/);
+    expect(tail).toMatch(/ 8 discarded\s+done/);
+  });
+});
+
 /** The set as ClickUp would answer after a good PUT: the planned one, the new status with an id. */
 const GOOD: FrontdoorStatus[] = PLANNED.map((s) => (s.id ? s : { ...s, id: "p1_new" }));
 

@@ -10,12 +10,18 @@ export interface StatusAdd {
   name: string;
   type: string;
   color: string;
+  /** Place the new status right after (or right before) this existing status; not both. */
+  after?: string;
+  before?: string;
 }
+
+const RANK: Record<string, number> = { open: 0, custom: 1, done: 2, closed: 3 };
 
 /**
  * The PUT replaces the WHOLE set, so the body is every current status untouched (all fields as read, id kept) plus the
- * new one (no id), placed before the closed status; orderindex is re-numbered dense from 0 in the order of the read
+ * new one (no id), placed right after --after / right before --before, or before the closed status without either; orderindex is re-numbered dense from 0 in the order of the read
  * sorted by orderindex (the relative order never changes). No status_change_map: nothing is removed.
+ * An anchored place must keep the type order open, custom, done, closed (checked for the new status only).
  * Refuses what could make ClickUp lose or reorder a status: an empty set, a status without id, a missing or shared orderindex.
  */
 export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): FrontdoorStatusSetBody {
@@ -41,8 +47,29 @@ export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): Front
     throw new Error(`the set already has a ${add.type} status; only one is kept (adding a second is not captured)`);
   }
   const sorted = [...current].sort((x, y) => x.orderindex - y.orderindex);
-  const at = sorted.findIndex((s) => s.type === "closed");
-  const index = at === -1 ? sorted.length : at;
+  const anchor = add.after !== undefined ? add.after : add.before;
+  if (add.after !== undefined && add.before !== undefined) throw new Error("--after and --before cannot be used together");
+  let index: number;
+  if (anchor === undefined) {
+    const at = sorted.findIndex((s) => s.type === "closed");
+    index = at === -1 ? sorted.length : at;
+  } else {
+    const flag = add.after !== undefined ? "--after" : "--before";
+    const hit = sorted.findIndex((s) => s.status.trim().toLowerCase() === anchor.trim().toLowerCase());
+    if (hit === -1) {
+      throw new Error(`${flag} "${anchor}" is not a status of this set; the statuses are: ${sorted.map((s) => s.status).join(", ")}`);
+    }
+    index = add.after !== undefined ? hit + 1 : hit;
+    const left = sorted[index - 1];
+    const right = sorted[index];
+    const rank = RANK[add.type];
+    if ((left && RANK[left.type] > rank) || (right && RANK[right.type] < rank)) {
+      const side = (s: FrontdoorStatus | undefined) => (s ? `"${s.status}" (${s.type})` : "nothing");
+      throw new Error(
+        `a ${add.type} status cannot go between ${side(left)} and ${side(right)}: the types must stay in the order open, custom, done, closed`
+      );
+    }
+  }
   const created: FrontdoorStatus = { status: name, type: add.type, orderindex: 0, color: add.color };
   const statuses = [...sorted.slice(0, index), created, ...sorted.slice(index)].map((s, i) => ({ ...s, orderindex: i }));
   return { statuses };
@@ -50,6 +77,9 @@ export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): Front
 
 /** Where the new status goes, for the dry run: only a done status before the closed one is seen in the capture. */
 function positionNote(current: FrontdoorStatus[], add: StatusAdd): string {
+  const named = (flag: string | undefined) => current.find((s) => s.status.trim().toLowerCase() === flag?.trim().toLowerCase())?.status;
+  if (add.after !== undefined) return `position: after "${named(add.after)}"`;
+  if (add.before !== undefined) return `position: before "${named(add.before)}"`;
   if (!current.some((s) => s.type === "closed")) return "position: at the end (the set has no closed status; assumed)";
   return add.type === "done"
     ? "position: before the closed status (as in the capture)"
@@ -104,6 +134,8 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
         .option("name", { type: "string", requiresArg: true, demandOption: true, describe: "new status name" })
         .option("type", { type: "string", requiresArg: true, demandOption: true, choices: TYPES, describe: "status type" })
         .option("color", { type: "string", requiresArg: true, default: DEFAULT_COLOR, describe: "#rrggbb" })
+        .option("after", { type: "string", requiresArg: true, conflicts: "before", describe: "put the new status right after this status" })
+        .option("before", { type: "string", requiresArg: true, conflicts: "after", describe: "put the new status right before this status" })
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
@@ -112,7 +144,8 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
         }
         const space = argv.space as string | undefined;
         if (space === undefined || !/^\d+$/.test(space)) throw new Error("--space must be the numeric space id");
-        const add: StatusAdd = { name: argv.name as string, type: argv.type as string, color: argv.color as string };
+        const add: StatusAdd = { name: argv.name as string, type: argv.type as string, color: argv.color as string,
+          after: argv.after as string | undefined, before: argv.before as string | undefined };
         const fd = frontdoorFactory();
         const previous = await fd.getSpaceStatuses(space);
         const body = planStatusAdd(previous, add);
@@ -141,8 +174,10 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
           return;
         }
         let problems: string[];
+        let readBack: FrontdoorStatus[];
         try {
-          problems = verify(body.statuses, previous, await fd.getSpaceStatuses(space), add);
+          readBack = await fd.getSpaceStatuses(space);
+          problems = verify(body.statuses, previous, readBack, add);
         } catch (err) {
           console.error(
             `clickup add-status: the PUT WAS SENT, verification failed (${(err as Error).message}): ` +
@@ -159,6 +194,10 @@ export function createAddStatusCommand(frontdoorFactory: () => FrontdoorClient =
           return;
         }
         console.log(`status added: ${add.name.trim()}`);
+        console.log("the set as read back:");
+        for (const s of [...readBack].sort((x, y) => x.orderindex - y.orderindex)) {
+          console.log(`${String(s.orderindex).padStart(2)} ${s.status.padEnd(16)} ${s.type}`);
+        }
         process.exitCode = 0;
       } catch (err) {
         console.error(`clickup add-status: ${(err as Error).message}`);
