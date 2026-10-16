@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-493 dg clickup add-status --after and --before — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  header { border-bottom:1px solid var(--border); margin-bottom:1.5rem; }
+  .meta { color:var(--muted); display:flex; gap:1rem; flex-wrap:wrap; }
+  code { background:var(--code-bg); padding:.1em .3em; border-radius:3px; }
+</style>
+</head>
+<body>
+<header>
+<h1>DGS-493 dg clickup add-status --after and --before — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-493</strong></span><span>Date: 2026-10-16</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>dg clickup add-status</code> now places a new status exactly: <code>--after</code> or <code>--before</code> an existing status. Built and committed on branch DGS-493__add-status-placement. No ClickUp write was made by the build.</p>
+</section>
+<section id="built">
+<h2>Built</h2>
+<ul>
+<li>The two flags conflict. The anchor matches after trim, any case. An unknown name lists the existing names.</li>
+<li>Order rule for an anchored add: open, custom, done, closed. A refusal names both neighbours and their types. Without a flag the old behaviour stays.</li>
+<li>Every other status keeps id, name, type, color and relative order; orderindex is re-numbered from 0.</li>
+<li>The dry run prints the full order and a <code>position: after "x"</code> or <code>before "y"</code> line. After a real add the set as read back is printed.</li>
+<li>Tests: 47 in add-status, 2299 in the full suite with <code>FORCE_COLOR=1</code>; the build is clean.</li>
+</ul>
+</section>
+<section id="first-use">
+<h2>First use</h2>
+<p>Pending: refinement after discovery and acceptance after review in space 1301150000001271 (DGS-488).</p>
+</section>
+<section id="review">
+<h2>Review</h2>
+<p>Claude whole-branch review: no findings. Fixed: 0.</p>
+</section>
+</body>
+</html>
