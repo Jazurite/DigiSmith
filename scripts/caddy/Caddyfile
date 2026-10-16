@@ -20,13 +20,20 @@ pazurite.com {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 	}
+	encode zstd gzip
 	# Nexus API (DGS-324): the whole /api/* space goes to the API, which names the version. No login for now (tailnet only, read-only; login design: DGS-458).
 	handle /api/* {
 		reverse_proxy 127.0.0.1:4300 {
 			header_up -Authorization
 		}
 	}
+	# The life dashboard (DGS-481): static files from the depot. /storybook/ is the Storybook build next to the page. No CDN for now.
 	handle {
-		respond "Not found" 404
+		root * {env.DIGISMITH_WWW}
+		@hashed path /_nuxt/* /storybook/assets/*
+		@notHashed not path /_nuxt/* /storybook/assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		header @notHashed Cache-Control "no-cache"
+		file_server
 	}
 }

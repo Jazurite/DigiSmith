@@ -6,5 +6,6 @@ val() { sed -n "s/^$1=//p" "$D/.env" | head -n 1 | tr -d '\r' | sed -e 's/^"\(.*
 CLOUDFLARE_API_TOKEN=$(val CLOUDFLARE_API_TOKEN)
 [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "caddy-run: CLOUDFLARE_API_TOKEN is not set in the depot env file" >&2; exit 1; }
 export CLOUDFLARE_API_TOKEN
+export DIGISMITH_WWW="$D/nexus/www"   # DGS-481: the static page and Storybook; the install step creates it
 export XDG_DATA_HOME="$D/caddy/data" XDG_CONFIG_HOME="$D/caddy/config"
 exec "$D/bin/caddy" run --config "$D/caddy/Caddyfile" --adapter caddyfile

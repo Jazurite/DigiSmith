@@ -40,7 +40,7 @@ if (existsSync(cf)) {
   const apex = servers.flatMap(s => s.routes ?? []).filter(r => (r.match ?? []).some(m => (m.host ?? []).includes('pazurite.com')))
   check('apex route exists', apex.length === 1)
   const apexJson = JSON.stringify(apex[0] ?? {})
-  check('apex proxies only /api/* to 127.0.0.1:4300', (apexJson.match(/reverse_proxy/g) ?? []).length === 1 && apexJson.includes('127.0.0.1:4300') && apexJson.includes('/api/*'))
+  check('apex proxies only /api/* to 127.0.0.1:4300', (apexJson.match(/reverse_proxy/g) ?? []).length === 1 && apexJson.includes('127.0.0.1:4300') && apexJson.includes('/api/*') && apexJson.includes('file_server'))
   check('no login anywhere: no basic_auth in the config (login design: DGS-458)', !/http_basic|basic_auth/.test(json))
 
   // route table by SNI against a stub backend
@@ -51,17 +51,27 @@ if (existsSync(cf)) {
     .replaceAll('127.0.0.1:4198', `127.0.0.1:${BACK}`)
     .replaceAll('127.0.0.1:4300', `127.0.0.1:${BACK2}`)
   const tcf = join(tmp, 'Caddyfile'); writeFileSync(tcf, src)
+  const www = join(tmp, 'www'); mkdirSync(join(www, '_nuxt'), { recursive: true }); mkdirSync(join(www, 'storybook/assets'), { recursive: true })
+  const big = '<!doctype html><title>x</title>' + '<p>padding</p>'.repeat(120)   // over Caddy's compression minimum
+  writeFileSync(join(www, 'index.html'), big); writeFileSync(join(www, '_nuxt/app.abc123.js'), 'console.log(1)\n'.repeat(80))
+  writeFileSync(join(www, 'storybook/index.html'), big); writeFileSync(join(www, 'storybook/assets/x-abc123.js'), 'console.log(2)\n'.repeat(80))
   const stub = http.createServer((q, r) => r.end('stub-ok'))
   await new Promise(r => stub.listen(BACK, '127.0.0.1', r))
   const api = http.createServer((q, r) => r.end(`api-ok ${q.url} auth-header-seen-by-api=${q.headers.authorization ? 'yes' : 'no'}`))
   await new Promise(r => api.listen(BACK2, '127.0.0.1', r))
-  const caddy = spawn(CADDY, ['run', '--config', tcf, '--adapter', 'caddyfile'], { env: { ...DUMMY, XDG_DATA_HOME: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'cfg') }, stdio: ['ignore', 'ignore', 'pipe'] })
+  const caddy = spawn(CADDY, ['run', '--config', tcf, '--adapter', 'caddyfile'], { env: { ...DUMMY, DIGISMITH_WWW: www, XDG_DATA_HOME: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'cfg') }, stdio: ['ignore', 'ignore', 'pipe'] })
   process.on('exit', () => caddy.kill('SIGTERM'))
   let log = ''; caddy.stderr.on('data', d => { log += d })
   for (let i = 0; i < 50; i++) { if (await new Promise(ok => { const s = net.connect(FRONT, '127.0.0.1'); s.on('connect', () => { s.destroy(); ok(true) }); s.on('error', () => ok(false)) })) break; await new Promise(r => setTimeout(r, 200)) }
-  const get = (host, path, auth) => new Promise(ok => https.get({ host: '127.0.0.1', port: FRONT, path, servername: host, rejectUnauthorized: false, headers: { host, ...(auth ? { authorization: 'Basic ' + Buffer.from(auth).toString('base64') } : {}) } }, res => { let b = ''; res.on('data', d => { b += d }); res.on('end', () => ok([res.statusCode, b])) }).on('error', e => ok([0, e.message])))
+  const get = (host, path, auth, extra = {}) => new Promise(ok => https.get({ host: '127.0.0.1', port: FRONT, path, servername: host, rejectUnauthorized: false, headers: { host, ...extra, ...(auth ? { authorization: 'Basic ' + Buffer.from(auth).toString('base64') } : {}) } }, res => { let b = ''; res.on('data', d => { b += d }); res.on('end', () => ok([res.statusCode, b, res.headers])) }).on('error', e => ok([0, e.message])))
   for (let i = 0; i < 50; i++) { const [c] = await get('pazurite.com', '/'); if (c) break; await new Promise(r => setTimeout(r, 200)) }   // certificates are issued after the listener is up
-  { const [c, b] = await get('pazurite.com', '/'); check('pazurite.com/ -> 404 (no login needed)', c === 404, `got ${c} ${b}`) }
+  { const [c, b, h] = await get('pazurite.com', '/'); check('pazurite.com/ serves the page', c === 200 && b.includes('<title>x</title>'), `got ${c}`); check('index.html is sent no-cache', h?.['cache-control'] === 'no-cache', JSON.stringify(h?.['cache-control'])) }
+  { const [c, , h] = await get('pazurite.com', '/_nuxt/app.abc123.js'); check('hashed page asset is immutable for a year', c === 200 && h['cache-control'] === 'public, max-age=31536000, immutable', JSON.stringify(h?.['cache-control'])) }
+  { const [c, b, h] = await get('pazurite.com', '/storybook/'); check('/storybook/ serves Storybook, no-cache', c === 200 && b.includes('<title>x</title>') && h['cache-control'] === 'no-cache', `got ${c}`) }
+  { const [c, , h] = await get('pazurite.com', '/storybook'); check('/storybook redirects to /storybook/', c >= 300 && c < 400 && String(h.location).endsWith('/storybook/'), `got ${c} ${h?.location}`) }
+  { const [c, , h] = await get('pazurite.com', '/storybook/assets/x-abc123.js'); check('Storybook hashed asset is immutable', c === 200 && h['cache-control'] === 'public, max-age=31536000, immutable', JSON.stringify(h?.['cache-control'])) }
+  { const [c, , h] = await get('pazurite.com', '/', undefined, { 'accept-encoding': 'gzip' }); check('the page is compressed', c === 200 && /gzip|zstd/.test(String(h['content-encoding'])), JSON.stringify(h?.['content-encoding'])) }
+  { const [c] = await get('pazurite.com', '/missing.html'); check('an unknown file is 404', c === 404, `got ${c}`) }
   for (const p of ['/api/v1/power-metrics', '/api/anything', '/api/']) {
     const [k, kb] = await get('pazurite.com', p); check(`pazurite.com${p} -> API stub 200, no login`, k === 200 && kb.startsWith(`api-ok ${p}`), `got ${k} ${kb}`)
   }
@@ -87,10 +97,11 @@ check('caddy-run.sh exists', existsSync(runner))
 if (existsSync(runner)) {
   const dep = join(tmp, 'run-depot'); mkdirSync(join(dep, 'bin'), { recursive: true }); mkdirSync(join(dep, 'caddy'), { recursive: true })
   writeFileSync(join(dep, '.env'), 'OTHER_SECRET=nope\nCLOUDFLARE_API_TOKEN=tok123\n')
-  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
+  writeFileSync(join(dep, 'bin', 'caddy'), '#!/bin/sh\nenv | grep -E "^(CLOUDFLARE_API_TOKEN|NEXUS_BASIC_AUTH_HASH|XDG_DATA_HOME|DIGISMITH_WWW|OTHER_SECRET)=" | sed "s/=.*/ set/"\necho "args: $*"\n')
   chmodSync(join(dep, 'bin', 'caddy'), 0o755)
   const r = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
   check('caddy-run.sh gives Caddy the token and a data dir, and no login hash', /CLOUDFLARE_API_TOKEN set/.test(r.stdout) && !/NEXUS_BASIC_AUTH_HASH/.test(r.stdout) && /XDG_DATA_HOME set/.test(r.stdout), r.stdout + r.stderr)
+  check('caddy-run.sh gives Caddy the web root', /DIGISMITH_WWW set/.test(r.stdout), r.stdout)
   check('caddy-run.sh does not pass other .env values', !/OTHER_SECRET/.test(r.stdout))
   writeFileSync(join(dep, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\nNEXUS_BASIC_AUTH_HASH=$2a$14$leftover\n')   // an old line in .env is not passed on either
   const old = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
