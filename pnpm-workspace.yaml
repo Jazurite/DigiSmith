@@ -1,4 +1,5 @@
 packages:
   - "packages/*"
+  - "scripts/nexus-api"
 allowBuilds:
   esbuild: true
