@@ -1,0 +1,19 @@
+// --box is derived from the grid's own width with a container query unit, so rows have exactly the same height
+// in the real grid and in the skeleton (no layout shift when the data arrives). 52 boxes, 51 gaps, one age column.
+@mixin grid-geometry {
+  container-type: inline-size;
+  --age-w: 24px;
+  --box: calc((100cqw - var(--age-w) - 52 * var(--gap)) / 52);
+  max-width: 880px;
+  margin: 0 auto;
+}
+@mixin row-geometry {
+  display: grid;
+  grid-template-columns: var(--age-w) repeat(52, var(--box));
+  grid-auto-rows: var(--box);
+  gap: var(--gap);
+  height: var(--box);
+}
+$decade-gap: 5px;
+$ruler-h: 16px;
+$ruler-gap: 4px;
