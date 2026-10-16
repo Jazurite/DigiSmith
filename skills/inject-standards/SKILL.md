@@ -79,7 +79,7 @@ gate.
 
 Whichever axis reads `on` is auto-included in **Scenario 1 (Conversation)
 only** — `technical_voice` → `global/ste100-writing` (with its
-`companions:` `ste100-word-swaps` and `ste100-use-cases`, per Step 6's
+`companions:` `ste100-word-swaps`, `ste100-use-cases` and `ai-writing-tells`, per Step 6's
 companion rule), `conversation_voice` → `global/ai-voice-conversational` —
 formatted exactly like any other Scenario 1 match (Step 6), but skipping
 Step 4's suggestion/confirm prompt entirely for these two: the repo already

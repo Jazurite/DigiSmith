@@ -12,6 +12,10 @@ These are style swaps, not hedge removal — see
 already certain the thing happens. If the outcome is genuinely still
 uncertain, keep a hedge instead of deleting it.
 
+Every row here stays a rule. The *weak alone* restraint in
+`global/ai-writing-tells.md` applies only to that file's own patterns,
+such as dashes, stacked qualifiers and passive voice.
+
 | Slop | Write instead |
 |---|---|
 | leverage, utilize | use |

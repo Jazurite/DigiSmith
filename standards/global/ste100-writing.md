@@ -42,11 +42,13 @@ mechanically.
 | Domain terms | Keep necessary technical nouns/verbs, define once if not common English | Use jargon without ever defining it |
 
 See `global/ste100-word-swaps.md` (same rule weight as the Lexical rules
-above) for a concrete slop-word substitution table and
-`global/ste100-use-cases.md` for per-genre patterns. If only this file
-gets injected, the Structural rules, Hedge preservation, and Scan
-checklist above still apply in full on their own — the two companion
-files add detail, not a missing prerequisite.
+above) for a concrete slop-word substitution table,
+`global/ste100-use-cases.md` for per-genre patterns, and
+`global/ai-writing-tells.md` for the catalog of AI-writing tells, the
+rule for counting them, the preserve list and the mark-draft-check-final
+loop. If only this file gets injected, the Structural rules, Hedge
+preservation, and Scan checklist above still apply in full on their own.
+The three companion files add detail, not a missing prerequisite.
 
 Where another standard already governs a surface's overall shape —
 `global/commit-style.md`'s title-only commits, `global/pr-descriptions.md`'s
@@ -81,6 +83,10 @@ Run this check before finalizing any drafted paragraph:
    sentence" above.
 6. **Soft phrasal verbs** — see "No phrasal verbs" above and the
    word-swap table.
+7. **Tell catalog** — mark the tells in `global/ai-writing-tells.md`
+   (strong tells on one sighting, *weak alone* tells only in a cluster),
+   then run its mark-draft-check-final loop. Sentence case is a hard rule
+   for every heading.
 
 ## Boundaries
 
