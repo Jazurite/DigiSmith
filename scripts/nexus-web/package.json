@@ -9,7 +9,7 @@
     "build-storybook": "storybook build -o storybook-static",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:built": "nuxt generate && vitest run tests/unit/built-page.test.ts",
+    "test:built": "nuxt generate && pnpm build-storybook && vitest run tests/unit/built-page.test.ts tests/unit/built-storybook.test.ts",
     "postinstall": "nuxt prepare",
     "e2e": "nuxt generate && playwright test tests/e2e",
     "e2e:install": "playwright install chromium",

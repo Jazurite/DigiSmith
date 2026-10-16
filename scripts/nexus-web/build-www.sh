@@ -24,8 +24,15 @@ if [ -n "$(find "$NEW" -name '.*' ! -path "$NEW" | head -n 1)" ]; then echo "bui
 if [ "${SKIP_STORYBOOK:-}" != 1 ]; then
   (cd "$WEB" && pnpm build-storybook) || { echo "build-www: the Storybook build failed" >&2; exit 1; }
   mkdir -p "$NEW/storybook"
-  cp -R "$WEB/storybook-static/." "$NEW/storybook/"
+  # logs/ (the Vite configs with the build machine's absolute paths) and project.json are build diagnostics: they are left out at copy time, never deleted
+  find "$WEB/storybook-static" -mindepth 1 -maxdepth 1 ! -name logs ! -name project.json -exec cp -R {} "$NEW/storybook/" \;
   if [ -n "$(find "$NEW/storybook" -name '.*' | head -n 1)" ]; then echo "build-www: the Storybook output contains a dotfile or dot-folder; not switching www" >&2; exit 1; fi
+  # fail closed: nothing that names the build machine may be published
+  if [ -n "$(find "$NEW/storybook" \( -name logs -o -name project.json -o -name '*.config.*' \) | head -n 1)" ]; then echo "build-www: the Storybook output contains logs/, project.json or a *.config.* file; not switching www" >&2; exit 1; fi
+  REPO_ROOT="$(git -C "$WEB" rev-parse --show-toplevel 2>/dev/null || true)"
+  set -- -e /Users/ -e "$WEB"
+  [ -z "$REPO_ROOT" ] || set -- "$@" -e "$REPO_ROOT"
+  if [ -n "$(grep -rIlF "$@" "$NEW/storybook" | head -n 1)" ]; then echo "build-www: the Storybook output holds an absolute build path (/Users/, the web folder or the repo root); not switching www" >&2; exit 1; fi
 fi
 # one rename: make a new symlink next to the old one, then move it over (-h: do not follow the old symlink)
 ln -sfn "www.d/$STAMP" "$NEXUS/www.next"

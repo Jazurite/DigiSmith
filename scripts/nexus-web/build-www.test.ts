@@ -13,7 +13,7 @@ function setup() {
   writeFileSync(join(bin, 'pnpm'), `#!/bin/sh
 case "$*" in
   *generate*) mkdir -p "$WEB/.output/public/_nuxt" && echo "<h1>page $STAMP</h1>" > "$WEB/.output/public/index.html" && echo x > "$WEB/.output/public/_nuxt/a.js" && { [ -z "$DOTFILE" ] || echo secret > "$WEB/.output/public/$DOTFILE"; } ;;
-  *build-storybook*) mkdir -p "$WEB/storybook-static" && echo "<h1>sb</h1>" > "$WEB/storybook-static/index.html" ;;
+  *build-storybook*) mkdir -p "$WEB/storybook-static" && echo "<h1>sb</h1>" > "$WEB/storybook-static/index.html" && { [ -z "$SB_LOGS" ] || { mkdir -p "$WEB/storybook-static/logs" && echo '{"cwd":"/Users/x/repo"}' > "$WEB/storybook-static/logs/vite-final.config.json" && echo '{}' > "$WEB/storybook-static/project.json"; }; } && { [ -z "$SB_LEAK" ] || { mkdir -p "$WEB/storybook-static/_nuxt" && echo "sourceFiles:['$SB_LEAK/app/X.vue']" > "$WEB/storybook-static/_nuxt/a.js"; }; } && { [ -z "$SB_CONFIG" ] || echo '{}' > "$WEB/storybook-static/vite.config.json"; } ;;
 esac
 `)
   chmodSync(join(bin, 'pnpm'), 0o755)
@@ -84,6 +84,36 @@ describe('build-www.sh', () => {
     const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
     expect(r.status).not.toBe(0)
     expect(r.stderr).toMatch(/built-page check failed/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+  })
+  it('does not copy storybook logs/ or project.json (build diagnostics with absolute paths)', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SB_LOGS: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(existsSync(join(s.depot, 'nexus/www/storybook/index.html'))).toBe(true)
+    expect(existsSync(join(s.depot, 'nexus/www/storybook/logs'))).toBe(false)
+    expect(existsSync(join(s.depot, 'nexus/www/storybook/project.json'))).toBe(false)
+    expect(existsSync(join(s.web, 'storybook-static/logs'))).toBe(true)   // the source is left alone
+  })
+  it('refuses a storybook output that holds an absolute /Users/ path, and does not switch www', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SB_LEAK: '/Users/someone/repo' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/absolute build path/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+  })
+  it('refuses a storybook output that holds the web folder path, and does not switch www', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SB_LEAK: s.web })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/absolute build path/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+  })
+  it('refuses a storybook output that holds a *.config.* file, and does not switch www', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SB_CONFIG: '1' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/logs\/, project.json or a \*\.config\.\*/)
     expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
   })
 })
