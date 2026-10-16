@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review Mode gaps</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2rem 1rem 4rem; }
+  h1 { font-size:1.6rem; margin:0 0 .3rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; margin-top:2rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  code { background:var(--code-bg); padding:.1rem .3rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; }
+  th, td { border:1px solid var(--border); padding:.4rem .6rem; text-align:left; vertical-align:top; }
+  th { color:var(--accent); }
+</style>
+</head>
+<body>
+<h1>Review Mode: close the gaps from its first use</h1>
+<p class="meta">DGS-492 · follow-up of DGS-277 · 2026-10-16 · worker dgs-492</p>
+
+<h2>Goal</h2>
+<p>The first real Review Mode run (EMKT-817 proposal) showed 8 gaps. Close them in two files:
+<code>skills/voice/SKILL.md</code> (Review Mode) and <code>standards/global/ai-writing-tells.md</code>.
+No other file changes, unless a companion line must name a change (none found: <code>index.yml</code>, <code>ste100-writing.md</code> and the other readers of the standard name no pattern text).</p>
+
+<h2>Changes</h2>
+<table>
+<tr><th>#</th><th>File and place</th><th>Change</th></tr>
+<tr><td>1 Output shape</td><td>SKILL.md, Review Mode step 5</td>
+<td>The marked tells are a table. One row for each tell: pattern number (or <code>STE</code> for a structural rule of <code>ste100-writing.md</code> that has no number), strength (strong / middle / weak alone / STE), the quoted text, the fix.</td></tr>
+<tr><td>2 Order</td><td>SKILL.md, step 5</td>
+<td>Group by section of the text, strongest first inside each section. Above the groups, a "Top 5" list, strongest first. This keeps both rules: the groups follow the text, the Top 5 shows what to fix first.</td></tr>
+<tr><td>3 Counting</td><td>SKILL.md, step 5</td>
+<td>Count by sighting: one heading with two tells is two sightings. The header line of the review says "counted by sighting".</td></tr>
+<tr><td>4 Pattern 20</td><td>ai-writing-tells.md, row 20</td>
+<td>A heading that is the exact title of a linked page or document is a proper name: keep its case. Test for "written for effect": the heading must name what the section holds. A question heading is fine when the section answers it. <strong>The DGS-277 heading carve-out for skill and document templates stays word for word.</strong></td></tr>
+<tr><td>5 Pattern 19</td><td>ai-writing-tells.md, row 19</td>
+<td>Bold stays on a label that carries information the sentence does not repeat (a defined term, a status, a field name). Bold on every item of a list, or a label the sentence repeats, goes.</td></tr>
+<tr><td>6 Pattern 22</td><td>ai-writing-tells.md, row 22 and "When not to act"</td>
+<td>Sign-offs and salutations are exempt only in a letter, an email or a comment addressed to a person. In a document or a page ("Let me know your thoughts... Thanks for reading.") they are a pattern 22 tell. Both places say the same thing.</td></tr>
+<tr><td>7 Pattern 25</td><td>ai-writing-tells.md, row 25</td>
+<td>Add draft placeholders and notes to the author ("Figure to attach: ...", "TODO", "TBD by ...") to the watch list.</td></tr>
+<tr><td>8 Undefined terms</td><td>SKILL.md, step 6 (Facts)</td>
+<td>For readers outside the team, flag an undefined acronym or term for the author. Never define it unless the source gives the definition. This fits the existing no-added-fact rule.</td></tr>
+</table>
+
+<h2>Decisions and reasons</h2>
+<ul>
+<li>Items 1 to 8 come from the Maestro. No technical choice was left open.</li>
+<li>The strength labels in the table reuse the three levels of "How to count tells". <code>STE</code> is the fourth value, only for rows that have no pattern number.</li>
+<li>Item 8 sits in step 6 (Facts) because it is a limit on what the rewrite may add, and an undefined term is the same risk.</li>
+<li>Item 9 (does pattern 20 reach a team's own document template) was dropped on 2026-10-16: it is Emma's concern. No open item remains.</li>
+</ul>
+
+<h2>Check</h2>
+<p>Both files are prose. There is no test script. The check: read both files after the edit, confirm each of the 8 points appears once, and confirm row 20 still holds the DGS-277 carve-out sentence unchanged.</p>
+</body>
+</html>

@@ -88,15 +88,20 @@ humanizer skill or plugin.
    patterns.
 4. **Prose only.** Code blocks, inline code, commands, paths, YAML front
    matter, data and link targets stay unchanged.
-5. **Output.** Default: return the marked tells (pattern number plus the
-   quoted sentence), a short list of tells that remain after the draft,
-   and the rewrite. Write the final text back to the file only when the
-   user asks for it. After a write-back, give a short summary of what
-   changed.
+5. **Output.** Default: return the marked tells, a short list of tells
+   that remain after the draft, and the rewrite. Write the final text
+   back to the file only when the user asks for it. After a write-back,
+   give a short summary of what changed. Shape of the marked tells:
+   - A header line with the counts by strength. Say "counted by sighting": a heading with two tells is two sightings.
+   - Above the groups, a "Top 5" list of the strongest sightings, strongest first.
+   - Then one group for each section of the text, in text order. Inside a group, strongest first.
+   - Each tell is one table row: pattern number (or `STE` for a structural rule of `ste100-writing.md` that has no number), strength (strong / middle / weak alone / STE), the quoted text, the fix.
 6. **Facts.** The rewrite adds no fact, name, number, date, quote or
    citation that the source does not give. A lost or added claim is an
    error. Hedges stay hedges (see Hedge preservation in
-   `ste100-writing.md`).
+   `ste100-writing.md`). For readers outside the team, flag an undefined
+   acronym or term for the author. Never define it unless the source gives
+   the definition.
 
 ## Error Handling
 
