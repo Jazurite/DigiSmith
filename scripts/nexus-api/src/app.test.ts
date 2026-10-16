@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createLogger } from './logger.ts'
 import { parsePowermetrics } from './parse-powermetrics.ts'
 import { buildReading } from './reading.ts'
 import { createApiServer, HOST } from './server.ts'
@@ -65,5 +66,15 @@ describe('the Hono app keeps the old power-metrics behaviour', () => {
     const r = await fetch(base + '/%E0%A4%A')
     expect([400, 404]).toContain(r.status)
     expect((await fetch(base + PATH)).status).toBe(200)
+  })
+  it('logs one line per request with the error code and no query string', async () => {
+    const lines: string[] = []
+    server = createApiServer(async () => null, { logger: createLogger(l => lines.push(l), () => 0) })
+    await new Promise<void>(r => server!.listen(0, HOST, r))
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    await fetch(base + PATH + '?secret=1')
+    expect(lines).toHaveLength(1)
+    expect(JSON.parse(lines[0])).toMatchObject({ method: 'GET', path: PATH, status: 503, code: 'no_reading' })
+    expect(lines[0]).not.toContain('secret')
   })
 })

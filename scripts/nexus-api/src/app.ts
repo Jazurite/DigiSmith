@@ -2,17 +2,28 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { ApiError, PowerMetrics } from './types.ts'
+import { createLogger, type Logger } from './logger.ts'
 import { API_VERSION } from './version.ts'
 
 export const POWER_PATH = `/api/${API_VERSION}/power-metrics` as const
 
 // c.json() would drop the charset and re-order nothing, but c.body(JSON.stringify(...)) keeps the old bytes and headers exactly.
-export function sendJson(c: Context, status: ContentfulStatusCode, body: unknown, headers: Record<string, string> = {}) {
+export type Env = { Variables: { errorCode?: string } }
+
+export function sendJson(c: Context<Env, any, any>, status: ContentfulStatusCode, body: unknown, headers: Record<string, string> = {}) {
+  const code = (body as { error?: unknown } | null)?.error
+  if (typeof code === 'string') c.set('errorCode', code)
   return c.body(JSON.stringify(body), status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers })
 }
 
-export function buildApp(getReading: () => Promise<PowerMetrics | null>) {
-  const app = new Hono()
+export function buildApp(getReading: () => Promise<PowerMetrics | null>, deps: { logger?: Logger } = {}) {
+  const logger = deps.logger ?? createLogger(() => {})   // silent unless the entry point passes the real one
+  const app = new Hono<Env>()
+  app.use('*', async (c, next) => {
+    const t = performance.now()
+    await next()
+    logger.request({ method: c.req.method, path: c.req.path, status: c.res.status, ms: performance.now() - t, code: c.get('errorCode') })
+  })
   app.all(POWER_PATH, async c => {
     // Hono runs a HEAD request through the GET route; c.req.method still says HEAD, so HEAD gets the old 405.
     if (c.req.method !== 'GET') return sendJson(c, 405, { error: 'method_not_allowed' }, { Allow: 'GET' })

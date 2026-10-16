@@ -1,7 +1,8 @@
 import { createAdaptorServer } from '@hono/node-server'
 import type { Server } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import { buildApp, POWER_PATH } from './app.ts'
+import { buildApp } from './app.ts'
+import { createLogger, type Logger } from './logger.ts'
 import { createLive } from './live.ts'
 import { createPowermetricsSource, type RunPowermetrics } from './powermetrics-source.ts'
 import { buildReading } from './reading.ts'
@@ -18,8 +19,8 @@ export function parsePort(value: string | undefined): number {
 }
 
 // Same contract as before the move: a Node http.Server that is not listening yet.
-export function createApiServer(getReading: () => Promise<PowerMetrics | null>): Server {
-  return createAdaptorServer({ fetch: buildApp(getReading).fetch }) as Server
+export function createApiServer(getReading: () => Promise<PowerMetrics | null>, deps: { logger?: Logger } = {}): Server {
+  return createAdaptorServer({ fetch: buildApp(getReading, deps).fetch }) as Server
 }
 
 export function createDefaultReader(run?: RunPowermetrics): () => Promise<PowerMetrics | null> {
@@ -33,5 +34,6 @@ export function createDefaultReader(run?: RunPowermetrics): () => Promise<PowerM
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = parsePort(process.env.PORT)
-  createApiServer(createDefaultReader()).listen(port, HOST, () => console.log(`nexus-api listening on ${HOST}:${port}${POWER_PATH}`))
+  const logger = createLogger()
+  createApiServer(createDefaultReader(), { logger }).listen(port, HOST, () => logger.info('listening', { host: HOST, port }))
 }
