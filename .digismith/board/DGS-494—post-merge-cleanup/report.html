@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-merge cleanup — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; } th,td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+</style>
+</head>
+<body>
+<h1>Post-merge cleanup — Implementation Report</h1>
+<div class="meta">Date: 2026-10-16 · Ticket: <strong>DGS-494</strong> · Branch: <code>DGS-494__post-merge-cleanup</code></div>
+
+<h2>Summary</h2>
+<p>Worker flow left its worktree and merged branch behind after a pushed merge, and a stale board file in the main checkout made <code>git merge</code> refuse. This change adds one cleanup script, a <code>post_merge_cleanup</code> preference gate, a stale-board move before the merge, and pointers in the runbook and Maestro prompt. Built inline with TDD; the Maestro approved the spec, and an independent whole-branch review found 10 items, of which the verified ones were fixed.</p>
+<p>Documents: <a href="design.md">spec</a> and <a href="plan.md">plan</a>.</p>
+
+<h2>What was delivered</h2>
+<table>
+<tr><th>Part</th><th>Result</th></tr>
+<tr><td><code>scripts/post-merge-cleanup.ts</code></td><td>Checks the branch is merged into <code>--base</code> (default <code>main</code>), deletes the post-finish pins, removes the worktree (<code>--force</code> only when every untracked file is under <code>.impeccable/</code>), runs <code>git branch -d</code>. Stops with a message on tracked changes or real untracked files. <code>--dry-run</code>, safe re-run, <code>already cleaned</code> on a second run. 11 Vitest tests against temp git repos.</td></tr>
+<tr><td>Skill Step 6</td><td>Reads <code>post_merge_cleanup</code>: <code>auto</code> runs the script, <code>ask</code> asks each time, unset asks once and saves.</td></tr>
+<tr><td>Skill Step 5 Option 1</td><td>Moves an untracked own copy of the branch's board files to <code>~/.digismith-depot/backups/&lt;branch&gt;-stale-board/</code> before the merge (<code>mv -n</code>, never a delete).</td></tr>
+<tr><td>Bootstrap, preferences, hook doc</td><td>Board files are written inside the worktree only; the new preference key is documented; the pin deletion now belongs to the script.</td></tr>
+<tr><td>Runbook and <code>.opencode/prompts/maestro.md</code></td><td>Start command carries <code>--allowedTools "Bash(node --experimental-strip-types */post-merge-cleanup.ts *)"</code>; text points at <code>preferences.post_merge_cleanup</code>. The runbook is git-excluded and was edited on disk only.</td></tr>
+</table>
+
+<h2>Review</h2>
+<p>Fixed: cache files with spaces or non-ASCII names, second-run exit code, hardcoded base branch, unguarded discard path, <code>mv</code> overwriting a backup, running the script from inside the worktree, missing wording for a declined <code>ask</code>. Kept as specced: pins deleted second.</p>
+
+<h2>Commits</h2>
+<ul>
+<li><code>ba068c6</code> docs(dgs-494): add ticket and design</li>
+<li><code>47158b5</code> feat(dgs-494): add post-merge-cleanup script</li>
+<li><code>ca95eb4</code> feat(dgs-494): gate post-merge cleanup on a preference and move stale board copies</li>
+<li><code>a8ab08a</code> fix(dgs-494): harden cleanup script and skill text after review</li>
+</ul>
+<p class="meta">DigiSmith · .digismith/board/DGS-494—post-merge-cleanup/report.html</p>
+</body>
+</html>
