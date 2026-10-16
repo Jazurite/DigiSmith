@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, symlinkSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -52,5 +52,31 @@ describe('build-www.sh', () => {
     const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
     expect(r.status).not.toBe(0)
     expect(lstatSync(join(s.depot, 'nexus/www')).isDirectory()).toBe(true)
+  })
+  it('replaces the placeholder symlink that caddy-run.sh makes before the first build', () => {
+    const s = setup()
+    mkdirSync(join(s.depot, 'nexus/www.d/empty'), { recursive: true })
+    symlinkSync('www.d/empty', join(s.depot, 'nexus/www'))
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(readlinkSync(join(s.depot, 'nexus/www'))).toBe('www.d/1')
+    expect(readFileSync(join(s.depot, 'nexus/www/index.html'), 'utf8')).toContain('page 1')
+    expect(existsSync(join(s.depot, 'nexus/www.d/empty'))).toBe(true)
+  })
+  it('a stale www.next link does not stop the switch', () => {
+    const s = setup()
+    mkdirSync(join(s.depot, 'nexus/www.d/old'), { recursive: true })
+    symlinkSync('www.d/old', join(s.depot, 'nexus/www.next'))
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(readlinkSync(join(s.depot, 'nexus/www'))).toBe('www.d/1')
+  })
+  it('runs the built-page check after generate and fails the build when it fails', () => {
+    const s = setup()
+    writeFileSync(join(s.bin, 'pnpm'), readFileSync(join(s.bin, 'pnpm'), 'utf8').replace('esac', '  *vitest*) exit 1 ;;\nesac'))
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/built-page check failed/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
   })
 })

@@ -26,7 +26,9 @@ done
 cp "$SRC/../nexus-shared/package.json" "$DEPOT/nexus-shared/package.json"
 cp "$SRC/seed-profile.ts" "$DEPOT/nexus-api/seed-profile.ts"
 # the shared files import zod: point them at the API's node_modules (one install, no second copy)
-rm -rf "$DEPOT/nexus-shared/node_modules"; ln -s ../nexus-api/node_modules "$DEPOT/nexus-shared/node_modules"
+P="$DEPOT/nexus-shared/node_modules"
+if [ -L "$P" ]; then rm "$P"; elif [ -e "$P" ]; then echo "install: $P is a real directory; move it away first (Jack decides)" >&2; exit 1; fi
+ln -s ../nexus-api/node_modules "$P"
 # DGS-481: the API now has runtime dependencies. DGS_SKIP_PNPM=1 is for tests only (they link node_modules instead).
 if [ "${DGS_SKIP_PNPM:-}" != 1 ]; then
   command -v pnpm >/dev/null 2>&1 || { echo "install: pnpm not found" >&2; exit 1; }

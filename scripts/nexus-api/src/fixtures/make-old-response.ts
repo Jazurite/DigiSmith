@@ -14,4 +14,4 @@ const port = (server.address() as AddressInfo).port
 const text = await (await fetch(`http://127.0.0.1:${port}/api/v1/power-metrics`)).text()
 writeFileSync(new URL('./power-metrics-old-response.json', import.meta.url), text)
 server.close()
-console.log('stored', text.length, 'bytes')
+process.stdout.write(`stored ${text.length} bytes\n`)

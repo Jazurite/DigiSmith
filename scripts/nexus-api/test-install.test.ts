@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync, symlinkSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,6 +25,22 @@ describe('install.sh', () => {
   })
   it('copies no tests into nexus-shared', () => {
     expect(readdirSync(join(depot, 'nexus-shared')).filter(f => f.endsWith('.test.ts'))).toEqual([])
+  })
+  it('a second run is idempotent and keeps nexus-shared/node_modules a symlink', () => {
+    const again = sh([join(HERE, 'install.sh')], { HOME: home, DEPOT: depot, DGS_SKIP_PNPM: '1' })
+    expect(again.status, again.stderr).toBe(0)
+    expect(readlinkSync(join(depot, 'nexus-shared/node_modules'))).toBe('../nexus-api/node_modules')
+  })
+  it('refuses a real directory at nexus-shared/node_modules and leaves it alone', () => {
+    const h = mkdtempSync(join(tmpdir(), 'nexus-install-real-'))
+    const d = join(h, 'depot')
+    mkdirSync(join(d, 'nexus-shared/node_modules'), { recursive: true })
+    writeFileSync(join(d, 'nexus-shared/node_modules/keep.txt'), 'keep')
+    const bad = sh([join(HERE, 'install.sh')], { HOME: h, DEPOT: d, DGS_SKIP_PNPM: '1' })
+    expect(bad.status).not.toBe(0)
+    expect(bad.stderr).toMatch(/real directory/)
+    expect(lstatSync(join(d, 'nexus-shared/node_modules')).isDirectory()).toBe(true)
+    expect(readFileSync(join(d, 'nexus-shared/node_modules/keep.txt'), 'utf8')).toBe('keep')
   })
   it('wrapper has the absolute node path baked in and no placeholder', () => {
     const w = readFileSync(join(depot, 'bin/nexus-api'), 'utf8')

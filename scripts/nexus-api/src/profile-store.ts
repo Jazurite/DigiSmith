@@ -33,8 +33,13 @@ export async function openStore(dataDir: string | undefined, opts: { create?: bo
     }
   }
   const db = dataDir === undefined ? new PGlite() : new PGlite(dataDir)
-  await db.waitReady
-  await db.exec(SCHEMA)
+  try {
+    await db.waitReady
+    await db.exec(SCHEMA)
+  } catch (e) {
+    try { await db.close() } catch { /* already closed or never opened */ }
+    throw e
+  }
   return {
     async save(sealed, keyVersion) {
       await db.query(

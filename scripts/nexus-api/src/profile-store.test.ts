@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { chmodSync, writeFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -55,5 +55,14 @@ describe('profile store (a real data folder)', () => {
     mkdirSync(dir, { mode: 0o755 }); chmodSync(dir, 0o755)
     await expect(openStore(dir, { create: false })).rejects.toBeInstanceOf(StoreError)
     await expect(openStore(dir, { create: false })).rejects.toMatchObject({ code: 'profile_invalid' })
+  }, T)
+})
+
+describe('profile store (failed start)', () => {
+  it('throws instead of hanging when the data path is a file, and leaves the file alone', async () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'store-bad-')), 'not-a-dir')
+    writeFileSync(f, 'x', { mode: 0o600 })
+    await expect(openStore(f)).rejects.toThrow()
+    expect(readFileSync(f, 'utf8')).toBe('x')
   }, T)
 })

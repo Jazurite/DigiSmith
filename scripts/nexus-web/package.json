@@ -8,6 +8,7 @@
     "build-storybook": "nuxt build-storybook",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
+    "test:built": "nuxt generate && vitest run tests/unit/built-page.test.ts",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
