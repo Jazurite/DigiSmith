@@ -1,5 +1,6 @@
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
+import { createGzip } from 'node:zlib'
 import type { AddressInfo } from 'node:net'
 import { extname, join, normalize } from 'node:path'
 import { getRequestListener } from '@hono/node-server'
@@ -30,7 +31,14 @@ export async function startStub(opts: { dir: string; port?: number }) {
     let file = join(opts.dir, normalize(url).replace(/^(\.\.[/\\])+/, ''))
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html')
     if (!existsSync(file)) { res.writeHead(404); res.end(); return }
-    res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' })
+    const type = TYPES[extname(file)] ?? 'application/octet-stream'
+    // like any real web server, compress the text files: the Lighthouse budgets count transferred bytes
+    if (/^(text\/|application\/json|image\/svg)/.test(type) && /\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
+      res.writeHead(200, { 'content-type': type, 'content-encoding': 'gzip', vary: 'accept-encoding' })
+      createReadStream(file).pipe(createGzip()).pipe(res)
+      return
+    }
+    res.writeHead(200, { 'content-type': type })
     createReadStream(file).pipe(res)
   })
   await new Promise<void>(r => server.listen(opts.port ?? 0, '127.0.0.1', r))

@@ -1,34 +1,37 @@
 <script setup lang="ts">
 if (typeof performance !== 'undefined') performance.mark('grid-setup')
-import { boxRange, formatLong } from '#days'
+import { boxRange } from '#days'
 import type { LifeCalendar } from '#life-schema'
+import { createChunkScheduler } from '../utils/chunk-scheduler'
+import { BOXES, boxLabel } from '../utils/grid-label'
 import { nearestBox, nextCell } from '../utils/grid-nav'
 import { placeTooltip } from '../utils/tooltip-place'
 import type { TipInfo } from './WeekTooltip.vue'
 
-const props = defineProps<{ data: LifeCalendar }>()
-const BOXES = 52
+// eager: render every row at once (unit tests); the page renders in chunks of 10 rows
+const props = defineProps<{ data: LifeCalendar; eager?: boolean }>()
+const CHUNK = 10
 const cur = props.data.current
 // the one tab stop: this week, or the first box when there is none
 const startRow = cur?.row ?? 0
 const startBox = cur?.box ?? 0
 
-function stateOf(rowLived: number, age: number, b: number): 'lived' | 'current' | 'ahead' {
-  if (b < rowLived) return 'lived'
-  if (cur && cur.row === age && cur.box === b) return 'current'
-  return 'ahead'
-}
-const WORD = { lived: 'lived', current: 'this week', ahead: 'ahead' } as const
-function label(row: LifeCalendar['rows'][number], b: number, state: 'lived' | 'current' | 'ahead'): string {
-  const r = boxRange(row, b)
-  return `Age ${row.age}, week ${b + 1} of ${BOXES}, ${formatLong(r.from)} to ${formatLong(r.to)}, ${WORD[state]}`
-}
 const MARK_SPAN = 7   // a mark spans 7 columns so its text stays inside the grid; the last one is anchored to the right edge
 const WEEK_MARKS = [0, 12, 25, 38, 51]
 // the real starting grid column of a mark (column 1 is the label column), so assistive tech does not map the headers by position
 const markStart = (m: number) => (m === BOXES - 1 ? m + 3 - MARK_SPAN : m + 2)
-const lastRow = props.data.rows.length - 1
-onMounted(() => performance.measure('grid-render', 'grid-setup'))
+const total = props.data.rows.length
+const shown = ref(props.eager ? total : Math.min(CHUNK, total))
+const scheduler = createChunkScheduler({ total, size: props.eager ? total : CHUNK, onChange: (n) => { shown.value = n } })
+const chunks = computed(() => Array.from({ length: Math.ceil(shown.value / CHUNK) }, (_, c) => c))
+const complete = computed(() => shown.value >= total)
+// space of the rows not drawn yet, so the layout never moves when the next chunks arrive
+const spacer = computed(() => {
+  let extra = 0
+  for (let a = shown.value; a < total; a++) if ((a + 1) % 10 === 0 && a < total - 1) extra += 5
+  return `calc(${total - shown.value} * (var(--box) + var(--gap)) + ${extra}px)`
+})
+onMounted(() => { performance.measure('grid-render', 'grid-setup'); scheduler.start() })
 
 const tip = ref<TipInfo | null>(null)
 const mode = ref<'pointer' | 'readout'>('pointer')
@@ -52,7 +55,7 @@ function describe(el: HTMLElement | null) { described = el }
 const liveText = computed(() => {
   const t = tip.value
   const row = t ? props.data.rows[t.age] : undefined
-  return t && row && mode.value === 'readout' ? label(row, t.week - 1, t.state) : ''
+  return t && row && mode.value === 'readout' ? boxLabel(row, t.week - 1, t.state) : ''
 })
 function move(x: number, y: number) {
   cancelAnimationFrame(frame)
@@ -102,7 +105,7 @@ function showAnchored(el: HTMLElement) {
   const r = el.getBoundingClientRect()
   move(r.left + r.width / 2, r.top)
 }
-function onKeydown(e: KeyboardEvent) {
+async function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') { hide(); return }
   // leave browser shortcuts alone (Alt+Arrow = Back); Ctrl/Cmd only mean something with Home and End
   if (e.altKey || e.shiftKey) return
@@ -113,10 +116,18 @@ function onKeydown(e: KeyboardEvent) {
   const next = nextCell(e.key, mod, { row: Number(el.dataset.row), box: Number(el.dataset.box) }, props.data.rows.length)
   if (!next) return
   e.preventDefault()
-  const target = document.querySelector<HTMLElement>(`#calendar-grid [data-row="${next.row}"][data-box="${next.box}"]`)
+  const find = () => document.querySelector<HTMLElement>(`#calendar-grid [data-row="${next.row}"][data-box="${next.box}"]`)
+  if (!find()) { scheduler.ensure(next.row); await nextTick() }   // the row is not drawn yet: draw its chunks now
+  const target = find()
   if (target) { activate(target); showAnchored(target) }
 }
-function onFocusIn(e: FocusEvent) {
+async function onFocusIn(e: FocusEvent) {
+  if (e.target === e.currentTarget) {   // while the this-week row is not drawn the grid itself is the tab stop: draw everything and hand the focus to the real one
+    scheduler.flush(); await nextTick()
+    const start = document.querySelector<HTMLElement>(`#calendar-grid [data-row="${startRow}"][data-box="${startBox}"]`)
+    if (start) activate(start)
+    return
+  }
   const el = cellOf(e.target)
   if (!el) return
   setStop(el)
@@ -141,30 +152,18 @@ watch(tip, (v) => {
   if (v) { document.addEventListener('keydown', onDocKeydown); document.addEventListener('pointerup', onDocPointerUp) }
   else { document.removeEventListener('keydown', onDocKeydown); document.removeEventListener('pointerup', onDocPointerUp) }
 })
-onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onDocKeydown); document.removeEventListener('pointerup', onDocPointerUp) })
+onBeforeUnmount(() => { scheduler.stop(); cancelAnimationFrame(frame); document.removeEventListener('keydown', onDocKeydown); document.removeEventListener('pointerup', onDocPointerUp) })
 </script>
 
 <template>
   <div class="grid-wrap">
-  <div id="calendar-grid" v-once class="grid" role="grid" @pointermove="onPointerMove" @pointerleave="onPointerLeave" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
+  <div id="calendar-grid" class="grid" role="grid" :data-rendered="complete ? 'complete' : 'pending'" :tabindex="shown > startRow ? undefined : 0" @pointermove="onPointerMove" @pointerleave="onPointerLeave" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
     <div class="row ruler" role="row">
       <span class="corner" role="columnheader" aria-colindex="1">Age</span>
       <span v-for="m in WEEK_MARKS" :key="m" class="mark" :class="{ last: m === BOXES - 1 }" role="columnheader" :aria-colindex="markStart(m)" :style="{ gridColumn: m === BOXES - 1 ? `${m + 3 - MARK_SPAN} / ${m + 3}` : `${m + 2} / span ${MARK_SPAN}` }">Week {{ m + 1 }}</span>
     </div>
-    <div v-for="row in data.rows" :key="row.age" class="row" :class="{ 'decade-end': (row.age + 1) % 10 === 0 && row.age < lastRow }" role="row">
-      <span class="age" :class="{ labelled: row.age % 10 === 0 }" role="rowheader">
-        <span v-if="row.age % 10 === 0" aria-hidden="true">{{ row.age }}</span>
-        <span class="sr-only">Age {{ row.age }}</span>
-      </span>
-      <div
-        v-for="n in BOXES" :key="n"
-        class="box" role="gridcell"
-        :class="stateOf(row.lived, row.age, n - 1)"
-        :data-row="row.age" :data-box="n - 1" :data-state="stateOf(row.lived, row.age, n - 1)"
-        :tabindex="row.age === startRow && n - 1 === startBox ? 0 : -1"
-        :aria-label="label(row, n - 1, stateOf(row.lived, row.age, n - 1))"
-      />
-    </div>
+    <GridRows v-for="c in chunks" :key="c" :data="data" :from="c * CHUNK" :to="Math.min((c + 1) * CHUNK, total)" :start-row="startRow" :start-box="startBox" />
+    <div v-if="!complete" class="pending" aria-hidden="true" :style="{ height: spacer }" />
   </div>
   <div class="sr-only" aria-live="polite" aria-atomic="true" data-testid="grid-live">{{ liveText }}</div>
   <Teleport to="body"><WeekTooltip :info="tip" :mode="mode" /></Teleport>
@@ -175,7 +174,6 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListene
 @use '../assets/grid' as g;
 .grid { @include g.grid-geometry; }
 .row { @include g.row-geometry; margin-bottom: var(--gap); }
-.row.decade-end { margin-bottom: calc(var(--gap) + #{g.$decade-gap}); }
 .ruler { height: g.$ruler-h; grid-auto-rows: auto; margin-bottom: g.$ruler-gap; color: var(--ink-2); font-size: 11px; line-height: g.$ruler-h; }
 .corner { grid-column: 1; }
 .mark { white-space: nowrap; overflow: hidden; }
@@ -183,15 +181,4 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListene
 @media (max-width: 639px) { .ruler { font-size: 10px; } }
 @media (max-width: 379px) { .ruler { font-size: 9px; letter-spacing: -0.01em; } }   // "Week 13" must fit its 7 columns at 360 px
 @media (max-width: 339px) { .ruler { font-size: 8px; letter-spacing: -0.02em; } }   // and at 320 px
-.age { grid-column: 1; align-self: center; color: var(--ink-2); font-size: 11px; line-height: 1; }
-.box { border-radius: var(--radius-box); outline: none; }
-.lived { background: var(--ink); }
-.ahead { box-shadow: inset 0 0 0 1px var(--ahead); }
-.current { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); position: relative; z-index: 1; }
-.box:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; position: relative; z-index: 2; }
-.selected { outline: 2px solid var(--ink); outline-offset: 1px; }
-.box.current:focus-visible { outline-width: 3px; }
-@media (forced-colors: active) {
-  .lived { background: CanvasText; } .ahead { box-shadow: none; border: 1px solid GrayText; } .current { background: Highlight; box-shadow: none; }
-}
 </style>

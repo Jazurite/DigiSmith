@@ -18,6 +18,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' })
       await page.goto(`${url}/iframe.html?id=${e.id}&viewMode=story`)
       await page.locator('#storybook-root > *').first().waitFor()
+      await page.waitForFunction(() => !document.querySelector('[data-rendered="pending"]'))   // the grid draws its rows in chunks
       await page.evaluate(() => document.fonts.ready)
       await expect(page).toHaveScreenshot(`${e.id}-${scheme}-${info.project.name}.png`, { fullPage: true })
     })

@@ -28,6 +28,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme })
       await page.goto(`${url}/iframe.html?id=${e.id}&viewMode=story`)
       await page.locator('#storybook-root > *').first().waitFor()
+      await page.waitForFunction(() => !document.querySelector('[data-rendered="pending"]'))   // the grid draws its rows in chunks
       // target-size on the grid boxes is the one recorded exception (tests/a11y/EXCEPTIONS.md)
       const all = await analyzeWhenFree(() => new AxeBuilder({ page }).include('#storybook-root').withTags(TAGS).disableRules(['target-size', 'region']).analyze())
       const size = await analyzeWhenFree(() => new AxeBuilder({ page }).include('#storybook-root').withRules(['target-size']).exclude('[role="gridcell"]').analyze())

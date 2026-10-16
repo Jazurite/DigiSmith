@@ -6,7 +6,7 @@ import CalendarGrid from './CalendarGrid.vue'
 import WeekTooltip from './WeekTooltip.vue'
 
 const cell = (w: any, r: number, b: number) => w.find(`[data-row="${r}"][data-box="${b}"]`)
-async function grid() { return mountSuspended(CalendarGrid, { props: { data: fixture() }, attachTo: document.body }) }
+async function grid() { return mountSuspended(CalendarGrid, { props: { eager: true, data: fixture() }, attachTo: document.body }) }
 
 describe('WeekTooltip', () => {
   it('shows the Designer text: age and week, date range, state', async () => {

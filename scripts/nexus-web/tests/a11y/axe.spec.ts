@@ -22,6 +22,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.goto(app.url)
       if (mode === 'locked' || mode === 'empty' || mode === 'down') await expect(page.locator('.panel')).toBeVisible()
       else await expect(page.locator('[role="gridcell"]')).toHaveCount(4680)
+      await page.waitForFunction(() => !document.querySelector('[data-rendered="pending"]'))   // the grid draws its rows in chunks
       expect(await violations(page)).toEqual([])
     })
   }
@@ -29,6 +30,8 @@ for (const scheme of ['light', 'dark'] as const) {
     test.setTimeout(AXE_TIMEOUT)
     await page.emulateMedia({ colorScheme: scheme })
     await page.goto(app.url)
+    await expect(page.locator('[role="gridcell"]')).toHaveCount(4680)
+    await page.waitForFunction(() => !document.querySelector('[data-rendered="pending"]'))   // the grid draws its rows in chunks
     await page.locator('[data-row="36"][data-box="41"]').focus()
     await expect(page.getByRole('tooltip')).toBeVisible()
     expect(await violations(page)).toEqual([])

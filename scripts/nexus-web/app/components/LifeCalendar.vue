@@ -11,7 +11,8 @@ async function load(isRetry = false) {
   const recovered = isRetry && next.kind === 'loaded'
   state.value = next
   retrying.value = false
-  if (recovered) { await nextTick(); document.getElementById('calendar-grid')?.querySelector<HTMLElement>('[tabindex="0"]')?.focus() }
+  // until this week's row is drawn the grid itself is the tab stop and hands the focus on
+  if (recovered) { await nextTick(); const grid = document.getElementById('calendar-grid'); (grid?.querySelector<HTMLElement>('[tabindex="0"]') ?? grid)?.focus() }
 }
 function scheduleMidnight() {
   timer = setTimeout(async () => { await load(); scheduleMidnight() }, msUntilNextMidnightUtc7(Date.now()) + 1000)

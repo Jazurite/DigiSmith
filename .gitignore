@@ -11,6 +11,7 @@ dist/
 scripts/nexus-web/.nuxt/
 scripts/nexus-web/.output/
 scripts/nexus-web/storybook-static/
+scripts/nexus-web/*.log
 scripts/nexus-web/test-results/
 scripts/nexus-web/playwright-report/
 scripts/nexus-web/.lighthouseci/
