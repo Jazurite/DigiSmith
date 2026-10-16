@@ -16,9 +16,10 @@ describe('StatsBar', () => {
     expect((await mountSuspended(StatsBar, { props: { totals: BEFORE_BIRTH().totals, loading: false } })).findAll('dd').map(e => e.text())).toEqual(['0', '4,680', '0.0%'])
     expect((await mountSuspended(StatsBar, { props: { totals: PAST_LAST_ROW().totals, loading: false } })).findAll('dd').map(e => e.text())).toEqual(['4,680', '0', '100.0%'])
   })
-  it('loading: bars, aria-busy and a polite live region; no numbers', async () => {
+  it('loading: bars and aria-busy; no numbers (the live region lives in LifeCalendarView, so it is never replaced)', async () => {
     const w = await mountSuspended(StatsBar, { props: { totals: null, loading: true } })
-    expect(w.find('[aria-live="polite"]').attributes('aria-busy')).toBe('true')
+    expect(w.find('[aria-busy]').attributes('aria-busy')).toBe('true')
+    expect(w.find('[aria-live]').exists()).toBe(false)
     expect(w.findAll('.bar')).toHaveLength(3)
   })
   it('error forms show a dash', async () => {

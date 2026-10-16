@@ -9,11 +9,22 @@ const meta = computed(() => {
   if (s.kind === 'loaded') return `Updated ${s.data.readAtUtc7.slice(11, 16)}, UTC+7`
   return 'Not available'
 })
+// ONE live region for the whole widget, never replaced: a region created together with its text is not announced
+const announce = computed(() => {
+  const s = props.state
+  if (s.kind === 'loading') return 'Loading your calendar…'
+  if (s.kind === 'loaded') {
+    const t = s.data.totals
+    return `Calendar loaded. ${t.weeksLived.toLocaleString('en-US')} weeks lived, ${t.weeksLeft.toLocaleString('en-US')} weeks left, ${t.percentLived.toFixed(1)}% lived.`
+  }
+  return ''   // the error panel announces itself (role alert or status)
+})
 </script>
 
 <template>
   <WidgetFrame title="Life Calendar" :meta="meta">
     <div id="calendar" class="area">
+      <div class="sr-only" role="status" data-testid="calendar-live">{{ announce }}</div>
       <LifeCalendarLoaded v-if="state.kind === 'loaded'" :data="state.data" />
       <template v-else>
         <StatsBar :totals="null" :loading="state.kind === 'loading'" />

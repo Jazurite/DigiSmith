@@ -7,7 +7,7 @@ const WORD = { lived: 'Lived', current: 'This week', ahead: 'Ahead' } as const
 </script>
 
 <template>
-  <div v-if="info" id="week-tooltip" class="tip" :class="[mode, { inline }]" :role="mode === 'pointer' ? 'tooltip' : 'status'">
+  <div v-if="info" id="week-tooltip" class="tip" :class="[mode, { inline }]" :role="mode === 'pointer' ? 'tooltip' : undefined" :aria-hidden="mode === 'readout' ? 'true' : undefined">
     <strong>Age {{ info.age }} · Week {{ info.week }} of 52</strong>
     <span>{{ formatShort(info.from) }} – {{ formatShort(info.to) }}</span>
     <span class="state"><i class="sw" :class="info.state" aria-hidden="true" />{{ WORD[info.state] }}</span>

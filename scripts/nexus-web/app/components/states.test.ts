@@ -27,7 +27,10 @@ describe('StatePanel', () => {
     expect(w.emitted('retry')).toHaveLength(1)
     await w.setProps({ retrying: true })
     expect(w.find('button').text()).toBe('Retrying…')
-    expect(w.find('button').attributes('disabled')).toBeDefined()
+    expect(w.find('button').attributes('disabled')).toBeUndefined()   // aria-disabled keeps the focus on the button
+    expect(w.find('button').attributes('aria-disabled')).toBe('true')
+    await w.find('button').trigger('click')
+    expect(w.emitted('retry')).toHaveLength(1)   // a click while busy does nothing
   })
 })
 

@@ -40,7 +40,7 @@ test.describe('touch', () => {
     await page.goto(app.url)
     const box = await page.locator('[data-row="36"][data-box="41"]').boundingBox()
     await page.touchscreen.tap(box!.x + box!.width / 2 + 2, box!.y + box!.height / 2 + 2)   // beside the box (the boxes are 6.4 px apart on a phone), inside the 14 px radius
-    const readout = page.getByRole('status').filter({ hasText: 'Age 36' })
+    const readout = page.locator('.tip.readout').filter({ hasText: 'Age 36' })   // visual only (aria-hidden): the grid live region announces it
     await expect(readout).toContainText('Week 42 of 52')
     const r = await readout.boundingBox()
     expect(r!.y + r!.height).toBeGreaterThan(844 - 40)   // pinned to the bottom of the screen

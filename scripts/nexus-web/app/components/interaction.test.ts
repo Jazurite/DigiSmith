@@ -16,9 +16,10 @@ describe('WeekTooltip', () => {
     expect(w.text()).toContain('15 Oct 2026 – 21 Oct 2026')
     expect(w.text()).toContain('This week')
   })
-  it('the touch readout is a status region and shows the same text', async () => {
+  it('the touch readout shows the same text and is hidden from assistive tech (the grid live region announces it)', async () => {
     const w = await mountSuspended(WeekTooltip, { props: { mode: 'readout', info: { age: 0, week: 1, from: '1990-01-01', to: '1990-01-07', state: 'lived' } } })
-    expect(w.attributes('role')).toBe('status')
+    expect(w.attributes('role')).toBeUndefined()
+    expect(w.attributes('aria-hidden')).toBe('true')
     expect(w.text()).toContain('Lived')
   })
   it('renders nothing when there is no info', async () => {
@@ -31,7 +32,7 @@ describe('keyboard on the grid', () => {
     const w = await mountSuspended(WeekTooltip, { props: { mode: 'pointer', inline: true, info: { age: 1, week: 1, from: '1990-01-01', to: '1990-01-07', state: 'lived' } } })
     expect(w.find('.tip').classes()).toContain('inline')
   })
-  it('arrow keys move the one tab stop and focus, and describe the box by the tooltip', async () => {
+  it('arrow keys move the one tab stop and focus; the box is not described by the tooltip (its aria-label already says it)', async () => {
     const w = await grid()
     const start = cell(w, 36, 41)
     ;(start.element as HTMLElement).focus()
@@ -39,11 +40,11 @@ describe('keyboard on the grid', () => {
     expect(cell(w, 36, 42).attributes('tabindex')).toBe('0')
     expect(start.attributes('tabindex')).toBe('-1')
     expect(document.activeElement).toBe(cell(w, 36, 42).element)
-    expect(cell(w, 36, 42).attributes('aria-describedby')).toBe('week-tooltip')
+    expect(cell(w, 36, 42).attributes('aria-describedby')).toBeUndefined()
     expect(w.findAll('[tabindex="0"]')).toHaveLength(1)
     w.unmount()
   })
-  it('focus shows the tooltip over the box; Escape hides it and removes aria-describedby', async () => {
+  it('focus shows the tooltip over the box; Escape hides it', async () => {
     const w = await grid()
     const c = cell(w, 10, 5)
     ;(c.element as HTMLElement).focus()
@@ -51,7 +52,6 @@ describe('keyboard on the grid', () => {
     expect(document.getElementById('week-tooltip')?.textContent).toContain('Age 10 · Week 6 of 52')
     await c.trigger('keydown', { key: 'Escape' })
     expect(document.getElementById('week-tooltip')).toBeNull()
-    expect(c.attributes('aria-describedby')).toBeUndefined()
     w.unmount()
   })
   it('hover with a mouse shows it, leaving hides it; there is one tooltip element only', async () => {
@@ -101,6 +101,30 @@ describe('keyboard on the grid', () => {
     await c.trigger('focusin')
     expect(c.attributes('tabindex')).toBe('0')
     expect(w.findAll('[tabindex="0"]')).toHaveLength(1)
+    w.unmount()
+  })
+})
+
+describe('the grid live region (touch readout)', () => {
+  const live = (w: any) => w.find('[data-testid="grid-live"]')
+  it('is one persistent polite region, empty until a touch readout shows', async () => {
+    const w = await grid()
+    const el = live(w).element
+    expect(live(w).attributes('aria-live')).toBe('polite')
+    expect(live(w).attributes('aria-atomic')).toBe('true')
+    expect(live(w).text()).toBe('')
+    await cell(w, 36, 41).trigger('pointerup', { pointerType: 'touch', clientX: 1, clientY: 1 })
+    expect(live(w).element).toBe(el)   // the same element, so the change is announced
+    w.unmount()
+  })
+  it('keyboard and mouse tooltips do not write to it (focus already reads the aria-label; no double reading)', async () => {
+    const w = await grid()
+    const c = cell(w, 10, 5)
+    ;(c.element as HTMLElement).focus()
+    await c.trigger('focusin')
+    expect(live(w).text()).toBe('')
+    await cell(w, 36, 41).trigger('pointermove', { pointerType: 'mouse', clientX: 100, clientY: 100 })
+    expect(live(w).text()).toBe('')
     w.unmount()
   })
 })

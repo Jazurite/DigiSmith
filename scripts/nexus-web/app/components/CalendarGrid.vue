@@ -44,11 +44,14 @@ function infoOf(el: HTMLElement): TipInfo | null {
   const r = boxRange(row, box)
   return { age: row.age, week: box + 1, from: r.from, to: r.to, state: el.dataset.state as TipInfo['state'] }
 }
-function describe(el: HTMLElement | null) {
-  described?.removeAttribute('aria-describedby')
-  described = el
-  el?.setAttribute('aria-describedby', 'week-tooltip')
-}
+// The tooltip text is already each box's aria-label, so the box is NOT described by the tooltip (no double reading).
+function describe(el: HTMLElement | null) { described = el }
+// Touch moves no focus, so the readout is announced by ONE persistent live region whose text changes.
+const liveText = computed(() => {
+  const t = tip.value
+  const row = t ? props.data.rows[t.age] : undefined
+  return t && row && mode.value === 'readout' ? label(row, t.week - 1, t.state) : ''
+})
 function move(x: number, y: number) {
   cancelAnimationFrame(frame)
   frame = requestAnimationFrame(() => {
@@ -161,6 +164,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListene
       />
     </div>
   </div>
+  <div class="sr-only" aria-live="polite" aria-atomic="true" data-testid="grid-live">{{ liveText }}</div>
   <Teleport to="body"><WeekTooltip :info="tip" :mode="mode" /></Teleport>
   </div>
 </template>
@@ -175,6 +179,8 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListene
 .mark { white-space: nowrap; overflow: hidden; }
 .mark.last { text-align: right; }
 @media (max-width: 639px) { .ruler { font-size: 10px; } }
+@media (max-width: 379px) { .ruler { font-size: 9px; letter-spacing: -0.01em; } }   // "Week 13" must fit its 7 columns at 360 px
+@media (max-width: 339px) { .ruler { font-size: 8px; letter-spacing: -0.02em; } }   // and at 320 px
 .age { grid-column: 1; align-self: center; color: var(--ink-2); font-size: 11px; line-height: 1; }
 .box { border-radius: var(--radius-box); outline: none; }
 .lived { background: var(--ink); }

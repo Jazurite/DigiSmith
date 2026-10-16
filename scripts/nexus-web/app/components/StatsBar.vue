@@ -9,7 +9,7 @@ const percent = computed(() => props.totals ? `${props.totals.percentLived.toFix
 </script>
 
 <template>
-  <div aria-live="polite" :aria-busy="loading ? 'true' : 'false'">
+  <div :aria-busy="loading ? 'true' : 'false'">
     <dl class="stats">
       <StatItem label="weeks lived" :value="lived" :loading="loading" />
       <StatItem label="weeks left" :value="left" :loading="loading" />
