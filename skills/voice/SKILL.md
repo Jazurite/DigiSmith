@@ -13,7 +13,7 @@ already shipped as content: `technical_voice`
 (`standards/global/ai-voice-conversational.md`, T.5). Persisted via the
 existing H-lineage preference store (`digismith:preferences`) — no new
 store, no named-voice registry (exactly one real standard exists per axis
-today).
+today). The skill also reviews a draft file or pasted text against those standards (Review Mode, below).
 
 ## Invoked By
 
@@ -79,7 +79,7 @@ humanizer skill or plugin.
    `companions:` from `standards/index.yml`, which include
    `global/ai-writing-tells.md`. A review is an explicit request, so it
    runs even when `technical_voice` is off. Say so in one line when it is
-   off. When the text is a reply inside a conversation, also read
+   off (check with `--action status`). When the text is a reply inside a conversation, also read
    `standards/global/ai-voice-conversational.md` and apply its rule 11.
 3. **Process.** Run the loop in `ai-writing-tells.md` ("Mark, draft,
    check, final") with the structural rules of `ste100-writing.md`. Any
