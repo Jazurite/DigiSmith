@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life dashboard on Nexus: the Life Calendar (design)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Life dashboard on Nexus: the Life Calendar (design)</h1>
+  <div class="meta">
+    <span>Date: 2026-10-16</span>
+    <span>Ticket: DGS-481</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal and scope</a></li>
+    <li><a href="#privacy">Privacy and the date-range decision</a></li>
+    <li><a href="#pieces">Pieces and where they live</a></li>
+    <li><a href="#counting">Counting rule</a></li>
+    <li><a href="#schema">Shared schema and the API JSON</a></li>
+    <li><a href="#db">Database: PGlite</a></li>
+    <li><a href="#crypto">Encryption at rest and the key</a></li>
+    <li><a href="#seed">Seed step</a></li>
+    <li><a href="#errors">Errors</a></li>
+    <li><a href="#page">The page</a></li>
+    <li><a href="#caddy">Caddy route for /</a></li>
+    <li><a href="#tests">Tests</a></li>
+    <li><a href="#deploy">Deploy steps</a></li>
+    <li><a href="#later">Not in version 1</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>1. Goal and scope</h2>
+<p>Jack's private life dashboard is the home page of <code>https://pazurite.com/</code>. Version 1 has one widget, the Life Calendar: a life in weeks. The page draws a grid of 90 rows (one per year of age) of 52 boxes. Weeks lived are filled, this week uses the one accent colour, weeks ahead are outlined. Above the grid are weeks lived, weeks left and % lived. Each box has a tooltip with age, week number and date range. The look is black and white with one accent colour, and dark mode follows the device.</p>
+<p>The data comes from <code>GET /api/v1/life-calendar</code> on the Nexus API. Access is tailnet only, with no login (login design: DGS-458). Stack: TypeScript on the API and on the page, SCSS, Vitest, Playwright, pnpm, no UI framework. This document is the architecture and solution design. It contains no code.</p>
+</section>
+
+<section id="privacy">
+<h2>2. Privacy and the date-range decision</h2>
+<div class="callout">
+<strong>Decision A (Jack, 2026-10-16).</strong> The tooltips keep their date ranges. They reveal Jack's birth date to anyone who can see the page or the JSON (today only his devices on the tailnet). Jack accepts this.
+</div>
+<p>Why it reveals the date: box 0 of row 0 starts on the birth date, and <code>rows[0].start</code> in the JSON is that date. The API still has no field named for a birth date, and the schema forbids one (section 5).</p>
+<ul>
+<li>The birth date and the life length are secret. They never appear in the repo, ClickUp, a spec, a plan, a test, a log or a pane. Tests use a fake profile.</li>
+<li>The real values exist in two places only: the private input file <code>~/.digismith-depot/nexus/profile.private.json</code> (fields <code>birthDate</code> as YYYY-MM-DD and <code>lifeYears</code> as a number, mode 600), and, encrypted, in the database.</li>
+<li>Nobody in this work opens the private input file. Only the seed step reads it, when Jack runs the step.</li>
+<li>FileVault is off on the Workbox and cannot be turned on (it breaks the headless auto-login). The encryption in section 7 is therefore the protection at rest.</li>
+</ul>
+</section>
+
+<section id="pieces">
+<h2>3. Pieces and where they live</h2>
+<div class="table-wrap"><table>
+<tr><th>Piece</th><th>Path in the repo</th><th>Runs as</th></tr>
+<tr><td>Shared schema and types</td><td><code>scripts/nexus-shared/life-calendar.ts</code></td><td>imported by the API and bundled into the page</td></tr>
+<tr><td>Life math (pure functions)</td><td><code>scripts/nexus-api/src/life-calendar.ts</code></td><td>inside the API</td></tr>
+<tr><td>Crypto module (AES-256-GCM)</td><td><code>scripts/nexus-api/src/profile-crypto.ts</code></td><td>inside the API and the seed step</td></tr>
+<tr><td>Key providers (Keychain, file)</td><td><code>scripts/nexus-api/src/key-provider.ts</code></td><td>inside the API and the seed step</td></tr>
+<tr><td>Storage (PGlite)</td><td><code>scripts/nexus-api/src/profile-store.ts</code></td><td>inside the API and the seed step</td></tr>
+<tr><td>Route <code>GET /api/v1/life-calendar</code></td><td><code>scripts/nexus-api/src/server.ts</code>, <code>types.ts</code></td><td>the API on 127.0.0.1:4300</td></tr>
+<tr><td>Seed step</td><td><code>scripts/nexus-api/seed-profile.ts</code></td><td>one-off command, run by Jack</td></tr>
+<tr><td>Keychain probe</td><td><code>scripts/nexus-api/probe-keychain.ts</code> and a probe LaunchAgent template</td><td>one-off, loaded by Jack</td></tr>
+<tr><td>Page (TypeScript, SCSS, HTML)</td><td><code>scripts/nexus-web/</code></td><td>static files built into the depot</td></tr>
+<tr><td>Caddy route for <code>/</code></td><td><code>scripts/caddy/Caddyfile</code>, <code>caddy-run.sh</code></td><td>Caddy</td></tr>
+</table></div>
+<ul>
+<li>The repo holds the source and the depot runs it (DGS-265). <code>install.sh</code> copies the API source, <code>nexus-shared</code> and the built page into <code>~/.digismith-depot/</code>. The relative import <code>../../nexus-shared/life-calendar.ts</code> works from <code>scripts/nexus-api/src/</code> in the repo and from <code>$DEPOT/nexus-api/src/</code> in the depot.</li>
+<li>The API is no longer dependency-free. Two dependencies are new: <code>zod</code> and <code>@electric-sql/pglite</code>. <code>scripts/nexus-api/package.json</code> lists them. <code>install.sh</code> copies it and runs <code>pnpm install --prod --frozen-lockfile</code> in the depot copy.</li>
+<li>Dev dependencies for the page: <code>esbuild</code> (TypeScript to one JS file), <code>sass</code> (SCSS to one CSS file), <code>@playwright/test</code>. The build output is not committed. <code>install.sh</code> builds it into <code>~/.digismith-depot/nexus/www/</code>.</li>
+</ul>
+</section>
+
+<section id="counting">
+<h2>4. Counting rule (birthday-anchored)</h2>
+<ul>
+<li>All dates are date-only, in UTC+7. "Today" is the UTC+7 calendar day, never the UTC day.</li>
+<li>Row k (age k) starts on the k-th birthday and ends the day before the next one. Box j (0 to 51) covers days 7j to 7j+6 after the row start. Box 51 absorbs the one or two leftover days.</li>
+<li>A 29 February birthday counts as 1 March in non-leap years. The code and the tests state this rule.</li>
+<li>Weeks lived are the boxes whose last day is before today. The current box holds today and counts as neither lived nor ahead. Weeks left = total − lived − (1 when a current box exists).</li>
+<li>Before the birth date: lived is 0 and <code>current</code> is null. Past the last row: everything is lived, <code>current</code> is null and weeks left is 0.</li>
+<li>The number of rows is <code>lifeYears</code> (version 1 expects 90). <code>weeksTotal</code> = rows × 52.</li>
+</ul>
+</section>
+
+<section id="schema">
+<h2>5. Shared schema and the API JSON</h2>
+<p>One Zod 4 schema in <code>scripts/nexus-shared/life-calendar.ts</code> describes the response. The inferred types come from it (<code>z.infer</code>). The API and the page both import this file. Zod is chosen for the best type inference, wide familiarity and one dependency.</p>
+<pre><code>{
+  "readAt": "2026-10-16T14:00:00.000Z",
+  "readAtUtc7": "2026-10-16 21:00:00",
+  "today": "2026-10-16",
+  "timezone": "UTC+7",
+  "totals": { "weeksTotal": 4680, "weeksLived": 0, "weeksLeft": 0, "percentLived": 0.0 },
+  "current": { "row": 0, "box": 0 },
+  "rows": [ { "age": 0, "start": "YYYY-MM-DD", "end": "YYYY-MM-DD", "lived": 52 } ]
+}</code></pre>
+<ul>
+<li><code>rows[i].lived</code> is the number of filled boxes in row i (0 to 52). The box at <code>current</code> is this week. The remaining boxes are ahead. <code>current</code> is null before birth and after the last row. <code>percentLived</code> has one decimal.</li>
+<li>The schema is <code>strict</code>: an unknown key, including any birth-date key, fails validation. The seed input schema (<code>birthDate</code>, <code>lifeYears</code>) lives only inside <code>scripts/nexus-api/</code> and is never shared with the page.</li>
+<li><strong>API side:</strong> the API validates the response before it sends it. A bad shape returns 503 <code>internal_invalid</code> and sends no body from the calculation.</li>
+<li><strong>Page side:</strong> the page validates what it receives. A bad shape shows the plain error state (section 10).</li>
+<li>The page draws what the API sends. For the tooltip it adds one thing: box j covers <code>start + 7j</code> days to <code>start + 7j + 6</code> days, and box 51 ends on <code>end</code>. This is plain day addition, unit-tested.</li>
+<li>Same headers as the power route: <code>application/json; charset=utf-8</code> and <code>Cache-Control: no-store</code>. Only GET is allowed (405 with <code>Allow: GET</code>), other paths return 404.</li>
+</ul>
+</section>
+
+<section id="db">
+<h2>6. Database: PGlite</h2>
+<p>Jack's toolchain says PostgreSQL. The design uses PGlite, embedded PostgreSQL for Node (WebAssembly), with one pnpm dependency and no server.</p>
+<div class="table-wrap"><table>
+<tr><th></th><th>PGlite (chosen)</th><th>Real PostgreSQL server</th></tr>
+<tr><td>Install</td><td><code>@electric-sql/pglite</code>, installed by <code>install.sh</code></td><td>No Homebrew and no Docker on this Mac; MacPorts exists. Route: <code>sudo port install postgresql17-server</code>, <code>initdb</code>, a background service. Postgres.app and the EDB installer also work. All of it would be Jack's steps with <code>sudo</code>.</td></tr>
+<tr><td>Service, port, password</td><td>none</td><td>a service on 127.0.0.1:5432, a role and a password in the depot <code>.env</code></td></tr>
+<tr><td>Tests</td><td>in-memory database, no setup</td><td>a test database must exist</td></tr>
+<tr><td>Data</td><td><code>~/.digismith-depot/nexus/db/</code>, mode 700</td><td>the Postgres data directory</td></tr>
+</table></div>
+<ul>
+<li>This Mac is Intel (x86_64). PGlite is WebAssembly, so the architecture does not matter.</li>
+<li>It is still PostgreSQL, with the same SQL. A later move to a real server is a dump and restore. That would be its own ticket.</li>
+<li><strong>Limit:</strong> one process owns the data folder. The seed step cannot run while the API runs. The order is: stop the API, seed, start the API. The API is restarted by hand anyway (no deploy pipeline, DGS-467).</li>
+<li><strong>Cost:</strong> the API process holds the database in memory (roughly 100 MB or more). The storage ticket measures it.</li>
+<li>Table: <code>profile(id INTEGER PRIMARY KEY CHECK (id = 1), key_version INTEGER NOT NULL, nonce BYTEA NOT NULL, ciphertext BYTEA NOT NULL)</code>. One row. There is no plaintext column.</li>
+<li>The API opens the database at start and checks that the data folder is mode 700. A wrong mode is the same failure as an invalid profile (503 <code>profile_invalid</code>).</li>
+</ul>
+</section>
+
+<section id="crypto">
+<h2>7. Encryption at rest and the key</h2>
+<h3>The blob</h3>
+<ul>
+<li>One JSON blob <code>{birthDate, lifeYears}</code> is encrypted with AES-256-GCM (Node <code>crypto</code>). The nonce is 12 random bytes, new on every seed. The 16-byte tag is stored with the ciphertext. The associated data is the fixed text <code>nexus-profile:v1</code>, so a blob cannot be reused for another purpose.</li>
+<li>The API reads the key once at start and keeps it in memory. It decrypts on each request. It never caches the plaintext, never logs it and never writes it anywhere.</li>
+</ul>
+<h3>Key providers</h3>
+<p>A small interface <code>getKey()</code> with two implementations. One setting chooses between them: <code>NEXUS_KEY_PROVIDER=keychain|file</code>, written into the API wrapper by <code>install.sh</code>.</p>
+<ol>
+<li><strong>Keychain (preferred).</strong> The service <code>com.jazurite.digismith.nexus</code>, account <code>profile-key</code> in the macOS login Keychain. The API runs <code>security find-generic-password -s ... -a ... -w</code> through <code>execFile</code> with a timeout. The seed step stores the key with <code>security add-generic-password</code>. The key is in a process argument for a moment while it is stored, so another local user could see it. This is a one-user machine, and the seed ticket names the risk.</li>
+<li><strong>File (fallback, a deliberate setting only).</strong> <code>~/.digismith-depot/keys/nexus-profile.key</code>, mode 600, checked at start. The data is in <code>nexus/db/</code> and the key is in <code>keys/</code>, so the key is not next to the data. Limit: if the whole depot is backed up, the key file goes into the same backup as the data. The Keychain does not have that problem.</li>
+</ol>
+<h3>The Keychain probe comes first</h3>
+<p>From an SSH-like session, <code>security</code> answered "User interaction is not allowed". The build must therefore prove that the LaunchAgent can read the item before anything else depends on it. A probe script and a small probe LaunchAgent read the item and write only <code>ok</code> or <code>fail</code> plus the key length to a log. They never write the key. Jack loads the probe LaunchAgent.</p>
+<div class="callout"><strong>Risk the probe must settle.</strong> With automatic login the login Keychain may stay locked after a reboot, because nobody typed the password. The probe runs after a reboot too. If it fails, the file provider is chosen on purpose, by Jack, and the backup limit above is told to him.</div>
+<p>If the Keychain is locked while the API runs, the API still starts. It returns 503 <code>key_unavailable</code> for the calendar route and serves everything else. It does not crash and it does not fall back silently.</p>
+</section>
+
+<section id="seed">
+<h2>8. Seed step</h2>
+<p><code>node --experimental-strip-types scripts/nexus-api/seed-profile.ts [--from &lt;path&gt;]</code>, run by Jack with the API stopped.</p>
+<ol>
+<li>Read the input file (default <code>~/.digismith-depot/nexus/profile.private.json</code>). Refuse if it is not mode 600.</li>
+<li>Validate with the private seed schema (<code>birthDate</code> a real YYYY-MM-DD date, <code>lifeYears</code> a whole number from 1 to 120).</li>
+<li>Get the key from the provider. Create a new 32-byte key only when none exists yet.</li>
+<li>Encrypt. Upsert the single row in the database (created with mode 700).</li>
+<li>Print only <code>profile saved</code>, or the name of the invalid field. It never prints a value, a key or a value inside an error. It never deletes the input file. It prints "you can delete the input file now" and Jack decides.</li>
+</ol>
+</section>
+
+<section id="errors">
+<h2>9. Errors</h2>
+<div class="table-wrap"><table>
+<tr><th>Case</th><th>Result</th></tr>
+<tr><td>Database missing or no row</td><td>503 <code>profile_missing</code>, message "run the seed step"</td></tr>
+<tr><td>Decrypt fails (wrong key, changed blob), bad data folder mode, values invalid after decrypt</td><td>503 <code>profile_invalid</code>. The message never says which cause.</td></tr>
+<tr><td>No key, or the Keychain is locked, or the provider times out</td><td>503 <code>key_unavailable</code></td></tr>
+<tr><td>The response fails the shared schema</td><td>503 <code>internal_invalid</code></td></tr>
+<tr><td>Wrong method, unknown path</td><td>405 with <code>Allow: GET</code>, 404 <code>not_found</code></td></tr>
+<tr><td>Page: API down, a 5xx, or a bad shape</td><td>one plain sentence ("The calendar is not available right now") and a Retry button</td></tr>
+</table></div>
+<p>No error message or log line carries a profile value, a key or a response body. Logs carry only the error code. A 503 sends <code>Retry-After: 5</code>, as the power route does.</p>
+</section>
+
+<section id="page">
+<h2>10. The page</h2>
+<ul>
+<li>Files in <code>scripts/nexus-web/</code>: <code>index.html</code>, <code>main.ts</code>, <code>grid.ts</code>, <code>tooltip.ts</code>, <code>styles.scss</code>. Plain TypeScript and the DOM, no framework.</li>
+<li>The grid is a CSS grid of 4,680 <code>div</code>s with <code>data-row</code> and <code>data-box</code>, easy for Playwright to query.</li>
+<li>States: lived is filled, current uses the accent colour, ahead is outlined.</li>
+<li>Above the grid: weeks lived, weeks left, % lived.</li>
+<li>One shared tooltip element follows the pointer and shows age, week number (1 to 52) and the date range. A tap shows it on touch.</li>
+<li>Look: black and white, one accent colour, dark mode through <code>prefers-color-scheme</code>. Colour tokens on <code>:root</code>.</li>
+<li>The page fetches with <code>cache: 'no-store'</code>. It refreshes once at the UTC+7 midnight so "this week" stays right if the tab stays open.</li>
+<li>Phone access works only when the phone is on Tailscale.</li>
+</ul>
+</section>
+
+<section id="caddy">
+<h2>11. Caddy route for /</h2>
+<ul>
+<li><code>caddy-run.sh</code> exports <code>DIGISMITH_WWW="$D/nexus/www"</code>.</li>
+<li>In the <code>pazurite.com</code> block, the last <code>handle</code> becomes a file server with <code>root * {env.DIGISMITH_WWW}</code> instead of the 404. <code>/api/*</code> stays above it and still goes to 127.0.0.1:4300. Unknown files return 404. <code>index.html</code> is sent with <code>Cache-Control: no-cache</code>.</li>
+<li>A change to a static file needs no restart. The Caddyfile change needs one Caddy restart.</li>
+</ul>
+</section>
+
+<section id="tests">
+<h2>12. Tests</h2>
+<ul>
+<li><strong>Vitest, life math:</strong> fixed "now" values and a fake birth date. Cases: birthday today, the day before a birthday, the 29 February birthday, 52-box rows and the leftover days, before birth, past the last row, UTC+7 midnight edges, totals add up to rows × 52.</li>
+<li><strong>Vitest, crypto:</strong> a fixed fake key and a fake profile. Round trip, a changed ciphertext, a changed tag, a wrong key, a wrong associated-data text, a new nonce on each seed.</li>
+<li><strong>Vitest, key providers:</strong> the Keychain provider runs against an injected fake <code>security</code> runner (found, not found, locked, timeout). The file provider checks mode 600 and a missing file.</li>
+<li><strong>Vitest, storage and seed:</strong> PGlite in memory for most tests. One test uses a real data folder in a temp directory, checks mode 700 and checks that the files do not contain the fake birth date as plain text. Seed tests use a fake JSON file in a temp folder: mode check, invalid input, and a capture that shows no value or key in any output.</li>
+<li><strong>Vitest, server:</strong> the 200 shape, the key list has no birth-date key, every 503 code, 405 and 404.</li>
+<li><strong>Vitest, shared schema:</strong> a strict-key test (an extra key is rejected). The API and the page import the same file, so the types cannot drift.</li>
+<li><strong>Vitest, page units:</strong> the tooltip range math.</li>
+<li><strong>Playwright:</strong> against a throwaway server with a stub API on a high port. It checks 90 rows of 52 boxes, the three states, the stats line, the tooltip text, dark mode (<code>colorScheme: 'dark'</code>) and the error state with Retry.</li>
+<li><strong>Caddy:</strong> extend <code>scripts/caddy/test-config.mjs</code> so <code>/</code> serves the index file, <code>/other</code> returns 404 and <code>/api/*</code> still proxies.</li>
+<li>A pattern check that no source file, fixture or snapshot outside the test folders holds a birth-date literal. Tests use a fake date only.</li>
+</ul>
+</section>
+
+<section id="deploy">
+<h2>13. Deploy steps (Jack or the future Releaser; nothing is done in this order)</h2>
+<ol>
+<li>Merge.</li>
+<li>Prove the Keychain with the probe (load the probe LaunchAgent, also after a reboot). Choose the provider.</li>
+<li><code>sh scripts/nexus-api/install.sh</code> (copies the API source and <code>nexus-shared</code>, runs <code>pnpm install --prod</code> in the depot copy, builds <code>www/</code>) and <code>sh scripts/caddy/install.sh</code>.</li>
+<li>Stop the API. Run the seed step once. Start the API.</li>
+<li>Restart Caddy once (the Caddyfile changed).</li>
+<li>Health check: <code>/api/v1/life-calendar</code> returns 200, <code>/</code> returns the page, and the totals are in a plausible range. The check never prints the birth date.</li>
+</ol>
+</section>
+
+<section id="later">
+<h2>14. Not in version 1</h2>
+<p>Life phases (school, work) and events on the grid, more widgets (for example the Mac verdict, DGS-466), login (DGS-458), a real PostgreSQL server, a deploy pipeline (DGS-467). Each gets its own ticket.</p>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-481—life-dashboard-nexus-life/design.html</footer>
+
+</body>
+</html>
