@@ -9,6 +9,8 @@ describe('shell components', () => {
     expect(w.find('header').exists()).toBe(true)
     expect(w.text()).toContain('pazurite')
     expect(w.find('.date').exists()).toBe(true)
+    expect(w.find('.date').attributes('aria-label')).toBeUndefined()   // aria-label on a plain span is prohibited
+    expect(w.find('.date .sr-only').text()).toBe('Today:')
   })
   it('the widget frame renders an h2, the meta, the content and the note', async () => {
     const w = await mountSuspended(WidgetFrame, { props: { title: 'Life Calendar', meta: 'Updated 21:00, UTC+7' }, slots: { default: '<p id="c">content</p>', note: 'a note' } })

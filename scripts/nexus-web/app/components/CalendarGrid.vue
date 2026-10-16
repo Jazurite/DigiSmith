@@ -24,6 +24,8 @@ function label(row: LifeCalendar['rows'][number], b: number, state: 'lived' | 'c
 }
 const MARK_SPAN = 7   // a mark spans 7 columns so its text stays inside the grid; the last one is anchored to the right edge
 const WEEK_MARKS = [0, 12, 25, 38, 51]
+// the real starting grid column of a mark (column 1 is the label column), so assistive tech does not map the headers by position
+const markStart = (m: number) => (m === BOXES - 1 ? m + 3 - MARK_SPAN : m + 2)
 const lastRow = props.data.rows.length - 1
 
 const tip = ref<TipInfo | null>(null)
@@ -133,8 +135,8 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListene
   <div class="grid-wrap">
   <div id="calendar-grid" v-once class="grid" role="grid" @pointermove="onPointerMove" @pointerleave="hide" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
     <div class="row ruler" role="row">
-      <span class="corner" role="columnheader">Age</span>
-      <span v-for="m in WEEK_MARKS" :key="m" class="mark" :class="{ last: m === BOXES - 1 }" role="columnheader" :style="{ gridColumn: m === BOXES - 1 ? `${m + 3 - MARK_SPAN} / ${m + 3}` : `${m + 2} / span ${MARK_SPAN}` }">Week {{ m + 1 }}</span>
+      <span class="corner" role="columnheader" aria-colindex="1">Age</span>
+      <span v-for="m in WEEK_MARKS" :key="m" class="mark" :class="{ last: m === BOXES - 1 }" role="columnheader" :aria-colindex="markStart(m)" :style="{ gridColumn: m === BOXES - 1 ? `${m + 3 - MARK_SPAN} / ${m + 3}` : `${m + 2} / span ${MARK_SPAN}` }">Week {{ m + 1 }}</span>
     </div>
     <div v-for="row in data.rows" :key="row.age" class="row" :class="{ 'decade-end': (row.age + 1) % 10 === 0 && row.age < lastRow }" role="row">
       <span class="age" :class="{ labelled: row.age % 10 === 0 }" role="rowheader">

@@ -49,6 +49,10 @@ describe('CalendarGrid', () => {
     expect((await mountSuspended(CalendarGrid, { props: { data: BEFORE_BIRTH() } })).findAll('[data-state="ahead"]')).toHaveLength(4680)
     expect((await mountSuspended(CalendarGrid, { props: { data: PAST_LAST_ROW() } })).findAll('[data-state="lived"]')).toHaveLength(4680)
   })
+  it('gives the ruler headers their real column index, so the week marks are not mapped by position', async () => {
+    const w = await mountSuspended(CalendarGrid, { props: { data: fixture() } })
+    expect(w.findAll('[role="columnheader"]').map(h => h.attributes('aria-colindex'))).toEqual(['1', '2', '14', '27', '40', '47'])
+  })
   it('keeps every ruler mark inside the grid: the last one is right-aligned and ends at the last column', async () => {
     const w = await mountSuspended(CalendarGrid, { props: { data: fixture() } })
     const marks = w.findAll('.mark')

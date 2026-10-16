@@ -7,7 +7,7 @@ onMounted(() => { date.value = formatHeaderDate(Date.now()) })
 <template>
   <header class="top">
     <span class="wordmark">pazurite</span>
-    <span class="date" aria-label="Today">{{ date || ' ' }}</span>
+    <span class="date"><span class="sr-only">Today: </span>{{ date || ' ' }}</span>
   </header>
 </template>
 
