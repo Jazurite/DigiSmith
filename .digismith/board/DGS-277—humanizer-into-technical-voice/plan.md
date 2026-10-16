@@ -18,6 +18,7 @@
 - Review Mode lives inside `digismith:voice`: input is a file path or pasted text; prose only (code blocks, inline code, commands, paths, front matter and link targets unchanged); write back only when asked; runs even when `technical_voice` is off.
 - Commits: title-only conventional commits, no AI attribution (no Co-Authored-By, no "Generated with" footer). pnpm only. Pathspec commits (`git commit -m ... -- <paths>`).
 - The new and edited Markdown follow their own rules: sentence-case headings, no stacked dashes, no words from `ste100-word-swaps.md`.
+  Clarification (Jack's Maestro, 2026-10-16): quoting a watched word as a "watch for" example is allowed, because the preserve list covers text that discusses a phrase. Read "no words from `ste100-word-swaps.md`" as "no such words in the prose around the quotes". Put every quoted example in double quotes or backticks, so it reads as a mention.
 - Never read or print a token, key or `.env`.
 
 ---
@@ -78,7 +79,7 @@ Patterns 1 to 25 below. "Instead" says what to write.
 
 | # | Watch for | Instead |
 |---|---|---|
-| 12 | Words models overuse (crucial, pivotal, delve, tapestry, underscore, showcase, robust as praise, landscape as a metaphor) | Use the swap in `global/ste100-word-swaps.md`, or the plain fact. |
+| 12 | Words models overuse: "crucial", "pivotal", "delve", "tapestry", "underscore", "showcase", "robust" as praise, "landscape" as a metaphor | Use the swap in `global/ste100-word-swaps.md`, or the plain fact. |
 | 13 | Stands as a testament; a pivotal moment; plays a key role; setting the stage for; a stock "Challenges and outlook" section; "the future looks bright" | Keep the fact, drop the significance. End on the last concrete fact. |
 | 14 | Associated with; connected to; linked to; in connection with, with no stated relationship | Name the relationship the source gives. If the source does not give one, keep the vague wording. Never invent a role. |
 | 15 | A bolted-on -ing phrase: highlighting, underscoring, ensuring, reflecting, fostering | Keep the fact. Keep the rider only when the source supports what it claims. |
