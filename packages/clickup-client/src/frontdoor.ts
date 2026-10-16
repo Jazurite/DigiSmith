@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
-import { RenewalError, isDue, renewSession } from "./frontdoor-session.ts";
+import { RenewalError, isDue, renewSession, tokenExpiry } from "./frontdoor-session.ts";
 import type { RenewTransport, SessionStore } from "./frontdoor-session.ts";
 
 export const DEFAULT_FRONTDOOR_HOST = "frontdoor-prod-ap-southeast-2-2.clickup.com";
@@ -128,7 +128,15 @@ export class FrontdoorClient {
 
   private async request<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
     await this.limiter.acquire();
-    if (this.canRenew() && isDue(this.auth, Math.floor(this.now() / 1000))) await this.renew();
+    if (this.canRenew() && isDue(this.auth, Math.floor(this.now() / 1000))) {
+      try {
+        await this.renew();
+      } catch (err) {
+        // A token with minutes left still works: let the call go and renew on its 401. Expired: stop here.
+        const exp = tokenExpiry(this.auth);
+        if (exp === undefined || exp <= Math.floor(this.now() / 1000)) throw err;
+      }
+    }
     try {
       return await this.send<T>(method, url, data);
     } catch (err) {

@@ -451,4 +451,12 @@ describe("FrontdoorClient renewal", () => {
     expect(transport).not.toHaveBeenCalled();
     expect(request).toHaveBeenCalledTimes(1);
   });
+
+  it("a failed pre-call renewal does not block a call while the token still has time left", async () => {
+    const transport = vi.fn().mockResolvedValue({ status: 500, body: {}, setCookies: [] });
+    const { client } = renewing(NOW + 300, { transport });
+    request.mockResolvedValueOnce({ data: { custom_items: [] } });
+    await expect(client.getTaskTypes()).resolves.toEqual([]);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
 });

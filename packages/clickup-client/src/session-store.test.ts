@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSessionStore, writeEnvValues } from "./session-store.ts";
@@ -107,5 +107,22 @@ describe("FileSessionStore", () => {
     utimesSync(`${env}.lock`, old, old);
     await expect(new FileSessionStore(env, fast).withLock(async () => "ok")).resolves.toBe("ok");
     expect(existsSync(`${env}.lock`)).toBe(false);
+  });
+
+  it("does not remove a lock that another process holds now (taken over after a long run)", async () => {
+    const { env } = tmp("");
+    await new FileSessionStore(env, fast).withLock(async () => {
+      writeFileSync(`${env}.lock`, "someone-else");
+    });
+    expect(readFileSync(`${env}.lock`, "utf-8")).toBe("someone-else");
+  });
+});
+
+describe("writeEnvValues failure", () => {
+  it("removes its temp file when the rename fails", () => {
+    const { dir, env } = tmp();
+    mkdirSync(env); // a directory in the way: rename of a file onto it fails
+    expect(() => writeEnvValues(env, { A: "fake-secret" })).toThrow();
+    expect(readdirSync(dir)).toEqual([".env"]);
   });
 });

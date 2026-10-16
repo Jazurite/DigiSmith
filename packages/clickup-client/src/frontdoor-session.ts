@@ -94,7 +94,7 @@ export function mergeCookies(stored: string, setCookies: string[]): string {
 /** The default transport. validateStatus keeps axios from throwing on a 4xx, so no AxiosError (which holds the request headers) exists. */
 export const axiosRenewTransport: RenewTransport = async (req) => {
   try {
-    const res = await axios.post(req.url, undefined, { headers: req.headers, validateStatus: () => true });
+    const res = await axios.post(req.url, undefined, { headers: req.headers, validateStatus: () => true, timeout: 15000 });
     const raw = res.headers?.["set-cookie"];
     return { status: res.status, body: res.data, setCookies: Array.isArray(raw) ? raw : raw ? [String(raw)] : [] };
   } catch (err) {

@@ -167,7 +167,7 @@ describe("axiosRenewTransport", () => {
     const { axiosRenewTransport } = await import("./frontdoor-session.ts");
     const res = await axiosRenewTransport({ url: "https://x/y", headers: { Cookie: "c" } });
     expect(post.mock.calls[0][1]).toBeUndefined();
-    expect(post.mock.calls[0][2]).toMatchObject({ headers: { Cookie: "c" } });
+    expect(post.mock.calls[0][2]).toMatchObject({ headers: { Cookie: "c" }, timeout: 15000 });
     expect(post.mock.calls[0][2]!.validateStatus!(401)).toBe(true);
     expect(res).toEqual({ status: 401, body: { err: "x" }, setCookies: ["a=1", "b=2"] });
     post.mockRejectedValue(Object.assign(new Error("boom Cookie: fake-refresh-cookie"), { code: "ECONNRESET", config: {} }));

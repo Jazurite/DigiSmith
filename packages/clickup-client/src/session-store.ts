@@ -22,8 +22,17 @@ export function writeEnvValues(envPath: string, values: Record<string, string>):
   }
   const tmp = join(dirname(envPath), `.${basename(envPath)}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`);
   writeFileSync(tmp, lines.join("\n") + "\n", { mode: 0o600, flag: "wx" });
-  chmodSync(tmp, 0o600);
-  renameSync(tmp, envPath);
+  try {
+    chmodSync(tmp, 0o600);
+    renameSync(tmp, envPath);
+  } catch (err) {
+    try {
+      unlinkSync(tmp); // never leave a secret behind in a temp file
+    } catch {
+      // nothing to remove
+    }
+    throw err;
+  }
 }
 
 export interface FileSessionStoreOptions {
@@ -70,24 +79,31 @@ export class FileSessionStore implements SessionStore {
   }
 
   async withLock<T>(fn: () => Promise<T>): Promise<T> {
-    await this.acquire();
+    const owner = await this.acquire();
     try {
       return await fn();
     } finally {
       try {
-        unlinkSync(this.lockPath);
+        // Only our own lock: after a run longer than staleMs another process may hold a new one.
+        if (readFileSync(this.lockPath, "utf-8") === owner) unlinkSync(this.lockPath);
       } catch {
-        // already gone: taken over as stale
+        // already gone
       }
     }
   }
 
-  private async acquire(): Promise<void> {
+  private async acquire(): Promise<string> {
     const deadline = Date.now() + this.waitMs;
     for (;;) {
       try {
-        closeSync(openSync(this.lockPath, "wx", 0o600));
-        return;
+        const owner = `${process.pid}-${randomBytes(6).toString("hex")}`;
+        const fd = openSync(this.lockPath, "wx", 0o600);
+        try {
+          writeFileSync(fd, owner);
+        } finally {
+          closeSync(fd);
+        }
+        return owner;
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
       }
