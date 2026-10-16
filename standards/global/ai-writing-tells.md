@@ -57,7 +57,7 @@ Patterns 1 to 25 below. "Instead" says what to write.
 | # | Watch for | Instead |
 |---|---|---|
 | 19 | Bold used as decoration; every list item with a bold label and a colon | Remove the bold. Turn a list whose labels carry no information into prose. |
-| 20 | Title case in a heading; an emoji or arrow ("→") in a heading; the same decoration on list items (*weak alone*); a horizontal rule between every section; a top heading that repeats the document title; a heading written for effect | **Hard rule: use sentence case for every heading.** Title case, and emoji or arrow decoration in a heading, are strong tells on one sighting. Remove the rules and the repeated title. Name what the section holds. |
+| 20 | Title case in a heading; an emoji or arrow ("→") in a heading; the same decoration on list items (*weak alone*); a horizontal rule between every section; a top heading that repeats the document title; a heading written for effect | **Hard rule: use sentence case for every heading.** Title case, and emoji or arrow decoration in a heading, are strong tells on one sighting. Remove the rules and the repeated title. Name what the section holds. Headings fixed by a skill or document template, such as the `writing-skills` template or the vendored Superpowers forks, keep the template's shape; sentence case stays the hard rule everywhere else. |
 | 21 | Curly quotation marks where the target uses straight quotes. *Weak alone.* | Use straight quotes. |
 
 ### E. Leftovers from the chat and the draft

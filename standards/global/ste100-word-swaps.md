@@ -70,3 +70,14 @@ such as dashes, stacked qualifiers and passive voice.
 | bustling | busy |
 | that being said, notwithstanding | but |
 | I hope this helps, let's dive in | (delete) |
+| actually | (delete) |
+| additionally | also |
+| align with | match |
+| deep dive | detailed look |
+| enduring | lasting (or delete) |
+| garner | get |
+| gate, gated (figurative) | (say the condition) |
+| highlight (verb) | show |
+| key (adjective) | main (or delete) |
+| quietly | (delete) |
+| valuable | useful (or delete) |
