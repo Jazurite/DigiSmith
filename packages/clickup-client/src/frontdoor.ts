@@ -3,15 +3,22 @@ import { randomBytes } from "node:crypto";
 import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
+import { RenewalError, isDue, renewSession } from "./frontdoor-session.ts";
+import type { RenewTransport, SessionStore } from "./frontdoor-session.ts";
 
 export const DEFAULT_FRONTDOOR_HOST = "frontdoor-prod-ap-southeast-2-2.clickup.com";
 const RATE_LIMIT = 100;
 const RATE_WINDOW_SEC = 60;
 
 export class FrontdoorAuthError extends Error {
-  constructor() {
-    super("Frontdoor session expired or not enough, capture a new one");
+  constructor(message = "Frontdoor session expired or not enough, capture a new one") {
+    super(message);
   }
+}
+
+function isAuthStatus(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } }).response?.status;
+  return status === 401 || status === 403;
 }
 
 const ALPHANUM = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -56,6 +63,12 @@ export interface FrontdoorClientConfig {
   /** The full Authorization header value of a captured Frontdoor session. */
   CLICKUP_FRONTDOOR_AUTH: string;
   host?: string;
+  /** With a stored refresh cookie the client renews its own session; without one it behaves as before. */
+  session?: SessionStore;
+  /** Test seam for the renewal call. */
+  transport?: RenewTransport;
+  /** Epoch milliseconds; a test seam. */
+  now?: () => number;
 }
 
 /**
@@ -66,9 +79,18 @@ export class FrontdoorClient {
   readonly teamId: string;
   private readonly http: AxiosInstance;
   private readonly limiter: RateLimiter;
+  private readonly session: SessionStore | undefined;
+  private readonly transport: RenewTransport | undefined;
+  private readonly now: () => number;
+  private readonly initialAuth: string;
+  private auth: string;
 
   constructor(config: FrontdoorClientConfig) {
     this.teamId = config.CLICKUP_TEAM_ID;
+    this.session = config.session;
+    this.transport = config.transport;
+    this.now = config.now ?? Date.now;
+    this.initialAuth = this.auth = config.CLICKUP_FRONTDOOR_AUTH;
     this.http = axios.create({
       baseURL: `https://${config.host ?? DEFAULT_FRONTDOOR_HOST}`,
       headers: { Authorization: config.CLICKUP_FRONTDOOR_AUTH },
@@ -76,18 +98,57 @@ export class FrontdoorClient {
     this.limiter = new RateLimiter(RATE_LIMIT, RATE_LIMIT / RATE_WINDOW_SEC);
   }
 
-  private async request<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
-    await this.limiter.acquire();
+  private canRenew(): boolean {
+    return this.session !== undefined && Boolean(this.session.read()?.refreshCookie);
+  }
+
+  /** Renews under the store's lock (or adopts what another dg process stored). Any failure is a FrontdoorAuthError with a plain message. */
+  private async renew(): Promise<void> {
     try {
-      const res = await this.http.request<T>({ method, url, data });
-      return res.data;
+      const r = await renewSession({
+        store: this.session!,
+        teamId: this.teamId,
+        transport: this.transport,
+        now: this.now,
+        heldAuth: this.auth,
+      });
+      this.auth = r.session.auth;
     } catch (err) {
-      const status = (err as { response?: { status?: number } }).response?.status;
-      if (status === 401 || status === 403) throw new FrontdoorAuthError();
-      // Same as ClickUpClient: plain fields only, never the request headers.
-      if (isAxiosLike(err)) throw toApiError(err, method, url);
+      if (err instanceof RenewalError) throw new FrontdoorAuthError(err.message);
       throw err;
     }
+  }
+
+  private async send<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
+    // The header is set per call only after a renewal, so a client that never renews sends exactly what axios.create got.
+    const headers = this.auth === this.initialAuth ? undefined : { Authorization: this.auth };
+    const res = await this.http.request<T>({ method, url, data, ...(headers ? { headers } : {}) });
+    return res.data;
+  }
+
+  private async request<T>(method: "GET" | "POST" | "PUT", url: string, data?: unknown): Promise<T> {
+    await this.limiter.acquire();
+    if (this.canRenew() && isDue(this.auth, Math.floor(this.now() / 1000))) await this.renew();
+    try {
+      return await this.send<T>(method, url, data);
+    } catch (err) {
+      if (isAuthStatus(err) && this.canRenew()) {
+        await this.renew();
+        try {
+          return await this.send<T>(method, url, data);
+        } catch (retryErr) {
+          throw this.failure(retryErr, method, url);
+        }
+      }
+      throw this.failure(err, method, url);
+    }
+  }
+
+  private failure(err: unknown, method: string, url: string): unknown {
+    if (isAuthStatus(err)) return new FrontdoorAuthError();
+    // Same as ClickUpClient: plain fields only, never the request headers.
+    if (isAxiosLike(err)) return toApiError(err, method, url);
+    return err;
   }
 
   async getTaskTypes(): Promise<ClickUpTaskType[]> {

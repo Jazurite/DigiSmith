@@ -13,6 +13,8 @@ import {
   folderDescriptionText,
 } from "./frontdoor.ts";
 import { readFrontdoorAuth } from "./credentials.ts";
+import { fakeJwt, memoryStore } from "./frontdoor-session.test-util.ts";
+import type { RenewResponse } from "./frontdoor-session.ts";
 
 vi.mock("axios");
 
@@ -349,5 +351,104 @@ describe("readFrontdoorAuth", () => {
     expect(readFrontdoorAuth(f.path)).toBeUndefined();
     expect(readFrontdoorAuth(f.path + ".nope")).toBeUndefined();
     f.done();
+  });
+});
+
+describe("FrontdoorClient renewal", () => {
+  const NOW = 1_800_000_000;
+  const COOKIE = "cu_refresh=fake-refresh-cookie; cu_session_meta=fake-meta-cookie";
+  const NEW = fakeJwt(NOW + 172800, "new");
+  const okRenew = (): RenewResponse => ({ status: 200, body: { token: NEW }, setCookies: [] });
+
+  function renewing(authExp: number, opts: { cookie?: string; transport?: ReturnType<typeof vi.fn> } = {}) {
+    vi.mocked(axios.create).mockReturnValue({ request } as unknown as ReturnType<typeof axios.create>);
+    const store = memoryStore({
+      auth: `Bearer ${fakeJwt(authExp, "old")}`,
+      ...("cookie" in opts ? (opts.cookie ? { refreshCookie: opts.cookie } : {}) : { refreshCookie: COOKIE }),
+    });
+    const transport = opts.transport ?? vi.fn().mockResolvedValue(okRenew());
+    const client = new FrontdoorClient({
+      CLICKUP_TEAM_ID: "5738747",
+      CLICKUP_FRONTDOOR_AUTH: store.current!.auth,
+      session: store,
+      transport,
+      now: () => NOW * 1000,
+    });
+    return { client, store, transport };
+  }
+
+  beforeEach(() => {
+    request.mockReset();
+    vi.mocked(axios.create).mockReset();
+  });
+
+  it("does not renew while the token has more than 10 minutes left", async () => {
+    const { client, transport } = renewing(NOW + 3600);
+    request.mockResolvedValueOnce({ data: { custom_items: [] } });
+    await client.getTaskTypes();
+    expect(transport).not.toHaveBeenCalled();
+    expect(request.mock.calls[0][0].headers).toBeUndefined();
+  });
+
+  it("renews before the call when under 10 minutes remain, and sends the new token", async () => {
+    const { client, transport, store } = renewing(NOW + 300);
+    request.mockResolvedValueOnce({ data: { custom_items: [] } });
+    await client.getTaskTypes();
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0].headers).toEqual({ Authorization: `Bearer ${NEW}` });
+    expect(store.current?.auth).toBe(`Bearer ${NEW}`);
+  });
+
+  it("renews before the call when the token is already expired", async () => {
+    const { client, transport } = renewing(NOW - 86400);
+    request.mockResolvedValueOnce({ data: { custom_items: [] } });
+    await client.getTaskTypes();
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps using the renewed token on the next call without renewing again", async () => {
+    const { client, transport } = renewing(NOW - 10);
+    request.mockResolvedValue({ data: { custom_items: [] } });
+    await client.getTaskTypes();
+    await client.getTaskTypes();
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[1][0].headers).toEqual({ Authorization: `Bearer ${NEW}` });
+  });
+
+  it("on a 401 renews once and retries the call once", async () => {
+    const { client, transport } = renewing(NOW + 3600);
+    request.mockRejectedValueOnce({ response: { status: 401 } }).mockResolvedValueOnce({ data: { custom_items: [{ id: 1 }] } });
+    await expect(client.getTaskTypes()).resolves.toEqual([{ id: 1 }]);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[1][0].headers).toEqual({ Authorization: `Bearer ${NEW}` });
+  });
+
+  it("a second 401 after the retry throws FrontdoorAuthError, with no third call and no second renewal", async () => {
+    const { client, transport } = renewing(NOW + 3600);
+    request.mockRejectedValue({ response: { status: 403 } });
+    await expect(client.getTaskTypes()).rejects.toBeInstanceOf(FrontdoorAuthError);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws FrontdoorAuthError with the capture hint when renewal fails, and does not call Frontdoor", async () => {
+    const transport = vi.fn().mockResolvedValue({ status: 401, body: {}, setCookies: [] });
+    const { client } = renewing(NOW - 10, { transport });
+    const err = await client.getTaskTypes().catch((e) => e);
+    expect(err).toBeInstanceOf(FrontdoorAuthError);
+    expect(err.message).toBe("renewal failed (HTTP 401): capture a new session with Proxyman, then dg clickup frontdoor import-auth");
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("without a stored refresh cookie keeps today's behaviour: no renewal, the plain FrontdoorAuthError", async () => {
+    const { client, transport } = renewing(NOW - 10, { cookie: "" });
+    request.mockRejectedValueOnce({ response: { status: 401 } });
+    const err = await client.getTaskTypes().catch((e) => e);
+    expect(err).toBeInstanceOf(FrontdoorAuthError);
+    expect(err.message).toBe("Frontdoor session expired or not enough, capture a new one");
+    expect(transport).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

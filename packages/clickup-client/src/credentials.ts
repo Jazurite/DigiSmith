@@ -9,7 +9,7 @@ export interface Credentials {
 
 export class CredentialsError extends Error {}
 
-function defaultEnvPath(): string {
+export function defaultEnvPath(): string {
   return join(homedir(), ".digismith-depot", ".env");
 }
 
