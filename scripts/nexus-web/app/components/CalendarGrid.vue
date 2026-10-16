@@ -15,6 +15,10 @@ const cur = props.data.current
 // the one tab stop: this week, or the first box when there is none
 const startRow = cur?.row ?? 0
 const startBox = cur?.box ?? 0
+// the roving tab stop lives in state, never in a hand-set attribute: GridRows and the grid itself both read it, so there is always exactly one
+const stop = ref({ row: startRow, box: startBox })
+// a chunk only gets the stop when it holds it, so moving the stop re-renders at most two chunks
+const stopFor = (c: number) => (stop.value.row >= c * CHUNK && stop.value.row < (c + 1) * CHUNK ? stop.value : { row: -1, box: -1 })
 
 const MARK_SPAN = 7   // a mark spans 7 columns so its text stays inside the grid; the last one is anchored to the right edge
 const WEEK_MARKS = [0, 12, 25, 38, 51]
@@ -92,9 +96,8 @@ function onPointerUp(e: PointerEvent) {
   tip.value = i
 }
 function setStop(el: HTMLElement) {   // roving tabindex: exactly one box is the tab stop
-  if (el.getAttribute('tabindex') === '0') return
-  document.querySelector('#calendar-grid [tabindex="0"]')?.setAttribute('tabindex', '-1')
-  el.setAttribute('tabindex', '0')
+  const row = Number(el.dataset.row), box = Number(el.dataset.box)
+  if (stop.value.row !== row || stop.value.box !== box) stop.value = { row, box }
 }
 function activate(el: HTMLElement) { setStop(el); el.focus() }
 function showAnchored(el: HTMLElement) {
@@ -130,6 +133,7 @@ async function onFocusIn(e: FocusEvent) {
   }
   const el = cellOf(e.target)
   if (!el) return
+  if (!complete.value) scheduler.ensure(startRow)   // draw this week's row now, so it is never drawn after the stop moved
   setStop(el)
   let visible = true
   try { visible = el.matches(':focus-visible') } catch { visible = true }   // a mouse click must not show the anchored tooltip
@@ -157,12 +161,12 @@ onBeforeUnmount(() => { scheduler.stop(); cancelAnimationFrame(frame); document.
 
 <template>
   <div class="grid-wrap">
-  <div id="calendar-grid" class="grid" role="grid" :data-rendered="complete ? 'complete' : 'pending'" :tabindex="shown > startRow ? undefined : 0" @pointermove="onPointerMove" @pointerleave="onPointerLeave" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
+  <div id="calendar-grid" class="grid" role="grid" :data-rendered="complete ? 'complete' : 'pending'" :tabindex="shown > stop.row ? undefined : 0" @pointermove="onPointerMove" @pointerleave="onPointerLeave" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
     <div class="row ruler" role="row">
       <span class="corner" role="columnheader" aria-colindex="1">Age</span>
       <span v-for="m in WEEK_MARKS" :key="m" class="mark" :class="{ last: m === BOXES - 1 }" role="columnheader" :aria-colindex="markStart(m)" :style="{ gridColumn: m === BOXES - 1 ? `${m + 3 - MARK_SPAN} / ${m + 3}` : `${m + 2} / span ${MARK_SPAN}` }">Week {{ m + 1 }}</span>
     </div>
-    <GridRows v-for="c in chunks" :key="c" :data="data" :from="c * CHUNK" :to="Math.min((c + 1) * CHUNK, total)" :start-row="startRow" :start-box="startBox" />
+    <GridRows v-for="c in chunks" :key="c" :data="data" :from="c * CHUNK" :to="Math.min((c + 1) * CHUNK, total)" :stop-row="stopFor(c).row" :stop-box="stopFor(c).box" />
     <div v-if="!complete" class="pending" aria-hidden="true" :style="{ height: spacer }" />
   </div>
   <div class="sr-only" aria-live="polite" aria-atomic="true" data-testid="grid-live">{{ liveText }}</div>

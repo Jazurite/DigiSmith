@@ -1,6 +1,6 @@
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { nextTick } from 'vue'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { fixture } from '../../tests/fixtures'
 import CalendarGrid from './CalendarGrid.vue'
 import WeekTooltip from './WeekTooltip.vue'
@@ -125,6 +125,23 @@ describe('the grid live region (touch readout)', () => {
     expect(live(w).text()).toBe('')
     await cell(w, 36, 41).trigger('pointermove', { pointerType: 'mouse', clientX: 100, clientY: 100 })
     expect(live(w).text()).toBe('')
+    w.unmount()
+  })
+})
+
+describe('the single tab stop while rows are pending', () => {
+  it('focusing a drawn box before the this-week row is drawn leaves exactly one tab stop once everything is drawn', async () => {
+    const w = await mountSuspended(CalendarGrid, { props: { data: fixture() }, attachTo: document.body })   // eager=false: chunks of 10 rows
+    const root = document.getElementById('calendar-grid')!
+    expect(root.dataset.rendered).toBe('pending')
+    expect(root.getAttribute('tabindex')).toBe('0')   // this week (row 36) is not drawn: the grid is the stop
+    const box = root.querySelector<HTMLElement>('[data-row="3"][data-box="5"]')!
+    box.focus()
+    await nextTick()
+    await vi.waitFor(() => expect(root.dataset.rendered).toBe('complete'), { timeout: 5000 })
+    await nextTick()
+    const stops = [root, ...root.querySelectorAll<HTMLElement>('[role="gridcell"]')].filter(e => e.getAttribute('tabindex') === '0')
+    expect(stops).toEqual([box])
     w.unmount()
   })
 })

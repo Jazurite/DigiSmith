@@ -3,7 +3,7 @@ import type { LifeCalendar } from '#life-schema'
 import { BOXES, boxLabel, stateOf } from '../utils/grid-label'
 
 // One chunk of the calendar's rows (a fragment: the rows stay direct children of the grid).
-const props = defineProps<{ data: LifeCalendar; from: number; to: number; startRow: number; startBox: number }>()
+const props = defineProps<{ data: LifeCalendar; from: number; to: number; stopRow: number; stopBox: number }>()
 const lastRow = props.data.rows.length - 1
 const cur = props.data.current
 const rows = computed(() => props.data.rows.slice(props.from, props.to))
@@ -20,7 +20,7 @@ const rows = computed(() => props.data.rows.slice(props.from, props.to))
       class="box" role="gridcell"
       :class="stateOf(cur, row.lived, row.age, n - 1)"
       :data-row="row.age" :data-box="n - 1" :data-state="stateOf(cur, row.lived, row.age, n - 1)"
-      :tabindex="row.age === startRow && n - 1 === startBox ? 0 : -1"
+      :tabindex="row.age === props.stopRow && n - 1 === props.stopBox ? 0 : -1"
       :aria-label="boxLabel(row, n - 1, stateOf(cur, row.lived, row.age, n - 1))"
     />
   </div>
