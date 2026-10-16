@@ -1,4 +1,5 @@
 <script setup lang="ts">
+if (typeof performance !== 'undefined') performance.mark('grid-setup')
 import { boxRange, formatLong } from '#days'
 import type { LifeCalendar } from '#life-schema'
 import { nearestBox, nextCell } from '../utils/grid-nav'
@@ -27,6 +28,7 @@ const WEEK_MARKS = [0, 12, 25, 38, 51]
 // the real starting grid column of a mark (column 1 is the label column), so assistive tech does not map the headers by position
 const markStart = (m: number) => (m === BOXES - 1 ? m + 3 - MARK_SPAN : m + 2)
 const lastRow = props.data.rows.length - 1
+onMounted(() => performance.measure('grid-render', 'grid-setup'))
 
 const tip = ref<TipInfo | null>(null)
 const mode = ref<'pointer' | 'readout'>('pointer')
