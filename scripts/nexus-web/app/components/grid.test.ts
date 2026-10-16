@@ -49,4 +49,11 @@ describe('CalendarGrid', () => {
     expect((await mountSuspended(CalendarGrid, { props: { data: BEFORE_BIRTH() } })).findAll('[data-state="ahead"]')).toHaveLength(4680)
     expect((await mountSuspended(CalendarGrid, { props: { data: PAST_LAST_ROW() } })).findAll('[data-state="lived"]')).toHaveLength(4680)
   })
+  it('keeps every ruler mark inside the grid: the last one is right-aligned and ends at the last column', async () => {
+    const w = await mountSuspended(CalendarGrid, { props: { data: fixture() } })
+    const marks = w.findAll('.mark')
+    expect(marks.at(-1)!.classes()).toContain('last')
+    expect(marks.at(-1)!.attributes('style')).toContain('grid-column: 47 / 54')
+    expect(marks.map(m => m.attributes('style')).every(st => /grid-column: \d+ \/ (span 7|54)/.test(st ?? ''))).toBe(true)
+  })
 })
