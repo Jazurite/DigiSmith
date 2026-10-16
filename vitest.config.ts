@@ -18,6 +18,7 @@ export default defineConfig({
       '**/.claude/worktrees/**',
       '**/.worktrees/**',
       '**/worktrees/**',
+      '**/scripts/nexus-web/**',
     ],
   },
 })

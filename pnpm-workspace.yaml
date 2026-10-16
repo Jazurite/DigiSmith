@@ -2,5 +2,10 @@ packages:
   - "packages/*"
   - "scripts/nexus-api"
   - "scripts/nexus-shared"
+  - "scripts/nexus-web"
 allowBuilds:
   esbuild: true
+  "@parcel/watcher": false
+minimumReleaseAgeExclude:
+  - happy-dom@21.0.3
+  - sass@1.105.2

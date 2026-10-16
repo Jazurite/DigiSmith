@@ -8,3 +8,10 @@ node_modules/
 dist/
 .opencode/probes/decoy/
 .opencode/probes/results*
+scripts/nexus-web/.nuxt/
+scripts/nexus-web/.output/
+scripts/nexus-web/storybook-static/
+scripts/nexus-web/test-results/
+scripts/nexus-web/playwright-report/
+scripts/nexus-web/.lighthouseci/
+scripts/nexus-web/dist
