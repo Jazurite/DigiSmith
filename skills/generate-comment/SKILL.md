@@ -53,7 +53,8 @@ directly; otherwise ask for DigiSmith's repo path this session and remember it),
 
 **Reads `on`** (default, and also the disposition when the key is missing or malformed — same as
 `scripts/voice.ts`'s own existing behavior) → read `<digismith-repo>/standards/global/ste100-writing.md`
-and its companions, `ste100-word-swaps.md` and `ste100-use-cases.md`, into context. Apply their
+and its `companions:` from `standards/index.yml` (`ste100-word-swaps.md`, `ste100-use-cases.md` and
+`ai-writing-tells.md`), into context. Apply their
 sentence-level rules — active voice, one instruction per sentence, no phrasal verbs, hedge
 preservation — while drafting every bullet in Step 2 (Progress Update) and Step 3 (Investigation
 Update). **Except** the Structural rules table's "Lists for sequences" and "Paragraph limits" rows:

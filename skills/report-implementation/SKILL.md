@@ -281,8 +281,8 @@ the plan file, the ledger, and `git` alone:
   remember it), then run `node --experimental-strip-types <digismith-repo>/scripts/voice.ts --action status`.
   **Reads `off`** → compose 1-2 exactly as today. **Reads `on`** (default, and also the disposition
   when the key is missing or malformed — same as `scripts/voice.ts`'s own existing behavior) → read
-  `<digismith-repo>/standards/global/ste100-writing.md` and its companions (`ste100-word-swaps.md`,
-  `ste100-use-cases.md`) and apply their sentence-level rules to the composed 1-2 clauses only —
+  `<digismith-repo>/standards/global/ste100-writing.md` and its `companions:` from `standards/index.yml`
+  (`ste100-word-swaps.md`, `ste100-use-cases.md`, `ai-writing-tells.md`) and apply their sentence-level rules to the composed 1-2 clauses only —
   **never to source 3**, the fixed closing sentence, which is reused boilerplate text, not freshly
   drafted prose, so there's nothing for the standard to apply to.
   **Any standard file missing or unreadable** → don't block the report; compose 1-2 unstyled and

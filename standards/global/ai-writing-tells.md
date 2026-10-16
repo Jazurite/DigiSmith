@@ -8,10 +8,12 @@ Adapted from [blader/humanizer](https://github.com/blader/humanizer) v3.1.0 (com
 
 Every pattern is one default choice a model makes for the widest range of readers. A careful writer can make any of them on purpose. A tell counts in proportion to how rarely a careful writer would make it on purpose.
 
-- **Strong:** act on one sighting. This covers every pattern below that is not marked *weak alone*.
+- **Strong:** act on one sighting. This covers groups A (staging) and E (chat and draft leftovers), and pattern 20 (headings).
+- **Middle:** the unmarked patterns in groups B, C and D (patterns 6, 7, 12 to 19, except those marked *weak alone*). Act on one sighting only when the sentence is plainly the default choice, for example an advertising phrase in a technical report. Otherwise wait for a second tell in the same passage.
 - **Weak alone:** act only when other tells appear in the same passage. One em-dash, one hyphenated pair or one passive sentence is ordinary. A passage full of them is a tell.
 - Look at paragraph shape as well as sentences. The same contrast split over two sentences, three parallel examples, or the same closer after every section is the same tell at a larger scale.
 - Word habits change with every model release. The structural habits persist, so they lead the list. Word-level swaps live in `global/ste100-word-swaps.md`, where every row stays a rule.
+- **Reviewing and drafting differ.** *Weak alone* decides whether existing text counts as machine-written in a review. When you draft, the structural rules in `global/ste100-writing.md` still apply in full, including active voice.
 
 ## Patterns
 
@@ -55,7 +57,7 @@ Patterns 1 to 25 below. "Instead" says what to write.
 | # | Watch for | Instead |
 |---|---|---|
 | 19 | Bold used as decoration; every list item with a bold label and a colon | Remove the bold. Turn a list whose labels carry no information into prose. |
-| 20 | Title case in a heading; an emoji or arrow ("→") in a heading or list item; a horizontal rule between every section; a top heading that repeats the document title; a heading written for effect | **Hard rule: use sentence case for every heading.** Title case, emoji and arrow decoration are strong tells on one sighting. Remove the rules and the repeated title. Name what the section holds. |
+| 20 | Title case in a heading; an emoji or arrow ("→") in a heading; the same decoration on list items (*weak alone*); a horizontal rule between every section; a top heading that repeats the document title; a heading written for effect | **Hard rule: use sentence case for every heading.** Title case, and emoji or arrow decoration in a heading, are strong tells on one sighting. Remove the rules and the repeated title. Name what the section holds. |
 | 21 | Curly quotation marks where the target uses straight quotes. *Weak alone.* | Use straight quotes. |
 
 ### E. Leftovers from the chat and the draft
@@ -67,7 +69,7 @@ Remove these outright. Nothing here needs a rewrite.
 | 22 | "I hope this helps"; "Certainly!"; "Great question!"; "You're absolutely right"; "Would you like..."; "let me know"; "here is a..." | Remove the wrapper and keep the content. This is the most certain tell. |
 | 23 | "As of [date]"; "up to my last update"; "while specific details are limited"; "based on available information"; "maintains a low profile"; "likely [guess]" | State what the source does not show, or delete the sentence. Never dress up missing information as content. See Hedge preservation in `global/ste100-writing.md`. |
 | 24 | A heading followed by a one-line paragraph that restates it | Delete the repeated sentence. |
-| 25 | Text about the document instead of its subject: what it replaced, how it was assembled, a legend of a table the reader can see | Mention a previous version only in change logs and migration notes. Cut the account of how you worked. Keep a caveat that changes what the reader should do. |
+| 25 | Text about the document instead of its subject: what it replaced, how it was assembled, a legend of a table the reader can see | Mention a previous version only in change logs and migration notes. Cut the account of how you worked. Keep a source credit the reader can follow. Keep a caveat that changes what the reader should do. A single description of the page is *weak alone*. |
 
 ## Mark, draft, check, final
 
