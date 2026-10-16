@@ -35,8 +35,9 @@ let frame = 0
 function cellOf(target: EventTarget | null): HTMLElement | null {
   return (target as HTMLElement | null)?.closest?.('[data-row]') ?? null
 }
-function infoOf(el: HTMLElement): TipInfo {
-  const row = props.data.rows[Number(el.dataset.row)]!
+function infoOf(el: HTMLElement): TipInfo | null {
+  const row = props.data.rows[Number(el.dataset.row)]
+  if (!row) return null
   const box = Number(el.dataset.box)
   const r = boxRange(row, box)
   return { age: row.age, week: box + 1, from: r.from, to: r.to, state: el.dataset.state as TipInfo['state'] }
@@ -62,7 +63,7 @@ function onPointerMove(e: PointerEvent) {
   const el = cellOf(e.target)
   if (!el) { hide(); return }
   mode.value = 'pointer'
-  if (el !== described) { tip.value = infoOf(el); describe(el) }
+  if (el !== described) { const i = infoOf(el); if (!i) return; tip.value = i; describe(el) }
   move(e.clientX, e.clientY)
 }
 function onPointerUp(e: PointerEvent) {
@@ -70,26 +71,35 @@ function onPointerUp(e: PointerEvent) {
   const el = nearestBox(e.clientX, e.clientY, (x, y) => cellOf(document.elementFromPoint(x, y))) as HTMLElement | null
   hide()
   if (!el) return
+  const i = infoOf(el)
+  if (!i) return
   mode.value = 'readout'
   selected.value = el; el.classList.add('selected')
-  tip.value = infoOf(el)
+  tip.value = i
 }
-function activate(el: HTMLElement) {
+function setStop(el: HTMLElement) {   // roving tabindex: exactly one box is the tab stop
+  if (el.getAttribute('tabindex') === '0') return
   document.querySelector('#calendar-grid [tabindex="0"]')?.setAttribute('tabindex', '-1')
   el.setAttribute('tabindex', '0')
-  el.focus()
 }
+function activate(el: HTMLElement) { setStop(el); el.focus() }
 function showAnchored(el: HTMLElement) {
+  const i = infoOf(el)
+  if (!i) return
   mode.value = 'pointer'
-  tip.value = infoOf(el); describe(el)
+  tip.value = i; describe(el)
   const r = el.getBoundingClientRect()
   move(r.left + r.width / 2, r.top)
 }
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') { hide(); return }
+  // leave browser shortcuts alone (Alt+Arrow = Back); Ctrl/Cmd only mean something with Home and End
+  if (e.altKey || e.shiftKey) return
+  const mod = e.ctrlKey || e.metaKey
+  if (mod && e.key !== 'Home' && e.key !== 'End') return
   const el = cellOf(e.target)
   if (!el) return
-  const next = nextCell(e.key, e.ctrlKey || e.metaKey, { row: Number(el.dataset.row), box: Number(el.dataset.box) }, props.data.rows.length)
+  const next = nextCell(e.key, mod, { row: Number(el.dataset.row), box: Number(el.dataset.box) }, props.data.rows.length)
   if (!next) return
   e.preventDefault()
   const target = document.querySelector<HTMLElement>(`#calendar-grid [data-row="${next.row}"][data-box="${next.box}"]`)
@@ -98,12 +108,25 @@ function onKeydown(e: KeyboardEvent) {
 function onFocusIn(e: FocusEvent) {
   const el = cellOf(e.target)
   if (!el) return
+  setStop(el)
   let visible = true
   try { visible = el.matches(':focus-visible') } catch { visible = true }   // a mouse click must not show the anchored tooltip
   if (visible) showAnchored(el)
 }
-function onFocusOut() { hide() }
-onBeforeUnmount(() => cancelAnimationFrame(frame))
+function onFocusOut(e: FocusEvent) {
+  // touch: the compat mousedown after pointerup moves focus and must not wipe the readout
+  if (mode.value === 'readout') return
+  const to = e.relatedTarget as Node | null
+  if (to && document.getElementById('calendar-grid')?.contains(to)) return   // still inside the grid
+  hide()
+}
+// WCAG 1.4.13 dismissible: Escape closes a visible tip wherever the focus is
+function onDocKeydown(e: KeyboardEvent) { if (e.key === 'Escape') hide() }
+watch(tip, (v) => {
+  if (v) document.addEventListener('keydown', onDocKeydown)
+  else document.removeEventListener('keydown', onDocKeydown)
+})
+onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onDocKeydown) })
 </script>
 
 <template>

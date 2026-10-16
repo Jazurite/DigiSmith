@@ -24,4 +24,5 @@ const WORD = { lived: 'Lived', current: 'This week', ahead: 'Ahead' } as const
 .current { background: var(--accent); }
 .ahead { box-shadow: inset 0 0 0 1px var(--bg); }
 @keyframes fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tip { animation: none; } }
 </style>
