@@ -62,7 +62,7 @@
 <body>
 
 <header class="doc-head">
-  <span class="badge">awaiting spec review</span>
+  <span class="badge">approved for planning</span>
   <h1>Humanizer into the technical voice</h1>
   <div class="meta">
     <span>Date: 2026-10-16</span>
@@ -79,7 +79,7 @@
     <li><a href="#consumers">How each file consumes it</a></li>
     <li><a href="#review">Review action in digismith:voice</a></li>
     <li><a href="#h2">Pattern 26 in H.2</a></li>
-    <li><a href="#pending">Pending: Q1 (Jack)</a></li>
+    <li><a href="#dashes">Dashes and headings (Jack, Q1)</a></li>
     <li><a href="#tests">Testing and out of scope</a></li>
   </ol>
 </nav>
@@ -92,7 +92,7 @@
     <tr><td>One shared, genre-neutral catalog: <code>standards/global/ai-writing-tells.md</code></td><td>Jack's Maestro (Q2)</td><td>H.5 Business voice can reuse it later without a change. This ticket does no H.5 work.</td></tr>
     <tr><td>Pattern 26 becomes one rule in <code>ai-voice-conversational.md</code>, in this ticket</td><td>Jack's Maestro (Q3)</td><td>It is a reply-shape rule. The catalog stays about finished text.</td></tr>
     <tr><td>Review action inside <code>digismith:voice</code></td><td>Jack's Maestro (Q4)</td><td>That skill already owns the voice standards. A new skill is not allowed.</td></tr>
-    <tr><td>Em-dash and sentence-case rules</td><td>Open with Jack (Q1)</td><td>See "Pending". Marked placeholder in the catalog.</td></tr>
+    <tr><td>Em-dash and sentence-case rules</td><td>Jack (Q1)</td><td>Em-dash (§8) is weak alone. Sentence-case headings (§20) are a hard rule. See "Dashes and headings".</td></tr>
     <tr><td>The catalog loads through <code>companions:</code> of <code>ste100-writing</code></td><td>Worker (technical)</td><td>Step 0.5 and Step 6 of inject-standards already load every companion. The gate needs no edit.</td></tr>
     <tr><td>Keep <code>ste100-word-swaps.md</code> as hard rows</td><td>Worker (technical)</td><td>It shipped as "every row is a rule". The catalog's "weak alone" covers only the catalog's own patterns. One line in each file says so, so they do not contradict.</td></tr>
     <tr><td>The change is Markdown plus one <code>index.yml</code> edit, with no script or code change</td><td>Worker (technical)</td><td>Cluster counting is a judgment instruction, not tooling. This answers the ticket's own open question.</td></tr>
@@ -121,7 +121,7 @@
     <li><strong>The pattern list.</strong> Patterns 1 to 25, grouped A to E, strongest first. Each entry is one table row: watch for, write instead. Pattern 26 is not here (see H.2). Word-level patterns (humanizer §12) point to <code>ste100-word-swaps.md</code> instead of repeating its rows.</li>
     <li><strong>Mark, draft, check, final.</strong> The four-step loop, shortened: mark every tell strongest first, draft keeping every supported claim, check the draft (added or dropped facts count as errors, re-search the tells that survive rewrites), write the final text. Never add a fact, name, number, date, quote or citation that the source does not give. This also covers the ticket's "two-pass loop" item and the hedge-preservation rule already in <code>ste100-writing.md</code>.</li>
     <li><strong>When not to act.</strong> The preserve list: quotations, titles, proper names, text that discusses a phrase; letter and comment salutations; text written before 2022-11-30; and the voice details to keep (specific odd detail, unresolved tension, era-bound references, explained first-person choice, genuine aside). A writing sample from the user overrides the patterns.</li>
-    <li><strong>Pending rule (Q1).</strong> See below.</li>
+    <li><strong>Dashes and headings (Q1).</strong> See below.</li>
   </ol>
   <p class="callout">Knowledge-limit disclaimers (humanizer §23) cover the ticket's "knowledge-cutoff contamination" item, and it merges with the existing hedge-preservation rule: never dress up missing information as content.</p>
 </section>
@@ -151,12 +151,12 @@
 
 <section id="h2">
   <h2>Pattern 26 in H.2</h2>
-  <p>One new rule 11 in <code>ai-voice-conversational.md</code>: "Lead with the decision in a reply; do not rebuild context the reader has." It keeps only the reasoning that would change whether the reader agrees (usually one fact they lack, plus any link they need). The diagnosis and proof move to the ticket or document. It carries one short before/after example. It applies only when the surrounding conversation is visible or the text is plainly a reply. If unsure, ask or leave the text alone. The Pre-send check gets one matching line. Jack's Maestro posts the DGS-278 comment, so this ticket does not touch ClickUp for it.</p>
+  <p>One new rule 11 in <code>ai-voice-conversational.md</code>: "Lead with the decision in a reply; do not rebuild context the reader has." It keeps only the reasoning that would change whether the reader agrees (usually one fact they lack, plus any link they need). The diagnosis and proof move to the ticket or document. It carries one short before/after example. It applies only when the surrounding conversation is visible or the text is plainly a reply. If unsure, ask or leave the text alone. The Pre-send check gets one matching line.</p>
 </section>
 
-<section id="pending">
-  <h2>Pending: Q1 (Jack)</h2>
-  <p class="callout"><strong>PLACEHOLDER, not decided.</strong> Humanizer §8 (dashes as the universal connector) and §20 (decorative headings, title case) ask: hard rule, or "weak alone"? Until Jack answers, the catalog carries both patterns as <code>weak alone</code> with a visible line "PENDING Jack, DGS-277 Q1". The Maestro sends the answer. If Jack picks "hard", the plan task for this rule changes to one row edit in the catalog. Nothing else depends on it. The plan keeps this rule as its own last task so the answer can land late.</p>
+<section id="dashes">
+  <h2>Dashes and headings (Jack, Q1)</h2>
+  <p class="callout">Decided by Jack on 2026-10-16. Em-dashes (humanizer §8) are <em>weak alone</em>: one dash is fine, and only a text full of dashes is a tell. Sentence case is a hard rule for every heading in AI-written artifacts (humanizer §20). Title case, emoji and arrow decoration in headings are tells on one sighting, with no company needed. The catalog lists §8 under the weak-alone patterns and §20 under the strong ones. The plan keeps this as its own last task.</p>
 </section>
 
 <section id="tests">
