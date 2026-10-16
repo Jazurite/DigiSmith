@@ -16,11 +16,13 @@
 </head>
 <body>
 <h1>Post-merge cleanup — Implementation Report</h1>
-<div class="meta">Date: 2026-10-16 · Ticket: <strong>DGS-494</strong> · Branch: <code>DGS-494__post-merge-cleanup</code></div>
+<div class="meta"><span>Date: 2026-10-16</span> <span>Ticket: <strong>DGS-494</strong></span> <span>Branch: <code>DGS-494__post-merge-cleanup</code></span></div>
 
+<section id="summary">
 <h2>Summary</h2>
 <p>Worker flow left its worktree and merged branch behind after a pushed merge, and a stale board file in the main checkout made <code>git merge</code> refuse. This change adds one cleanup script, a <code>post_merge_cleanup</code> preference gate, a stale-board move before the merge, and pointers in the runbook and Maestro prompt. Built inline with TDD; the Maestro approved the spec, and an independent whole-branch review found 10 items, of which the verified ones were fixed.</p>
 <p>Documents: <a href="design.md">spec</a> and <a href="plan.md">plan</a>.</p>
+</section>
 
 <h2>What was delivered</h2>
 <table>
