@@ -5,3 +5,4 @@ e2e_framework: Playwright
 package_manager: pnpm (workspace/monorepo management and global CLI installs)
 node_installation: nvm (over distro-packaged Node — apt/NodeSource — on a server)
 script_language: TypeScript (over Python, absent existing precedent to match)
+database: PostgreSQL
