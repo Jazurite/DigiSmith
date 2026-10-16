@@ -7,8 +7,11 @@ const IIFE = readFileSync(join(import.meta.dirname, '../../node_modules/web-vita
 const BUDGET = { lcp: 2500, inp: 200, cls: 0.1 }
 // A starting guard for the grid's own render task. The first real measure may justify moving it: tell the Maestro when you do.
 const RENDER_GUARD = { desktop: 100, phone: 400 }
+// The same guard for the longest later chunk task and for the whole grid (setup to the last chunk): the total is allowed to be longer than one task, never one long task.
+const TOTAL_GUARD = { desktop: 1000, phone: 4000 }
 
 // This Mac is noisy: a stray frame spike (up to ~250 ms with no grid on the page either) can break one run. A real regression fails all three attempts.
+// Flaky passes are acceptable ONLY because INP on this machine spikes up to ~250 ms even on a page with no grid; a render or chunk guard failing is never a flake to wave through.
 test.describe.configure({ retries: 2 })
 
 test('Core Web Vitals stay inside the "good" budgets (local, no analytics)', async ({ stub, page }, info) => {
@@ -42,12 +45,19 @@ test('Core Web Vitals stay inside the "good" budgets (local, no analytics)', asy
   }
   await page.waitForTimeout(500)
 
-  const v = await page.evaluate(() => ({ ...(window as any).__v, render: performance.getEntriesByName('grid-render')[0]?.duration ?? null }))
+  const v = await page.evaluate(() => ({ ...(window as any).__v, render: performance.getEntriesByName('grid-render')[0]?.duration ?? null,
+    chunk: Math.max(0, ...performance.getEntriesByName('grid-chunk').map(e => e.duration)),
+    chunks: performance.getEntriesByName('grid-chunk').length,
+    total: performance.getEntriesByName('grid-render-total')[0]?.duration ?? null }))
   expect(v.LCP, 'LCP was measured').toBeGreaterThan(0)
   expect(v.LCP).toBeLessThan(BUDGET.lcp)
   expect(v.CLS ?? 0).toBeLessThan(BUDGET.cls)
   expect(v.INP ?? v.worst).toBeLessThan(BUDGET.inp)   // INP only reports interactions over 40 ms; the observer catches the worst one from 16 ms
   expect(v.render, 'the grid render was timed').not.toBeNull()
   expect(v.render).toBeLessThan(phone ? RENDER_GUARD.phone : RENDER_GUARD.desktop)
-  test.info().annotations.push({ type: 'vitals', description: JSON.stringify({ LCP: Math.round(v.LCP), CLS: v.CLS ?? 0, INP: v.INP ?? v.worst, render: Math.round(v.render) }) })
+  expect(v.chunks, 'the later chunks were timed').toBeGreaterThan(0)
+  expect(v.chunk, 'the longest later chunk task').toBeLessThan(phone ? RENDER_GUARD.phone : RENDER_GUARD.desktop)
+  expect(v.total, 'the whole grid render was timed').not.toBeNull()
+  expect(v.total).toBeLessThan(phone ? TOTAL_GUARD.phone : TOTAL_GUARD.desktop)
+  test.info().annotations.push({ type: 'vitals', description: JSON.stringify({ LCP: Math.round(v.LCP), CLS: v.CLS ?? 0, INP: v.INP ?? v.worst, render: Math.round(v.render), chunk: Math.round(v.chunk), total: Math.round(v.total) }) })
 })

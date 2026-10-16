@@ -26,7 +26,7 @@ const WEEK_MARKS = [0, 12, 25, 38, 51]
 const markStart = (m: number) => (m === BOXES - 1 ? m + 3 - MARK_SPAN : m + 2)
 const total = props.data.rows.length
 const shown = ref(props.eager ? total : Math.min(CHUNK, total))
-const scheduler = createChunkScheduler({ total, size: props.eager ? total : CHUNK, onChange: (n) => { shown.value = n } })
+const scheduler = createChunkScheduler({ total, size: props.eager ? total : CHUNK, onChange: (n) => { if (typeof performance !== 'undefined') performance.mark('grid-chunk-start'); shown.value = n } })
 const chunks = computed(() => Array.from({ length: Math.ceil(shown.value / CHUNK) }, (_, c) => c))
 const complete = computed(() => shown.value >= total)
 // space of the rows not drawn yet, so the layout never moves when the next chunks arrive
@@ -35,6 +35,12 @@ const spacer = computed(() => {
   for (let a = shown.value; a < total; a++) if ((a + 1) % 10 === 0 && a < total - 1) extra += 5
   return `calc(${total - shown.value} * (var(--box) + var(--gap)) + ${extra}px)`
 })
+// timing guards: every later chunk is measured from the scheduler step to the end of its render ('grid-chunk'), and the whole grid once at complete ('grid-render-total')
+watch(shown, () => {
+  if (typeof performance === 'undefined') return
+  performance.measure('grid-chunk', 'grid-chunk-start')
+  if (shown.value >= total) performance.measure('grid-render-total', 'grid-setup')
+}, { flush: 'post' })
 onMounted(() => { performance.measure('grid-render', 'grid-setup'); scheduler.start() })
 
 const tip = ref<TipInfo | null>(null)
