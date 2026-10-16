@@ -42,8 +42,8 @@ refs/digismith/<point>/<feature-branch>/head   — the merge commit itself
 
 For `<point>` = `post-finish`, `finishing-a-development-branch` Option 1 writes these right after
 `git merge <feature-branch>` — `base` from the tip it recorded just before the merge, `head` from
-`HEAD` afterward, and only if the merge actually moved `HEAD` — and deletes both with
-`git update-ref -d` once every hook has fired. A hook that reads a range resolves it from those
+`HEAD` afterward, and only if the merge actually moved `HEAD` — and deletes both once every hook has fired (the
+post-merge cleanup script, Step 6, does the `git update-ref -d`). A hook that reads a range resolves it from those
 two refs and nothing else:
 
 ```bash

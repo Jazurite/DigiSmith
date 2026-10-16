@@ -292,6 +292,11 @@ If the result has no `**Key:**` line set — it's a Door 2 draft that was
 never upgraded to a real ticket — stop here. See Error Handling. Do not
 create a branch or worktree for a key-less ticket.
 
+Write board files (`ticket.md` and anything after it) into the worktree only. When the
+key is already known and no board folder exists yet, run Step 2 first and call
+`digismith:jira-intake` from inside the new worktree. A board file in the main checkout
+makes `git merge` refuse later, because the branch commits the same path.
+
 Then, still in the original checkout and **before any worktree exists**,
 read the full content of the ticket file that `digismith:jira-intake` just
 wrote (or that this session already had) into your own context now —

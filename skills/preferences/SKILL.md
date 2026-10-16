@@ -39,8 +39,13 @@ profile: digismith
 
 preferences:
   finish_option: merge_locally
+  post_merge_cleanup: auto
   ssh_key: /root/.ssh/jazurite_github
 ```
+
+`post_merge_cleanup` (`auto` or `ask`, unset until asked) is read by
+`finishing-a-development-branch` Step 6: `auto` runs the post-merge cleanup
+script without asking, `ask` asks each time.
 
 This skill's operations keep the bare key names: `--key finish_option`
 reads and writes `preferences.finish_option`.
