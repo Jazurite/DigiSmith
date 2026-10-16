@@ -2,6 +2,9 @@ global:
   ai-voice-conversational:
     kind: prose
     description: Live-conversation response-shape discipline for talking with engineers (action-first, numbered steps, no preamble/recap/closers, hedge-preserving error tone). Not for code — skip for code-writing tasks
+  ai-writing-tells:
+    kind: prose
+    description: Catalog of AI-writing tells (staging, rhythm, inflation, formatting, chat leftovers), the weak-alone counting rule, the preserve list and the mark-draft-check-final loop. Prose only, not code. Skip for code-writing tasks
   branch-scope-discipline:
     description: Verify file scope before squashing a branch, diffed against the target base
   code-comments:
@@ -20,7 +23,7 @@ global:
     description: Slop-word to plain-word substitution table for AI-generated prose. Prose only, not code — skip for code-writing tasks
   ste100-writing:
     kind: prose
-    companions: [ste100-word-swaps, ste100-use-cases]
+    companions: [ste100-word-swaps, ste100-use-cases, ai-writing-tells]
     description: Writing style for AI-generated prose (PR descriptions, comments, reports, SKILL.md). Not for code, code comments, or live conversation — skip entirely for a code-writing task
   surgical-changes:
     description: Touch only what the request requires; don't refactor or clean up adjacent code
