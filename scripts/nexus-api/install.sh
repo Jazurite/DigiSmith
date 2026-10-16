@@ -24,6 +24,7 @@ for f in "$SRC"/../nexus-shared/*.ts; do
   cp "$f" "$DEPOT/nexus-shared/"
 done
 cp "$SRC/../nexus-shared/package.json" "$DEPOT/nexus-shared/package.json"
+cp "$SRC/seed-profile.ts" "$DEPOT/nexus-api/seed-profile.ts"
 # the shared files import zod: point them at the API's node_modules (one install, no second copy)
 rm -rf "$DEPOT/nexus-shared/node_modules"; ln -s ../nexus-api/node_modules "$DEPOT/nexus-shared/node_modules"
 # DGS-481: the API now has runtime dependencies. DGS_SKIP_PNPM=1 is for tests only (they link node_modules instead).

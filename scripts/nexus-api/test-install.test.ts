@@ -17,7 +17,7 @@ describe('install.sh', () => {
 
   it('succeeds and writes the depot files', () => {
     expect(r.status, r.stdout + r.stderr).toBe(0)
-    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'nexus-shared/days.ts', 'nexus-shared/life-calendar.ts', 'bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
+    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'nexus-shared/days.ts', 'nexus-shared/life-calendar.ts', 'nexus-api/seed-profile.ts','bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
     expect(statSync(join(depot, 'bin/nexus-api')).mode & 0o777).toBe(0o755)
   })
   it('copies no tests and no fixtures into the depot', () => {
