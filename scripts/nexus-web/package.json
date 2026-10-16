@@ -13,7 +13,9 @@
     "postinstall": "nuxt prepare",
     "e2e": "nuxt generate && playwright test tests/e2e",
     "e2e:install": "playwright install chromium",
-    "a11y": "nuxt generate && playwright test tests/a11y"
+    "a11y": "nuxt generate && playwright test tests/a11y",
+    "visual": "playwright test tests/visual",
+    "visual:update": "playwright test tests/visual --update-snapshots"
   },
   "dependencies": {
     "hono": "4.13.13",
