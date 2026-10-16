@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -28,6 +28,25 @@ describe('file key provider', () => {
     const f = join(dir(), 'profile.key')
     writeFileSync(f, Buffer.alloc(5), { mode: 0o600 })
     await expect(fileKeyProvider(f).getKey()).rejects.toMatchObject({ code: 'key_unavailable' })
+  })
+})
+
+describe('file key provider errors', () => {
+  it('a directory at the key path gives a KeyError with no path in the message', async () => {
+    const f = join(dir(), 'profile.key')
+    mkdirSync(f, { mode: 0o700 })
+    const err = await fileKeyProvider(f).getKey().catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(KeyError)
+    expect((err as Error).message).toBe('key_unavailable')
+    expect((err as Error).message).not.toContain(f)
+  })
+  it('an unwritable parent with create on gives a KeyError, not a raw error', async () => {
+    const d = dir()
+    const f = join(d, 'ro', 'profile.key')
+    mkdirSync(join(d, 'ro'), { mode: 0o500 })
+    const err = await fileKeyProvider(f, { create: true }).getKey().catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(KeyError)
+    chmodSync(join(d, 'ro'), 0o700)
   })
 })
 

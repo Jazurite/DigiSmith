@@ -13,16 +13,26 @@ export interface KeyProvider { getKey(): Promise<Buffer> }
 export function fileKeyProvider(path: string, opts: { create?: boolean } = {}): KeyProvider {
   return {
     async getKey() {
-      if (!existsSync(path)) {
-        if (!opts.create) throw new KeyError()
-        mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-        writeFileSync(path, randomBytes(KEY_BYTES), { flag: 'wx', mode: 0o600 })
-        chmodSync(path, 0o600)
+      try {
+        if (!existsSync(path)) {
+          if (!opts.create) throw new KeyError()
+          mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+          try {
+            writeFileSync(path, randomBytes(KEY_BYTES), { flag: 'wx', mode: 0o600 })
+            chmodSync(path, 0o600)
+          } catch (e) {
+            // A key made between the check and the write is read below, never overwritten.
+            if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e
+          }
+        }
+        if ((statSync(path).mode & 0o077) !== 0) throw new KeyError()
+        const key = readFileSync(path)
+        if (key.length !== KEY_BYTES) throw new KeyError()
+        return key
+      } catch {
+        // Raw fs errors carry the key path in the message: only the code leaves here.
+        throw new KeyError()
       }
-      if ((statSync(path).mode & 0o077) !== 0) throw new KeyError()
-      const key = readFileSync(path)
-      if (key.length !== KEY_BYTES) throw new KeyError()
-      return key
     },
   }
 }

@@ -33,6 +33,7 @@ describe('profile crypto (AES-256-GCM)', () => {
     expect(() => open(seal(FAKE, key), Buffer.alloc(16))).toThrowError(expect.objectContaining({ code: 'bad_key' }))
   })
   it('an error carries a code only, never the profile values or the key', () => {
+    expect.assertions(3)
     try { open(seal(FAKE, key), randomBytes(32)) } catch (e) {
       expect(e).toBeInstanceOf(CryptoError)
       expect((e as Error).message).toBe('decrypt_failed')
