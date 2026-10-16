@@ -88,7 +88,10 @@ humanizer skill or plugin.
    patterns.
 4. **Prose only.** Code blocks, inline code, commands, paths, YAML front
    matter, data and link targets stay unchanged.
-5. **Output.** Default: return the marked tells, a short list of tells that remain after the draft, and the rewrite. Write the final text back to the file only when the user asks for it. After a write-back, give a short summary of what changed. Shape of the marked tells:
+5. **Output.** Default: return the marked tells, a short list of tells
+   that remain after the draft, and the rewrite. Write the final text
+   back to the file only when the user asks for it. After a write-back,
+   give a short summary of what changed. Shape of the marked tells:
    - A header line with the counts by strength. Say "counted by sighting": a heading with two tells is two sightings.
    - Above the groups, a "Top 5" list of the strongest sightings, strongest first.
    - Then one group for each section of the text, in text order. Inside a group, strongest first.
