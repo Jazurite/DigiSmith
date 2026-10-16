@@ -50,7 +50,7 @@ This determines which menu to show and how cleanup works:
 | State | Menu | Cleanup |
 |-------|------|---------|
 | `GIT_DIR == GIT_COMMON` (normal repo) | Standard 3 options | No worktree to clean up |
-| `GIT_DIR != GIT_COMMON`, named branch | Standard 3 options | Provenance-based (see Step 6) |
+| `GIT_DIR != GIT_COMMON`, named branch | Standard 3 options | Post-merge cleanup (see Step 6) |
 | `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 2 options (no merge) | Externally managed — leave in place |
 
 ## Step 3: Determine Base Branch
@@ -190,6 +190,15 @@ individual command it's prefixed onto.
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 
+# Stale board copy: move it aside before the merge (see "Stale board copy" below)
+BACKUP="$HOME/.digismith-depot/backups/<feature-branch>-stale-board"
+git -c core.quotepath=off diff --name-only --diff-filter=A <base-branch>...<feature-branch> -- .digismith/board |
+while IFS= read -r f; do
+  if [ -e "$MAIN_ROOT/$f" ] && ! git ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
+    mkdir -p "$BACKUP/$(dirname "$f")" && mv -n "$MAIN_ROOT/$f" "$BACKUP/$f" && echo "moved stale $f to $BACKUP"
+  fi
+done
+
 # Merge first — verify success before removing anything
 git checkout <base-branch>
 ${SSH_KEY_PREFIX}git pull
@@ -208,6 +217,16 @@ fi
 # Verify tests on merged result
 <test command>
 ```
+
+**Stale board copy.** A worker that wrote its board folder into the main checkout
+before its worktree existed leaves an untracked file at a path the branch also
+commits, and `git merge` then refuses ("untracked working tree files would be
+overwritten"). The loop above finds every board file the branch adds that the main
+checkout holds untracked, and moves it to
+`~/.digismith-depot/backups/<feature-branch>-stale-board/`. It is a move, never a
+delete (`mv -n` never overwrites an earlier backup), and it touches only paths the branch adds. Tracked files and unrelated
+untracked files stay. The fix at the source is in `digismith:bootstrap`: the board
+folder is written inside the worktree only.
 
 If `git merge` stops on conflicts, nothing was pinned (`HEAD` did not move).
 Resolve the conflicts and `git commit` the merge, then pin by hand before
@@ -252,14 +271,7 @@ report the rejection plainly, and investigate — do not force-push
 automatically. Force-push only on your human partner's explicit request
 (see "The push was rejected — force-push will fix it" below).
 
-Once the push succeeds: clean up the worktree (Step 6), then delete the
-branch:
-
-```bash
-git branch -d <feature-branch>
-```
-
-Finally, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
+Once the push succeeds, fire the `post-finish` lifecycle hook: see `fire-lifecycle-hook.md`
 (in this skill's own folder) for the procedure. This runs in every repo,
 DigiSmith's own included — a repo with no `.digismith/hooks/post-finish/`
 folder simply has nothing to fire. Hooks that reason about "what did this
@@ -268,12 +280,8 @@ above — never `ORIG_HEAD` or the live `HEAD`, both of which another
 session's merge on the same checkout may have moved by the time a hook
 actually runs.
 
-Once every hook has fired, delete the pins:
-
-```bash
-git update-ref -d refs/digismith/post-finish/<feature-branch>/base
-git update-ref -d refs/digismith/post-finish/<feature-branch>/head
-```
+Once every hook has fired, run the post-merge cleanup (Step 6). It deletes the
+pins, removes the worktree and deletes the branch, in that order.
 
 Mark the end of finishing. Use the key from the start block:
 
@@ -376,7 +384,10 @@ MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-tople
 cd "$MAIN_ROOT"
 ```
 
-Then clean up the worktree (Step 6) and force-delete the branch:
+Then remove the worktree, only when `GIT_DIR != GIT_COMMON` and `WORKTREE_PATH` is
+under `.worktrees/` or `worktrees/` (a normal repo or a host-owned workspace stays
+in place), with `git worktree remove --force "$WORKTREE_PATH"` from the main repo
+root (the typed `discard` covers its untracked files), and force-delete the branch:
 
 ```bash
 git branch -D <feature-branch>
@@ -389,26 +400,54 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --write
 ```
 
-## Step 6: Cleanup Workspace
+## Step 6: Post-Merge Cleanup
 
-**Runs for Option 1 and confirmed discards.** Options 2 and 3 always
-preserve the worktree. Both callers have already changed directory to the
-main repo root — worktree removal must run from outside the worktree —
-and use the `GIT_DIR`/`GIT_COMMON`/`WORKTREE_PATH` values captured in
-Step 2, from before that directory change.
+**Runs for Option 1, after the post-finish hooks.** Options 2 and 3 always preserve the
+worktree. Run it from the main repo root, never from inside the worktree.
+Use `WORKTREE_PATH` captured in Step 2.
 
-**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
+**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree. Skip the script. Run
+`git branch -d <feature-branch>` and delete the two pins with
+`git update-ref -d refs/digismith/post-finish/<feature-branch>/base` and `.../head`.
 
-**If `WORKTREE_PATH` is under `.worktrees/` or `worktrees/`:** Superpowers
-created this worktree — we own cleanup:
+**If `WORKTREE_PATH` is not under `.worktrees/` or `worktrees/`:** The host
+environment owns this workspace. Leave the worktree in place. Still delete the
+pins and run `git branch -d <feature-branch>` as above. If `git branch -d` fails
+(the branch is still checked out there, or not merged), report the message and stop.
+
+**Otherwise,** read `post_merge_cleanup` with `digismith:preferences`' `get`
+operation:
+
+| Value | Action |
+|-------|--------|
+| `auto` | Run the script. Do not ask. |
+| `ask` | Ask once for this run: "Clean up the worktree and branch for `<feature-branch>`?" Run the script on yes. On no, skip this run (the pins, worktree and branch stay; running the script later still works). |
+| `unset` | Ask once: "Clean up the merged worktree and branch automatically from now on?" Save `auto` on yes and `ask` on no (`set` operation), then act on this run's answer. |
 
 ```bash
-git worktree remove "$WORKTREE_PATH"
-git worktree prune  # Self-healing: clean up any stale registrations
+node --experimental-strip-types <skill-folder>/scripts/post-merge-cleanup.ts \
+  --branch <feature-branch> --worktree "$WORKTREE_PATH" --base <base-branch>
 ```
 
-**Otherwise:** The host environment owns this workspace — leave it in
-place. If your platform provides a workspace-exit tool, use it.
+`<skill-folder>` is this skill's own base directory. Add `--dry-run` to see the
+plan first. The script stops with a clear message and changes nothing further
+when any check fails. In order, it:
+
+1. checks `<feature-branch>` is in `git branch --merged main`;
+2. deletes the pins `refs/digismith/post-finish/<feature-branch>/{base,head}`
+   (a missing pin is fine, so a re-run works);
+3. lists untracked files in the worktree. None: `git worktree remove`. Only known
+   tool caches (`.impeccable/`): `git worktree remove --force`. Anything else, or
+   a tracked change: it stops and lists the files;
+4. runs `git worktree prune` and `git branch -d` (never `-D`).
+
+The script stops after the hooks fired, so the pins it already deleted are not
+needed again: never re-fire a hook after a stop. When the script stops, report its
+message to your human partner and leave the rest in place. A second run after a
+full success prints `already cleaned` and exits 0. Never remove the worktree by hand with `--force` to get past it.
+
+**Discard (explicit request only):** the branch is not merged, so the script
+refuses. The discard section above removes the worktree and the branch itself.
 
 ## Step 7: Hand Off
 
@@ -427,7 +466,7 @@ end-of-ticket cleanup round, and decides whether to clear this session using the
 
 | Option | Merge | Push | Keep Worktree | Cleanup Branch |
 |--------|-------|------|---------------|----------------|
-| 1. Merge locally | yes | yes | - | yes |
+| 1. Merge locally | yes | yes | removed by the script | yes (`-d`) |
 | 2. Create PR | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | Discard (explicit request only) | - | - | - | yes (force) |

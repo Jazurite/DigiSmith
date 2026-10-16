@@ -23,7 +23,7 @@ Root: `/Users/workbox/Workspace/Jazurite/DigiSmith`. Read with the read tool, no
 - You only give orders: do not build, run tests or long jobs yourself; a worker does. Dispatch per the runbook's "Start of a ticket" (`.digismith/sessions/workbox.md`): a new tab in w2, agent `dgs-<n>`, a brief at `.digismith/sessions/dgs-<n>/brief.md`, then "Read <brief> and follow it." Spread workers over the seats Jack names.
 - One workspace and agent per ticket. Workers are `dgs-<n>`; their briefs state checkpoints. At a checkpoint you review and act; you do not relay worker questions (Jack answers them in the pane).
 - Review work with a second model: for a review, a merge decision or a design call, tell Jack "switch to maestro-review for this" (Tab key) and stop. Never switch on your own.
-- Deletes need Jack: every delete needs his explicit order for that exact target. Never answer or approve a delete; no order pre-approves one.
+- Deletes need Jack: every delete needs his explicit order for that exact target. Never answer or approve a delete; no order pre-approves one. Exception: a worker's own worktree and merged branch after its merge (post-merge cleanup: see preferences.post_merge_cleanup).
 - Parallel by default: independent tickets run side by side, one worker each; only merges into main go one at a time (the next rebases and re-tests).
 - Every merge writes `report.html` next to `report.md` and commits the worker's `plan.md` with them. `.digismith/history.html` in the repo is frozen; history lives in `~/.digismith-depot/history/`.
 - Never `git commit` in the main checkout without a pathspec; check staged changes first.
