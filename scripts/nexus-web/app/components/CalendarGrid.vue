@@ -68,6 +68,10 @@ function onPointerMove(e: PointerEvent) {
   if (el !== described) { const i = infoOf(el); if (!i) return; tip.value = i; describe(el) }
   move(e.clientX, e.clientY)
 }
+function onPointerLeave(e: PointerEvent) {
+  if (e.pointerType === 'touch') return   // touch: the browser sends pointerleave right after pointerup; it must not wipe the readout
+  hide()
+}
 function onPointerUp(e: PointerEvent) {
   if (e.pointerType !== 'touch') return
   const el = nearestBox(e.clientX, e.clientY, (x, y) => cellOf(document.elementFromPoint(x, y))) as HTMLElement | null
@@ -124,16 +128,20 @@ function onFocusOut(e: FocusEvent) {
 }
 // WCAG 1.4.13 dismissible: Escape closes a visible tip wherever the focus is
 function onDocKeydown(e: KeyboardEvent) { if (e.key === 'Escape') hide() }
+// touch: a tap outside the grid clears the readout
+function onDocPointerUp(e: PointerEvent) {
+  if (e.pointerType === 'touch' && !document.getElementById('calendar-grid')?.contains(e.target as Node)) hide()
+}
 watch(tip, (v) => {
-  if (v) document.addEventListener('keydown', onDocKeydown)
-  else document.removeEventListener('keydown', onDocKeydown)
+  if (v) { document.addEventListener('keydown', onDocKeydown); document.addEventListener('pointerup', onDocPointerUp) }
+  else { document.removeEventListener('keydown', onDocKeydown); document.removeEventListener('pointerup', onDocPointerUp) }
 })
-onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onDocKeydown) })
+onBeforeUnmount(() => { cancelAnimationFrame(frame); document.removeEventListener('keydown', onDocKeydown); document.removeEventListener('pointerup', onDocPointerUp) })
 </script>
 
 <template>
   <div class="grid-wrap">
-  <div id="calendar-grid" v-once class="grid" role="grid" @pointermove="onPointerMove" @pointerleave="hide" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
+  <div id="calendar-grid" v-once class="grid" role="grid" @pointermove="onPointerMove" @pointerleave="onPointerLeave" @pointerup="onPointerUp" @keydown="onKeydown" @focusin="onFocusIn" @focusout="onFocusOut" aria-label="Your life in weeks. One row per year of age, 52 boxes per row. Use the arrow keys to move between weeks." :aria-rowcount="data.rows.length + 1" :aria-colcount="BOXES + 1">
     <div class="row ruler" role="row">
       <span class="corner" role="columnheader" aria-colindex="1">Age</span>
       <span v-for="m in WEEK_MARKS" :key="m" class="mark" :class="{ last: m === BOXES - 1 }" role="columnheader" :aria-colindex="markStart(m)" :style="{ gridColumn: m === BOXES - 1 ? `${m + 3 - MARK_SPAN} / ${m + 3}` : `${m + 2} / span ${MARK_SPAN}` }">Week {{ m + 1 }}</span>
