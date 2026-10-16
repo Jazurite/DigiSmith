@@ -102,8 +102,12 @@ if (existsSync(runner)) {
   const r = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
   check('caddy-run.sh gives Caddy the token and a data dir, and no login hash', /CLOUDFLARE_API_TOKEN set/.test(r.stdout) && !/NEXUS_BASIC_AUTH_HASH/.test(r.stdout) && /XDG_DATA_HOME set/.test(r.stdout), r.stdout + r.stderr)
   check('caddy-run.sh gives Caddy the web root', /DIGISMITH_WWW set/.test(r.stdout), r.stdout)
+  check('caddy-run.sh creates the web root directory', existsSync(join(dep, 'nexus', 'www')))
   check('caddy-run.sh does not pass other .env values', !/OTHER_SECRET/.test(r.stdout))
   writeFileSync(join(dep, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\nNEXUS_BASIC_AUTH_HASH=$2a$14$leftover\n')   // an old line in .env is not passed on either
+  { const dep2 = join(tmp, 'run-depot2'); mkdirSync(join(dep2, 'bin'), { recursive: true }); mkdirSync(join(dep2, 'caddy'), { recursive: true }); writeFileSync(join(dep2, '.env'), 'CLOUDFLARE_API_TOKEN=tok123\n'); writeFileSync(join(dep2, 'nexus'), 'a file, not a directory'); writeFileSync(join(dep2, 'bin', 'caddy'), '#!/bin/sh\necho started\n'); chmodSync(join(dep2, 'bin', 'caddy'), 0o755)
+    const bad = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep2 } })
+    check('caddy-run.sh refuses to start Caddy without a web root directory', bad.status !== 0 && !/started/.test(bad.stdout), bad.stdout + bad.stderr) }
   const old = run('sh', [runner], { env: { PATH: process.env.PATH, HOME: tmp, DIGISMITH_DEPOT: dep } })
   check('caddy-run.sh ignores a leftover NEXUS_BASIC_AUTH_HASH line', !/NEXUS_BASIC_AUTH_HASH/.test(old.stdout), old.stdout)
   check('caddy-run.sh runs the depot Caddyfile', /args: run --config .*caddy\/Caddyfile --adapter caddyfile/.test(r.stdout), r.stdout)

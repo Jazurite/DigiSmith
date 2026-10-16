@@ -8,4 +8,6 @@ CLOUDFLARE_API_TOKEN=$(val CLOUDFLARE_API_TOKEN)
 export CLOUDFLARE_API_TOKEN
 export DIGISMITH_WWW="$D/nexus/www"   # DGS-481: the static page and Storybook; the install step creates it
 export XDG_DATA_HOME="$D/caddy/data" XDG_CONFIG_HOME="$D/caddy/config"
+mkdir -p "$DIGISMITH_WWW"
+[ -n "$DIGISMITH_WWW" ] && [ -d "$DIGISMITH_WWW" ] || { echo "caddy-run: the web root is missing or not a directory: $DIGISMITH_WWW" >&2; exit 1; }   # fail closed: an empty root would serve the current directory
 exec "$D/bin/caddy" run --config "$D/caddy/Caddyfile" --adapter caddyfile
