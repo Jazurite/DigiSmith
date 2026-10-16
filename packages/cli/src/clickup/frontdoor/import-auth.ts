@@ -1,27 +1,24 @@
 import type { CommandModule } from "yargs";
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { formatExpiry, jwtExpiry, newestCapture, readCalls } from "./captures.ts";
+import { defaultEnvPath, mergeCookies, writeEnvValues } from "@digismith/clickup-client";
+import { formatExpiry, jwtExpiry, newestCapture, readCalls, type CapturedCall } from "./captures.ts";
 import { CAPTURES_ROOT } from "./dump.ts";
 
-const KEY = "CLICKUP_FRONTDOOR_AUTH";
+const AUTH_KEY = "CLICKUP_FRONTDOOR_AUTH";
+const COOKIE_KEY = "CLICKUP_FRONTDOOR_REFRESH_COOKIE";
+const KEPT = ["cu_refresh", "cu_session_meta"];
 
-function defaultEnvPath(): string {
-  return join(homedir(), ".digismith-depot", ".env");
-}
-
-/** Sets KEY='value' in the env file, replacing an existing line. Single quotes: the file is sourced by shells. */
-function storeAuth(envPath: string, value: string): void {
-  const line = `${KEY}='${value.replace(/'/g, "'\\''")}'`;
-  const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : "";
-  const lines = existing === "" ? [] : existing.replace(/\n$/, "").split("\n");
-  const at = lines.findIndex((l) => l.startsWith(`${KEY}=`));
-  if (at === -1) lines.push(line);
-  else lines[at] = line;
-  // mode only applies when the file is created: tighten an existing file before the secret goes in.
-  if (existsSync(envPath)) chmodSync(envPath, 0o600);
-  writeFileSync(envPath, lines.join("\n") + "\n", { mode: 0o600 });
+/**
+ * The two cookies a renewal needs, newest value last seen in the capture: a request Cookie header sets them,
+ * a later non-empty Set-Cookie replaces them. "" when the capture has no cu_refresh (the session cannot renew).
+ */
+export function refreshCookieOf(calls: CapturedCall[]): string {
+  let cookie = "";
+  for (const call of calls) {
+    // A Cookie header is "name=value; name=value": mergeCookies reads each pair like a Set-Cookie line and keeps only the two names.
+    cookie = mergeCookies(cookie, (call.requestHeaders.cookie ?? "").split(/;\s*/));
+    cookie = mergeCookies(cookie, call.responseSetCookies);
+  }
+  return cookie.includes("cu_refresh=") ? cookie : "";
 }
 
 export function createImportAuthCommand(
@@ -30,7 +27,8 @@ export function createImportAuthCommand(
 ): CommandModule {
   return {
     command: "import-auth",
-    describe: "store the Frontdoor session of a Proxyman raw export in ~/.digismith-depot/.env (prints no secret)",
+    describe:
+      "store the Frontdoor session and its refresh cookie of a Proxyman raw export in ~/.digismith-depot/.env (prints no secret)",
     builder: (y) =>
       y.option("capture", {
         type: "string",
@@ -40,14 +38,17 @@ export function createImportAuthCommand(
     handler: async (argv) => {
       try {
         const folder = (argv.capture as string | undefined) ?? newestCapture(capturesRoot);
-        const withAuth = readCalls(folder).filter((c) => c.isFrontdoor && c.requestHeaders.authorization);
+        const calls = readCalls(folder);
+        const withAuth = calls.filter((c) => c.isFrontdoor && c.requestHeaders.authorization);
         const newest = withAuth[withAuth.length - 1];
         if (!newest) throw new Error("no Frontdoor request with an Authorization header in the capture");
         const value = newest.requestHeaders.authorization;
-        storeAuth(envPath, value);
+        const cookie = refreshCookieOf(calls);
+        // One atomic write for both values; a capture without the cookie clears an older one, which belongs to another session.
+        writeEnvValues(envPath, { [AUTH_KEY]: value, [COOKIE_KEY]: cookie });
         const exp = jwtExpiry(value);
         console.log(
-          `clickup frontdoor import-auth: stored${exp === undefined ? "" : `, expires ${formatExpiry(exp)}`}`,
+          `clickup frontdoor import-auth: stored${exp === undefined ? "" : `, expires ${formatExpiry(exp)}`}, renewal: ${cookie ? "yes" : "no"}`,
         );
         process.exitCode = 0;
       } catch (err) {

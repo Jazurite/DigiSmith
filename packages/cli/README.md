@@ -41,7 +41,8 @@ digismith clickup remove-dependency --task <id|key> (--waiting-on <id|key> | --b
 digismith clickup add-link --task <id|key> --to <id|key> [--yes]   # link two tasks (public API; dry run without --yes; has an allow rule)
 digismith clickup remove-link --task <id|key> --to <id|key> [--yes]  # remove a link, never a task (dry run without --yes; no allow rule)
 digismith clickup add-comment --task <id|key> (--text <s> | --markdown-file <path>) [--yes]  # post a comment (public API; dry run without --yes; file sent as plain text, not converted; a second --yes posts a second comment; no allow rule)
-digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session of a Proxyman capture in ~/.digismith-depot/.env (no secret printed)
+digismith clickup frontdoor import-auth [--capture <Raw_* folder>]  # store the Frontdoor session and its refresh cookie of a Proxyman capture in ~/.digismith-depot/.env (no secret printed; says "renewal: yes/no")
+digismith clickup frontdoor refresh   # renew the Frontdoor session with the stored refresh cookie (prints the old and new expiry, no secret)
 digismith clickup frontdoor dump [--capture <folder>] [--match <re>] # masked request/response bodies of the Frontdoor calls in a capture
 
 digismith --version
@@ -54,7 +55,11 @@ digismith --version
 Frontdoor commands cover what the public ClickUp API cannot do (task types today). Capture procedure: turn Proxyman on,
 do the action once in the ClickUp web app, export the requests as Raw into `~/Downloads/Proxyman Captures/ClickUp/`, then run
 `dg clickup frontdoor import-auth` (it never moves or changes the export). Without `--capture` both commands use the newest `Raw_*` there.
-The session token expires; a 401 or 403 says to capture a new one.
+The session token lives 48 hours. When the capture holds a refresh cookie (`cu_refresh`), `import-auth` stores it (and `cu_session_meta`) as
+`CLICKUP_FRONTDOOR_REFRESH_COOKIE`, and every Frontdoor command then renews the token itself: before a call when it expires in under 10 minutes
+or is expired, and once more on a 401 or 403 (then the call is retried once). `dg clickup frontdoor refresh` does the same by hand. The refresh cookie
+lasts about a year; it is a long-lived credential, kept in the mode-600 `.env` and never printed. When renewal fails, or no cookie is stored, a 401
+or 403 says to capture a new session.
 
 `dg` accepts exactly the same arguments. `--help`, at any level, shows branded, colorized command help.
 

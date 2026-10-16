@@ -77,6 +77,8 @@ describe("readCalls", () => {
     expect(c.requestBody).toContain('"name":"Epic"');
     expect(c.responseStatus).toBe("HTTP/1.1 200 OK");
     expect(c.responseBody).toBe('{"id":1030}');
+    expect(c.responseSetCookies).toEqual(["s=1"]);
+    expect(calls[0].responseSetCookies).toEqual([]);
   });
 
   it("works with LF line endings too", () => {

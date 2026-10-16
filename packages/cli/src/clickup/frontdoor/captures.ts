@@ -14,6 +14,8 @@ export interface CapturedCall {
   requestBody: string;
   responseStatus?: string;
   responseBody?: string;
+  /** Every Set-Cookie line of the response, as sent. Read these only to import a session; never print them. */
+  responseSetCookies: string[];
 }
 
 /** The newest Raw_* export in a captures folder, by the timestamp in its name. */
@@ -63,12 +65,16 @@ export function readCalls(folder: string): CapturedCall[] {
       isFrontdoor: host.startsWith("frontdoor-prod-") || file.includes("frontdoor-prod-"),
       requestHeaders,
       requestBody: req.body,
+      responseSetCookies: [],
     };
     const resFile = files.find((f) => f.startsWith(`[${n}] Response`));
     if (resFile) {
       const res = splitMessage(readFileSync(join(folder, resFile), "utf-8"));
       call.responseStatus = res.head[0];
       call.responseBody = res.body;
+      call.responseSetCookies = res.head
+        .filter((l) => /^set-cookie:/i.test(l))
+        .map((l) => l.slice(l.indexOf(":") + 1).trim());
     }
     calls.push(call);
   }

@@ -1,4 +1,4 @@
-import { ClickUpClient, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
+import { ClickUpClient, FileSessionStore, FrontdoorClient, checkCredentials, readFrontdoorAuth, Space } from "@digismith/clickup-client";
 import { readFileSync } from "node:fs";
 import { parseDateFlag, assertDateOrder } from "./parse-date.ts";
 import type { ClickUpTaskWriteBody } from "@digismith/clickup-client";
@@ -20,7 +20,12 @@ export function createFrontdoorClient(envPath?: string): FrontdoorClient {
       "CLICKUP_FRONTDOOR_AUTH is missing in ~/.digismith-depot/.env; run dg clickup frontdoor import-auth"
     );
   }
-  return new FrontdoorClient({ CLICKUP_TEAM_ID: creds.teamId, CLICKUP_FRONTDOOR_AUTH: auth });
+  // The store lets the client renew the session itself when a refresh cookie is stored (dg clickup frontdoor import-auth).
+  return new FrontdoorClient({
+    CLICKUP_TEAM_ID: creds.teamId,
+    CLICKUP_FRONTDOOR_AUTH: auth,
+    session: new FileSessionStore(envPath),
+  });
 }
 
 export const DIGISMITH_SPACE_ID = "1301150000001271";
