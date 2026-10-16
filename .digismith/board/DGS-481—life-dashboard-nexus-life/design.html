@@ -76,15 +76,17 @@
     <li><a href="#goal">Goal and scope</a></li>
     <li><a href="#privacy">Privacy and the date-range decision</a></li>
     <li><a href="#hono">Step 1: move the API onto Hono</a></li>
-    <li><a href="#pieces">Pieces and where they live</a></li>
+    <li><a href="#pieces">Pieces, dependencies and pins</a></li>
     <li><a href="#counting">Counting rule</a></li>
     <li><a href="#schema">Shared schema and the API JSON</a></li>
     <li><a href="#db">Database: PGlite</a></li>
     <li><a href="#crypto">Encryption at rest and the key</a></li>
     <li><a href="#seed">Seed step</a></li>
-    <li><a href="#errors">Errors</a></li>
-    <li><a href="#page">The page</a></li>
-    <li><a href="#caddy">Caddy route for /</a></li>
+    <li><a href="#errors">Errors and logging</a></li>
+    <li><a href="#page">The page: Nuxt and Vue</a></li>
+    <li><a href="#a11y">Accessibility</a></li>
+    <li><a href="#perf">Performance: Core Web Vitals</a></li>
+    <li><a href="#caddy">Caddy: the page, Storybook, caching</a></li>
     <li><a href="#tests">Tests</a></li>
     <li><a href="#deploy">Deploy steps</a></li>
     <li><a href="#later">Not in version 1</a></li>
@@ -94,7 +96,7 @@
 <section id="goal">
 <h2>1. Goal and scope</h2>
 <p>Jack's private life dashboard is the home page of <code>https://pazurite.com/</code>. Version 1 has one widget, the Life Calendar: a life in weeks. The page draws a grid of 90 rows (one per year of age) of 52 boxes. Weeks lived are filled, this week uses the one accent colour, weeks ahead are outlined. Above the grid are weeks lived, weeks left and % lived. Each box has a tooltip with age, week number and date range. The look is black and white with one accent colour, and dark mode follows the device.</p>
-<p>The data comes from <code>GET /api/v1/life-calendar</code> on the Nexus API. Access is tailnet only, with no login (login design: DGS-458). Stack: TypeScript on the API (Hono on Node, Jack's call) and on the page, one shared Zod schema and Hono's typed client between them, SCSS, Vitest, Playwright, pnpm, no UI framework. This document is the architecture and solution design. It contains no code.</p>
+<p>The data comes from <code>GET /api/v1/life-calendar</code> on the Nexus API. Access is tailnet only, with no login (login design: DGS-458). Stack: TypeScript on the API (Hono on Node, Jack's call) and on the page (Nuxt 4 with Vue 3, SCSS, generated as static files), one shared Zod schema and Hono's typed client between them, Storybook for the components, Vitest, Playwright, pnpm. This document is the architecture and solution design. It contains no code.</p>
 </section>
 
 <section id="privacy">
@@ -105,8 +107,8 @@
 <p>Why it reveals the date: box 0 of row 0 starts on the birth date, and <code>rows[0].start</code> in the JSON is that date. The API still has no field named for a birth date, and the schema forbids one (section 6).</p>
 <ul>
 <li>The birth date and the life length are secret. They never appear in the repo, ClickUp, a spec, a plan, a test, a log or a pane. Tests use a fake profile.</li>
-<li>The real values exist in two places only: the private input file <code>~/.digismith-depot/nexus/profile.private.json</code> (fields <code>birthDate</code> as YYYY-MM-DD and <code>lifeYears</code> as a number, mode 600), and, encrypted, in the database.</li>
-<li>Nobody in this work opens the private input file. Only the seed step reads it, when Jack runs the step.</li>
+<li>The real values exist in two places only: the private input file <code>~/.digismith-depot/nexus/profile.private.json</code> (fields <code>birthDate</code> as YYYY-MM-DD and <code>lifeYears</code> as a number, mode 600), and, encrypted, in the database. The input file stays in plain text until Jack deletes it, so the at-rest protection is only complete after that.</li>
+<li>Nobody in this work opens the private input file. Only the seed step reads it, when the build runs the step. The seed step never changes or deletes the file; deleting it is Jack's call.</li>
 <li>FileVault is off on the Workbox and cannot be turned on (it breaks the headless auto-login). The encryption in section 8 is therefore the protection at rest.</li>
 </ul>
 </section>
@@ -131,7 +133,7 @@
 </section>
 
 <section id="pieces">
-<h2>4. Pieces and where they live</h2>
+<h2>4. Pieces, dependencies and pins</h2>
 <div class="table-wrap"><table>
 <tr><th>Piece</th><th>Path in the repo</th><th>Runs as</th></tr>
 <tr><td>Shared schema and types</td><td><code>scripts/nexus-shared/life-calendar.ts</code></td><td>imported by the API and bundled into the page</td></tr>
@@ -144,14 +146,36 @@
 <tr><td>Entry point: port, host, listen; <code>createApiServer</code></td><td><code>scripts/nexus-api/src/server.ts</code> (kept)</td><td>the API on 127.0.0.1:4300, started by the same LaunchAgent wrapper</td></tr>
 <tr><td>Route <code>GET /api/v1/life-calendar</code></td><td><code>scripts/nexus-api/src/life-calendar-route.ts</code></td><td>a Hono route module mounted by <code>app.ts</code></td></tr>
 <tr><td>Seed step</td><td><code>scripts/nexus-api/seed-profile.ts</code></td><td>one-off command, run by Jack</td></tr>
-<tr><td>Keychain probe</td><td><code>scripts/nexus-api/probe-keychain.ts</code> and a probe LaunchAgent template</td><td>one-off, loaded by Jack</td></tr>
-<tr><td>Page (TypeScript, SCSS, HTML)</td><td><code>scripts/nexus-web/</code></td><td>static files built into the depot; calls the API through <code>hono/client</code></td></tr>
+<tr><td>Keychain probe (a later ticket, not tonight)</td><td><code>scripts/nexus-api/probe-keychain.ts</code> and a probe LaunchAgent template</td><td>one-off, loaded by Jack</td></tr>
+<tr><td>Page: Nuxt 4 app (Vue 3, TypeScript, SCSS) and Storybook</td><td><code>scripts/nexus-web/</code> (a pnpm workspace package)</td><td>static files built into the depot; calls the API through <code>hono/client</code></td></tr>
 <tr><td>Caddy route for <code>/</code></td><td><code>scripts/caddy/Caddyfile</code>, <code>caddy-run.sh</code></td><td>Caddy</td></tr>
 </table></div>
 <ul>
 <li>The repo holds the source and the depot runs it (DGS-265). <code>install.sh</code> copies the API source, <code>nexus-shared</code> and the built page into <code>~/.digismith-depot/</code>. The relative import <code>../../nexus-shared/life-calendar.ts</code> works from <code>scripts/nexus-api/src/</code> in the repo and from <code>$DEPOT/nexus-api/src/</code> in the depot.</li>
 <li>The API is no longer dependency-free. Five runtime dependencies are new: <code>hono</code>, <code>@hono/node-server</code>, <code>@hono/zod-validator</code>, <code>zod</code> and <code>@electric-sql/pglite</code>. The plan pins exact versions for all five. <code>scripts/nexus-api/package.json</code> lists them. <code>install.sh</code> copies it and runs <code>pnpm install --prod --frozen-lockfile</code> in the depot copy.</li>
-<li><code>hono</code> is also bundled into the page (for <code>hono/client</code>). Dev dependencies for the page: <code>esbuild</code> (TypeScript to one JS file), <code>sass</code> (SCSS to one CSS file), <code>@playwright/test</code>. The build output is not committed. <code>install.sh</code> builds it into <code>~/.digismith-depot/nexus/www/</code>.</li>
+<li><strong>Dependencies and pins.</strong> Versions checked with <code>npm view</code> on 2026-10-16. The plan pins them exactly and the first ticket of each package re-checks them. Nothing was installed.
+<div class="table-wrap"><table>
+<tr><th>Package</th><th>Version</th><th>Where, and why</th></tr>
+<tr><td><code>hono</code></td><td>4.13.13</td><td>API runtime; also bundled into the page for <code>hono/client</code></td></tr>
+<tr><td><code>@hono/node-server</code></td><td>2.1.5</td><td>API runtime (Node 20 or newer)</td></tr>
+<tr><td><code>@hono/zod-validator</code></td><td>0.9.1</td><td>API runtime (peer <code>zod ^3.25 || ^4</code>)</td></tr>
+<tr><td><code>zod</code></td><td>4.6.7</td><td>API runtime and the page (the shared schema)</td></tr>
+<tr><td><code>@electric-sql/pglite</code></td><td>0.5.10</td><td>API runtime</td></tr>
+<tr><td><code>nuxt</code></td><td>4.6.1</td><td>page (needs Node 24.15 or newer; the Workbox has 24.21). It builds with Vite 8 (<code>@nuxt/vite-builder</code> 4.6.1 depends on <code>vite ^8.3.2</code>) and Vue 3.5.</td></tr>
+<tr><td><code>vue</code></td><td>3.5.44</td><td>page</td></tr>
+<tr><td><code>sass</code></td><td>1.105.2</td><td>page build (SCSS)</td></tr>
+<tr><td><code>vue-tsc</code></td><td>3.3.13</td><td>type check of the page (<code>nuxt typecheck</code>)</td></tr>
+<tr><td><code>storybook</code>, <code>@nuxtjs/storybook</code></td><td>10.6.2, 10.0.1</td><td>component catalogue. The module reuses Nuxt's own Vite config, so auto-imports and aliases work in stories. <code>@nuxtjs/storybook</code> wants <code>storybook ^10.6.0</code>.</td></tr>
+<tr><td><code>@storybook/addon-a11y</code></td><td>10.6.2</td><td>accessibility panel in Storybook</td></tr>
+<tr><td><code>vitest</code> (page package)</td><td>5.0.5</td><td>unit and component tests. <code>@nuxt/test-utils</code> 4.3.3 needs Vitest 4 or newer. The repo root keeps <code>vitest ^2.1</code>, so the page package carries its own newer Vitest and the root config excludes <code>scripts/nexus-web/**</code>. A repo-wide upgrade is a separate decision.</td></tr>
+<tr><td><code>@nuxt/test-utils</code>, <code>@vue/test-utils</code>, <code>happy-dom</code></td><td>4.3.3, 2.5.1, 21.0.3</td><td>component tests (the Nuxt Vitest environment, happy-dom)</td></tr>
+<tr><td><code>@playwright/test</code></td><td>1.64.1</td><td>end-to-end, visual regression and accessibility runs. It downloads its own Chromium (<code>playwright install chromium</code>), allowed in the build order, never now.</td></tr>
+<tr><td><code>@axe-core/playwright</code>, <code>axe-core</code></td><td>4.14.0, 4.14.0</td><td>automated accessibility checks</td></tr>
+<tr><td><code>@lhci/cli</code></td><td>0.15.1</td><td>Lighthouse CI against the built page, local only (it brings its own <code>lighthouse</code> 12.6.1)</td></tr>
+<tr><td><code>web-vitals</code></td><td>6.2.3</td><td>Core Web Vitals in a Playwright test</td></tr>
+</table></div>
+<code>esbuild</code> is no longer a direct dependency: Nuxt builds with Vite. The API's own <code>package.json</code> lists only the five API runtime packages. The page package lists the rest. The depot install of the API stays <code>pnpm install --prod</code>; the page is built from the repo checkout and only its output is copied to the depot.</li>
+
 </ul>
 </section>
 
@@ -217,26 +241,26 @@
 <li>The API reads the key once at start and keeps it in memory. It decrypts on each request. It never caches the plaintext, never logs it and never writes it anywhere.</li>
 </ul>
 <h3>Key providers</h3>
-<p>A small interface <code>getKey()</code> with two implementations. One setting chooses between them: <code>NEXUS_KEY_PROVIDER=keychain|file</code>, written into the API wrapper by <code>install.sh</code>.</p>
+<p>A small interface <code>getKey()</code> with two implementations. One setting chooses between them: <code>NEXUS_KEY_PROVIDER=file|keychain</code>. The API defaults to <code>file</code> when the setting is absent, so the first deploy needs no wrapper change. The Keychain task adds the setting to the wrapper (written by <code>install.sh</code>). The code keeps both providers once that task is done.</p>
 <ol>
-<li><strong>Keychain (preferred).</strong> The service <code>com.jazurite.digismith.nexus</code>, account <code>profile-key</code> in the macOS login Keychain. The API runs <code>security find-generic-password -s ... -a ... -w</code> through <code>execFile</code> with a timeout. The seed step stores the key with <code>security add-generic-password</code>. The key is in a process argument for a moment while it is stored, so another local user could see it. This is a one-user machine, and the seed ticket names the risk.</li>
-<li><strong>File (fallback, a deliberate setting only).</strong> <code>~/.digismith-depot/keys/nexus-profile.key</code>, mode 600, checked at start. The data is in <code>nexus/db/</code> and the key is in <code>keys/</code>, so the key is not next to the data. Limit: if the whole depot is backed up, the key file goes into the same backup as the data. The Keychain does not have that problem.</li>
+<li><strong>File (the provider for the first deploy).</strong> A 32-byte key in <code>~/.digismith-depot/nexus/profile.key</code>, mode 600, checked at start. The seed step creates it if it is missing and never overwrites an existing key. The API refuses to start the calendar route if the file is not mode 600. Limit, stated plainly: the key file sits in the same folder as the database folder (<code>nexus/db/</code>), and if the whole depot is backed up, the key goes into the same backup as the data. The encryption then protects only against someone who gets the database folder without the key file. Mode 600 and mode 700 protect against other local users. This is the weaker option, and the Keychain ticket exists to replace it.</li>
+<li><strong>Keychain (a later ticket).</strong> The service <code>com.jazurite.digismith.nexus</code>, account <code>profile-key</code> in the macOS login Keychain. The API runs <code>security find-generic-password -s ... -a ... -w</code> through <code>execFile</code> with a timeout. The key would be stored with <code>security add-generic-password</code>; the key is in a process argument for a moment while it is stored, so another local user could see it (a one-user machine; the ticket names the risk). Moving from the file to the Keychain means: store the key in the Keychain, switch the setting, restart the API, then Jack deletes the key file (a re-seed is not needed, the key is the same).</li>
 </ol>
-<h3>The Keychain probe comes first</h3>
-<p>From an SSH-like session, <code>security</code> answered "User interaction is not allowed". The build must therefore prove that the LaunchAgent can read the item before anything else depends on it. A probe script and a small probe LaunchAgent read the item and write only <code>ok</code> or <code>fail</code> plus the key length to a log. They never write the key. Jack loads the probe LaunchAgent.</p>
-<div class="callout"><strong>Risk the probe must settle.</strong> With automatic login the login Keychain may stay locked after a reboot, because nobody typed the password. The probe runs after a reboot too. If it fails, the file provider is chosen on purpose, by Jack, and the backup limit above is told to him.</div>
-<p>If the Keychain is locked while the API runs, the API still starts. It returns 503 <code>key_unavailable</code> for the calendar route and serves everything else. It does not crash and it does not fall back silently.</p>
+<h3>The Keychain probe is a separate, later ticket</h3>
+<p>From an SSH-like session, <code>security</code> answered "User interaction is not allowed". Before the Keychain provider is switched on, a probe script and a small probe LaunchAgent must prove that the LaunchAgent can read the item. The probe writes only <code>ok</code> or <code>fail</code> plus the key length to a log, never the key. Jack loads the probe LaunchAgent, so this ticket waits for him.</p>
+<div class="callout"><strong>Risk the probe must settle.</strong> With automatic login the login Keychain may stay locked after a reboot, because nobody typed the password. The probe runs after a reboot too. If it fails, the file provider stays, by Jack's decision, with the backup limit above told to him.</div>
+<p>If the key is not available (no key file, or later a locked Keychain), the API still starts. It returns 503 <code>key_unavailable</code> for the calendar route and serves everything else. It does not crash and it does not fall back silently.</p>
 </section>
 
 <section id="seed">
 <h2>9. Seed step</h2>
-<p><code>node --experimental-strip-types scripts/nexus-api/seed-profile.ts [--from &lt;path&gt;]</code>, run by Jack with the API stopped.</p>
+<p><code>node --experimental-strip-types scripts/nexus-api/seed-profile.ts [--from &lt;path&gt;]</code>. The deploy runs it (not Jack), with the API stopped. Jack can run it again later to change the profile.</p>
 <ol>
 <li>Read the input file (default <code>~/.digismith-depot/nexus/profile.private.json</code>). Refuse if it is not mode 600.</li>
 <li>Validate with the private seed schema (<code>birthDate</code> a real YYYY-MM-DD date, <code>lifeYears</code> a whole number from 1 to 120).</li>
-<li>Get the key from the provider. Create a new 32-byte key only when none exists yet.</li>
+<li>Get the key from the provider. With the file provider, create a new 32-byte key at <code>~/.digismith-depot/nexus/profile.key</code> (mode 600) only when none exists yet, and never overwrite one.</li>
 <li>Encrypt. Upsert the single row in the database (created with mode 700).</li>
-<li>Print only <code>profile saved</code>, or the name of the invalid field. It never prints a value, a key or a value inside an error. It never deletes the input file. It prints "you can delete the input file now" and Jack decides.</li>
+<li>Print nothing on success (exit code 0). On failure print only the name of the invalid field or the failing step, and exit non-zero. It never prints a value, a key or a value inside an error. It never changes or deletes the input file; Jack decides about it.</li>
 </ol>
 </section>
 
@@ -251,7 +275,8 @@
 <tr><td>Wrong method, unknown path</td><td>405 with <code>Allow: GET</code>, 404 <code>not_found</code> (same bodies as today, from a custom handler)</td></tr>
 <tr><td>A query string on the life-calendar route</td><td>400 <code>bad_request</code></td></tr>
 <tr><td>Any other error thrown in a handler</td><td><code>app.onError</code> maps it to a code from this table (unknown ones to 503 <code>internal_invalid</code>). Hono's default error body is never sent.</td></tr>
-<tr><td>Page: API down, a 5xx, or a bad shape</td><td>one plain sentence ("The calendar is not available right now") and a Retry button</td></tr>
+<tr><td>Page: <code>key_unavailable</code>, <code>profile_missing</code></td><td>the page reads the <code>error</code> code from the 503 body and shows "The calendar is locked." or "No calendar yet." (decision: the body carries a code only, so nothing sensitive reaches the page; the error codes are part of the shared schema)</td></tr>
+<tr><td>Page: API down, any other code, a network failure, or a bad shape</td><td>one plain sentence ("The calendar is not available right now") and a Retry button</td></tr>
 </table></div>
 <p>A 503 sends <code>Retry-After: 5</code>, as the power route does.</p>
 <h3>Logging (an own small logger, no dependency)</h3>
@@ -265,62 +290,169 @@
 </section>
 
 <section id="page">
-<h2>11. The page</h2>
+<h2>11. The page: Nuxt and Vue</h2>
+<p>The visual reference is the Designer's <code>ui-design.md</code> and <code>mock.html</code> in this board folder (all mock data is fake: born 1990-01-01, "today" 2026-10-16). This spec decides the structure. The look, tokens, states and wording come from the Designer's files.</p>
+<h3>Rendering mode: static generation</h3>
+<p>The page is a Nuxt 4 app built with <code>nuxt generate</code> (prerendered HTML plus JS), served by Caddy as files. The data is fetched in the browser through Hono's typed client. This adds no new server process and no new LaunchAgent.</p>
 <ul>
-<li>Files in <code>scripts/nexus-web/</code>: <code>index.html</code>, <code>main.ts</code>, <code>grid.ts</code>, <code>tooltip.ts</code>, <code>styles.scss</code>. Plain TypeScript and the DOM, no framework.</li>
-<li>The grid is a CSS grid of 4,680 <code>div</code>s with <code>data-row</code> and <code>data-box</code>, easy for Playwright to query.</li>
-<li>States: lived is filled, current uses the accent colour, ahead is outlined.</li>
-<li>Above the grid: weeks lived, weeks left, % lived.</li>
-<li>One shared tooltip element follows the pointer and shows age, week number (1 to 52) and the date range. A tap shows it on touch.</li>
-<li>Look: black and white, one accent colour, dark mode through <code>prefers-color-scheme</code>. Colour tokens on <code>:root</code>.</li>
-<li>The page calls the API with <code>hc&lt;AppType&gt;</code> from <code>hono/client</code> (one fetch, <code>cache: 'no-store'</code>) and runs the shared schema on the answer. It refreshes once at the UTC+7 midnight so "this week" stays right if the tab stays open.</li>
+<li><strong>Why not SSR (a running Nitro server):</strong> it needs a second always-on process and a LaunchAgent, and it adds nothing here. The data is private and live, so it must be fetched per visit anyway, and it must never be baked into HTML or cached. The prerendered HTML holds the header, the widget frame, the stat placeholders and the grid placeholder at their final size. Static files from Caddy have the fastest first byte. So the first paint does not wait for data, and Core Web Vitals do not give a reason for SSR (section 13). If a later widget needs server-rendered data, it gets its own decision.</li>
+<li><strong>The build never touches the API or the profile.</strong> <code>nuxt generate</code> runs with no access to the API. All data code runs on the client after mount. A test greps the built files for the fixture's fake values and for any API response shape, and fails if found.</li>
+<li>Page content that depends on "now" (today's date in the header) is rendered on the client only, in a slot of fixed size, so the prerendered HTML is never stale and never shifts.</li>
+<li>No Nuxt pages or router (one page), no Nitro server routes, no Nuxt modules except <code>@nuxtjs/storybook</code>. <code>app/app.vue</code> is the shell.</li>
+<li>The API base is relative (<code>/api/...</code>), so the same build works on the tailnet host and in the test server.</li>
+</ul>
+<h3>Components</h3>
+<p>Vue 3 single-file components with TypeScript and SCSS inside. The Designer's ten components map like this:</p>
+<div class="table-wrap"><table>
+<tr><th>Designer's component</th><th>Vue component (in <code>app/components/</code>)</th><th>Notes</th></tr>
+<tr><td>1. Page header</td><td><code>DashboardHeader.vue</code></td><td>wordmark and today's date (client only, fixed slot)</td></tr>
+<tr><td>2. Widget frame</td><td><code>WidgetFrame.vue</code></td><td>h2, meta, content slot, note slot; reused by later widgets</td></tr>
+<tr><td>3. Stat</td><td><code>StatsBar.vue</code> and <code>StatItem.vue</code></td><td>description list; has a skeleton form</td></tr>
+<tr><td>4. Legend</td><td><code>CalendarLegend.vue</code></td><td>three swatch and word pairs</td></tr>
+<tr><td>5. Calendar grid</td><td><code>CalendarGrid.vue</code></td><td>ruler, age column, rows, decade spacing</td></tr>
+<tr><td>6. Box</td><td>not a component</td><td>plain elements inside <code>CalendarGrid.vue</code>, with classes. 4,680 component instances would cost render time (section 13).</td></tr>
+<tr><td>7. Tooltip and touch readout</td><td><code>WeekTooltip.vue</code></td><td>one element, two placements</td></tr>
+<tr><td>8. State panel</td><td><code>StatePanel.vue</code></td><td>kinds: <code>error</code>, <code>locked</code>, <code>empty</code></td></tr>
+<tr><td>9. Button</td><td><code>AppButton.vue</code></td><td>primary, busy and disabled states</td></tr>
+<tr><td>10. Skeleton and ghost grid</td><td><code>GridSkeleton.vue</code></td><td>same footprint as the real grid</td></tr>
+<tr><td>(widget)</td><td><code>LifeCalendar.vue</code> (container) and <code>LifeCalendarView.vue</code> (presentational)</td><td>the container fetches and maps errors. The view takes the state as props. Stories and component tests use the view only.</td></tr>
+<tr><td>(data)</td><td><code>composables/useLifeCalendar.ts</code></td><td>calls the API with <code>hc&lt;AppType&gt;</code>, runs the shared schema on the answer, maps an error code to a state</td></tr>
+</table></div>
+<ul>
+<li><strong>States of the view:</strong> loading, loaded, before birth, past the last row, error, locked, empty (Designer, section 6).</li>
+<li><strong>Error mapping:</strong> the 503 body's <code>error</code> code (shared schema) selects the panel: <code>key_unavailable</code> gives locked, <code>profile_missing</code> gives empty, anything else gives error. The panel never shows a code, a stack, a key name or a path.</li>
+<li><strong>Typed client:</strong> <code>import type { AppType }</code> from the API through one alias. The page runs the shared schema on the received JSON too, because the client gives compile-time types only.</li>
+<li><strong>Interaction:</strong> one pointer listener on the grid (event delegation), no listener per box. The box under the pointer is found from the event target (<code>closest('[data-row]')</code>), which is one DOM lookup per move. Touch uses the nearest-box rule (within 14 px). Keyboard follows the Designer's keys (section 12).</li>
+<li><strong>Refresh:</strong> one refresh at the UTC+7 midnight so "this week" stays right if the tab stays open.</li>
+<li><strong>Taste points, pending Jack</strong> (the Designer's recommendations are used until he answers): accent colour vermilion (<code>#e8401c</code>, dark <code>#ff5a3c</code>); row labels every 10 years with a gap after each decade; stat labels "weeks lived", "weeks left", "lived".</li>
 <li>Phone access works only when the phone is on Tailscale.</li>
+</ul>
+<h3>Storybook</h3>
+<ul>
+<li><strong>Choice:</strong> the <code>@nuxtjs/storybook</code> module (10.0.1) with Storybook 10.6.2. It reuses Nuxt's Vite config, so stories see the same auto-imports and aliases as the page. The plain <code>@storybook/vue3-vite</code> builder would need that setup repeated by hand.</li>
+<li><strong>Stories</strong> live next to the components (<code>*.stories.ts</code>). One story per widget state on <code>LifeCalendarView</code>: loaded, loading, error, key unavailable, empty, before birth, past 90 years. Plus one story per other component state (tooltip placements, the three stat forms, legend, buttons, panels, a small three-state grid).</li>
+<li><strong>Fake data only.</strong> A fixture module builds the data by calling the API's pure life-math function with the fake profile (born 1990-01-01, today 2026-10-16), so fixtures cannot drift from the real counting rule. The expected numbers match the Designer's mock: 1,913 lived, 2,766 left, 40.9%, this week at row 36, box 41. A decorator replaces <code>fetch</code> with a function that throws, so no story can reach the API.</li>
+<li><strong>Light and dark:</strong> the tokens follow <code>prefers-color-scheme</code>. A small toolbar item (<code>device</code>, <code>light</code>, <code>dark</code>) sets a <code>data-theme</code> attribute that the tokens also honour, so Jack can compare both on one device. The tests use browser colour-scheme emulation instead, which is how the real page behaves.</li>
+<li><strong>Hosting:</strong> a static Storybook build is served at <code>https://pazurite.com/storybook/</code> through Caddy (section 14), tailnet only, no login. I see no reason against it. Conditions: stories use fake data only and cannot fetch (above), and the Storybook build is rebuilt by the same install step as the page. It is several megabytes, but it is a separate path and does not touch the page's Core Web Vitals.</li>
+</ul>
+</section>
+
+<section id="a11y">
+<h2>12. Accessibility</h2>
+<p>Target: WCAG 2.2 level AA, in light and dark. The Designer's section 8 is the detailed pattern. This section sets what must be true and how it is checked.</p>
+<ul>
+<li><strong>Grid:</strong> <code>role="grid"</code> with a name that explains the keys, <code>role="row"</code> rows, a <code>role="rowheader"</code> per row ("Age 36") and <code>role="gridcell"</code> boxes. A column header row (<code>role="columnheader"</code>) carries "Week 1", 13, 26, 39, 52, and every box's accessible name also holds its week number. The ruler is the visual form of the headers. (If the 4,680 cells cost too much in the measured render budget, the fallback order is in section 13.)</li>
+<li><strong>Labels on every box:</strong> "Age 36, week 42 of 52, 12 October 2026 to 18 October 2026, this week". A screen reader user gets the full text without the tooltip.</li>
+<li><strong>Tooltip by keyboard:</strong> when a box has focus, the tooltip shows over it and the box has <code>aria-describedby</code> pointing at the one tooltip element (<code>role="tooltip"</code>). Escape hides it (WCAG 1.4.13: dismissible, hoverable, persistent). The touch readout is a live <code>status</code> region.</li>
+<li><strong>Keyboard:</strong> the grid is one tab stop with a roving <code>tabindex</code>, starting on this week. Keys: arrows, Home, End, Ctrl+Home, Ctrl+End, Page Up, Page Down, Escape (Designer, section 8). A "Skip to the calendar" link is the first tab stop. Focus is visible (2 px ink ring, 3 px on this week) and never hidden by sticky content (WCAG 2.4.11).</li>
+<li><strong>Live regions:</strong> the stat area is a polite live region and has <code>aria-busy</code> while loading. The state panels use <code>role="alert"</code> (error, locked) and <code>role="status"</code> (empty). After Retry succeeds, focus moves to the grid. The skeleton boxes are <code>aria-hidden</code>.</li>
+<li><strong>Contrast and meaning:</strong> text 4.5:1 or more, ahead outlines and the accent box 3:1 or more against the page, in both themes (the vermilion accent <code>#e8401c</code> on white and <code>#ff5a3c</code> on near-black are checked by test, not by eye). Meaning is never colour alone: lived is filled, ahead is an outline, this week has a ring and a word in the legend and the tooltip.</li>
+<li><strong>Target size (WCAG 2.5.8):</strong> buttons are 44 px. The grid boxes are smaller than 24 px, so the grid uses the spec exception for an equivalent: the nearest-box selection on touch and the full keyboard control. The test notes this exception.</li>
+<li><strong>Other:</strong> forced colours (lived <code>CanvasText</code>, ahead <code>GrayText</code>, this week <code>Highlight</code>) and reduced motion (pulse and fades stop).</li>
+</ul>
+<h3>How it is checked</h3>
+<ul>
+<li><strong>axe-core in Playwright</strong> (<code>@axe-core/playwright</code>) runs on the real page in the end-to-end tests and on every Storybook story, in light and dark, with the tags <code>wcag2a</code>, <code>wcag2aa</code>, <code>wcag21a</code>, <code>wcag21aa</code>, <code>wcag22aa</code>. The run fails on any violation. There is no allow-list; an exception needs its own reason in the test file and Jack's sign-off.</li>
+<li><strong>Storybook a11y addon</strong> (<code>@storybook/addon-a11y</code>) shows the same axe results in the Storybook panel for Jack and the builder. The failing gate is the Playwright run over the built Storybook. It uses the same axe engine and the same rules. Failing from the addon itself would need <code>@storybook/addon-vitest</code>, which wants Vitest 3 or newer in browser mode and the repo root has Vitest 2; I do not do that in version 1.</li>
+<li>Keyboard tests in Playwright press each key and assert focus and the tooltip text. A contrast test reads the computed token colours in both schemes and checks the ratios.</li>
+<li>Automated checks do not find everything. A manual screen-reader pass (VoiceOver) is a step before release, done by Jack or by a note in the acceptance step for the Jack sign-off ticket.</li>
+</ul>
+</section>
+
+<section id="perf">
+<h2>13. Performance: Core Web Vitals</h2>
+<p>Budgets at Google's "good" thresholds for the dashboard page: <strong>LCP under 2.5 s, INP under 200 ms, CLS under 0.1</strong>. They hold on a desktop profile and on a phone profile (390 px wide, CPU slowed 4 times). All measurements stay local. There is no external analytics and no field monitoring service.</p>
+<h3>Measurement</h3>
+<ul>
+<li><strong>Lighthouse CI</strong> (<code>@lhci/cli</code>) runs against the built page served locally by the test server (the same stub API server the end-to-end tests use), 3 runs, median, mobile and desktop presets. Assertions: LCP at most 2,500 ms, CLS at most 0.1, and Total Blocking Time at most 200 ms as the lab stand-in for INP (Lighthouse's navigation run does not measure INP). Results are written to a local folder, never uploaded.</li>
+<li><strong><code>web-vitals</code></strong> in a Playwright test measures LCP, CLS and INP on the real page with scripted interaction: pointer moves across many boxes, a click, tap, keyboard arrows through rows and Escape. The test fails over any budget. It runs with the desktop profile and the phone profile (CPU throttle through the browser protocol).</li>
+<li>A render guard: the grid's render task is timed with the User Timing API. The budget is a guard value the plan sets after the first measure (starting point: under 100 ms desktop, under 400 ms on the 4 times slowed phone profile).</li>
+</ul>
+<h3>Design rules that keep the budgets</h3>
+<ul>
+<li><strong>4,680 boxes, render cost.</strong> The boxes are plain elements, not components. The rows render once and are marked static (<code>v-once</code> or <code>v-memo</code>) until the data signature changes (midnight refresh). Styles use classes only, with <code>contain: layout paint</code> on the grid. If the measured render budget fails, the fallbacks, in order: (1) the per-box <code>aria-label</code> is written on first hover or focus and the row carries the label until then, keeping the accessible names complete for the focused cell and the row; (2) render the grid in decade chunks with <code>requestIdleCallback</code>. The plan measures first and changes nothing before that.</li>
+<li><strong>Layout shift while data loads.</strong> The prerendered HTML, the client's first render and the skeleton all use the same markup and size. The skeleton is one element with the grid's exact height, computed from the same CSS variables as the grid (rows, box size, gap, decade spacing), with the boxes drawn by a CSS pattern. It keeps the prerendered HTML small and the DOM light before data arrives. The stat slots have fixed height and tabular figures. The state panel sits on top of the ghost grid and takes no space. The header date has a fixed slot. The system font stack means no font swap. Version 1 expects 90 rows; if the data has another row count, the grid height changes once, which is the only allowed shift (and the shift test uses 90).</li>
+<li><strong>LCP.</strong> The largest element is text (the title or the stat), so there is no image to wait for. It appears from the prerendered HTML without waiting for JS or data. No web fonts, no external requests, no analytics.</li>
+<li><strong>INP and a fast tooltip.</strong> One delegated <code>pointermove</code> listener. The handler finds the box from the event target (one DOM lookup), does no layout read while moving, updates the tooltip only when the box changes, and moves it with a <code>transform</code> inside one animation frame. Hover work stays under a few milliseconds even on the slowed phone profile.</li>
+<li><strong>Delivery.</strong> Caddy compresses (<code>gzip</code> and <code>zstd</code>) and sends hashed assets with a long immutable cache (section 14). No CDN in version 1.</li>
 </ul>
 </section>
 
 <section id="caddy">
-<h2>12. Caddy route for /</h2>
+<h2>14. Caddy: the page, Storybook, caching</h2>
 <ul>
 <li><code>caddy-run.sh</code> exports <code>DIGISMITH_WWW="$D/nexus/www"</code>.</li>
-<li>In the <code>pazurite.com</code> block, the last <code>handle</code> becomes a file server with <code>root * {env.DIGISMITH_WWW}</code> instead of the 404. <code>/api/*</code> stays above it and still goes to 127.0.0.1:4300. Unknown files return 404. <code>index.html</code> is sent with <code>Cache-Control: no-cache</code>.</li>
+<li>In the <code>pazurite.com</code> block, the last <code>handle</code> becomes a file server with <code>root * {env.DIGISMITH_WWW}</code> instead of the 404. <code>/api/*</code> stays above it and still goes to 127.0.0.1:4300. Unknown files return 404.</li>
+<li><strong>Storybook</strong> is published into <code>$DEPOT/nexus/www/storybook/</code>. The same file server serves <code>https://pazurite.com/storybook/</code> and redirects <code>/storybook</code> to <code>/storybook/</code>. No second route is needed.</li>
+<li><strong>Caching:</strong> <code>index.html</code> files (the page and Storybook) are sent with <code>Cache-Control: no-cache</code>. The hashed build assets (<code>/_nuxt/*</code> and Storybook's hashed files) are sent with <code>public, max-age=31536000, immutable</code>.</li>
+<li><strong>Compression:</strong> <code>encode zstd gzip</code> in the <code>pazurite.com</code> block (HTML, JS, CSS, JSON).</li>
 <li>A change to a static file needs no restart. The Caddyfile change needs one Caddy restart.</li>
 </ul>
 </section>
 
 <section id="tests">
-<h2>13. Tests</h2>
+<h2>15. Tests</h2>
+<h3>Backend (Vitest, repo root, Vitest 2)</h3>
 <ul>
-<li><strong>Vitest, Hono move (step 1):</strong> the existing server tests, unchanged; a byte comparison of the power response against a stored fixture; 127.0.0.1 binding; HEAD, POST, unknown path and trailing slash as before; the 503 <code>no_reading</code> case.</li>
-<li><strong>Vitest, life math:</strong> fixed "now" values and a fake birth date. Cases: birthday today, the day before a birthday, the 29 February birthday, 52-box rows and the leftover days, before birth, past the last row, UTC+7 midnight edges, totals add up to rows × 52.</li>
-<li><strong>Vitest, crypto:</strong> a fixed fake key and a fake profile. Round trip, a changed ciphertext, a changed tag, a wrong key, a wrong associated-data text, a new nonce on each seed.</li>
-<li><strong>Vitest, key providers:</strong> the Keychain provider runs against an injected fake <code>security</code> runner (found, not found, locked, timeout). The file provider checks mode 600 and a missing file.</li>
-<li><strong>Vitest, storage and seed:</strong> PGlite in memory for most tests. One test uses a real data folder in a temp directory, checks mode 700 and checks that the files do not contain the fake birth date as plain text. Seed tests use a fake JSON file in a temp folder: mode check, invalid input, and a capture that shows no value or key in any output.</li>
-<li><strong>Vitest, life-calendar route:</strong> the 200 shape, the key list has no birth-date key, every 503 code, 400 for a query string, 405 and 404, and that a response failing the shared schema becomes 503 <code>internal_invalid</code>.</li>
-<li><strong>Vitest, no secret in a log line:</strong> the app is built with a logger whose output function collects every line. A fake profile, a fake key and the matching fake ciphertext are loaded. The test runs a good request, then every error path (missing profile, key unavailable, a changed blob, a wrong key, a bad response, a query string, an <code>Authorization</code> header, an error thrown by a fake provider whose message holds the fake values). It then asserts that the collected log text contains none of: the fake birth date (in any common format), the fake life length as a field, the key (hex and base64), the ciphertext and the nonce. The same test scans the API source files and fails on any <code>console.</code> call outside <code>logger.ts</code>, so a line added later cannot bypass the logger.</li>
-<li><strong>Type check, end to end:</strong> <code>tsc --noEmit</code> runs over the API, the page and the shared file. A type test (<code>expectTypeOf</code>) checks that the type the page gets from <code>hc&lt;AppType&gt;</code> equals the type inferred from the shared schema, so a schema change that the page does not follow fails the build.</li>
-<li><strong>Vitest, shared schema:</strong> a strict-key test (an extra key is rejected). The API and the page import the same file, so the types cannot drift.</li>
-<li><strong>Vitest, page units:</strong> the tooltip range math.</li>
-<li><strong>Playwright:</strong> against a throwaway server with a stub API on a high port. It checks 90 rows of 52 boxes, the three states, the stats line, the tooltip text, dark mode (<code>colorScheme: 'dark'</code>) and the error state with Retry.</li>
-<li><strong>Caddy:</strong> extend <code>scripts/caddy/test-config.mjs</code> so <code>/</code> serves the index file, <code>/other</code> returns 404 and <code>/api/*</code> still proxies.</li>
-<li>A pattern check that no source file, fixture or snapshot outside the test folders holds a birth-date literal. Tests use a fake date only.</li>
+<li><strong>Hono move (step 1):</strong> the existing server tests, unchanged; a byte comparison of the power response against a stored fixture; 127.0.0.1 binding; HEAD, POST, unknown path and trailing slash as before; the 503 <code>no_reading</code> case.</li>
+<li><strong>Life math:</strong> fixed "now" values and a fake birth date. Cases: birthday today, the day before a birthday, the 29 February birthday, 52-box rows and the leftover days, before birth, past the last row, UTC+7 midnight edges, totals add up to rows times 52.</li>
+<li><strong>Crypto:</strong> a fixed fake key and a fake profile. Round trip, a changed ciphertext, a changed tag, a wrong key, a wrong associated-data text, a new nonce on each seed.</li>
+<li><strong>Key providers:</strong> the Keychain provider runs against an injected fake <code>security</code> runner (found, not found, locked, timeout). The file provider checks mode 600 and a missing file.</li>
+<li><strong>Storage and seed:</strong> PGlite in memory for most tests. One test uses a real data folder in a temp directory, checks mode 700 and checks that the files do not contain the fake birth date as plain text. Seed tests use a fake JSON file in a temp folder: mode check, invalid input, and a capture that shows no value or key in any output.</li>
+<li><strong>Life-calendar route:</strong> the 200 shape, the key list has no birth-date key, every 503 code, 400 for a query string, 405 and 404, a response failing the shared schema becomes 503 <code>internal_invalid</code>, and the <code>charset</code> header.</li>
+<li><strong>No secret in a log line:</strong> the app is built with a logger whose output function collects every line. A fake profile, a fake key and the matching fake ciphertext are loaded. The test runs a good request, then every error path (missing profile, key unavailable, a changed blob, a wrong key, a bad response, a query string, an <code>Authorization</code> header, an error thrown by a fake provider whose message holds the fake values). It asserts that the collected log text contains none of: the fake birth date (in any common format), the fake life length as a field, the key (hex and base64), the ciphertext and the nonce. The same test scans the API source files and fails on any <code>console.</code> call outside <code>logger.ts</code>.</li>
+<li><strong>Shared schema:</strong> a strict-key test (an extra key is rejected), the error-code schema, and a pattern check that no source file, fixture or snapshot outside the test folders holds a birth-date literal.</li>
+</ul>
+<h3>Page (Vitest in the page package, Vitest 5)</h3>
+<ul>
+<li><strong>Units:</strong> the tooltip range math (box 51 ends on the row's <code>end</code>), the keyboard navigation rules (<code>nextCell</code>), the nearest-box rule, the tooltip placement, the error-code mapping, the date formats.</li>
+<li><strong>Components</strong> (<code>@nuxt/test-utils</code> with <code>@vue/test-utils</code>, happy-dom): each component and <code>LifeCalendarView</code> in every state: the roles, names and live regions, the roving tabindex and each key, the tooltip text and <code>aria-describedby</code>, the busy and retry behaviour of the panels, the three stats and their labels.</li>
+<li><strong>Type check, end to end:</strong> <code>nuxt typecheck</code> (vue-tsc) and <code>tsc --noEmit</code> over the API, the page and the shared file. A type test (<code>expectTypeOf</code>) checks that the type the page gets from <code>hc&lt;AppType&gt;</code> equals the type inferred from the shared schema.</li>
+<li><strong>Build checks:</strong> the generated files contain no fake profile value and no API response shape; the built page makes no request except to <code>/api/</code>.</li>
+</ul>
+<h3>Storybook as the state catalogue</h3>
+<ul>
+<li>Every widget state has a story (section 11). The static build is the input of the visual and accessibility runs below.</li>
+</ul>
+<h3>End to end (Playwright)</h3>
+<ul>
+<li>Against a throwaway server (<code>tests/serve-stub.ts</code>): the built page files plus a stub <code>/api/v1/life-calendar</code> that answers from a fake profile (born 1990-01-01, fixed "today"). It listens on a high port on 127.0.0.1 only. The same server is used by Lighthouse CI.</li>
+<li>Checks: 90 rows of 52 boxes, the three states, the stats line, the tooltip text, dark mode (<code>colorScheme: 'dark'</code>), the error, locked and empty panels (the stub answers each 503 code on request), Retry, the keyboard keys, and the midnight refresh with a fake clock.</li>
+</ul>
+<h3>Visual regression (Playwright <code>toHaveScreenshot</code>)</h3>
+<ul>
+<li>Every story of the static Storybook build, in light and dark (colour-scheme emulation). The seven <code>LifeCalendarView</code> states run at two widths (390 px and 1,000 px); the other stories run at one width.</li>
+<li>Baselines are committed (fake data only). No SaaS such as Chromatic: everything stays private.</li>
+<li>Stability: animations disabled, reduced motion on, a fixed clock, web fonts absent, and a small allowed difference (<code>maxDiffPixelRatio</code> 0.001). The baselines depend on the OS and the Chromium build, because the page uses the system font stack. They are made on the Workbox, which is also where the tests run, with the pinned Playwright version. A Playwright or macOS update that changes pixels means a baseline update in its own ticket; a baseline change in a pull is always reviewed as an image diff.</li>
+<li>Playwright downloads its own Chromium for this (<code>playwright install chromium</code>). That install is part of the build order, not of this order.</li>
+</ul>
+<h3>Accessibility and performance runs</h3>
+<ul>
+<li>axe-core in Playwright on the page and on every story in both themes, failing on any violation (section 12). The keyboard and contrast tests.</li>
+<li>Lighthouse CI and the <code>web-vitals</code> Playwright test against the budgets (section 13).</li>
+</ul>
+<h3>Caddy</h3>
+<ul>
+<li>Extend <code>scripts/caddy/test-config.mjs</code>: <code>/</code> serves the index file, <code>/storybook/</code> serves Storybook, <code>/storybook</code> redirects, <code>/other</code> returns 404, <code>/api/*</code> still proxies, hashed files carry the immutable header, index files carry <code>no-cache</code>, and a response is compressed.</li>
 </ul>
 </section>
 
 <section id="deploy">
-<h2>14. Deploy steps (Jack or the future Releaser; nothing is done in this order)</h2>
+<h2>16. Deploy steps (the Maestro or the future Releaser; nothing is done in this order)</h2>
 <ol>
 <li>Merge.</li>
-<li>Prove the Keychain with the probe (load the probe LaunchAgent, also after a reboot). Choose the provider.</li>
-<li><code>sh scripts/nexus-api/install.sh</code> (copies the API source and <code>nexus-shared</code>, runs <code>pnpm install --prod</code> in the depot copy, builds <code>www/</code>) and <code>sh scripts/caddy/install.sh</code>.</li>
-<li>Stop the API. Run the seed step once. Start the API.</li>
-<li>Restart Caddy once (the Caddyfile changed).</li>
-<li>Health check: <code>/api/v1/life-calendar</code> returns 200, <code>/</code> returns the page, and the totals are in a plausible range. The check never prints the birth date.</li>
+<li>Provider: the first deploy uses the file key (<code>NEXUS_KEY_PROVIDER=file</code>). The Keychain probe and the switch to the Keychain are a later ticket that needs Jack.</li>
+<li>From the repo checkout: <code>pnpm install</code>, then <code>pnpm exec playwright install chromium</code> (build order only), then the build: <code>nuxt generate</code> and the Storybook build. The page output and the Storybook output go into a new folder next to <code>www/</code> and are swapped in with one rename, so the site is never half-updated.</li>
+<li><code>sh scripts/nexus-api/install.sh</code> (copies the API source and <code>nexus-shared</code>, runs <code>pnpm install --prod</code> in the depot copy) and <code>sh scripts/caddy/install.sh</code>.</li>
+<li>Stop the API. The build runs the seed step once (it reads the private input file, creates the key file if missing, prints nothing). Start the API.</li>
+<li>Restart Caddy once (the Caddyfile changed). The Nexus API and Caddy are already installed as LaunchAgents and the Maestro restarts them; no new LaunchAgent is needed, because the page is static files.</li>
+<li>Health check: <code>/api/v1/life-calendar</code> returns 200, <code>/</code> returns the page, <code>/storybook/</code> returns Storybook, and the totals are in a plausible range. The check never prints the birth date.</li>
 </ol>
 </section>
 
 <section id="later">
-<h2>15. Not in version 1</h2>
-<p>Life phases (school, work) and events on the grid, more widgets (for example the Mac verdict, DGS-466), login (DGS-458), a real PostgreSQL server, a deploy pipeline (DGS-467). Each gets its own ticket.</p>
+<h2>17. Not in version 1</h2>
+<p>Life phases (school, work) and events on the grid, more widgets (for example the Mac verdict, DGS-466), a CDN (Jack: "I'll handle CDN later"; Caddy serves the static files on the tailnet), login (DGS-458), a real PostgreSQL server, a deploy pipeline (DGS-467), server-side rendering, field monitoring of Core Web Vitals. Each gets its own ticket when it is wanted.</p>
 </section>
 
 <footer>DigiSmith · .digismith/board/DGS-481—life-dashboard-nexus-life/design.html</footer>
