@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DGS-491 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style></head><body>
+<header>
+<h1>DGS-491 Frontdoor renewal — Implementation Report</h1>
+<div class="meta"><span>Ticket: <strong>DGS-491</strong></span><span>Date: 2026-10-16</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p>The Frontdoor client now renews its own 48-hour session with a stored refresh cookie, and <code>dg clickup frontdoor refresh</code> does it by hand. No Proxyman capture is needed every two days. The whole suite passes (2322 tests).</p>
+</section>
+<h2>What changed</h2>
+<ul>
+<li>The Frontdoor token comes from <code>POST id.app.clickup.com/data/v3/workspaces/&lt;team&gt;/authentication/access_tokens</code> (empty body, cookies <code>cu_refresh</code> and <code>cu_session_meta</code>), not from <code>/auth/v1/refresh_token</code> as the ticket said: that call returns a token without the <code>workspace_id</code> claim. The cookie does not rotate and lasts about a year.</li>
+<li><code>clickup-client</code>: <code>renewSession</code>, <code>FileSessionStore</code> (atomic write, mode 600, other lines kept; lock file, stale after 60 s). <code>FrontdoorClient</code> renews before a call when the token expires in under 10 minutes or is expired, and once on a 401/403 with one retry. Without a stored cookie nothing changes.</li>
+<li>CLI: <code>frontdoor refresh</code>; <code>import-auth</code> stores the cookie and prints <code>renewal: yes/no</code>; README and <code>--help</code>.</li>
+<li>Only the two-cookie call is built; no User-Agent or CSRF fallback.</li>
+</ul>
+<h2>Tests</h2>
+<p>Written first, with a fake store, a fake transport and temp dirs. Fixture secrets are asserted absent from stdout, stderr and errors. Full suite: 155 files, 2322 tests.</p>
+<h2>Whole-branch review</h2>
+<p>Claude subagent: no leak, nothing critical. Four fixes with tests: a 15 s timeout on the renewal call, a lock released only by its owner, the secret temp file removed when the rename fails, and a failed pre-call renewal no longer blocks a call while the token has time left. Parked: one renewal per 403, duplicate keys in <code>.env</code>, quote round trip, a narrow stale-lock race.</p>
+<h2>First use</h2>
+<p>After the merge, on the Maestro's go: <code>import-auth</code>, <code>refresh</code> (expiry after 2026-10-18 18:15 UTC+7), and an <code>add-status</code> dry run.</p>
+</body></html>
