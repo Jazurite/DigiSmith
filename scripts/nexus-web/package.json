@@ -10,7 +10,9 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "test:built": "nuxt generate && vitest run tests/unit/built-page.test.ts",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "e2e": "nuxt generate && playwright test tests/e2e",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
     "hono": "4.13.13",
@@ -19,8 +21,10 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@hono/node-server": "2.1.5",
     "@nuxt/test-utils": "4.3.3",
     "@nuxtjs/storybook": "10.0.1",
+    "@playwright/test": "1.64.1",
     "@storybook/addon-a11y": "10.6.2",
     "@vue/test-utils": "2.5.1",
     "happy-dom": "21.0.3",
