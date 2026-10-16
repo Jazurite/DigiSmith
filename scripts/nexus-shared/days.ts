@@ -18,11 +18,11 @@ export function addDays(text: string, n: number): string {
 }
 // "12 Oct 2026" (tooltip) and "12 October 2026" (accessible name). Fixed English, no locale.
 export function formatShort(text: string): string {
-  const [y, m, d] = text.split('-').map(Number)
+  const [y, m, d] = text.split('-').map(Number) as [number, number, number]
   return `${d} ${SHORT[m - 1]} ${y}`
 }
 export function formatLong(text: string): string {
-  const [y, m, d] = text.split('-').map(Number)
+  const [y, m, d] = text.split('-').map(Number) as [number, number, number]
   return `${d} ${LONG[m - 1]} ${y}`
 }
 // The date range of box j in a row: 7 days from start+7j; the last box (51) ends on the row's end day.

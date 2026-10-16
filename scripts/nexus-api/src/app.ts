@@ -18,7 +18,7 @@ export interface AppDeps { logger?: Logger; loadProfile?: () => Promise<Profile>
 // c.json() would drop the charset and re-order nothing, but c.body(JSON.stringify(...)) keeps the old bytes and headers exactly.
 export type Env = { Variables: { errorCode?: string } }
 
-export function sendJson(c: Context<Env, any, any>, status: ContentfulStatusCode, body: unknown, headers: Record<string, string> = {}) {
+export function sendJson(c: Context<any, any, any>, status: ContentfulStatusCode, body: unknown, headers: Record<string, string> = {}) {
   const code = (body as { error?: unknown } | null)?.error
   if (typeof code === 'string') c.set('errorCode', code)
   return c.body(JSON.stringify(body), status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers })

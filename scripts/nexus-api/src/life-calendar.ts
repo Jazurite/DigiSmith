@@ -16,7 +16,7 @@ function isLeap(y: number): boolean { return (y % 4 === 0 && y % 100 !== 0) || y
 
 // The k-th birthday as a day number. A 29 February birthday falls on 1 March in non-leap years.
 export function birthday(birthDate: string, k: number): number {
-  const [y, m, d] = birthDate.split('-').map(Number)
+  const [y, m, d] = birthDate.split('-').map(Number) as [number, number, number]
   const year = y + k
   if (m === 2 && d === 29 && !isLeap(year)) return Date.UTC(year, 2, 1) / DAY
   return Date.UTC(year, m - 1, d) / DAY
