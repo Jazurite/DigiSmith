@@ -19,10 +19,13 @@ mkdir -p "$NEXUS/www.d"
 (cd "$WEB" && pnpm vitest run tests/unit/built-page.test.ts) || { echo "build-www: the built-page check failed" >&2; exit 1; }   # the check skips itself without .output/public, so it runs only after generate
 mkdir -p "$NEW"
 cp -R "$WEB/.output/public/." "$NEW/"
+# the Caddyfile has no `hide .*` (a web root under a dot-folder needs that), so a dotfile in the build would be served: refuse it before the switch
+if [ -n "$(find "$NEW" -name '.*' ! -path "$NEW" | head -n 1)" ]; then echo "build-www: the build output contains a dotfile or dot-folder; not switching www" >&2; exit 1; fi
 if [ "${SKIP_STORYBOOK:-}" != 1 ]; then
   (cd "$WEB" && pnpm build-storybook) || { echo "build-www: the Storybook build failed" >&2; exit 1; }
   mkdir -p "$NEW/storybook"
   cp -R "$WEB/storybook-static/." "$NEW/storybook/"
+  if [ -n "$(find "$NEW/storybook" -name '.*' | head -n 1)" ]; then echo "build-www: the Storybook output contains a dotfile or dot-folder; not switching www" >&2; exit 1; fi
 fi
 # one rename: make a new symlink next to the old one, then move it over (-h: do not follow the old symlink)
 ln -sfn "www.d/$STAMP" "$NEXUS/www.next"

@@ -51,7 +51,8 @@ if (existsSync(cf)) {
     .replaceAll('127.0.0.1:4198', `127.0.0.1:${BACK}`)
     .replaceAll('127.0.0.1:4300', `127.0.0.1:${BACK2}`)
   const tcf = join(tmp, 'Caddyfile'); writeFileSync(tcf, src)
-  const www = join(tmp, 'www'); mkdirSync(join(www, '_nuxt'), { recursive: true }); mkdirSync(join(www, 'storybook/assets'), { recursive: true })
+  const www = join(tmp, '.digismith-depot-like', 'nexus', 'www')   // under a dot-folder, like the real ~/.digismith-depot/nexus/www (DGS-481 first deploy: `hide .*` made every file 404)
+  mkdirSync(join(www, '_nuxt'), { recursive: true }); mkdirSync(join(www, 'storybook/assets'), { recursive: true })
   const big = '<!doctype html><title>x</title>' + '<p>padding</p>'.repeat(120)   // over Caddy's compression minimum
   writeFileSync(join(www, 'index.html'), big); writeFileSync(join(www, '_nuxt/app.abc123.js'), 'console.log(1)\n'.repeat(80))
   writeFileSync(join(www, 'storybook/index.html'), big); writeFileSync(join(www, 'storybook/assets/x-abc123.js'), 'console.log(2)\n'.repeat(80))

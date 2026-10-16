@@ -12,7 +12,7 @@ function setup() {
   // a fake pnpm: "generate" makes .output/public/index.html in the web folder; "build-storybook" makes storybook-static/
   writeFileSync(join(bin, 'pnpm'), `#!/bin/sh
 case "$*" in
-  *generate*) mkdir -p "$WEB/.output/public/_nuxt" && echo "<h1>page $STAMP</h1>" > "$WEB/.output/public/index.html" && echo x > "$WEB/.output/public/_nuxt/a.js" ;;
+  *generate*) mkdir -p "$WEB/.output/public/_nuxt" && echo "<h1>page $STAMP</h1>" > "$WEB/.output/public/index.html" && echo x > "$WEB/.output/public/_nuxt/a.js" && { [ -z "$DOTFILE" ] || echo secret > "$WEB/.output/public/$DOTFILE"; } ;;
   *build-storybook*) mkdir -p "$WEB/storybook-static" && echo "<h1>sb</h1>" > "$WEB/storybook-static/index.html" ;;
 esac
 `)
@@ -62,6 +62,13 @@ describe('build-www.sh', () => {
     expect(readlinkSync(join(s.depot, 'nexus/www'))).toBe('www.d/1')
     expect(readFileSync(join(s.depot, 'nexus/www/index.html'), 'utf8')).toContain('page 1')
     expect(existsSync(join(s.depot, 'nexus/www.d/empty'))).toBe(true)
+  })
+  it('refuses a build that contains a dotfile, and does not switch www (the Caddyfile has no hide .*)', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1', DOTFILE: '.env' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/dotfile/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
   })
   it('a stale www.next link does not stop the switch', () => {
     const s = setup()
