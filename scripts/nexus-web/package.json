@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "build-storybook": "nuxt build-storybook",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "test:built": "nuxt generate && vitest run tests/unit/built-page.test.ts",
@@ -19,9 +20,12 @@
   },
   "devDependencies": {
     "@nuxt/test-utils": "4.3.3",
+    "@nuxtjs/storybook": "10.0.1",
+    "@storybook/addon-a11y": "10.6.2",
     "@vue/test-utils": "2.5.1",
     "happy-dom": "21.0.3",
     "sass": "1.105.2",
+    "storybook": "10.6.2",
     "typescript": "5.9.3",
     "vitest": "5.0.5",
     "vue-tsc": "3.3.13"

@@ -27,6 +27,10 @@ describe('WeekTooltip', () => {
 })
 
 describe('keyboard on the grid', () => {
+  it('inline puts the tooltip in the page flow', async () => {
+    const w = await mountSuspended(WeekTooltip, { props: { mode: 'pointer', inline: true, info: { age: 1, week: 1, from: '1990-01-01', to: '1990-01-07', state: 'lived' } } })
+    expect(w.find('.tip').classes()).toContain('inline')
+  })
   it('arrow keys move the one tab stop and focus, and describe the box by the tooltip', async () => {
     const w = await grid()
     const start = cell(w, 36, 41)
