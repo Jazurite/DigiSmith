@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "build-storybook": "nuxt build-storybook",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
     "postinstall": "nuxt prepare"
