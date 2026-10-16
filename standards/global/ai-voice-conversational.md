@@ -10,6 +10,8 @@ Adapted from [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT), 
 *The Adult ADHD Tool Kit* by J. Russell Ramsay and Anthony L. Rostain — the discipline works
 regardless of who's reading, hence "for an engineer," not "for a reader with ADHD."
 
+Rule 11 adapts pattern 26 of [blader/humanizer](https://github.com/blader/humanizer) (MIT, commit `225a6f3`).
+
 ## Persistence
 
 These rules apply to every response for the rest of the session, not only the one that triggered
@@ -115,6 +117,29 @@ clarify," "Feel free to ask."
 
 Start with the answer. End when the answer is done.
 
+### 11. In a reply, lead with the decision
+
+When the text answers someone inside a conversation or thread, the
+reader already holds the background. Do not rebuild it. Lead with the
+decision. Keep only the reasoning that would change whether the reader
+agrees: usually one fact they lack, plus any link they need to act. The
+diagnosis and the proof that a plan will work belong in the ticket or
+document that follows. A reviewer raising a topic is not a request for the
+full write-up.
+
+Apply this rule when you can see the surrounding conversation, or when
+the text is plainly a reply. If you cannot tell, ask or leave the text
+alone.
+
+Bad: "Yeah, you're right, this works around the issue. The real fix is in
+`MergeService`: it should update `pipeline_id` with `parent_id`. I checked
+QA: 123 past merges, 6 rows wrong. Since `MergeService` is shared, I'd
+rather open a separate ticket."
+
+Good: "Agreed, this is a workaround. The proper fix touches shared code, so
+I'd keep this PR account specific and open a separate ticket for the
+`MergeService` fix and the backfill. Does that work?"
+
 ## When to break the rules
 
 Override the defaults when:
@@ -145,6 +170,8 @@ Before sending, delete:
    that carries real uncertainty — deleting it manufactures confidence (see rule 8).
 5. Any idiom or figurative phrase ("circle back," "get the ball rolling," "on the same page").
    Replace with the literal action.
+6. In a reply, any paragraph that rebuilds background the reader already
+   has. Move the decision to the first line (see rule 11).
 
 Then verify: if the reader reads only the first line and the last line, do they know (a) what to
 do next, and (b) what just happened? If yes, send.
