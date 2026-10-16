@@ -17,11 +17,14 @@ describe('install.sh', () => {
 
   it('succeeds and writes the depot files', () => {
     expect(r.status, r.stdout + r.stderr).toBe(0)
-    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
+    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'nexus-shared/days.ts', 'nexus-shared/life-calendar.ts', 'bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
     expect(statSync(join(depot, 'bin/nexus-api')).mode & 0o777).toBe(0o755)
   })
   it('copies no tests and no fixtures into the depot', () => {
     expect(readdirSync(join(depot, 'nexus-api/src')).filter(f => f.endsWith('.test.ts') || f === 'fixtures')).toEqual([])
+  })
+  it('copies no tests into nexus-shared', () => {
+    expect(readdirSync(join(depot, 'nexus-shared')).filter(f => f.endsWith('.test.ts'))).toEqual([])
   })
   it('wrapper has the absolute node path baked in and no placeholder', () => {
     const w = readFileSync(join(depot, 'bin/nexus-api'), 'utf8')

@@ -17,6 +17,15 @@ for f in "$SRC"/src/*.ts; do
   cp "$f" "$DEPOT/nexus-api/src/"
 done
 cp "$SRC/package.json" "$DEPOT/nexus-api/package.json"
+# DGS-481: the shared schema sits next to the API in the depot, so ../../nexus-shared/ resolves the same as in the repo.
+mkdir -p "$DEPOT/nexus-shared"
+for f in "$SRC"/../nexus-shared/*.ts; do
+  case "$f" in *.test.ts) continue;; esac
+  cp "$f" "$DEPOT/nexus-shared/"
+done
+cp "$SRC/../nexus-shared/package.json" "$DEPOT/nexus-shared/package.json"
+# the shared files import zod: point them at the API's node_modules (one install, no second copy)
+rm -rf "$DEPOT/nexus-shared/node_modules"; ln -s ../nexus-api/node_modules "$DEPOT/nexus-shared/node_modules"
 # DGS-481: the API now has runtime dependencies. DGS_SKIP_PNPM=1 is for tests only (they link node_modules instead).
 if [ "${DGS_SKIP_PNPM:-}" != 1 ]; then
   command -v pnpm >/dev/null 2>&1 || { echo "install: pnpm not found" >&2; exit 1; }
