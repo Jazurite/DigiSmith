@@ -195,7 +195,7 @@ BACKUP="$HOME/.digismith-depot/backups/<feature-branch>-stale-board"
 git -c core.quotepath=off diff --name-only --diff-filter=A <base-branch>...<feature-branch> -- .digismith/board |
 while IFS= read -r f; do
   if [ -e "$MAIN_ROOT/$f" ] && ! git ls-files --error-unmatch -- "$f" >/dev/null 2>&1; then
-    mkdir -p "$BACKUP/$(dirname "$f")" && mv "$MAIN_ROOT/$f" "$BACKUP/$f" && echo "moved stale $f to $BACKUP"
+    mkdir -p "$BACKUP/$(dirname "$f")" && mv -n "$MAIN_ROOT/$f" "$BACKUP/$f" && echo "moved stale $f to $BACKUP"
   fi
 done
 
@@ -224,7 +224,7 @@ commits, and `git merge` then refuses ("untracked working tree files would be
 overwritten"). The loop above finds every board file the branch adds that the main
 checkout holds untracked, and moves it to
 `~/.digismith-depot/backups/<feature-branch>-stale-board/`. It is a move, never a
-delete, and it touches only paths the branch adds. Tracked files and unrelated
+delete (`mv -n` never overwrites an earlier backup), and it touches only paths the branch adds. Tracked files and unrelated
 untracked files stay. The fix at the source is in `digismith:bootstrap`: the board
 folder is written inside the worktree only.
 
@@ -384,8 +384,10 @@ MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-tople
 cd "$MAIN_ROOT"
 ```
 
-Then remove the worktree (`git worktree remove "$WORKTREE_PATH"`, from the main
-repo root) and force-delete the branch:
+Then remove the worktree, only when `GIT_DIR != GIT_COMMON` and `WORKTREE_PATH` is
+under `.worktrees/` or `worktrees/` (a normal repo or a host-owned workspace stays
+in place), with `git worktree remove --force "$WORKTREE_PATH"` from the main repo
+root (the typed `discard` covers its untracked files), and force-delete the branch:
 
 ```bash
 git branch -D <feature-branch>
@@ -410,7 +412,8 @@ Use `WORKTREE_PATH` captured in Step 2.
 
 **If `WORKTREE_PATH` is not under `.worktrees/` or `worktrees/`:** The host
 environment owns this workspace. Leave the worktree in place. Still delete the
-pins and run `git branch -d <feature-branch>` as above.
+pins and run `git branch -d <feature-branch>` as above. If `git branch -d` fails
+(the branch is still checked out there, or not merged), report the message and stop.
 
 **Otherwise,** read `post_merge_cleanup` with `digismith:preferences`' `get`
 operation:
@@ -418,12 +421,12 @@ operation:
 | Value | Action |
 |-------|--------|
 | `auto` | Run the script. Do not ask. |
-| `ask` | Ask once for this run: "Clean up the worktree and branch for `<feature-branch>`?" Run the script on yes. |
+| `ask` | Ask once for this run: "Clean up the worktree and branch for `<feature-branch>`?" Run the script on yes. On no, skip this run (the pins, worktree and branch stay; running the script later still works). |
 | `unset` | Ask once: "Clean up the merged worktree and branch automatically from now on?" Save `auto` on yes and `ask` on no (`set` operation), then act on this run's answer. |
 
 ```bash
 node --experimental-strip-types <skill-folder>/scripts/post-merge-cleanup.ts \
-  --branch <feature-branch> --worktree "$WORKTREE_PATH"
+  --branch <feature-branch> --worktree "$WORKTREE_PATH" --base <base-branch>
 ```
 
 `<skill-folder>` is this skill's own base directory. Add `--dry-run` to see the
@@ -438,8 +441,10 @@ when any check fails. In order, it:
    a tracked change: it stops and lists the files;
 4. runs `git worktree prune` and `git branch -d` (never `-D`).
 
-When the script stops, report its message to your human partner and leave the
-rest in place. Never remove the worktree by hand with `--force` to get past it.
+The script stops after the hooks fired, so the pins it already deleted are not
+needed again: never re-fire a hook after a stop. When the script stops, report its
+message to your human partner and leave the rest in place. A second run after a
+full success prints `already cleaned` and exits 0. Never remove the worktree by hand with `--force` to get past it.
 
 **Discard (explicit request only):** the branch is not merged, so the script
 refuses. The discard section above removes the worktree and the branch itself.

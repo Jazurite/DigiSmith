@@ -10,6 +10,7 @@ export interface CleanupOptions {
   repo: string;
   branch: string;
   worktree: string;
+  base?: string;
   dryRun?: boolean;
 }
 
@@ -23,7 +24,7 @@ const gitRaw = (cwd: string, ...args: string[]): string =>
   execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const git = (cwd: string, ...args: string[]): string => gitRaw(cwd, ...args).trim();
 
-export function cleanup({ repo, branch, worktree, dryRun = false }: CleanupOptions): CleanupResult {
+export function cleanup({ repo, branch, worktree, base = "main", dryRun = false }: CleanupOptions): CleanupResult {
   const steps: string[] = [];
   const stop = (message: string): CleanupResult => ({ ok: false, steps, message });
   const act = (label: string, run: () => void) => {
@@ -31,19 +32,27 @@ export function cleanup({ repo, branch, worktree, dryRun = false }: CleanupOptio
     if (!dryRun) run();
   };
 
-  const merged = git(repo, "branch", "--merged", "main", "--format=%(refname:short)").split("\n");
-  if (!merged.includes(branch)) return stop(`branch ${branch} is not merged into main; nothing was changed`);
+  const pinRefs = ["base", "head"].map((pin) => `refs/digismith/post-finish/${branch}/${pin}`);
+  const branchExists = git(repo, "branch", "--list", branch) !== "";
+  if (!branchExists && !existsSync(worktree) && pinRefs.every((r) => !git(repo, "for-each-ref", r))) {
+    return { ok: true, steps, message: `already cleaned: no branch, worktree or pins left for ${branch}` };
+  }
+  const merged = git(repo, "branch", "--merged", base, "--format=%(refname:short)").split("\n");
+  if (!merged.includes(branch)) return stop(`branch ${branch} is not merged into ${base}; nothing was changed`);
 
-  for (const pin of ["base", "head"]) {
-    const ref = `refs/digismith/post-finish/${branch}/${pin}`;
+  for (const ref of pinRefs) {
     if (git(repo, "for-each-ref", ref)) act(`delete pin ${ref}`, () => git(repo, "update-ref", "-d", ref));
   }
 
   if (existsSync(worktree)) {
-    const dirty = gitRaw(worktree, "status", "--porcelain", "--untracked-files=all")
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => ({ code: line.slice(0, 2), path: line.slice(3) }));
+    // -z: paths come raw (no quoting, no octal escapes); a rename entry carries its source path as an extra token.
+    const tokens = gitRaw(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0").filter(Boolean);
+    const dirty: { code: string; path: string }[] = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const code = tokens[i].slice(0, 2);
+      dirty.push({ code, path: tokens[i].slice(3) });
+      if (code[0] === "R" || code[0] === "C") i++;
+    }
     const tracked = dirty.filter((f) => f.code !== "??");
     const untracked = dirty.filter((f) => f.code === "??");
     const other = untracked.filter((f) => !KNOWN_CACHES.some((c) => f.path.startsWith(c)));
@@ -71,15 +80,22 @@ function main(argv: string[]): number {
     if (argv[i] === "--dry-run") dryRun = true;
     else if (argv[i].startsWith("--")) args.set(argv[i].slice(2), argv[++i]);
   }
+  const base = args.get("base") ?? "main";
   const branch = args.get("branch");
   const worktree = args.get("worktree");
   if (!branch || !worktree) {
-    console.error("usage: post-merge-cleanup.ts --branch <name> --worktree <path> [--dry-run]");
+    console.error("usage: post-merge-cleanup.ts --branch <name> --worktree <path> [--base <branch>] [--dry-run]");
     return 2;
   }
   try {
     const repo = git(process.cwd(), "rev-parse", "--path-format=absolute", "--git-common-dir").replace(/\/\.git$/, "");
-    const r = cleanup({ repo, branch, worktree: resolve(worktree), dryRun });
+    const wt = resolve(worktree);
+    const here = resolve(process.cwd());
+    if (here === wt || here.startsWith(`${wt}/`)) {
+      console.error("post-merge-cleanup: run it from the main checkout, not from inside the worktree");
+      return 2;
+    }
+    const r = cleanup({ repo, branch, worktree: wt, base, dryRun });
     for (const s of r.steps) console.log(s);
     (r.ok ? console.log : console.error)(r.message);
     return r.ok ? 0 : 1;

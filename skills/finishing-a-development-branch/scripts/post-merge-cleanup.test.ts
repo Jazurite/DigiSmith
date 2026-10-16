@@ -82,6 +82,25 @@ describe("cleanup", () => {
       expect(r.message).toMatch(/b\.txt/);
       expect(existsSync(worktree)).toBe(true);
     });
+    it("treats cache files with spaces and non-ASCII names as caches", () => {
+      mkdirSync(join(worktree, ".impeccable"));
+      writeFileSync(join(worktree, ".impeccable", "a b.json"), "{}");
+      writeFileSync(join(worktree, ".impeccable", "é file.json"), "{}");
+      expect(cleanup({ repo, branch: BRANCH, worktree }).ok).toBe(true);
+      expect(existsSync(worktree)).toBe(false);
+    });
+    it("is a clean no-op when run twice", () => {
+      expect(cleanup({ repo, branch: BRANCH, worktree }).ok).toBe(true);
+      const r = cleanup({ repo, branch: BRANCH, worktree });
+      expect(r.ok).toBe(true);
+      expect(r.message).toMatch(/already cleaned/);
+    });
+    it("checks the merge against --base", () => {
+      git(repo, "branch", "other", "main~1");
+      const r = cleanup({ repo, branch: BRANCH, worktree, base: "other" });
+      expect(r.ok).toBe(false);
+      expect(r.message).toMatch(/not merged into other/);
+    });
     it("accepts missing pins", () => {
       git(repo, "update-ref", "-d", `refs/digismith/post-finish/${BRANCH}/base`);
       git(repo, "update-ref", "-d", `refs/digismith/post-finish/${BRANCH}/head`);
