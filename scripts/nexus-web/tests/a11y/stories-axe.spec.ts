@@ -29,8 +29,8 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.goto(`${url}/iframe.html?id=${e.id}&viewMode=story`)
       await page.locator('#storybook-root > *').first().waitFor()
       await page.waitForFunction(() => !document.querySelector('[data-rendered="pending"]'))   // the grid draws its rows in chunks
-      // target-size on the grid boxes is the one recorded exception (tests/a11y/EXCEPTIONS.md)
-      const all = await analyzeWhenFree(() => new AxeBuilder({ page }).include('#storybook-root').withTags(TAGS).disableRules(['target-size', 'region']).analyze())
+      // target-size on the grid boxes is the one recorded exception (tests/a11y/EXCEPTIONS.md). The 'region' rule (a page-level best-practice) is not in the WCAG tags, so it never runs on a story fragment: nothing to disable.
+      const all = await analyzeWhenFree(() => new AxeBuilder({ page }).include('#storybook-root').withTags(TAGS).disableRules(['target-size']).analyze())
       const size = await analyzeWhenFree(() => new AxeBuilder({ page }).include('#storybook-root').withRules(['target-size']).exclude('[role="gridcell"]').analyze())
       expect([...all.violations, ...size.violations].map(v => `${v.id}: ${v.nodes.map(n => n.target.join(' ')).slice(0, 3).join(' | ')}`)).toEqual([])
     })

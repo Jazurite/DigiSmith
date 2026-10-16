@@ -30,8 +30,8 @@ pazurite.com {
 	# The life dashboard (DGS-481): static files from the depot. /storybook/ is the Storybook build next to the page. No CDN for now.
 	handle {
 		root * {env.DIGISMITH_WWW}
-		@hashed path /_nuxt/* /storybook/assets/*
-		@notHashed not path /_nuxt/* /storybook/assets/*
+		@hashed path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
+		@notHashed not path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
 		header @hashed Cache-Control "public, max-age=31536000, immutable"
 		header @notHashed Cache-Control "no-cache"
 		# No `hide .*`: Caddy tests the hide patterns against the whole path, so a web root under a dot-folder (~/.digismith-depot/...) would answer 404 for every file.
