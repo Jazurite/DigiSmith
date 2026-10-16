@@ -30,7 +30,7 @@ describe('CalendarGrid', () => {
   it('shows a visible age only every 10 rows, and all rows keep a hidden name', async () => {
     const w = await mountSuspended(CalendarGrid, { props: { data: fixture() } })
     expect(w.findAll('.age.labelled').map(a => a.find('[aria-hidden="true"]').text())).toEqual(['0', '10', '20', '30', '40', '50', '60', '70', '80'])
-    expect(w.findAll('[role="rowheader"]')[36].find('.sr-only').text()).toBe('Age 36')
+    expect(w.findAll('[role="rowheader"]')[36]!.find('.sr-only').text()).toBe('Age 36')
   })
   it('ends a decade with extra space: 8 gaps between 90 rows', async () => {
     const w = await mountSuspended(CalendarGrid, { props: { data: fixture() } })
