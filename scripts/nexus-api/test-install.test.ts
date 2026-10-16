@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, statSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,12 +12,12 @@ const sh = (args: string[], env: Record<string, string>) => spawnSync('sh', args
 describe('install.sh', () => {
   const home = mkdtempSync(join(tmpdir(), 'nexus-install-home-'))
   const depot = join(home, 'depot')
-  const r = sh([join(HERE, 'install.sh')], { HOME: home, DEPOT: depot })
+  const r = sh([join(HERE, 'install.sh')], { HOME: home, DEPOT: depot, DGS_SKIP_PNPM: '1' })
   const user = spawnSync('id', ['-un'], { encoding: 'utf8' }).stdout.trim()
 
   it('succeeds and writes the depot files', () => {
     expect(r.status, r.stdout + r.stderr).toBe(0)
-    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
+    for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
     expect(statSync(join(depot, 'bin/nexus-api')).mode & 0o777).toBe(0o755)
   })
   it('copies no tests and no fixtures into the depot', () => {
@@ -38,6 +38,7 @@ describe('install.sh', () => {
     expect(readFileSync(join(depot, 'nexus/digismith-nexus.sudoers'), 'utf8')).toBe(sudoersLine(user) + '\n')
   })
   it('the depot copy serves the API (fake powermetrics, no sudo)', () => {
+    symlinkSync(join(HERE, 'node_modules'), join(depot, 'nexus-api/node_modules'))
     const script = `
       import { readFileSync } from 'node:fs'
       const { createApiServer, createDefaultReader } = await import(${JSON.stringify(join(depot, 'nexus-api/src/server.ts'))})

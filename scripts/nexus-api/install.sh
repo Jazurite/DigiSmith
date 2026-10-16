@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs the Nexus API into the depot (DGS-265: the repo holds the source, the depot runs it).
+# Installs the Nexus API and its runtime dependencies into the depot (DGS-265: the repo holds the source, the depot runs it).
 # Run: sh scripts/nexus-api/install.sh. Copies the API source, writes the wrapper (with this machine's node path), renders the LaunchAgent plist,
 # and stages the sudoers rule for the one fixed powermetrics command. It never uses sudo, never loads a service, never writes outside $DEPOT.
 # Jack installs the sudoers rule and the LaunchAgent himself (steps printed at the end). DEPOT can be overridden (tests).
@@ -16,6 +16,12 @@ for f in "$SRC"/src/*.ts; do
   case "$f" in *.test.ts) continue;; esac
   cp "$f" "$DEPOT/nexus-api/src/"
 done
+cp "$SRC/package.json" "$DEPOT/nexus-api/package.json"
+# DGS-481: the API now has runtime dependencies. DGS_SKIP_PNPM=1 is for tests only (they link node_modules instead).
+if [ "${DGS_SKIP_PNPM:-}" != 1 ]; then
+  command -v pnpm >/dev/null 2>&1 || { echo "install: pnpm not found" >&2; exit 1; }
+  (cd "$DEPOT/nexus-api" && pnpm install --prod --ignore-workspace) || { echo "install: pnpm install failed" >&2; exit 1; }
+fi
 sed -e "s|@NODE@|$NODE|g" -e "s|@DEPOT@|$DEPOT|g" "$SRC/nexus-api.sh.tmpl" > "$DEPOT/bin/nexus-api"
 chmod 755 "$DEPOT/bin/nexus-api"
 sed "s|@DEPOT@|$DEPOT|g" "$SRC/com.jazurite.digismith.nexus-api.plist.tmpl" > "$DEPOT/nexus/com.jazurite.digismith.nexus-api.plist"
