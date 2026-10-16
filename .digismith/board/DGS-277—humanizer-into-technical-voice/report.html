@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Humanizer into the technical voice — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Humanizer into the technical voice — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-16</span>
+    <span>Ticket: <strong>DGS-277</strong></span>
+    <span>Commit range: <code>f52d962..6c6bc23</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Absorb blader/humanizer (MIT, v3.1.0, commit <code>225a6f3</code>) into DigiSmith's own voice standards, with no standalone skill or plugin. One genre-neutral catalog, <code>ai-writing-tells.md</code>, loads as a third companion of <code>ste100-writing</code>, so the inject-standards Voice Gate needs no code change. Pattern 26 became rule 11 of the conversation voice, and <code>digismith:voice</code> gained a Review Mode. Jack's decisions: em-dashes are weak alone, and sentence case is a hard rule for headings. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 3 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Catalog standard and index entry</h4><p>New <code>standards/global/ai-writing-tells.md</code> (patterns 1 to 25, counting rule, preserve list, mark-draft-check-final loop, MIT credit) and its <code>index.yml</code> entry.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Wire the catalog into the T.1 files</h4><p>The catalog is a third companion of <code>ste100-writing</code>; Scan checklist item 7, a word-swaps note and the Voice Gate list name it.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Pattern 26 as H.2 rule 11</h4><p>Rule 11 (lead with the decision in a reply) and a Pre-send check item in <code>ai-voice-conversational.md</code>.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Review Mode in digismith:voice</h4><p>A Review Mode for a file path or pasted text, inside the existing voice skill. Prose only, write back only on request.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Verification and dry run</h4><p>Full test suite, style checks and Voice Gate check, run by the controller.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Catalog standard and index entry</td><td>New <code>standards/global/ai-writing-tells.md</code> (patterns 1 to 25, counting rule, preserve list, mark-draft-check-final loop, MIT credit) and its <code>index.yml</code> entry.</td><td>Approved after 1 fix round</td><td>Row 12 lists only part of the word-swaps table (by design).</td></tr>
+    <tr><td>Task 2: Wire the catalog into the T.1 files</td><td>The catalog is a third companion of <code>ste100-writing</code>; Scan checklist item 7, a word-swaps note and the Voice Gate list name it.</td><td>Approved, clean</td><td>inject-standards line 82 is longer than its neighbours.</td></tr>
+    <tr><td>Task 3: Pattern 26 as H.2 rule 11</td><td>Rule 11 (lead with the decision in a reply) and a Pre-send check item in <code>ai-voice-conversational.md</code>.</td><td>Approved, clean</td><td>Rule 11 wraps at 72 columns; no explicit cross-reference to rule 1.</td></tr>
+    <tr><td>Task 4: Review Mode in digismith:voice</td><td>A Review Mode for a file path or pasted text, inside the existing voice skill. Prose only, write back only on request.</td><td>Approved after 1 fix round</td><td>The Invoked By line wrap.</td></tr>
+    <tr><td>Task 5: Verification and dry run</td><td>Full test suite, style checks and Voice Gate check, run by the controller.</td><td>Checked by controller: 152 files and 2278 tests pass</td><td>The Review Mode dry run was a reading check, not an executed run.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>The whole-branch review first said not ready to merge. After one fix wave and one scoped re-review, every finding was fixed or ruled, and the re-review came back clean.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>The catalog treated every unmarked pattern as a one-sighting tell. The spec limits that to groups A and E.</td><td>Fixed: three tiers (strong, middle, weak alone).</td></tr>
+    <tr><td>Important</td><td>Pattern 25 lost the source's "keep a source credit" clause and its weak-alone mark.</td><td>Fixed: both restored.</td></tr>
+    <tr><td>Important</td><td>Passive voice: the catalog says weak alone, ste100-writing says always active.</td><td>Fixed: one bullet separates reviewing from drafting.</td></tr>
+    <tr><td>Important</td><td>generate-comment and report-implementation listed only two companions.</td><td>Fixed: both name the third.</td></tr>
+    <tr><td>Important</td><td>Sentence case as a hard rule clashes with the writing-skills template headings.</td><td>Ruled by the Maestro: headings fixed by a template keep its shape. One sentence added to pattern 20.</td></tr>
+    <tr><td>Minor</td><td>Pattern 20 counted emoji and arrows in list items as strong tells.</td><td>Fixed: strong in headings only; weak alone in list items.</td></tr>
+    <tr><td>Minor</td><td>Ten source words were in neither the catalog nor the word-swaps table.</td><td>Fixed: 11 rows added to ste100-word-swaps.md.</td></tr>
+    <tr><td>Minor</td><td>The ticket says the content lives in ste100-*.md; the file is ai-writing-tells.md by the shared-catalog decision.</td><td>Follow-up: the Maestro notes this on DGS-277 at close.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">c98b105</span> docs(dgs-277): spec for humanizer in the technical voice</li>
+    <li><span class="sha">2da1ee5</span> docs(dgs-277): reword spec fragments</li>
+    <li><span class="sha">f0260cb</span> docs(dgs-277): record Jack's answer on dashes and headings</li>
+    <li><span class="sha">f6112ee</span> docs(dgs-277): implementation plan</li>
+    <li><span class="sha">0d9194d</span> docs(dgs-277): note the quoted-examples reading in the plan</li>
+    <li><span class="sha">4171674</span> feat(dgs-277): add ai-writing-tells standard</li>
+    <li><span class="sha">2da8674</span> fix(dgs-277): quote watched examples in the tell catalog</li>
+    <li><span class="sha">e6d4466</span> feat(dgs-277): load the tell catalog as a ste100 companion</li>
+    <li><span class="sha">72c84de</span> feat(dgs-277): add reply rule to the conversation voice</li>
+    <li><span class="sha">599e172</span> feat(dgs-277): add review mode to the voice skill</li>
+    <li><span class="sha">9de9cc0</span> fix(dgs-277): name review mode in the voice overview</li>
+    <li><span class="sha">3577b50</span> fix(dgs-277): tier the tell counting rule and name the third companion</li>
+    <li><span class="sha">6c6bc23</span> fix(dgs-277): add heading carve-out and missing swap words</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-277—humanizer-into-technical-voice/report.html</footer>
+
+</body>
+</html>
