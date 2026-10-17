@@ -15,6 +15,7 @@ describe("buildCli", () => {
     expect(help).toMatch(/vps/);
     expect(help).toMatch(/depot/);
     expect(help).toMatch(/tokens/);
+    expect(help).toMatch(/steward/);
   });
 });
 

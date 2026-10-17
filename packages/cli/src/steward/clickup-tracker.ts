@@ -26,7 +26,13 @@ function words(text: string): Set<string> {
 }
 
 export class ClickUpTracker implements Tracker {
-  constructor(private readonly client: ClickUpClient, private readonly spaceId: string) {}
+  private readonly client: ClickUpClient;
+  private readonly spaceId: string;
+
+  constructor(client: ClickUpClient, spaceId: string) {
+    this.client = client;
+    this.spaceId = spaceId;
+  }
 
   private async taskOf(key: string): Promise<ClickUpTask> {
     return this.client.getTaskByRef(key);
