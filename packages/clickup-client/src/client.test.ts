@@ -823,3 +823,23 @@ describe("ClickUpClient relations", () => {
     await expect(client.get("/x")).rejects.toThrow(/^connect ECONNREFUSED$/);
   });
 });
+
+describe("ClickUpClient searchTeamTasks", () => {
+  beforeEach(() => {
+    request.mockReset();
+    vi.mocked(axios.create).mockReset();
+  });
+
+  it("pages through the team task list of one space and stops at a short page", async () => {
+    const client = makeClient();
+    request
+      .mockResolvedValueOnce({ data: { tasks: Array.from({ length: 100 }, (_, i) => ({ id: `a${i}` })) } })
+      .mockResolvedValueOnce({ data: { tasks: [{ id: "b0" }] } });
+    const tasks = await client.searchTeamTasks("S1");
+    expect(tasks).toHaveLength(101);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0].url).toBe("/team/5738747/task");
+    expect(request.mock.calls[0][0].params).toMatchObject({ "space_ids[]": "S1", page: 0, include_closed: false });
+    expect(request.mock.calls[1][0].params).toMatchObject({ page: 1 });
+  });
+});

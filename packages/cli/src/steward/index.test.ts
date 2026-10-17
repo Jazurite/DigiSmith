@@ -10,10 +10,10 @@ import yargs from "yargs";
 
 afterEach(() => { vi.restoreAllMocks(); process.exitCode = 0; });
 
-function cli(tracker: FakeTracker | null) {
+function cli(tracker: FakeTracker | null, runModel?: (p: string) => Promise<string>) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "stidx-"));
   const deps = (): EventDeps => ({ tracker, dir, now: () => new Date("2026-10-18T05:00:00Z"), config: { releaseStage: false }, sessionIds: () => [] });
-  return { dir, parse: (args: string[]) => yargs(args).exitProcess(false).command(createStewardCommand(deps)).strict().parseAsync() };
+  return { dir, parse: (args: string[]) => yargs(args).exitProcess(false).command(createStewardCommand(deps, runModel)).strict().parseAsync() };
 }
 
 describe("dg steward", () => {
@@ -68,5 +68,14 @@ describe("dg steward", () => {
   it("an unknown event name is rejected", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(async () => cli(null).parse(["steward", "event", "bogus", "--ticket", "DGS-1"])).rejects.toThrow();
+  });
+  it("file prints the filed line using the injected model", async () => {
+    const t = new FakeTracker(snapshot("backlog"));
+    t.targets = [{ id: "L5", name: "B.5: Autonomous Engineering", folder: "B: Agentic", description: "" }];
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const reply = JSON.stringify({ duplicate_of: null, list: "L5", type: "Task", title: "x" });
+    await cli(t, async () => reply).parse(["steward", "file", "x", "--type", "Bug"]);
+    expect(log.mock.calls.flat().join("\n")).toMatch(/^steward: filed DGS-900/);
+    expect(t.created[0].type).toBe("Bug");
   });
 });

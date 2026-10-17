@@ -2,6 +2,8 @@ import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { createDepotRegistry } from "../tokens/registry.ts";
 import { ClickUpTracker } from "./clickup-tracker.ts";
+import { claudeRunner } from "./model.ts";
+import { fileIdea, type ModelRunner } from "./file.ts";
 import { rebuild, runEvent, UsageError, type EventDeps, type EventResult } from "./event.ts";
 import { readStewardProfile } from "./profile.ts";
 import { stewardDir } from "./state.ts";
@@ -42,7 +44,7 @@ function guarded(depsFactory: () => EventDeps, body: (deps: EventDeps) => Promis
   })();
 }
 
-export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps): CommandModule {
+export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps, runModel: ModelRunner = claudeRunner()): CommandModule {
   return {
     command: "steward",
     describe: "keep ClickUp in step with the work: apply status events, file new ideas",
@@ -74,6 +76,20 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps)
           describe: "rebuild a ticket's state file from ClickUp and the token registry",
           builder: (e) => e.option("ticket", { type: "string", requiresArg: true, demandOption: true }),
           handler: (argv) => guarded(depsFactory, (deps) => rebuild(deps, argv.ticket as string)),
+        })
+        .command({
+          command: "file <idea>",
+          describe: "file a new idea into the backlog: picks the list, the type and checks for a duplicate",
+          builder: (e) =>
+            e
+              .positional("idea", { type: "string", demandOption: true })
+              .option("type", { type: "string", choices: ["Task", "Bug", "Spike", "Epic", "Initiative"], describe: "force the type" }),
+          handler: (argv) =>
+            guarded(depsFactory, async (deps) => {
+              if (!deps.tracker) return { out: [], warn: [] };
+              const out = await fileIdea({ tracker: deps.tracker, runModel, dir: deps.dir, now: deps.now }, argv.idea as string, { type: argv.type as string | undefined });
+              return { out, warn: [] };
+            }),
         })
         .demandCommand(1, ""),
     handler: () => {},
