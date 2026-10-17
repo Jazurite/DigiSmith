@@ -12,6 +12,7 @@ import shopeeCommand from "./shopee/index.ts";
 import tokensCommand from "./tokens/index.ts";
 import sessionsCommand from "./sessions/index.ts";
 import stewardCommand from "./steward/index.ts";
+import reviewerCommand from "./reviewer/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -35,6 +36,7 @@ export function buildCli(argv: string[]): Argv {
     .command(tokensCommand)
     .command(sessionsCommand)
     .command(stewardCommand)
+    .command(reviewerCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
