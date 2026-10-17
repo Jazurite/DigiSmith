@@ -2,6 +2,7 @@ import type { CommandModule } from "yargs";
 import { checkCredentialsCommand } from "./check-credentials.ts";
 import { listTasksCommand } from "./list-tasks.ts";
 import { getTaskCommand } from "./get-task.ts";
+import { timeInStatusCommand } from "./time-in-status.ts";
 import { getListsCommand } from "./get-lists.ts";
 import { createTaskCommand } from "./create-task.ts";
 import { updateTaskCommand } from "./update-task.ts";
@@ -39,6 +40,7 @@ const clickupCommand: CommandModule = {
       .command(checkCredentialsCommand)
       .command(listTasksCommand)
       .command(getTaskCommand)
+      .command(timeInStatusCommand)
       .command(getListsCommand)
       .command(createTaskCommand)
       .command(updateTaskCommand)
