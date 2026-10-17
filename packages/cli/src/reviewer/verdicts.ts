@@ -12,7 +12,7 @@ export function parseVerdictLines(ledger: string): Map<string, Judgement> {
   const out = new Map<string, Judgement>();
   ledger.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim().replace(/^- /, "");
-    if (!line.startsWith("Review ")) return;
+    if (!line.startsWith("Review task ") && !line.startsWith("Review ticket ")) return;
     const m = LINE_RE.exec(line);
     if (!m) throw new Error(`ledger line ${i + 1}: not a verdict line: ${line}`);
     const verdict = m[5] as Verdict;

@@ -78,6 +78,13 @@ describe("buildPack, ticket round 1", () => {
     expect(carry).not.toContain("fix round");
     expect(carry).not.toContain("review clean");
   });
+  it("carries role-mode parked verdict lines but not fixed ones", () => {
+    const ledger = w("role.md", "Review task 3 r1: F2 -> parked (ruling x)\nReview task 3 r1: F1 -> fixed (commit abc1234)\n");
+    const { dir } = buildPack(ticketInput({ ledger }));
+    const carry = fs.readFileSync(path.join(dir, "carry-over.md"), "utf8");
+    expect(carry).toContain("Review task 3 r1: F2 -> parked (ruling x)");
+    expect(carry).not.toContain("F1 -> fixed");
+  });
   it("writes 'none' when the ledger has no deferred or parked lines", () => {
     const { dir } = buildPack(ticketInput({ ledger: w("clean.md", "# SDD ledger\nTask 1: complete\n") }));
     expect(fs.readFileSync(path.join(dir, "carry-over.md"), "utf8").trim()).toBe("none");
@@ -93,6 +100,15 @@ describe("buildPack, re-review", () => {
     expect(m).toMatch(/^primitive: re-review-prompt\.md$/m);
     expect(m).toMatch(/^fix_base: e4f5a6b$/m);
     expect(m).toMatch(/^- findings: \//m);
+  });
+  it("a ticket round 2 lists the fixer's report and the plan", () => {
+    const { dir } = buildPack(ticketInput({ round: 2, findingsIn: w("open.md"), fixBase: "e4f5a6b", head: "9a8b7c6", report: w("fix-report.md") }));
+    const m = manifest(dir);
+    expect(m).toMatch(/^- report: \//m);
+    expect(m).toMatch(/^- plan: \//m);
+  });
+  it("a ticket round 2 without the report fails", () => {
+    expect(() => buildPack(ticketInput({ round: 2, findingsIn: w("open.md"), fixBase: "e4f5a6b", head: "9a8b7c6" }))).toThrow(/report: required/);
   });
   it("fails without the fix base or the findings", () => {
     expect(() => buildPack(taskInput({ round: 2, findingsIn: w("o.md"), fixBase: undefined }))).toThrow(/fix-base: required/);

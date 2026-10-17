@@ -26,6 +26,10 @@ describe("parseVerdictLines", () => {
   it("fails on a Review line that is not a verdict line, with its line number", () => {
     expect(() => parseVerdictLines("ok\nReview task 1 r1: F1 -> maybe (x)\n")).toThrow(/ledger line 2/);
   });
+  it("skips role-mode lines like 'Review mode: role'", () => {
+    const m = parseVerdictLines("Review mode: role\nReview mode: hand\nReview task 1 r1: F1 -> fixed (commit abc1234)\n");
+    expect(m.size).toBe(1);
+  });
   it("requires a reason for parked and rejected", () => {
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> parked\n")).toThrow(/reason/);
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> rejected ()\n")).toThrow(/ledger line 1/);

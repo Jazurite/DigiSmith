@@ -73,6 +73,13 @@ describe("runTable", () => {
     expect(r.written).toBe(true);
     expect(fs.readFileSync(out, "utf8")).toContain("approved, no findings");
   });
+  it("writes findings.md from a role-mode ledger that starts with Review mode", () => {
+    fs.mkdirSync(path.join(ws, "reviews", "task-1-r1"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "reviews", "task-1-r1", "report.md"), "```json findings\n[]\n```\n");
+    fs.writeFileSync(path.join(ws, "progress.md"), "Review mode: role\n# SDD ledger\n");
+    expect(runTable({ workspace: ws, out }).written).toBe(true);
+    expect(fs.existsSync(out)).toBe(true);
+  });
   it("fails when the workspace folder is gone", () => {
     expect(() => runTable({ workspace: path.join(ws, "nope"), out })).toThrow(/workspace: no such folder/);
   });

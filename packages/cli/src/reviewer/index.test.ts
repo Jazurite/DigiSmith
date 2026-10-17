@@ -23,9 +23,9 @@ const run = async (argv: string[]) => {
 };
 
 describe("dg reviewer", () => {
-  it("is registered, with its two commands", () => {
+  it("is registered, with its two commands", async () => {
     expect.assertions(4);
-    expect(buildCli([]).getHelp()).resolves.toMatch(/reviewer/);
+    await expect(buildCli([]).getHelp()).resolves.toMatch(/reviewer/);
     const argv = ["reviewer", "--help"];
     buildCli(argv).parse(argv, {}, (err, _argv, output) => {
       expect(err).toBeFalsy();

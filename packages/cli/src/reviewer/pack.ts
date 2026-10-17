@@ -25,7 +25,7 @@ export type PackInput = {
 const PRIMITIVE: Record<ReviewerType, string> = { task: "task-reviewer-prompt.md", ticket: "code-reviewer.md" };
 const RE_REVIEW = "re-review-prompt.md";
 const SHA_RE = /^[0-9a-f]{7,40}$/;
-const CARRY_RE = /^Task (?:\d+|final): (?:minor \(deferred\)|parked)(?![A-Za-z0-9_])/;
+const CARRY_RE = /^(?:Task (?:\d+|final): (?:minor \(deferred\)|parked)(?![A-Za-z0-9_])|Review task \d+ r\d+: F\d+ -> parked )/;
 
 function file(label: string, p: string | undefined): string {
   if (p === undefined || p === "") throw new Error(`${label}: required`);
@@ -68,6 +68,7 @@ export function buildPack(input: PackInput): { dir: string; model: string } {
     if (input.fixBase === undefined || input.fixBase === "") throw new Error("fix-base: required for a re-review");
     fixBase = sha("fix-base", input.fixBase);
     if (input.type === "task") files.push(["brief", file("brief", input.brief)], ["report", file("report", input.report)]);
+    else files.push(["report", file("report", input.report)], ["plan", file("plan", input.plan)]);
   }
   const standards = input.standards.map((s, i) => file(`standards[${i}]`, s));
 
