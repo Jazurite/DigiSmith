@@ -35,6 +35,14 @@ describe("dg steward", () => {
     expect(process.exitCode).toBe(2);
     expect(err.mock.calls.flat().join("\n")).toMatch(/--quote/);
   });
+  it("warnings go to stderr, successes to stdout, exit 0", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await cli(new FakeTracker(snapshot("refinement"))).parse(["steward", "event", "started", "--ticket", "DGS-1"]);
+    expect(log).not.toHaveBeenCalled();
+    expect(err.mock.calls.flat().join("\n")).toMatch(/refused started/);
+    expect(process.exitCode ?? 0).toBe(0);
+  });
   it("a tracker failure prints one line and exits 0", async () => {
     const t = new FakeTracker(snapshot("to do"));
     t.getTicket = async () => { throw new Error("network down"); };

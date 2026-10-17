@@ -2,7 +2,7 @@ import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { createDepotRegistry } from "../tokens/registry.ts";
 import { ClickUpTracker } from "./clickup-tracker.ts";
-import { rebuild, runEvent, UsageError, type EventDeps } from "./event.ts";
+import { rebuild, runEvent, UsageError, type EventDeps, type EventResult } from "./event.ts";
 import { readStewardProfile } from "./profile.ts";
 import { stewardDir } from "./state.ts";
 import { EVENTS, type EventName } from "./types.ts";
@@ -23,10 +23,12 @@ export function defaultDeps(): EventDeps {
   };
 }
 
-function guarded(depsFactory: () => EventDeps, body: (deps: EventDeps) => Promise<string[]>): Promise<void> {
+function guarded(depsFactory: () => EventDeps, body: (deps: EventDeps) => Promise<EventResult>): Promise<void> {
   return (async () => {
     try {
-      for (const line of await body(depsFactory())) console.log(line);
+      const res = await body(depsFactory());
+      for (const line of res.out) console.log(line);
+      for (const line of res.warn) console.error(line);
       process.exitCode = 0;
     } catch (err) {
       if (err instanceof UsageError) {

@@ -16,7 +16,8 @@ const deps = (t: FakeTracker | null, over: Partial<EventDeps> = {}): EventDeps =
   tracker: t, dir, now: () => NOW, config: { releaseStage: false },
   lock: { waitMs: 100, staleMs: 60_000, pollMs: 10 }, sessionIds: () => ["s1"], ...over,
 });
-const run = (t: FakeTracker, input: EventInput, over: Partial<EventDeps> = {}, dry = false) => runEvent(deps(t, over), "DGS-1", input, dry);
+const runR = (t: FakeTracker, input: EventInput, over: Partial<EventDeps> = {}, dry = false) => runEvent(deps(t, over), "DGS-1", input, dry);
+const run = async (t: FakeTracker, input: EventInput, over: Partial<EventDeps> = {}, dry = false) => { const r = await runR(t, input, over, dry); return [...r.out, ...r.warn]; };
 const Q = { quote: "approved, go" };
 
 describe("todayUtc7", () => {
@@ -34,7 +35,7 @@ describe("assertUsage", () => {
 
 describe("no tracker", () => {
   it("prints nothing and writes nothing", async () => {
-    expect(await runEvent(deps(null), "DGS-1", { event: "started" })).toEqual([]);
+    expect(await runEvent(deps(null), "DGS-1", { event: "started" })).toEqual({ out: [], warn: [] });
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 });
@@ -183,7 +184,7 @@ describe("dry run", () => {
 describe("rebuild", () => {
   it("builds the state from the tracker and the registry, and reports a difference", async () => {
     const t = new FakeTracker(snapshot("in progress", { startDate: "2026-10-01", signoff: "Auto" }));
-    const lines = await rebuild(deps(t), "DGS-1");
+    const lines = (await rebuild(deps(t), "DGS-1")).out;
     expect(readState(dir, "DGS-1")).toMatchObject({ status_written: "in progress", start_written: "2026-10-01", signoff: "Auto", sessions: ["s1"] });
     expect(lines[0]).toMatch(/rebuilt/);
   });
@@ -198,5 +199,65 @@ describe("rebuild", () => {
     t.ticket.status = "review"; // someone moved it by hand
     await run(t, { event: "review-started" });
     expect(readState(dir, "DGS-1")!.status_seen).toBe("review");
+  });
+});
+
+describe("which stream a line lands on", () => {
+  it("an applied move is out; refused, failed write, not-on-the-list and lock are warn", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    const ok = await runR(t, { event: "started" });
+    expect(ok.out.join("\n")).toContain("to do -> in progress");
+    expect(ok.warn).toEqual([]);
+
+    const refused = await runR(new FakeTracker(snapshot("refinement")), { event: "started" });
+    expect(refused.out).toEqual([]);
+    expect(refused.warn[0]).toMatch(/refused started/);
+
+    const f = new FakeTracker(snapshot("to do"));
+    f.failWrites = 1;
+    const failed = await runR(f, { event: "started" });
+    expect(failed.out).toEqual([]);
+    expect(failed.warn[0]).toMatch(/will retry/);
+
+    const nl = await runR(new FakeTracker(snapshot("review", { signoff: "Jack", statuses: ["review", "done"] })), { event: "merged" });
+    expect(nl.out).toEqual([]);
+    expect(nl.warn[0]).toContain("is not on the list");
+
+    fs.writeFileSync(path.join(dir, "DGS-1.json.lock"), "");
+    const locked = await runR(new FakeTracker(snapshot("to do")), { event: "started" });
+    expect(locked.out).toEqual([]);
+    expect(locked.warn[0]).toMatch(/lock/);
+  });
+});
+
+describe("a refused write leaves no record", () => {
+  it("merged on a list without acceptance leaves merged null", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Jack", statuses: ["review", "done"] }));
+    await run(t, { event: "merged", sha: "abc" });
+    expect(readState(dir, "DGS-1")!.merged).toBeNull();
+  });
+  it("accepted yes refused for a missing status leaves no gate and release-started is refused", async () => {
+    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack", statuses: ["acceptance", "release"] }));
+    await run(t, { event: "accepted", answer: "yes", quote: "ok" }, { config: { releaseStage: false } });
+    expect(readState(dir, "DGS-1")!.gates).toEqual([]);
+    const lines = await run(t, { event: "release-started" }, { config: { releaseStage: true } });
+    expect(lines[0]).toMatch(/refused release-started/);
+    expect(t.calls).toEqual([]);
+  });
+  it("a queued (failed) move keeps its gate", async () => {
+    const t = new FakeTracker(snapshot("refinement"));
+    t.failWrites = 1;
+    await run(t, { event: "approved", quote: "go" });
+    expect(readState(dir, "DGS-1")!.gates).toHaveLength(1);
+  });
+});
+
+describe("pending dedupe", () => {
+  it("the same event failing twice leaves one pending entry", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    t.failWrites = 4;
+    await run(t, { event: "started" });
+    await run(t, { event: "started" });
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
   });
 });
