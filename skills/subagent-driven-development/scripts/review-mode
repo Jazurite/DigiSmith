@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Prints the review mode of this session: "role" only when DIGISMITH_REVIEW_MODE is exactly
+# "role" (a herdr Builder that a conductor started), otherwise "hand" (the old path).
+# This is the one place that reads the variable.
+set -euo pipefail
+
+if [ "${DIGISMITH_REVIEW_MODE-}" = "role" ]; then
+  echo role
+else
+  echo hand
+fi
