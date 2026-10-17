@@ -7,3 +7,5 @@ logging: false
 model_offload_provider: chutes
 task_offload_provider: tokenreply
 task_offload_runner: claude-code
+tracker: clickup
+release_stage: false
