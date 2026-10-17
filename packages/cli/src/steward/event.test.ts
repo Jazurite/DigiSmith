@@ -147,7 +147,7 @@ describe("a failed write", () => {
     const lines = await run(t, { event: "started" });
     expect(lines.join("\n")).toMatch(/will retry/);
     expect(t.ticket.status).toBe("to do");
-    expect(readState(dir, "DGS-1")!.pending).toEqual([{ to: "in progress", start: "2026-10-18" }]);
+    expect(readState(dir, "DGS-1")!.pending).toEqual([{ to: "in progress", from: "to do", start: "2026-10-18" }]);
     await run(t, { event: "review-started" });
     expect(t.ticket.status).toBe("review");
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
@@ -219,6 +219,7 @@ describe("which stream a line lands on", () => {
     expect(failed.out).toEqual([]);
     expect(failed.warn[0]).toMatch(/will retry/);
 
+    fs.rmSync(path.join(dir, "DGS-1.json")); // a fresh ticket: drop the queued move above
     const nl = await runR(new FakeTracker(snapshot("review", { signoff: "Jack", statuses: ["review", "done"] })), { event: "merged" });
     expect(nl.out).toEqual([]);
     expect(nl.warn[0]).toContain("is not on the list");
@@ -259,5 +260,82 @@ describe("pending dedupe", () => {
     await run(t, { event: "started" });
     await run(t, { event: "started" });
     expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+  });
+});
+
+describe("pending retries", () => {
+  it("a stale pending after a hand discard is dropped with a warning and does not reopen the ticket", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    t.failWrites = 1;
+    await run(t, { event: "started" });
+    t.ticket.status = "discarded"; // Jack discarded it by hand
+    t.calls.length = 0;
+    const r = await runR(t, { event: "review-started" });
+    expect(t.ticket.status).toBe("discarded");
+    expect(t.calls).toEqual([]);
+    expect(r.warn.join("\n")).toMatch(/dropped the queued move to in progress because the ticket is now in discarded/);
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("a pending that is already satisfied is dropped without a comment", async () => {
+    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack" }));
+    t.failWrites = 1; // setStatus throws, nothing written
+    await run(t, { event: "accepted", answer: "no", quote: "wrong" });
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    t.ticket.status = "refinement"; // moved by hand to the target
+    await run(t, { event: "approved", quote: "go" });
+    expect(t.comments).toEqual([]);
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("a successful retry refreshes the snapshot so the event is judged on the fresh status", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    t.failWrites = 1;
+    await run(t, { event: "started" });
+    expect(t.ticket.status).toBe("to do");
+    const lines = await run(t, { event: "review-started" });
+    expect(lines.join("\n")).toContain("retried the earlier move to in progress");
+    expect(t.ticket.status).toBe("review");
+    expect(readState(dir, "DGS-1")!.log.at(-1)).toMatchObject({ outcome: "applied", note: "in progress -> review" });
+  });
+  it("the comment is posted once across a failed read back and a retry", async () => {
+    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack" }));
+    const original = t.setStatus.bind(t);
+    t.setStatus = async (k, s) => { await original(k, s); t.ticket.status = "acceptance"; };
+    await run(t, { event: "accepted", answer: "no", quote: "wrong colour" });
+    expect(t.comments).toHaveLength(1);
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    t.setStatus = original;
+    await run(t, { event: "concept-started" }); // refused itself, but the queued move retries first
+    expect(t.ticket.status).toBe("refinement");
+    expect(t.comments).toHaveLength(1);
+  });
+});
+
+describe("merge record after accepted no", () => {
+  it("is cleared when the ticket returns to refinement", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Jack" }));
+    await run(t, { event: "merged", sha: "abc" });
+    expect(readState(dir, "DGS-1")!.merged?.sha).toBe("abc");
+    await run(t, { event: "accepted", answer: "no", quote: "redo" });
+    expect(t.ticket.status).toBe("refinement");
+    expect(readState(dir, "DGS-1")!.merged).toBeNull();
+  });
+  it("rebuild keeps a merge record only from review on", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Jack" }));
+    await run(t, { event: "merged", sha: "abc" });
+    t.ticket.status = "review";
+    await rebuild(deps(t), "DGS-1");
+    expect(readState(dir, "DGS-1")!.merged?.sha).toBe("abc");
+    t.ticket.status = "refinement";
+    await rebuild(deps(t), "DGS-1");
+    expect(readState(dir, "DGS-1")!.merged).toBeNull();
+  });
+});
+
+describe("dry run and a corrupt file", () => {
+  it("leaves a corrupt state file in place", async () => {
+    fs.writeFileSync(path.join(dir, "DGS-1.json"), "{ not json");
+    const t = new FakeTracker(snapshot("to do"));
+    await run(t, { event: "started" }, {}, true);
+    expect(fs.readdirSync(dir)).toEqual(["DGS-1.json"]);
   });
 });

@@ -1,5 +1,5 @@
 import { evaluate } from "./rules.ts";
-import { DEFAULT_LOCK, readState, rebuildState, withLock, writeState, type LockOptions, type PendingWrite, type StewardState } from "./state.ts";
+import { DEFAULT_LOCK, peekState, readState, rebuildState, withLock, writeState, type LockOptions, type PendingWrite, type StewardState } from "./state.ts";
 import type { TicketSnapshot, Tracker } from "./tracker.ts";
 import { GATE_EVENTS, type Config, type EventInput, type Move, type TicketView } from "./types.ts";
 
@@ -20,6 +20,7 @@ type WriteResult = { ok: true } | { ok: false; kind: "refused" | "failed"; messa
 
 const TRACKER_NAME = "clickup";
 const LOG_LIMIT = 200;
+const MERGE_KEPT_IN = ["review", "acceptance", "release", "done", "documented"];
 const CLOSING = ["done", "discarded", "Closed"];
 
 export function todayUtc7(now: Date): string {
@@ -55,7 +56,10 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
     if (!snap.statuses.includes(p.to)) return { ok: false, kind: "refused", message: `status "${p.to}" is not on the list (${snap.statuses.join(", ")})` };
     await tracker.setStatus(ticket, p.to);
     if (p.start || p.due) await tracker.setDates(ticket, { start: p.start, due: p.due });
-    if (p.comment) await tracker.addComment(ticket, p.comment);
+    if (p.comment && !p.commented) {
+      await tracker.addComment(ticket, p.comment);
+      p.commented = true;
+    }
     const back = await tracker.getTicket(ticket);
     if (back.status !== p.to) return { ok: false, kind: "failed", message: `read back shows "${back.status}", wanted "${p.to}"` };
     st.status_written = p.to;
@@ -70,7 +74,7 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
 }
 
 function pendingOf(move: Move, st: StewardState, snap: TicketSnapshot, today: string): PendingWrite {
-  const p: PendingWrite = { to: move.to };
+  const p: PendingWrite = { to: move.to, from: snap.status };
   if (move.startDate && !st.start_written && !snap.startDate) p.start = today;
   if (move.dueDate) p.due = today;
   if (move.comment) p.comment = move.comment;
@@ -101,12 +105,17 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
   // Writes that failed earlier go first, in order.
   const stillPending: PendingWrite[] = [];
   for (const p of st.pending) {
+    if (snap.status === p.to) continue; // already there: nothing to send, and no second comment
+    if (snap.status !== p.from) {
+      warn.push(`steward: ${ticket}: dropped the queued move to ${p.to} because the ticket is now in ${snap.status}`);
+      continue;
+    }
     const res = await write(tracker, ticket, st, p, now, snap);
     if (!res.ok) stillPending.push(p);
     else out.push(`steward: ${ticket}: retried the earlier move to ${p.to}`);
+    try { snap = await tracker.getTicket(ticket); } catch { /* keep the last snapshot */ }
   }
   st.pending = stillPending;
-  if (st.pending.length === 0 && out.length > 0) snap = await tracker.getTicket(ticket);
 
   st.signoff = snap.signoff;
   st.status_seen = snap.status;
@@ -135,6 +144,7 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
       if (res.ok) {
         log(st, now, input, "applied", `${snap.status} -> ${result.to}`);
         st.applied.push(stamp);
+        if (input.event === "accepted" && input.answer === "no") st.merged = null; // the work will be redone
         out.push(`steward: ${describe(ticket, snap.status, result)}${p.start ? ` (start ${p.start})` : ""}${p.due ? ` (due ${p.due})` : ""}`);
       } else if (res.kind === "refused") {
         st.gates.length = gatesBefore;
@@ -142,7 +152,7 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
         log(st, now, input, "refused", res.message);
         warn.push(`steward: refused ${input.event}: ${ticket} ${res.message}`);
       } else {
-        if (!st.pending.some((q) => q.to === p.to && q.start === p.start && q.due === p.due && q.comment === p.comment)) st.pending.push(p);
+        if (!st.pending.some((q) => q.to === p.to && q.from === p.from && q.start === p.start && q.due === p.due && q.comment === p.comment)) st.pending.push(p);
         log(st, now, input, "pending", res.message);
         warn.push(`steward: ${ticket}: could not move to ${result.to} (${res.message}); will retry at the next event`);
       }
@@ -159,7 +169,7 @@ export async function runEvent(deps: EventDeps, ticket: string, input: EventInpu
   if (!tracker) return { out: [], warn: [] };
   if (dryRun) {
     const snap = await tracker.getTicket(ticket);
-    const st = readState(deps.dir, ticket) ?? rebuildState(ticket, TRACKER_NAME, snap, []);
+    const st = peekState(deps.dir, ticket) ?? rebuildState(ticket, TRACKER_NAME, snap, []);
     return { out: [`steward: dry run: ${describe(ticket, snap.status, evaluate(input, viewOf(snap, st), deps.config))}`], warn: [] };
   }
   const locked = await withLock(deps.dir, ticket, () => apply(deps, tracker, ticket, input), deps.lock ?? DEFAULT_LOCK);
@@ -175,7 +185,7 @@ export async function rebuild(deps: EventDeps, ticket: string): Promise<EventRes
     const snap = await tracker.getTicket(ticket);
     const before = readState(deps.dir, ticket);
     const st = rebuildState(ticket, TRACKER_NAME, snap, deps.sessionIds(ticket));
-    if (before) { st.gates = before.gates; st.log = before.log; st.applied = before.applied; st.pending = before.pending; if (before.merged) st.merged = before.merged; }
+    if (before) { st.gates = before.gates; st.log = before.log; st.applied = before.applied; st.pending = before.pending; if (before.merged && MERGE_KEPT_IN.includes(snap.status)) st.merged = before.merged; }
     writeState(deps.dir, st);
     const note = before && before.status_written !== snap.status ? ` (the file said ${before.status_written}; ClickUp says ${snap.status})` : "";
     return { out: [`steward: ${ticket}: state rebuilt, status ${snap.status}${note}`], warn: [] };

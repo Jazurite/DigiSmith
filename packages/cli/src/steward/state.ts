@@ -1,10 +1,12 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { existsSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { EventName, Signoff } from "./types.ts";
 
 export interface GateRecord { event: EventName; answer?: "yes" | "no"; quote: string; by: string; at: string }
-export interface PendingWrite { to: string; start?: string; due?: string; comment?: string }
+/** A queued move. `from` is the status the ticket had when it was queued; `commented` is set once the comment is posted. */
+export interface PendingWrite { to: string; from: string; start?: string; due?: string; comment?: string; commented?: boolean }
 export interface LogEntry { at: string; event: string; by: string; outcome: "applied" | "refused" | "noop" | "pending" | "recorded"; note: string }
 
 export interface StewardState {
@@ -52,17 +54,34 @@ function isState(v: unknown, ticket: string): v is StewardState {
     && Array.isArray(s.pending) && Array.isArray(s.sessions) && Array.isArray(s.log);
 }
 
-/** A file that does not parse, or does not match this ticket and schema, is moved aside (never deleted) and reads as absent. */
+function parseFile(file: string, ticket: string): StewardState | null {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
+    return isState(parsed, ticket) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads without side effects: an absent or unreadable file is null and stays where it is. */
+export function peekState(dir: string, ticket: string): StewardState | null {
+  const file = fileOf(dir, ticket);
+  return existsSync(file) ? parseFile(file, ticket) : null;
+}
+
+/** A file that does not parse, or does not match this ticket and schema, is moved aside (never deleted, never over an earlier .bad) and reads as absent. */
 export function readState(dir: string, ticket: string): StewardState | null {
   const file = fileOf(dir, ticket);
   if (!existsSync(file)) return null;
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
-    if (isState(parsed, ticket)) return parsed;
-  } catch {
-    // falls through to the move-aside below
+  const state = parseFile(file, ticket);
+  if (state) return state;
+  let target = `${file}.bad`;
+  if (existsSync(target)) {
+    const stamp = new Date().toISOString().replace(/:/g, "-");
+    target = `${file}.bad-${stamp}`;
+    for (let n = 1; existsSync(target); n += 1) target = `${file}.bad-${stamp}-${n}`;
   }
-  renameSync(file, `${file}.bad`);
+  renameSync(file, target);
   return null;
 }
 
@@ -84,19 +103,40 @@ export async function withLock<T>(
   mkdirSync(dir, { recursive: true });
   const lock = `${fileOf(dir, ticket)}.lock`;
   const deadline = Date.now() + opts.waitMs;
+  const token = randomBytes(8).toString("hex");
   for (;;) {
     try {
-      closeSync(openSync(lock, "wx"));
+      writeFileSync(lock, token, { flag: "wx" });
       break;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      let stale = false;
       try {
-        if (Date.now() - statSync(lock).mtimeMs > opts.staleMs) {
-          rmSync(lock, { force: true });
-          continue;
-        }
+        stale = Date.now() - statSync(lock).mtimeMs > opts.staleMs;
       } catch {
-        continue;
+        continue; // the lock vanished: try to take it
+      }
+      if (stale) {
+        // Move the stale lock to a name only this call knows; a failed rename means another waiter won.
+        const aside = `${lock}.stale-${token}`;
+        let moved = false;
+        try {
+          renameSync(lock, aside);
+          moved = true;
+        } catch {
+          // lost the race: keep waiting
+        }
+        if (moved) {
+          let wasStale = true;
+          try { wasStale = Date.now() - statSync(aside).mtimeMs > opts.staleMs; } catch { /* gone */ }
+          if (wasStale) {
+            rmSync(aside, { force: true });
+            continue;
+          }
+          // We moved a fresh lock by mistake: put it back if the name is still free.
+          try { linkSync(aside, lock); } catch { /* someone else holds the name now */ }
+          rmSync(aside, { force: true });
+        }
       }
       if (Date.now() >= deadline) return { locked: false };
       await new Promise((resolve) => setTimeout(resolve, opts.pollMs));
@@ -105,7 +145,12 @@ export async function withLock<T>(
   try {
     return { locked: true, value: await fn() };
   } finally {
-    rmSync(lock, { force: true });
+    // Free the lock only if it is still ours: a stale takeover may have replaced it.
+    try {
+      if (readFileSync(lock, "utf-8") === token) rmSync(lock, { force: true });
+    } catch {
+      // already gone
+    }
   }
 }
 

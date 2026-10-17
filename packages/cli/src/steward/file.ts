@@ -1,3 +1,4 @@
+import type { EventResult } from "./event.ts";
 import { newState, writeState } from "./state.ts";
 import type { Candidate, ListTarget, Tracker } from "./tracker.ts";
 
@@ -43,7 +44,7 @@ export function parsePick(raw: string, targets: ListTarget[], candidates: Candid
   return { duplicate_of: duplicate_of as string | null, list, type, title: title.trim() };
 }
 
-export async function fileIdea(deps: FileDeps, idea: string, opts: { type?: string } = {}): Promise<string[]> {
+export async function fileIdea(deps: FileDeps, idea: string, opts: { type?: string } = {}): Promise<EventResult> {
   if (idea.trim() === "") throw new Error("idea is empty");
   if (opts.type !== undefined && !(TYPES as readonly string[]).includes(opts.type)) throw new Error(`type must be one of ${TYPES.join(", ")}`);
   const [targets, candidates] = await Promise.all([deps.tracker.listTargets(), deps.tracker.findCandidates(idea)]);
@@ -58,7 +59,7 @@ export async function fileIdea(deps: FileDeps, idea: string, opts: { type?: stri
 
   if (pick?.duplicate_of) {
     const dup = candidates.find((c) => c.key === pick!.duplicate_of)!;
-    return [`steward: duplicate of ${dup.key} (${dup.name}); nothing filed`];
+    return { out: [`steward: duplicate of ${dup.key} (${dup.name}); nothing filed`], warn: [] };
   }
 
   let listId: string;
@@ -77,16 +78,27 @@ export async function fileIdea(deps: FileDeps, idea: string, opts: { type?: stri
   }
 
   const created = await deps.tracker.createTicket({ listId, name, type, description: idea.trim() });
-  const st = newState(created.key, "clickup");
-  st.status_written = "backlog";
-  st.status_seen = "backlog";
-  st.log.push({ at: deps.now().toISOString(), event: "filed", by: "steward", outcome: "applied", note: `${listId} ${type}` });
-  writeState(deps.dir, st);
-
+  // The ticket exists now: whatever fails next, the new key is printed.
   const where = targets.find((t) => t.id === listId)!.name;
-  if (!pick) {
-    await deps.tracker.addComment(created.key, `filed unsorted: model call failed (${failure}). Please re-sort.`);
-    return [`steward: filed ${created.key} unsorted in ${where} as ${type} (backlog); the model call failed`];
+  const out = [pick
+    ? `steward: filed ${created.key} in ${where} as ${type} (backlog)`
+    : `steward: filed ${created.key} unsorted in ${where} as ${type} (backlog); the model call failed`];
+  const warn: string[] = [];
+  try {
+    const st = newState(created.key, "clickup");
+    st.status_written = "backlog";
+    st.status_seen = "backlog";
+    st.log.push({ at: deps.now().toISOString(), event: "filed", by: "steward", outcome: "applied", note: `${listId} ${type}` });
+    writeState(deps.dir, st);
+  } catch (err) {
+    warn.push(`steward: ${created.key}: filed, but the state file was not written (${(err as Error).message})`);
   }
-  return [`steward: filed ${created.key} in ${where} as ${type} (backlog)`];
+  if (!pick) {
+    try {
+      await deps.tracker.addComment(created.key, `filed unsorted: model call failed (${failure}). Please re-sort.`);
+    } catch (err) {
+      warn.push(`steward: ${created.key}: filed, but the unsorted comment was not posted (${(err as Error).message})`);
+    }
+  }
+  return { out, warn };
 }

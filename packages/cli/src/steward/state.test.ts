@@ -73,6 +73,44 @@ describe("withLock", () => {
   });
 });
 
+describe("withLock ownership", () => {
+  it("a taken-over lock is not freed by the previous holder's finally", async () => {
+    const lock = path.join(dir, "DGS-9.json.lock");
+    await withLock(dir, "DGS-9", async () => {
+      fs.writeFileSync(lock, "someone-else"); // a takeover replaced our lock
+    }, FAST);
+    expect(fs.readFileSync(lock, "utf-8")).toBe("someone-else");
+  });
+  it("two waiters on one stale lock do not both run at once", async () => {
+    const lock = path.join(dir, "DGS-10.json.lock");
+    fs.writeFileSync(lock, "dead");
+    const old = new Date(Date.now() - 120_000);
+    fs.utimesSync(lock, old, old);
+    let inside = 0;
+    let max = 0;
+    let ran = 0;
+    const body = async () => { inside += 1; max = Math.max(max, inside); ran += 1; await new Promise((r) => setTimeout(r, 30)); inside -= 1; };
+    const opts = { ...FAST, waitMs: 2000 };
+    await Promise.all([withLock(dir, "DGS-10", body, opts), withLock(dir, "DGS-10", body, opts), withLock(dir, "DGS-10", body, opts)]);
+    expect(max).toBe(1);
+    expect(ran).toBe(3);
+    expect(fs.readdirSync(dir).filter((f) => f.includes("stale"))).toEqual([]);
+  });
+});
+
+describe("a second corrupt file", () => {
+  it("keeps both .bad files", () => {
+    const file = path.join(dir, "DGS-11.json");
+    fs.writeFileSync(file, "one");
+    expect(readState(dir, "DGS-11")).toBeNull();
+    fs.writeFileSync(file, "two");
+    expect(readState(dir, "DGS-11")).toBeNull();
+    const bads = fs.readdirSync(dir).filter((f) => f.startsWith("DGS-11.json.bad"));
+    expect(bads).toHaveLength(2);
+    expect(bads.map((f) => fs.readFileSync(path.join(dir, f), "utf-8")).sort()).toEqual(["one", "two"]);
+  });
+});
+
 describe("rebuildState", () => {
   const snap = (status: string) => ({ status, signoff: "Jack" as const, startDate: "2026-10-01", dueDate: null });
   it("copies status, dates and mark from the tracker and the sessions from the registry", () => {

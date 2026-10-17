@@ -87,8 +87,7 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps,
           handler: (argv) =>
             guarded(depsFactory, async (deps) => {
               if (!deps.tracker) return { out: [], warn: [] };
-              const out = await fileIdea({ tracker: deps.tracker, runModel, dir: deps.dir, now: deps.now }, argv.idea as string, { type: argv.type as string | undefined });
-              return { out, warn: [] };
+              return fileIdea({ tracker: deps.tracker, runModel, dir: deps.dir, now: deps.now }, argv.idea as string, { type: argv.type as string | undefined });
             }),
         })
         .demandCommand(1, ""),

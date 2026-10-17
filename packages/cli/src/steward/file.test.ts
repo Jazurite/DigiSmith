@@ -55,7 +55,7 @@ describe("parsePick", () => {
 describe("fileIdea", () => {
   it("creates a backlog ticket in the chosen list and writes its state", async () => {
     const t = tracker();
-    const lines = await fileIdea(deps(t, pick({ type: "Spike", title: "Try x" })), "try x");
+    const lines = (await fileIdea(deps(t, pick({ type: "Spike", title: "Try x" })), "try x")).out;
     expect(t.created).toEqual([{ listId: "L5", name: "Try x", type: "Spike", description: "try x" }]);
     expect(lines[0]).toBe("steward: filed DGS-900 in B.5: Autonomous Engineering as Spike (backlog)");
     expect(readState(dir, "DGS-900")).toMatchObject({ status_written: "backlog", signoff: null });
@@ -67,16 +67,23 @@ describe("fileIdea", () => {
   });
   it("a duplicate creates nothing and names the existing ticket", async () => {
     const t = tracker();
-    const lines = await fileIdea(deps(t, pick({ duplicate_of: "DGS-3" })), "steward sync");
+    const lines = (await fileIdea(deps(t, pick({ duplicate_of: "DGS-3" })), "steward sync")).out;
     expect(t.created).toEqual([]);
     expect(lines[0]).toContain("duplicate of DGS-3");
   });
   it("a model failure files a Task in the B.0 Pavilion with a comment", async () => {
     const t = tracker();
-    const lines = await fileIdea(deps(t, new Error("model down")), "lost idea");
+    const lines = (await fileIdea(deps(t, new Error("model down")), "lost idea")).out;
     expect(t.created[0]).toMatchObject({ listId: "L0", type: "Task", name: "lost idea" });
     expect(t.comments[0]).toMatch(/filed unsorted: model call failed/);
     expect(lines[0]).toContain("unsorted");
+  });
+  it("when addComment throws on the fallback path the new key is still printed with a warning", async () => {
+    const t = tracker();
+    t.addComment = async () => { throw new Error("comment down"); };
+    const r = await fileIdea(deps(t, new Error("model down")), "lost idea");
+    expect(r.out[0]).toContain("DGS-900");
+    expect(r.warn.join("\n")).toMatch(/DGS-900.*comment down/);
   });
   it("malformed model output takes the same fallback", async () => {
     const t = tracker();
