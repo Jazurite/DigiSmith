@@ -391,3 +391,27 @@ describe("cli", { timeout: 30000 }, () => {
     expect(fs.existsSync(path.join(tmp, "sessions"))).toBe(false);
   });
 });
+
+describe("reviewer card fields (DGS-529)", () => {
+  const reviewer = (): SessionCard => ({ ...worker(), role: "reviewer", id: "dgs-529-rev", under: "dsm-conductor-01" });
+  it("accepts reviewer_type task or ticket and a seat on a reviewer", () => {
+    expect(errs({ ...reviewer(), reviewer_type: "ticket", seat: "dev0" })).toEqual([]);
+    expect(errs({ ...reviewer(), reviewer_type: "task" })).toEqual([]);
+  });
+  it("refuses an unknown reviewer_type and a reviewer_type on another role", () => {
+    expect(errs({ ...reviewer(), reviewer_type: "design" }).join(" ")).toMatch(/reviewer_type: must be one of task, ticket/);
+    expect(errs({ ...worker(), reviewer_type: "task" }).join(" ")).toMatch(/reviewer_type: only a reviewer/);
+  });
+  it("accepts a seat on a worker, refuses it on a conductor or a bad seat name", () => {
+    expect(errs({ ...worker(), seat: "jack" })).toEqual([]);
+    expect(errs({ ...conductor(), seat: "dev0" }).join(" ")).toMatch(/seat: only a worker or a reviewer/);
+    expect(errs({ ...worker(), seat: "Dev 0" }).join(" ")).toMatch(/seat: /);
+  });
+  it("round-trips the new fields through format and parse", () => {
+    const card = { ...reviewer(), reviewer_type: "ticket" as const, seat: "dev0" };
+    expect(parseCard(formatCard(card))).toEqual(card);
+  });
+  it("a reviewer's legal parents are a conductor or a Maestro, never a worker", () => {
+    expect([...LEGAL_PARENT_ROLES.reviewer]).toEqual(["conductor", "maestro"]);
+  });
+});

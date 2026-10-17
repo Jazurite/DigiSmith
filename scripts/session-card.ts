@@ -19,6 +19,8 @@ export type SessionCard = {
   domain: string;
   mandate?: string;
   state?: string;
+  reviewer_type?: "task" | "ticket";
+  seat?: string;
   runs_on: string;
   machine?: string;
   created_by: string;
@@ -33,7 +35,7 @@ export type CardRef = { project: string; id: string; session: string };
 
 // Field order is the file order.
 const FIELDS = [
-  "name", "role", "id", "session", "under", "domain", "mandate", "state", "runs_on", "machine",
+  "name", "role", "id", "session", "under", "domain", "mandate", "state", "reviewer_type", "seat", "runs_on", "machine",
   "created_by", "started", "last_seen", "status", "ended", "result",
 ] as const;
 const ALWAYS = ["name", "role", "id", "session", "domain", "runs_on", "created_by", "started", "last_seen", "status"];
@@ -47,7 +49,7 @@ export const LEGAL_PARENT_ROLES: Record<Role, readonly Role[]> = {
   conductor: ["maestro"],
   worker: ["conductor", "maestro"],
   scout: ["conductor", "maestro", "worker"],
-  reviewer: ["conductor", "maestro", "worker"],
+  reviewer: ["conductor", "maestro"],
   observer: ["conductor", "maestro"],
 };
 
@@ -60,6 +62,8 @@ export class CardError extends Error {
   }
 }
 
+const REVIEWER_TYPES = ["task", "ticket"] as const; // keep equal to packages/cli/src/reviewer/types.ts (a test checks it)
+const SEAT_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 const ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const SAFE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/; // a file or folder name part: no slash, no leading dot
 const TS_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/;
@@ -164,6 +168,14 @@ export function validateCard(input: unknown): { ok: true; card: SessionCard } | 
     } else if (present("machine")) errors.push("machine: only a maestro has a machine");
     if (["conductor", "worker", "scout", "reviewer"].includes(role) && !present("mandate")) errors.push(`mandate: required for role ${role}`);
     if (["conductor", "maestro"].includes(role) && !present("state")) errors.push(`state: required for role ${role}`);
+    if (present("reviewer_type")) {
+      if (role !== "reviewer") errors.push("reviewer_type: only a reviewer has a reviewer_type");
+      else if (!(REVIEWER_TYPES as readonly string[]).includes(v.reviewer_type ?? "")) errors.push(`reviewer_type: must be one of ${REVIEWER_TYPES.join(", ")}`);
+    }
+    if (present("seat")) {
+      if (role !== "worker" && role !== "reviewer") errors.push("seat: only a worker or a reviewer has a seat");
+      else if (v.seat !== undefined && !SEAT_RE.test(v.seat)) errors.push("seat: must be a short account name, like dev0 or jack");
+    }
   }
 
   if (errors.length > 0) return { ok: false, errors };

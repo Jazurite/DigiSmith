@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { validateCard } from "../../../../scripts/session-card.ts";
 import { REVIEWER_TYPES, SEVERITIES, SONNET, OPUS, TASK_ESCALATE_LINES, modelFor, countChangedLines } from "./types.ts";
 
 describe("constants", () => {
@@ -51,5 +52,18 @@ describe("countChangedLines", () => {
   it("counts across two files", () => {
     const two = `${diff}\ndiff --git a/y.ts b/y.ts\n--- a/y.ts\n+++ b/y.ts\n@@ -1 +1 @@\n-a\n+b\n`;
     expect(countChangedLines(two)).toBe(5);
+  });
+});
+
+describe("card and constants agree", () => {
+  it("the card accepts every reviewer type the code knows", () => {
+    for (const t of REVIEWER_TYPES) {
+      const r = validateCard({
+        name: "x", role: "reviewer", id: "x-rev", session: "s1", under: "c1", domain: "DGS-1", mandate: "m",
+        runs_on: "herdr w1:p1", created_by: "c1", started: "2026-10-17T20:00+07:00", last_seen: "2026-10-17T20:00+07:00",
+        status: "open", reviewer_type: t,
+      });
+      expect(r.ok).toBe(true);
+    }
   });
 });
