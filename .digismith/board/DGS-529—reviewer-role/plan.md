@@ -1778,6 +1778,12 @@ describe("skills/reviewer/SKILL.md", () => {
     expect(card).toMatch(/hand mode/i);
     expect(card).toContain("DIGISMITH_REVIEW_MODE");
   });
+  it("tells the conductor how it notices a STOP and when to escalate", () => {
+    expect(card).toMatch(/keeps a watch \(Monitor\)/);
+    expect(card).toContain("STOP: task-review-ready");
+    expect(card).toMatch(/15 minutes/);
+    expect(card).toMatch(/reported to the Maestro/);
+  });
   it("names the markers, the findings block and the table command", () => {
     for (const s of ["STOP: task-review-ready", "STOP: ticket-review-ready", "json findings", "dg reviewer table", "dg reviewer pack"]) {
       expect(card).toContain(s);
@@ -1846,6 +1852,7 @@ The conductor picks the seat with the Workbox runbook's rule, inside Jack's seat
 
 ## Flow (role mode)
 
+0. **Watching.** While a Builder in role mode runs, the conductor keeps a watch (Monitor) on the Builder's pane for lines that start with `STOP: task-review-ready` or `STOP: ticket-review-ready`, and on the Builder's idle status. It answers each STOP within one watch cycle. A STOP that stays unanswered for 15 minutes is reported to the Maestro.
 1. The Builder runs `dg reviewer pack ...` and reports `STOP: task-review-ready <pack>` (or `STOP: ticket-review-ready <pack>`). The pack folder holds `pack.md` and the input files.
 2. The conductor starts the Reviewer worker (Workbox runbook, "Start of a ticket", S0 to S6) from `skills/reviewer/brief.md`, with the model from `pack.md`. A `ticket` Reviewer is one worker per review. A `task` Reviewer is one worker per ticket: for each new pack the conductor sends `/clear`, then `/model <model>` if it differs, then `Read <pack>/pack.md and follow the Reviewer card.`
 3. The Reviewer reads `pack.md`, follows the primitive it names, and writes `<pack>/report.md`. The report ends with the findings block (one fenced block, info string `json findings`). The Reviewer ends with one pane line: `done: <pack> verdict: <...>`.
@@ -1937,6 +1944,7 @@ A Builder reports `STOP: task-review-ready <pack>` or `STOP: ticket-review-ready
 - **Ticket Reviewer.** Run S0 to S6 with brief `skills/reviewer/brief.md` (TYPE=ticket, PACK=the pack folder), agent `<key>-rev`, label `<KEY> ⚚ Review`, `--model <model>`. Write the card with `role: reviewer`, `reviewer_type: ticket`, `seat`, `under: <your id>`. Send `review-started` to the Steward at S4. Close the worker after the verdict.
 - **Task Reviewer.** One worker per ticket: agent `<key>-rev-task`, label `<KEY> ⚚ Review task`. At the first pack run S0 to S6. For each later pack: read the pane with `--format ansi`, send `/clear`, then `/model <model>` if it differs from the worker's, then `Read <pack>/pack.md and follow the Reviewer card.` Close the worker after the last task review is clean.
 - **Relay.** Task findings go to the Builder without filtering. Ticket findings: verify each one (`digismith:receiving-code-review`), then relay. A finding you cannot verify goes to the Maestro.
+- **Watch.** While a Builder in role mode runs, keep a watch (Monitor) on its pane for lines that start with `STOP: task-review-ready` or `STOP: ticket-review-ready`, and on its idle status. Answer each STOP within one watch cycle. A STOP unanswered for 15 minutes: report it to the Maestro.
 - **Builder start.** When you start a Builder, set `DIGISMITH_REVIEW_MODE=role` in its pane before `agent start` (S3). A Builder without it runs the old hand mode.
 - **After the build.** Attach `<board folder>/findings.md` to the ticket with `dg clickup upload-attachment`.
 
@@ -1951,6 +1959,15 @@ A Builder reports `STOP: task-review-ready <pack>` or `STOP: ticket-review-ready
 - Authority ladder, Reviewer row: Alone: "Read the target. Write findings, a verdict and one report file in scratch. Run the profile's preview recipe for a Sign-off: Jack ticket after an approved verdict, to the preview target only." Needs the role above: "A wider read scope." Always needs Jack: "Anything that changes something else."
 - Session card: new optional fields `reviewer_type` (task | ticket; reviewer only) and `seat` (an account name; worker or reviewer). A reviewer's legal parents are a conductor or a Maestro.
 - Roles table, Reviewer row, "Who starts it": "A conductor or a Maestro. Never a Builder."
+
+## 4. First live use: does the mode variable reach the Builder? (do this once, after the merge)
+
+Claude Code removes some variables from the environment of its Bash tool (DGS-553: `CLAUDE_CODE_OAUTH_TOKEN`). The role mode depends on `DIGISMITH_REVIEW_MODE` reaching the Builder's Bash tool. Prove it before the first real role-mode build:
+
+1. In a herdr pane, run `export DIGISMITH_REVIEW_MODE=role`, then start a Claude session in that pane, the way the conductor starts a Builder (`herdr agent start ...`).
+2. In that session, ask it to run exactly one Bash command: `bash skills/subagent-driven-development/scripts/review-mode`.
+3. Expected output: `role`. Then repeat in a pane without the variable. Expected: `hand`.
+4. If the first run prints `hand`, the variable does not arrive. Then the mode must come from the session card instead: do not start a role-mode build. File the card-mode build ticket (see the Refiner output, "Contingency") and wait.
 ````
 
 - [ ] **Step 2: Check that the file has no placeholder text**
@@ -2078,6 +2095,10 @@ Expected: all tests PASS and the build exits 0.
 Run: `node --experimental-strip-types scripts/check_vendored_skills.ts`
 Expected: it reports the three primitive files and SDD's `SKILL.md` as "locally diverged". It reports no new upstream drift caused by this branch. Paste the relevant lines into `.digismith/board/DGS-529—reviewer-role/vendored-check.txt` as the evidence for the Compatibility requirement. If the command cannot clone upstream (no network), say so in that file and in the final report; do not claim the check passed.
 
+- [ ] **Step 4b: Note the live check that tests cannot do**
+
+The tests above run `review-mode` with a variable that the test sets itself. They cannot show that Claude Code passes the variable to a Builder's Bash tool. Append this line to `.digismith/board/DGS-529—reviewer-role/vendored-check.txt`: `Live check still open: the mode variable inside a herdr Claude session (handoff.md section 4, DGS-553).` The Maestro runs that check after the merge.
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -2090,5 +2111,6 @@ git commit -m "test(dgs-529): prove the old path and the role path"
 ## Plan notes (not tasks)
 
 - **Merge order.** Task 6 edits `packages/cli/src/index.ts`. DGS-549 (the Steward) also edits it. The build branch starts from main after DGS-549's merge, so the two lines sit next to the Steward's lines. Keep both.
+- **First gate before any role-mode build: the mode variable.** Claude Code strips some variables from its Bash tool (DGS-553). Run the live check in `handoff.md`, section 4: a herdr Claude session started with `DIGISMITH_REVIEW_MODE=role` must print `role` from `scripts/review-mode`, and `hand` without the variable. If it prints `hand` with the variable set, the mode must come from the session card (the contingency ticket in the Refiner output), and no role-mode build starts until that ticket is done.
 - **The first live use** is read only: after the merge, run `dg reviewer pack` and `dg reviewer table` on a finished SDD workspace and one real ticket Reviewer on a finished branch. No ticket is written to by a test.
 - **Not in this plan:** the Lights-Out engine starting Reviewers by itself (DGS-129), the preview step's recipe field in the profile (spec section 8 says "a new optional field `preview`"; it is needed only when the first Sign-off: Jack ticket reaches review, so it is a separate build ticket in the Refiner's output), more reviewer types, DGS-554's rename.

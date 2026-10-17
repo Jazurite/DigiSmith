@@ -186,6 +186,7 @@
 <h2>5. How each type runs</h2>
 <p>This section describes <strong>role mode</strong>: the mode a herdr Builder runs in. The conductor turns it on when it starts the Builder (section 15). By hand, outside role mode, nothing here applies and SDD runs as today.</p>
 <p>A Builder is a worker. A worker may not start another agent (DGS-404, authority ladder), and Jack's rule is stronger: a Builder never starts or runs a review. So after each review point the Builder runs a pack, reports a marker line and waits. Its parent decides. The Lights-Out night used the same shape at STOP-1 and STOP-2.</p>
+<p><strong>How the conductor notices a STOP.</strong> While a Builder in role mode runs, the conductor keeps a watch (Monitor) on the Builder's pane for lines that start with <code>STOP: task-review-ready</code> or <code>STOP: ticket-review-ready</code>, and on the Builder's idle status. It answers each STOP within one watch cycle. A STOP that stays unanswered for 15 minutes is reported to the Maestro.</p>
 
 <h3>Type <code>task</code>: one worker per ticket</h3>
 <ol>
@@ -389,6 +390,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 
 <h3>The switch</h3>
 <p>The mode is <strong>role mode</strong> when the environment variable <code>DIGISMITH_REVIEW_MODE</code> is exactly <code>role</code>. The conductor sets it in the Builder's pane when it starts the Builder (the S3 step, next to <code>claude-account</code>). Any other value, and an unset variable, is <strong>hand mode</strong>. A script <code>skills/subagent-driven-development/scripts/review-mode</code> prints <code>role</code> or <code>hand</code>. SDD runs it at setup and records the result in the ledger as <code>Review mode: role</code> or <code>Review mode: hand</code>. The script is the one place that reads the variable. A resumed session reads the ledger line first.</p>
+<p><strong>The variable must reach the Builder's Bash tool.</strong> Claude Code removes some variables from the environment of its Bash tool (DGS-553). Before the first real role-mode build, a live check must show that <code>scripts/review-mode</code> prints <code>role</code> inside a herdr Claude session that was started with the variable set. If it does not arrive, the mode comes from the session card instead (a card field, read by the same script), and no role-mode build starts until that change is built.</p>
 
 <h3>What each mode does</h3>
 <div class="table-wrap"><table>
