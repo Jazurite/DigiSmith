@@ -62,7 +62,7 @@
 <body>
 
 <header class="doc-head">
-  <span class="badge">awaiting approval (checkpoint 1)</span>
+  <span class="badge">approved for planning (checkpoint 1)</span>
   <h1>Reviewer role: architecture and solution design</h1>
   <div class="meta">
     <span>Date: 2026-10-17</span>
@@ -86,57 +86,63 @@
     <li><a href="#errors">Errors</a></li>
     <li><a href="#testing">Testing</a></li>
     <li><a href="#notv1">Not in version 1</a></li>
-    <li><a href="#confirm">For Jack to confirm</a></li>
+    <li><a href="#confirm">Decisions</a></li>
+    <li><a href="#compat">Compatibility</a></li>
   </ol>
 </nav>
 
 <section id="goal">
 <h2>1. Goal and scope</h2>
-<p>Today the reviews are subagents inside the Builder. They share its context, its seat and its blind spots. On the first Lights-Out night (DGS-483) the 21 task reviews and the 2 whole-branch reviews found real faults, one of them a leak: the Storybook build would have published file paths from the Mac. The Builder paid for all of it in its own context.</p>
+<p>Today the reviews are subagents inside the Builder. They share its context, its seat and its blind spots, and the Builder starts and runs them. On the first Lights-Out night (DGS-483) the 21 task reviews and the 2 whole-branch reviews found real faults, one of them a leak: the Storybook build would have published file paths from the Mac. The Builder paid for all of it in its own context.</p>
 <p>This spec makes the Reviewer one role with its own card, its own context pack for each type and its own start. The input is Jack's pitch on DGS-529 (ClickUp comment 1301150000116983). The pitch is a decision, not a proposal. This spec does not reopen it.</p>
 <p>Settled by the pitch and not repeated as questions:</p>
 <ul>
   <li>The Reviewer only judges. The Builder fixes. The Reviewer re-checks. The Reviewer never fixes and never merges.</li>
+  <li>The Builder never starts or runs a review, task reviews included (Jack: "The builder should never review."). Only a conductor or a Maestro starts a review. The Builder reports up and waits.</li>
   <li>One role, one field <code>reviewer type</code>: <code>task</code> or <code>ticket</code>. The ledger role <code>final-reviewer</code> becomes <code>ticket</code>.</li>
   <li>Every role is its own agent with a defined context pack. It never gets the Builder's context.</li>
   <li>Roles use primitives. The primitives stay the source of truth and are not merged into the role.</li>
-  <li>SDD decides when a review happens. It calls the Reviewer role at that step.</li>
+  <li>SDD decides when a review is due. In role mode it stops with a marker and reports up. A conductor or a Maestro starts the Reviewer.</li>
   <li>The <code>ticket</code> Reviewer prepares the preview for "Sign-off: Jack" tickets until a Releaser exists (DGS-467).</li>
   <li>The report is a findings table on the ticket with a reviewer-type column.</li>
+  <li>The existing primitives keep working by hand. The role path is added beside the old path, never in place of it (section 15).</li>
 </ul>
-<p>Out of scope here: the call inside SDD (DGS-129), more tiers and the cross-model reviewer (DGS-127), the rename <code>task</code> to <code>step</code> (DGS-554), the Steward wiring (DGS-551), the Releaser (DGS-467), the nightly audit.</p>
+<p>Out of scope here: the automatic start by the Lights-Out engine (DGS-129), more tiers and the cross-model reviewer (DGS-127), the rename <code>task</code> to <code>step</code> (DGS-554), the Steward wiring (DGS-551), the Releaser (DGS-467), the nightly audit.</p>
 </section>
 
 <section id="card">
 <h2>2. The role card</h2>
-<p>The role is one skill: <code>skills/reviewer/SKILL.md</code>, called <code>digismith:reviewer</code>. It is the Reviewer card. A <code>task</code> subagent and a <code>ticket</code> worker both load the same file, so the rules cannot drift between the two types. A skill is the right place because the repo already holds its roles' text in skills, and a herdr worker can read a skill from the brief.</p>
+<p>The role is one skill: <code>skills/reviewer/SKILL.md</code>, called <code>digismith:reviewer</code>. It is the Reviewer card. A <code>task</code> worker and a <code>ticket</code> worker both load the same file, so the rules cannot drift between the two types. A skill is the right place because the repo already holds its roles' text in skills, and a herdr worker can read a skill from the brief.</p>
 <p>The card holds, and only holds:</p>
 <ul>
-  <li><strong>Authority.</strong> Read the target. Write one report. Return findings and a verdict. Nothing else. This is the Reviewer ceiling of DGS-404 (section 4 of that design). The one change is the preview step (section 8).</li>
+  <li><strong>Authority.</strong> Read the target. Write one report and one findings file, in scratch. Return findings and a verdict. Nothing else. This is the Reviewer ceiling of DGS-404 (section 4 of that design). The one change is the preview step (section 8).</li>
   <li><strong>The type table</strong> (section 3) and the pack each type reads (section 4).</li>
+  <li><strong>The type to seat policy</strong> (section 5, "The seat").</li>
   <li><strong>Which primitive to follow for which job</strong>, by reference, never by copy (section 3).</li>
   <li><strong>The output addendum</strong>: the findings block (section 7). The primitives do not have it.</li>
-  <li><strong>Who "your human partner" is</strong> for each type: the Builder's orchestrator for <code>task</code>, the Maestro for <code>ticket</code>. The Maestro sends taste questions to Jack.</li>
+  <li><strong>Who "your human partner" is</strong> for each type: the Builder's orchestrator (the SDD controller) for <code>task</code>, the Maestro for <code>ticket</code>. The Maestro sends taste questions to Jack.</li>
+  <li><strong>The rule: a Builder never starts or runs a review.</strong> In role mode a conductor or a Maestro starts every review (section 5). By hand, outside role mode, the old path stays (section 15).</li>
   <li><strong>How the role is started</strong> (section 5) and which Steward events it maps to (section 9).</li>
 </ul>
 <p>The card holds no review criteria. Severity, what to check, the fix loop and the output format stay in the primitives.</p>
 
 <h3>The session card fields (DGS-404, section 5)</h3>
-<p>A <code>ticket</code> Reviewer is a herdr worker, so it has a session card. The card uses <code>role: reviewer</code> and adds two fields for every worker:</p>
+<p>Both Reviewer types are herdr workers, so each has a session card. The card uses <code>role: reviewer</code> and adds two fields:</p>
 <ul>
-  <li><code>reviewer_type: ticket</code> (only on a Reviewer's card).</li>
-  <li><code>seat: dev0</code> or <code>jack</code>. This field is new. The conductor needs it to find the Builder's seat when it picks the Reviewer's seat. Today the seat is only in the pane's environment. The field is read from <code>claude-account status</code> at the start.</li>
+  <li><code>reviewer_type: task</code> or <code>ticket</code> (only on a Reviewer's card).</li>
+  <li><code>seat: dev0</code> or <code>jack</code>. This field is new for every worker. The conductor needs it to find the Builder's seat when it picks the Reviewer's seat. Today the seat is only in the pane's environment. The field is read from <code>claude-account status</code> at the start.</li>
 </ul>
-<p>A <code>task</code> Reviewer is a subagent. It has no card of its own. The Builder's card stands for it.</p>
 
 <h3>Owner header on each primitive</h3>
-<p>Each primitive file gets one first line after its title: <code>Used by the Reviewer role (DGS-529): not dispatched directly by a Builder.</code> The files are:</p>
+<p>Each primitive file gets one first line after its title. The text is true in both modes:</p>
+<p><code>Used by the Reviewer role (DGS-529). In role mode a conductor or a Maestro starts this review, never a Builder. Outside role mode it runs as before.</code></p>
+<p>The files are:</p>
 <ul>
   <li><code>skills/subagent-driven-development/task-reviewer-prompt.md</code></li>
   <li><code>skills/subagent-driven-development/re-review-prompt.md</code></li>
   <li><code>skills/requesting-code-review/code-reviewer.md</code></li>
 </ul>
-<p>These files are vendored from Superpowers (<code>vendored/PROVENANCE.md</code>). The header is a local change. It gets a "Further diverged by DGS-529" line in <code>PROVENANCE.md</code>, and <code>scripts/check_vendored_skills.ts</code> must still report it as local divergence, not upstream drift. <code>requesting-code-review</code> stays callable by hand.</p>
+<p>These files are vendored from Superpowers (<code>vendored/PROVENANCE.md</code>). The header and the additive sections are local changes. They get a "Further diverged by DGS-529" line in <code>PROVENANCE.md</code>, and <code>scripts/check_vendored_skills.ts</code> must still report them as local divergence, not upstream drift. <code>requesting-code-review</code> stays callable by hand.</p>
 </section>
 
 <section id="types">
@@ -147,11 +153,13 @@
 <tr><th>When</th><td>After each task. Again after each fix round.</td><td>Once at the end, when all tasks are done. Again once after the fix wave.</td></tr>
 <tr><th>Blocks</th><td>The next task.</td><td>The merge.</td></tr>
 <tr><th>Primitive</th><td><code>task-reviewer-prompt.md</code>. Re-review: <code>re-review-prompt.md</code>.</td><td><code>code-reviewer.md</code>. Re-review: <code>re-review-prompt.md</code>.</td></tr>
-<tr><th>Runs as</th><td>A fresh subagent of the Builder's session.</td><td>Its own herdr worker, on the other seat when the seat rule allows it.</td></tr>
+<tr><th>Started by</th><td>A conductor or a Maestro, after the Builder reports <code>STOP: task-review-ready</code>.</td><td>A conductor or a Maestro, after the Builder reports <code>STOP: ticket-review-ready</code>.</td></tr>
+<tr><th>Runs as</th><td>Its own herdr worker: one per ticket, kept for the whole build. The conductor sends <code>/clear</code> before each pack, so every review has a fresh context.</td><td>Its own herdr worker, one review, closed after the verdict.</td></tr>
 <tr><th>Model</th><td>Per the primitive's Model Selection: a mid-tier floor, scaled to the diff. Sonnet 5.5 today. DGS-537 may change this.</td><td>The most capable model: Opus 5.5.</td></tr>
-<tr><th>Human partner</th><td>The Builder's orchestrator.</td><td>The Maestro.</td></tr>
+<tr><th>Seat</th><td>The seat the runbook's rule gives. No exclusion of the Builder's seat: task reviews are many and cheap.</td><td>Not the Builder's seat when the other seat has headroom.</td></tr>
+<tr><th>Human partner</th><td>The Builder's orchestrator (the SDD controller). The conductor relays between the Reviewer and the Builder and does not filter.</td><td>The Maestro. The conductor verifies findings and relays them.</td></tr>
 </table></div>
-<p>Why <code>task</code> stays a subagent: it is cheap, it runs 20 times a night and it needs the task's text and diff only, which a subagent gets in one file. Why <code>ticket</code> becomes a worker: it is the review that catches what the Builder's whole session could not see, so it must not share that session.</p>
+<p>Both types always run inside Jack's seat order in force (section 5, "The seat"). Why both types become workers: the Builder must not review, and a worker has no Builder context to share. Why <code>task</code> keeps one worker for the build: starting 20 workers a night costs more than one worker and 20 <code>/clear</code> commands, and <code>/clear</code> gives each review the fresh context the pitch asks for.</p>
 <p>The value <code>task</code> is a constant in one place in the code (<code>REVIEWER_TYPES</code>), so the rename to <code>step</code> (DGS-554) is a one-line change plus the skill text.</p>
 </section>
 
@@ -166,48 +174,61 @@
 <tr><td><code>ticket</code>, round 1</td><td><code>ticket.md</code>. The approved spec (<code>design.html</code>). <code>plan.md</code>. The full diff against main (<code>review-package</code>, merge base to head). The standards for the plan, as paths. <code>carry-over.md</code>: one line per deferred Minor and per parked finding with its ruling, copied from the ledger.</td><td>The Builder's conversation. The task reviewers' reports and transcripts. The rest of the ledger.</td></tr>
 <tr><td><code>ticket</code>, re-review</td><td>The open findings list. The fix-wave diff. The fixer's report.</td><td>The round 1 diff again.</td></tr>
 </table></div>
-<p>Two points where the pack lists something the pitch's short list does not, both because a primitive demands it. See section 14.</p>
+<p>Two points where the pack lists something the pitch's short list does not, both because a primitive demands it. Jack approved both (section 14).</p>
 <ul>
-  <li>The implementer's report is in the <code>task</code> pack. <code>task-reviewer-prompt.md</code> requires it as a file of claims to check. It is marked unverified.</li>
-  <li><code>carry-over.md</code> is in the <code>ticket</code> pack. <code>SKILL.md</code> of SDD tells the final reviewer to triage the deferred Minors and parked findings. Without that list the triage cannot happen. The file has one-line entries only, not review transcripts.</li>
+  <li>The implementer's report is in the <code>task</code> pack (approved default 1, section 14). <code>task-reviewer-prompt.md</code> requires it as a file of claims to check. It is marked unverified.</li>
+  <li><code>carry-over.md</code> is in the <code>ticket</code> pack (approved default 2, section 14). <code>SKILL.md</code> of SDD tells the final reviewer to triage the deferred Minors and parked findings. Without that list the triage cannot happen. The file has one-line entries only, not review transcripts.</li>
 </ul>
 <p>Standards are not matched by the pack command. The matching is a judgment (<code>standards/index.yml</code> holds descriptions). The Builder already picked the standards for its tasks and named them in the brief. The pack only copies those paths.</p>
 </section>
 
 <section id="run">
 <h2>5. How each type runs</h2>
-<h3>Type <code>task</code>: a subagent of the Builder</h3>
+<p>This section describes <strong>role mode</strong>: the mode a herdr Builder runs in. The conductor turns it on when it starts the Builder (section 15). By hand, outside role mode, nothing here applies and SDD runs as today.</p>
+<p>A Builder is a worker. A worker may not start another agent (DGS-404, authority ladder), and Jack's rule is stronger: a Builder never starts or runs a review. So after each review point the Builder runs a pack, reports a marker line and waits. Its parent decides. The Lights-Out night used the same shape at STOP-1 and STOP-2.</p>
+
+<h3>Type <code>task</code>: one worker per ticket</h3>
 <ol>
-  <li>SDD finishes a task and runs <code>dg reviewer pack --type task</code>.</li>
-  <li>SDD dispatches a subagent with an explicit model. The prompt is short: read the card, read <code>pack.md</code>, follow the primitive named there.</li>
-  <li>The subagent returns its report as its final message, as the primitive says. SDD saves it to <code>&lt;pack&gt;/report.md</code> and adds the ledger line <code>Task N: dispatch task-reviewer ...</code> as today.</li>
-  <li>The fix loop is the primitive's: up to 5 rounds, the Builder fixes, a scoped re-review checks. The Reviewer subagent never edits.</li>
+  <li><strong>Request.</strong> The SDD controller finishes a task and its implementer. It runs <code>dg reviewer pack --type task --task N</code>, appends the ledger line <code>Task N: review requested</code>, and reports <code>STOP: task-review-ready &lt;pack path&gt;</code>. It does not dispatch a reviewer. It waits.</li>
+  <li><strong>Start or reuse.</strong> The conductor (or the Maestro) looks for the ticket's task Reviewer. None exists: it starts one with the runbook's "Start of a ticket" steps (S0 to S6), brief <code>skills/reviewer/brief.md</code>, agent <code>&lt;key&gt;-rev-task</code>, label <code>&lt;KEY&gt; ⚚ Review task</code>. One exists and is idle: it sends <code>/clear</code>, then the prompt. The prompt is short: <code>Read &lt;pack&gt;/pack.md and follow the Reviewer card.</code> The conductor reads the pane with <code>--format ansi</code> first and sends only when the input box is empty.</li>
+  <li><strong>Review.</strong> The Reviewer follows the primitive named in <code>pack.md</code>. It writes <code>&lt;pack&gt;/report.md</code> and the findings file, and ends with one pane line: <code>done: &lt;pack&gt; verdict: &lt;Approved|Needs fixes&gt;</code>.</li>
+  <li><strong>Relay.</strong> The conductor prompts the Builder with the report path and the verdict, and does not filter the findings. The SDD controller verifies the ⚠️ items itself (it holds the plan and the cross-task context) and adjudicates, as SDD says.</li>
+  <li><strong>Fix loop.</strong> The primitive's loop stays: up to 5 rounds. The Builder's implementer fixes (rounds 1 to 3 resumed, rounds 4 and 5 fresh on a stronger model). The controller runs <code>dg reviewer pack --type task --task N --round R</code> for the scoped re-review and reports <code>STOP: task-review-ready &lt;pack&gt;</code> again. The same Reviewer worker takes it after <code>/clear</code>, with <code>re-review-prompt.md</code>.</li>
+  <li><strong>Breaker.</strong> After round 5 the SDD controller adjudicates the open findings, as the primitive says: park with a ruling, or <code>BLOCKED</code> to the parent.</li>
+  <li><strong>Clean.</strong> The conductor tells the Builder "task N review clean". The Builder moves to the next task.</li>
+  <li><strong>Close.</strong> After the last task review is clean, the conductor closes the task Reviewer worker.</li>
 </ol>
-<p>Because this step lives in SDD, DGS-129 builds the call. This ticket defines what the call passes (type and pack path) and what it gets back (report and verdict).</p>
+<p>SDD's rule "do not pause between tasks" gets one exception in role mode: the Builder waits at each <code>STOP: ...-review-ready</code>. This costs wall time at every task. The conductor watches for the marker and answers it, as it does for the other STOP markers. The Lights-Out engine can take this over later (DGS-129).</p>
 
 <h3>Type <code>ticket</code>: its own worker</h3>
-<p>A Builder is a worker. A worker may not start another agent (DGS-404, authority ladder). So the Builder cannot start the Reviewer worker itself. A conductor or the Maestro starts it. The Builder stops at a checkpoint, as it did at STOP-1 and STOP-2 on the Lights-Out night.</p>
 <ol>
-  <li><strong>Request.</strong> The Builder finishes the last task, runs <code>dg reviewer pack --type ticket</code>, writes the ledger line <code>Task final: review requested</code>, and reports the marker <code>STOP: ticket-review-ready &lt;pack path&gt;</code>. It does not start anything. It waits.</li>
-  <li><strong>Start.</strong> The conductor starts the Reviewer with the runbook's "Start of a ticket" steps (S0 to S6), with these values:
+  <li><strong>Request.</strong> The Builder finishes the last task, runs <code>dg reviewer pack --type ticket</code>, appends <code>Task final: review requested</code>, and reports <code>STOP: ticket-review-ready &lt;pack path&gt;</code>. It waits.</li>
+  <li><strong>Start.</strong> The conductor starts the Reviewer with S0 to S6, with these values:
     <ul>
-      <li>Brief: <code>skills/reviewer/ticket-brief.md</code>, a template. It names the pack and the card. It says: judge only, write one report, never edit, never merge.</li>
-      <li>Agent: <code>&lt;key&gt;-rev</code>, for example <code>dgs-529-rev</code>. Label: <code>&lt;KEY&gt; ⚚ Review</code>. The Names block of the runbook allows a short word when one ticket has two workers.</li>
+      <li>Brief: <code>skills/reviewer/brief.md</code>, a template with the type as a placeholder. It names the pack and the card. It says: judge only, write one report and one findings file, never edit, never merge.</li>
+      <li>Agent: <code>&lt;key&gt;-rev</code>, for example <code>dgs-529-rev</code>. Label: <code>&lt;KEY&gt; ⚚ Review</code>. The runbook's Names block allows a short word when one ticket has two workers.</li>
       <li>Working folder: the Builder's worktree, read only. The Builder is stopped, so nothing changes under the Reviewer. During a fix wave the Reviewer is idle.</li>
       <li>Model: Opus 5.5. Seat: see below.</li>
       <li>The session card gets <code>role: reviewer</code>, <code>reviewer_type: ticket</code>, <code>under: &lt;the conductor or Maestro that started it&gt;</code>, <code>seat</code>.</li>
+      <li>The Reviewer registers its session for the ticket's token count (<code>entry.ts session --ticket &lt;KEY&gt; --role reviewer</code>, written in the brief), so its tokens count with the ticket.</li>
     </ul>
   </li>
-  <li><strong>Review.</strong> The Reviewer follows <code>code-reviewer.md</code> against its pack, writes <code>&lt;pack&gt;/report.md</code> with the findings block, and ends with one pane line: <code>done: &lt;path&gt; verdict: &lt;approved|needs-fixes&gt;</code>.</li>
+  <li><strong>Review.</strong> The Reviewer follows <code>code-reviewer.md</code> against its pack, writes <code>&lt;pack&gt;/report.md</code> and the findings file, and ends with one pane line: <code>done: &lt;path&gt; verdict: &lt;approved|needs-fixes&gt;</code>.</li>
   <li><strong>Verify and relay.</strong> The conductor verifies each finding (the skill <code>digismith:receiving-code-review</code>), then sends the verified findings to the Builder. A finding the conductor cannot verify goes to the Maestro, not into a fix.</li>
-  <li><strong>Fix wave.</strong> The Builder dispatches ONE fix subagent with the whole list (the SDD rule). Then it asks for the re-review.</li>
-  <li><strong>Re-review.</strong> The same Reviewer worker gets a round 2 pack (open findings, fix-wave diff) by <code>herdr agent prompt</code>. It follows <code>re-review-prompt.md</code>. If the worker is gone, a new one starts with the round 1 report in its pack.</li>
+  <li><strong>Fix wave.</strong> The Builder dispatches ONE fix subagent with the whole list (the SDD rule), runs the re-review pack and reports <code>STOP: ticket-review-ready &lt;pack&gt;</code> again.</li>
+  <li><strong>Re-review.</strong> The same Reviewer worker gets the round 2 pack by <code>herdr agent prompt</code> and follows <code>re-review-prompt.md</code>. If the worker is gone, a new one starts with the round 1 report in its pack.</li>
   <li><strong>Residual.</strong> Any finding still open after the one re-review is adjudicated by the Maestro, as the primitive says: park with a ruling, or stop on a load-bearing one.</li>
-  <li><strong>Close.</strong> After an approved verdict (and the preview, when it applies) the conductor closes the Reviewer worker. Its record is the report and the table row. The merge follows the merge order. The Reviewer does not merge.</li>
+  <li><strong>Close.</strong> After an approved verdict (and the preview, when it applies) the conductor tells the Builder "ticket review clean" and closes the Reviewer worker. The merge follows the merge order. The Reviewer does not merge.</li>
 </ol>
 
 <h3>The seat</h3>
-<p>The pitch says "the other seat". The seat rule in force (Jack, 2026-10-17) puts every worker on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. Until then the <code>ticket</code> Reviewer runs on <code>dev0</code>, like the Builder. The separation then rests on the separate context and the separate model, not on the seat. After that date the conductor picks the seat with "The rule" of the runbook and excludes the Builder's seat when the other seat has headroom. If no other seat has headroom, the Reviewer runs on the Builder's seat. A limit stop on the Reviewer's seat is reported to Jack. The conductor does not move the Reviewer on its own.</p>
+<p>The card holds a type to seat policy. The policy always runs <strong>inside Jack's seat order in force</strong>. The order in force (Jack, 2026-10-17) puts every worker on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. Until then both Reviewer types run on <code>dev0</code>, whatever the policy says. The separation then rests on the separate context and the separate model, not on the seat.</p>
+<div class="table-wrap"><table>
+<tr><th>Type</th><th>Policy (when no seat order overrides it)</th></tr>
+<tr><td><code>task</code></td><td>The seat that "The rule" of the runbook gives. The Builder's seat is not excluded.</td></tr>
+<tr><td><code>ticket</code></td><td>Not the Builder's seat when the other seat has headroom (the rule's steps 1 to 3 on the other seat). If it has none, the Builder's seat.</td></tr>
+</table></div>
+<p>A limit stop on the Reviewer's seat is reported to Jack. The conductor does not move the Reviewer on its own.</p>
 </section>
 
 <section id="blocking">
@@ -217,8 +238,8 @@
   <li><strong>Severity.</strong> Critical, Important, Minor, as in <code>task-reviewer-prompt.md</code> and <code>code-reviewer.md</code>. A hit from <code>check-attribution</code> is an automatic Critical.</li>
   <li><strong>What blocks.</strong> A verified Critical or Important finding, or a confirmed ⚠️ item, or spec ❌. For <code>task</code> it blocks the next task. For <code>ticket</code> it blocks the merge. Minor findings go to the ledger as deferred and never block. The <code>ticket</code> Reviewer triages the deferred ones and says which must be fixed before merge.</li>
   <li><strong>Loop.</strong> <code>task</code>: five fix rounds, then the breaker. <code>ticket</code>: one fix wave, one scoped re-review, then adjudication. There is no second wave.</li>
-  <li><strong>Who adjudicates.</strong> The human partner: the Builder's orchestrator for <code>task</code>, the Maestro for <code>ticket</code>. A load-bearing finding that survives goes up to the Maestro and stays a blocker. A finding that conflicts with the plan text, and a finding that is taste, goes from the Maestro to Jack.</li>
-  <li><strong>Who may override a block.</strong> Only the human partner, with a written ruling. The Reviewer cannot clear its own finding. The Builder cannot clear a finding either.</li>
+  <li><strong>Who adjudicates.</strong> The human partner: the Builder's orchestrator (the SDD controller) for <code>task</code>, the Maestro for <code>ticket</code>. Adjudicating is not reviewing: the Builder rules on findings and fixes them, and never judges its own work. A load-bearing finding that survives goes up to the Maestro and stays a blocker. A finding that conflicts with the plan text, and a finding that is taste, goes from the Maestro to Jack.</li>
+  <li><strong>Who may override a block.</strong> Only the human partner, with a written ruling. The Reviewer cannot clear its own finding. The conductor relays and verifies and does not rule.</li>
   <li><strong>No fix, no merge.</strong> While a blocking finding is open, the ticket stays in <code>review</code>. The Steward gets no <code>merged</code> event. A night run does not retry it on its own (the failed-ticket status is DGS-490).</li>
 </ul>
 </section>
@@ -235,7 +256,7 @@
 <p>An approved review with no findings has <code>[]</code>. The block is the only machine-read part. The rest of the report stays as the primitive writes it.</p>
 
 <h3>The verdict lines (the human partner writes them)</h3>
-<p>The Reviewer judges only, so the verdict on a finding is not the Reviewer's. The human partner writes one ledger line per finding at the moment it is decided:</p>
+<p>The Reviewer judges only, so the verdict on a finding is not the Reviewer's. The human partner writes one ledger line per finding at the moment it is decided. The ledger is the Builder's file, so a ruling that comes from the Maestro reaches the Builder in the conductor's message and the Builder appends it as written:</p>
 <pre><code>Review ticket final r1: F1 -&gt; fixed (commit a7f3c2d)
 Review task 7 r2: F2 -&gt; parked (reviewer wrong: the test asserts the cap)
 Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
@@ -250,7 +271,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <tr><td>task 9</td><td>1</td><td>-</td><td>-</td><td>approved, no findings</td><td>-</td><td>-</td></tr>
 </table></div>
 <p>A finding with no verdict line makes the command fail with the finding's id. An unjudged finding must not ship in a table.</p>
-<p>When it runs: in <code>digismith:report-implementation</code>, after the final review and before the Finish step deletes the SDD workspace. The report files live in that workspace, so the table must be built first. The conductor attaches <code>findings.md</code> to the ticket with <code>dg clickup upload-attachment</code> (a worker has no ClickUp write). This is the Provenance record (DGS-534). The report skill also links the table from <code>report.html</code>.</p>
+<p>When it runs: in <code>digismith:report-implementation</code>, after the final review and before the Finish step deletes the SDD workspace. By hand, where no review wrote a findings file, the command finds nothing, says so and writes no file (section 15). The report files live in that workspace, so the table must be built first. The conductor attaches <code>findings.md</code> to the ticket with <code>dg clickup upload-attachment</code> (a worker has no ClickUp write). This is the Provenance record (DGS-534). The report skill also links the table from <code>report.html</code>.</p>
 </section>
 
 <section id="preview">
@@ -273,7 +294,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <tr><th>Moment</th><th>Event</th><th>Sent by</th></tr>
 <tr><td>The Builder stops with <code>ticket-review-ready</code></td><td><code>review-started</code></td><td>The conductor, at start step S4 of the Reviewer worker.</td></tr>
 <tr><td>The merge is pushed</td><td><code>merged</code></td><td>The merge order's hook. Not the Reviewer: it never merges.</td></tr>
-<tr><td>A <code>task</code> review</td><td>none</td><td>-</td></tr>
+<tr><td>A <code>task</code> review (a task Reviewer starts or gets a pack)</td><td>none</td><td>-</td></tr>
 </table></div>
 <p>Task reviews happen while the ticket is <code>in progress</code>, so they send no event. The wiring itself, which step sends what, is DGS-551. This spec only fixes the moments.</p>
 </section>
@@ -284,8 +305,10 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <div class="table-wrap"><table>
 <tr><th>Where</th><th>Change</th></tr>
 <tr><td>DGS-488 (statuses and roles)</td><td>The <code>review</code> row reads: the Builder fixes, the Reviewer re-checks, then the merge. The Reviewer row: judges, re-checks, prepares the preview for Jack tickets. Never: fixes, merges, builds. The open point "Reviewer and Releaser as one role or two" is closed: two.</td></tr>
-<tr><td>DGS-404 (role architecture)</td><td>The Reviewer row of the authority ladder gets the preview permission. The card gets <code>reviewer_type</code> and <code>seat</code>. A <code>task</code> Reviewer is a subagent dispatched by the Builder's orchestrator, an accepted exception to "started by a conductor or Maestro".</td></tr>
-<tr><td>DGS-129 (hook into SDD)</td><td>Builds the call: SDD runs <code>dg reviewer pack</code>, dispatches the <code>task</code> Reviewer, writes the <code>ticket-review-ready</code> STOP and the verdict lines. SDD is vendored, so it needs a PROVENANCE line.</td></tr>
+<tr><td>DGS-404 (role architecture)</td><td>The Reviewer row of the authority ladder gets the preview permission. The card gets <code>reviewer_type</code> and <code>seat</code> (a new field for every worker). Both Reviewer types are started by a conductor or a Maestro, as the design already says.</td></tr>
+<tr><td>SDD and the role mode</td><td>Role mode, switched on by the conductor, replaces the Builder's own review dispatches with <code>dg reviewer pack</code>, the ledger line and the <code>STOP: ...-review-ready</code> marker. The old dispatch text stays for by-hand use (section 15). SDD is vendored, so it needs a PROVENANCE line.</td></tr>
+<tr><td>DGS-129 (hook into SDD)</td><td>Automates the start: the Lights-Out engine can start and feed the Reviewer where today a conductor does it by hand. No edit to SDD beyond this spec.</td></tr>
+<tr><td><code>skills/reviewer/brief.md</code> (new)</td><td>The brief template for both Reviewer types.</td></tr>
 <tr><td>DGS-127 (multi-tier review)</td><td>A tier is a new way to run the role, called a runner (for example a cross-model worker). The pack, the findings block and the table do not change for a new runner.</td></tr>
 <tr><td>DGS-554 (task to step)</td><td>Changes the value of <code>reviewer type</code>, the pack folder names and the card text. One constant plus text.</td></tr>
 <tr><td>DGS-551 (hooks and wiring)</td><td>Uses the moments in section 9.</td></tr>
@@ -305,6 +328,9 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
   <li><strong>The Reviewer wants to change something.</strong> It reports the need as a finding. It does not edit.</li>
   <li><strong>The Reviewer cannot verify a claim.</strong> It marks it as ⚠️, as the primitive says. The human partner checks it.</li>
   <li><strong>The Reviewer's seat hits a limit.</strong> Report to Jack and wait (the seat rule in force).</li>
+  <li><strong>The Builder's STOP is not answered.</strong> The Builder waits. The conductor treats a <code>STOP: ...-review-ready</code> marker like the other STOP markers and answers it. A Builder never falls back to reviewing itself in role mode.</li>
+  <li><strong>The task Reviewer worker is gone or stuck after a <code>/clear</code>.</strong> The conductor starts a new one. The pack holds the full input of a review, so nothing is lost.</li>
+  <li><strong>Role mode is on but <code>dg reviewer pack</code> fails.</strong> The Builder reports the error up and waits. It does not review without a pack.</li>
 </ul>
 </section>
 
@@ -314,7 +340,8 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
   <li><code>dg reviewer pack</code>, Vitest with a temporary git repo: a <code>task</code> pack holds exactly the listed files; a <code>ticket</code> pack holds no ledger text beyond <code>carry-over.md</code>; attribution in a commit stops the pack; a missing file gives a named error; <code>pack.md</code> has every placeholder value of the primitive.</li>
   <li><code>dg reviewer table</code>: findings plus verdict lines give the exact rows; a clean review gives a summary row; a finding without a verdict fails; a bad JSON block fails with the report path.</li>
   <li>The card: a test checks that the type table in <code>SKILL.md</code> matches <code>REVIEWER_TYPES</code>, and that each of the three primitive files has the owner header (this guards drift). The existing <code>check_vendored_skills.ts</code> test still passes with the divergence recorded.</li>
-  <li>The brief template: a test that every placeholder in <code>ticket-brief.md</code> has a value in the start recipe.</li>
+  <li>The brief template: a test that every placeholder in <code>skills/reviewer/brief.md</code> has a value in the start recipe, for both types.</li>
+  <li>Both paths (section 15): tests for the mode switch, for the old text that must stay, and for the by-hand behaviour of <code>dg reviewer table</code>.</li>
   <li>First use, live and read only: pack a finished ticket (for example the DGS-481 branch) as a <code>ticket</code> pack, run one real <code>ticket</code> Reviewer worker on it, and check that its findings block parses and the table builds. No ticket is written to by a test.</li>
 </ul>
 </section>
@@ -322,25 +349,64 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <section id="notv1">
 <h2>13. Not in version 1</h2>
 <ul>
-  <li>The call inside SDD, the STOP marker and the automatic start (DGS-129 and the Lights-Out engine). Until then the conductor starts the Reviewer by hand with the recipe in section 5.</li>
+  <li>The automatic start by the Lights-Out engine (DGS-129). In version 1 the conductor starts and feeds the Reviewers by hand with the recipes in section 5. The STOP markers, the pack command, the seat policy and the role mode are in version 1.</li>
   <li>More reviewer types (design, security, cross-model) and a second field for scope or focus. They come when a real ticket needs one.</li>
   <li>The cross-model Reviewer (Sol, paused since 2026-10-11) and the review tiers (DGS-127).</li>
   <li>The Releaser (DGS-467) and the nightly audit.</li>
   <li>A faster tier for the <code>task</code> model (the Haiku spike, DGS-537).</li>
   <li>Reviewing a design or a plan. The role judges code against a spec and a plan.</li>
+  <li>Removing the by-hand path of SDD and <code>requesting-code-review</code>. It stays (section 15).</li>
 </ul>
 </section>
 
 <section id="confirm">
-<h2>14. For Jack to confirm</h2>
-<p>The pitch settles the design. These five points are consequences the pitch did not state. Each one has a default in this spec. A "no" on any of them changes only that point.</p>
+<h2>14. Decisions</h2>
+<p>Jack decided these at checkpoint 1 (2026-10-17, relayed by the Maestro, DGS-529 comment 1301150000116989).</p>
 <ol>
-  <li><strong>The <code>task</code> pack keeps the implementer's report</strong>, as unverified claims. The pitch lists diff, task text and standards. The primitive requires the report. Default: keep it.</li>
-  <li><strong>The <code>ticket</code> pack keeps one file of one-line carry-over entries</strong> (deferred Minors, parked rulings), and no review transcripts. The pitch says "not the task-review history". The primitive needs the list to triage. Default: keep the list only.</li>
-  <li><strong>The "other seat" waits until Wed 21 Oct 12:00 UTC+7.</strong> Your seat order says every worker on <code>dev0</code> until then. Default: your seat order wins. The <code>ticket</code> Reviewer runs on <code>dev0</code> until then.</li>
-  <li><strong>The preview step raises the Reviewer's ceiling by one permission</strong> (run the profile's preview recipe, preview target only). Your pitch says the Reviewer prepares the preview, and the DGS-404 ceiling says read only. Default: the narrow permission, until the Releaser exists.</li>
-  <li><strong>The Builder stops and a conductor starts the <code>ticket</code> Reviewer.</strong> A worker cannot start an agent (DGS-404). So the call from SDD is a stop-and-start, not a function call. The Lights-Out engine and DGS-129 can later automate the start. Default: stop-and-start.</li>
+  <li><strong>The <code>task</code> pack keeps the implementer's report</strong>, as unverified claims. Approved.</li>
+  <li><strong>The <code>ticket</code> pack keeps one file of one-line carry-over entries</strong> (deferred Minors, parked rulings), and no review transcripts. Approved.</li>
+  <li><strong>The seat follows Jack's seat order in force.</strong> Every worker is on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. The type to seat policy applies inside that order (section 5). Approved, and extended: the policy is part of the card.</li>
+  <li><strong>The preview step raises the Reviewer's ceiling by one permission</strong> (run the profile's preview recipe, preview target only). Approved.</li>
+  <li><strong>The Builder stops and a conductor starts the Reviewer.</strong> Approved, and extended: this now holds for task reviews too. "The builder should never review."</li>
+  <li><strong>The task Reviewer is one worker per ticket</strong>, kept for the whole build, with <code>/clear</code> before each pack. This is the Maestro's technical direction. Findings go back through the conductor. The primitive's fix loop and its 5-round cap stay.</li>
+  <li><strong>The existing primitives keep working.</strong> The role path is added beside the old one (section 15).</li>
 </ol>
+</section>
+
+<section id="compat">
+<h2>15. Compatibility</h2>
+<p>Requirement: SDD and <code>requesting-code-review</code> run exactly as today when used by hand, outside a herdr Builder. The role path is added beside the old path. It never replaces it. <code>check_vendored_skills</code> passes with the divergence recorded. Tests prove both paths.</p>
+
+<h3>The switch</h3>
+<p>The mode is <strong>role mode</strong> when the environment variable <code>DIGISMITH_REVIEW_MODE</code> is exactly <code>role</code>. The conductor sets it in the Builder's pane when it starts the Builder (the S3 step, next to <code>claude-account</code>). Any other value, and an unset variable, is <strong>hand mode</strong>. A script <code>skills/subagent-driven-development/scripts/review-mode</code> prints <code>role</code> or <code>hand</code>. SDD runs it at setup and records the result in the ledger as <code>Review mode: role</code> or <code>Review mode: hand</code>. The script is the one place that reads the variable. A resumed session reads the ledger line first.</p>
+
+<h3>What each mode does</h3>
+<div class="table-wrap"><table>
+<tr><th></th><th>Hand mode (as today)</th><th>Role mode (a herdr Builder)</th></tr>
+<tr><th>Task review</th><td>SDD dispatches <code>task-reviewer-prompt.md</code> as a subagent. The old text applies unchanged.</td><td>SDD runs <code>dg reviewer pack</code>, writes <code>Task N: review requested</code>, reports <code>STOP: task-review-ready</code> and waits.</td></tr>
+<tr><th>Final review</th><td>SDD dispatches <code>code-reviewer.md</code> as a subagent. Unchanged.</td><td><code>STOP: ticket-review-ready</code>, and a conductor starts the ticket Reviewer.</td></tr>
+<tr><th><code>requesting-code-review</code> by hand</th><td>As today. The user or a Maestro dispatches <code>code-reviewer.md</code>.</td><td>Not applicable: a Builder never uses it.</td></tr>
+<tr><th>Findings block</th><td>The block at the end of the report is part of the prompt. <code>[FINDINGS_FILE]</code> is optional: with no value the reviewer only prints the block. Old dispatches that do not fill it keep working.</td><td><code>[FINDINGS_FILE]</code> is set by the pack.</td></tr>
+<tr><th>Verdict lines and the table</th><td>No new ledger lines. <code>dg reviewer table</code> finds no findings files, says so and writes no file.</td><td>Verdict lines are written. <code>report-implementation</code> builds <code>findings.md</code>.</td></tr>
+<tr><th>Ledger</th><td>Grammar unchanged. One added line at setup: <code>Review mode: hand</code>.</td><td>Added lines: <code>Review mode: role</code>, <code>Task N: review requested</code>, verdict lines.</td></tr>
+</table></div>
+
+<h3>Rules for the edits</h3>
+<ul>
+  <li>Edits to the three primitives and to SDD are <strong>additive</strong>: new lines and new sections. No existing line is deleted or rewritten. The role-mode text is a separate section that starts with "In role mode".</li>
+  <li>The old dispatch instructions stay in place. The role-mode section says that when the mode is <code>role</code> it replaces those steps, and it names each one.</li>
+  <li>The owner header is true in both modes (section 2).</li>
+  <li><code>PROVENANCE.md</code> gets one "Further diverged by DGS-529" line that names the files. <code>check_vendored_skills.ts</code> must report them as local divergence and must not report upstream drift.</li>
+</ul>
+
+<h3>Tests for both paths</h3>
+<ul>
+  <li><strong>The switch.</strong> <code>review-mode</code> prints <code>hand</code> when the variable is unset, empty, <code>Role</code>, <code>1</code> or <code>role </code>, and <code>role</code> only for exactly <code>role</code>.</li>
+  <li><strong>The old path stays.</strong> A text test lists anchor phrases of the old dispatch text (for example "Dispatch final code reviewer", "Generate review package, dispatch task reviewer", "Never dispatch a task reviewer without a diff file") and asserts that each is still in <code>SKILL.md</code>. The same test checks that the primitive prompts keep their original placeholders and that <code>[FINDINGS_FILE]</code> is documented as optional.</li>
+  <li><strong>The new path exists.</strong> A text test asserts that SDD has the role-mode section, the two marker names (<code>STOP: task-review-ready</code>, <code>STOP: ticket-review-ready</code>) and the ledger lines.</li>
+  <li><strong>By hand, the table.</strong> <code>dg reviewer table</code> on a workspace with no <code>reviews/</code> folder exits 0, writes no file and says "no reviews found".</li>
+  <li><strong>The vendored check.</strong> The existing <code>check_vendored_skills.ts</code> test still passes, and a run on the branch reports the changes as local divergence only.</li>
+</ul>
 </section>
 
 <footer>DigiSmith · .digismith/board/DGS-529—reviewer-role/design.html</footer>
