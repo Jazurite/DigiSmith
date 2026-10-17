@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>handoff: flux clears without the check gate — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>handoff: flux clears without the check gate — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-17</span>
+    <span>Ticket: <strong>DGS-555</strong></span>
+    <span>Commit range: <code>b6a0ddd..fcbbf13</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A manual clear order ("flux", "flux it", "hand off and clear", "start fresh", "clear context") now writes the handoff note, shows it and clears the session in the same turn, with no check gate. End-of-ticket mode keeps its gate. The note also gets a redaction rule, an unverified-claims rule and a <code>next:</code> focus argument, adapted from Matt Pocock's handoff skills (MIT). The change is one Markdown file, <code>skills/handoff/SKILL.md</code>, built with <code>digismith:writing-skills</code> and checked against seven scenarios before and after.</p>
+  <p>Reference documents: the <a href="spec.md">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><h4>Flux clears in the same turn</h4><p>A manual clear order is the confirmation; the Check Gate covers end-of-ticket mode only.</p></div>
+    <div class="card"><h4>Redaction and unverified claims</h4><p>No secret value in the note; unchecked claims are marked "(not verified)" or dropped.</p></div>
+    <div class="card"><h4>Focus argument</h4><p>Text after <code>next:</code> leads Next and orders Open problems.</p></div>
+    <div class="card"><h4>Trigger and credit</h4><p>"flux" in the description and Invoked By; a Credits line for Matt Pocock's skills.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Baseline first: a subagent read the old skill against seven scenarios; "flux" stopped at the gate and the secret, unverified-claim and focus cases had no rule (<code>baseline.md</code>). After the edit, the same scenarios all passed (<code>verify.md</code>). The whole-branch review found nothing to fix, and one fix followed it: "flux" was added to the frontmatter description so a bare "flux" loads the skill.</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">53489a3</span> docs(dgs-555): add the spec</li>
+    <li><span class="sha">4e22754</span> docs(dgs-555): widen the spec to redaction, unverified claims, focus argument</li>
+    <li><span class="sha">de38ce5</span> docs(dgs-555): add the plan</li>
+    <li><span class="sha">0dafcf6</span> feat(dgs-555): flux clears without the check gate, add redaction, unverified claims, focus argument</li>
+    <li><span class="sha">68eddd6</span> docs(dgs-555): add the baseline and verify runs</li>
+    <li><span class="sha">fcbbf13</span> fix(dgs-555): name flux in the handoff skill description</li>
+    </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-555—flux-no-gate/report.html</footer>
+
+</body>
+</html>
