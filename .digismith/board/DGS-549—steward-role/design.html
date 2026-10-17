@@ -145,7 +145,7 @@
   <li><code>discard</code> and <code>close</code> also need Jack's quote, because only Jack drops or closes a ticket.</li>
 </ul>
 <h3>The done rules by Sign-off mark</h3>
-<p>The mark is a ClickUp drop-down field <code>Sign-off</code> with the values <code>Auto</code> and <code>Jack</code>. A ticket with no value is unmarked. What <code>merged</code> does:</p>
+<p>The mark is a ClickUp drop-down field <code>Sign-off</code> with the values <code>Auto</code> and <code>Jack</code>. It exists on all ten clan folders (DGS-552, done) and is set by name with <code>dg clickup update-task --field "Sign-off=Auto"</code>. The Steward only reads it. A ticket with no value is unmarked. What <code>merged</code> does:</p>
 <div class="table-wrap"><table>
 <tr><th>Mark</th><th>After <code>merged</code></th><th>Reaches <code>done</code> by</th></tr>
 <tr><td><code>Auto</code></td><td><code>done</code> at once, due date today</td><td>the merge itself. No <code>verified</code>.</td></tr>
@@ -256,7 +256,6 @@
 <h2>10. Gaps that become D.3 tasks in the plan</h2>
 <ul>
   <li><strong>Read ClickUp Time in Status.</strong> <code>dg</code> cannot read it. A new <code>dg clickup</code> command, with a test, is a plan item. The Steward does not need it in version 1; it feeds the refinement-time report.</li>
-  <li><strong>The <code>Sign-off</code> field</strong> (drop-down, Auto and Jack) does not exist on any list yet. It is created with <code>dg clickup create-field</code> as a plan item, on the lists that hold buildable tickets. The Refiner sets it; Jack confirms it when he approves into <code>to do</code>.</li>
   <li><strong>The <code>tracker</code> and <code>release_stage</code> profile fields</strong> and their loader change, with tests.</li>
 </ul>
 </section>
