@@ -25,7 +25,8 @@ A Builder runs this plan with `DIGISMITH_REVIEW_MODE=role` (Workbox runbook, "St
 
 - Each task below is small (one commit) so each review has a small diff file.
 - Tasks 1 to 3 build in order. Task 1 makes `ticket:` available. The packs of Task 1 itself and any pack built before Task 1 is merged into the Builder's branch have no `ticket:` line: the Reviewer uses the key in the conductor's brief. From Task 2 on, the Builder builds its packs with the new option: pass `--ticket DGS-566`.
-- The Builder passes `--ticket DGS-566` (the `**Key:**` line of `ticket.md`) once the option exists. Until then, the command has no such option: omit it for the pack of Task 1 only.
+- **Which `dg`.** The global `dg` is a pnpm link to the MAIN checkout's `packages/cli/dist`. Merges do not rebuild that dist, so inside this build the global `dg` never has `--ticket`. The Builder never uses the global `dg` for `reviewer pack` from Task 2 on. It uses its own worktree's CLI, checked on 2026-10-18: run `pnpm install --frozen-lockfile --offline` once in the worktree root, then after Task 1 is committed run `pnpm --filter @digismith/cli build` (this builds `clickup-client` first; `dist` is git-ignored), then run every pack command as `node packages/cli/dist/index.js reviewer pack ...` from the worktree root. (`node --experimental-strip-types packages/cli/src/index.ts` does not work here: it needs the built `clickup-client` dist. Build first, then use the dist entry.) Check once with `node packages/cli/dist/index.js reviewer pack --help`: it must list `--ticket`.
+- The pack of Task 1 itself is built with the global `dg` and no `--ticket` option (it does not exist yet): that pack has no `ticket:` line, and its Reviewer takes the key from the conductor's brief. From Task 2 on the Builder passes `--ticket DGS-566` (the `**Key:**` line of `ticket.md`) with the worktree CLI. The SDD text of Task 3 shows `dg reviewer pack`: that is the text for the plugin users after the merge; the Builder runs the worktree form.
 
 ## File Structure
 
@@ -314,6 +315,15 @@ Expected: PASS. Then run the whole suite: `pnpm exec vitest run` — Expected: P
 git add skills/subagent-driven-development/SKILL.md packages/cli/src/reviewer/sdd.test.ts
 git commit -m "docs(dgs-566): pass the ticket key in the SDD role-mode pack commands"
 ```
+
+---
+
+## After the merge (first use)
+
+Merges do not rebuild the global `dg`. After the merge and push, in the MAIN checkout (`/Users/workbox/Workspace/Jazurite/DigiSmith`):
+
+1. `pnpm --filter @digismith/cli build`
+2. First use: the global `dg reviewer pack --help` lists `--ticket`. The ticket is verified in use when that line shows. (Plugin update and the version bump are the merge order's post-finish hooks 01-03, not repeated here.)
 
 ---
 
