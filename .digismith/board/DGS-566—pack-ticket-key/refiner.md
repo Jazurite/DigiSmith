@@ -39,3 +39,7 @@ One ticket. It can start as soon as Jack moves it to `to do`. It also serves as 
 - **DGS-566: Auto.** Internal tooling: one manifest line, one CLI option, card and skill text, all with tests. No look, wording for users, personal data or public surface. Done at merge and push, after the first use is seen (`dg reviewer pack --help` lists `--ticket` after the rebuild).
 
 Jack confirms the mark when he approves into `to do`.
+
+## Refinement end mark
+
+Refinement ended 2026-10-18 00:54 UTC+7 [2026-10-17T17:54:03Z]. Checkpoint 3 approved by the Maestro. Waiting for Jack's `to do` decision.
