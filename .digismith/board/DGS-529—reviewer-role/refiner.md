@@ -8,11 +8,11 @@ DGS-529 stays the parent. It holds the spec (`design.html`) and the plan (`plan.
 
 | # | Title | Plan tasks | Size | Depends on |
 |---|---|---|---|---|
-| B1 | `dg reviewer`: pack and table commands (pure code, no skill edits) | 1, 2, 3, 4, 5, 6 | M | none |
-| B2 | Session card: `reviewer_type` and `seat`; a reviewer's parent is a conductor or a Maestro | 7 | S | B1 |
-| B3 | Role mode in the skills: `review-mode` script, findings section and owner headers on the three primitives, SDD role mode, findings table step in `report-implementation`, PROVENANCE line | 8, 9, 10, 11 | M | B1 |
-| B4 | The Reviewer card and brief template, the handoff texts, and the both-paths tests | 12, 13, 14 | S | B1, B3 |
-| L1 = DGS-558 (filed, backlog) | Preview step for "Sign-off: Jack" tickets: profile field `preview`, a card section, a recipe run to a preview target only (spec section 8) | new plan when started | S | B4, and a first Sign-off: Jack ticket in view |
+| B1 = DGS-560 | `dg reviewer`: pack and table commands (pure code, no skill edits) | 1, 2, 3, 4, 5, 6 | M | none |
+| B2 = DGS-561 | Session card: `reviewer_type` and `seat`; a reviewer's parent is a conductor or a Maestro | 7 | S | B1 = DGS-560 |
+| B3 = DGS-562 | Role mode in the skills: `review-mode` script, findings section and owner headers on the three primitives, SDD role mode, findings table step in `report-implementation`, PROVENANCE line | 8, 9, 10, 11 | M | B1 = DGS-560 |
+| B4 = DGS-559 | The Reviewer card and brief template, the handoff texts, and the both-paths tests | 12, 13, 14 | S | B1 = DGS-560, B3 = DGS-562 |
+| L1 = DGS-558 (filed, backlog) | Preview step for "Sign-off: Jack" tickets: profile field `preview`, a card section, a recipe run to a preview target only (spec section 8) | new plan when started | S | B4 = DGS-559, and a first Sign-off: Jack ticket in view |
 | L2 (not filed) | Contingency: the review mode from the session card, if `DIGISMITH_REVIEW_MODE` does not reach a Builder's Bash tool (DGS-553) | new plan when started | S | the live check fails |
 
 Notes on the split:
@@ -40,17 +40,17 @@ Notes on the split:
 - [x] The old path is protected: anchor tests on SDD's old text, the `review-mode` tests, the hand-mode table test, and the vendored check (Task 14)
 - [x] The conductor's watch of the Builder's pane for `STOP:` lines is written into the card and the runbook text (Maestro's addition)
 - [x] Live use is read only. No ticket is written to by a test. The one live check (the mode variable inside a herdr Claude session) is written down step by step in `handoff.md`, section 4
-- [x] Dependencies are named: B2, B3 after B1; B4 after B1 and B3
+- [x] Dependencies are named and set in ClickUp: B2 (DGS-561) and B3 (DGS-562) after B1 (DGS-560); B4 (DGS-559) after B1 and B3
 - [ ] Jack moves DGS-529 and its subtasks to `to do` (gate 1, his quote)
 
 Not ready, on purpose: L1 and L2 have no plan yet. Each gets its own refinement when started.
 
 ## Sign-off (proposal)
 
-- **B1: Auto.** Internal tooling with a fully defined contract (new `dg` commands, pure functions, tests). No look, wording, personal data or public surface.
-- **B2: Auto.** A card schema change with tests. Internal.
-- **B3: Auto.** Skill and prompt edits with a defined contract, protected by the old-path anchor tests and the vendored check. Internal.
-- **B4: unmarked.** It is the ticket that makes role mode usable. It stays in `review` after the merge until the live check of the mode variable and the first role-mode build are seen working, then the Maestro or a conductor sends `verified`. This is the Steward's rule for unmarked tickets.
+- **B1 = DGS-560: Auto.** Internal tooling with a fully defined contract (new `dg` commands, pure functions, tests). No look, wording, personal data or public surface.
+- **B2 = DGS-561: Auto.** A card schema change with tests. Internal.
+- **B3 = DGS-562: Auto.** Skill and prompt edits with a defined contract, protected by the old-path anchor tests and the vendored check. Internal.
+- **B4 = DGS-559: unmarked.** It is the ticket that makes role mode usable. It stays in `review` after the merge until the live check of the mode variable and the first role-mode build are seen working, then the Maestro or a conductor sends `verified`. This is the Steward's rule for unmarked tickets.
 - **L1 = DGS-558: Jack.** It raises the Reviewer's permission ceiling by one permission (run a preview recipe) and can deploy a preview. Jack accepts it in `acceptance`.
 - **L2 (only if filed): Auto.** A small card-schema and script change with tests.
 
