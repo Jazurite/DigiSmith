@@ -642,7 +642,10 @@ so build the table now. Let `<workspace>` be the directory
 - **Otherwise** run
   `dg reviewer table --workspace <workspace> --out <target folder>/findings.md`.
   - It prints `wrote <file> (<n> row(s))`: link the table from `report.html`
-    with one line in the report's reviews section (edit the file). Then, unless
+    (edit the file): add the link as one line in the Final Review & Fix section
+    (`<section id="finalreview">`) when it exists. The template omits that section when
+    the final review found nothing; then add the link as a one-line paragraph at the
+    end of the Summary section (`<section id="summary">`). Then, unless
     the folder is gitignored (as Step 4 checks), commit the edited `report.html`
     together with `<target folder>/findings.md` in one follow-up commit before the
     merge: `git add <target folder>/report.html <target folder>/findings.md`, then

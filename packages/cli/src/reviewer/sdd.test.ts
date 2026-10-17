@@ -40,4 +40,21 @@ describe("SDD has the role-mode path (new)", () => {
   it("says a Builder never starts or runs a review in role mode", () => {
     expect(sdd).toMatch(/never (starts|dispatches) or runs a review|never starts a review/);
   });
+  it("tells the Builder to pass commit hashes, not ref names (F1)", () => {
+    expect(sdd).toContain("git rev-parse --short HEAD");
+    expect(sdd).toMatch(/Never use a ref\s+name like `HEAD`/);
+  });
+  it("gives full re-review pack examples for task and ticket (F2)", () => {
+    expect(sdd).toContain("--findings-in");
+    expect(sdd).toContain("--fix-base");
+    expect(sdd).toContain("--type ticket --round 2");
+    expect(sdd).toContain("findings-<type>-<id>-r<R>.md");
+    expect(sdd).toContain("final-fix-report.md");
+  });
+  it("treats a ledger without a Review mode line as hand (F4)", () => {
+    expect(sdd).toMatch(/without a `Review mode:` (second )?line is treated as `hand`/);
+  });
+  it("explains r<R> in a verdict line is the pack round (F5)", () => {
+    expect(sdd).toMatch(/round of the\s+review pack that raised the finding/);
+  });
 });

@@ -29,4 +29,11 @@ describe("report-implementation", () => {
     expect(sec).toContain("docs: add findings table");
     expect(sec).toContain("no reviews found");
   });
+  it("links findings.md from the Final Review & Fix section or the Summary (F3)", () => {
+    const a = text.indexOf("### Step 4a: Findings table");
+    const sec = text.slice(a, text.indexOf("### Step 5: Hand Back"));
+    expect(sec).not.toContain("reviews section");
+    expect(sec).toContain("Final Review & Fix");
+    expect(sec).toContain("end of the Summary");
+  });
 });

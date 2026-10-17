@@ -147,6 +147,8 @@ a ledger file, not only in todos.
   to the ledger as its second line, from its output. A resumed session reads
   that line and does not run the script again. `hand` is the default and
   means this skill runs exactly as described everywhere outside "Role Mode".
+  A resumed ledger without a `Review mode:` second line is treated as `hand`,
+  unless the session runs `scripts/review-mode` once and appends the line then.
 - The ledger is your recovery map: the commits it names exist in git even
   when your context no longer remembers creating them. After compaction,
   trust the ledger and `git log` over your own recollection.
@@ -495,6 +497,9 @@ ledger and the deferred-minor lines.
    attribution check runs inside it), then
    `dg reviewer pack --type task --task <N> --workspace <workspace> --plan PLAN_FILE --base BASE --head HEAD --diff <review package path> --brief <brief path> --report <report path> --standards <each standards file the brief names>`.
    It prints `pack: <folder>` and `model: <id>`. The model is the role's, not yours.
+   Pass `--base`, `--head` and `--fix-base` as commit hashes of 7 to 40 hex
+   characters, for example `--head $(git rev-parse --short HEAD)`. Never use a ref
+   name like `HEAD`: `scripts/review-package` accepts refs, but `dg reviewer pack` does not.
 2. Append `Task <N>: review requested` to the ledger.
 3. Report one line, `STOP: task-review-ready <pack folder>`, and wait. Do not
    start another task and do not review the diff yourself.
@@ -502,7 +507,7 @@ ledger and the deferred-minor lines.
    `Needs fixes`, run the fix loop of step 4 with the findings as written
    (verify ⚠️ items yourself, as that step says). For each fix round, build
    the scoped re-review package, run
-   `dg reviewer pack --type task --task <N> --round <R+1> --fix-base <previous head> --findings-in <open findings file> ...`
+   `dg reviewer pack --type task --task <N> --round <R+1> --workspace <workspace> --base BASE --head HEAD --diff <scoped review package path> --brief <brief path> --report <report path> --fix-base <previous head> --findings-in <workspace>/findings-task-<N>-r<R>.md --standards <each standards file the brief names>`
    and report `STOP: task-review-ready <pack folder>` again. Never dispatch the re-reviewer.
 5. When your parent says "task <N> review clean", complete the task as step 5 says.
 
@@ -512,7 +517,18 @@ package with `scripts/review-package PLAN_FILE MERGE_BASE HEAD`, run
 append `Task final: review requested`, report `STOP: ticket-review-ready <pack folder>`
 and wait. The ONE fix wave, the one scoped re-review (another pack and another STOP) and the
 adjudication of residuals work as "Final Review" describes, with your parent
-starting each review.
+starting each review. After the fix wave, build the scoped package with
+`scripts/review-package PLAN_FILE FIX_BASE HEAD`, then run
+`dg reviewer pack --type ticket --round 2 --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <scoped review package path> --report <workspace>/final-fix-report.md --fix-base <head before the fix wave> --findings-in <workspace>/findings-ticket-final-r1.md --standards ...`
+and report `STOP: ticket-review-ready <pack folder>`.
+
+Where the re-review files come from: `--findings-in` is the open findings file,
+`<workspace>/findings-<type>-<id>-r<R>.md`, a file you write that lists the
+open findings, one per line, each with its id (for example `F1`). `dg reviewer
+pack` only checks that the file exists and copies it into the pack for the
+re-reviewer; it does not parse it. For a task re-review `--report` is the
+implementer's fix report. For the ticket re-review `--report` is
+`<workspace>/final-fix-report.md`, the report of the one fix subagent.
 
 **Verdict lines.** When a finding is decided, append one ledger line for it:
 `Review task <N> r<R>: F<n> -> fixed (<commit>)`, `... -> parked (<ruling>)` or
@@ -520,7 +536,9 @@ starting each review.
 `Review ticket final r<R>: F<n> -> <verdict> (<reason>)`. A ruling that comes
 from the Maestro reaches you in your parent's message; append it as written.
 `parked` and `rejected` need a reason. Never leave a finding without a line:
-`dg reviewer table` fails on it.
+`dg reviewer table` fails on it. In a verdict line `r<R>` is the round of the
+review pack that raised the finding (the `-r<R>` of its pack folder), not the
+fix round. `dg reviewer table` rejects a line whose key names no finding.
 
 **Waiting is the rule here.** "Continuous execution" above has one exception in
 role mode: you wait at each `STOP: ...-review-ready` until your parent answers.
