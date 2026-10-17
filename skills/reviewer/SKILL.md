@@ -37,7 +37,7 @@ The conductor picks the seat with the Workbox runbook's rule, inside Jack's seat
 ## Flow (role mode)
 
 0. **Watching.** While a Builder in role mode runs, the conductor keeps a watch (Monitor) on the Builder's pane for lines that start with `STOP: task-review-ready` or `STOP: ticket-review-ready`, and on the Builder's idle status. It answers each STOP within one watch cycle. A STOP that stays unanswered for 15 minutes is reported to the Maestro.
-1. The Builder runs `dg reviewer pack ...` and reports `STOP: task-review-ready <pack>` (or `STOP: ticket-review-ready <pack>`). The pack folder holds `pack.md`, which lists the input files by absolute path.
+1. The Builder runs `dg reviewer pack ...` and reports `STOP: task-review-ready <pack>` (or `STOP: ticket-review-ready <pack>`). The pack folder holds `pack.md`, which gives the ticket key (`ticket:`) and lists the input files by absolute path.
 2. The conductor starts the Reviewer worker (Workbox runbook, "Start of a ticket", S0 to S6) from `skills/reviewer/brief.md`, with the model from `pack.md`. A `ticket` Reviewer is one worker per review. A `task` Reviewer is one worker per ticket: for each new pack the conductor sends `/clear`, then `/model <model>` if it differs, then `Read <pack>/pack.md and follow the Reviewer card.`
 3. The Reviewer reads `pack.md`, follows the primitive it names, and writes `<pack>/report.md`. The report ends with the findings block (one fenced block, info string `json findings`). The Reviewer ends with one pane line: `done: <pack> verdict: <...>`.
 4. The conductor relays the result to the Builder. For `task` it relays without filtering. For `ticket` it verifies each finding first (`digismith:receiving-code-review`); a finding it cannot verify goes to the Maestro.
@@ -50,7 +50,7 @@ A Critical or Important finding, a confirmed ⚠️ item or a spec ❌ blocks (t
 
 - The findings block: a JSON array of `{ id, path, line, severity, what, scenario }`. `[]` when there are none.
 - The Builder appends one ledger verdict line per finding, with the human partner's ruling as written: `Review <task|ticket> <id> r<round>: F<n> -> <fixed|parked|rejected> (<reason>)`.
-- `report-implementation` runs `dg reviewer table --workspace <workspace> --out <board folder>/findings.md`. The conductor attaches `findings.md` to the ticket (`dg clickup upload-attachment`).
+- `report-implementation` runs `dg reviewer table --workspace <workspace> --out <ticket folder>/findings.md`. The conductor attaches `findings.md` to the ticket (`dg clickup upload-attachment`).
 
 ## Steward moments
 
@@ -59,7 +59,7 @@ A Critical or Important finding, a confirmed ⚠️ item or a spec ❌ blocks (t
 ## Rules for the Reviewer
 
 - Read only on the checkout. Write only `<pack>/report.md`.
-- Register this session first, at the start of every review, including after a `/clear`: `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <KEY> --role reviewer`. `pack.md` has no ticket line: the key is the ticket key of the board folder named in the paths of `pack.md`. The command skips a session that is already registered.
+- Register this session first, at the start of every review, including after a `/clear`: `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket <KEY> --role reviewer`. `pack.md` has a `ticket:` line: its value is `<KEY>`. A `ticket: none` line means the work has no tracker key: skip the command. The command skips a session that is already registered.
 - Read only what `pack.md` lists besides the card and the primitive. Never read the Builder's conversation, other reviewers' reports or the rest of the ledger.
 - The report is the primitive's own output plus the findings block.
 - Report a need to change something as a finding. Never edit.

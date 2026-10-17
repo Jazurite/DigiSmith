@@ -50,6 +50,12 @@ describe("skills/reviewer/SKILL.md", () => {
       expect(card).toContain(s);
     }
   });
+  it("takes the ticket key from the ticket line of pack.md, not from a path", () => {
+    expect(card).toContain("`ticket:` line");
+    expect(card).toContain("ticket: none");
+    expect(card).not.toMatch(/board folder/);
+    expect(card).not.toMatch(/has no ticket line/);
+  });
 });
 
 describe("skills/reviewer/brief.md", () => {
