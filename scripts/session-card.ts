@@ -170,7 +170,7 @@ export function validateCard(input: unknown): { ok: true; card: SessionCard } | 
     if (["conductor", "maestro"].includes(role) && !present("state")) errors.push(`state: required for role ${role}`);
     if (present("reviewer_type")) {
       if (role !== "reviewer") errors.push("reviewer_type: only a reviewer has a reviewer_type");
-      else if (!(REVIEWER_TYPES as readonly string[]).includes(v.reviewer_type ?? "")) errors.push(`reviewer_type: must be one of ${REVIEWER_TYPES.join(", ")}`);
+      else if (v.reviewer_type !== undefined && !(REVIEWER_TYPES as readonly string[]).includes(v.reviewer_type)) errors.push(`reviewer_type: must be one of ${REVIEWER_TYPES.join(", ")}`);
     }
     if (present("seat")) {
       if (role !== "worker" && role !== "reviewer") errors.push("seat: only a worker or a reviewer has a seat");
