@@ -641,10 +641,17 @@ so build the table now. Let `<workspace>` be the directory
   `executing-plans` run): nothing to do. Skip this step silently.
 - **Otherwise** run
   `dg reviewer table --workspace <workspace> --out <target folder>/findings.md`.
-  - It prints `wrote <file> (<n> row(s))`: add `<target folder>/findings.md` to the
-    same `git add` as the report in Step 4 (unless the folder is gitignored, as
-    Step 4 checks), and link the table from `report.html` with one line in the
-    report's reviews section.
+  - It prints `wrote <file> (<n> row(s))`: link the table from `report.html`
+    with one line in the report's reviews section (edit the file). Then, unless
+    the folder is gitignored (as Step 4 checks), commit the edited `report.html`
+    together with `<target folder>/findings.md` in one follow-up commit before the
+    merge: `git add <target folder>/report.html <target folder>/findings.md`, then
+    `git commit -m "docs: add findings table (<ticket>)"`. Step 4 already
+    committed the report, and the history hook stops on a file that is on disk
+    but not committed.
+  - It prints `no reviews found` and exits 0 (the `reviews/` folder exists but
+    holds no review): it writes nothing. Skip like the no-folder case: add no
+    link and no commit.
   - It exits 1 (a finding with no verdict line, a report without a findings
     block, a missing ledger): stop and report the message to the human partner.
     Do not write the report as if the reviews were complete. The Builder fixes the

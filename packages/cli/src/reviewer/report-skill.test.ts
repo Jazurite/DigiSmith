@@ -23,4 +23,10 @@ describe("report-implementation", () => {
     expect(text).toMatch(/no `reviews\/` folder|nothing to do/);
     expect(text).toMatch(/stop and report/);
   });
+  it("commits the findings table after the report commit and skips an empty reviews folder", () => {
+    const a = text.indexOf("### Step 4a: Findings table");
+    const sec = text.slice(a, text.indexOf("### Step 5: Hand Back"));
+    expect(sec).toContain("docs: add findings table");
+    expect(sec).toContain("no reviews found");
+  });
 });
