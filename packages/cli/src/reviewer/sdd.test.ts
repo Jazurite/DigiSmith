@@ -20,6 +20,14 @@ describe("SDD keeps the old path (hand mode)", () => {
 });
 
 describe("SDD has the role-mode path (new)", () => {
+  it("passes --ticket <KEY> in every pack command and says where the key comes from", () => {
+    const lines = sdd.split("\n").filter((l) => l.includes("dg reviewer pack --type"));
+    expect(lines.length).toBe(4);
+    for (const l of lines) expect(l).toContain("--ticket <KEY>");
+    expect(sdd).toMatch(/`<KEY>` is the `\*\*Key:\*\*` line of the ticket's `ticket\.md`/);
+    expect(sdd).toContain("or `none`");
+  });
+
   it("records the mode at setup with the script", () => {
     expect(sdd).toContain("scripts/review-mode");
     expect(sdd).toContain("Review mode: role");
@@ -47,7 +55,7 @@ describe("SDD has the role-mode path (new)", () => {
   it("gives full re-review pack examples for task and ticket (F2)", () => {
     expect(sdd).toContain("--findings-in");
     expect(sdd).toContain("--fix-base");
-    expect(sdd).toContain("--type ticket --round 2");
+    expect(sdd).toContain("--type ticket --ticket <KEY> --round 2");
     expect(sdd).toContain("findings-<type>-<id>-r<R>.md");
     expect(sdd).toContain("final-fix-report.md");
   });

@@ -495,11 +495,15 @@ ledger and the deferred-minor lines.
 
 1. Run `scripts/review-package PLAN_FILE BASE HEAD` as step 3 says (the
    attribution check runs inside it), then
-   `dg reviewer pack --type task --task <N> --workspace <workspace> --plan PLAN_FILE --base BASE --head HEAD --diff <review package path> --brief <brief path> --report <report path> --standards <each standards file the brief names>`.
+   `dg reviewer pack --type task --ticket <KEY> --task <N> --workspace <workspace> --plan PLAN_FILE --base BASE --head HEAD --diff <review package path> --brief <brief path> --report <report path> --standards <each standards file the brief names>`.
    It prints `pack: <folder>` and `model: <id>`. The model is the role's, not yours.
    Pass `--base`, `--head` and `--fix-base` as commit hashes of 7 to 40 hex
    characters, for example `--head $(git rev-parse --short HEAD)`. Never use a ref
    name like `HEAD`: `scripts/review-package` accepts refs, but `dg reviewer pack` does not.
+   `<KEY>` is the `**Key:**` line of the ticket's `ticket.md`, for example
+   `DGS-566`, or `none` when the work has no tracker key. Pass the same value
+   in every pack of the ticket. The Reviewer takes the key from the `ticket:`
+   line of `pack.md`.
 2. Append `Task <N>: review requested` to the ledger.
 3. Report one line, `STOP: task-review-ready <pack folder>`, and wait. Do not
    start another task and do not review the diff yourself.
@@ -507,19 +511,19 @@ ledger and the deferred-minor lines.
    `Needs fixes`, run the fix loop of step 4 with the findings as written
    (verify ⚠️ items yourself, as that step says). For each fix round, build
    the scoped re-review package, run
-   `dg reviewer pack --type task --task <N> --round <R+1> --workspace <workspace> --base BASE --head HEAD --diff <scoped review package path> --brief <brief path> --report <report path> --fix-base <previous head> --findings-in <workspace>/findings-task-<N>-r<R>.md --standards <each standards file the brief names>`
+   `dg reviewer pack --type task --ticket <KEY> --task <N> --round <R+1> --workspace <workspace> --base BASE --head HEAD --diff <scoped review package path> --brief <brief path> --report <report path> --fix-base <previous head> --findings-in <workspace>/findings-task-<N>-r<R>.md --standards <each standards file the brief names>`
    and report `STOP: task-review-ready <pack folder>` again. Never dispatch the re-reviewer.
 5. When your parent says "task <N> review clean", complete the task as step 5 says.
 
 **After the last task**, instead of dispatching the final reviewer: build the
 package with `scripts/review-package PLAN_FILE MERGE_BASE HEAD`, run
-`dg reviewer pack --type ticket --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <path> --ticket-file <ticket.md> --spec <design.html> --ledger <workspace>/progress.md --standards ...`,
+`dg reviewer pack --type ticket --ticket <KEY> --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <path> --ticket-file <ticket.md> --spec <design.html> --ledger <workspace>/progress.md --standards ...`,
 append `Task final: review requested`, report `STOP: ticket-review-ready <pack folder>`
 and wait. The ONE fix wave, the one scoped re-review (another pack and another STOP) and the
 adjudication of residuals work as "Final Review" describes, with your parent
 starting each review. After the fix wave, build the scoped package with
 `scripts/review-package PLAN_FILE FIX_BASE HEAD`, then run
-`dg reviewer pack --type ticket --round 2 --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <scoped review package path> --report <workspace>/final-fix-report.md --fix-base <head before the fix wave> --findings-in <workspace>/findings-ticket-final-r1.md --standards ...`
+`dg reviewer pack --type ticket --ticket <KEY> --round 2 --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <scoped review package path> --report <workspace>/final-fix-report.md --fix-base <head before the fix wave> --findings-in <workspace>/findings-ticket-final-r1.md --standards ...`
 and report `STOP: ticket-review-ready <pack folder>`.
 
 Where the re-review files come from: `--findings-in` is the open findings file,
