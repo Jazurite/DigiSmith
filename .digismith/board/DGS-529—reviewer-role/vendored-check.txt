@@ -1,0 +1,25 @@
+Command: node --experimental-strip-types scripts/check_vendored_skills.ts
+Exit code: 0
+Upstream was reachable (the script cloned it; no network failure).
+Baseline: a641885. Upstream drift and local divergence are both measured against this baseline.
+
+Checking 14 vendored skills against baseline a641885
+Upstream: (temporary clone of upstream skills/, removed after the run)
+
+subagent-driven-development: 7 file(s) changed upstream, 6 locally diverged
+  -- SKILL.md --            (upstream changed; local divergence)
+  -- implementer-prompt.md  (upstream changed; no local divergence)
+  -- re-review-prompt.md    (upstream changed; local divergence)
+  -- scripts/review-package (upstream changed; local divergence)
+  -- scripts/sdd-workspace  (upstream changed; local divergence)
+  -- scripts/task-brief     (upstream changed; local divergence)
+  -- task-reviewer-prompt.md (upstream changed; local divergence)
+
+Of the primitives named in the brief, all three are locally diverged: scripts/review-package, scripts/sdd-workspace, scripts/task-brief. SDD SKILL.md is locally diverged too, as the brief expected.
+
+Two divergences the brief did not list: re-review-prompt.md and task-reviewer-prompt.md. Both are DGS-529 edits (commit 3608eed, owner headers and the findings block in the review prompts), so they are expected.
+
+Upstream drift in the other skills (brainstorming, executing-plans, finishing-a-development-branch, requesting-code-review, systematic-debugging, test-driven-development, using-superpowers, writing-plans, writing-skills) is upstream moving past the baseline. None of it comes from this branch, which only changes the vendored files listed above.
+Result: no new upstream drift caused by this branch. Local divergence is limited to the files this build changed on purpose.
+
+Live check still open: the mode variable inside a herdr Claude session (handoff.md section 4, DGS-553).
