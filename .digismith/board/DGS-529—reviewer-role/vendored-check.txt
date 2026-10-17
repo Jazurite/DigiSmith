@@ -61,8 +61,8 @@ writing-skills: 2 file(s) changed upstream, 0 locally diverged
 Notes (not script output)
 - Upstream was reachable; the script cloned it and printed the temporary path above. The path is from this run.
 - Baseline: a641885. Upstream drift and local divergence are both measured against this baseline.
-- The brief expected SDD SKILL.md and the three primitives (scripts/review-package, scripts/sdd-workspace, scripts/task-brief) to be locally diverged. All four are diverged.
-- Two more SDD files are locally diverged and the brief did not list them: re-review-prompt.md and task-reviewer-prompt.md. Both come from DGS-529 commit 3608eed (owner headers and findings block in the review prompts), so they are expected.
-- Result: no new upstream drift caused by this branch. The upstream changes in brainstorming, executing-plans, finishing-a-development-branch, requesting-code-review, systematic-debugging, test-driven-development, using-superpowers, writing-plans and writing-skills come from upstream moving past the baseline. This branch changes only the vendored files listed as locally diverged above, on purpose.
+- The plan's three primitives are the review prompts task-reviewer-prompt.md, re-review-prompt.md and code-reviewer.md, not the SDD scripts. Expected diverged set: SDD SKILL.md plus those three prompts. All four are diverged (DGS-529 commit 3608eed: owner headers and findings block in the review prompts; code-reviewer.md shows under requesting-code-review).
+- The SDD scripts (review-package, sdd-workspace, task-brief) and the other diverged skills diverge from earlier tickets, not from this branch.
+- Result: no new upstream drift caused by this branch. The upstream changes in brainstorming, executing-plans, finishing-a-development-branch, requesting-code-review, systematic-debugging, test-driven-development, using-superpowers, writing-plans and writing-skills come from upstream moving past the baseline.
 
 Live check still open: the mode variable inside a herdr Claude session (handoff.md section 4, DGS-553).

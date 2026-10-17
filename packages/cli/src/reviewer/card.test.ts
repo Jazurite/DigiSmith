@@ -61,5 +61,6 @@ describe("skills/reviewer/brief.md", () => {
     expect(brief).toMatch(/never edit/i);
     expect(brief).toContain("report.md");
     expect(brief).toContain("entry.ts session --ticket {{KEY}} --role reviewer");
+    expect(card).toContain("--role reviewer");
   });
 });
