@@ -17,7 +17,7 @@ DGS-529 stays the parent. It holds the spec (`design.html`) and the plan (`plan.
 
 Notes on the split:
 - B1 is pure code with its own tests. It can merge alone. It breaks nothing: the hand path does not call it.
-- B2 and B3 are independent after B1 and run side by side (one worker each). B2 touches `scripts/session-card.ts`. B3 touches `skills/` and `vendored/PROVENANCE.md`. Their only shared file is none.
+- B2 and B3 are independent after B1 and run side by side (one worker each). B2 touches `scripts/session-card.ts`. B3 touches `skills/` and `vendored/PROVENANCE.md`. They share no file.
 - B4 comes last because its tests read the primitives (B3) and the constants (B1), and its handoff texts describe the finished flow.
 - Task 6 edits `packages/cli/src/index.ts`, which the Steward also edits. B1 branches from main after the Steward's merge (done).
 - The Maestro pastes `handoff.md` (written by B4) into the runbook and into the DGS-488 and DGS-404 descriptions. That is not a ticket.
