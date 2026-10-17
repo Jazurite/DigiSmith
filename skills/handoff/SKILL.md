@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", start fresh, or clear context — writes this session's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume", "Arise" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
+description: Use when the user asks to hand off, wrap up, checkpoint, "save where we are", flux, start fresh, or clear context — writes this session's living handoff note (Done / Decisions / Next / Open problems) and clears the session only when asked. Also use when the user says "resume", "Arise" or "pick up where we left off", and when digismith:finishing-a-development-branch Step 7 hands off at the end of a ticket.
 ---
 
 # Handoff
