@@ -16,12 +16,12 @@ const smallDiff = "# Review package: a1b2c3d..e4f5a6b\n\ndiff --git a/x b/x\n---
 const bigDiff = `# Review package: a1b2c3d..e4f5a6b\n\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n${"+line\n".repeat(801)}`;
 
 const taskInput = (over: Partial<PackInput> = {}): PackInput => ({
-  type: "task", id: "7", round: 1, workspace: path.join(ws, "wk"), base: "a1b2c3d", head: "e4f5a6b",
+  type: "task", id: "7", round: 1, ticket: "DGS-566", workspace: path.join(ws, "wk"), base: "a1b2c3d", head: "e4f5a6b",
   diff: w("d.diff", smallDiff), plan: w("plan.md"), brief: w("brief.md"), report: w("report-in.md"),
   standards: [w("std/commit-style.md")], ...over,
 });
 const ticketInput = (over: Partial<PackInput> = {}): PackInput => ({
-  type: "ticket", id: "final", round: 1, workspace: path.join(ws, "wk"), base: "a1b2c3d", head: "e4f5a6b",
+  type: "ticket", id: "final", round: 1, ticket: "DGS-566", workspace: path.join(ws, "wk"), base: "a1b2c3d", head: "e4f5a6b",
   diff: w("d.diff", smallDiff), plan: w("plan.md"), ticketFile: w("ticket.md"), spec: w("design.html"),
   ledger: w("progress.md", [
     "# SDD ledger — plan: plan.md",
@@ -45,6 +45,8 @@ describe("buildPack, task round 1", () => {
     const m = manifest(dir);
     expect(m).toContain("# Review pack: task 7 round 1");
     expect(m).toMatch(/^type: task$/m);
+    expect(m).toMatch(/^ticket: DGS-566$/m);
+    expect(m.indexOf("ticket: DGS-566")).toBeLessThan(m.indexOf("type: task"));
     expect(m).toMatch(/^model: claude-sonnet-5-5$/m);
     expect(m).toMatch(/^primitive: task-reviewer-prompt\.md$/m);
     expect(m).toMatch(/^base: a1b2c3d$/m);
@@ -132,5 +134,23 @@ describe("buildPack, refusals", () => {
     expect(() => buildPack(ticketInput({ id: "3" }))).toThrow(/id/);
     expect(() => buildPack(taskInput({ round: 0 }))).toThrow(/round/);
     expect(() => buildPack(taskInput({ head: "HEAD" }))).toThrow(/head/);
+  });
+});
+
+describe("buildPack, the ticket line", () => {
+  it("is written for a ticket pack and for a round 2 pack", () => {
+    expect(manifest(buildPack(ticketInput()).dir)).toMatch(/^ticket: DGS-566$/m);
+    const r2 = buildPack(taskInput({ round: 2, findingsIn: w("open.md"), fixBase: "e4f5a6b", head: "9a8b7c6" }));
+    expect(manifest(r2.dir)).toMatch(/^ticket: DGS-566$/m);
+  });
+  it("accepts none and writes it as is", () => {
+    expect(manifest(buildPack(taskInput({ ticket: "none" })).dir)).toMatch(/^ticket: none$/m);
+  });
+  it("refuses a missing or malformed value and makes no folder", () => {
+    expect(() => buildPack(taskInput({ ticket: "" }))).toThrow(/ticket: required/);
+    for (const bad of ["dgs-566", "566", "DGS-", "DGS-566 x", "None"]) {
+      expect(() => buildPack(taskInput({ ticket: bad }))).toThrow(/ticket: must be a ticket key such as DGS-566, or none/);
+    }
+    expect(fs.existsSync(path.join(ws, "wk", "reviews"))).toBe(false);
   });
 });

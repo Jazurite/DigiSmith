@@ -61,17 +61,31 @@ describe("dg reviewer", () => {
     const w = (n: string, t = "x\n") => { const p = path.join(ws, n); fs.writeFileSync(p, t); return p; };
     const diff = w("d.diff", "# Review package: a1b2c3d..e4f5a6b\n\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\n");
     await run([
-      "reviewer", "pack", "--type", "task", "--task", "3", "--workspace", path.join(ws, "wk"),
+      "reviewer", "pack", "--type", "task", "--task", "3", "--ticket", "DGS-566", "--workspace", path.join(ws, "wk"),
       "--base", "a1b2c3d", "--head", "e4f5a6b", "--diff", diff, "--plan", w("plan.md"),
       "--brief", w("brief.md"), "--report", w("rep.md"),
     ]);
     expect(logs[0]).toBe(`pack: ${path.join(ws, "wk", "reviews", "task-3-r1")}`);
     expect(logs[1]).toBe("model: claude-sonnet-5-5");
+    const m = fs.readFileSync(path.join(ws, "wk", "reviews", "task-3-r1", "pack.md"), "utf8");
+    expect(m).toMatch(/^ticket: DGS-566$/m);
+  });
+  it("pack exits 1 and says ticket is required when --ticket is missing", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const w = (n: string, t = "x\n") => { const p = path.join(ws, n); fs.writeFileSync(p, t); return p; };
+    const diff = w("d2.diff", "# Review package: a1b2c3d..e4f5a6b\n\ndiff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\n");
+    await run([
+      "reviewer", "pack", "--type", "task", "--task", "4", "--workspace", path.join(ws, "wk"),
+      "--base", "a1b2c3d", "--head", "e4f5a6b", "--diff", diff, "--plan", w("plan2.md"),
+      "--brief", w("brief2.md"), "--report", w("rep2.md"),
+    ]);
+    expect(process.exitCode).toBe(1);
+    expect(err.mock.calls.flat().join(" ")).toMatch(/ticket: required/);
   });
   it("pack exits 1 and names the problem on bad input", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run([
-      "reviewer", "pack", "--type", "task", "--task", "3", "--workspace", ws,
+      "reviewer", "pack", "--type", "task", "--task", "3", "--ticket", "DGS-566", "--workspace", ws,
       "--base", "a1b2c3d", "--head", "e4f5a6b", "--diff", path.join(ws, "none.diff"), "--plan", path.join(ws, "p.md"),
     ]);
     expect(process.exitCode).toBe(1);

@@ -5,7 +5,7 @@ import { REVIEWER_TYPES, type ReviewerType } from "./types.ts";
 
 interface TableArgs { workspace: string; ledger?: string; out: string }
 interface PackArgs {
-  type: ReviewerType; task?: number; round: number; workspace: string; base: string; head: string;
+  type: ReviewerType; task?: number; round: number; ticket?: string; workspace: string; base: string; head: string;
   diff: string; plan?: string; brief?: string; report?: string; constraints?: string;
   "ticket-file"?: string; spec?: string; ledger?: string; "findings-in"?: string; "fix-base"?: string;
   standards?: string[];
@@ -41,6 +41,7 @@ const packCommand: CommandModule<object, PackArgs> = {
       .option("type", { type: "string", choices: [...REVIEWER_TYPES], demandOption: true })
       .option("task", { type: "number", describe: "the task number (type task)" })
       .option("round", { type: "number", default: 1, describe: "1 = first review, 2 or more = re-review" })
+      .option("ticket", { type: "string", describe: "the ticket key, such as DGS-566, or none when the work has no tracker key" })
       .option("workspace", { type: "string", demandOption: true })
       .option("base", { type: "string", demandOption: true })
       .option("head", { type: "string", demandOption: true })
@@ -59,7 +60,7 @@ const packCommand: CommandModule<object, PackArgs> = {
     try {
       const id = args.type === "ticket" ? "final" : String(args.task ?? "");
       const { dir, model } = buildPack({
-        type: args.type, id, round: args.round, workspace: args.workspace, base: args.base, head: args.head,
+        type: args.type, id, round: args.round, ticket: args.ticket ?? "", workspace: args.workspace, base: args.base, head: args.head,
         diff: args.diff, plan: args.plan ?? "", brief: args.brief, report: args.report, constraints: args.constraints,
         ticketFile: args["ticket-file"], spec: args.spec, ledger: args.ledger,
         findingsIn: args["findings-in"], fixBase: args["fix-base"], standards: args.standards ?? [],

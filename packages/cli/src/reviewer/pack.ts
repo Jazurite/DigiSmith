@@ -6,6 +6,7 @@ export type PackInput = {
   type: ReviewerType;
   id: string;
   round: number;
+  ticket: string;
   workspace: string;
   base: string;
   head: string;
@@ -25,6 +26,7 @@ export type PackInput = {
 const PRIMITIVE: Record<ReviewerType, string> = { task: "task-reviewer-prompt.md", ticket: "code-reviewer.md" };
 const RE_REVIEW = "re-review-prompt.md";
 const SHA_RE = /^[0-9a-f]{7,40}$/;
+const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 const CARRY_RE = /^(?:Task (?:\d+|final): (?:minor \(deferred\)|parked)(?![A-Za-z0-9_])|Review task \d+ r\d+: F\d+ -> parked )/;
 
 function file(label: string, p: string | undefined): string {
@@ -39,11 +41,18 @@ function sha(label: string, v: string): string {
   return v;
 }
 
+function ticketKey(v: string): string {
+  if (v === "") throw new Error("ticket: required");
+  if (v !== "none" && !TICKET_RE.test(v)) throw new Error("ticket: must be a ticket key such as DGS-566, or none");
+  return v;
+}
+
 export function buildPack(input: PackInput): { dir: string; model: string } {
   if (!(REVIEWER_TYPES as readonly string[]).includes(input.type)) throw new Error(`type: must be one of ${REVIEWER_TYPES.join(", ")}`);
   if (input.type === "task" && !/^\d+$/.test(input.id)) throw new Error("id: a task review needs the task number");
   if (input.type === "ticket" && input.id !== "final") throw new Error("id: a ticket review has the id final");
   if (!Number.isInteger(input.round) || input.round < 1) throw new Error("round: must be an integer of 1 or more");
+  const ticket = ticketKey(input.ticket ?? "");
   const base = sha("base", input.base);
   const head = sha("head", input.head);
 
@@ -86,6 +95,7 @@ export function buildPack(input: PackInput): { dir: string; model: string } {
   const manifest = [
     `# Review pack: ${label} round ${input.round}`,
     "",
+    `ticket: ${ticket}`,
     `type: ${input.type}`,
     `id: ${input.id}`,
     `round: ${input.round}`,

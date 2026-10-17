@@ -64,11 +64,12 @@ describe("the new path (role mode)", () => {
 
     const ws = path.join(repo, "ws");
     const { dir, model } = buildPack({
-      type: "task", id: "1", round: 1, workspace: ws, base: base.slice(0, 7), head: head.slice(0, 7),
+      type: "task", id: "1", round: 1, ticket: "DGS-566", workspace: ws, base: base.slice(0, 7), head: head.slice(0, 7),
       diff, plan: path.join(repo, "plan.md"), brief: path.join(repo, "brief.md"),
       report: path.join(repo, "impl-report.md"), standards: [],
     });
     expect(model).toBe("claude-sonnet-5-5");
+    expect(fs.readFileSync(path.join(dir, "pack.md"), "utf8")).toMatch(/^ticket: DGS-566$/m);
 
     // what the Reviewer worker writes
     const finding = { id: "F1", path: "a.txt", line: 1, severity: "Minor", what: "a nit", scenario: "none" };
