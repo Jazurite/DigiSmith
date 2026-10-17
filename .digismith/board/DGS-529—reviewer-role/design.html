@@ -117,7 +117,7 @@
 <ul>
   <li><strong>Authority.</strong> Read the target. Write one report and one findings file, in scratch. Return findings and a verdict. Nothing else. This is the Reviewer ceiling of DGS-404 (section 4 of that design). The one change is the preview step (section 8).</li>
   <li><strong>The type table</strong> (section 3) and the pack each type reads (section 4).</li>
-  <li><strong>The type to seat policy</strong> (section 5, "The seat").</li>
+  <li><strong>The type to model policy</strong> (section 5, "The model"). The role sets the model when a review starts. Neither the conductor nor the Builder picks it.</li>
   <li><strong>Which primitive to follow for which job</strong>, by reference, never by copy (section 3).</li>
   <li><strong>The output addendum</strong>: the findings block (section 7). The primitives do not have it.</li>
   <li><strong>Who "your human partner" is</strong> for each type: the Builder's orchestrator (the SDD controller) for <code>task</code>, the Maestro for <code>ticket</code>. The Maestro sends taste questions to Jack.</li>
@@ -130,7 +130,7 @@
 <p>Both Reviewer types are herdr workers, so each has a session card. The card uses <code>role: reviewer</code> and adds two fields:</p>
 <ul>
   <li><code>reviewer_type: task</code> or <code>ticket</code> (only on a Reviewer's card).</li>
-  <li><code>seat: dev0</code> or <code>jack</code>. This field is new for every worker. The conductor needs it to find the Builder's seat when it picks the Reviewer's seat. Today the seat is only in the pane's environment. The field is read from <code>claude-account status</code> at the start.</li>
+  <li><code>seat: dev0</code> or <code>jack</code>. This field is new for every worker. The conductor needs it to find the Builder's seat when it picks the Reviewer's seat with the runbook's rule. Today the seat is only in the pane's environment. The field is read from <code>claude-account status</code> at the start.</li>
 </ul>
 
 <h3>Owner header on each primitive</h3>
@@ -155,18 +155,18 @@
 <tr><th>Primitive</th><td><code>task-reviewer-prompt.md</code>. Re-review: <code>re-review-prompt.md</code>.</td><td><code>code-reviewer.md</code>. Re-review: <code>re-review-prompt.md</code>.</td></tr>
 <tr><th>Started by</th><td>A conductor or a Maestro, after the Builder reports <code>STOP: task-review-ready</code>.</td><td>A conductor or a Maestro, after the Builder reports <code>STOP: ticket-review-ready</code>.</td></tr>
 <tr><th>Runs as</th><td>Its own herdr worker: one per ticket, kept for the whole build. The conductor sends <code>/clear</code> before each pack, so every review has a fresh context.</td><td>Its own herdr worker, one review, closed after the verdict.</td></tr>
-<tr><th>Model</th><td>Per the primitive's Model Selection: a mid-tier floor, scaled to the diff. Sonnet 5.5 today. DGS-537 may change this.</td><td>The most capable model: Opus 5.5.</td></tr>
-<tr><th>Seat</th><td>The seat the runbook's rule gives. No exclusion of the Builder's seat: task reviews are many and cheap.</td><td>Not the Builder's seat when the other seat has headroom.</td></tr>
+<tr><th>Model</th><td>Set by the role: the primitive's mid-tier floor, Sonnet 5.5 today, raised to Opus 5.5 for a large diff (section 5, "The model"). DGS-537 may change the floor.</td><td>Set by the role: the most capable model, Opus 5.5.</td></tr>
+<tr><th>Seat</th><td>Picked by the conductor with the runbook's rule, inside the seat order in force.</td><td>Picked by the conductor with the runbook's rule, inside the seat order in force. The other seat when the rule allows it.</td></tr>
 <tr><th>Human partner</th><td>The Builder's orchestrator (the SDD controller). The conductor relays between the Reviewer and the Builder and does not filter.</td><td>The Maestro. The conductor verifies findings and relays them.</td></tr>
 </table></div>
-<p>Both types always run inside Jack's seat order in force (section 5, "The seat"). Why both types become workers: the Builder must not review, and a worker has no Builder context to share. Why <code>task</code> keeps one worker for the build: starting 20 workers a night costs more than one worker and 20 <code>/clear</code> commands, and <code>/clear</code> gives each review the fresh context the pitch asks for.</p>
+<p>Both types always run inside Jack's seat order in force (section 5, "The seat"), and both get their model from the role (section 5, "The model"). Why both types become workers: the Builder must not review, and a worker has no Builder context to share. Why <code>task</code> keeps one worker for the build: starting 20 workers a night costs more than one worker and 20 <code>/clear</code> commands, and <code>/clear</code> gives each review the fresh context the pitch asks for.</p>
 <p>The value <code>task</code> is a constant in one place in the code (<code>REVIEWER_TYPES</code>), so the rename to <code>step</code> (DGS-554) is a one-line change plus the skill text.</p>
 </section>
 
 <section id="packs">
 <h2>4. Context packs</h2>
 <p>A pack is the complete input of one review. It is a folder with a manifest, built by code, not assembled from memory. A new command builds it: <code>dg reviewer pack --type task|ticket --plan &lt;plan.md&gt; ...</code>. It calls the existing <code>review-package</code> script for the diff, so the attribution check still runs before any pack is written. A hit stops the pack and the review.</p>
-<p>Location: <code>&lt;sdd workspace&gt;/reviews/&lt;type&gt;-&lt;id&gt;-r&lt;round&gt;/</code>. The workspace is the plan's git-ignored <code>.sdd-workspace</code> (the SDD script <code>sdd-workspace</code> prints it). The manifest is <code>pack.md</code>. It lists each file with an absolute path and a one-line role, and it carries the values that fill the primitive's placeholders: base, head, diff file, model, brief file.</p>
+<p>Location: <code>&lt;sdd workspace&gt;/reviews/&lt;type&gt;-&lt;id&gt;-r&lt;round&gt;/</code>. The workspace is the plan's git-ignored <code>.sdd-workspace</code> (the SDD script <code>sdd-workspace</code> prints it). The manifest is <code>pack.md</code>. It lists each file with an absolute path and a one-line role, and it carries the values that fill the primitive's placeholders: base, head, diff file, model, brief file. The model comes from the role's model policy (section 5), so the conductor reads it from the pack and does not choose it.</p>
 <div class="table-wrap"><table>
 <tr><th>Pack</th><th>Contains</th><th>Never contains</th></tr>
 <tr><td><code>task</code>, round 1</td><td>The task text (<code>task-brief</code> output). The global constraints from the spec. The task's diff file (<code>review-package</code>, base to head of the task). The implementer's report, labeled "claims, not verified". The standards the task's brief names, as paths.</td><td>The Builder's conversation. The ledger. Other tasks' reviews.</td></tr>
@@ -221,14 +221,22 @@
   <li><strong>Close.</strong> After an approved verdict (and the preview, when it applies) the conductor tells the Builder "ticket review clean" and closes the Reviewer worker. The merge follows the merge order. The Reviewer does not merge.</li>
 </ol>
 
-<h3>The seat</h3>
-<p>The card holds a type to seat policy. The policy always runs <strong>inside Jack's seat order in force</strong>. The order in force (Jack, 2026-10-17) puts every worker on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. Until then both Reviewer types run on <code>dev0</code>, whatever the policy says. The separation then rests on the separate context and the separate model, not on the seat.</p>
+<h3>The model</h3>
+<p>The role picks the model for each review. The card holds a type to model policy, and the code behind <code>dg reviewer pack</code> applies it and writes the result into <code>pack.md</code> as <code>model</code>. The conductor and the Builder never pick a model. They pass on what <code>pack.md</code> says.</p>
 <div class="table-wrap"><table>
-<tr><th>Type</th><th>Policy (when no seat order overrides it)</th></tr>
-<tr><td><code>task</code></td><td>The seat that "The rule" of the runbook gives. The Builder's seat is not excluded.</td></tr>
-<tr><td><code>ticket</code></td><td>Not the Builder's seat when the other seat has headroom (the rule's steps 1 to 3 on the other seat). If it has none, the Builder's seat.</td></tr>
+<tr><th>Type</th><th>Policy</th></tr>
+<tr><td><code>task</code></td><td>The primitive's mid-tier floor: Sonnet 5.5 (<code>claude-sonnet-5-5</code>) today. Scaled to the diff: a diff above 800 changed lines gets Opus 5.5 (<code>claude-opus-5-5</code>). The limit is one constant, <code>TASK_ESCALATE_LINES</code>. DGS-537 (the Haiku spike) may change the floor.</td></tr>
+<tr><td><code>ticket</code></td><td>The most capable model: Opus 5.5.</td></tr>
 </table></div>
-<p>A limit stop on the Reviewer's seat is reported to Jack. The conductor does not move the Reviewer on its own.</p>
+<p>The two model ids and the line limit are constants in one place in the code. How the model is set:</p>
+<ul>
+  <li><strong>A worker that starts</strong> (the <code>ticket</code> Reviewer, and the <code>task</code> Reviewer at its first pack): the conductor starts it with the model from <code>pack.md</code> (<code>herdr agent start ... -- --model &lt;model&gt;</code>).</li>
+  <li><strong>The <code>task</code> worker that is reused</strong>: after <code>/clear</code> and before the review prompt the conductor sends <code>/model &lt;model&gt;</code> when the pack's model differs from the worker's current one. The conductor reads the model from the pack and does not judge the diff.</li>
+</ul>
+
+<h3>The seat</h3>
+<p>The conductor picks the seat with "The rule" of the runbook (usage probe, headroom, workers in use), inside <strong>Jack's seat order in force</strong>. The order in force (Jack, 2026-10-17) puts every worker on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. Until then both Reviewer types run on <code>dev0</code>. The separation then rests on the separate context and the separate model, not on the seat.</p>
+<p>After that date the rule applies again. For the <code>ticket</code> Reviewer the conductor excludes the Builder's seat first, because a review on the other seat does not share the Builder's quota or its blind spots. If the other seat has no headroom, the Reviewer runs on the Builder's seat. A limit stop on the Reviewer's seat is reported to Jack. The conductor does not move the Reviewer on its own.</p>
 </section>
 
 <section id="blocking">
@@ -341,6 +349,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
   <li><code>dg reviewer table</code>: findings plus verdict lines give the exact rows; a clean review gives a summary row; a finding without a verdict fails; a bad JSON block fails with the report path.</li>
   <li>The card: a test checks that the type table in <code>SKILL.md</code> matches <code>REVIEWER_TYPES</code>, and that each of the three primitive files has the owner header (this guards drift). The existing <code>check_vendored_skills.ts</code> test still passes with the divergence recorded.</li>
   <li>The brief template: a test that every placeholder in <code>skills/reviewer/brief.md</code> has a value in the start recipe, for both types.</li>
+  <li>The model policy: <code>task</code> gives Sonnet 5.5 at 800 changed lines or fewer and Opus 5.5 above; <code>ticket</code> gives Opus 5.5; <code>pack.md</code> carries the model; the two ids and the limit are single constants.</li>
   <li>Both paths (section 15): tests for the mode switch, for the old text that must stay, and for the by-hand behaviour of <code>dg reviewer table</code>.</li>
   <li>First use, live and read only: pack a finished ticket (for example the DGS-481 branch) as a <code>ticket</code> pack, run one real <code>ticket</code> Reviewer worker on it, and check that its findings block parses and the table builds. No ticket is written to by a test.</li>
 </ul>
@@ -349,7 +358,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <section id="notv1">
 <h2>13. Not in version 1</h2>
 <ul>
-  <li>The automatic start by the Lights-Out engine (DGS-129). In version 1 the conductor starts and feeds the Reviewers by hand with the recipes in section 5. The STOP markers, the pack command, the seat policy and the role mode are in version 1.</li>
+  <li>The automatic start by the Lights-Out engine (DGS-129). In version 1 the conductor starts and feeds the Reviewers by hand with the recipes in section 5. The STOP markers, the pack command, the model policy and the role mode are in version 1.</li>
   <li>More reviewer types (design, security, cross-model) and a second field for scope or focus. They come when a real ticket needs one.</li>
   <li>The cross-model Reviewer (Sol, paused since 2026-10-11) and the review tiers (DGS-127).</li>
   <li>The Releaser (DGS-467) and the nightly audit.</li>
@@ -365,7 +374,8 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <ol>
   <li><strong>The <code>task</code> pack keeps the implementer's report</strong>, as unverified claims. Approved.</li>
   <li><strong>The <code>ticket</code> pack keeps one file of one-line carry-over entries</strong> (deferred Minors, parked rulings), and no review transcripts. Approved.</li>
-  <li><strong>The seat follows Jack's seat order in force.</strong> Every worker is on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. The type to seat policy applies inside that order (section 5). Approved, and extended: the policy is part of the card.</li>
+  <li><strong>The seat follows Jack's seat order in force.</strong> Every worker is on <code>dev0</code> until Wed 21 Oct 12:00 UTC+7. The conductor picks the seat with the runbook's rule inside that order (section 5). Approved.</li>
+  <li><strong>The Reviewer role picks the model for the review</strong> (Jack: "The reviewer role pick the model for the reviewing."). The card holds a type to model policy. The conductor and the Builder never pick it (section 5).</li>
   <li><strong>The preview step raises the Reviewer's ceiling by one permission</strong> (run the profile's preview recipe, preview target only). Approved.</li>
   <li><strong>The Builder stops and a conductor starts the Reviewer.</strong> Approved, and extended: this now holds for task reviews too. "The builder should never review."</li>
   <li><strong>The task Reviewer is one worker per ticket</strong>, kept for the whole build, with <code>/clear</code> before each pack. This is the Maestro's technical direction. Findings go back through the conductor. The primitive's fix loop and its 5-round cap stay.</li>
