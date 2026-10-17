@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviewer pack and table commands (DGS-560) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Reviewer pack and table commands (DGS-560) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-17</span>
+    <span>Ticket: <strong>DGS-560</strong></span>
+    <span>Commit range: <code>ae03ec1..f078705</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Adds the <code>dg reviewer</code> command group: <code>pack</code> builds the input folder of one review and picks its model, and <code>table</code> joins review findings with verdict lines into <code>findings.md</code>. The code is pure functions in <code>packages/cli/src/reviewer/</code>: file in, file out, no network. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (6 tasks of the plan, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge. This ticket covers Tasks 1 to 6 of the DGS-529 plan.</p>
+  <p>Reference documents: the <a href="../DGS-529—reviewer-role/design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Constants, model policy and diff line count</h4><p>The reviewer constants, <code>modelFor</code> and <code>countChangedLines</code>.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Findings block parser</h4><p><code>parseFindings</code>, <code>extractFindings</code> and <code>readReviews</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Verdict line parser</h4><p><code>parseVerdictLines</code> and <code>judgementKey</code>.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Table rows, markdown and runTable</h4><p><code>buildRows</code>, <code>renderMarkdown</code> and <code>runTable</code>.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>The review pack and its manifest</h4><p><code>buildPack</code>: the pack folder, <code>pack.md</code> and the model choice.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>The dg reviewer command group</h4><p><code>dg reviewer table</code> and <code>dg reviewer pack</code>, registered in the CLI.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Constants, model policy and diff line count</td><td>The reviewer constants, <code>modelFor</code> and <code>countChangedLines</code>.</td><td>Approved, clean</td><td>countChangedLines miscounts a content line that starts with "-- a/" or "++ b/" (negligible against the 800 limit)</td></tr>
+    <tr><td>Task 2: Findings block parser</td><td><code>parseFindings</code>, <code>extractFindings</code> and <code>readReviews</code>.</td><td>Approved, clean</td><td>readReviews sorts pack folders lexicographically (buildRows re-sorts); FENCE_RE and a quoted outer fence; loose rejection tests</td></tr>
+    <tr><td>Task 3: Verdict line parser</td><td><code>parseVerdictLines</code> and <code>judgementKey</code>.</td><td>Approved, clean</td><td>whitespace-only reason accepted; a non-verdict Review line failed the whole parse (fixed in the fix wave)</td></tr>
+    <tr><td>Task 4: Table rows, markdown and runTable</td><td><code>buildRows</code>, <code>renderMarkdown</code> and <code>runTable</code>.</td><td>Approved, clean</td><td>no test for a multi-line cell or an explicit --ledger</td></tr>
+    <tr><td>Task 5: The review pack and its manifest</td><td><code>buildPack</code>: the pack folder, <code>pack.md</code> and the model choice.</td><td>Approved, clean (one accepted deviation: CARRY_RE ends with a negative lookahead instead of \b)</td><td>loose /id/ regexes in refusal tests; partial pack folder on a write failure; re-review pack has no constraints entry</td></tr>
+    <tr><td>Task 6: The dg reviewer command group</td><td><code>dg reviewer table</code> and <code>dg reviewer pack</code>, registered in the CLI.</td><td>Approved, clean</td><td>unawaited expect(...).resolves (fixed in the fix wave); redundant standards default</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge after one fix wave: 1 Critical and 3 Important findings, all resolved and re-reviewed clean.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td><code>dg reviewer table</code> failed on every role-mode ledger: the parser threw on the <code>Review mode: role</code> line.</td><td>Fixed: only <code>Review task</code> and <code>Review ticket</code> lines are verdict candidates. Tests added.</td></tr>
+    <tr><td>Important</td><td>The ticket re-review pack left out the fixer's report.</td><td>Fixed: <code>report</code> is required and the plan is listed for a ticket re-review. Tests added.</td></tr>
+    <tr><td>Important</td><td>Parked findings written as role-mode verdict lines did not reach <code>carry-over.md</code>.</td><td>Fixed: <code>CARRY_RE</code> also matches <code>Review task N rR: Fn -&gt; parked</code>. Test added.</td></tr>
+    <tr><td>Important</td><td>The registration test did not await <code>expect(...).resolves</code>.</td><td>Fixed: the test is async and awaits it.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">47badfb</span> feat(dgs-529): add the reviewer constants and model policy</li>
+    <li><span class="sha">3c32731</span> feat(dgs-529): parse the findings block of a review report</li>
+    <li><span class="sha">43ac164</span> feat(dgs-529): parse review verdict lines from the SDD ledger</li>
+    <li><span class="sha">0904f76</span> feat(dgs-529): build the review findings table</li>
+    <li><span class="sha">6f0265b</span> feat(dgs-529): build the review pack and pick the model</li>
+    <li><span class="sha">7f4bce6</span> feat(dgs-529): add dg reviewer pack and table</li>
+    <li><span class="sha">f078705</span> fix(dgs-529): skip non-verdict Review lines, carry role-mode parked, pass fixer report to ticket re-review</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-560—reviewer-pack-table/report.html</footer>
+
+</body>
+</html>
