@@ -41,7 +41,8 @@ Two modes:
 
 - The human partner, at any time:
   - write: "hand off", "handoff", "wrap up", "save where we are", "checkpoint"
-  - write, then clear: "hand off and clear", "start fresh", "clear context"
+  - write, then clear: "flux", "flux it", "hand off and clear", "start fresh", "clear context"
+  - any write or clear trigger may end with `next: <focus>` ("flux, next: fix the token counter"): the focus of the next session
   - resume: "resume", "Arise", "pick up where we left off"
 - `digismith:finishing-a-development-branch` Step 7, after Option 1 or Option 2 (write,
   end-of-ticket mode).
@@ -112,7 +113,12 @@ note lands in the main checkout's `.digismith/docs/`, the current note in the de
    came from the fallback, because the `_unlettered` note is shared and may belong to another
    session. Carry forward only what is still true and belongs to this session, typically
    open problems not yet solved and decisions that still hold.
-3. Compose the note (see Note Format). Sources: this conversation; any plan ledger or
+3. Compose the note (see Note Format). Rules for what goes in:
+   - **Redaction:** the note never holds a key, token, password or personal data. A pointer to where the secret lives is fine ("the key is in `~/.digismith-depot/.env`"); its value never is.
+   - **Unverified claims:** the next session trusts the note and does not re-check it. A claim this session did not check (a test run, a read-back, a file seen) gets "(not verified)" or is left out.
+   - **Focus:** text after `next:` in the message is the next session's focus. Next starts with it, and Open problems lists the items that bear on it first. No argument: Next and Open problems as usual.
+
+   Sources: this conversation; any plan ledger or
    `progress.md` for status (cross-check it, do not restate status from memory). For the header,
    run `git branch --show-current` and `git -C <main-root> rev-parse --short HEAD`.
 4. **End-of-ticket mode only: the cleanup round.**
@@ -136,11 +142,15 @@ note lands in the main checkout's `.digismith/docs/`, the current note in the de
 
 ## Clear Decision
 
-**Manual run:** clear only if this message asked for it ("hand off and clear", "start fresh",
-"clear context"). The human partner's yes to your own question "kicker open? flux now?"
-writes and shows the note without the gate (see the exception under Check Gate), but this
-skill does not clear on it; the flux procedure clears on its next turn. Otherwise stop after
-showing the note.
+**Manual run:** clear only if this message asked for it ("flux", "flux it", "hand off and clear",
+"start fresh", "clear context"). That order is the confirmation: there is no check gate. Show
+the note, say the final summary, and clear as the last action of the same turn (see Clearing).
+The note must be written first: no note, or a failed write, means no clear.
+
+The human partner's yes to your own question "kicker open? flux now?" writes and shows the
+note, but this skill does not clear on it; the flux procedure arms the kicker and clears on its
+next turn, after the kicker replies "armed". The question and the yes are the signal; no other
+wording counts. Otherwise stop after showing the note.
 
 **End-of-ticket mode:** invoke `digismith:preferences`' `get` operation for key `clear_context`.
 
@@ -156,15 +166,8 @@ showing the note.
 
 ## Check Gate
 
-Every clear waits for the human partner to check the note. End the turn with the note shown and:
-"Fix anything, or say ok to clear."
-
-**One exception:** when the message you are answering is the human partner's yes to your own
-question "kicker open? flux now?", skip the gate. Write the note and show it, but do not
-clear: the flux procedure arms the kicker and clears on its next turn, after the kicker
-replies "armed". The question and the yes are the signal; no other wording
-counts, and every other clear, including a "hand off and clear" the human partner types,
-keeps the gate.
+End-of-ticket mode only: the clear was not asked for in the message, so the human partner checks
+the note first. End the turn with the note shown and: "Fix anything, or say ok to clear."
 
 On the next message:
 
@@ -172,6 +175,8 @@ On the next message:
 - **Corrections:** rewrite the note with them, show what changed, then clear.
 - **Anything else** (new work, a question, "don't clear"): do not clear. The note stays written;
   handle the message normally.
+
+## Clearing
 
 To clear: first say the final summary (what is done, what is next, `Handoff note: <path>`), then,
 as the last action of the turn, call `mcp__ccd_session_mgmt__clear_session` with
@@ -219,9 +224,16 @@ The first line is always the H1 title. Exactly these four sections, in this orde
 |--------|---------|
 | "The ticket's done, they'd obviously want a fresh start" | Only an explicit ask or a saved `yes` clears. Never infer it. |
 | "I'll clear now and summarize after" | The clear drops everything after this turn. Summary first, clear last. |
-| "The note looks fine, I can skip the check" | Every clear waits for the human partner's ok or fixes. The only exception is the yes to "kicker open? flux now?", which skips the gate but still does not clear here (Check Gate). |
+| "The note looks fine, I can skip the check" | In end-of-ticket mode the clear waits for the human partner's ok or fixes. A manual clear order ("flux") has no gate: it is the confirmation. |
+| "They said flux, but I'll ask ok first, to be safe" | The order is the confirmation. Write, show, summarize, clear in the same turn. |
+| "I'm sure it passed" | The next session will not re-check it. Mark it "(not verified)" or drop it. |
+| "I'll put the key in the note so the next session can use it" | Never a value. Point to where it lives. |
 | "The title has no prefix; I can tell the session from the work" | A wrong name overwrites another session's note. A title that is not one safe name goes through the fallback; no title means ask. |
 | "I'll append today's work under the old note" | Rewrite the whole note. Carry forward only what is still true. |
 | "The write failed, but I'll clear anyway" | The note is the only state that survives the clear. No note, no clear. |
 | "Resume found a note, so I'll start on Next" | Ask first. Days may have passed, and another session may have moved things. |
 | "While wrapping up I'll also update MEMORY and ClickUp" | The cleanup round checks and lists gaps. It does not do those chores. |
+
+## Credits
+
+Redaction, unverified claims and the focus argument are adapted from the handoff skills in [mattpocock/skills](https://github.com/mattpocock/skills) (MIT, commit `49dd158`), Copyright (c) Matt Pocock.
