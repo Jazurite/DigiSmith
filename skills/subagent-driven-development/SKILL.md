@@ -143,6 +143,10 @@ a ledger file, not only in todos.
   plan's progress: leave it in place and start your own, fresh.
 - Create the ledger with its identity as the first line:
   `# SDD ledger — plan: <plan file path>`.
+- Run `scripts/review-mode` once. Append `Review mode: role` or `Review mode: hand`
+  to the ledger as its second line, from its output. A resumed session reads
+  that line and does not run the script again. `hand` is the default and
+  means this skill runs exactly as described everywhere outside "Role Mode".
 - The ledger is your recovery map: the commits it names exist in git even
   when your context no longer remembers creating them. After compaction,
   trust the ledger and `git log` over your own recollection.
@@ -471,6 +475,57 @@ your other bookkeeping:
 Then mark the todo complete and move on. Never move to the next task while
 the review has open Critical/Important issues that are neither fixed nor
 parked-with-ruling at the cap.
+
+## Role Mode (a herdr Builder)
+
+This section applies only when the ledger says `Review mode: role`: a conductor
+started this session as a Builder and set `DIGISMITH_REVIEW_MODE=role`. In `hand`
+mode ignore this section; every other part of this skill applies unchanged.
+
+In role mode a Builder never starts a review and never runs one (DGS-529). A
+conductor or a Maestro starts every review. This section replaces three steps:
+"Review the task" in the Task Loop (step 3), the re-review dispatch in the
+fix loop (step 4), and the final reviewer dispatch in "Final Review". Everything
+else stays: the implementer, the fix rounds (up to five), the breaker, the
+ledger and the deferred-minor lines.
+
+**After each task**, instead of dispatching a task reviewer:
+
+1. Run `scripts/review-package PLAN_FILE BASE HEAD` as step 3 says (the
+   attribution check runs inside it), then
+   `dg reviewer pack --type task --task <N> --workspace <workspace> --plan PLAN_FILE --base BASE --head HEAD --diff <review package path> --brief <brief path> --report <report path> --standards <each standards file the brief names>`.
+   It prints `pack: <folder>` and `model: <id>`. The model is the role's, not yours.
+2. Append `Task <N>: review requested` to the ledger.
+3. Report one line, `STOP: task-review-ready <pack folder>`, and wait. Do not
+   start another task and do not review the diff yourself.
+4. Your parent sends the report path and a verdict. Read the report. On
+   `Needs fixes`, run the fix loop of step 4 with the findings as written
+   (verify ⚠️ items yourself, as that step says). For each fix round, build
+   the scoped re-review package, run
+   `dg reviewer pack --type task --task <N> --round <R+1> --fix-base <previous head> --findings-in <open findings file> ...`
+   and report `STOP: task-review-ready <pack folder>` again. Never dispatch the re-reviewer.
+5. When your parent says "task <N> review clean", complete the task as step 5 says.
+
+**After the last task**, instead of dispatching the final reviewer: build the
+package with `scripts/review-package PLAN_FILE MERGE_BASE HEAD`, run
+`dg reviewer pack --type ticket --workspace <workspace> --plan PLAN_FILE --base MERGE_BASE --head HEAD --diff <path> --ticket-file <ticket.md> --spec <design.html> --ledger <workspace>/progress.md --standards ...`,
+append `Task final: review requested`, report `STOP: ticket-review-ready <pack folder>`
+and wait. The ONE fix wave, the one scoped re-review (another pack and another STOP) and the
+adjudication of residuals work as "Final Review" describes, with your parent
+starting each review.
+
+**Verdict lines.** When a finding is decided, append one ledger line for it:
+`Review task <N> r<R>: F<n> -> fixed (<commit>)`, `... -> parked (<ruling>)` or
+`... -> rejected (<reason>)`; for the final review
+`Review ticket final r<R>: F<n> -> <verdict> (<reason>)`. A ruling that comes
+from the Maestro reaches you in your parent's message; append it as written.
+`parked` and `rejected` need a reason. Never leave a finding without a line:
+`dg reviewer table` fails on it.
+
+**Waiting is the rule here.** "Continuous execution" above has one exception in
+role mode: you wait at each `STOP: ...-review-ready` until your parent answers.
+If `dg reviewer pack` fails, report the error to your parent and wait. Never fall
+back to reviewing yourself.
 
 ## Final Review
 
