@@ -301,8 +301,8 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
   <li><strong>Attribution found in the commit range.</strong> No pack is written. The review does not run. The Builder removes the attribution first.</li>
   <li><strong>Pack file missing</strong> (no plan, no spec, no ticket file). <code>dg reviewer pack</code> exits non-zero and names the file. A review without its input does not start.</li>
   <li><strong>Report without a findings block, or with invalid JSON.</strong> The human partner treats the review as not done and re-dispatches once. A second failure goes to the Maestro.</li>
-  <li><strong>The Reviewer worker stalls.</strong> The conductor follows the Builder's time box rule (DGS-528): after about 30 minutes without output it reports and does not retry on its own. A whole-branch review took about 9 minutes on the cross-model proof of concept (DGS-78), so 30 minutes is a real stall.</li>
-  <li><strong>The Reviewer wants to change something.</strong> It reports the need as a finding. It does not edit. A Reviewer that edited a file produces a Critical process finding in the next review.</li>
+  <li><strong>The Reviewer worker stalls.</strong> The conductor applies the time box proposed in DGS-528: after about 30 minutes without output it reports and does not retry on its own. A whole-branch review took about 9 minutes on the cross-model proof of concept (DGS-78), so 30 minutes is a real stall.</li>
+  <li><strong>The Reviewer wants to change something.</strong> It reports the need as a finding. It does not edit.</li>
   <li><strong>The Reviewer cannot verify a claim.</strong> It marks it as ⚠️, as the primitive says. The human partner checks it.</li>
   <li><strong>The Reviewer's seat hits a limit.</strong> Report to Jack and wait (the seat rule in force).</li>
 </ul>
