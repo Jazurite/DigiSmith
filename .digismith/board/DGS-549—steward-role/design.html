@@ -75,10 +75,10 @@
   <ol>
     <li><a href="#goal">Goal and version 1 scope</a></li>
     <li><a href="#arch">Architecture</a></li>
-    <li><a href="#events">Events and rules</a></li>
+    <li><a href="#events">Events, the status map and rules</a></li>
     <li><a href="#state">State file</a></li>
     <li><a href="#filing">Filing new ideas</a></li>
-    <li><a href="#wiring">Where events fire</a></li>
+    <li><a href="#wiring">Callers: DGS-551</a></li>
     <li><a href="#errors">Errors</a></li>
     <li><a href="#testing">Testing</a></li>
     <li><a href="#out">Not in version 1</a></li>
@@ -89,13 +89,14 @@
 <section id="goal">
 <h2>1. Goal and version 1 scope</h2>
 <p>The Steward keeps the work, the Claude sessions and ClickUp in step. It is not a session. It is a set of <code>dg steward</code> commands. Each call loads one ticket's state file, acts, saves and ends. It holds no context between calls.</p>
-<p>Version 1 does two things:</p>
+<p>Version 1 is:</p>
 <ol>
-  <li><strong>The status follows the build:</strong> <code>in progress</code>, <code>review</code>, <code>done</code>, with start and due dates. The SDD and merge steps drive it.</li>
-  <li><strong>File and type new ideas</strong> into the backlog at once.</li>
+  <li><strong>The event engine with the whole status map of DGS-488.</strong> It knows every status, the event that moves a ticket into each one, the two gates, and the done rules by Sign-off mark. It applies any event it receives: <code>dg steward event &lt;event&gt; --ticket &lt;KEY&gt;</code>.</li>
+  <li><strong>Filing and typing new ideas</strong> into the backlog at once.</li>
 </ol>
 <p>Tracker: ClickUp, for the DigiSmith profile. JIRA (Emma) later, behind the same adapter interface.</p>
-<div class="callout">Settled by Jack and the Maestro and not repeated here: events not polling; deterministic engine, a small model only for filing; one depot state file per open ticket; the Steward never moves a ticket through the two gates (<code>refinement</code> to <code>to do</code>, and <code>acceptance</code>), and only Jack's own yes, recorded with his quote, moves a ticket out of <code>acceptance</code>; ClickUp writes go through <code>dg</code> only.</div>
+<div class="callout">Out of scope here: <strong>which skill or step sends which event, and when</strong>. That wiring, including the SDD and merge hooks, is DGS-551 (A.3: Lifecycle Hooks), which waits on this ticket. This spec defines the event contract that DGS-551 calls.</div>
+<div class="callout">Settled by Jack and the Maestro and not repeated here: events not polling; deterministic engine, a small model only for filing; one depot state file per open ticket; ClickUp writes go through <code>dg</code> only; the Steward never moves a ticket through the two gates (<code>refinement</code> to <code>to do</code>, and <code>acceptance</code>) on its own. It applies a gate move only when the event carries Jack's own answer, which is stored as the record of his decision.</div>
 </section>
 
 <section id="arch">
@@ -109,32 +110,56 @@
 <tr><td><code>event.ts</code></td><td>The <code>dg steward event</code> command: load state, run rules, apply moves through the adapter, save.</td><td>rules, state, tracker</td></tr>
 <tr><td><code>file.ts</code></td><td>The <code>dg steward file</code> command: duplicate check, clan and type pick (the only model call), create in backlog.</td><td>tracker, model call</td></tr>
 </table></div>
-<p>The tracker comes from a new profile field <code>tracker: clickup | jira | none</code>. Absent means <code>none</code>: every <code>dg steward</code> call then ends silently with exit 0. The DigiSmith profile gets <code>tracker: clickup</code>.</p>
+<p>The tracker comes from a new profile field <code>tracker: clickup | jira | none</code>. Absent means <code>none</code>: every <code>dg steward</code> call then ends silently with exit 0. The DigiSmith profile gets <code>tracker: clickup</code>. A second new field, <code>release_stage</code>, is described in section 3.</p>
 </section>
 
 <section id="events">
 <h2>3. Events and rules</h2>
-<p>Command: <code>dg steward event &lt;name&gt; --ticket &lt;KEY&gt; [--sha &lt;sha&gt;] [--dry-run]</code>. The ticket's Sign-off mark is a ClickUp drop-down field <code>Sign-off</code> with values <code>Auto</code> and <code>Jack</code>. Three kinds of ticket follow three paths after the merge:</p>
-<ul>
-  <li><code>Sign-off: Auto</code>: <code>done</code> as soon as it is merged and pushed.</li>
-  <li><code>Sign-off: Jack</code>: goes into <code>acceptance</code> and waits there. Only Jack's own yes moves it on. <code>verified</code> is never valid for it.</li>
-  <li>Unmarked: stays in <code>review</code> until the Maestro or a conductor sends <code>verified</code> (first use seen working).</li>
-</ul>
+<p>Command: <code>dg steward event &lt;event&gt; --ticket &lt;KEY&gt; [--by &lt;role&gt;] [--sha &lt;sha&gt;] [--quote "&lt;Jack's words&gt;"] [--dry-run]</code>. <code>--by</code> is a free label kept in state, for the record only. The engine does not trust it.</p>
+<h3>The status map</h3>
+<p>Statuses in the space: backlog, concept, discovery, refinement, to do, in progress, review, acceptance, release, done, documented, discarded, Closed (DGS-488, DGS-493). Every status has an entry event. An event is valid only from the statuses in its "from" column. Any other status gives a refusal, never a move.</p>
 <div class="table-wrap"><table>
-<tr><th>Event</th><th>Fired by</th><th>Status now</th><th>Moves</th></tr>
-<tr><td><code>started</code></td><td>SDD or executing-plans, start of implementation</td><td><code>to do</code></td><td><code>in progress</code>, start date today (only if empty)</td></tr>
-<tr><td><code>review</code></td><td>SDD, whole-branch review starts</td><td><code>in progress</code></td><td><code>review</code></td></tr>
-<tr><td><code>merged</code></td><td>finishing-a-development-branch, after merge and push</td><td><code>review</code></td><td>Records the merge sha and time in state, then by Sign-off: <code>Auto</code>: <code>done</code>, due date today. <code>Jack</code>: <code>acceptance</code> (entering the gate, not passing it). Unmarked: no move.</td></tr>
-<tr><td><code>verified</code></td><td>the Maestro or a conductor, after first use is seen working</td><td><code>review</code>, merge recorded, Sign-off unmarked</td><td><code>done</code>, due date today. Refused for Sign-off <code>Jack</code> and for <code>acceptance</code>.</td></tr>
-<tr><td><code>accepted --answer yes|no --quote "&lt;Jack's words&gt;"</code></td><td>the Maestro, relaying Jack's answer in his words</td><td><code>acceptance</code></td><td>yes: <code>done</code>, due date today (no <code>release</code> in version 1). no: back to <code>refinement</code>, with his words as a ticket comment. The quote is required and is stored in state as the record of his decision.</td></tr>
+<tr><th>Event</th><th>From</th><th>Into</th><th>Also writes</th><th>Meaning (DGS-488)</th></tr>
+<tr><td><code>filed</code> (made by <code>dg steward file</code>, not typed by hand)</td><td>none</td><td><code>backlog</code></td><td>priority Normal, type</td><td>a raw idea in the inbox</td></tr>
+<tr><td><code>concept-started</code></td><td><code>backlog</code></td><td><code>concept</code></td><td></td><td>Jack picks an idea; Shaping begins</td></tr>
+<tr><td><code>discovery-started</code></td><td><code>concept</code></td><td><code>discovery</code></td><td></td><td>Jack says "discover it"</td></tr>
+<tr><td><code>refinement-started</code></td><td><code>concept</code>, <code>discovery</code></td><td><code>refinement</code></td><td></td><td>Jack says "refine it", or the discovery pack is complete</td></tr>
+<tr><td><code>approved</code> <strong>gate 1</strong></td><td><code>refinement</code></td><td><code>to do</code></td><td>quote kept in state</td><td>Jack approves into <code>to do</code>. Needs <code>--quote</code>.</td></tr>
+<tr><td><code>started</code></td><td><code>to do</code></td><td><code>in progress</code></td><td>start date today, only if empty</td><td>a build starts</td></tr>
+<tr><td><code>review-started</code></td><td><code>in progress</code></td><td><code>review</code></td><td></td><td>ready for review</td></tr>
+<tr><td><code>merged</code></td><td><code>review</code></td><td>by Sign-off, see below</td><td>merge sha and time in state</td><td>the work is merged and pushed</td></tr>
+<tr><td><code>verified</code></td><td><code>review</code> (merge recorded)</td><td><code>done</code></td><td>due date today</td><td>first use seen working. Valid for unmarked tickets only.</td></tr>
+<tr><td><code>accepted --answer yes|no</code> <strong>gate 2</strong></td><td><code>acceptance</code></td><td>yes: <code>release</code> or <code>done</code> (see below). no: <code>refinement</code></td><td>quote kept in state; on no, the quote is also a ticket comment</td><td>Jack's answer to an acceptance. Needs <code>--quote</code>.</td></tr>
+<tr><td><code>release-started</code></td><td><code>review</code> (Sign-off Auto, merged), <code>acceptance</code> (answer yes)</td><td><code>release</code></td><td></td><td>deploy, health check, rollback</td></tr>
+<tr><td><code>released</code></td><td><code>release</code></td><td><code>done</code></td><td>due date today</td><td>live and healthy</td></tr>
+<tr><td><code>documented</code></td><td><code>done</code></td><td><code>documented</code></td><td></td><td>report and morning summary written</td></tr>
+<tr><td><code>discard --quote</code></td><td>any open status</td><td><code>discarded</code></td><td>quote kept; due date untouched</td><td>Jack drops it</td></tr>
+<tr><td><code>close --quote</code></td><td>any open status</td><td><code>Closed</code></td><td>quote kept</td><td>Jack closes it</td></tr>
 </table></div>
+<p>The failed-ticket status is undecided (DGS-490). The engine has no event for it. A failed ticket is never retried on its own.</p>
+<h3>The two gates</h3>
 <ul>
-  <li><strong>Any other status now</strong> (for example <code>refinement</code>, or <code>acceptance</code>): no move. The command prints one plain line saying why, exits 0, and records the refused event in state.</li>
+  <li>The two gates are <code>refinement</code> to <code>to do</code> and the <code>acceptance</code> status. Both are Jack's.</li>
+  <li>The only events that cross a gate are <code>approved</code> and <code>accepted</code>. Both are refused without a non-empty <code>--quote</code>. The quote is stored in state with the time and the <code>--by</code> label. The Steward cannot check that the quote is Jack's: it is a record of what the caller says he said. The caller's duty to relay only Jack's own words belongs to DGS-551.</li>
+  <li>No other event has <code>to do</code> as target, or <code>refinement</code> or <code>acceptance</code> as source. A test checks this over the whole table.</li>
+  <li><code>discard</code> and <code>close</code> also need Jack's quote, because only Jack drops or closes a ticket.</li>
+</ul>
+<h3>The done rules by Sign-off mark</h3>
+<p>The mark is a ClickUp drop-down field <code>Sign-off</code> with the values <code>Auto</code> and <code>Jack</code>. A ticket with no value is unmarked. What <code>merged</code> does:</p>
+<div class="table-wrap"><table>
+<tr><th>Mark</th><th>After <code>merged</code></th><th>Reaches <code>done</code> by</th></tr>
+<tr><td><code>Auto</code></td><td><code>done</code> at once, due date today</td><td>the merge itself. No <code>verified</code>.</td></tr>
+<tr><td><code>Jack</code></td><td><code>acceptance</code> (entering the gate)</td><td>Jack's <code>accepted yes</code> only. <code>verified</code> is refused for these tickets.</td></tr>
+<tr><td>unmarked</td><td>stays in <code>review</code></td><td><code>verified</code> from the Maestro or a conductor</td></tr>
+</table></div>
+<p><strong>The release stage.</strong> The map has <code>release</code>, but the Releaser (DGS-467) does not exist. A profile flag <code>release_stage</code> (default <code>false</code>) says whether the stage is in use. While it is <code>false</code>, the rows above go straight to <code>done</code> as written, and <code>accepted yes</code> goes to <code>done</code>. When it is <code>true</code>, <code>merged</code> for <code>Auto</code> and <code>accepted yes</code> go to <code>release</code>, and <code>released</code> then moves to <code>done</code>. The events <code>release-started</code> and <code>released</code> are valid in both cases, so the map is complete before the Releaser exists.</p>
+<h3>General rules</h3>
+<ul>
+  <li><strong>Any other status now:</strong> no move. The command prints one plain line saying why, exits 0, and records the refused event in state.</li>
   <li><strong>Already at the target status:</strong> no write. Events are idempotent. State keeps the ids of applied events (<code>name:sha-or-date</code>).</li>
-  <li><strong>Dates</strong> are date-only, in UTC+7. Start date is set once. Due date is set at <code>done</code>.</li>
-  <li><strong>The gate:</strong> the Steward moves a ticket into <code>acceptance</code> but never out of it on its own judgement. Only <code>accepted</code> with Jack's quoted answer moves it on. <code>verified</code>, <code>review</code>, <code>started</code> and <code>merged</code> are all refused in <code>acceptance</code>.</li>
-  <li><strong>Out of order:</strong> <code>verified</code> before <code>merged</code> is refused. <code>merged</code> with Sign-off <code>Auto</code> that finds the ticket still in <code>in progress</code> (the review event was missed) is refused and reported, not repaired. Repair is the audit's job, later.</li>
-  <li><strong>Closing:</strong> after <code>done</code>, state gets <code>closed_at</code>. The file is removed only when two checks pass: Hallmark's roll-up (DGS-545) and the analytics store (DGS-220) both hold the ticket. Neither exists yet, so in version 1 the check function returns false and the file stays with <code>closed_at</code> set. A later ticket turns the check on.</li>
+  <li><strong>Dates</strong> are date-only, in UTC+7. Start date is set once, at <code>started</code>. Due date is set at every move into <code>done</code>.</li>
+  <li><strong>Out of order:</strong> <code>verified</code> before <code>merged</code> is refused. A <code>merged</code> that finds the ticket in <code>in progress</code> (the <code>review-started</code> event was missed) is refused and reported, not repaired. Repair is the audit's job, later.</li>
+  <li><strong>Closing:</strong> after a move into <code>done</code>, <code>discarded</code> or <code>Closed</code>, state gets <code>closed_at</code>. The file is removed only when two checks pass: Hallmark's roll-up (DGS-545) and the analytics store (DGS-220) both hold the ticket. Neither exists yet, so in version 1 the check function returns false and the file stays with <code>closed_at</code> set. A later ticket turns the check on. <code>documented</code> after <code>done</code> only changes the status.</li>
 </ul>
 </section>
 
@@ -150,7 +175,7 @@
   "start_written": "2026-10-17",
   "due_written": null,
   "signoff": "Auto",                 // Auto | Jack | null, read from the tracker at each event
-  "acceptance": null,                // { "answer": "yes", "quote": "...", "at": "..." } once Jack answers
+  "gates": [],                       // [{ "event": "approved", "quote": "...", "by": "maestro", "at": "..." }]
   "merged": { "sha": "abc1234", "at": "2026-10-17T05:10:00Z" },
   "applied": ["started:2026-10-17"],
   "pending": [],                      // writes that failed, retried first at the next event
@@ -159,6 +184,7 @@
 }</code></pre>
 <ul>
   <li><strong>Created</strong> when the ticket is filed by <code>dg steward file</code>, or at the first event for a ticket that has no file.</li>
+  <li>The state file also keeps a short <code>log</code> of every event received, applied or refused, with its <code>--by</code> label and time.</li>
   <li><strong>Rebuild:</strong> <code>dg steward rebuild &lt;KEY&gt;</code>, also run automatically when an event finds no file. It reads status, dates and the Sign-off field from ClickUp and the sessions from the token registry. ClickUp stays the source of truth: where state and ClickUp disagree, ClickUp wins and the difference is reported.</li>
   <li><strong>Concurrency:</strong> a conductor and a worker can fire for one ticket at the same time. The command takes a lock file (<code>&lt;KEY&gt;.json.lock</code>, created with exclusive open). It waits up to 5 seconds, then proceeds without the write and puts the event in <code>pending</code> of the next call. A lock older than 60 seconds is stale and is taken over.</li>
   <li>The Steward writes only its own folder in the depot.</li>
@@ -177,17 +203,15 @@
 </section>
 
 <section id="wiring">
-<h2>6. Where events fire</h2>
-<p>The skills already call <code>entry.ts step-start</code> and <code>step-end</code>. Version 1 adds one line next to four of those markers. No new hook point is needed, and no session hook. The ticket key comes the same way as for the markers (board folder, or branch name with <code>^([A-Za-z]+-[0-9]+)(__|-|$)</code>).</p>
-<div class="table-wrap"><table>
-<tr><th>Skill step</th><th>Line added</th></tr>
-<tr><td>subagent-driven-development, implementation <code>step-start</code> (and the same in executing-plans)</td><td><code>dg steward event started --ticket &lt;Key&gt;</code></td></tr>
-<tr><td>subagent-driven-development, the whole-branch review begins</td><td><code>dg steward event review --ticket &lt;Key&gt;</code></td></tr>
-<tr><td>finishing-a-development-branch, after the merge and the push (Option 1, and Option 2 after the PR merges)</td><td><code>dg steward event merged --ticket &lt;Key&gt; --sha &lt;sha&gt;</code></td></tr>
-<tr><td>Maestro runbook, after first use is verified (unmarked tickets only)</td><td><code>dg steward event verified --ticket &lt;Key&gt;</code></td></tr>
-<tr><td>Maestro runbook, when Jack answers an acceptance</td><td><code>dg steward event accepted --ticket &lt;Key&gt; --answer yes|no --quote "&lt;his words&gt;"</code></td></tr>
-</table></div>
-<p>The skill text says: a non-zero exit or a warning never blocks the flow (same rule as the step markers). The command itself exits 0 on every tracker or state failure and prints the problem to stderr. It exits non-zero only on a usage error.</p>
+<h2>6. Callers: DGS-551</h2>
+<p>Nothing in this spec edits a skill, a hook or a runbook. The skills' step markers, the session hooks and the Maestro runbook stay as they are. DGS-551 (A.3: Lifecycle Hooks, waits on this ticket) decides which skill or step sends which event and when, including the SDD and merge hooks.</p>
+<p>What DGS-551 can rely on from this spec:</p>
+<ul>
+  <li>The command line, the event names and the "from" rules in section 3.</li>
+  <li>The ticket key is always given with <code>--ticket</code>. The Steward does not derive a key from a branch or a folder.</li>
+  <li>A non-zero exit means a usage error only (unknown event name, missing <code>--ticket</code>, a gate event without <code>--quote</code>). Tracker and state failures exit 0 with a stderr line, so a hook that calls the Steward never blocks a flow.</li>
+  <li>With <code>tracker: none</code> (the profile default) every call ends silently with exit 0.</li>
+</ul>
 </section>
 
 <section id="errors">
@@ -205,12 +229,12 @@
 <section id="testing">
 <h2>8. Testing</h2>
 <ul>
-  <li><strong>rules.ts:</strong> table-driven Vitest cases: every event against every status, including all refusals. One test asserts the gate rule holds for the whole table.</li>
+  <li><strong>rules.ts:</strong> table-driven Vitest cases: every event against every status, including all refusals. One test asserts the gate rule holds for the whole table. One test checks that every status in the map has an entry event.</li>
   <li><strong>state.ts:</strong> temp depot dir: create, atomic write, lock wait and stale takeover, bad file moved aside, rebuild from a fake tracker and a fake registry.</li>
   <li><strong>clickup-tracker.ts:</strong> a fake <code>ClickUpClient</code> (the same factory pattern the <code>dg clickup</code> tests use): write then read-back, mismatch, missing status.</li>
-  <li><strong>event.ts:</strong> end to end with a fake tracker: the full run <code>started</code>, <code>review</code>, <code>merged</code> for an Auto ticket (ends <code>done</code>), a Jack ticket (ends in <code>acceptance</code>, then <code>accepted yes</code> and <code>accepted no</code>, and <code>verified</code> refused) and an unmarked ticket (stays in <code>review</code>, then <code>verified</code>); idempotent repeat; pending retry after a failed write.</li>
+  <li><strong>event.ts:</strong> end to end with a fake tracker: the whole map in order, <code>filed</code> to <code>documented</code>; the three done paths (Auto ends <code>done</code> at <code>merged</code>; Jack ends in <code>acceptance</code>, then <code>accepted yes</code> or <code>accepted no</code>, with <code>verified</code> refused; unmarked stays in <code>review</code> until <code>verified</code>); both values of <code>release_stage</code>; gate events refused without a quote; idempotent repeat; pending retry after a failed write.</li>
   <li><strong>file.ts:</strong> a stubbed model: duplicate found, clean create, malformed output, model failure falls back to the Pavilion.</li>
-  <li><strong>Command wiring:</strong> one test in the style of <code>index.e2e.test.ts</code>: <code>dg steward --help</code> and a <code>--dry-run</code> event.</li>
+  <li><strong>Command wiring:</strong> one test in the style of <code>index.e2e.test.ts</code>: <code>dg steward --help</code> and a <code>--dry-run</code> event. No test touches a skill, because no skill changes.</li>
   <li><strong>First use (live):</strong> a dry run against DGS-549 itself, read-only. No ticket is written to by a test.</li>
 </ul>
 </section>
@@ -218,10 +242,12 @@
 <section id="out">
 <h2>9. Not in version 1</h2>
 <ul>
+  <li>Hooks and wiring: which skill or step sends which event (DGS-551).</li>
   <li>The nightly audit. When it comes, its rule (Jack): fix the safe gaps (priority Normal, dates on done tickets, milestone links) and report the rest.</li>
   <li>Session-to-ticket ties (shared with Hallmark, DGS-531). The state field <code>sessions</code> is reserved for it.</li>
-  <li>Moves for <code>backlog</code>, <code>concept</code>, <code>refinement</code> (except the <code>accepted no</code> return), <code>release</code>, <code>documented</code>. The status flow after <code>review</code> is only <code>done</code> until the Releaser (DGS-467) exists.</li>
+  <li>The status for a failed ticket (DGS-490).</li>
   <li>The email or message to Jack when an Auto ticket goes <code>done</code> (Jack's call: a separate backlog ticket).</li>
+  <li>The Releaser itself (DGS-467). The engine only carries the <code>release</code> status and a flag.</li>
   <li>JIRA (Emma).</li>
 </ul>
 </section>
@@ -231,7 +257,7 @@
 <ul>
   <li><strong>Read ClickUp Time in Status.</strong> <code>dg</code> cannot read it. A new <code>dg clickup</code> command, with a test, is a plan item. The Steward does not need it in version 1; it feeds the refinement-time report.</li>
   <li><strong>The <code>Sign-off</code> field</strong> (drop-down, Auto and Jack) does not exist on any list yet. It is created with <code>dg clickup create-field</code> as a plan item, on the lists that hold buildable tickets. The Refiner sets it; Jack confirms it when he approves into <code>to do</code>.</li>
-  <li><strong>The <code>tracker</code> profile field</strong> and its loader change, with tests.</li>
+  <li><strong>The <code>tracker</code> and <code>release_stage</code> profile fields</strong> and their loader change, with tests.</li>
 </ul>
 </section>
 
