@@ -74,12 +74,12 @@ Cloned: 2026-08-20
   also fixing a basename collision between differently-named plan files sharing one folder.
   **Further diverged by DGS-85** (2026-09-26): its four `superpowers:finishing-a-development-branch`
   call sites now point at `digismith:finishing-a-development-branch`; W.3's call-site cutover had
-  missed them.
+  missed them. **Further diverged by DGS-529** (2026-10-17): an owner header line and a "Findings Block" section on `task-reviewer-prompt.md` and `re-review-prompt.md`; a Role Mode section and a `scripts/review-mode` script in SDD itself (see the DGS-529 spec, section 15).
 - **requesting-code-review** — map item **W.8**, activated 2026-09-11. Its shared
   `code-reviewer.md` template (used both as `subagent-driven-development`'s own final
   whole-branch review template and standalone) now runs `scripts/check-attribution` as a
   mandatory step alongside its existing diff commands — a hit is an automatic Critical finding,
-  full stop, regardless of the rest of the diff. See the frozen letter map (DGS-356), map item W.
+  full stop, regardless of the rest of the diff. See the frozen letter map (DGS-356), map item W. **Further diverged by DGS-529** (2026-10-17): an owner header line and a "Findings Block" section on `code-reviewer.md`.
 
 ## License
 

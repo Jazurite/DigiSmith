@@ -1,5 +1,7 @@
 # Code Reviewer Prompt Template
 
+Used by the Reviewer role (DGS-529). In role mode a conductor or a Maestro starts this review, never a Builder. Outside role mode it runs as before.
+
 Use this template when dispatching a code reviewer subagent.
 
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
@@ -129,6 +131,29 @@ Subagent (general-purpose):
     - Give feedback on code you didn't actually read
     - Be vague ("improve error handling")
     - Avoid giving a clear verdict
+
+    ## Findings Block
+
+    End your report with one fenced block whose info string is exactly
+    `json findings`. It holds a JSON array with one object for each
+    Critical, Important or Minor finding in this report; a ⚠️ item you
+    could not verify is not a finding. Use `[]` when you found nothing.
+    The ids are F1, F2, and so on. In a re-review, number only the new
+    findings in the fix diff, after the ids you were given. `line` is an
+    integer of 1 or more, or `null` when no line applies.
+
+    ```json findings
+    [
+      {
+        "id": "F1",
+        "path": "src/example.ts",
+        "line": 42,
+        "severity": "Important",
+        "what": "what is wrong, in one sentence",
+        "scenario": "the input or state that makes it fail"
+      }
+    ]
+    ```
 ```
 
 **Placeholders:**
