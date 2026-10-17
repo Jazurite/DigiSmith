@@ -631,6 +631,28 @@ rendered empty.
      a file that is on disk but not committed, and after the merge that stop
      has no recovery while the head pin is fixed.
 
+### Step 4a: Findings table (role mode only)
+
+The review reports live in the plan's workspace, which the Finish step deletes,
+so build the table now. Let `<workspace>` be the directory
+`skills/subagent-driven-development/scripts/sdd-workspace PLAN_FILE` prints.
+
+- **No `reviews/` folder in `<workspace>`** (a by-hand run, or an inline
+  `executing-plans` run): nothing to do. Skip this step silently.
+- **Otherwise** run
+  `dg reviewer table --workspace <workspace> --out <target folder>/findings.md`.
+  - It prints `wrote <file> (<n> row(s))`: add `<target folder>/findings.md` to the
+    same `git add` as the report in Step 4 (unless the folder is gitignored, as
+    Step 4 checks), and link the table from `report.html` with one line in the
+    report's reviews section.
+  - It exits 1 (a finding with no verdict line, a report without a findings
+    block, a missing ledger): stop and report the message to the human partner.
+    Do not write the report as if the reviews were complete. The Builder fixes the
+    ledger lines, then runs this step again.
+- Attaching `findings.md` to the ClickUp ticket is the conductor's job
+  (`dg clickup upload-attachment`). A worker has no ClickUp write. Mention the
+  file path in the hand-back (Step 5).
+
 ### Step 5: Hand Back
 
 This skill's job ends here either way.
