@@ -115,7 +115,7 @@
 <p>The role is one skill: <code>skills/reviewer/SKILL.md</code>, called <code>digismith:reviewer</code>. It is the Reviewer card. A <code>task</code> worker and a <code>ticket</code> worker both load the same file, so the rules cannot drift between the two types. A skill is the right place because the repo already holds its roles' text in skills, and a herdr worker can read a skill from the brief.</p>
 <p>The card holds, and only holds:</p>
 <ul>
-  <li><strong>Authority.</strong> Read the target. Write one report and one findings file, in scratch. Return findings and a verdict. Nothing else. This is the Reviewer ceiling of DGS-404 (section 4 of that design). The one change is the preview step (section 8).</li>
+  <li><strong>Authority.</strong> Read the target. Write one report file (<code>report.md</code>, ending with the findings block), in scratch. Return findings and a verdict. Nothing else. This is the Reviewer ceiling of DGS-404 (section 4 of that design). The one change is the preview step (section 8).</li>
   <li><strong>The type table</strong> (section 3) and the pack each type reads (section 4).</li>
   <li><strong>The type to model policy</strong> (section 5, "The model"). The role sets the model when a review starts. Neither the conductor nor the Builder picks it.</li>
   <li><strong>Which primitive to follow for which job</strong>, by reference, never by copy (section 3).</li>
@@ -165,7 +165,7 @@
 
 <section id="packs">
 <h2>4. Context packs</h2>
-<p>A pack is the complete input of one review. It is a folder with a manifest, built by code, not assembled from memory. A new command builds it: <code>dg reviewer pack --type task|ticket --plan &lt;plan.md&gt; ...</code>. It calls the existing <code>review-package</code> script for the diff, so the attribution check still runs before any pack is written. A hit stops the pack and the review.</p>
+<p>A pack is the complete input of one review. It is a folder with a manifest, built by code, not assembled from memory. A new command builds it: <code>dg reviewer pack --type task|ticket --plan &lt;plan.md&gt; ...</code>. It takes the diff file that the existing <code>review-package</code> script wrote, and refuses any file that does not start with the package header. The attribution check runs inside <code>review-package</code>, so a hit stops the diff file and with it the pack and the review. (The depot clone that <code>dg</code> runs from holds only <code>packages/</code>, so the command cannot call a skill script itself. The Builder runs the script and passes the file.)</p>
 <p>Location: <code>&lt;sdd workspace&gt;/reviews/&lt;type&gt;-&lt;id&gt;-r&lt;round&gt;/</code>. The workspace is the plan's git-ignored <code>.sdd-workspace</code> (the SDD script <code>sdd-workspace</code> prints it). The manifest is <code>pack.md</code>. It lists each file with an absolute path and a one-line role, and it carries the values that fill the primitive's placeholders: base, head, diff file, model, brief file. The model comes from the role's model policy (section 5), so the conductor reads it from the pack and does not choose it.</p>
 <div class="table-wrap"><table>
 <tr><th>Pack</th><th>Contains</th><th>Never contains</th></tr>
@@ -191,7 +191,7 @@
 <ol>
   <li><strong>Request.</strong> The SDD controller finishes a task and its implementer. It runs <code>dg reviewer pack --type task --task N</code>, appends the ledger line <code>Task N: review requested</code>, and reports <code>STOP: task-review-ready &lt;pack path&gt;</code>. It does not dispatch a reviewer. It waits.</li>
   <li><strong>Start or reuse.</strong> The conductor (or the Maestro) looks for the ticket's task Reviewer. None exists: it starts one with the runbook's "Start of a ticket" steps (S0 to S6), brief <code>skills/reviewer/brief.md</code>, agent <code>&lt;key&gt;-rev-task</code>, label <code>&lt;KEY&gt; ⚚ Review task</code>. One exists and is idle: it sends <code>/clear</code>, then the prompt. The prompt is short: <code>Read &lt;pack&gt;/pack.md and follow the Reviewer card.</code> The conductor reads the pane with <code>--format ansi</code> first and sends only when the input box is empty.</li>
-  <li><strong>Review.</strong> The Reviewer follows the primitive named in <code>pack.md</code>. It writes <code>&lt;pack&gt;/report.md</code> and the findings file, and ends with one pane line: <code>done: &lt;pack&gt; verdict: &lt;Approved|Needs fixes&gt;</code>.</li>
+  <li><strong>Review.</strong> The Reviewer follows the primitive named in <code>pack.md</code>. It writes <code>&lt;pack&gt;/report.md</code>, ending with the findings block, and ends with one pane line: <code>done: &lt;pack&gt; verdict: &lt;Approved|Needs fixes&gt;</code>.</li>
   <li><strong>Relay.</strong> The conductor prompts the Builder with the report path and the verdict, and does not filter the findings. The SDD controller verifies the ⚠️ items itself (it holds the plan and the cross-task context) and adjudicates, as SDD says.</li>
   <li><strong>Fix loop.</strong> The primitive's loop stays: up to 5 rounds. The Builder's implementer fixes (rounds 1 to 3 resumed, rounds 4 and 5 fresh on a stronger model). The controller runs <code>dg reviewer pack --type task --task N --round R</code> for the scoped re-review and reports <code>STOP: task-review-ready &lt;pack&gt;</code> again. The same Reviewer worker takes it after <code>/clear</code>, with <code>re-review-prompt.md</code>.</li>
   <li><strong>Breaker.</strong> After round 5 the SDD controller adjudicates the open findings, as the primitive says: park with a ruling, or <code>BLOCKED</code> to the parent.</li>
@@ -205,7 +205,7 @@
   <li><strong>Request.</strong> The Builder finishes the last task, runs <code>dg reviewer pack --type ticket</code>, appends <code>Task final: review requested</code>, and reports <code>STOP: ticket-review-ready &lt;pack path&gt;</code>. It waits.</li>
   <li><strong>Start.</strong> The conductor starts the Reviewer with S0 to S6, with these values:
     <ul>
-      <li>Brief: <code>skills/reviewer/brief.md</code>, a template with the type as a placeholder. It names the pack and the card. It says: judge only, write one report and one findings file, never edit, never merge.</li>
+      <li>Brief: <code>skills/reviewer/brief.md</code>, a template with the type as a placeholder. It names the pack and the card. It says: judge only, write one report, never edit, never merge.</li>
       <li>Agent: <code>&lt;key&gt;-rev</code>, for example <code>dgs-529-rev</code>. Label: <code>&lt;KEY&gt; ⚚ Review</code>. The runbook's Names block allows a short word when one ticket has two workers.</li>
       <li>Working folder: the Builder's worktree, read only. The Builder is stopped, so nothing changes under the Reviewer. During a fix wave the Reviewer is idle.</li>
       <li>Model: Opus 5.5. Seat: see below.</li>
@@ -213,7 +213,7 @@
       <li>The Reviewer registers its session for the ticket's token count (<code>entry.ts session --ticket &lt;KEY&gt; --role reviewer</code>, written in the brief), so its tokens count with the ticket.</li>
     </ul>
   </li>
-  <li><strong>Review.</strong> The Reviewer follows <code>code-reviewer.md</code> against its pack, writes <code>&lt;pack&gt;/report.md</code> and the findings file, and ends with one pane line: <code>done: &lt;path&gt; verdict: &lt;approved|needs-fixes&gt;</code>.</li>
+  <li><strong>Review.</strong> The Reviewer follows <code>code-reviewer.md</code> against its pack, writes <code>&lt;pack&gt;/report.md</code>, ending with the findings block, and ends with one pane line: <code>done: &lt;path&gt; verdict: &lt;approved|needs-fixes&gt;</code>.</li>
   <li><strong>Verify and relay.</strong> The conductor verifies each finding (the skill <code>digismith:receiving-code-review</code>), then sends the verified findings to the Builder. A finding the conductor cannot verify goes to the Maestro, not into a fix.</li>
   <li><strong>Fix wave.</strong> The Builder dispatches ONE fix subagent with the whole list (the SDD rule), runs the re-review pack and reports <code>STOP: ticket-review-ready &lt;pack&gt;</code> again.</li>
   <li><strong>Re-review.</strong> The same Reviewer worker gets the round 2 pack by <code>herdr agent prompt</code> and follows <code>re-review-prompt.md</code>. If the worker is gone, a new one starts with the round 1 report in its pack.</li>
@@ -279,7 +279,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <tr><td>task 9</td><td>1</td><td>-</td><td>-</td><td>approved, no findings</td><td>-</td><td>-</td></tr>
 </table></div>
 <p>A finding with no verdict line makes the command fail with the finding's id. An unjudged finding must not ship in a table.</p>
-<p>When it runs: in <code>digismith:report-implementation</code>, after the final review and before the Finish step deletes the SDD workspace. By hand, where no review wrote a findings file, the command finds nothing, says so and writes no file (section 15). The report files live in that workspace, so the table must be built first. The conductor attaches <code>findings.md</code> to the ticket with <code>dg clickup upload-attachment</code> (a worker has no ClickUp write). This is the Provenance record (DGS-534). The report skill also links the table from <code>report.html</code>.</p>
+<p>When it runs: in <code>digismith:report-implementation</code>, after the final review and before the Finish step deletes the SDD workspace. By hand, where no review pack exists, the command finds nothing, says so and writes no file (section 15). The report files live in that workspace, so the table must be built first. The conductor attaches <code>findings.md</code> to the ticket with <code>dg clickup upload-attachment</code> (a worker has no ClickUp write). This is the Provenance record (DGS-534). The report skill also links the table from <code>report.html</code>.</p>
 </section>
 
 <section id="preview">
@@ -396,8 +396,8 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <tr><th>Task review</th><td>SDD dispatches <code>task-reviewer-prompt.md</code> as a subagent. The old text applies unchanged.</td><td>SDD runs <code>dg reviewer pack</code>, writes <code>Task N: review requested</code>, reports <code>STOP: task-review-ready</code> and waits.</td></tr>
 <tr><th>Final review</th><td>SDD dispatches <code>code-reviewer.md</code> as a subagent. Unchanged.</td><td><code>STOP: ticket-review-ready</code>, and a conductor starts the ticket Reviewer.</td></tr>
 <tr><th><code>requesting-code-review</code> by hand</th><td>As today. The user or a Maestro dispatches <code>code-reviewer.md</code>.</td><td>Not applicable: a Builder never uses it.</td></tr>
-<tr><th>Findings block</th><td>The block at the end of the report is part of the prompt. <code>[FINDINGS_FILE]</code> is optional: with no value the reviewer only prints the block. Old dispatches that do not fill it keep working.</td><td><code>[FINDINGS_FILE]</code> is set by the pack.</td></tr>
-<tr><th>Verdict lines and the table</th><td>No new ledger lines. <code>dg reviewer table</code> finds no findings files, says so and writes no file.</td><td>Verdict lines are written. <code>report-implementation</code> builds <code>findings.md</code>.</td></tr>
+<tr><th>Findings block</th><td>The block is an extra section at the end of the primitive's prompt. By hand the reviewer prints it at the end of its report like any other section. No placeholder is added, so old dispatches keep working unchanged.</td><td>The Reviewer ends <code>report.md</code> with the block. <code>dg reviewer table</code> reads it from there.</td></tr>
+<tr><th>Verdict lines and the table</th><td>No new ledger lines. <code>dg reviewer table</code> finds no review packs, says so and writes no file.</td><td>Verdict lines are written. <code>report-implementation</code> builds <code>findings.md</code>.</td></tr>
 <tr><th>Ledger</th><td>Grammar unchanged. One added line at setup: <code>Review mode: hand</code>.</td><td>Added lines: <code>Review mode: role</code>, <code>Task N: review requested</code>, verdict lines.</td></tr>
 </table></div>
 
@@ -412,7 +412,7 @@ Review task 3 r1: F1 -&gt; rejected (out of scope per plan line 40)</code></pre>
 <h3>Tests for both paths</h3>
 <ul>
   <li><strong>The switch.</strong> <code>review-mode</code> prints <code>hand</code> when the variable is unset, empty, <code>Role</code>, <code>1</code> or <code>role </code>, and <code>role</code> only for exactly <code>role</code>.</li>
-  <li><strong>The old path stays.</strong> A text test lists anchor phrases of the old dispatch text (for example "Dispatch final code reviewer", "Generate review package, dispatch task reviewer", "Never dispatch a task reviewer without a diff file") and asserts that each is still in <code>SKILL.md</code>. The same test checks that the primitive prompts keep their original placeholders and that <code>[FINDINGS_FILE]</code> is documented as optional.</li>
+  <li><strong>The old path stays.</strong> A text test lists anchor phrases of the old dispatch text (for example "Dispatch final code reviewer", "Generate review package, dispatch task reviewer", "Never dispatch a task reviewer without a diff file") and asserts that each is still in <code>SKILL.md</code>. The same test checks that the primitive prompts keep their original placeholders and that the findings section is the only addition besides the owner header.</li>
   <li><strong>The new path exists.</strong> A text test asserts that SDD has the role-mode section, the two marker names (<code>STOP: task-review-ready</code>, <code>STOP: ticket-review-ready</code>) and the ledger lines.</li>
   <li><strong>By hand, the table.</strong> <code>dg reviewer table</code> on a workspace with no <code>reviews/</code> folder exits 0, writes no file and says "no reviews found".</li>
   <li><strong>The vendored check.</strong> The existing <code>check_vendored_skills.ts</code> test still passes, and a run on the branch reports the changes as local divergence only.</li>
