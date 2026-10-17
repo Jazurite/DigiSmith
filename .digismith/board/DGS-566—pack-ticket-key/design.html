@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviewer pack: ticket key in pack.md</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">for checkpoint 1</span>
+  <h1>Reviewer pack: ticket key in pack.md</h1>
+  <div class="meta">
+    <span>Date: 2026-10-18</span>
+    <span>Ticket: DGS-566</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#approaches">Approaches</a></li>
+    <li><a href="#design">Design</a></li>
+    <li><a href="#tests">Tests and old-path protection</a></li>
+    <li><a href="#build">How it is built</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2>1. Problem</h2>
+  <p><code>dg reviewer pack</code> writes <code>pack.md</code>. The file has no ticket line. The Reviewer card says: take the ticket key from the board folder named in the paths of <code>pack.md</code>. That is a guess from a path. A task Reviewer is reused for the whole ticket and the key is needed at every review: the session registration (<code>entry.ts session --ticket &lt;KEY&gt; --role reviewer</code>) counts the Reviewer's tokens with the ticket. A wrong or missing key loses those tokens.</p>
+</section>
+
+<section id="approaches">
+  <h2>2. Approaches</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Option</th><th>Source of the key</th><th>Verdict</th></tr>
+    <tr><td><b>A. A <code>--ticket</code> option</b></td><td>The Builder passes the key. It has it: the <code>**Key:**</code> line of <code>ticket.md</code>, and the branch prefix.</td><td><b>Chosen.</b> Explicit, one line, no guessing, works for both pack types and every round.</td></tr>
+    <tr><td>B. Read the git branch</td><td><code>^KEY__</code> of the current branch</td><td>No. A keyless branch has no prefix. The pack builder would depend on the checkout it runs in.</td></tr>
+    <tr><td>C. Read it from <code>--ticket-file</code></td><td>The <code>**Key:**</code> line</td><td>No. Only a round 1 ticket pack has that file. A task pack has none.</td></tr>
+  </table></div>
+</section>
+
+<section id="design">
+  <h2>3. Design</h2>
+  <h3>Where the key comes from</h3>
+  <p><code>dg reviewer pack</code> gets a new required option <code>--ticket &lt;KEY|none&gt;</code>. <code>PackInput</code> gets <code>ticket: string</code>. The option is required on purpose: an optional one is the bug again, the day a Builder forgets it. Value <code>none</code> is for work with no tracker key (a <code>ticket: false</code> profile).</p>
+  <h3>Validation</h3>
+  <p><code>buildPack</code> accepts <code>/^[A-Z][A-Z0-9]*-\d+$/</code> or the word <code>none</code>. Anything else throws <code>ticket: must be a ticket key such as DGS-566, or none</code>. The CLI prints it as <code>error: ...</code> and exits 1, like every other pack error. A pack that fails writes no folder (the check runs before <code>mkdir</code>).</p>
+  <h3>Manifest line</h3>
+  <p>One line, first field after the title, before <code>type:</code>:</p>
+<pre><code># Review pack: task 7 round 1
+
+ticket: DGS-566
+type: task
+id: 7
+...</code></pre>
+  <p>Same <code>key: value</code> shape as the other fields. It is written in every round and both types.</p>
+  <h3>Card text</h3>
+  <p>In <code>skills/reviewer/SKILL.md</code>, the registration rule becomes: "<code>pack.md</code> has a <code>ticket:</code> line. Use it as <code>&lt;KEY&gt;</code>. A <code>ticket: none</code> line means no registration: skip the command." The sentence about the board folder is removed. The flow step that lists what <code>pack.md</code> holds names the ticket line. <code>skills/reviewer/brief.md</code> already has <code>{{KEY}}</code> from the conductor: it stays, and its registration line stays.</p>
+  <h3>SDD role mode</h3>
+  <p>The four <code>dg reviewer pack</code> command lines in <code>skills/subagent-driven-development/SKILL.md</code> get <code>--ticket &lt;KEY&gt;</code>, and the role-mode text says where the Builder takes the key (the <code>**Key:**</code> line of <code>ticket.md</code>, or <code>none</code>).</p>
+</section>
+
+<section id="tests">
+  <h2>4. Tests and old-path protection</h2>
+  <ul>
+    <li><code>pack.test.ts</code>: the manifest has <code>ticket: DGS-566</code> for a task pack, a ticket pack and a round 2 pack; <code>none</code> is written as <code>ticket: none</code>; a bad value (<code>dgs-566</code>, <code>566</code>, empty) throws and leaves no folder.</li>
+    <li><code>index.test.ts</code>: the CLI refuses a pack with no <code>--ticket</code> and prints the key in the manifest when given.</li>
+    <li><code>card.test.ts</code>: the card names the <code>ticket:</code> line and no longer says "board folder".</li>
+    <li><code>sdd.test.ts</code>: every <code>dg reviewer pack</code> line in the SDD skill carries <code>--ticket</code>.</li>
+    <li><code>both-paths.test.ts</code> (the Task 14 tests): the <b>old path</b> test (hand mode, <code>review-package</code> alone, no pack) is not touched and still passes: hand mode never calls <code>pack</code>, so a required option cannot break it. The <b>role path</b> test gets the new argument and one added assertion: the pack of a real range carries the <code>ticket:</code> line.</li>
+  </ul>
+</section>
+
+<section id="build">
+  <h2>5. How it is built</h2>
+  <p>One build ticket, about 4 small tasks: (1) <code>pack.ts</code> and <code>index.ts</code> with their tests; (2) the card and <code>card.test.ts</code>; (3) the SDD command lines and <code>sdd.test.ts</code>; (4) <code>both-paths.test.ts</code> and a plugin version check.</p>
+  <div class="callout">This is the <b>first role-mode build</b>. A Builder runs it with <code>DIGISMITH_REVIEW_MODE=role</code> (runbook, "Start of a Reviewer"). The task Reviewers and the final Reviewer run as their own workers under the role mode of DGS-529. The plan keeps each task small, with a diff file per task and a findings block per review. The new <code>ticket:</code> line is what the reused task Reviewer reads. Until task 1 merges in the Builder's branch, the packs of this very build have no <code>ticket:</code> line: the Reviewer uses the key in the conductor's brief for those. No card-mode fallback is needed (the live check passed).</div>
+  <p>Out of scope: moving the Reviewer events (DGS-551), other pack fields, a ClickUp write.</p>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-566—pack-ticket-key/design.html</footer>
+
+</body>
+</html>
