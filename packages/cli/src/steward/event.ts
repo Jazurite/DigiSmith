@@ -91,14 +91,13 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
 }
 
 const REPAIRED_IN = ["in progress", "review", "acceptance", "release", "done", "documented"];
-const DONE_LIKE = ["done", "documented"];
 
-/** The start date to write, or null. A start later than today becomes today (ClickUp's Reschedule dependencies moves a dependent's start to the day after its predecessor's due date). A missing start becomes the day the ticket entered in progress, else today. On done, a start later than the due date becomes the due date. */
+/** The start date to write, or null. A start later than today becomes today (ClickUp's Reschedule dependencies moves a dependent's start to the day after its predecessor's due date). A missing start becomes the day the ticket entered in progress, else today. A start later than the due date becomes the due date (ClickUp refuses it with ITEM_238). */
 function repairedStart(snap: TicketSnapshot, today: string, enteredOn: string | null): string | null {
   if (!REPAIRED_IN.includes(snap.status)) return null;
   let start = snap.startDate ?? enteredOn ?? today;
   if (start > today) start = today;
-  if (DONE_LIKE.includes(snap.status) && snap.dueDate !== null && start > snap.dueDate) start = snap.dueDate;
+  if (snap.dueDate !== null && start > snap.dueDate) start = snap.dueDate;
   return start === snap.startDate ? null : start;
 }
 
@@ -153,7 +152,21 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
   // Writes that failed earlier go first, in order.
   const stillPending: PendingWrite[] = [];
   for (const p of st.pending) {
-    if (snap.status === p.to) continue; // already there: nothing to send, and no second comment
+    if (snap.status === p.to) {
+      // Already there: no second status write and no second comment. The dates may not have landed with the status, so send those.
+      const q: PendingWrite = { ...p, start: p.start && st.start_written !== p.start ? p.start : undefined, due: p.due && st.due_written !== p.due ? p.due : undefined };
+      if (q.start || q.due) {
+        try {
+          await setDatesOnce(tracker, ticket, q);
+          if (q.start) st.start_written = q.start;
+          if (q.due) st.due_written = q.due;
+        } catch (err) {
+          warn.push(`steward: ${ticket}: could not write the dates of the earlier move to ${p.to} (${(err as Error).message}); will retry at the next event`);
+          stillPending.push(p);
+        }
+      }
+      continue;
+    }
     if (snap.status !== p.from) {
       warn.push(`steward: ${ticket}: dropped the queued move to ${p.to} because the ticket is now in ${snap.status}`);
       continue;

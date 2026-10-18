@@ -123,6 +123,26 @@ describe("the dates repair at every event", () => {
     expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
   });
+  it("a done move whose status landed but whose dates failed: the next event writes the dates", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-01" }));
+    const original = t.setDates.bind(t);
+    let failed = false;
+    t.setDates = async (k, d) => { if (d.due && !failed) { failed = true; throw new Error("boom"); } await original(k, d); };
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.ticket.status).toBe("done");
+    expect(t.ticket.dueDate).toBeNull();
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.ticket).toMatchObject({ status: "done", dueDate: "2026-10-18" });
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+    expect(readState(dir, "DGS-1")!.due_written).toBe("2026-10-18");
+  });
+  it("a missing start is clamped to an earlier due date in every repaired status", async () => {
+    const t = new FakeTracker(snapshot("in progress", { dueDate: "2026-10-10" }));
+    await run(t, { event: "started" });
+    expect(t.calls).toEqual(["dates:2026-10-10|"]);
+    expect(t.ticket.startDate).toBe("2026-10-10");
+  });
   it("fills a missing start with the day the ticket entered in progress", async () => {
     const t = new FakeTracker(snapshot("to do"));
     await run(t, { event: "started" }, { now: () => new Date("2026-10-16T05:00:00Z") }); // the 16th in UTC+7
