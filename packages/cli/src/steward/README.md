@@ -14,7 +14,7 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `discovery-started` | concept | discovery |
 | `refinement-started` | concept, discovery | refinement |
 | `approved` (gate, needs `--quote`) | refinement | to do |
-| `started` | to do | in progress (start date) |
+| `started` | to do | in progress (start date; a start later than today is replaced) |
 | `review-started` | in progress | review |
 | `merged` | review | Sign-off Auto: done. Jack: acceptance. Unmarked: stays, records the merge |
 | `verified` | review (merge recorded, unmarked) | done |
@@ -26,3 +26,14 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 
 A non-zero exit (code 2) means a usage error only. Tracker or state failures print one line and exit 0.
 Which skill or step sends which event is DGS-551.
+
+## Dates and "Reschedule dependencies"
+
+The ClickUp space setting "Reschedule dependencies" is ON. ClickUp can move the dates of a ticket that waits on another ticket, whenever the other ticket's dates change. The Steward does not fight this between events: it has no timer and no watcher. It repairs dates inside its own events, at every event, from the snapshot it reads first, even when the status is already there:
+
+- A ticket in progress or later (not discarded or Closed): a start date later than today becomes today.
+- On done or documented: a start date later than the due date becomes the due date.
+- A missing start date is filled with the day the ticket entered in progress (from the state log), else today. An earlier start date is kept.
+- `started` also replaces a late start date and reads the ticket back once after its write.
+- If ClickUp still answers ITEM_238 (start after due) on the done write, the Steward retries once with start = due.
+- A failed repair is a warning. The next event repairs again.
