@@ -85,9 +85,14 @@ function repairedStart(snap: TicketSnapshot, today: string, enteredOn: string | 
   return start === snap.startDate ? null : start;
 }
 
+function lateStart(snap: TicketSnapshot, today: string): boolean {
+  return snap.startDate !== null && snap.startDate > today;
+}
+
 function pendingOf(move: Move, st: StewardState, snap: TicketSnapshot, today: string): PendingWrite {
   const p: PendingWrite = { to: move.to, from: snap.status };
   if (move.startDate && !st.start_written && !snap.startDate) p.start = today;
+  if (move.startDate && lateStart(snap, today)) p.start = today;
   if (move.dueDate) p.due = today;
   if (move.comment) p.comment = move.comment;
   return p;
@@ -136,6 +141,7 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
       warn.push(`steward: ${ticket}: dropped the queued move to ${p.to} because the ticket is now in ${snap.status}`);
       continue;
     }
+    if (p.to === "in progress" && lateStart(snap, today)) p.start = today;
     const res = await write(tracker, ticket, st, p, now, snap);
     if (!res.ok) stillPending.push(p);
     else out.push(`steward: ${ticket}: retried the earlier move to ${p.to}`);

@@ -55,6 +55,13 @@ describe("a start", () => {
     await run(t, { event: "started" });
     expect(t.calls).toEqual(["status:in progress"]);
   });
+  it("replaces a start date later than today (a dependent ClickUp moved)", async () => {
+    const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-19" }));
+    await run(t, { event: "started" });
+    expect(t.calls).toEqual(["status:in progress", "dates:2026-10-18|"]);
+    expect(t.ticket.startDate).toBe("2026-10-18");
+    expect(readState(dir, "DGS-1")!.start_written).toBe("2026-10-18");
+  });
 });
 
 describe("the dates repair at every event", () => {
@@ -229,6 +236,15 @@ describe("a failed write", () => {
     await run(t, { event: "review-started" });
     expect(t.ticket.status).toBe("review");
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("a queued start takes start = today when ClickUp shifted the start meanwhile", async () => {
+    const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-01" }));
+    t.failWrites = 1;
+    await run(t, { event: "started" });
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    t.ticket.startDate = "2026-10-19";
+    await run(t, { event: "review-started" });
+    expect(t.ticket).toMatchObject({ status: "review", startDate: "2026-10-18" });
   });
   it("a read-back that differs from the write counts as a failed write", async () => {
     const t = new FakeTracker(snapshot("to do"));
