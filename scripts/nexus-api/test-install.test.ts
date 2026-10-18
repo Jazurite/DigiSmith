@@ -1,5 +1,6 @@
-import { spawnSync } from 'node:child_process'
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { createServer } from 'node:net'
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,6 +9,12 @@ import { sudoersLine } from './src/command.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const sh = (args: string[], env: Record<string, string>) => spawnSync('sh', args, { encoding: 'utf8', env: { PATH: process.env.PATH ?? '', ...env } })
+
+const freePort = () => new Promise<number>((res, rej) => {
+  const s = createServer()
+  s.once('error', rej)
+  s.listen(0, '127.0.0.1', () => { const p = (s.address() as { port: number }).port; s.close(() => res(p)) })
+})
 
 describe('install.sh', () => {
   const home = mkdtempSync(join(tmpdir(), 'nexus-install-home-'))
@@ -72,6 +79,62 @@ describe('install.sh', () => {
     const out = spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', script], { encoding: 'utf8' })
     expect(out.status, out.stderr).toBe(0)
     expect(JSON.parse(out.stdout.trim().split('\n').at(-1)!)).toEqual({ status: 200, source: 'ok', cpu: 50.33, version: 'MacBookPro16,1' })
+  }, 30000)
+  it('copies every non-test scheduler file and no test or fixture into the depot', () => {
+    const want = readdirSync(join(HERE, 'src/scheduler')).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts')).sort()
+    expect(want.length).toBeGreaterThan(0)
+    const got = readdirSync(join(depot, 'nexus-api/src/scheduler')).sort()
+    expect(got).toEqual(want)
+    expect(got.filter(f => f.endsWith('.test.ts') || f === 'fixtures')).toEqual([])
+  })
+  it('the plist template is unchanged against the base of this ticket', () => {
+    const rel = 'scripts/nexus-api/com.jazurite.digismith.nexus-api.plist.tmpl'
+    const git = (args: string[]) => spawnSync('git', args, { cwd: HERE, encoding: 'utf8' })
+    const base = git(['merge-base', 'main', 'HEAD'])
+    expect(base.status, base.stderr).toBe(0)
+    const old = git(['show', `${base.stdout.trim()}:${rel}`])
+    expect(old.status, old.stderr).toBe(0)
+    expect(readFileSync(join(HERE, 'com.jazurite.digismith.nexus-api.plist.tmpl'), 'utf8')).toBe(old.stdout)
+  })
+  it('the depot copy starts on a high port and lists the jobs, with a private token file', async () => {
+    const state = mkdtempSync(join(tmpdir(), 'nexus-install-state-'))
+    const port = await freePort()
+    expect(port).not.toBe(4300)
+    const child = spawn(process.execPath, ['--experimental-strip-types', join(realpathSync(depot), 'nexus-api/src/server.ts')], {
+      env: { PATH: process.env.PATH ?? '', HOME: home, DIGISMITH_DEPOT: depot, NEXUS_STATE_DIR: state, PORT: String(port) },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let log = ''
+    child.stdout.on('data', d => { log += d })
+    child.stderr.on('data', d => { log += d })
+    const exited = new Promise<void>(res => child.once('exit', () => res()))
+    try {
+      let res: Response | undefined
+      for (let i = 0; i < 100 && !res; i++) {
+        if (child.exitCode !== null) break
+        res = await fetch(`http://127.0.0.1:${port}/api/v1/jobs`).catch(() => undefined)
+        if (!res) await new Promise(r => setTimeout(r, 100))
+      }
+      if (!res) throw new Error(log)
+      expect(res!.status).toBe(200)
+      const text = await res!.text()
+      const body = JSON.parse(text)
+      const list = (Array.isArray(body) ? body : body.jobs) as Array<{ id?: string; name?: string; nextRunAt: unknown; lastRun: unknown }>
+      const selftest = list.find(j => (j.id ?? j.name) === 'selftest')
+      expect(selftest, text).toBeDefined()
+      expect(selftest!.nextRunAt).toBeNull()
+      expect(selftest!.lastRun).toBeNull()
+      const tokenFile = join(state, 'token')
+      expect(statSync(tokenFile).mode & 0o777).toBe(0o600)
+      const token = readFileSync(tokenFile, 'utf8').trim()
+      expect(token.length).toBeGreaterThan(0)
+      expect(text).not.toContain(token)
+    } finally {
+      child.kill('SIGTERM')
+      await Promise.race([exited, new Promise(r => setTimeout(r, 5000))])
+      if (child.exitCode === null) child.kill('SIGKILL')
+      await exited
+    }
   }, 30000)
   it('install.sh never uses sudo or launchctl, and writes only under $DEPOT', () => {
     const code = readFileSync(join(HERE, 'install.sh'), 'utf8').replace(/^\s*#.*$/gm, '').replace(/echo[^\n]*\n/g, '')
