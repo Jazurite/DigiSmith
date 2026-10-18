@@ -47,7 +47,10 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'selftest',
     description: 'Prints one line; proves the scheduler end to end. Run now only.',
-    command: { file: process.execPath, args: ['-e', "process.stdout.write('selftest ok\\n')"] },
+    command: {
+      file: process.execPath,
+      args: ['-e', "if (process.env.SELFTEST_FAIL === '1') { process.stderr.write('selftest failed (SELFTEST_FAIL=1)\\n'); process.exit(1) } else process.stdout.write('selftest ok\\n')"],
+    },
   }),
 ]
 

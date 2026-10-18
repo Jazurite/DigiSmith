@@ -79,10 +79,21 @@ describe('JOBS', () => {
     expect(JOBS[0]?.schedule).toBeUndefined()
     expect(isAbsolute(JOBS[0]!.command.file)).toBe(true)
   })
-  it('selftest prints one line', async () => {
+  it('selftest prints one line and exits 0 without SELFTEST_FAIL', async () => {
     const { command } = JOBS[0]!
-    const { stdout } = await promisify(execFile)(command.file, command.args)
+    const env = { ...process.env }
+    delete env.SELFTEST_FAIL
+    const { stdout, stderr } = await promisify(execFile)(command.file, command.args, { env })
     expect(stdout.trim().split('\n')).toEqual(['selftest ok'])
+    expect(stderr).toBe('')
+  })
+  it('selftest exits 1 with one stderr line when SELFTEST_FAIL=1', async () => {
+    const { command } = JOBS[0]!
+    const err = await promisify(execFile)(command.file, command.args, { env: { ...process.env, SELFTEST_FAIL: '1' } })
+      .then(() => null, (e: { code?: number; stdout?: string; stderr?: string }) => e)
+    expect(err?.code).toBe(1)
+    expect(err?.stdout).toBe('')
+    expect(err?.stderr?.trim().split('\n')).toEqual(['selftest failed (SELFTEST_FAIL=1)'])
   })
 })
 
