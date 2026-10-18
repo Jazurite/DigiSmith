@@ -137,7 +137,7 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
   const st = loadState(deps, ticket, snap);
 
   // Dates first, at every event: ClickUp may have moved them since the last one.
-  const entered = st.log.findLast((l) => l.outcome === "applied" && l.note.endsWith("-> in progress"));
+  const entered = [...st.log].reverse().find((l) => l.outcome === "applied" && l.note.endsWith("-> in progress"));
   const fixed = repairedStart(snap, today, entered ? todayUtc7(new Date(entered.at)) : null);
   if (fixed !== null) {
     try {
