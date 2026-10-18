@@ -11,10 +11,14 @@ NODE=$(command -v node) || { echo "install: node not found" >&2; exit 1; }
 case "$NODE" in *'|'*|*'&'*|*'<'*|*'>'*|*'"'*|*'$'*|*'`'*|*'\'*) echo "install: node path may not contain | & < > \" \$ \` or a backslash" >&2; exit 1;; esac
 USER_NAME=$(id -un)
 
-mkdir -p "$DEPOT/bin" "$DEPOT/nexus-api/src" "$DEPOT/nexus/logs"
+mkdir -p "$DEPOT/bin" "$DEPOT/nexus-api/src/scheduler" "$DEPOT/nexus/logs"
 for f in "$SRC"/src/*.ts; do
   case "$f" in *.test.ts) continue;; esac
   cp "$f" "$DEPOT/nexus-api/src/"
+done
+for f in "$SRC"/src/scheduler/*.ts; do
+  case "$f" in *.test.ts) continue;; esac
+  cp "$f" "$DEPOT/nexus-api/src/scheduler/"
 done
 cp "$SRC/package.json" "$DEPOT/nexus-api/package.json"
 # DGS-481: the shared schema sits next to the API in the depot, so ../../nexus-shared/ resolves the same as in the repo.

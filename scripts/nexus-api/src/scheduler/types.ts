@@ -37,4 +37,4 @@ export interface JobsResponse { generatedAt: string; jobs: JobInfo[] }
 export interface RunsResponse { job: string; runs: RunRecord[] }
 export interface RunNowRequest { confirm: string }
 export interface RunNowResponse { accepted: true; run: { id: string; startedAt: string } }
-export interface JobsError { error: 'not_found' | 'already_running' | 'bad_request' | 'forbidden' | 'method_not_allowed'; message: string }
+export interface JobsError { error: 'not_found' | 'already_running' | 'bad_request' | 'forbidden' | 'method_not_allowed' | 'stopped'; message: string }

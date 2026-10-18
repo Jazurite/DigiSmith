@@ -11,6 +11,11 @@ import { createLive } from './live.ts'
 import { createPowermetricsSource, type RunPowermetrics } from './powermetrics-source.ts'
 import { buildReading } from './reading.ts'
 import type { PowerMetrics } from './types.ts'
+import { createEngine } from './scheduler/engine.ts'
+import { ensureToken } from './scheduler/guard.ts'
+import { createClickupNotifier } from './scheduler/notify.ts'
+import { JOBS } from './scheduler/registry.ts'
+import { stateDir } from './scheduler/runlog.ts'
 
 export const HOST = '127.0.0.1'
 const DEFAULT_PORT = 4300
@@ -45,5 +50,30 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     // lazy, so a missing key makes the calendar route answer 503 key_unavailable and never stops the server from starting
     getKey: () => Promise.resolve().then(() => selectKeyProvider(process.env.NEXUS_KEY_PROVIDER, { keyFile: join(depot, 'nexus', 'profile.key') }).getKey()),
   })
-  createApiServer(createDefaultReader(), { logger, loadProfile }).listen(port, HOST, () => logger.info('listening', { host: HOST, port }))
+  process.on('unhandledRejection', (err) => logger.error('scheduler_error', { where: 'unhandled_rejection', code: errorCode(err) }))
+  // the state follows DIGISMITH_DEPOT like the profile does, unless NEXUS_STATE_DIR names it
+  const dir = process.env.NEXUS_STATE_DIR ? stateDir() : join(depot, 'nexus', 'scheduler')
+  const token = ensureToken(dir)
+  // A LaunchAgent has a short PATH, so node and dg are absolute.
+  const dg = { file: process.execPath, args: ['--experimental-strip-types', join(depot, 'repo', 'packages', 'cli', 'src', 'index.ts')] }
+  const engine = createEngine({ jobs: JOBS, stateDir: dir, logger, notify: createClickupNotifier({ dg, logger }) })
+  await engine.start()
+  const server = createApiServer(createDefaultReader(), { logger, loadProfile, jobs: { engine, jobs: JOBS, token } })
+  let stopping = false
+  const shutdown = async () => {
+    if (stopping) return
+    stopping = true
+    try { await engine.stop() } catch (err) { logger.error('scheduler_error', { where: 'stop', code: errorCode(err) }) }
+    setTimeout(() => process.exit(0), 5000).unref()
+    server.close(() => process.exit(0))
+  }
+  process.on('SIGTERM', () => { void shutdown() })
+  process.on('SIGINT', () => { void shutdown() })
+  server.listen(port, HOST, () => logger.info('listening', { host: HOST, port }))
+}
+
+function errorCode(err: unknown): string {
+  const code = (err as { code?: unknown } | null)?.code
+  if (typeof code === 'string') return code
+  return err instanceof Error ? err.name : 'unknown'
 }
