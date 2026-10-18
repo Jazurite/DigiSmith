@@ -20,17 +20,19 @@ export function createClickupNotifier(opts: NotifierOptions): (event: EngineEven
   const lastSent = new Map<string, number>()
 
   const compose = (event: EngineEvent): { key: string; text: string } | null => {
-    const time = formatUtc7(now())
     if (event.type === 'unclean-start') {
+      const atMs = Date.parse(event.at)
+      const time = formatUtc7(Number.isNaN(atMs) ? now() : atMs)
       const detail = (event.run?.detail ?? '').replace(/\s+/g, ' ').trim().slice(0, DETAIL_MAX)
       return { key: UNCLEAN_KEY, text: `nexus scheduler unclean-start at ${time} (UTC+7)${detail ? `: ${detail}` : ''}` }
     }
     const { job, run } = event
+    const time = run.startedAtUtc7
     const status = run.status
     const wanted = status === 'failed' || status === 'timeout' || status === 'interrupted' || (status === 'ok' && job.notify === 'always')
     if (!wanted) return null
     const detail = run.detail.replace(/\s+/g, ' ').trim().slice(0, DETAIL_MAX)
-    return { key: job.name, text: `nexus scheduler job ${job.name} ${status} at ${time} (UTC+7)${detail ? `: ${detail}` : ''}` }
+    return { key: status === 'ok' ? `ok:${job.name}` : `fail:${job.name}`, text: `nexus scheduler job ${job.name} ${status} at ${time} (UTC+7)${detail ? `: ${detail}` : ''}` }
   }
 
   return async (event) => {

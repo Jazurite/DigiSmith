@@ -62,6 +62,31 @@ describe('createClickupNotifier', () => {
     expect(c[0][4]).toContain(formatUtc7(T0))
   })
 
+  it('an ok comment does not hide a later failure comment', async () => {
+    const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
+    await n(runEvent('ok', 'fine', job({ notify: 'always' })))
+    await n(runEvent('failed', 'bad', job({ notify: 'always' })))
+    expect(sent()).toHaveLength(2)
+  })
+
+  it('uses the run time, not the notify time', async () => {
+    const n = createClickupNotifier({ dg: fakeDg, now: () => T0 + 5 * 3600_000 })
+    await n(runEvent('failed'))
+    await n({ type: 'unclean-start', at: new Date(T0 - 7200_000).toISOString(), run: null })
+    const c = sent()
+    expect(c[0][4]).toContain(formatUtc7(T0))
+    expect(c[0][4]).not.toContain(formatUtc7(T0 + 5 * 3600_000))
+    expect(c[1][4]).toContain(formatUtc7(T0 - 7200_000))
+  })
+
+  it('an unclean start with a run carries its detail cut to 300 characters', async () => {
+    const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
+    await n({ type: 'unclean-start', at: new Date(T0).toISOString(), run: run('interrupted', 'q'.repeat(500)) })
+    const text = sent()[0][4]
+    expect(text).toContain('q'.repeat(300))
+    expect(text).not.toContain('q'.repeat(301))
+  })
+
   it('sends ok only with notify always; skipped never', async () => {
     const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
     await n(runEvent('ok'))
