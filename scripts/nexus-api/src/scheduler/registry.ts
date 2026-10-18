@@ -47,7 +47,7 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'selftest',
     description: 'Prints one line; proves the scheduler end to end. Run now only.',
-    command: { file: process.execPath, args: ['-e', "console.log('selftest ok')"] },
+    command: { file: process.execPath, args: ['-e', "process.stdout.write('selftest ok\\n')"] },
   }),
 ]
 
