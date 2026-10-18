@@ -10,7 +10,7 @@ export interface Logger {
 
 const MAX_PATH = 200
 // The scheduler places an error line can name; anything else becomes "unknown".
-const WHERE = new Set(['append_run', 'write_state', 'read_state', 'read_runs', 'tick', 'start'])
+const WHERE = new Set(['append_run', 'write_state', 'read_state', 'read_runs', 'tick', 'start', 'notify'])
 // an error code like ENOTDIR or an error class name like TypeError; never message text
 const ERROR_CODE = /^[A-Za-z][A-Za-z0-9_]{0,39}$/
 // Only a code from this list can be logged. Anything else becomes "unknown", so no message text can leak through here.
