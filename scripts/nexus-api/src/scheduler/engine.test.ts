@@ -372,6 +372,31 @@ describe('snapshot and runs', () => {
   })
 })
 
+describe('queued jobs', () => {
+  it('a job waiting behind another shows queued, not running, and starts its record when it runs', async () => {
+    const { engine, runner } = make([job('a'), job('b')], fakeRunner('hang'))
+    t = at('2026-10-19 12:00:00')
+    expect(engine.runNow('a')).toMatchObject({ accepted: true })
+    await runner.waitForCalls(1)
+    const b = engine.runNow('b')
+    expect(b).toMatchObject({ accepted: true, startedAt: '2026-10-19T05:00:00Z' })
+    const [sa, sb] = engine.snapshot()
+    expect(sa).toMatchObject({ running: { startedAt: '2026-10-19T05:00:00Z', trigger: 'manual' }, queued: null })
+    expect(sb).toMatchObject({ running: null, queued: { since: '2026-10-19T05:00:00Z', trigger: 'manual' } })
+    t = at('2026-10-19 12:05:00')
+    runner.calls[0].resolve({ status: 'ok', exitCode: 0, detail: 'a done' })
+    await runner.waitForCalls(2)
+    const [, sb2] = engine.snapshot()
+    expect(sb2).toMatchObject({ running: { startedAt: '2026-10-19T05:05:00Z', trigger: 'manual' }, queued: null })
+    t = at('2026-10-19 12:06:00')
+    runner.calls[1].resolve({ status: 'ok', exitCode: 0, detail: 'b done' })
+    await engine.whenIdle()
+    const rb = (await engine.getRuns('b', 10))[0]
+    expect(rb).toMatchObject({ id: (b as { runId: string }).runId, startedAt: '2026-10-19T05:05:00Z', startedAtUtc7: '2026-10-19 12:05:00', durationMs: 60_000 })
+    expect(engine.snapshot().map((j) => [j.running, j.queued])).toEqual([[null, null], [null, null]])
+  })
+})
+
 describe('review r1 fixes', () => {
   it('reports state-dir errors through the logger and health, and keeps ticking', async () => {
     fs.writeFileSync(path.join(dir, 'file'), 'x')

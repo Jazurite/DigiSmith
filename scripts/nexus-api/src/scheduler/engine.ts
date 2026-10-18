@@ -42,7 +42,7 @@ export interface Engine {
 
 type InFlight = NonNullable<State['inFlight']> & { trigger?: RunTrigger }
 type EngineState = Omit<State, 'inFlight'> & { inFlight: InFlight | null }
-interface Item { job: JobDef; trigger: RunTrigger; slot: Slot | null; startedAt: string; id: string }
+interface Item { job: JobDef; trigger: RunTrigger; slot: Slot | null; queuedAt: string; startedAt: string; id: string }
 
 const DAY_MS = 24 * 3600_000
 const LOOKBACK_LINES = 2000
@@ -169,9 +169,10 @@ export function createEngine(opts: EngineOptions): Engine {
 
   const execute = async (item: Item): Promise<void> => {
     const abort = new AbortController()
+    let startMs = now()
+    item.startedAt = isoS(startMs)
     active = { item, abort }
     let result: RunResult
-    let startMs = now()
     try {
       result = await run(item.job.command, {
         timeoutMs: item.job.timeoutMs,
@@ -214,8 +215,8 @@ export function createEngine(opts: EngineOptions): Engine {
   }
 
   const enqueue = (job: JobDef, trigger: RunTrigger, slot: Slot | null): Item => {
-    const startedAt = isoS(now())
-    const item = { job, trigger, slot, startedAt, id: uniqueId(`${startedAt}-${job.name}`) }
+    const queuedAt = isoS(now())
+    const item = { job, trigger, slot, queuedAt, startedAt: queuedAt, id: uniqueId(`${queuedAt}-${job.name}`) }
     queue.push(item)
     return item
   }
@@ -233,7 +234,7 @@ export function createEngine(opts: EngineOptions): Engine {
       const trigger: RunTrigger = onTime ? 'schedule' : 'catch-up'
       if (isBusy(job.name)) await skip(job, sl, trigger, 'busy')
       else if (!onTime && job.catchUp === 'skip') await skip(job, sl, 'catch-up', 'missed')
-      else due.push({ job, trigger, slot: sl, startedAt: '', id: '' })
+      else due.push({ job, trigger, slot: sl, queuedAt: '', startedAt: '', id: '' })
     }
   }
 
@@ -322,7 +323,7 @@ export function createEngine(opts: EngineOptions): Engine {
       if (isBusy(name)) return { accepted: false, error: 'already_running', message: `${name} is already running or queued` }
       const item = enqueue(job, 'manual', null)
       drain()
-      return { accepted: true, runId: item.id, startedAt: item.startedAt }
+      return { accepted: true, runId: item.id, startedAt: item.queuedAt }
     },
 
     snapshot() {
@@ -330,12 +331,14 @@ export function createEngine(opts: EngineOptions): Engine {
       return jobs.map((job): JobInfo => {
         const s = job.schedule
         const next = s ? nextRunAt(t, s) : null
-        const mine = active?.item.job === job ? active.item : queue.find((q) => q.job === job)
+        const runningItem = active?.item.job === job ? active.item : null
+        const queuedItem = runningItem ? null : queue.find((q) => q.job === job)
         return {
           name: job.name, description: job.description,
           schedule: s ? { atUtc7: s.atUtc7, windowEndUtc7: s.windowEndUtc7, everyMinutes: s.everyMinutes ?? null } : null,
           nextRunAt: next === null ? null : isoS(next), nextRunAtUtc7: next === null ? null : formatUtc7(next),
-          running: mine ? { startedAt: mine.startedAt, trigger: mine.trigger } : null,
+          running: runningItem ? { startedAt: runningItem.startedAt, trigger: runningItem.trigger } : null,
+          queued: queuedItem ? { since: queuedItem.queuedAt, trigger: queuedItem.trigger } : null,
           lastRun: lastRun.get(job.name) ?? null,
         }
       })

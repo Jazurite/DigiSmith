@@ -63,7 +63,8 @@ export interface JobInfo {
   name: string; description: string
   schedule: { atUtc7: string; windowEndUtc7: string; everyMinutes: number | null }
   nextRunAt: string | null; nextRunAtUtc7: string | null    // null when the job has no slot (run-now only)
-  running: { startedAt: string; trigger: RunTrigger } | null
+  running: { startedAt: string; trigger: RunTrigger } | null   // set when the child really starts
+  queued: { since: string; trigger: RunTrigger } | null        // waiting behind another job (fix 2026-10-19, ticket review r1 F4)
   lastRun: RunRecord | null
 }
 export interface JobsResponse { generatedAt: string; jobs: JobInfo[] }                // GET /api/v1/jobs

@@ -31,6 +31,7 @@ export interface JobInfo {
   schedule: { atUtc7: string; windowEndUtc7: string; everyMinutes: number | null } | null
   nextRunAt: string | null; nextRunAtUtc7: string | null
   running: { startedAt: string; trigger: RunTrigger } | null
+  queued: { since: string; trigger: RunTrigger } | null
   lastRun: RunRecord | null
 }
 export interface JobsResponse { generatedAt: string; jobs: JobInfo[] }
