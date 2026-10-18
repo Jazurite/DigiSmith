@@ -6,6 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildApp } from '../app.ts'
 import { createLogger } from '../logger.ts'
+import { createShutdown } from '../server.ts'
 import type { PowerMetrics } from '../types.ts'
 import { API_VERSION } from '../version.ts'
 import { createEngine, type Engine, type EngineEvent } from './engine.ts'
@@ -219,6 +220,18 @@ describe('POST /jobs/<name>/run', () => {
     expect(s.runner.calls).toBe(0)
   })
 
+  it('a wrong token gets 403 without the body being read', async () => {
+    const s = setup()
+    let pulled = 0
+    const body = new ReadableStream({ pull(ctrl) { pulled++; if (pulled === 1) ctrl.enqueue(new TextEncoder().encode('{"confirm":')) } })
+    const init = { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Nexus-Token': 'nope' }, body, duplex: 'half' } as RequestInit
+    const r = await Promise.race([s.app.request(`${BASE}/selftest/run`, init), new Promise<null>((res) => setTimeout(() => res(null), 1000))])
+    expect(r?.status).toBe(403)
+    const huge = await s.post('selftest', { 'X-Nexus-Token': '' }, 'x'.repeat(5_000_000))
+    expect(huge.status).toBe(403)
+    expect(s.runner.calls).toBe(0)
+  })
+
   it('403 forbidden when the job refuses run-now outside its window', async () => {
     const flux = job('flux', { schedule: { atUtc7: '00:10', windowEndUtc7: '05:00' }, manualOutsideWindow: 'refused' })
     const r = await setup({ jobs: [flux] }).post('flux')
@@ -288,6 +301,36 @@ describe('methods and paths', () => {
     expect(a.text).toBe(await b.text())
     expect([...a.headers]).toEqual([...b.headers])
     expect((await s.req(POWER, { method: 'POST' })).status).toBe(405)
+  })
+})
+
+describe('shutdown', () => {
+  it('stops the engine, then closes the server, then exits 0', async () => {
+    const order: string[] = []
+    const shutdown = createShutdown({
+      stop: async () => { order.push('stop') }, close: (done) => { order.push('close'); done() },
+      exit: (code) => { order.push(`exit ${code}`) }, onStopError: () => order.push('error'), graceMs: 60_000,
+    })
+    await shutdown()
+    await shutdown()
+    expect(order).toEqual(['stop', 'close', 'exit 0'])
+  })
+
+  it('a stop that never ends still exits after the grace time', async () => {
+    const exits: number[] = []
+    let closed = false
+    const shutdown = createShutdown({ stop: () => new Promise<void>(() => undefined), close: () => { closed = true }, exit: (c) => { exits.push(c) }, onStopError: () => undefined, graceMs: 50 })
+    void shutdown()
+    await new Promise((r) => setTimeout(r, 150))
+    expect(exits).toEqual([0])
+    expect(closed).toBe(false)
+  })
+
+  it('a stop that throws is reported and the server still closes', async () => {
+    const order: string[] = []
+    const shutdown = createShutdown({ stop: async () => { throw new Error('x') }, close: (done) => { order.push('close'); done() }, exit: (c) => { order.push(`exit ${c}`) }, onStopError: () => order.push('error'), graceMs: 60_000 })
+    await shutdown()
+    expect(order).toEqual(['error', 'close', 'exit 0'])
   })
 })
 

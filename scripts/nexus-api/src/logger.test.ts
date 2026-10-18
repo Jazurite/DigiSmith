@@ -37,4 +37,12 @@ describe('logger', () => {
     logger.error('scheduler_error', { where: 'notify', code: 'failed' })
     expect(JSON.parse(lines[2])).toMatchObject({ where: 'notify', code: 'failed' })
   })
+  it('keeps the jobs route codes and the server stop places', () => {
+    const { lines, logger } = collect()
+    for (const code of ['already_running', 'forbidden', 'stopped']) logger.request({ method: 'POST', path: '/x', status: 409, ms: 1, code })
+    logger.error('scheduler_error', { where: 'stop', code: 'Error' })
+    logger.error('scheduler_error', { where: 'unhandled_rejection', code: 'TypeError' })
+    expect(lines.map(l => JSON.parse(l).code)).toEqual(['already_running', 'forbidden', 'stopped', 'Error', 'TypeError'])
+    expect(lines.slice(3).map(l => JSON.parse(l).where)).toEqual(['stop', 'unhandled_rejection'])
+  })
 })

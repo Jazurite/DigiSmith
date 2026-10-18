@@ -41,6 +41,27 @@ export function createDefaultReader(run?: RunPowermetrics): () => Promise<PowerM
   }
 }
 
+export interface ShutdownDeps {
+  stop: () => Promise<void>
+  close: (done: () => void) => void
+  exit: (code: number) => void
+  onStopError: (err: unknown) => void
+  graceMs?: number
+}
+
+// The timer is armed before the stop, so a hung stop still ends the process. 15 s leaves room for a job's
+// SIGTERM-then-SIGKILL (10 s + 2 s) and stays under launchd's 20 s before it sends SIGKILL itself.
+export function createShutdown(deps: ShutdownDeps): () => Promise<void> {
+  let stopping = false
+  return async () => {
+    if (stopping) return
+    stopping = true
+    setTimeout(() => deps.exit(0), deps.graceMs ?? 15_000).unref()
+    try { await deps.stop() } catch (err) { deps.onStopError(err) }
+    deps.close(() => deps.exit(0))
+  }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = parsePort(process.env.PORT)
   const logger = createLogger()
@@ -59,14 +80,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const engine = createEngine({ jobs: JOBS, stateDir: dir, logger, notify: createClickupNotifier({ dg, logger }) })
   await engine.start()
   const server = createApiServer(createDefaultReader(), { logger, loadProfile, jobs: { engine, jobs: JOBS, token } })
-  let stopping = false
-  const shutdown = async () => {
-    if (stopping) return
-    stopping = true
-    try { await engine.stop() } catch (err) { logger.error('scheduler_error', { where: 'stop', code: errorCode(err) }) }
-    setTimeout(() => process.exit(0), 5000).unref()
-    server.close(() => process.exit(0))
-  }
+  const shutdown = createShutdown({
+    stop: () => engine.stop(),
+    close: (done) => server.close(() => done()),
+    exit: (code) => process.exit(code),
+    onStopError: (err) => logger.error('scheduler_error', { where: 'stop', code: errorCode(err) }),
+  })
   process.on('SIGTERM', () => { void shutdown() })
   process.on('SIGINT', () => { void shutdown() })
   server.listen(port, HOST, () => logger.info('listening', { host: HOST, port }))

@@ -64,7 +64,11 @@ export function createJobsRoutes(deps: JobsDeps): Hono<Env> {
     const stop = unknown(c, name) ?? wrongMethod(c, 'POST')
     if (stop) return stop
     try {
-      const guard = checkRunNow({ contentType: c.req.header('content-type'), tokenHeader: c.req.header('x-nexus-token'), body: await c.req.text() }, token, name)
+      const input = { contentType: c.req.header('content-type'), tokenHeader: c.req.header('x-nexus-token') }
+      // the guard checks the token first; asking it with no body lets a wrong token end 403 before the body is read
+      const pre = checkRunNow({ ...input, body: undefined }, token, name)
+      if (!pre.ok && pre.status === 403) return fail(c, pre.status, pre.error, pre.message)
+      const guard = checkRunNow({ ...input, body: await c.req.text() }, token, name)
       if (!guard.ok) return fail(c, guard.status, guard.error, guard.message)
       const r = engine.runNow(name)
       if (!r.accepted) return fail(c, STATUS[r.error], r.error, r.message)
