@@ -8,12 +8,15 @@ export type JobInput = Pick<JobDef, 'name' | 'description' | 'command'> & Partia
 
 export function defineJob(input: JobInput): JobDef {
   return {
-    timeoutMs: DEFAULT_TIMEOUT_MS,
-    catchUp: 'run-once-in-window',
-    order: 100,
-    notify: 'failures',
-    manualOutsideWindow: 'allowed',
-    ...input,
+    name: input.name,
+    description: input.description,
+    command: input.command,
+    ...(input.schedule === undefined ? {} : { schedule: input.schedule }),
+    timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    catchUp: input.catchUp ?? 'run-once-in-window',
+    order: input.order ?? 100,
+    notify: input.notify ?? 'failures',
+    manualOutsideWindow: input.manualOutsideWindow ?? 'allowed',
   }
 }
 
@@ -26,6 +29,7 @@ export function validateJobs(jobs: readonly JobDef[]): void {
     if (!NAME.test(job.name)) throw new Error(`job name "${job.name}" is not url-safe (lowercase letters, digits, single hyphens)`)
     if (seen.has(job.name)) throw new Error(`job name "${job.name}" is duplicate; names must be unique`)
     seen.add(job.name)
+    if (typeof job.order !== 'number' || !Number.isFinite(job.order)) throw new Error(`job ${job.name}: order must be a finite number`)
     if (!isAbsolute(job.command.file)) throw new Error(`job ${job.name}: command file must be an absolute path`)
     if (!Number.isFinite(job.timeoutMs) || job.timeoutMs <= 0 || job.timeoutMs > MAX_TIMEOUT_MS)
       throw new Error(`job ${job.name}: timeoutMs must be above 0 and at most ${MAX_TIMEOUT_MS}`)

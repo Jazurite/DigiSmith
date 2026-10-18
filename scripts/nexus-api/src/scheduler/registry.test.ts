@@ -21,7 +21,19 @@ describe('defineJob defaults', () => {
   })
 })
 
+describe('defineJob undefined fallback', () => {
+  it('treats explicit undefined as absent', () => {
+    const job = defineJob({ ...base, order: undefined, notify: undefined, catchUp: undefined, manualOutsideWindow: undefined, timeoutMs: undefined })
+    expect(job).toEqual(defineJob(base))
+  })
+})
+
 describe('validateJobs', () => {
+  it('requires a finite order', () => {
+    for (const order of [Number.NaN, Infinity, -Infinity, '5' as never])
+      expect(() => validateJobs([defineJob({ ...base, order })])).toThrow(/order/)
+    expect(() => validateJobs([defineJob({ ...base, order: -1 })])).not.toThrow()
+  })
   it('accepts a window that crosses midnight with everyMinutes', () => {
     expect(() => validateJobs([withSchedule({ atUtc7: '23:00', windowEndUtc7: '06:00', everyMinutes: 60 })])).not.toThrow()
   })
