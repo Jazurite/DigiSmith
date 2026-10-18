@@ -29,6 +29,7 @@ export function runJob(command: RunCommand, opts: RunOptions): Promise<RunResult
     let settled = false
     let timeoutTimer: NodeJS.Timeout | undefined
     let killTimer: NodeJS.Timeout | undefined
+    let exitTimer: NodeJS.Timeout | undefined
 
     const append = (chunk: string) => {
       tail = (tail + chunk).slice(-TAIL)
@@ -38,6 +39,7 @@ export function runJob(command: RunCommand, opts: RunOptions): Promise<RunResult
       settled = true
       clearTimeout(timeoutTimer)
       clearTimeout(killTimer)
+      clearTimeout(exitTimer)
       opts.signal?.removeEventListener('abort', onAbort)
       resolve(r)
     }
@@ -86,7 +88,7 @@ export function runJob(command: RunCommand, opts: RunOptions): Promise<RunResult
         return
       }
       // a grandchild may keep the pipes open; give the output a short moment, then stop waiting
-      setTimeout(() => end(() => ({ status: code === 0 ? 'ok' : 'failed', exitCode: code, detail: tail, pid: child.pid })), 200).unref()
+      exitTimer = setTimeout(() => end(() => ({ status: code === 0 ? 'ok' : 'failed', exitCode: code, detail: tail, pid: child.pid })), 200)
     })
     child.on('close', (code) => {
       if (stopReason) return

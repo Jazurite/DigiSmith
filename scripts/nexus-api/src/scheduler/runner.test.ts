@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { runJob } from './runner.ts'
 
@@ -119,5 +119,14 @@ describe('runJob', () => {
     expect(r.status).toBe('failed')
     expect(r.exitCode).toBeNull()
     expect(r.detail.length).toBeGreaterThan(0)
+  })
+
+  it('sends no signal after a clean run has settled', async () => {
+    const spy = vi.spyOn(process, 'kill')
+    try {
+      await runJob(node('0'), { timeoutMs: 10_000 })
+      await new Promise((res) => setTimeout(res, 400))
+      expect(spy).not.toHaveBeenCalled()
+    } finally { spy.mockRestore() }
   })
 })
