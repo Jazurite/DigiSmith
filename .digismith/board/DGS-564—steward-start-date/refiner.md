@@ -27,15 +27,19 @@ One ticket. It can start as soon as Jack moves it to `to do`. It needs the Revie
 
 - [x] Spec approved by Jack (checkpoint 1, relayed by the Maestro, with "Reschedule dependencies stays on"): `design.html`
 - [x] Plan written and approved by the Maestro (checkpoint 2, with the change "repair at every event, even when the status is already there"): `plan.md`
-- [x] Decided, not open: cause = most likely Reschedule dependencies (unverified; Jack keeps it ON, so the fix coexists); time zone UTC+7 and automations ruled out by Jack; the repair rules (late start becomes today in progress or later; start <= due at done; a missing start only by `started`); one ITEM_238 retry with start = due; a failed repair is a warning, never a block
+- [x] Decided, not open: cause = most likely Reschedule dependencies (unverified; Jack keeps it ON, so the fix coexists); time zone UTC+7 and automations ruled out by Jack; the repair rules (late start becomes today in progress or later; start <= due at done; a missing start filled with the day the ticket entered in progress (state log), else today); one ITEM_238 retry with start = due; a failed repair is a warning, never a block
 - [x] No open question for a Builder. Each task has its test code, its commands and its expected result
-- [x] The old path is protected: the existing steward tests stay as they are; a Builder fixes test data only if an old snapshot has a late start
+- [x] The old path is protected: the existing steward tests stay as they are; a Builder fixes test data only if an old snapshot is in progress or later with no start date (it gets `startDate: "2026-10-01"`)
 - [x] No ClickUp write by a test (tests use `FakeTracker`)
 - [x] The post-merge `dist` rebuild and its check are in the plan ("After the merge") and in this output, for the merge order
 - [ ] Jack moves DGS-564 to `to do`
 
 ## Sign-off (proposal)
 
-- **DGS-564: Auto.** Internal tooling: the Steward's date rules, with tests and a README note. No look, wording for users, personal data or public surface. Done at merge and push, after the first use is seen (a dependent ticket through `started` and done keeps start <= due, and the global `dist` holds the new code).
+- **DGS-564: unmarked** (no Sign-off value). Internal tooling: the Steward's date rules, with tests and a README note. No look, wording for users, personal data or public surface, so Jack's acceptance is not needed. It is not Auto, because done waits for the first use: at merge the Steward only records the merge and the ticket stays in `review`. After the rebuild and the first use are seen (a dependent ticket through `started` and done keeps start <= due, and the global `dist` holds the new code), `verified` moves it to done.
 
-Jack confirms the mark when he approves into `to do`.
+Jack confirms the choice when he approves into `to do`.
+
+## Refinement end mark
+
+Refinement ended 2026-10-18 22:43 UTC+7 [2026-10-18T15:43:15Z]. Checkpoint 3 approved by the Maestro, with the missing-start repair and the unmarked Sign-off. Waiting for Jack's `to do` decision. No build.

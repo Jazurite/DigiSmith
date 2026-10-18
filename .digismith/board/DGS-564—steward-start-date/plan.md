@@ -13,7 +13,7 @@
 - Spec: `.digismith/board/DGS-564—steward-start-date/design.html` (approved at checkpoint 1).
 - "Today" is `todayUtc7(now)`, a `YYYY-MM-DD` string. Dates compare as strings.
 - "Reschedule dependencies" stays ON. No timer, no watcher: the repair runs only inside an event, at every event, even when the status is already there (Maestro, checkpoint 2).
-- Repair rules: in progress or later (not discarded or Closed): start later than today becomes today; on done or documented, start later than due becomes due. A missing start date is repaired only by `started`.
+- Repair rules: in progress or later (not discarded or Closed): start later than today becomes today; on done or documented, start later than due becomes due. A missing start date (in progress or later) is filled with the day the ticket entered `in progress` when the Steward's state log has it (the last applied `-> in progress` entry, as a UTC+7 day), else today.
 - A start date earlier than today is kept.
 - pnpm only, never npm. No change to any ClickUp setting.
 - Tests: `pnpm --filter @digismith/cli exec vitest run src/steward/event.test.ts` (from the worktree root).
@@ -42,7 +42,7 @@ The build runs with `DIGISMITH_REVIEW_MODE=role`: the Builder never reviews. Aft
 
 **Interfaces:**
 - Consumes: `TicketSnapshot { status, startDate, dueDate }`; `todayUtc7(now)`; `Tracker.setDates`.
-- Produces: `repairedStart(snap: TicketSnapshot, today: string): string | null` (module-private): the start date to write, or `null` for no repair. `apply` calls it right after the first `getTicket`, before the pending loop and `evaluate`, for every event. A failed repair is a warning, never an error.
+- Produces: `repairedStart(snap: TicketSnapshot, today: string, enteredOn: string | null): string | null` (module-private): the start date to write, or `null` for no repair. `enteredOn` is the UTC+7 day of the last applied move to `in progress` in the state log, or `null`. `apply` calls it right after the first `getTicket`, before the pending loop and `evaluate`, for every event. A failed repair is a warning, never an error.
 
 - [ ] **Step 1: Write the failing tests** (a new `describe` in `event.test.ts`, after `describe("a start", ...)`)
 
@@ -82,7 +82,7 @@ describe("the dates repair at every event", () => {
     expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
   });
   it("a queued done move heals: the start ClickUp shifted is repaired at the next event", async () => {
-    const t = new FakeTracker(snapshot("review", { signoff: "Auto" }));
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-01" }));
     t.failWrites = 1;
     await run(t, { event: "merged", sha: "abc" });
     expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
@@ -91,13 +91,23 @@ describe("the dates repair at every event", () => {
     expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
   });
-  it("leaves alone: a ticket in to do, a discarded one, an earlier start, a missing start", async () => {
+  it("fills a missing start with the day the ticket entered in progress", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    await run(t, { event: "started" }, { now: () => new Date("2026-10-16T05:00:00Z") }); // the 16th in UTC+7
+    t.ticket.startDate = null; // ClickUp lost the start
+    await run(t, { event: "review-started" }); // today is the 18th
+    expect(t.ticket).toMatchObject({ status: "review", startDate: "2026-10-16" });
+  });
+  it("fills a missing start with today when the state does not know the day", async () => {
+    const t = new FakeTracker(snapshot("in progress"));
+    await run(t, { event: "started" });
+    expect(t.calls).toEqual(["dates:2026-10-18|"]);
+    expect(t.ticket.startDate).toBe("2026-10-18");
+  });
+  it("leaves alone: a ticket in to do, a discarded one, an earlier start", async () => {
     const early = new FakeTracker(snapshot("in progress", { startDate: "2026-10-01" }));
     await run(early, { event: "started" });
     expect(early.calls).toEqual([]);
-    const missing = new FakeTracker(snapshot("in progress"));
-    await run(missing, { event: "started" });
-    expect(missing.calls).toEqual([]);
     const todo = new FakeTracker(snapshot("to do", { startDate: "2026-10-19" }));
     await run(todo, { event: "review-started" });
     expect(todo.calls).toEqual([]);
@@ -129,10 +139,10 @@ In `event.ts`, above `pendingOf`:
 const REPAIRED_IN = ["in progress", "review", "acceptance", "release", "done", "documented"];
 const DONE_LIKE = ["done", "documented"];
 
-/** The start date to write, or null. A start later than today becomes today (ClickUp's Reschedule dependencies moves a dependent's start to the day after its predecessor's due date). On done, a start later than the due date becomes the due date. A missing start is not repaired here. */
-function repairedStart(snap: TicketSnapshot, today: string): string | null {
-  if (snap.startDate === null || !REPAIRED_IN.includes(snap.status)) return null;
-  let start = snap.startDate;
+/** The start date to write, or null. A start later than today becomes today (ClickUp's Reschedule dependencies moves a dependent's start to the day after its predecessor's due date). A missing start becomes the day the ticket entered in progress, else today. On done, a start later than the due date becomes the due date. */
+function repairedStart(snap: TicketSnapshot, today: string, enteredOn: string | null): string | null {
+  if (!REPAIRED_IN.includes(snap.status)) return null;
+  let start = snap.startDate ?? enteredOn ?? today;
   if (start > today) start = today;
   if (DONE_LIKE.includes(snap.status) && snap.dueDate !== null && start > snap.dueDate) start = snap.dueDate;
   return start === snap.startDate ? null : start;
@@ -143,11 +153,12 @@ In `apply`, right after `const st = loadState(deps, ticket, snap);` and before t
 
 ```ts
   // Dates first, at every event: ClickUp may have moved them since the last one.
-  const fixed = repairedStart(snap, today);
+  const entered = st.log.findLast((l) => l.outcome === "applied" && l.note.endsWith("-> in progress"));
+  const fixed = repairedStart(snap, today, entered ? todayUtc7(new Date(entered.at)) : null);
   if (fixed !== null) {
     try {
       await tracker.setDates(ticket, { start: fixed });
-      out.push(`steward: ${ticket}: start date ${snap.startDate} -> ${fixed}`);
+      out.push(`steward: ${ticket}: start date ${snap.startDate ?? "missing"} -> ${fixed}`);
       snap = { ...snap, startDate: fixed };
       st.start_written = fixed;
     } catch (err) {
@@ -159,7 +170,7 @@ In `apply`, right after `const st = loadState(deps, ticket, snap);` and before t
 - [ ] **Step 4: Run the full steward tests**
 
 Run: `pnpm --filter @digismith/cli exec vitest run src/steward`
-Expected: all PASS. If an old test now shows a repair line, its snapshot had a late start; fix that test's data, not the rule.
+Expected: some old tests FAIL: their snapshot is in progress or later with no start date, so the repair now writes one. For each, add `startDate: "2026-10-01"` to that snapshot and change nothing else (same commit). Then all PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -403,7 +414,7 @@ The ClickUp space setting "Reschedule dependencies" is ON. ClickUp can move the 
 
 - A ticket in progress or later (not discarded or Closed): a start date later than today becomes today.
 - On done or documented: a start date later than the due date becomes the due date.
-- A missing start date is written only by `started`. An earlier start date is kept.
+- A missing start date is filled with the day the ticket entered in progress (from the state log), else today. An earlier start date is kept.
 - `started` also replaces a late start date and reads the ticket back once after its write.
 - If ClickUp still answers ITEM_238 (start after due) on the done write, the Steward retries once with start = due.
 - A failed repair is a warning. The next event repairs again.
@@ -427,4 +438,4 @@ git commit -m "docs(dgs-564): document the Steward date rules"
 
 - Rule 1, read back after the write -> Task 3. Rule 2, repair at every event -> Task 1; the `started` move from `to do` -> Task 2. Rule 3, merged never meets ITEM_238 -> Task 1 (late start put back first) and Task 4 (last resort). Rule 4, stuck tickets heal -> Task 1 (queued test, "status already there" test). Dependents -> Task 2. Tests section -> the tests above. Out of scope (the setting, a timer) -> no task, by design.
 - Names used in later tasks (`repairedStart`, `lateStart`, `setDatesOnce`, `PendingWrite`) are defined in the task that adds them. Task 3 uses `lateStart` from Task 2.
-- The gap from the first draft (a lost repair after a failed corrective write) is closed by Task 1: the repair does not depend on the queued move, and the next event repairs again. A missing start date after a failed `started` fix stays missing (Task 1 does not write a missing start); a hand `dg clickup update-task --start-date` fixes it. That case needs two failures in a row.
+- The gap from the first draft (a lost repair after a failed corrective write) is closed by Task 1: the repair does not depend on the queued move, and the next event repairs again. A missing start date, including one left by a failed `started` fix, is filled at the next event (Maestro, checkpoint 3).
