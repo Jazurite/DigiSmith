@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-564 Steward start date</title>
+<style>` block byte-for-byte, filling in `{{TITLE}}`,
+  `{{DATE}}`, `{{MAP_ITEM}}`, and the body `<section>`s per the spec's own content):
+
+  ```html
+  <!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+      --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+        --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--fg);
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+    }
+    header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+    h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+    .meta { color: var(--muted); font-size: .9rem; }
+    .meta span { margin-right: 1.2rem; }
+    .badge {
+      display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+      border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+    }
+    nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+    nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--muted); margin: 0 0 .6rem; }
+    nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+    nav.toc a { color: var(--fg); text-decoration: none; }
+    nav.toc a:hover { color: var(--accent); }
+    section { margin-bottom: 2.6rem; }
+    h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+    h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+    code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 1rem; overflow-x: auto; }
+    pre code { background: none; padding: 0; }
+    ul, ol { padding-left: 1.4rem; }
+    li { margin-bottom: .3rem; }
+    .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+    @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+    .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+    .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+    .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+    .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+    .table-wrap { overflow-x: auto; }
+    th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+    th { background: var(--card-bg); }
+    .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+      padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+    footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+      padding-top: 1rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+<header class="doc-head">
+<span class="badge">spec for checkpoint 1</span>
+<h1>DGS-564: Steward start date written a day late</h1>
+<div class="meta"><span>Date: 2026-10-18</span><span>Ticket: DGS-564</span></div>
+</header>
+<nav class="toc"><h2>Contents</h2><ol><li><a href="#what">What goes wrong</a></li><li><a href="#cause">What the data shows</a></li><li><a href="#ask">Question for Jack</a></li><li><a href="#design">Design</a></li><li><a href="#tests">Tests</a></li><li><a href="#open">Open</a></li></ol></nav>
+
+<section id="what"><h2>1. What goes wrong</h2>
+<p>Two tickets (DGS-561, DGS-562) had a ClickUp start date of 2026-10-18 after <code>dg steward event started</code> ran on the 17th at 22:44 UTC+7. At <code>merged</code> the Steward set due 2026-10-17 and ClickUp refused with <code>ITEM_238</code> (start after due). The move to done stayed pending.</p></section>
+<section id="cause"><h2>2. What the code and data show (read-only)</h2>
+<ul>
+<li><code>todayUtc7</code> and <code>parseDateFlag</code> are correct (tests in the repo; manual write gives 04:00 UTC+7 on the right day).</li>
+<li>In <code>event.ts</code>, <code>pendingOf</code> writes a start only when the snapshot has none. <code>write()</code> sets the status first, then the dates, then reads back. It never checks that the start it leaves in ClickUp is a sane date. Nothing in <code>write()</code> compares start with due.</li>
+<li>A queued (pending) write is replayed unchanged. A write that failed on ITEM_238 fails the same way at every retry, so the ticket stays stuck.</li>
+<li><code>rebuildState</code> sets <code>start_written</code> from the ClickUp snapshot. The by-hand <code>dg steward rebuild</code> on DGS-561 can therefore have changed the "start_written: null" evidence. That evidence is weak.</li>
+<li>Log times: DGS-560 started 15:17Z and has the right date. DGS-561 and DGS-562 started 15:44Z. DGS-566 started 17:59Z (00:59 on the 18th UTC+7) and got 2026-10-18, which is right.</li>
+<li><strong>The writer of the 18th is not proven.</strong> Two candidates: (a) a ClickUp automation on list B.5 that sets a start date on the status move, in another time zone or with a delay that lands after the Steward's own date write; (b) the workspace or user time zone. <code>dg</code> has no command that reads automations or the workspace time zone, and the public ClickUp API has no automations endpoint.</li>
+</ul></section>
+<section id="ask"><h2>3. Question for Jack (a ClickUp setting, so only Jack)</h2>
+<p>In the ClickUp web app, please look (do not change) at: (1) Automations on list B.5 and on its folder: any rule that sets or changes a start date or due date; (2) Workspace Settings, time zone, and your profile time zone. Tell me what you see. This decides whether the build also needs a setting change by Jack. The code fix below does not wait for the answer.</p></section>
+<section id="design"><h2>4. Design (works whatever the cause)</h2>
+<p>The Steward owns the dates. It does not trust that ClickUp left them alone.</p>
+<ol>
+<li><strong>Check after the write.</strong> After the status write and the date write, <code>write()</code> reads the ticket back. On a <code>started</code> move: if the start is missing or later than today (UTC+7), write start = today. One extra read; one write only when needed.</li>
+<li><strong>Repair at every event.</strong> At the start of <code>apply</code>, on a ticket in progress or later: a start date later than today is overwritten with today. This catches an automation that fires after the read-back.</li>
+<li><strong>Merged never meets ITEM_238.</strong> When the move sets due = today, send start = min(start, today) in the same date write if the snapshot start is later than today. If ClickUp still answers ITEM_238, retry once with start = due. A queued write is recomputed from a fresh snapshot at retry, not replayed unchanged.</li>
+<li><strong>Stuck tickets heal.</strong> A pending <code>merged</code> from before the fix completes at the next event, by rule 3.</li>
+<li><strong>Not in scope:</strong> changing a ClickUp automation or setting (Jack's call after section 3); a new <code>dg</code> command to read automations (a gap; ticket it only if Jack wants it).</li>
+</ol></section>
+<section id="tests"><h2>5. Tests</h2>
+<ul><li>Fake tracker whose <code>setStatus</code> sets start to tomorrow: a started event ends with start = today.</li>
+<li>Fake tracker that refuses dates with ITEM_238: merged ends in done with start = due.</li>
+<li>A pending write with a stale start completes after a fresh snapshot.</li>
+<li>Existing 560-style case (no start at snapshot) unchanged.</li></ul></section>
+<section id="open"><h2>6. Open</h2><ul><li>Cause of the 18th: unproven until Jack reports section 3. If the answer is a time zone, the build adds a one-line note to the Steward runbook, nothing else.</li></ul></section>
+
+<footer>DigiSmith · .digismith/board/DGS-564—steward-start-date/design.html</footer>
+</body>
+</html>
