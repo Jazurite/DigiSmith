@@ -44,17 +44,33 @@ export function runJob(command: RunCommand, opts: RunOptions): Promise<RunResult
 
     let child: ReturnType<typeof spawn>
     try {
-      child = spawn(command.file, command.args, { shell: false, stdio: ['ignore', 'pipe', 'pipe'] })
+      child = spawn(command.file, command.args, { shell: false, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
     } catch (err) {
       finish({ status: 'failed', exitCode: null, detail: String((err as Error).message ?? err).slice(-TAIL) })
       return
     }
 
+    const killGroup = (sig: NodeJS.Signals) => {
+      try { if (child.pid !== undefined) process.kill(-child.pid, sig) } catch { /* group already gone */ }
+    }
+    const release = () => {
+      child.stdout?.destroy()
+      child.stderr?.destroy()
+    }
+    const end = (r: () => RunResult) => {
+      killGroup('SIGKILL')
+      release()
+      finish(r())
+    }
+
     const stop = (reason: 'timeout' | 'interrupted') => {
       if (stopReason || settled) return
       stopReason = reason
-      child.kill('SIGTERM')
-      killTimer = setTimeout(() => { child.kill('SIGKILL') }, killGraceMs)
+      killGroup('SIGTERM')
+      killTimer = setTimeout(() => {
+        killGroup('SIGKILL')
+        killTimer = setTimeout(() => end(() => ({ status: reason, exitCode: null, detail: tail, pid: child.pid })), 2000)
+      }, killGraceMs)
     }
     function onAbort() { stop('interrupted') }
 
@@ -63,9 +79,18 @@ export function runJob(command: RunCommand, opts: RunOptions): Promise<RunResult
     child.on('error', (err) => {
       if (child.pid === undefined) finish({ status: 'failed', exitCode: null, detail: String(err.message).slice(-TAIL) })
     })
+    child.on('exit', (code) => {
+      if (stopReason) {
+        const reason = stopReason
+        end(() => ({ status: reason, exitCode: code, detail: tail, pid: child.pid }))
+        return
+      }
+      // a grandchild may keep the pipes open; give the output a short moment, then stop waiting
+      setTimeout(() => end(() => ({ status: code === 0 ? 'ok' : 'failed', exitCode: code, detail: tail, pid: child.pid })), 200).unref()
+    })
     child.on('close', (code) => {
-      if (stopReason) finish({ status: stopReason, exitCode: code, detail: tail, pid: child.pid })
-      else finish({ status: code === 0 ? 'ok' : 'failed', exitCode: code, detail: tail, pid: child.pid })
+      if (stopReason) return
+      finish({ status: code === 0 ? 'ok' : 'failed', exitCode: code, detail: tail, pid: child.pid })
     })
 
     if (child.pid !== undefined) {

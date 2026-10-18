@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { runJob } from './runner.ts'
 
 const node = (code: string, ...rest: string[]) => ({ file: process.execPath, args: ['-e', code, ...rest] })
@@ -84,5 +85,39 @@ describe('runJob', () => {
     const r = await runJob(node('0'), { timeoutMs: 10_000, onStart: (p) => seen.push(p) })
     expect(seen).toHaveLength(1)
     expect(seen[0]).toBe(r.pid)
+  })
+
+  const sleepers = (tag: string) => {
+    try { return execFileSync('pgrep', ['-f', tag]).toString().trim().split('\n').filter(Boolean) } catch { return [] }
+  }
+
+  it('ends on timeout when a grandchild holds the pipes, and kills the grandchild', async () => {
+    const tag = '3601.11'
+    const t0 = Date.now()
+    const r = await runJob({ file: 'sh', args: ['-c', `sleep ${tag} & wait`] }, { timeoutMs: 300, killGraceMs: 300 })
+    expect(r.status).toBe('timeout')
+    expect(Date.now() - t0).toBeLessThan(3000)
+    await new Promise((res) => setTimeout(res, 200))
+    expect(sleepers(tag)).toEqual([])
+  })
+
+  it('ends on abort when a grandchild holds the pipes, and kills the grandchild', async () => {
+    const tag = '3602.22'
+    const ac = new AbortController()
+    const t0 = Date.now()
+    const r = await runJob({ file: 'sh', args: ['-c', `sleep ${tag} & wait`] }, {
+      timeoutMs: 30_000, killGraceMs: 300, signal: ac.signal, onStart: () => { setTimeout(() => ac.abort(), 300) },
+    })
+    expect(r.status).toBe('interrupted')
+    expect(Date.now() - t0).toBeLessThan(3000)
+    await new Promise((res) => setTimeout(res, 200))
+    expect(sleepers(tag)).toEqual([])
+  })
+
+  it('resolves failed, not a throw, when spawn throws synchronously', async () => {
+    const r = await runJob({ file: 'bad\0file', args: [] }, { timeoutMs: 5_000 })
+    expect(r.status).toBe('failed')
+    expect(r.exitCode).toBeNull()
+    expect(r.detail.length).toBeGreaterThan(0)
   })
 })
