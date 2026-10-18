@@ -265,3 +265,51 @@ describe("unpricedNotes: checks the rates actually charged", () => {
     expect(notes).toEqual([]);
   });
 });
+
+describe("computeTokenCost: every Anthropic model id gets a cost", () => {
+  // 1M tokens in each of input, output, cache read, cache write 5m and 1h:
+  // the cost is the sum of the five listed prices.
+  const million = {
+    inputTokens: 1_000_000,
+    outputTokens: 1_000_000,
+    cacheReadTokens: 1_000_000,
+    cacheWrite5mTokens: 1_000_000,
+    cacheWrite1hTokens: 1_000_000,
+  };
+
+  it.each([
+    ["claude-fable-5-1", 10 + 50 + 0.25 + 12.5 + 20],
+    ["claude-opus-5-5", 4 + 20 + 0.2 + 5 + 8],
+    ["claude-opus-5", 5 + 25 + 0.5 + 6.25 + 10],
+    ["claude-sonnet-5-5", 2 + 10 + 0.1 + 2.5 + 4],
+    ["claude-sonnet-5", 2 + 10 + 0.2 + 2.5 + 4],
+    ["claude-haiku-4-5", 1 + 5 + 0.1 + 1.25 + 2],
+    ["claude-haiku-4-5-20251001", 1 + 5 + 0.1 + 1.25 + 2],
+    // The prompt here is 4M tokens, over 100,000: Haiku 5.5 long rates.
+    ["claude-haiku-5-5", 0.5 + 2.5 + 0.05 + 0.625 + 1],
+  ])("%s costs %d USD for 1M tokens of each kind", (model, expected) => {
+    const record = computeTokenCost("anthropic", model, million);
+
+    expect(record.costUsd).toBeCloseTo(expected, 10);
+    expect(record.note).toBeUndefined();
+  });
+
+  it("prices a Haiku 5.5 request under 100,000 prompt tokens at the base rates", () => {
+    const record = computeTokenCost("anthropic", "claude-haiku-5-5", {
+      inputTokens: 10_000,
+      outputTokens: 10_000,
+      cacheReadTokens: 10_000,
+      cacheWrite5mTokens: 10_000,
+      cacheWrite1hTokens: 10_000,
+    });
+
+    expect(record.costUsd).toBeCloseTo((0.1 + 0.5 + 0.01 + 0.125 + 0.2) * 0.01, 10);
+  });
+
+  it("still returns null for an unknown Anthropic model id", () => {
+    const record = computeTokenCost("anthropic", "claude-opus-9-9", million);
+
+    expect(record.costUsd).toBeNull();
+    expect(record.note).toBe("no pricing data for provider/model");
+  });
+});
