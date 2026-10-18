@@ -31,20 +31,6 @@ function positive(tokens: number | undefined): tokens is number {
   return typeof tokens === "number" && tokens > 0;
 }
 
-export function unpricedNotes(pricing: PricingEntry, usage: TokenUsage): string[] {
-  const notes: string[] = [];
-  if (positive(usage.cacheReadTokens) && pricing.cacheReadPricePerMillion === undefined) {
-    notes.push(UNPRICED_CACHE_READ_NOTE);
-  }
-  const unpricedWrite =
-    (positive(usage.cacheWrite5mTokens) && pricing.cacheWrite5mPricePerMillion === undefined) ||
-    (positive(usage.cacheWrite1hTokens) && pricing.cacheWrite1hPricePerMillion === undefined);
-  if (unpricedWrite) {
-    notes.push(UNPRICED_CACHE_WRITE_NOTE);
-  }
-  return notes;
-}
-
 function promptTokens(usage: TokenUsage): number {
   return (
     usage.inputTokens +
@@ -54,10 +40,29 @@ function promptTokens(usage: TokenUsage): number {
   );
 }
 
-export function costFromPricing(pricing: PricingEntry, usage: TokenUsage): number {
+/** The rates a request is charged at: the long-prompt tier when its prompt is over the threshold. */
+function effectiveRates(pricing: PricingEntry, usage: TokenUsage): Omit<PricingEntry, "longPrompt"> {
   const tier = pricing.longPrompt;
-  const rates: Omit<PricingEntry, "longPrompt"> =
-    tier && promptTokens(usage) > tier.thresholdTokens ? tier.rates : pricing;
+  return tier && promptTokens(usage) > tier.thresholdTokens ? tier.rates : pricing;
+}
+
+export function unpricedNotes(pricing: PricingEntry, usage: TokenUsage): string[] {
+  const rates = effectiveRates(pricing, usage);
+  const notes: string[] = [];
+  if (positive(usage.cacheReadTokens) && rates.cacheReadPricePerMillion === undefined) {
+    notes.push(UNPRICED_CACHE_READ_NOTE);
+  }
+  const unpricedWrite =
+    (positive(usage.cacheWrite5mTokens) && rates.cacheWrite5mPricePerMillion === undefined) ||
+    (positive(usage.cacheWrite1hTokens) && rates.cacheWrite1hPricePerMillion === undefined);
+  if (unpricedWrite) {
+    notes.push(UNPRICED_CACHE_WRITE_NOTE);
+  }
+  return notes;
+}
+
+export function costFromPricing(pricing: PricingEntry, usage: TokenUsage): number {
+  const rates = effectiveRates(pricing, usage);
 
   const perMillion = (tokens: number | undefined, price: number | undefined): number =>
     tokens === undefined || price === undefined ? 0 : (tokens / 1_000_000) * price;

@@ -179,15 +179,89 @@ describe("a price of 0 is a real price", () => {
   });
 });
 
-describe("computeTokenCost: unpriced cache writes", () => {
+describe("unpriced cache writes", () => {
+  const noWritePrice = { inputPricePerMillion: 0.95, outputPricePerMillion: 4 };
+
   it("sets a note when cache-write tokens are used but the entry has no write price", () => {
-    const record = computeTokenCost("tokenreply", "kimi-k2.7", {
-      inputTokens: 1_000_000,
+    const usage = { inputTokens: 1_000_000, outputTokens: 0, cacheWrite5mTokens: 100 };
+
+    expect(costFromPricing(noWritePrice, usage)).toBeCloseTo(0.95, 10);
+    const notes = unpricedNotes(noWritePrice, usage);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatch(/cache-write/i);
+  });
+
+  it("sets the cache-write note for 1h tokens when the entry has no 1h write price", () => {
+    const fiveMinOnly = {
+      inputPricePerMillion: 0.95,
+      outputPricePerMillion: 4,
+      cacheWrite5mPricePerMillion: 1.19,
+    };
+    const notes = unpricedNotes(fiveMinOnly, { inputTokens: 0, outputTokens: 0, cacheWrite1hTokens: 100 });
+
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatch(/cache-write/i);
+  });
+
+  it("counts 1h cache-write tokens toward the long-prompt threshold", () => {
+    const tieredWrites = {
+      inputPricePerMillion: 1,
+      outputPricePerMillion: 0,
+      cacheWrite1hPricePerMillion: 10,
+      longPrompt: {
+        thresholdTokens: 100_000,
+        rates: {
+          inputPricePerMillion: 2,
+          outputPricePerMillion: 0,
+          cacheWrite1hPricePerMillion: 20,
+        },
+      },
+    };
+
+    // prompt = 50,000 input + 60,000 1h write = 110,000 > 100,000, so long rates
+    const cost = costFromPricing(tieredWrites, {
+      inputTokens: 50_000,
       outputTokens: 0,
-      cacheWrite5mTokens: 100,
+      cacheWrite1hTokens: 60_000,
     });
 
-    expect(record.costUsd).toBeCloseTo(0.95, 10);
-    expect(record.note).toMatch(/cache-write/i);
+    expect(cost).toBeCloseTo(0.1 + 1.2, 10); // 50k @ $2/M + 60k @ $20/M
+  });
+});
+
+describe("unpricedNotes: checks the rates actually charged", () => {
+  const cachedTiered = {
+    inputPricePerMillion: 1,
+    outputPricePerMillion: 1,
+    cacheReadPricePerMillion: 0.1,
+    longPrompt: {
+      thresholdTokens: 100_000,
+      rates: {
+        inputPricePerMillion: 2,
+        outputPricePerMillion: 2,
+        // no cacheReadPricePerMillion in the long tier
+      },
+    },
+  };
+
+  it("sets the cache-read note when the long tier has no cache-read price", () => {
+    const notes = unpricedNotes(cachedTiered, {
+      inputTokens: 100_000,
+      outputTokens: 0,
+      cacheReadTokens: 50_000,
+    });
+
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatch(/cache-read/i);
+  });
+
+  it("sets no note under the threshold, where the base cache-read price applies", () => {
+    const notes = unpricedNotes(cachedTiered, {
+      inputTokens: 50_000,
+      outputTokens: 0,
+      cacheReadTokens: 10_000,
+    });
+
+    expect(notes).toEqual([]);
   });
 });
