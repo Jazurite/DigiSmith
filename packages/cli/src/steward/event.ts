@@ -60,8 +60,14 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
       await tracker.addComment(ticket, p.comment);
       p.commented = true;
     }
-    const back = await tracker.getTicket(ticket);
+    let back = await tracker.getTicket(ticket);
     if (back.status !== p.to) return { ok: false, kind: "failed", message: `read back shows "${back.status}", wanted "${p.to}"` };
+    const today = todayUtc7(now);
+    if (p.to === "in progress" && (back.startDate === null || lateStart(back, today))) {
+      await tracker.setDates(ticket, { start: today });
+      p.start = today;
+      back = await tracker.getTicket(ticket);
+    }
     st.status_written = p.to;
     st.status_seen = p.to;
     if (p.start) st.start_written = p.start;

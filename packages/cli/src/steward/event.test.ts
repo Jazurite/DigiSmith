@@ -50,6 +50,21 @@ describe("a start", () => {
     expect(s).toMatchObject({ status_written: "in progress", start_written: "2026-10-18", sessions: ["s1"] });
     expect(s.log.at(-1)).toMatchObject({ event: "started", by: "worker", outcome: "applied" });
   });
+  it("fixes a start date that ClickUp sets itself on the status move", async () => {
+    const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-01" })); // no own start write, so only the read-back can catch it
+    const original = t.setStatus.bind(t);
+    t.setStatus = async (k, s) => { await original(k, s); t.ticket.startDate = "2026-10-19"; };
+    await run(t, { event: "started" });
+    expect(t.ticket).toMatchObject({ status: "in progress", startDate: "2026-10-18" });
+    expect(readState(dir, "DGS-1")!.start_written).toBe("2026-10-18");
+  });
+  it("writes the start date when it is missing after the move", async () => {
+    const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-01" }));
+    const original = t.setStatus.bind(t);
+    t.setStatus = async (k, s) => { await original(k, s); t.ticket.startDate = null; };
+    await run(t, { event: "started" });
+    expect(t.ticket.startDate).toBe("2026-10-18");
+  });
   it("keeps an existing start date", async () => {
     const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-01" }));
     await run(t, { event: "started" });
