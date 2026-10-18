@@ -50,12 +50,23 @@ function log(st: StewardState, now: Date, input: EventInput, outcome: StewardSta
   if (st.log.length > LOG_LIMIT) st.log.splice(0, st.log.length - LOG_LIMIT);
 }
 
+/** One date write. ClickUp's ITEM_238 (start after due) is answered once with start = due, so a done move is not left pending. */
+async function setDatesOnce(tracker: Tracker, ticket: string, p: PendingWrite): Promise<void> {
+  try {
+    await tracker.setDates(ticket, { start: p.start, due: p.due });
+  } catch (err) {
+    if (!p.due || !(err as Error).message.includes("ITEM_238")) throw err;
+    await tracker.setDates(ticket, { start: p.due, due: p.due });
+    p.start = p.due;
+  }
+}
+
 /** One status write, its dates and comment, then a read back. Returns ok, or why not: refused (status not on the list) or failed (tracker error or read-back mismatch). Ok when the tracker shows the new status. */
 async function write(tracker: Tracker, ticket: string, st: StewardState, p: PendingWrite, now: Date, snap: TicketSnapshot): Promise<WriteResult> {
   try {
     if (!snap.statuses.includes(p.to)) return { ok: false, kind: "refused", message: `status "${p.to}" is not on the list (${snap.statuses.join(", ")})` };
     await tracker.setStatus(ticket, p.to);
-    if (p.start || p.due) await tracker.setDates(ticket, { start: p.start, due: p.due });
+    if (p.start || p.due) await setDatesOnce(tracker, ticket, p);
     if (p.comment && !p.commented) {
       await tracker.addComment(ticket, p.comment);
       p.commented = true;

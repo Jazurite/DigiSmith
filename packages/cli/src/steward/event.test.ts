@@ -174,6 +174,24 @@ describe("a refusal and a repeat", () => {
 });
 
 describe("the three done paths", () => {
+  it("Auto: merged retries once with start = due when ClickUp says ITEM_238", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-01" }));
+    const original = t.setDates.bind(t);
+    t.setDates = async (k, d) => {
+      if (!d.start && d.due) { t.calls.push("dates-refused"); throw new Error('Request failed with status code 400: {"ECODE":"ITEM_238"}'); }
+      await original(k, d);
+    };
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.calls).toEqual(["status:done", "dates-refused", "dates:2026-10-18|2026-10-18"]);
+    expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("a date error that is not ITEM_238 still queues the move", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto" }));
+    t.setDates = async () => { throw new Error("boom"); };
+    await run(t, { event: "merged", sha: "abc" });
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+  });
   it("Auto: review-started then merged ends done with a due date, no verified needed", async () => {
     const t = new FakeTracker(snapshot("in progress", { signoff: "Auto" }));
     await run(t, { event: "review-started" });
