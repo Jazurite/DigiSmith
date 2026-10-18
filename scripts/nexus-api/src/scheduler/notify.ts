@@ -42,7 +42,7 @@ export function createClickupNotifier(opts: NotifierOptions): (event: EngineEven
       const last = lastSent.get(msg.key)
       if (last !== undefined && now() - last < HOUR_MS) return
       lastSent.set(msg.key, now())
-      const r = await runJob({ file: dg.file, args: [...dg.args, 'clickup', 'add-comment', ticket, msg.text] }, { timeoutMs, killGraceMs: 1000 })
+      const r = await runJob({ file: dg.file, args: [...dg.args, 'clickup', 'add-comment', '--task', ticket, '--text', msg.text, '--yes'] }, { timeoutMs, killGraceMs: 1000 })
       if (r.status !== 'ok') logger?.error('scheduler_error', { where: 'notify', code: r.status })
     } catch {
       try { logger?.error('scheduler_error', { where: 'notify', code: 'internal' }) } catch { /* never rejects */ }

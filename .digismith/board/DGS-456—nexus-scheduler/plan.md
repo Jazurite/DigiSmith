@@ -11,7 +11,7 @@ scripts/nexus-api/src/scheduler/
   clock.ts        UTC+7 helpers: nights, slots (midnight window, everyMinutes), currentSlot(now, job), inWindow, nextRunAt; now() injectable
   runlog.ts       monthly runs-YYYY-MM.jsonl append and read (newest first, limit), state.json (atomic write)
   runner.ts       runs one job as a child process (execFile, fixed argv), timeout, SIGTERM then SIGKILL, output tail
-  notify.ts       Notifier list; clickup notifier (dg clickup add-comment DGS-436), per-job-per-hour dedupe
+  notify.ts       Notifier list; clickup notifier (dg clickup add-comment --task DGS-436 --text <text> --yes), per-job-per-hour dedupe
   engine.ts       tick (30 s), due slots, missed-run rule, serial queue, overlap, run now, start/stop (clean-stop mark, interrupted)
   guard.ts        token file (mode 600, created on first start, never logged), constant-time compare, POST checks
   routes.ts       Hono sub-app: GET /jobs, GET /jobs/<name>/runs, POST /jobs/<name>/run
@@ -46,7 +46,7 @@ Depot after `install.sh`: `~/.digismith-depot/nexus-api/src/scheduler/`. At run 
 
 ### Task 6: Notify
 
-(`notify.test.ts`; fake `dg` script that records its argv): `failed`, `timeout`, `interrupted` and an unclean start each send one comment on DGS-436 with job, status, time UTC+7 and the first 300 characters of `detail`; `ok` sends one only with `notify: 'always'`; at most one comment per job per hour (the second failure inside the hour is not sent, one after the hour is); the comment call times out at 30 s; a failing `dg` is logged only and the run line stays `failed`/`ok`; fixed argv, nothing from a request.
+(`notify.test.ts`; fake `dg` script that records its argv): `failed`, `timeout`, `interrupted` and an unclean start each send one comment on DGS-436 with job, status, time UTC+7 and the first 300 characters of `detail`; `ok` sends one only with `notify: 'always'`; at most one comment per job per hour (the second failure inside the hour is not sent, one after the hour is); the comment call times out at 30 s; a failing `dg` is logged only and the run line stays `failed`/`ok`; fixed argv `clickup add-comment --task DGS-436 --text <text> --yes`, nothing from a request. (Fix 2026-10-19, ticket review r1 F1: the argv was positional before; a test now parses it with the real `parseCommentArgv`.)
 
 ### Task 7: Guard
 

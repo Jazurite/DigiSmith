@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
+import { createAddCommentCommand, parseCommentArgv, type CommentArgv } from '../../../../packages/cli/src/clickup/add-comment.ts'
 import { createClickupNotifier } from './notify.ts'
 import { formatUtc7 } from './clock.ts'
 import type { EngineEvent } from './engine.ts'
@@ -17,6 +20,7 @@ function writeDg(body: string) {
   fs.writeFileSync(script, `require('fs').appendFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2)) + '\\n');\n${body}`)
   return { file: process.execPath, args: [script, '--prefix'] }
 }
+const textOf = (argv: string[]): string => argv[argv.indexOf('--text') + 1]
 const sent = (): string[][] => (fs.existsSync(calls) ? fs.readFileSync(calls, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)) : [])
 
 const job = (over: Partial<JobDef> = {}): JobDef => ({
@@ -43,12 +47,11 @@ describe('createClickupNotifier', () => {
       await n(runEvent(status, 'it broke'))
       const c = sent()
       expect(c).toHaveLength(1)
-      expect(c[0].slice(0, 4)).toEqual(['--prefix', 'clickup', 'add-comment', 'DGS-436'])
-      expect(c[0]).toHaveLength(5)
-      expect(c[0][4]).toContain('nightly-sync')
-      expect(c[0][4]).toContain(status)
-      expect(c[0][4]).toContain(formatUtc7(T0))
-      expect(c[0][4]).toContain('it broke')
+      expect(c[0]).toEqual(['--prefix', 'clickup', 'add-comment', '--task', 'DGS-436', '--text', textOf(c[0]), '--yes'])
+      expect(textOf(c[0])).toContain('nightly-sync')
+      expect(textOf(c[0])).toContain(status)
+      expect(textOf(c[0])).toContain(formatUtc7(T0))
+      expect(textOf(c[0])).toContain('it broke')
     })
   }
 
@@ -57,9 +60,9 @@ describe('createClickupNotifier', () => {
     await n({ type: 'unclean-start', at: new Date(T0).toISOString(), run: null })
     const c = sent()
     expect(c).toHaveLength(1)
-    expect(c[0].slice(0, 4)).toEqual(['--prefix', 'clickup', 'add-comment', 'DGS-1'])
-    expect(c[0][4]).toContain('unclean')
-    expect(c[0][4]).toContain(formatUtc7(T0))
+    expect(c[0]).toEqual(['--prefix', 'clickup', 'add-comment', '--task', 'DGS-1', '--text', textOf(c[0]), '--yes'])
+    expect(textOf(c[0])).toContain('unclean')
+    expect(textOf(c[0])).toContain(formatUtc7(T0))
   })
 
   it('an ok comment does not hide a later failure comment', async () => {
@@ -74,15 +77,15 @@ describe('createClickupNotifier', () => {
     await n(runEvent('failed'))
     await n({ type: 'unclean-start', at: new Date(T0 - 7200_000).toISOString(), run: null })
     const c = sent()
-    expect(c[0][4]).toContain(formatUtc7(T0))
-    expect(c[0][4]).not.toContain(formatUtc7(T0 + 5 * 3600_000))
-    expect(c[1][4]).toContain(formatUtc7(T0 - 7200_000))
+    expect(textOf(c[0])).toContain(formatUtc7(T0))
+    expect(textOf(c[0])).not.toContain(formatUtc7(T0 + 5 * 3600_000))
+    expect(textOf(c[1])).toContain(formatUtc7(T0 - 7200_000))
   })
 
   it('an unclean start with a run carries its detail cut to 300 characters', async () => {
     const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
     await n({ type: 'unclean-start', at: new Date(T0).toISOString(), run: run('interrupted', 'q'.repeat(500)) })
-    const text = sent()[0][4]
+    const text = textOf(sent()[0])
     expect(text).toContain('q'.repeat(300))
     expect(text).not.toContain('q'.repeat(301))
   })
@@ -126,7 +129,7 @@ describe('createClickupNotifier', () => {
   it('cuts detail to 300 characters on one line', async () => {
     const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
     await n(runEvent('failed', 'a\n\nb   c' + 'z'.repeat(500)))
-    const text = sent()[0][4]
+    const text = textOf(sent()[0])
     expect(text).toContain('a b c')
     expect(text).not.toContain('\n')
     expect(text).toContain('z'.repeat(300 - 5))
@@ -173,6 +176,23 @@ describe('createClickupNotifier', () => {
     await n({ type: 'run', job: j, run: { ...run('failed', 'd'), id: 'SECRET-ID', slot: 'SECRET-SLOT' } })
     const joined = JSON.stringify(sent()[0])
     expect(joined).not.toContain('SECRET')
-    expect(sent()[0]).toHaveLength(5)
+    expect(sent()[0]).toHaveLength(8)
+  })
+
+  it('sends an argv the real dg clickup add-comment command parses', async () => {
+    const n = createClickupNotifier({ dg: fakeDg, now: () => T0 })
+    await n(runEvent('failed', 'it broke'))
+    const argv = sent()[0].slice(1)
+    const cliRequire = createRequire(new URL('../../../../packages/cli/package.json', import.meta.url))
+    const yargs = (await import(pathToFileURL(cliRequire.resolve('yargs')).href)).default
+    const real = createAddCommentCommand(() => { throw new Error('no ClickUp client in this test') })
+    let got: CommentArgv | undefined
+    await yargs(argv)
+      .command({ command: 'clickup', builder: (y: any) => y.command({ ...real, handler: (a: CommentArgv) => { got = a } }).demandCommand(1), handler: () => {} })
+      .strict().exitProcess(false).fail((msg: string, err: Error | undefined) => { throw err ?? new Error(msg) })
+      .parseAsync()
+    expect(got?.yes).toBe(true)
+    expect(parseCommentArgv(got!)).toEqual({ task: 'DGS-436', text: textOf(sent()[0]) })
+    expect(textOf(sent()[0])).toContain('it broke')
   })
 })
