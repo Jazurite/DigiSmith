@@ -140,7 +140,7 @@ git commit -m "fix(dgs-564): replace a start date later than today at started an
 
 ```ts
   it("fixes a start date that ClickUp sets itself on the status move", async () => {
-    const t = new FakeTracker(snapshot("to do"));
+    const t = new FakeTracker(snapshot("to do", { startDate: "2026-10-01" })); // no own start write, so only the read-back can catch it
     const original = t.setStatus.bind(t);
     t.setStatus = async (k, s) => { await original(k, s); t.ticket.startDate = "2026-10-19"; };
     await run(t, { event: "started" });
