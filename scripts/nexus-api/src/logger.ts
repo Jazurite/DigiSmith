@@ -9,10 +9,11 @@ export interface Logger {
 }
 
 const MAX_PATH = 200
-// Only a code from this list can be logged. Anything else becomes "unknown", so no message text can leak through here.
+// The scheduler places an error line can name; anything else becomes "unknown".
 const WHERE = new Set(['append_run', 'write_state', 'read_state', 'read_runs', 'tick', 'start'])
 // an error code like ENOTDIR or an error class name like TypeError; never message text
 const ERROR_CODE = /^[A-Za-z][A-Za-z0-9_]{0,39}$/
+// Only a code from this list can be logged. Anything else becomes "unknown", so no message text can leak through here.
 const CODES = new Set(['profile_missing', 'profile_invalid', 'key_unavailable', 'internal_invalid', 'bad_request', 'no_reading', 'not_found', 'method_not_allowed'])
 
 export function createLogger(sink: LogSink = line => process.stdout.write(line + '\n'), now: () => number = Date.now): Logger {
