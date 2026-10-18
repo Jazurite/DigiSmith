@@ -57,6 +57,84 @@ describe("a start", () => {
   });
 });
 
+describe("the dates repair at every event", () => {
+  it("status already there, start still late: repaired", async () => {
+    const t = new FakeTracker(snapshot("in progress", { startDate: "2026-10-19" }));
+    const lines = await run(t, { event: "started" });
+    expect(t.calls).toEqual(["dates:2026-10-18|"]);
+    expect(t.ticket.startDate).toBe("2026-10-18");
+    expect(lines.join("\n")).toContain("start date 2026-10-19 -> 2026-10-18");
+    const s = readState(dir, "DGS-1")!;
+    expect(s.start_written).toBe("2026-10-18");
+    expect(s.log.at(-1)?.outcome).toBe("noop");
+  });
+  it("a record-only event in review repairs a late start", async () => {
+    const t = new FakeTracker(snapshot("review", { startDate: "2026-10-19" }));
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.calls).toEqual(["dates:2026-10-18|"]);
+  });
+  it("a refused event still repairs", async () => {
+    const t = new FakeTracker(snapshot("review", { startDate: "2026-10-19" }));
+    const lines = await run(t, { event: "started" });
+    expect(lines.join("\n")).toMatch(/refused started/);
+    expect(t.ticket.startDate).toBe("2026-10-18");
+  });
+  it("done with a start after the due date: start = due", async () => {
+    const t = new FakeTracker(snapshot("done", { startDate: "2026-10-19", dueDate: "2026-10-17" }));
+    await run(t, { event: "documented" });
+    expect(t.calls).toEqual(["dates:2026-10-17|", "status:documented"]);
+    expect(t.ticket.startDate).toBe("2026-10-17");
+  });
+  it("merged: a late start is put back before the due write", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-19" }));
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.calls).toEqual(["dates:2026-10-18|", "status:done", "dates:|2026-10-18"]);
+    expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
+  });
+  it("a queued done move heals: the start ClickUp shifted is repaired at the next event", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-01" }));
+    t.failWrites = 1;
+    await run(t, { event: "merged", sha: "abc" });
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    t.ticket.startDate = "2026-10-19";
+    await run(t, { event: "merged", sha: "abc" });
+    expect(t.ticket).toMatchObject({ status: "done", startDate: "2026-10-18", dueDate: "2026-10-18" });
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("fills a missing start with the day the ticket entered in progress", async () => {
+    const t = new FakeTracker(snapshot("to do"));
+    await run(t, { event: "started" }, { now: () => new Date("2026-10-16T05:00:00Z") }); // the 16th in UTC+7
+    t.ticket.startDate = null; // ClickUp lost the start
+    await run(t, { event: "review-started" }); // today is the 18th
+    expect(t.ticket).toMatchObject({ status: "review", startDate: "2026-10-16" });
+  });
+  it("fills a missing start with today when the state does not know the day", async () => {
+    const t = new FakeTracker(snapshot("in progress"));
+    await run(t, { event: "started" });
+    expect(t.calls).toEqual(["dates:2026-10-18|"]);
+    expect(t.ticket.startDate).toBe("2026-10-18");
+  });
+  it("leaves alone: a ticket in to do, a discarded one, an earlier start", async () => {
+    const early = new FakeTracker(snapshot("in progress", { startDate: "2026-10-01" }));
+    await run(early, { event: "started" });
+    expect(early.calls).toEqual([]);
+    const todo = new FakeTracker(snapshot("to do", { startDate: "2026-10-19" }));
+    await run(todo, { event: "review-started" });
+    expect(todo.calls).toEqual([]);
+    const gone = new FakeTracker(snapshot("discarded", { startDate: "2026-10-19" }));
+    await run(gone, { event: "discard", ...Q });
+    expect(gone.calls).toEqual([]);
+  });
+  it("a failed repair is a warning and the event still applies", async () => {
+    const t = new FakeTracker(snapshot("review", { signoff: "Auto", startDate: "2026-10-19" }));
+    const original = t.setDates.bind(t);
+    t.setDates = async (k, d) => { if (!d.due) throw new Error("boom"); await original(k, d); };
+    const lines = await run(t, { event: "merged", sha: "abc" });
+    expect(lines.join("\n")).toMatch(/could not repair the start date \(boom\)/);
+    expect(t.ticket.status).toBe("done");
+  });
+});
+
 describe("a refusal and a repeat", () => {
   it("a refused event writes nothing to the tracker but is logged", async () => {
     const t = new FakeTracker(snapshot("refinement"));
@@ -66,7 +144,7 @@ describe("a refusal and a repeat", () => {
     expect(readState(dir, "DGS-1")!.log.at(-1)?.outcome).toBe("refused");
   });
   it("a repeated event is a no-op", async () => {
-    const t = new FakeTracker(snapshot("in progress"));
+    const t = new FakeTracker(snapshot("in progress", { startDate: "2026-10-01" }));
     await run(t, { event: "started" });
     expect(t.calls).toEqual([]);
     expect(readState(dir, "DGS-1")!.log.at(-1)?.outcome).toBe("noop");
@@ -124,7 +202,7 @@ describe("the gates", () => {
     expect(readState(dir, "DGS-1")!.gates[0]).toMatchObject({ event: "approved", quote: "approved, go", by: "maestro" });
   });
   it("an event in acceptance other than accepted is refused", async () => {
-    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack" }));
+    const t = new FakeTracker(snapshot("acceptance", { startDate: "2026-10-01", signoff: "Jack" }));
     for (const event of ["started", "review-started", "merged", "verified"] as const) await run(t, { event });
     expect(t.ticket.status).toBe("acceptance");
     expect(t.calls).toEqual([]);
@@ -133,7 +211,7 @@ describe("the gates", () => {
 
 describe("a status that is not on the list", () => {
   it("is refused with the list's statuses and nothing is written", async () => {
-    const t = new FakeTracker(snapshot("review", { signoff: "Jack", statuses: ["review", "done"] }));
+    const t = new FakeTracker(snapshot("review", { startDate: "2026-10-01", signoff: "Jack", statuses: ["review", "done"] }));
     const lines = await run(t, { event: "merged" });
     expect(t.calls).toEqual([]);
     expect(lines.join("\n")).toContain('"acceptance" is not on the list');
@@ -220,7 +298,7 @@ describe("which stream a line lands on", () => {
     expect(failed.warn[0]).toMatch(/will retry/);
 
     fs.rmSync(path.join(dir, "DGS-1.json")); // a fresh ticket: drop the queued move above
-    const nl = await runR(new FakeTracker(snapshot("review", { signoff: "Jack", statuses: ["review", "done"] })), { event: "merged" });
+    const nl = await runR(new FakeTracker(snapshot("review", { startDate: "2026-10-01", signoff: "Jack", statuses: ["review", "done"] })), { event: "merged" });
     expect(nl.out).toEqual([]);
     expect(nl.warn[0]).toContain("is not on the list");
 
@@ -238,7 +316,7 @@ describe("a refused write leaves no record", () => {
     expect(readState(dir, "DGS-1")!.merged).toBeNull();
   });
   it("accepted yes refused for a missing status leaves no gate and release-started is refused", async () => {
-    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack", statuses: ["acceptance", "release"] }));
+    const t = new FakeTracker(snapshot("acceptance", { startDate: "2026-10-01", signoff: "Jack", statuses: ["acceptance", "release"] }));
     await run(t, { event: "accepted", answer: "yes", quote: "ok" }, { config: { releaseStage: false } });
     expect(readState(dir, "DGS-1")!.gates).toEqual([]);
     const lines = await run(t, { event: "release-started" }, { config: { releaseStage: true } });
@@ -277,7 +355,7 @@ describe("pending retries", () => {
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
   });
   it("a pending that is already satisfied is dropped without a comment", async () => {
-    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack" }));
+    const t = new FakeTracker(snapshot("acceptance", { startDate: "2026-10-01", signoff: "Jack" }));
     t.failWrites = 1; // setStatus throws, nothing written
     await run(t, { event: "accepted", answer: "no", quote: "wrong" });
     expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);

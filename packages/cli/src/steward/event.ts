@@ -73,6 +73,18 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
   }
 }
 
+const REPAIRED_IN = ["in progress", "review", "acceptance", "release", "done", "documented"];
+const DONE_LIKE = ["done", "documented"];
+
+/** The start date to write, or null. A start later than today becomes today (ClickUp's Reschedule dependencies moves a dependent's start to the day after its predecessor's due date). A missing start becomes the day the ticket entered in progress, else today. On done, a start later than the due date becomes the due date. */
+function repairedStart(snap: TicketSnapshot, today: string, enteredOn: string | null): string | null {
+  if (!REPAIRED_IN.includes(snap.status)) return null;
+  let start = snap.startDate ?? enteredOn ?? today;
+  if (start > today) start = today;
+  if (DONE_LIKE.includes(snap.status) && snap.dueDate !== null && start > snap.dueDate) start = snap.dueDate;
+  return start === snap.startDate ? null : start;
+}
+
 function pendingOf(move: Move, st: StewardState, snap: TicketSnapshot, today: string): PendingWrite {
   const p: PendingWrite = { to: move.to, from: snap.status };
   if (move.startDate && !st.start_written && !snap.startDate) p.start = today;
@@ -101,6 +113,20 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
   const today = todayUtc7(now);
   let snap = await tracker.getTicket(ticket);
   const st = loadState(deps, ticket, snap);
+
+  // Dates first, at every event: ClickUp may have moved them since the last one.
+  const entered = st.log.findLast((l) => l.outcome === "applied" && l.note.endsWith("-> in progress"));
+  const fixed = repairedStart(snap, today, entered ? todayUtc7(new Date(entered.at)) : null);
+  if (fixed !== null) {
+    try {
+      await tracker.setDates(ticket, { start: fixed });
+      out.push(`steward: ${ticket}: start date ${snap.startDate ?? "missing"} -> ${fixed}`);
+      snap = { ...snap, startDate: fixed };
+      st.start_written = fixed;
+    } catch (err) {
+      warn.push(`steward: ${ticket}: could not repair the start date (${(err as Error).message}); will retry at the next event`);
+    }
+  }
 
   // Writes that failed earlier go first, in order.
   const stillPending: PendingWrite[] = [];
