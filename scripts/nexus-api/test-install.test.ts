@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createServer } from 'node:net'
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -87,14 +88,9 @@ describe('install.sh', () => {
     expect(got).toEqual(want)
     expect(got.filter(f => f.endsWith('.test.ts') || f === 'fixtures')).toEqual([])
   })
-  it('the plist template is unchanged against the base of this ticket', () => {
-    const rel = 'scripts/nexus-api/com.jazurite.digismith.nexus-api.plist.tmpl'
-    const git = (args: string[]) => spawnSync('git', args, { cwd: HERE, encoding: 'utf8' })
-    const base = git(['merge-base', 'main', 'HEAD'])
-    expect(base.status, base.stderr).toBe(0)
-    const old = git(['show', `${base.stdout.trim()}:${rel}`])
-    expect(old.status, old.stderr).toBe(0)
-    expect(readFileSync(join(HERE, 'com.jazurite.digismith.nexus-api.plist.tmpl'), 'utf8')).toBe(old.stdout)
+  it('the plist template is unchanged (pinned hash; a deliberate plist change updates it)', () => {
+    const hash = createHash('sha256').update(readFileSync(join(HERE, 'com.jazurite.digismith.nexus-api.plist.tmpl'))).digest('hex')
+    expect(hash).toBe('b8c67f78c9def9755e11331c5a185bbccfb7049c38aaa3b575da3e33462a86fb')
   })
   it('the depot copy starts on a high port and lists the jobs, with a private token file', async () => {
     const state = mkdtempSync(join(tmpdir(), 'nexus-install-state-'))
@@ -118,9 +114,10 @@ describe('install.sh', () => {
       if (!res) throw new Error(log)
       expect(res!.status).toBe(200)
       const text = await res!.text()
-      const body = JSON.parse(text)
-      const list = (Array.isArray(body) ? body : body.jobs) as Array<{ id?: string; name?: string; nextRunAt: unknown; lastRun: unknown }>
-      const selftest = list.find(j => (j.id ?? j.name) === 'selftest')
+      const body = JSON.parse(text) as { generatedAt: unknown; jobs: Array<{ name: string; nextRunAt: unknown; lastRun: unknown }> }
+      expect(typeof body.generatedAt).toBe('string')
+      expect(Array.isArray(body.jobs)).toBe(true)
+      const selftest = body.jobs.find(j => j.name === 'selftest')
       expect(selftest, text).toBeDefined()
       expect(selftest!.nextRunAt).toBeNull()
       expect(selftest!.lastRun).toBeNull()
