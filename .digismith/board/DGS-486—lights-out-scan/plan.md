@@ -87,7 +87,7 @@ export interface Event { ts: string; tsUtc7: string; night: string; kind: EventK
 export interface Lock { ticket: string; taskId: string; claimedAt: string; claimedAtUtc7: string; order: string; scanId: string }
 // clock.ts
 export const OFFSET_MS = 7 * 3600_000;
-export const nightOf = (now: Date): string => new Date(now.getTime() - 7 * 3600_000 + OFFSET_MS).toISOString().slice(0, 10);
+export const nightOf = (now: Date): string => new Date(now.getTime() - 7 * 3600_000 + OFFSET_MS).toISOString().slice(0, 10);  // UTC+7 date of (now - 7 h);
 export function inWindow(now: Date): boolean { const h = new Date(now.getTime() + OFFSET_MS).getUTCHours(); return h >= 23 || h < 6; }
 export function fmtUtc7(now: Date): string { return new Date(now.getTime() + OFFSET_MS).toISOString().slice(0, 19).replace("T", " "); }
 // rank.ts
@@ -115,7 +115,7 @@ export function rankTasks(tasks: LoTask[]): LoTask[] {
 ```ts
 export function lightsoutDir(env = process.env): string;           // LIGHTSOUT_DIR, else <DIGISMITH_DEPOT_DIR or ~/.digismith-depot>/lightsout
 export function acquireLock(dir: string, lock: Lock): "acquired" | "busy";   // writeFileSync(..., { flag: "wx" }); EEXIST -> "busy"; other errors throw
-export function readLock(dir: string): Lock | null;                // missing or corrupt file -> null for corrupt is WRONG: a corrupt lock reads as { ticket: "?", ... } so the scan stays busy
+export function readLock(dir: string): Lock | null;                // no file -> null; a corrupt file -> a lock with ticket "?", so the scan stays busy
 export function clearLock(dir: string): void;                      // rmSync force
 export function readNotes(dir: string): Record<string, string>;
 export function writeNotes(dir: string, notes: Record<string, string>): void;   // temp file + rename
