@@ -22,10 +22,14 @@ interface Call { command: RunCommand; opts: RunOptions; resolve: (r: RunResult) 
 
 function fakeRunner(initial: Mode = 'ok') {
   const calls: Call[] = []
-  const r = { mode: initial, calls, run: (command: RunCommand, opts: RunOptions): Promise<RunResult> => {
+  const waiters: { n: number; resolve: () => void }[] = []
+  const r = { mode: initial, calls, waitForCalls: (n: number): Promise<void> =>
+    calls.length >= n ? Promise.resolve() : new Promise<void>((resolve) => { waiters.push({ n, resolve }) }),
+  run: (command: RunCommand, opts: RunOptions): Promise<RunResult> => {
     if (r.mode === 'throw') throw new Error('runner exploded')
     return new Promise<RunResult>((resolve) => {
       calls.push({ command, opts, resolve })
+      for (const w of waiters.splice(0)) if (calls.length >= w.n) w.resolve(); else waiters.push(w)
       opts.onStart?.(4242)
       opts.signal?.addEventListener('abort', () => resolve({ status: 'interrupted', exitCode: null, detail: 'stopped' }))
       if (r.mode === 'ok') resolve({ status: 'ok', exitCode: 0, detail: 'done' })
@@ -41,6 +45,25 @@ const now = () => t
 beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'engine-')) })
 
 // a fresh log has no lines for the night before the first tick, so the engine logs those slots missed; most tests look from `since`
+// state writes wait until the test opens the gate, so the test decides when the engine's disk work ends
+function gatedWrites() {
+  let open: () => void = () => undefined
+  let gate: Promise<void> = Promise.resolve()
+  const close = () => { gate = new Promise<void>((resolve) => { open = resolve }) }
+  const written: State[] = []
+  const waiters: { pred: (s: State) => boolean; resolve: () => void }[] = []
+  const writeStateGated = async (d: string, st: State) => {
+    await gate
+    await writeState(d, st)
+    written.push(st)
+    for (const w of waiters.splice(0)) if (w.pred(st)) w.resolve(); else waiters.push(w)
+  }
+  const until = (pred: (s: State) => boolean): Promise<void> =>
+    written.some(pred) ? Promise.resolve() : new Promise<void>((resolve) => { waiters.push({ pred, resolve }) })
+  return { writeState: writeStateGated, open: () => open(), close, until }
+}
+const settle = () => new Promise<void>((r) => setImmediate(r))
+
 const lines = async (since = ''): Promise<RunRecord[]> =>
   (await readRuns(dir, { limit: 1000 })).reverse().filter((r) => r.slot === null || r.slot.slice(0, 10) >= since)
 
@@ -194,14 +217,20 @@ describe('overlap', () => {
   it('runs two jobs due together one after the other, lower order first', async () => {
     const a = job('a', { schedule: { atUtc7: '00:10', windowEndUtc7: '05:00' }, order: 200 })
     const b = job('b', { schedule: { atUtc7: '00:10', windowEndUtc7: '05:00' }, order: 50 })
-    const { engine, runner } = make([a, b], fakeRunner('hang'))
+    const writes = gatedWrites()
+    const { engine, runner } = make([a, b], fakeRunner('hang'), { writeState: writes.writeState })
     t = at('2026-10-19 00:10:05')
     await engine.tick()
     expect(runner.calls).toHaveLength(1)
+    expect(runner.calls[0].command).toBe(b.command)
     expect(engine.runNow('a')).toMatchObject({ accepted: false, error: 'already_running' })
+    writes.close()
     runner.calls[0].resolve({ status: 'ok', exitCode: 0, detail: 'b done' })
-    await new Promise((r) => setTimeout(r, 20))
-    expect(runner.calls).toHaveLength(2)
+    for (let i = 0; i < 5; i++) await settle()
+    expect(runner.calls).toHaveLength(1)
+    writes.open()
+    await runner.waitForCalls(2)
+    expect(runner.calls[1].command).toBe(a.command)
     runner.calls[1].resolve({ status: 'ok', exitCode: 0, detail: 'a done' })
     await engine.whenIdle()
     expect((await lines('2026-10-19')).map((r) => [r.job, r.slot])).toEqual([['b', '2026-10-19@00:10'], ['a', '2026-10-19@00:10']])
@@ -265,11 +294,12 @@ describe('interrupted runs', () => {
   })
 
   it('logs a running child interrupted at stop and writes the clean-stop mark', async () => {
-    const { engine, runner, events } = make([flux()], fakeRunner('hang'))
+    const writes = gatedWrites()
+    const { engine, runner, events } = make([flux()], fakeRunner('hang'), { writeState: writes.writeState })
     t = at('2026-10-19 00:10:05')
     await engine.start()
     expect(runner.calls).toHaveLength(1)
-    await new Promise((r) => setTimeout(r, 20))
+    await writes.until((s) => s.inFlight !== null)
     expect((await readState(dir)).inFlight).toMatchObject({ job: 'flux', pid: 4242 })
     await engine.stop()
     expect(runner.calls[0].opts.signal?.aborted).toBe(true)
