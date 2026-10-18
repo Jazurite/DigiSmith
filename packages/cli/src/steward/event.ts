@@ -66,6 +66,7 @@ async function write(tracker: Tracker, ticket: string, st: StewardState, p: Pend
   try {
     if (!snap.statuses.includes(p.to)) return { ok: false, kind: "refused", message: `status "${p.to}" is not on the list (${snap.statuses.join(", ")})` };
     await tracker.setStatus(ticket, p.to);
+    p.statusSent = true;
     if (p.start || p.due) await setDatesOnce(tracker, ticket, p);
     if (p.comment && !p.commented) {
       await tracker.addComment(ticket, p.comment);
@@ -153,15 +154,20 @@ async function apply(deps: EventDeps, tracker: Tracker, ticket: string, input: E
   const stillPending: PendingWrite[] = [];
   for (const p of st.pending) {
     if (snap.status === p.to) {
-      // Already there: no second status write and no second comment. The dates may not have landed with the status, so send those.
+      // Already there: no second status write. The dates may not have landed with the status, and the comment may be unsent when the date write failed first, so send those, each once.
       const q: PendingWrite = { ...p, start: p.start && st.start_written !== p.start ? p.start : undefined, due: p.due && st.due_written !== p.due ? p.due : undefined };
-      if (q.start || q.due) {
+      const needComment = Boolean(p.comment && !p.commented && p.statusSent);
+      if (q.start || q.due || needComment) {
         try {
-          await setDatesOnce(tracker, ticket, q);
+          if (q.start || q.due) await setDatesOnce(tracker, ticket, q);
           if (q.start) st.start_written = q.start;
           if (q.due) st.due_written = q.due;
+          if (needComment) {
+            await tracker.addComment(ticket, p.comment!);
+            p.commented = true;
+          }
         } catch (err) {
-          warn.push(`steward: ${ticket}: could not write the dates of the earlier move to ${p.to} (${(err as Error).message}); will retry at the next event`);
+          warn.push(`steward: ${ticket}: could not finish the earlier move to ${p.to} (${(err as Error).message}); will retry at the next event`);
           stillPending.push(p);
         }
       }

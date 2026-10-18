@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { runEvent, rebuild, assertUsage, UsageError, todayUtc7, type EventDeps } from "./event.ts";
-import { readState } from "./state.ts";
+import { readState, writeState } from "./state.ts";
 import { FakeTracker, snapshot } from "./fake-tracker.test-util.ts";
 import type { EventInput } from "./types.ts";
 
@@ -432,6 +432,31 @@ describe("pending retries", () => {
     await run(t, { event: "approved", quote: "go" });
     expect(t.comments).toEqual([]);
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+  });
+  it("a queued comment is posted once when the status already landed and the dates retry", async () => {
+    const t = new FakeTracker(snapshot("acceptance", { signoff: "Jack" }));
+    const addComment = t.addComment.bind(t);
+    let commentFailed = false;
+    t.addComment = async (k, c) => { if (!commentFailed) { commentFailed = true; throw new Error("no comment"); } await addComment(k, c); };
+    await run(t, { event: "accepted", answer: "no", quote: "wrong" });
+    expect(t.ticket.status).toBe("refinement");
+    expect(t.comments).toEqual([]);
+    const s = readState(dir, "DGS-1")!;
+    expect(s.pending).toHaveLength(1);
+    s.pending[0].due = "2026-10-18"; // the move also owed a due date
+    writeState(dir, s);
+    const setDates = t.setDates.bind(t);
+    let datesFailed = false;
+    t.setDates = async (k, d) => { if (!datesFailed) { datesFailed = true; throw new Error("boom"); } await setDates(k, d); };
+    await run(t, { event: "concept-started" }); // the dates fail first, so the comment waits
+    expect(t.comments).toEqual([]);
+    expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
+    await run(t, { event: "concept-started" });
+    expect(t.comments).toEqual(["Jack did not accept: wrong"]);
+    expect(t.ticket.dueDate).toBe("2026-10-18");
+    expect(readState(dir, "DGS-1")!.pending).toEqual([]);
+    await run(t, { event: "concept-started" });
+    expect(t.comments).toHaveLength(1);
   });
   it("a successful retry refreshes the snapshot so the event is judged on the fresh status", async () => {
     const t = new FakeTracker(snapshot("to do"));

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import type { EventName, Signoff } from "./types.ts";
 
 export interface GateRecord { event: EventName; answer?: "yes" | "no"; quote: string; by: string; at: string }
-/** A queued move. `from` is the status the ticket had when it was queued; `commented` is set once the comment is posted. */
-export interface PendingWrite { to: string; from: string; start?: string; due?: string; comment?: string; commented?: boolean }
+/** A queued move. `from` is the status the ticket had when it was queued; `statusSent` is set once the status write went through; `commented` is set once the comment is posted. */
+export interface PendingWrite { to: string; from: string; start?: string; due?: string; comment?: string; commented?: boolean; statusSent?: boolean }
 export interface LogEntry { at: string; event: string; by: string; outcome: "applied" | "refused" | "noop" | "pending" | "recorded"; note: string }
 
 export interface StewardState {
