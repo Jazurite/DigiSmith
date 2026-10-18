@@ -24,6 +24,16 @@ describe('ensureToken', () => {
     expect(ensureToken(dir)).toBe(ensureToken(dir))
   })
 
+  it('replaces an empty token file with a non-empty one at mode 600', () => {
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'token'), '', { mode: 0o600 })
+    const t = ensureToken(dir)
+    expect(t).toMatch(/^[0-9a-f]{64}$/)
+    expect(fs.readFileSync(path.join(dir, 'token'), 'utf8').trim()).toBe(t)
+    expect(fs.statSync(path.join(dir, 'token')).mode & 0o777).toBe(0o600)
+    expect(fs.readdirSync(dir)).toEqual(['token'])
+  })
+
   it('fixes a group/world readable token file to 600', () => {
     const first = ensureToken(dir)
     fs.chmodSync(path.join(dir, 'token'), 0o644)

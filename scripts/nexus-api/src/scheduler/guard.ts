@@ -12,16 +12,36 @@ export type GuardResult =
   | { ok: true }
   | { ok: false, status: 400 | 403, error: 'bad_request' | 'forbidden', message: string }
 
+function readToken(file: string): string | null {
+  try {
+    return fs.readFileSync(file, 'utf8').trim() || null
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw e
+  }
+}
+
+// The token is written to a temp file first so a crash never leaves an empty token visible.
 export function ensureToken(stateDir: string): string {
   fs.mkdirSync(stateDir, { recursive: true })
   const file = path.join(stateDir, 'token')
-  try {
-    fs.writeFileSync(file, crypto.randomBytes(32).toString('hex'), { flag: 'wx', mode: 0o600 })
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e
+  let token = readToken(file)
+  if (!token) {
+    const tmp = `${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`
+    fs.writeFileSync(tmp, crypto.randomBytes(32).toString('hex'), { flag: 'wx', mode: 0o600 })
+    try {
+      if (fs.existsSync(file)) fs.renameSync(tmp, file)
+      else fs.linkSync(tmp, file)
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e
+    } finally {
+      fs.rmSync(tmp, { force: true })
+    }
+    token = readToken(file)
+    if (!token) throw new Error('token file unreadable')
   }
   fs.chmodSync(file, 0o600)
-  return fs.readFileSync(file, 'utf8').trim()
+  return token
 }
 
 function tokenMatches(given: string | undefined, token: string): boolean {
