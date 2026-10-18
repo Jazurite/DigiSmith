@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import type { Logger } from '../logger.ts'
 import { currentSlot, formatUtc7, inWindow, nextRunAt, slotsOfNight, type Slot } from './clock.ts'
 import { appendRun, readRuns, readState, writeState as writeStateFile, type State } from './runlog.ts'
 import { runJob, type RunResult } from './runner.ts'
@@ -11,7 +12,7 @@ export type EngineEvent =
 
 export type RunNowResult =
   | { accepted: true; runId: string; startedAt: string }
-  | { accepted: false; error: 'not_found' | 'already_running' | 'forbidden'; message: string }
+  | { accepted: false; error: 'not_found' | 'already_running' | 'forbidden' | 'stopped'; message: string }
 
 export interface EngineOptions {
   jobs: readonly JobDef[]
@@ -22,7 +23,11 @@ export interface EngineOptions {
   tickMs?: number
   killGraceMs?: number
   writeState?: (dir: string, state: State) => Promise<void>
+  logger?: Pick<Logger, 'error'>
 }
+
+export type EngineErrorPlace = 'append_run' | 'write_state' | 'read_state' | 'read_runs' | 'tick' | 'start'
+export interface EngineHealth { errorCount: number; lastError: { at: string; where: EngineErrorPlace; code: string } | null }
 
 export interface Engine {
   start(): Promise<void>
@@ -32,6 +37,7 @@ export interface Engine {
   runNow(name: string): RunNowResult
   snapshot(): JobInfo[]
   getRuns(name: string, limit: number): Promise<RunRecord[]>
+  health(): EngineHealth
 }
 
 type InFlight = NonNullable<State['inFlight']> & { trigger?: RunTrigger }
@@ -46,6 +52,11 @@ const FAILURES = new Set(['failed', 'timeout', 'interrupted'])
 const isoS = (ms: number): string => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
 const nightOf = (ms: number): string => formatUtc7(ms).slice(0, 10)
 const errText = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+const errCode = (err: unknown): string => {
+  const code = (err as { code?: unknown } | null)?.code
+  if (typeof code === 'string') return code
+  return err instanceof Error ? err.name : 'unknown'
+}
 
 function validInFlight(v: unknown): InFlight | null {
   if (!v || typeof v !== 'object') return null
@@ -75,10 +86,26 @@ export function createEngine(opts: EngineOptions): Engine {
   let timer: NodeJS.Timeout | undefined
   let stopped = false
   let loading: Promise<void> | null = null
+  const usedIds = new Set<string>()
+  const health: EngineHealth = { errorCount: 0, lastError: null }
+
+  const report = (where: EngineErrorPlace, err: unknown): void => {
+    const code = errCode(err)
+    health.errorCount++
+    health.lastError = { at: isoS(now()), where, code }
+    try { opts.logger?.error('scheduler_error', { where, code }) } catch { /* a broken logger must not stop the engine */ }
+  }
+
+  const uniqueId = (base: string): string => {
+    let id = base
+    for (let n = 2; usedIds.has(id); n++) id = `${base}-${n}`
+    usedIds.add(id)
+    return id
+  }
 
   const persist = (): Promise<void> => {
     const snap = JSON.parse(JSON.stringify(state)) as State
-    writes = writes.then(() => write(dir, snap)).catch(() => undefined)
+    writes = writes.then(() => write(dir, snap)).catch((err) => report('write_state', err))
     return writes
   }
 
@@ -87,13 +114,16 @@ export function createEngine(opts: EngineOptions): Engine {
       stateExisted = await fs.access(path.join(dir, 'state.json')).then(() => true, () => false)
       const s = await readState(dir)
       state = { cleanStop: s.cleanStop, inFlight: validInFlight(s.inFlight), lastSlot: { ...s.lastSlot } }
-    } catch { /* defaults stay */ }
+    } catch (err) { report('read_state', err) }
     for (const j of jobs) {
       try {
         const rs = await readRuns(dir, { job: j.name, limit: LOOKBACK_LINES })
         if (rs[0]) lastRun.set(j.name, rs[0])
-        for (const r of rs) if (typeof r.slot === 'string' && r.status !== 'interrupted') handled.get(j.name)?.add(r.slot)
-      } catch { /* an unreadable log only loses the look-back */ }
+        for (const r of rs) {
+          if (typeof r.id === 'string') usedIds.add(r.id)
+          if (typeof r.slot === 'string' && r.status !== 'interrupted') handled.get(j.name)?.add(r.slot)
+        }
+      } catch (err) { report('read_runs', err) }
     }
   })())
 
@@ -110,7 +140,7 @@ export function createEngine(opts: EngineOptions): Engine {
   }
 
   const log = async (job: JobDef | null, record: RunRecord, slot: Slot | null): Promise<void> => {
-    try { await appendRun(dir, record) } catch { /* the run still counts as handled in memory */ }
+    try { await appendRun(dir, record) } catch (err) { report('append_run', err) }
     lastRun.set(record.job, record)
     if (job && slot && record.status !== 'interrupted') {
       handled.get(job.name)?.add(slot.key)
@@ -125,7 +155,7 @@ export function createEngine(opts: EngineOptions): Engine {
   const skip = (job: JobDef, slot: Slot, trigger: RunTrigger, reason: string): Promise<void> => {
     const startedAt = isoS(now())
     return log(job, {
-      id: `${startedAt}-${job.name}-${slot.key}`, job: job.name, trigger, slot: slot.key, status: 'skipped',
+      id: uniqueId(`${startedAt}-${job.name}-${slot.key}`), job: job.name, trigger, slot: slot.key, status: 'skipped',
       startedAt, startedAtUtc7: formatUtc7(Date.parse(startedAt)), endedAt: null, durationMs: null, exitCode: null, detail: reason,
     }, slot)
   }
@@ -177,7 +207,7 @@ export function createEngine(opts: EngineOptions): Engine {
     draining = (async () => {
       while (queue.length && !stopped) {
         const item = queue.shift()!
-        try { await execute(item) } catch { active = null }
+        try { await execute(item) } catch (err) { active = null; report('tick', err) }
       }
       pumping = false
     })()
@@ -185,7 +215,7 @@ export function createEngine(opts: EngineOptions): Engine {
 
   const enqueue = (job: JobDef, trigger: RunTrigger, slot: Slot | null): Item => {
     const startedAt = isoS(now())
-    const item = { job, trigger, slot, startedAt, id: `${startedAt}-${job.name}` }
+    const item = { job, trigger, slot, startedAt, id: uniqueId(`${startedAt}-${job.name}`) }
     queue.push(item)
     return item
   }
@@ -198,7 +228,8 @@ export function createEngine(opts: EngineOptions): Engine {
     for (const sl of slots) {
       if (isHandled(job, sl.key) || due.some((d) => d.job === job)) continue
       if (!cur || sl.key !== cur.key) { await skip(job, sl, 'catch-up', 'missed'); continue }
-      const onTime = t - sl.atMs < tickMs
+      // a late setInterval or a slow write may delay a tick; that must not turn an on-time slot into a catch-up
+      const onTime = t - sl.atMs < 2 * tickMs
       const trigger: RunTrigger = onTime ? 'schedule' : 'catch-up'
       if (isBusy(job.name)) await skip(job, sl, trigger, 'busy')
       else if (!onTime && job.catchUp === 'skip') await skip(job, sl, 'catch-up', 'missed')
@@ -215,12 +246,12 @@ export function createEngine(opts: EngineOptions): Engine {
         const t = now()
         const due: Item[] = []
         for (const job of jobs) {
-          try { await tickJob(job, t, due) } catch { /* one job's tick never blocks the others */ }
+          try { await tickJob(job, t, due) } catch (err) { report('tick', err) }
         }
         due.sort((a, b) => a.job.order - b.job.order || jobs.indexOf(a.job) - jobs.indexOf(b.job))
         for (const d of due) enqueue(d.job, d.trigger, d.slot)
         drain()
-      } catch { /* the next tick tries again */ } finally {
+      } catch (err) { report('tick', err) } finally {
         ticking = null
       }
     })()
@@ -237,7 +268,7 @@ export function createEngine(opts: EngineOptions): Engine {
           if (f) {
             const ms = Date.parse(f.startedAt)
             record = {
-              id: `${isoS(ms)}-${f.job}`, job: f.job, trigger: f.trigger ?? 'schedule', slot: null, status: 'interrupted',
+              id: uniqueId(`${isoS(ms)}-${f.job}`), job: f.job, trigger: f.trigger ?? 'schedule', slot: null, status: 'interrupted',
               startedAt: f.startedAt, startedAtUtc7: formatUtc7(ms), endedAt: null, durationMs: null, exitCode: null,
               detail: 'the server stopped without a clean stop; slot unknown',
             }
@@ -248,7 +279,7 @@ export function createEngine(opts: EngineOptions): Engine {
         state.inFlight = null
         state.cleanStop = false
         await persist()
-      } catch { /* start goes on; the tick must run */ }
+      } catch (err) { report('start', err) }
       timer = setInterval(() => { void tick() }, tickMs)
       timer.unref()
       await tick()
@@ -282,6 +313,7 @@ export function createEngine(opts: EngineOptions): Engine {
     runNow(name) {
       const job = jobs.find((j) => j.name === name)
       if (!job) return { accepted: false, error: 'not_found', message: `no job named ${name}` }
+      if (stopped) return { accepted: false, error: 'stopped', message: 'the scheduler is stopping' }
       const s = job.schedule
       if (job.manualOutsideWindow === 'refused' && (!s || !inWindow(now(), s))) {
         const win = s ? `${s.atUtc7} to ${s.windowEndUtc7} UTC+7` : 'none'
@@ -307,6 +339,10 @@ export function createEngine(opts: EngineOptions): Engine {
           lastRun: lastRun.get(job.name) ?? null,
         }
       })
+    },
+
+    health() {
+      return { errorCount: health.errorCount, lastError: health.lastError && { ...health.lastError } }
     },
 
     getRuns(name, limit) {

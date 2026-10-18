@@ -28,4 +28,11 @@ describe('logger', () => {
     logger.info('listening', { host: '127.0.0.1', port: 4300 })
     expect(JSON.parse(lines[0])).toEqual({ time: '1970-01-01T00:00:00.000Z', level: 'info', msg: 'listening', host: '127.0.0.1', port: 4300 })
   })
+  it('the scheduler error line has a fixed place and a short code only', () => {
+    const { lines, logger } = collect()
+    logger.error('scheduler_error', { where: 'append_run', code: 'ENOTDIR' })
+    logger.error('scheduler_error', { where: 'somewhere /secret/path', code: 'text with a value' })
+    expect(JSON.parse(lines[0])).toEqual({ time: '1970-01-01T00:00:00.000Z', level: 'error', msg: 'scheduler_error', where: 'append_run', code: 'ENOTDIR' })
+    expect(JSON.parse(lines[1])).toMatchObject({ where: 'unknown', code: 'unknown' })
+  })
 })

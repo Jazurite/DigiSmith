@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { createEngine, type EngineEvent } from './engine.ts'
 import { defineJob, type JobInput } from './registry.ts'
+import { createLogger } from '../logger.ts'
 import { appendRun, readRuns, readState, writeState, type State } from './runlog.ts'
 import type { RunCommand, RunOptions, RunResult } from './runner.ts'
 import type { RunRecord } from './types.ts'
@@ -338,5 +339,71 @@ describe('snapshot and runs', () => {
     await engine.whenIdle()
     expect(engine.snapshot()[0]).toMatchObject({ running: null, lastRun: { status: 'ok', slot: '2026-10-19@00:10' } })
     expect(await engine.getRuns('flux', 10)).toMatchObject([{ status: 'ok' }, { status: 'skipped' }])
+  })
+})
+
+describe('review r1 fixes', () => {
+  it('reports state-dir errors through the logger and health, and keeps ticking', async () => {
+    fs.writeFileSync(path.join(dir, 'file'), 'x')
+    const bad = path.join(dir, 'file', 'sub')
+    const logged: string[] = []
+    const runner = fakeRunner()
+    const engine = createEngine({ jobs: [scan()], stateDir: bad, now, run: runner.run, logger: createLogger((l) => logged.push(l), () => 0) })
+    expect(engine.health()).toEqual({ errorCount: 0, lastError: null })
+    await tickAt(engine, '2026-10-18 23:00:05')
+    await tickAt(engine, '2026-10-19 00:00:05')
+    expect(runner.calls).toHaveLength(2)
+    expect(await readRuns(bad, { limit: 10 })).toEqual([])
+    const h = engine.health()
+    expect(h.errorCount).toBeGreaterThan(0)
+    expect(h.lastError).toMatchObject({ code: 'ENOTDIR' })
+    const parsed = logged.map((l) => JSON.parse(l))
+    expect(parsed.some((l) => l.level === 'error' && l.msg === 'scheduler_error' && l.where === 'append_run' && l.code === 'ENOTDIR')).toBe(true)
+    expect(logged.join('\n')).not.toContain(bad)
+    expect(engine.runNow('scan')).toMatchObject({ accepted: true })
+  })
+
+  it('a tick delayed by 1.5 intervals is still on time', async () => {
+    const { engine } = make([flux({ catchUp: 'skip' })])
+    await tickAt(engine, '2026-10-19 00:10:45')
+    expect(await lines('2026-10-19')).toMatchObject([{ slot: '2026-10-19@00:10', trigger: 'schedule', status: 'ok' }])
+  })
+
+  it('a tick later than 2 intervals is a catch-up', async () => {
+    const { engine } = make([flux()])
+    await tickAt(engine, '2026-10-19 00:11:01')
+    expect(await lines('2026-10-19')).toMatchObject([{ slot: '2026-10-19@00:10', trigger: 'catch-up', status: 'ok' }])
+  })
+
+  it('gives two runs of one job in the same second different ids', async () => {
+    const { engine } = make([flux()])
+    t = at('2026-10-19 12:00:03')
+    const a = engine.runNow('flux')
+    await engine.whenIdle()
+    const b = engine.runNow('flux')
+    await engine.whenIdle()
+    expect(a).toMatchObject({ runId: '2026-10-19T05:00:03Z-flux' })
+    expect(b).toMatchObject({ runId: '2026-10-19T05:00:03Z-flux-2' })
+    const ids = (await lines()).filter((r) => r.trigger === 'manual').map((r) => r.id)
+    expect(ids).toEqual(['2026-10-19T05:00:03Z-flux', '2026-10-19T05:00:03Z-flux-2'])
+    const c = make([flux()])
+    await c.engine.tick()
+    expect(c.engine.runNow('flux')).toMatchObject({ runId: '2026-10-19T05:00:03Z-flux-3' })
+  })
+
+  it('refuses run now after stop', async () => {
+    const { engine } = make([flux()])
+    t = at('2026-10-19 12:00:00')
+    await engine.start()
+    await engine.stop()
+    expect(engine.runNow('flux')).toMatchObject({ accepted: false, error: 'stopped' })
+  })
+
+  it('passes timeoutMs and killGraceMs to the runner', async () => {
+    const { engine, runner } = make([flux({ timeoutMs: 5000 })], fakeRunner(), { killGraceMs: 1234 })
+    t = at('2026-10-19 12:00:00')
+    engine.runNow('flux')
+    await engine.whenIdle()
+    expect(runner.calls[0].opts).toMatchObject({ timeoutMs: 5000, killGraceMs: 1234 })
   })
 })
