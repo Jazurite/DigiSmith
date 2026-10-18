@@ -11,7 +11,7 @@ NODE=$(command -v node) || { echo "install: node not found" >&2; exit 1; }
 case "$NODE" in *'|'*|*'&'*|*'<'*|*'>'*|*'"'*|*'$'*|*'`'*|*'\'*) echo "install: node path may not contain | & < > \" \$ \` or a backslash" >&2; exit 1;; esac
 USER_NAME=$(id -un)
 
-mkdir -p "$DEPOT/bin" "$DEPOT/nexus-api/src/scheduler" "$DEPOT/nexus/logs"
+mkdir -p "$DEPOT/bin" "$DEPOT/nexus-api/src/scheduler" "$DEPOT/nexus/logs" "$DEPOT/nexus/scheduler"
 for f in "$SRC"/src/*.ts; do
   case "$f" in *.test.ts) continue;; esac
   cp "$f" "$DEPOT/nexus-api/src/"

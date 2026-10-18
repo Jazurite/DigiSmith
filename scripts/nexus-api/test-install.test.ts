@@ -28,6 +28,11 @@ describe('install.sh', () => {
     for (const f of ['nexus-api/src/server.ts', 'nexus-api/src/command.ts', 'nexus-api/package.json', 'nexus-shared/days.ts', 'nexus-shared/life-calendar.ts', 'nexus-api/seed-profile.ts','bin/nexus-api', 'nexus/com.jazurite.digismith.nexus-api.plist', 'nexus/digismith-nexus.sudoers']) expect(existsSync(join(depot, f)), f).toBe(true)
     expect(statSync(join(depot, 'bin/nexus-api')).mode & 0o777).toBe(0o755)
   })
+  it('creates the scheduler state folder with no token inside', () => {
+    const dir = join(depot, 'nexus/scheduler')
+    expect(existsSync(dir) && statSync(dir).isDirectory()).toBe(true)
+    expect(readdirSync(dir)).toEqual([])
+  })
   it('copies no tests and no fixtures into the depot', () => {
     expect(readdirSync(join(depot, 'nexus-api/src')).filter(f => f.endsWith('.test.ts') || f === 'fixtures')).toEqual([])
   })
