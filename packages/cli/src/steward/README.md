@@ -31,8 +31,8 @@ Which skill or step sends which event is DGS-551.
 
 The ClickUp space setting "Reschedule dependencies" is ON. ClickUp can move the dates of a ticket that waits on another ticket, whenever the other ticket's dates change. The Steward does not fight this between events: it has no timer and no watcher. It repairs dates inside its own events, at every event, from the snapshot it reads first, even when the status is already there:
 
-- A ticket in progress or later (not discarded or Closed): a start date later than today becomes today.
-- On done or documented: a start date later than the due date becomes the due date.
+- A ticket in progress or later (not discarded or Closed): a start date later than today (UTC+7) becomes today.
+- In every one of those statuses: a start date later than the due date becomes the due date.
 - A missing start date is filled with the day the ticket entered in progress (from the state log), else today. An earlier start date is kept.
 - `started` also replaces a late start date and reads the ticket back once after its write.
 - If ClickUp still answers ITEM_238 (start after due) on the done write, the Steward retries once with start = due.
