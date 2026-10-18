@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import { API_VERSION } from './version.ts'
-import { createApiServer, HOST, parsePort } from './server.ts'
+import { createApiServer, HOST, parsePort, startNexus } from './server.ts'
+import { createLogger } from './logger.ts'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { PowerMetrics } from './types.ts'
 import { buildReading } from './reading.ts'
 import { parsePowermetrics } from './parse-powermetrics.ts'
@@ -76,5 +80,51 @@ describe('server', () => {
     expect(parsePort(undefined)).toBe(4300)
     expect(parsePort('4311')).toBe(4311)
     for (const bad of ['abc', '0', '70000', '-1', '4300.5', '']) expect(() => parsePort(bad)).toThrow()
+  })
+})
+
+describe('startNexus', () => {
+  const dg = { file: '/nonexistent/dg', args: [] }
+  async function boot(dir: string) {
+    const lines: string[] = []
+    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg })
+    server = nexus.server
+    await new Promise<void>(r => server!.listen(0, HOST, r))
+    const { port } = server.address() as AddressInfo
+    return { nexus, lines, base: `http://127.0.0.1:${port}` }
+  }
+
+  it('a state folder that cannot be made disables only the scheduler', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'nexus-start-'))
+    try {
+      const file = join(tmp, 'plain-file')
+      writeFileSync(file, 'x')
+      const { nexus, lines, base } = await boot(join(file, 'scheduler'))
+      expect(nexus.scheduler).toBe(false)
+      expect(lines.map(l => JSON.parse(l))).toEqual([expect.objectContaining({ level: 'error', msg: 'scheduler_error', where: 'start', code: 'ENOTDIR' })])
+      const r = await fetch(base + PATH)
+      expect(r.status).toBe(200)
+      expect(await r.json()).toEqual(reading)
+      const jobs = await fetch(`${base}/api/${API_VERSION}/jobs`)
+      expect(jobs.status).toBe(404)
+      await expect(nexus.stop()).resolves.toBeUndefined()
+    } finally {
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('a good state folder serves the jobs routes', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'nexus-start-'))
+    try {
+      const { nexus, lines, base } = await boot(join(tmp, 'scheduler'))
+      expect(nexus.scheduler).toBe(true)
+      expect(lines).toEqual([])
+      const jobs = await fetch(`${base}/api/${API_VERSION}/jobs`)
+      expect(jobs.status).toBe(200)
+      expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['selftest'])
+      await nexus.stop()
+    } finally {
+      rmSync(tmp, { recursive: true, force: true })
+    }
   })
 })

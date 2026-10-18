@@ -11,7 +11,7 @@ import { createLive } from './live.ts'
 import { createPowermetricsSource, type RunPowermetrics } from './powermetrics-source.ts'
 import { buildReading } from './reading.ts'
 import type { PowerMetrics } from './types.ts'
-import { createEngine } from './scheduler/engine.ts'
+import { createEngine, type Engine } from './scheduler/engine.ts'
 import { ensureToken } from './scheduler/guard.ts'
 import { createClickupNotifier } from './scheduler/notify.ts'
 import { JOBS } from './scheduler/registry.ts'
@@ -62,6 +62,33 @@ export function createShutdown(deps: ShutdownDeps): () => Promise<void> {
   }
 }
 
+export interface NexusOptions {
+  getReading: () => Promise<PowerMetrics | null>
+  logger: Logger
+  loadProfile?: AppDeps['loadProfile']
+  stateDir: string
+  dg: { file: string; args: string[] }
+}
+
+export async function startNexus(opts: NexusOptions): Promise<{ server: Server; scheduler: boolean; stop: () => Promise<void> }> {
+  const { logger } = opts
+  let jobs: AppDeps['jobs']
+  let engine: Engine | null = null
+  try {
+    const token = ensureToken(opts.stateDir)
+    engine = createEngine({ jobs: JOBS, stateDir: opts.stateDir, logger, notify: createClickupNotifier({ dg: opts.dg, logger }) })
+    await engine.start()
+    jobs = { engine, jobs: JOBS, token }
+  } catch (err) {
+    logger.error('scheduler_error', { where: 'start', code: errorCode(err) })
+    if (engine) await engine.stop().catch(() => undefined)
+    engine = null
+  }
+  const server = createApiServer(opts.getReading, { logger, ...(opts.loadProfile ? { loadProfile: opts.loadProfile } : {}), ...(jobs ? { jobs } : {}) })
+  const running = engine
+  return { server, scheduler: running !== null, stop: () => (running ? running.stop() : Promise.resolve()) }
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = parsePort(process.env.PORT)
   const logger = createLogger()
@@ -74,14 +101,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   process.on('unhandledRejection', (err) => logger.error('scheduler_error', { where: 'unhandled_rejection', code: errorCode(err) }))
   // the state follows DIGISMITH_DEPOT like the profile does, unless NEXUS_STATE_DIR names it
   const dir = process.env.NEXUS_STATE_DIR ? stateDir() : join(depot, 'nexus', 'scheduler')
-  const token = ensureToken(dir)
   // A LaunchAgent has a short PATH, so node and dg are absolute.
   const dg = { file: process.execPath, args: ['--experimental-strip-types', join(depot, 'repo', 'packages', 'cli', 'src', 'index.ts')] }
-  const engine = createEngine({ jobs: JOBS, stateDir: dir, logger, notify: createClickupNotifier({ dg, logger }) })
-  await engine.start()
-  const server = createApiServer(createDefaultReader(), { logger, loadProfile, jobs: { engine, jobs: JOBS, token } })
+  const nexus = await startNexus({ getReading: createDefaultReader(), logger, loadProfile, stateDir: dir, dg })
+  const server = nexus.server
   const shutdown = createShutdown({
-    stop: () => engine.stop(),
+    stop: () => nexus.stop(),
     close: (done) => server.close(() => done()),
     exit: (code) => process.exit(code),
     onStopError: (err) => logger.error('scheduler_error', { where: 'stop', code: errorCode(err) }),
