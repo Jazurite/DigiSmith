@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-570 Role mode writes the Final review line</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">awaiting checkpoint 1</span>
+  <h1>DGS-570: role mode writes the Final review ledger line</h1>
+  <div class="meta"><span>Date: 2026-10-19</span><span>Ticket: DGS-570</span></div>
+</header>
+
+<nav class="toc"><h2>Contents</h2><ol>
+<li><a href="#problem">Problem</a></li><li><a href="#choice">The choice</a></li><li><a href="#design">Design</a></li>
+<li><a href="#files">Files</a></li><li><a href="#assumptions">Assumptions</a></li><li><a href="#tests">Tests</a></li></ol></nav>
+
+<section id="problem"><h2>Problem</h2>
+<p><code>digismith:report-implementation</code> reads an SDD ledger and expects a <code>Final review (base &lt;BASE&gt;..&lt;HEAD&gt;, &lt;model&gt;): ...</code> line (MEMORY.md, "Final-review ledger lines are standardized"). It builds the Final Review &amp; Fix rows (2c) from that line and the lines that follow it. With no such line it stops and asks (Step 1, Error Handling).</p>
+<p>In role mode (<code>Review mode: role</code>) the ticket review is a Reviewer worker. SDD's Role Mode section writes only <code>Task final: review requested</code> and <code>Review ticket final r&lt;R&gt;: F&lt;n&gt; -&gt; &lt;verdict&gt; (...)</code>. In the first role-mode build (DGS-566, 2026-10-18) the Builder had to add the missing line by hand.</p></section>
+
+<section id="choice"><h2>The choice</h2>
+<div class="table-wrap"><table>
+<tr><th></th><th>A. report-implementation reads role-mode lines</th><th>B. Role Mode writes the expected line</th></tr>
+<tr><td>Edits</td><td>Step 1 check, 2c, Error Handling, Quick Reference in a 700-line skill; a second grammar to parse</td><td>One paragraph in the Role Mode section of SDD</td></tr>
+<tr><td>Data gap</td><td>A verdict line holds only <code>F&lt;n&gt;</code>, the verdict and a reason. It has no severity and no finding text. The report would need <code>report.md</code> from the pack folder, which is outside the ledger</td><td>None. The Builder has the Reviewer's report and writes the one-line summary, as in hand mode</td></tr>
+<tr><td>Other readers</td><td>Each future reader of the ledger learns two grammars</td><td>MEMORY.md grammar stays the single contract</td></tr>
+<tr><td>Risk</td><td>Hand mode and inline mode could regress</td><td>Hand mode and report-implementation are untouched</td></tr></table></div>
+<div class="callout"><b>Decision: B.</b> It is the smaller change, it touches only role mode, and it keeps one ledger grammar. A needs data the ledger does not hold.</div></section>
+
+<section id="design"><h2>Design</h2>
+<p>Add a "Final review lines" paragraph to <code>## Role Mode (a herdr Builder)</code>, after "Verdict lines". It tells the Builder:</p>
+<ol>
+<li>When the parent returns the round 1 result of the ticket review, append (before any fix wave)<br><code>Final review (base &lt;MERGE_BASE&gt;..&lt;HEAD&gt;, &lt;model&gt;): &lt;one-line verdict and finding summary&gt;</code>. <code>&lt;model&gt;</code> is the <code>model:</code> line the ticket pack command printed. The summary names each finding as <code>F&lt;n&gt; &lt;severity&gt; &lt;what&gt;</code>, or says "no findings". The base and head are the hashes given to <code>dg reviewer pack</code>.</li>
+<li>After the one fix wave and its scoped re-review, append <code>Scoped re-review (fix base &lt;FIX_BASE&gt;..&lt;HEAD&gt;, &lt;model&gt;): &lt;verdict&gt;</code> with the model of the round 2 pack.</li>
+<li>For a ticket finding decided <code>parked</code>, write the verdict line (already required) and also <code>Final review: parked — F&lt;n&gt; &lt;finding&gt; — ruling: &lt;why&gt;</code>, the shape report-implementation reads. A <code>fixed</code> or <code>rejected</code> finding needs no extra line: 2c already finds it through the Scoped re-review line and the F-id in the Final review line.</li>
+<li>The ledger then holds the lines <code>report-implementation</code> expects. Nothing is written by hand outside Role Mode.</li></ol>
+<p>The Review ticket final verdict lines stay as they are: <code>dg reviewer table</code> reads them.</p></section>
+
+<section id="files"><h2>Files</h2><ul>
+<li><code>skills/subagent-driven-development/SKILL.md</code>: Role Mode section only (one paragraph; nothing else in the file). DGS-568 may also edit this file. The two edits sit in different sections, so a merge conflict is unlikely. The second ticket to merge rebases.</li>
+<li><code>packages/cli/src/reviewer/sdd.test.ts</code>: one new test.</li>
+<li><code>MEMORY.md</code>: one sentence in the Final-review convention: role mode Builders write the same lines.</li>
+<li>Not touched: <code>skills/report-implementation/SKILL.md</code>, <code>skills/reviewer/SKILL.md</code>, anything under <code>packages/cli/src</code> other than the test (so no dist rebuild).</li></ul></section>
+
+<section id="assumptions"><h2>Assumptions</h2><ul>
+<li>The ticket evidence settles the choice; no taste or product question is open.</li>
+<li>The Builder gets the finding severity from the Reviewer's report, which its parent hands over with the verdict.</li>
+<li>A <code>parked</code> ticket finding after the final review is rare; the extra line is cheap.</li>
+<li>First use after the merge: the next role-mode build. Its report-implementation run must pass Step 1 with no hand-added line.</li></ul></section>
+
+<section id="tests"><h2>Tests</h2><p>A test in <code>sdd.test.ts</code> (same style as the existing role-mode tests): the Role Mode section contains <code>Final review (base</code>, <code>Scoped re-review (fix base</code> and <code>Final review: parked</code>, and sits before <code>## Final Review</code>. <code>pnpm</code> runs it with the CLI package tests.</p></section>
+
+<footer>DigiSmith · .digismith/board/DGS-570—report-implementation-accept-role-mode-s/design.html</footer>
+</body>
+</html>
