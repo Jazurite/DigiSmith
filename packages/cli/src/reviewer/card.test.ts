@@ -69,4 +69,10 @@ describe("skills/reviewer/brief.md", () => {
     expect(brief).toContain("entry.ts session --ticket {{KEY}} --role reviewer");
     expect(card).toContain("--role reviewer");
   });
+  it("skips the session registration when pack.md says ticket: none, as the card does", () => {
+    expect(brief).toContain("`ticket:` line");
+    expect(brief).toContain("`ticket: none`");
+    expect(brief).toMatch(/skip the command/);
+    expect(brief).toContain("entry.ts session --ticket {{KEY}} --role reviewer");
+  });
 });
