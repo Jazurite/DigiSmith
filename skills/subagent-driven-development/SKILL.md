@@ -223,8 +223,16 @@ and is re-read on every later turn. Hand artifacts over as files.
 
 ### 1. Dispatch the implementer
 
-Record BASE (`git rev-parse HEAD`) before dispatching — the review package
-and fix-round diffs need it.
+Before the dispatch, mark the start of this task's window, then record BASE
+(`git rev-parse HEAD`) — the review package and fix-round diffs need it:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-start --ticket <Key> --task <N>
+```
+
+`<N>` is the task's number in the plan. The window is how the counter tags your own turns
+for this task (they carry no agent id). Same key rule as the start block. A warning or
+non-zero exit never blocks the flow.
 
 **Mechanical-tier auto-offload:** if this task's complexity signal (see Model Selection above)
 is **mechanical**, dispatch its **first attempt** by following `digismith:offload-implementer`'s
@@ -307,6 +315,7 @@ bullet list below exactly as before.
   fix-loop rounds 1-3 resume this agent.
 - After every dispatch, append `Task <N>: dispatch <role> agent=<agentId>`
   to the ledger. `<agentId>` is the `agentId` the Agent tool result returns.
+  A short note may follow the id, in parentheses, for example (base 47badfb); the token counter reads the id and ignores the note. Put a space between the id and the note.
   `<role>` is `implementer`, `task-reviewer`, `re-review`, `fix` or
   `final-reviewer`. The final reviewer's task id is `final`.
 - Never dispatch multiple implementation subagents in parallel (conflicts).
@@ -474,6 +483,14 @@ your other bookkeeping:
 - `Task <N>: complete (commits <base7>..<head7>, <K> parked)` after a
   tripped breaker
 
+Then mark the end of this task's window:
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task <N>
+```
+
+Same key rule as the start block.
+
 Then mark the todo complete and move on. Never move to the next task while
 the review has open Critical/Important issues that are neither fixed nor
 parked-with-ruling at the cap.
@@ -569,6 +586,14 @@ back to reviewing yourself.
 
 ## Final Review
 
+Mark the start of the final review's window (role mode runs this line too; it replaces only the dispatch):
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-start --ticket <Key> --task final
+```
+
+Same key rule as the start block.
+
 The final whole-branch review gets a package too: run
 `scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the
 branch started from, e.g. `git merge-base main HEAD`) and include the
@@ -593,7 +618,11 @@ rulings, or stop on load-bearing ones. There is no second fix wave —
 residual load-bearing findings surface to your human partner when
 finishing-a-development-branch presents the options.
 
-Once the final review is clean, before the report and the Finish step, mark the end of this step:
+Once the final review is clean, before the report and the Finish step, mark the end of this step. Close the final window, then the step.
+
+```bash
+node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task final
+```
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step implementation
