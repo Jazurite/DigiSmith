@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDD Task Tokens — Implementation Report</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; --good:#1a7f4b; --good-bg:#eefaf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; --good:#4fd889; --good-bg:#12271c; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  header.doc-head { border-bottom:1px solid var(--border); padding-bottom:1.25rem; margin-bottom:2rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; } .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  .badge { display:inline-block; border:1px solid var(--good); color:var(--good); background:var(--good-bg); border-radius:999px; padding:.1rem .6rem; font-size:.78rem; font-weight:600; }
+  section { margin-bottom:2.6rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  .cards { display:grid; grid-template-columns:repeat(2,1fr); gap:.9rem; margin:1.2rem 0; }
+  @media (max-width:560px) { .cards { grid-template-columns:1fr; } table { font-size:.82rem; } }
+  .card { border:1px solid var(--border); background:var(--card-bg); border-radius:10px; padding:1rem 1.2rem; }
+  .card h4 { margin:0 0 .3rem; font-size:.98rem; } .card p { margin:.4rem 0 0; font-size:.9rem; color:var(--muted); }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; margin:1rem 0; } .table-wrap { overflow-x:auto; }
+  th,td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; } th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; margin:.6rem 0; }
+  .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); }
+  .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>SDD Task Tokens — Implementation Report</h1>
+  <div class="meta"><span>Date: 2026-10-19</span><span>Ticket: <strong>DGS-568</strong></span><span>Commit range: <code>79c50e2..23c88f8</code></span></div>
+</header>
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Every plan task of an SDD build gets its tokens in <code>tokens.json</code>, and a build that skips the build skills still gets an <code>implementation</code> step. The ledger parser accepts a note after the agent id. Two new registry marks, <code>task_start</code> and <code>task_end</code>, give each task a time window; the snapshot tags a record by its ledger agent id first, then by the window. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix wave before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the <a href="plan.md">implementation plan</a>. Review findings: <a href="findings.md">findings.md</a>.</p>
+</section>
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><h4>Task 1: The ledger parser accepts a note after the agent id</h4><p>parseTaskAgents reads the agent id when text follows it.</p></div>
+    <div class="card"><h4>Task 2: Task marks in the registry types and reader</h4><p>The registry reads task_start and task_end marks with a valid task id.</p></div>
+    <div class="card"><h4>Task 3: entry.ts task-start and task-end</h4><p>entry.ts task-start and task-end write task marks for the live session.</p></div>
+    <div class="card"><h4>Task 4: Tag a record by its task window</h4><p>taskForRecord tags a response by its task window; the ledger agent id wins.</p></div>
+    <div class="card"><h4>Task 5: Count a worker&#x27;s records as implementation when no step was opened</h4><p>inferredStep counts a worker&#x27;s records up to its finishing end as implementation; the snapshot lists inferred_steps.</p></div>
+    <div class="card"><h4>Task 6: SDD writes the task marks and allows a note on the dispatch line</h4><p>The SDD skill writes task-start and task-end marks, including the final window.</p></div>
+    <div class="card"><h4>Task 7: executing-plans marks each task&#x27;s window</h4><p>executing-plans writes task-start at step 1 and task-end at step 7 of each task.</p></div>
+    <div class="card"><h4>Task 8: A ticket that starts with a plan opens implementation</h4><p>bootstrap and init open the implementation step when a plan already exists.</p></div>
+  </div>
+</section>
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code> in role mode: fresh implementer subagent per task, a conductor-started Reviewer after each.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1: The ledger parser accepts a note after the agent id</td><td>parseTaskAgents reads the agent id when text follows it.</td><td>Approved, clean</td><td></td></tr>
+    <tr><td>2: Task marks in the registry types and reader</td><td>The registry reads task_start and task_end marks with a valid task id.</td><td>Approved, clean, 1 minor parked</td><td>TASK_PATTERN repeats TICKET_PATTERN (F1, parked)</td></tr>
+    <tr><td>3: entry.ts task-start and task-end</td><td>entry.ts task-start and task-end write task marks for the live session.</td><td>Approved, clean</td><td></td></tr>
+    <tr><td>4: Tag a record by its task window</td><td>taskForRecord tags a response by its task window; the ledger agent id wins.</td><td>Approved, clean</td><td></td></tr>
+    <tr><td>5: Count a worker&#x27;s records as implementation when no step was opened</td><td>inferredStep counts a worker&#x27;s records up to its finishing end as implementation; the snapshot lists inferred_steps.</td><td>Approved, clean, 2 minors parked</td><td>No test for the earliest finishing end (F1, fixed in the fix wave); per-record scan cost (F2, parked)</td></tr>
+    <tr><td>6: SDD writes the task marks and allows a note on the dispatch line</td><td>The SDD skill writes task-start and task-end marks, including the final window.</td><td>Approved, clean, 3 minors parked</td><td>Wording of the Final Review block, a long line, an ambiguous key reference (F1 to F3, parked)</td></tr>
+    <tr><td>7: executing-plans marks each task&#x27;s window</td><td>executing-plans writes task-start at step 1 and task-end at step 7 of each task.</td><td>Approved, clean</td><td></td></tr>
+    <tr><td>8: A ticket that starts with a plan opens implementation</td><td>bootstrap and init open the implementation step when a plan already exists.</td><td>Approved, clean, 2 minors parked</td><td>Ragged paragraph (F1, parked); init resume can reopen implementation after a step end (F2, parked)</td></tr>
+  </table></div>
+</section>
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes — 0 Critical, 0 Important, 6 Minor; one fix wave and one scoped re-review. Table of every finding: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>init resume reopens implementation after the session ended it (F1)</td><td>Parked: needs code; follow-up ticket for resume mid-flow, filed by the Maestro</td></tr>
+    <tr><td>Minor</td><td>A /clear Builder mid-task loses the task window (F3)</td><td>Parked: follow-up ticket for resume mid-flow, filed by the Maestro</td></tr>
+    <tr><td>Minor</td><td>taskForRecord closed the open window at any task_end (F2)</td><td>Fixed (138df05), with a test</td></tr>
+    <tr><td>Minor</td><td>No test pinned the earliest finishing end (F4)</td><td>Fixed (8141ede)</td></tr>
+    <tr><td>Minor</td><td>Final Review wording and the ambiguous key reference (F5)</td><td>Fixed (506d251)</td></tr>
+    <tr><td>Minor</td><td>Ragged init paragraph; two wrap issues; line-641 wording (F6, F7, F8)</td><td>Parked: Minor after the one fix wave; no blocker. A wrap-only commit (23c88f8) also landed</td></tr>
+  </table></div>
+</section>
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">b68c01a</span> docs(dgs-568): spec for task token tagging in the SDD ledger</li>
+    <li><span class="sha">cbcd95b</span> docs(dgs-568): plan for task token tagging</li>
+    <li><span class="sha">2f97400</span> docs(dgs-568): refiner output for task token tagging</li>
+    <li><span class="sha">6ca9b11</span> fix(tokens): the ledger parser reads an agent id that has a note after it</li>
+    <li><span class="sha">2a598d8</span> feat(tokens): the registry holds task start and task end marks</li>
+    <li><span class="sha">27946d4</span> feat(tokens): entry.ts task-start and task-end write task marks</li>
+    <li><span class="sha">81d3a07</span> feat(tokens): tag a response by its task window when no ledger agent claims it</li>
+    <li><span class="sha">3bd5fe7</span> feat(tokens): a worker with no step marks but a finishing end counts as implementation</li>
+    <li><span class="sha">9e41fbb</span> feat(sdd): SDD marks each task&#x27;s window and allows a note on the dispatch line</li>
+    <li><span class="sha">637ba29</span> feat(executing-plans): mark each task&#x27;s window for the token counter</li>
+    <li><span class="sha">99b6041</span> feat(init): a ticket that starts with a plan opens the implementation step</li>
+    <li><span class="sha">138df05</span> fix(tokens): a task end closes only its own task window</li>
+    <li><span class="sha">8141ede</span> test(tokens): pin the earliest finishing end of an inferred step</li>
+    <li><span class="sha">506d251</span> docs(skills): tidy the SDD final window and init resume wording</li>
+    <li><span class="sha">23c88f8</span> docs(dgs-568): wrap the lines the ticket review flagged</li>
+  </ul>
+</section>
+<footer>DigiSmith · .digismith/board/DGS-568—sdd-task-tokens/report.html</footer>
+</body>
+</html>
