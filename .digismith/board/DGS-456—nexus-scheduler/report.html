@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus scheduler — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nexus scheduler — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-19</span>
+    <span>Ticket: <strong>DGS-456</strong></span>
+    <span>Commit range: <code>dda291a..ea9655e</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The scheduler runs DigiSmith's timed jobs inside the Nexus API process, with a jobs API (list, run log, run now) and a failure comment on DGS-436. A window may cross midnight (23:00 to 06:00 UTC+7), and a job may repeat inside its window with one run per slot and at most one catch-up run after downtime. No real job is registered; <code>selftest</code> is the only entry, and the Lights-Out scan job (DGS-486) is added later as one registry entry. Run now works from a process on the Workbox that reads the token file. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (10 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.md">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Types and registry</h4><p>Job types, API types and the registry with defaults and validation; <code>selftest</code> is the only job.</p></div>
+<div class="card"><span class="tag">Task 2</span><h4>Clock</h4><p>UTC+7 nights, slots, midnight windows and repeating slots, as pure functions.</p></div>
+<div class="card"><span class="tag">Task 3</span><h4>Run log and state</h4><p>Monthly JSONL run log and atomic state file.</p></div>
+<div class="card"><span class="tag">Task 4</span><h4>Runner</h4><p>Child-process runner with timeout, process-group kill and output tail.</p></div>
+<div class="card"><span class="tag">Task 5</span><h4>Engine</h4><p>Tick, slots, missed-run rule per slot, serial queue, run now, interrupted runs.</p></div>
+<div class="card"><span class="tag">Task 6</span><h4>Notify</h4><p>ClickUp failure comments on DGS-436 with per-kind hourly dedupe.</p></div>
+<div class="card"><span class="tag">Task 7</span><h4>Guard</h4><p>Token file (mode 600) and the run-now checks.</p></div>
+<div class="card"><span class="tag">Task 8</span><h4>Add the jobs routes and start the engine</h4><p>The three jobs routes in the app, engine start and clean shutdown.</p></div>
+<div class="card"><span class="tag">Task 9</span><h4>install.sh</h4><p>The depot copy gets the scheduler files and serves /api/v1/jobs.</p></div>
+<div class="card"><span class="tag">Task 10</span><h4>Mutation checks</h4><p>Five hand mutations, each caught by named tests.</p></div>
+
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Types and registry</td><td>Job types, API types and the registry with defaults and validation; <code>selftest</code> is the only job.</td><td>Approved after 1 fix round, 1 late fix</td><td>(none)</td></tr>
+<tr><td>Task 2: Clock</td><td>UTC+7 nights, slots, midnight windows and repeating slots, as pure functions.</td><td>Approved, 2 minors parked</td><td>T2 F1: window bounds check duplicated in inWindow and currentSlot. T2 F2: no clock test for equal start and end.</td></tr>
+<tr><td>Task 3: Run log and state</td><td>Monthly JSONL run log and atomic state file.</td><td>Approved, 3 minors parked, 1 rejected</td><td>T3 F2 fixed temp name in writeState (engine serializes). T3 F3 inFlight unchecked in readState (engine validates). T3 F4 readRuns reads the whole month file.</td></tr>
+<tr><td>Task 4: Runner</td><td>Child-process runner with timeout, process-group kill and output tail.</td><td>Approved after 1 fix round, 2 parked</td><td>T4 F3 onStart exception swallowed. T4 F5 pipes destroyed on first exit.</td></tr>
+<tr><td>Task 5: Engine</td><td>Tick, slots, missed-run rule per slot, serial queue, run now, interrupted runs.</td><td>Approved after 1 fix round, 2 parked, 1 flaky test fixed</td><td>T5 F2 look-back writes skipped lines for a job first seen. T5 F4 run line written before inFlight cleared.</td></tr>
+<tr><td>Task 6: Notify</td><td>ClickUp failure comments on DGS-436 with per-kind hourly dedupe.</td><td>Approved, Minor fixes in a follow-up, 1 parked</td><td>T6 F2 dedupe time recorded before the dg call.</td></tr>
+<tr><td>Task 7: Guard</td><td>Token file (mode 600) and the run-now checks.</td><td>Approved, 1 fixed, 1 parked (HTTP-layer token test done in task 8)</td><td>(none)</td></tr>
+<tr><td>Task 8: Add the jobs routes and start the engine</td><td>The three jobs routes in the app, engine start and clean shutdown.</td><td>Approved, 3 fixed, 2 parked</td><td>T8 F4 random test port. T8 F5 routes.ts and app.ts import cycle.</td></tr>
+<tr><td>Task 9: install.sh</td><td>The depot copy gets the scheduler files and serves /api/v1/jobs.</td><td>Approved, 2 fixed, 1 parked</td><td>T9 F3 freePort race.</td></tr>
+<tr><td>Task 10: Mutation checks</td><td>Five hand mutations, each caught by named tests.</td><td>Approved, 1 note added</td><td>(none)</td></tr>
+
+  </table>
+  </div>
+</section>
+
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge with fixes: 1 Critical and 2 Important findings, all resolved in one fix wave and verified by a scoped re-review. The full table of 45 task and ticket review rows is in <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Critical</td><td>The notifier called <code>dg clickup add-comment</code> with positional arguments; the real command needs --task, --text and --yes, so every failure comment was refused.</td><td>Fixed: argv corrected, test parses it with the real parseCommentArgv; design.md and plan.md corrected.</td></tr>
+<tr><td>Important</td><td>A token-file or state-folder error at start stopped the whole API.</td><td>Fixed: only the scheduler is disabled (jobs routes absent), power-metrics and life-calendar keep serving; test added.</td></tr>
+<tr><td>Important</td><td><code>SELFTEST_FAIL=1</code> promised by the plan was not built.</td><td>Fixed: selftest exits 1 with one stderr line; tests for both cases.</td></tr>
+<tr><td>Minor</td><td>A queued job showed as running.</td><td>Fixed: JobInfo has a queued state; startedAt is set at the real start.</td></tr>
+<tr><td>Minor</td><td>install.sh did not create the scheduler state folder.</td><td>Fixed: the script creates it (no token written); test added.</td></tr>
+
+  </table>
+  </div>
+</section>
+
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">1fcb700</span> docs(dgs-456): nexus scheduler design and plan</li>
+<li><span class="sha">5ffebf2</span> docs(dgs-456): revise design and plan for midnight windows, repeating slots, run-now</li>
+<li><span class="sha">b7e5ab3</span> docs(dgs-456): task headings so task-brief finds each task</li>
+<li><span class="sha">c70f3b3</span> feat(dgs-456): scheduler types and registry</li>
+<li><span class="sha">7b6b9f7</span> fix(dgs-456): registry defaults and order check</li>
+<li><span class="sha">3982cb4</span> feat(dgs-456): scheduler clock</li>
+<li><span class="sha">f619a5a</span> fix(dgs-456): selftest command without console call</li>
+<li><span class="sha">6fa2a92</span> feat(dgs-456): scheduler run log and state</li>
+<li><span class="sha">91d4811</span> feat(dgs-456): scheduler job runner</li>
+<li><span class="sha">6c9ecd2</span> fix(dgs-456): runner ends on timeout with a grandchild holding the pipes</li>
+<li><span class="sha">05b5f21</span> fix(dgs-456): clear the runner post-exit timer</li>
+<li><span class="sha">20b411e</span> feat(dgs-456): scheduler engine</li>
+<li><span class="sha">1e239a6</span> fix(dgs-456): engine error reporting, on-time bound, unique run ids</li>
+<li><span class="sha">98d0dc0</span> fix(dgs-456): logger comment order</li>
+<li><span class="sha">f2c3e72</span> feat(dgs-456): scheduler failure notifier</li>
+<li><span class="sha">431bae9</span> fix(dgs-456): notifier keys per kind and run time</li>
+<li><span class="sha">d3db92f</span> fix(dgs-456): stable engine overlap ordering</li>
+<li><span class="sha">59c1ea8</span> feat(dgs-456): scheduler run-now guard</li>
+<li><span class="sha">b66fdd3</span> fix(dgs-456): guard regenerates an empty token file</li>
+<li><span class="sha">7693229</span> feat(dgs-456): jobs routes and engine start</li>
+<li><span class="sha">b755a17</span> fix(dgs-456): shutdown timer first, token before body, logger codes</li>
+<li><span class="sha">8cdeeab</span> test(dgs-456): install copies the scheduler and serves jobs</li>
+<li><span class="sha">128e987</span> fix(dgs-456): pin the plist hash, exact jobs shape in install test</li>
+<li><span class="sha">2194bea</span> test(dgs-456): mutation checks</li>
+<li><span class="sha">0fcbc3b</span> docs(dgs-456): note the timeout catch in mutation 2</li>
+<li><span class="sha">d1f2151</span> fix(dgs-456): notifier calls dg add-comment with --task, --text and --yes</li>
+<li><span class="sha">6120717</span> feat(dgs-456): selftest fails on SELFTEST_FAIL=1</li>
+<li><span class="sha">b032eaa</span> fix(dgs-456): a scheduler start fault leaves the other routes serving</li>
+<li><span class="sha">b4e24d2</span> fix(dgs-456): a queued job shows queued, startedAt set at the real start</li>
+<li><span class="sha">ea9655e</span> fix(dgs-456): install.sh creates the scheduler state folder</li>
+
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-456—nexus-scheduler/report.html</footer>
+
+</body>
+</html>
