@@ -15,7 +15,7 @@ export function stepForRecord(record: UsageRecord, entries: RegistryEntry[]): St
   return last && last.kind === "step_start" ? last.step : "other";
 }
 
-// A task window opens at task_start and closes at task_end, the next task_start, or the end of the
+// A task window opens at task_start and closes at the task_end of the same task, the next task_start, or the end of the
 // implementation step. Same rules as stepForRecord: own session only, parsed instants, an end sorts
 // before a start at the same instant.
 export function taskForRecord(record: UsageRecord, entries: RegistryEntry[]): string | null {
@@ -26,8 +26,14 @@ export function taskForRecord(record: UsageRecord, entries: RegistryEntry[]): st
     .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
     .filter((x) => !Number.isNaN(x.t) && x.t <= at)
     .sort((a, b) => a.t - b.t || Number(b.e.kind !== "task_start") - Number(a.e.kind !== "task_start") || a.order - b.order);
-  const last = own[own.length - 1]?.e;
-  return last && last.kind === "task_start" ? last.task : null;
+  let open: string | null = null;
+  for (const { e } of own) {
+    if (e.kind === "task_start") open = e.task;
+    else if (e.kind === "task_end") {
+      if (e.task === open) open = null; // a stray end for another task leaves the window open
+    } else open = null; // step_end implementation closes any window
+  }
+  return open;
 }
 
 // A worker that never opened a step but closed "finishing" skipped the build skills (DGS-561). Its

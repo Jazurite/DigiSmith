@@ -103,6 +103,12 @@ describe("taskForRecord", () => {
     const same = [t("task_start", "2", "2026-10-10T02:00:00Z"), t("task_end", "1", "2026-10-10T02:00:00Z"), t("task_start", "1", "2026-10-10T01:00:00Z")];
     expect(taskForRecord(rec({ ts: "2026-10-10T02:00:00.500Z" }), same)).toBe("2");
   });
+  it("keeps a window open when a task_end names another task", () => {
+    const stray = [t("task_start", "2", "2026-10-10T01:00:00Z"), t("task_end", "1", "2026-10-10T02:00:00Z")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T03:00:00Z" }), stray)).toBe("2");
+    const own = [t("task_start", "2", "2026-10-10T01:00:00Z"), t("task_end", "2", "2026-10-10T02:00:00Z")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T03:00:00Z" }), own)).toBeNull();
+  });
   it("ignores an entry with a bad ts and gives null for a record with a bad ts", () => {
     const bad = [t("task_start", "1", "2026-10-10T01:00:00Z"), t("task_end", "1", "garbage")];
     expect(taskForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), bad)).toBe("1");
