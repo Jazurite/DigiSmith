@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reviewer brief: ticket none — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}h1,h2{color:#6b3fa0}</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Reviewer brief: ticket none — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-19</span>
+    <span>Ticket: <strong>DGS-569</strong></span>
+    <span>Commit range: <code>de84f9f..c377f01</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p><code>skills/reviewer/brief.md</code> now skips session registration when <code>pack.md</code> has <code>ticket: none</code>, as the card does. One bullet in the brief template gains the exception, and one assertion in the card test pins it. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (1 task, implemented by the controller in role mode and independently reviewed) → a final whole-branch review.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+  <p>Review findings table: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 1</div><h4>Brief follows the card on <code>ticket: none</code></h4><p>A brief whose registration bullet carries the same exception as the card. No new placeholder.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Brief follows the card on <code>ticket: none</code></td><td>Registration bullet in the brief skips the command on <code>ticket: none</code>; test pins it.</td><td>Approved, clean</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">4aae37c</span> docs(dgs-569): spec for reviewer brief ticket-none registration</li>
+    <li><span class="sha">3ec5b8d</span> docs(dgs-569): plan for reviewer brief ticket-none registration</li>
+    <li><span class="sha">140025d</span> docs(dgs-569): refiner part and definition of ready</li>
+    <li><span class="sha">c377f01</span> fix(reviewer): brief skips session registration on ticket none</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-569—reviewer-brief-skip-session-registration/report.html</footer>
+
+</body>
+</html>
