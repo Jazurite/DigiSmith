@@ -153,7 +153,9 @@ Moved to ClickUp DGS-398 (Notes): it is personal and leaves the public repo.
   subsequent fix round as `Scoped re-review (fix base <BASE>..<HEAD>, <model>): <verdict>`, and any
   residual as `Final review: parked — <finding> — ruling: <why>` (same shape as a per-task parked
   line). `digismith:report-implementation` depends on this exact grammar to render the Final Review
-  & Fix section — a ledger that doesn't follow it will read as "no final review recorded yet." In role mode (`Review mode: role`) the Builder writes these same lines itself, from the ticket Reviewer's report (DGS-570).
+  & Fix section — a ledger that doesn't follow it will read as "no final review recorded yet."
+  In role mode (`Review mode: role`) the Builder writes these same lines itself,
+  from the ticket Reviewer's report (DGS-570).
 - **`.digismith/profile` is config, not generated docs output** (map item O). The
   commit-vs-gitignore choice above governs `.digismith/docs/` — the docs DigiSmith *generates*. The
   one-line profile pointer sits beside that folder, not inside it, and is outside that choice

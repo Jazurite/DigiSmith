@@ -67,7 +67,10 @@ describe("SDD has the role-mode path (new)", () => {
   });
   it("tells the Builder to write the Final review lines report-implementation reads (DGS-570)", () => {
     const start = sdd.indexOf("## Role Mode (a herdr Builder)");
-    const role = sdd.slice(start, sdd.indexOf("## Final Review"));
+    const end = sdd.indexOf("## Final Review");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const role = sdd.slice(start, end);
     for (const s of [
       "**Final review lines.**",
       "Final review (base <MERGE_BASE>..<HEAD>, <model>):",

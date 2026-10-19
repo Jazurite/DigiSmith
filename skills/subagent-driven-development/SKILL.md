@@ -553,8 +553,10 @@ before any fix wave, append
 `model:` line the ticket pack command printed. Name each finding as
 `F<n> <severity> <what>`, or write `no findings`. After the one fix wave and its
 scoped re-review, append
-`Scoped re-review (fix base <FIX_BASE>..<HEAD>, <model>): <verdict>`, with the
-model of the round 2 pack. For a ticket finding decided `parked`, write its
+`Scoped re-review (fix base <FIX_BASE>..<HEAD>, <model>): <verdict>`. Here
+`<FIX_BASE>` and `<HEAD>` are the `--fix-base` and `--head` hashes of the round
+2 pack, and `<model>` is the `model:` line of the round 2 pack command. For a
+ticket finding decided `parked`, write its
 verdict line and also
 `Final review: parked — F<n> <finding> — ruling: <why>`. A `fixed` or `rejected`
 finding needs only its verdict line. Do not change the `Review ticket final`
