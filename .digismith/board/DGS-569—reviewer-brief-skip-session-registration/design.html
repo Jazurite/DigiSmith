@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-569 Reviewer brief: skip registration on ticket none</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  h1 { font-size:1.6rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:1rem; overflow-x:auto; }
+  pre code { background:none; padding:0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reviewer brief: skip session registration when the pack says ticket: none</h1>
+  <div class="meta">Date: 2026-10-19 &middot; Ticket: DGS-569 &middot; Refinement only (DGS-488)</div>
+</header>
+
+<section>
+<h2>Problem</h2>
+<p>The card (<code>skills/reviewer/SKILL.md</code>, "Rules for the Reviewer") says: register the session with the key from the <code>ticket:</code> line of <code>pack.md</code>, and skip the command when that line is <code>ticket: none</code>. The brief template (<code>skills/reviewer/brief.md</code>) says "Register your session ... first" with <code>--ticket {{KEY}}</code> and no exception. A Reviewer started from the brief for a no-key pack has two rules that disagree. The DGS-566 ticket Reviewer saw this.</p>
+</section>
+
+<section>
+<h2>Fix</h2>
+<p>Change the one registration bullet in <code>brief.md</code> so it follows the card. The command line stays as it is, with <code>{{KEY}}</code>. The bullet gains the exception:</p>
+<pre><code>- Register your session so your tokens count with the ticket, first, at the start of every review (again after a `/clear`). `pack.md` has a `ticket:` line. A `ticket: none` line means the work has no tracker key: skip the command.
+  `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket {{KEY}} --role reviewer`</code></pre>
+<p>The five placeholders stay the same. No new placeholder, no change to the card.</p>
+</section>
+
+<section>
+<h2>Test</h2>
+<p>In <code>packages/cli/src/reviewer/card.test.ts</code>, extend the <code>brief.md</code> test: the brief contains <code>ticket: none</code> and the <code>ticket:</code> line wording, and still contains the pinned command <code>entry.ts session --ticket {{KEY}} --role reviewer</code>. Written first, it fails on the current brief.</p>
+</section>
+
+<section>
+<h2>Files</h2>
+<ul>
+  <li><code>skills/reviewer/brief.md</code> (the bullet)</li>
+  <li><code>packages/cli/src/reviewer/card.test.ts</code> (one assertion)</li>
+</ul>
+<p>Not touched: <code>skills/subagent-driven-development/</code> (DGS-570 and DGS-568 may touch it), <code>skills/reviewer/SKILL.md</code>, anything under <code>packages/cli/src</code> that is not a test (no dist rebuild).</p>
+</section>
+
+<section>
+<h2>Assumptions</h2>
+<ul>
+  <li>The conductor fills <code>{{KEY}}</code> in the brief as today. For a no-key pack the Reviewer skips the command, so the value does not matter. The brief does not say what to put in <code>{{KEY}}</code> for such a pack; that is the runbook's "Start of a Reviewer", not this ticket.</li>
+  <li>The card wording is already right (its test pins it). Only the brief moves.</li>
+  <li>No wording Jack sees, no ClickUp setting, nothing public: no taste question.</li>
+  <li>The build runs in role mode (<code>DIGISMITH_REVIEW_MODE=role</code>); see the plan.</li>
+</ul>
+</section>
+
+<footer class="meta">DigiSmith &middot; .digismith/board/DGS-569&mdash;reviewer-brief-skip-session-registration/design.html</footer>
+</body>
+</html>
