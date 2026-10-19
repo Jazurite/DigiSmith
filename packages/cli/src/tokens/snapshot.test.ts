@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSnapshot, stepForRecord, taskForRecord } from "./snapshot.ts";
-import type { RegistryEntry, UsageRecord } from "./types.ts";
+import { buildSnapshot, inferredStep, stepForRecord, taskForRecord } from "./snapshot.ts";
+import type { RegistryEntry, Role, UsageRecord } from "./types.ts";
 
 function rec(over: Partial<UsageRecord>): UsageRecord {
   return {
@@ -138,5 +138,46 @@ describe("buildSnapshot task windows", () => {
   it("leaves an unregistered session out of the tasks", () => {
     const snap = buildSnapshot({ ticket: "T-1", generatedAt: "t", entries: marks, inferredSessions: [], records: [rec({ session_id: "s9", ts: "2026-10-10T01:10:00Z" })] });
     expect(snap.tasks).toEqual({});
+  });
+});
+
+describe("inferredStep", () => {
+  const session = (role: Role): Map<string, Role> => new Map([["s1", role]]);
+  const fin = (ts: string): RegistryEntry => ({ kind: "step_end", ticket: "T-1", step: "finishing", session_id: "s1", ts });
+  const reg: RegistryEntry = { kind: "session", ticket: "T-1", session_id: "s1", source: "claude-code", role: "worker", ts: "2026-10-10T00:59:00Z" };
+
+  it("calls the records before a lone finishing end of a worker the implementation", () => {
+    const list = [reg, fin("2026-10-10T02:00:00Z")];
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), list, session("worker"))).toBe("implementation");
+    expect(inferredStep(rec({ ts: "2026-10-10T02:00:00Z" }), list, session("worker"))).toBe("implementation");
+    expect(inferredStep(rec({ ts: "2026-10-10T02:00:01Z" }), list, session("worker"))).toBeNull();
+  });
+  it("infers nothing when the session has any step_start, no finishing end, another role or a bad ts", () => {
+    const started: RegistryEntry = { kind: "step_start", ticket: "T-1", step: "brainstorming", session_id: "s1", ts: "2026-10-10T00:30:00Z" };
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), [reg, started, fin("2026-10-10T02:00:00Z")], session("worker"))).toBeNull();
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), [reg], session("worker"))).toBeNull();
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), [reg, fin("2026-10-10T02:00:00Z")], session("reviewer"))).toBeNull();
+    expect(inferredStep(rec({ ts: "" }), [reg, fin("2026-10-10T02:00:00Z")], session("worker"))).toBeNull();
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), [reg, fin("garbage")], session("worker"))).toBeNull();
+  });
+});
+
+describe("buildSnapshot inferred steps", () => {
+  it("counts the DGS-561 shape as implementation and says so", () => {
+    const entries: RegistryEntry[] = [
+      { kind: "session", ticket: "T-1", session_id: "s1", source: "claude-code", role: "worker", ts: "2026-10-10T00:59:00Z" },
+      { kind: "step_end", ticket: "T-1", step: "finishing", session_id: "s1", ts: "2026-10-10T02:00:00Z" },
+    ];
+    const snap = buildSnapshot({
+      ticket: "T-1", generatedAt: "t", entries, inferredSessions: [],
+      records: [rec({ ts: "2026-10-10T01:00:00Z", output: 10 }), rec({ ts: "2026-10-10T03:00:00Z", output: 5 })],
+    });
+    expect(snap.steps.implementation["claude-opus-5-5"]).toMatchObject({ output: 10, responses: 1 });
+    expect(snap.steps.other["claude-opus-5-5"]).toMatchObject({ output: 5, responses: 1 });
+    expect(snap.inferred_steps).toEqual(["implementation"]);
+  });
+  it("leaves inferred_steps out when no step was inferred", () => {
+    const snap = buildSnapshot({ ticket: "T-1", generatedAt: "t", entries: [], inferredSessions: [], records: [] });
+    expect("inferred_steps" in snap).toBe(false);
   });
 });

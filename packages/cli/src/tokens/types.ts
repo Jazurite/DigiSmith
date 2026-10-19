@@ -64,4 +64,5 @@ export interface Snapshot {
   tasks: Record<string, Record<string, Counts>>; // task id -> model -> counts
   sessions: { session_id: string; role: Role | "unknown"; attribution: "registry" | "inferred" }[];
   unattributed: Record<string, Counts>;
+  inferred_steps?: Step[]; // steps counted without a step_start mark; absent when none
 }

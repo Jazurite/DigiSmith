@@ -30,6 +30,19 @@ export function taskForRecord(record: UsageRecord, entries: RegistryEntry[]): st
   return last && last.kind === "task_start" ? last.task : null;
 }
 
+// A worker that never opened a step but closed "finishing" skipped the build skills (DGS-561). Its
+// records up to that mark are the build, so they count as implementation, not other.
+export function inferredStep(record: UsageRecord, entries: RegistryEntry[], registered: Map<string, Role>): Step | null {
+  if (registered.get(record.session_id) !== "worker") return null;
+  const at = Date.parse(record.ts);
+  if (Number.isNaN(at)) return null;
+  const own = entries.filter((e) => e.session_id === record.session_id);
+  if (own.some((e) => e.kind === "step_start")) return null;
+  const ends = own.flatMap((e) => (e.kind === "step_end" && e.step === "finishing" ? [Date.parse(e.ts)] : [])).filter((t) => !Number.isNaN(t));
+  if (ends.length === 0) return null;
+  return at <= Math.min(...ends) ? "implementation" : null;
+}
+
 function ledgerTask(record: UsageRecord, taskAgents: Record<string, string[]> | undefined): string | null {
   if (!record.agent_id) return null;
   for (const [task, agents] of Object.entries(taskAgents ?? {})) if (agents.includes(record.agent_id)) return task;
@@ -70,6 +83,7 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
   const inferred = new Set(input.inferredSessions.filter((s) => !registered.has(s)));
 
   const steps: Snapshot["steps"] = {};
+  const inferredSteps = new Set<Step>();
   const tasks: Snapshot["tasks"] = {};
   const unattributed: Snapshot["unattributed"] = {};
 
@@ -78,7 +92,15 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
       addModel(unattributed, record);
       continue;
     }
-    bump(steps, stepForRecord(record, input.entries), record);
+    let step = stepForRecord(record, input.entries);
+    if (step === "other") {
+      const inferredFor = inferredStep(record, input.entries, registered);
+      if (inferredFor) {
+        step = inferredFor;
+        inferredSteps.add(inferredFor);
+      }
+    }
+    bump(steps, step, record);
     const task = ledgerTask(record, input.taskAgents) ?? taskForRecord(record, input.entries);
     if (task) bump(tasks, task, record);
   }
@@ -97,5 +119,6 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     tasks,
     sessions,
     unattributed,
+    ...(inferredSteps.size > 0 ? { inferred_steps: [...inferredSteps] } : {}),
   };
 }
