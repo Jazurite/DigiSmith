@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDD ledger tags each plan task's tokens</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">checkpoint 1: awaiting Maestro</span>
+  <h1>SDD ledger tags each plan task's tokens</h1>
+  <div class="meta">
+    <span>Date: 2026-10-19</span>
+    <span>Ticket: DGS-568</span>
+    <span>List: B.3 Token Economics</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#causes">Causes found</a></li>
+    <li><a href="#design">Design</a></li>
+    <li><a href="#assumptions">Assumptions</a></li>
+    <li><a href="#out">Out of scope</a></li>
+    <li><a href="#testing">Testing and first use</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+<h2>Problem</h2>
+<p>Spike DGS-563 (DGS-529 build, 2026-10-17) found that <code>tokens.json</code> <code>tasks</code> holds 5% (DGS-560), 6% (DGS-562) and 34% (DGS-559) of the implementation step's output. DGS-561 was built without SDD and has no step lines. The spike's advice: keep per-task counts in the ledger, not in ClickUp subtasks. So the ledger must tag every plan task, and a non-SDD build must still write step lines.</p>
+</section>
+
+<section id="causes">
+<h2>Causes found</h2>
+<p>Counts only, from the three <code>tokens.json</code> files, the registry files and the session transcripts (no message text read).</p>
+<div class="table-wrap"><table>
+<tr><th>#</th><th>Cause</th><th>Evidence</th></tr>
+<tr><td>1</td><td><b>The parser drops dispatch lines that carry a note.</b> <code>parseTaskAgents</code> (<code>ledger.ts</code>) needs the line to end at the agent id: <code>^Task (\S+): dispatch \S+ agent=(\S+)\s*$</code>. The Builder wrote <code>Task 2: dispatch implementer agent=a99f… (base 47badfb)</code>. The SKILL.md rule names no note, but real ledgers carry one.</td><td>DGS-560 session: 15 dispatch lines for tasks 1 to 6 and final. Only the lines with no note matched: the task 1 reviewer and the final reviewer. Tasks 2 to 6 (10 agents) all had <code>(base …)</code> or <code>(head …)</code>. That is why <code>tokens.json</code> has task 1 and final only.</td></tr>
+<tr><td>2</td><td><b>The controller's own output has no agent id, so no task can claim it.</b> Tagging is by <code>agent_id</code> only. The main thread (controller) writes most of the output: it reads reports, builds packs, writes ledger lines.</td><td>DGS-560: main thread 35,868 output, 15 subagents 5,130. DGS-559: main 31,748, subagents 13,716. With cause 1 fixed, DGS-560 tags at most 5,130 of ~40,998 (13%) and DGS-559 at most 13,716 of 45,464 (30%). So the id-only rule cannot reach full coverage.</td></tr>
+<tr><td>3</td><td><b>A build that skips the build skill writes no step lines.</b> Steps come from <code>step-start</code> blocks inside <code>brainstorming</code>, <code>writing-plans</code>, SDD and <code>executing-plans</code>. A Builder that starts from a plan pointer and codes directly runs none of them.</td><td>DGS-561 session: skills used were <code>init</code>, <code>bootstrap</code>, <code>report-implementation</code> only. Registry: one <code>session</code> line and one <code>step_end finishing</code>. All 36 responses sit in <code>other</code>.</td></tr>
+</table></div>
+</section>
+
+<section id="design">
+<h2>Design</h2>
+
+<h3>A. Parser accepts a trailing note (cause 1)</h3>
+<p><code>parseTaskAgents</code> reads <code>agent=&lt;id&gt;</code> and ignores any text after the id. The id pattern is <code>[A-Za-z0-9_-]+</code>. A line with no <code>agent=</code> still gives nothing. The SDD dispatch bullet says that a short note in parentheses may follow the id.</p>
+
+<h3>B. Task windows for the controller's turns (cause 2)</h3>
+<p>Two new registry entry kinds, written like step marks: <code>task_start</code> and <code>task_end</code>, each with <code>ticket</code>, <code>task</code>, <code>session_id</code>, <code>ts</code>. Two new commands: <code>entry.ts task-start --ticket K --task N</code> and <code>entry.ts task-end --ticket K --task N</code>, with the same session-id rule, the same "never blocks" rule, and a skip when the same start is already open.</p>
+<p>In <code>buildSnapshot</code>, a record in a registered or inferred session is tagged with a task by this order, one task at most:</p>
+<ol>
+<li>Its <code>agent_id</code> is in the ledger map: that task (the ledger wins).</li>
+<li>Otherwise the task whose window holds the record's time, in the record's own session. A window opens at <code>task_start</code> and closes at the matching <code>task_end</code>, the next <code>task_start</code>, or a <code>step_end implementation</code>. Same instant rule as <code>stepForRecord</code>. This covers the controller and any subagent the ledger lacks.</li>
+<li>Otherwise no task (setup, report, merge prep stay in their step).</li>
+</ol>
+<p>The <code>tasks</code> shape does not change (<code>task → model → counts</code>), so <code>task-tokens</code>, <code>tokens.json</code> readers and <code>schema_version: 1</code> stay valid. The <code>final</code> task id gets its own window.</p>
+<p>The skills write the marks:</p>
+<ul>
+<li>SDD: <code>task-start</code> before recording BASE for a task; <code>task-end</code> right after the "complete" ledger line; <code>task-start --task final</code> at the start of "Final Review" (role mode runs the same opening line; it replaces only the dispatch); <code>task-end --task final</code> with the <code>step-end implementation</code> block.</li>
+<li><code>executing-plans</code>: the same pair around each task.</li>
+</ul>
+
+<h3>C. Non-SDD builds still write step lines (cause 3)</h3>
+<ul>
+<li><b>At the source:</b> when <code>digismith:init</code> (or <code>adopt</code>) finds a plan for the ticket already in the board folder (a <code>plan.md</code>, or a plan pointer), the registry step is <code>implementation</code>, not <code>brainstorming</code>: <code>init</code> runs <code>step-start --step implementation</code>. Then a Builder that never opens SDD or <code>executing-plans</code> still has the step open.</li>
+<li><b>Safety net in code:</b> when a worker session has records but no <code>step_start</code> at all, and its first mark is a <code>step_end finishing</code>, the records before that mark count as <code>implementation</code> (not <code>other</code>). The snapshot gets one added field, <code>inferred_steps: ["implementation"]</code>, so a reader can tell the step was inferred. This turns the DGS-561 shape (36 responses in <code>other</code>) into an implementation step.</li>
+</ul>
+</section>
+
+<section id="assumptions">
+<h2>Assumptions</h2>
+<p>The ticket's evidence settles these. The Maestro can overrule any of them.</p>
+<ul>
+<li>Fix by the controller's time window, not by asking the controller to log more. A time window needs no new skill behaviour beyond two commands per task, and it gives full coverage.</li>
+<li>New registry kinds, not timestamps in the ledger. The ledger is a deleted-at-finish workspace file; the registry is the durable store the steps already use.</li>
+<li>The ledger tag beats the window. A record is never counted in two tasks.</li>
+<li><code>tokens.json</code> stays at <code>schema_version: 1</code>. <code>inferred_steps</code> is optional and added only when set. No reader is known to reject an extra key.</li>
+<li>Reviewer-role sessions (role mode) stay out of <code>tasks</code>. They are their own registered sessions with role <code>reviewer</code>.</li>
+<li>No backfill of the old <code>tokens.json</code> files (DGS-559, 560, 562). Their transcripts exist, but the windows do not.</li>
+<li>No new <code>dg</code> command. The two new subcommands live in <code>entry.ts</code> beside <code>step-start</code>.</li>
+<li>No ClickUp field, no ClickUp write, nothing the user sees in ClickUp.</li>
+</ul>
+</section>
+
+<section id="out">
+<h2>Out of scope</h2>
+<ul>
+<li>Reviewer tokens per task (a Reviewer session would need the task id from the pack). A follow-up ticket if wanted.</li>
+<li>Maestro and conductor windows for a parent ticket (spike Q2). Another ticket.</li>
+<li>Price table and cache-write prices (DGS-545/546).</li>
+<li>ClickUp subtasks per plan task. The spike said no.</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>Testing and first use</h2>
+<ul>
+<li>Unit tests (vitest, existing files): <code>ledger.test.ts</code> (a note after the id parses; no <code>agent=</code> gives nothing; the DGS-560 shapes), <code>snapshot.test.ts</code> (a main-thread record in a window tags the task; the ledger wins over the window; a window closes on <code>task_end</code>, on the next <code>task_start</code> and on <code>step_end implementation</code>; a record outside any window stays untagged; the inferred-step case), <code>entry.test.ts</code> (<code>task-start</code> and <code>task-end</code> write entries; a repeated open start is skipped; a bad task id fails with a usage error), <code>registry.test.ts</code> if the entry union needs a case.</li>
+<li>Replay check: run <code>dg tokens</code> over the DGS-560 and DGS-559 transcripts with the new parser and report the task share. The build gives the share it reached; no number is promised, because those two runs wrote no windows. The parser fix alone must lift DGS-560 from 5% to its 13% ceiling.</li>
+<li>First use after the merge: the next SDD build in role mode. Check its <code>tokens.json</code>: every plan task present, and the tagged share of the implementation step well above 34%.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-568—sdd-task-tokens/design.html</footer>
+
+</body>
+</html>
