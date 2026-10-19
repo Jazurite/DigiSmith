@@ -90,12 +90,11 @@ Check, in order:
      repeat of an open step. Same skip rule as above: no key → skip; a non-zero exit or
      warning never blocks.
 
-     Then read `profile` from
-     `.digismith/config.yml`, or from `.digismith/profile` when
-     `config.yml` or its `profile` key is missing (A.4 fallback). If
-     `config.yml` exists but cannot be read or parsed, handle it the same
-     way as a stale profile. Use that value as
-     `<name>` and report plainly, naming whichever folder actually
+     Then read `profile` from `.digismith/config.yml`, or from `.digismith/profile`
+     when `config.yml` or its `profile` key is missing (A.4 fallback). If
+     `config.yml` exists but cannot be read or parsed, handle it the same way as a
+     stale profile. Use that value as `<name>` and report plainly, naming whichever
+     folder actually
      matched:
 
      ```

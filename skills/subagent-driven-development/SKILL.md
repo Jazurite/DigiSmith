@@ -231,8 +231,8 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 `<N>` is the task's number in the plan. The window is how the counter tags your own turns
-for this task (they carry no agent id). Same key rule as the start block. A warning or
-non-zero exit never blocks the flow.
+for this task (they carry no agent id). Same key rule as the step-start block in
+Setup. A warning or non-zero exit never blocks the flow.
 
 **Mechanical-tier auto-offload:** if this task's complexity signal (see Model Selection above)
 is **mechanical**, dispatch its **first attempt** by following `digismith:offload-implementer`'s
@@ -315,7 +315,9 @@ bullet list below exactly as before.
   fix-loop rounds 1-3 resume this agent.
 - After every dispatch, append `Task <N>: dispatch <role> agent=<agentId>`
   to the ledger. `<agentId>` is the `agentId` the Agent tool result returns.
-  A short note may follow the id, in parentheses, for example (base 47badfb); the token counter reads the id and ignores the note. Put a space between the id and the note.
+  A short note may follow the id, in parentheses, for example
+  (base 47badfb); the token counter reads the id and ignores the note.
+  Put a space between the id and the note.
   `<role>` is `implementer`, `task-reviewer`, `re-review`, `fix` or
   `final-reviewer`. The final reviewer's task id is `final`.
 - Never dispatch multiple implementation subagents in parallel (conflicts).
@@ -476,7 +478,7 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Append the printed `Task <N>: tokens ...` line to the ledger. Same key rule
-as the start block. Then append the completion line in the same message as
+as the step-start block in Setup. Then append the completion line in the same message as
 your other bookkeeping:
 
 - `Task <N>: complete (commits <base7>..<head7>, review clean)`
@@ -489,7 +491,7 @@ Then mark the end of this task's window:
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task <N>
 ```
 
-Same key rule as the start block.
+Same key rule as the step-start block in Setup.
 
 Then mark the todo complete and move on. Never move to the next task while
 the review has open Critical/Important issues that are neither fixed nor
@@ -592,7 +594,7 @@ Mark the start of the final review's window (role mode runs this line too; it re
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-start --ticket <Key> --task final
 ```
 
-Same key rule as the start block.
+Same key rule as the step-start block in Setup.
 
 The final whole-branch review gets a package too: run
 `scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the
@@ -618,17 +620,14 @@ rulings, or stop on load-bearing ones. There is no second fix wave —
 residual load-bearing findings surface to your human partner when
 finishing-a-development-branch presents the options.
 
-Once the final review is clean, before the report and the Finish step, mark the end of this step. Close the final window, then the step.
+Once the final review is clean, before the report and the Finish step, mark the end of the final window and of the step:
 
 ```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task final
-```
-
-```bash
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-end --ticket <Key> --step implementation
 ```
 
-Same key rule as the start block.
+Same key rule as the step-start block in Setup.
 
 ## Finish
 
