@@ -544,6 +544,22 @@ from the Maestro reaches you in your parent's message; append it as written.
 review pack that raised the finding (the `-r<R>` of its pack folder), not the
 fix round. `dg reviewer table` rejects a line whose key names no finding.
 
+**Final review lines.** `digismith:report-implementation` reads the same
+whole-branch lines in every mode, so write them here yourself; never add them by
+hand later. When your parent returns the round 1 result of the ticket review,
+before any fix wave, append
+`Final review (base <MERGE_BASE>..<HEAD>, <model>): <one-line verdict and finding summary>`.
+`<MERGE_BASE>` and `<HEAD>` are the hashes you gave the pack. `<model>` is the
+`model:` line the ticket pack command printed. Name each finding as
+`F<n> <severity> <what>`, or write `no findings`. After the one fix wave and its
+scoped re-review, append
+`Scoped re-review (fix base <FIX_BASE>..<HEAD>, <model>): <verdict>`, with the
+model of the round 2 pack. For a ticket finding decided `parked`, write its
+verdict line and also
+`Final review: parked — F<n> <finding> — ruling: <why>`. A `fixed` or `rejected`
+finding needs only its verdict line. Do not change the `Review ticket final`
+verdict lines: `dg reviewer table` reads them.
+
 **Waiting is the rule here.** "Continuous execution" above has one exception in
 role mode: you wait at each `STOP: ...-review-ready` until your parent answers.
 If `dg reviewer pack` fails, report the error to your parent and wait. Never fall

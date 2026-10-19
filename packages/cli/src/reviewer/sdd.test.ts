@@ -65,4 +65,17 @@ describe("SDD has the role-mode path (new)", () => {
   it("explains r<R> in a verdict line is the pack round (F5)", () => {
     expect(sdd).toMatch(/round of the\s+review pack that raised the finding/);
   });
+  it("tells the Builder to write the Final review lines report-implementation reads (DGS-570)", () => {
+    const start = sdd.indexOf("## Role Mode (a herdr Builder)");
+    const role = sdd.slice(start, sdd.indexOf("## Final Review"));
+    for (const s of [
+      "**Final review lines.**",
+      "Final review (base <MERGE_BASE>..<HEAD>, <model>):",
+      "Scoped re-review (fix base <FIX_BASE>..<HEAD>, <model>):",
+      "Final review: parked — F<n>",
+      "`model:` line",
+    ]) expect(role).toContain(s);
+    expect(role.indexOf("**Final review lines.**")).toBeGreaterThan(role.indexOf("**Verdict lines.**"));
+    expect(role.indexOf("**Final review lines.**")).toBeLessThan(role.indexOf("**Waiting is the rule here.**"));
+  });
 });
