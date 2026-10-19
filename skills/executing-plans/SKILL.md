@@ -43,7 +43,8 @@ one way, so there's no collision). Record the commit at that point as `MERGE_BAS
 ledger.
 
 For each task:
-1. Mark as in_progress
+1. Mark as in_progress, and mark the start of the task's window:
+   `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-start --ticket <Key> --task <N>`
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
 4. Self-check before marking complete — the same spirit as a fresh-eyes review, not a separate
@@ -54,7 +55,10 @@ For each task:
 6. Append one line to the ledger: `Task <N>: complete (commits <base7>..<head7>, self-check:
    <one-line summary>)` — no review-verdict, no fix-round grammar; there is no independent
    reviewer to produce one.
-7. Mark as completed
+7. Mark as completed, and mark the end of the task's window:
+   `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task <N>`
+
+`<N>` is the task's number in the plan. Same key rule as the start block. A warning or non-zero exit never blocks the flow.
 
 ### Step 3: Complete Development
 
