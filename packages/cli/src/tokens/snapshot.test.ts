@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSnapshot, stepForRecord } from "./snapshot.ts";
+import { buildSnapshot, stepForRecord, taskForRecord } from "./snapshot.ts";
 import type { RegistryEntry, UsageRecord } from "./types.ts";
 
 function rec(over: Partial<UsageRecord>): UsageRecord {
@@ -77,5 +77,66 @@ describe("buildSnapshot", () => {
     expect(snap.sessions).toEqual([{ session_id: "s2", role: "unknown", attribution: "inferred" }]);
     expect(snap.steps.other["claude-opus-5-5"].responses).toBe(1);
     expect(snap.unattributed["claude-opus-5-5"]).toMatchObject({ output: 4, responses: 1 });
+  });
+});
+
+describe("taskForRecord", () => {
+  const t = (kind: "task_start" | "task_end", task: string, ts: string, session_id = "s1"): RegistryEntry => ({ kind, ticket: "T-1", task, session_id, ts });
+  const impl = (kind: "step_start" | "step_end", ts: string): RegistryEntry => ({ kind, ticket: "T-1", step: "implementation", session_id: "s1", ts });
+  const list = [t("task_start", "1", "2026-10-10T01:00:00Z"), t("task_end", "1", "2026-10-10T02:00:00Z"), t("task_start", "2", "2026-10-10T03:00:00Z")];
+
+  it("returns the task whose window holds the record", () => {
+    expect(taskForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), list)).toBe("1");
+    expect(taskForRecord(rec({ ts: "2026-10-10T04:00:00Z" }), list)).toBe("2");
+  });
+  it("returns null before the first window, between windows and for another session", () => {
+    expect(taskForRecord(rec({ ts: "2026-10-10T00:30:00Z" }), list)).toBeNull();
+    expect(taskForRecord(rec({ ts: "2026-10-10T02:30:00Z" }), list)).toBeNull();
+    expect(taskForRecord(rec({ session_id: "s9", ts: "2026-10-10T01:30:00Z" }), list)).toBeNull();
+  });
+  it("closes a window at the next task_start, at step_end implementation and at the same instant", () => {
+    const next = [t("task_start", "1", "2026-10-10T01:00:00Z"), t("task_start", "2", "2026-10-10T02:00:00Z")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T02:30:00Z" }), next)).toBe("2");
+    const stepEnd = [t("task_start", "final", "2026-10-10T01:00:00Z"), impl("step_end", "2026-10-10T02:00:00Z")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), stepEnd)).toBe("final");
+    expect(taskForRecord(rec({ ts: "2026-10-10T02:30:00Z" }), stepEnd)).toBeNull();
+    const same = [t("task_start", "2", "2026-10-10T02:00:00Z"), t("task_end", "1", "2026-10-10T02:00:00Z"), t("task_start", "1", "2026-10-10T01:00:00Z")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T02:00:00.500Z" }), same)).toBe("2");
+  });
+  it("ignores an entry with a bad ts and gives null for a record with a bad ts", () => {
+    const bad = [t("task_start", "1", "2026-10-10T01:00:00Z"), t("task_end", "1", "garbage")];
+    expect(taskForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), bad)).toBe("1");
+    expect(taskForRecord(rec({ ts: "" }), bad)).toBeNull();
+  });
+  it("does not treat step_start of implementation as a window mark", () => {
+    expect(taskForRecord(rec({ ts: "2026-10-10T01:30:00Z" }), [impl("step_start", "2026-10-10T01:00:00Z")])).toBeNull();
+  });
+});
+
+describe("buildSnapshot task windows", () => {
+  const worker: RegistryEntry = { kind: "session", ticket: "T-1", session_id: "s1", source: "claude-code", role: "worker", ts: "2026-10-10T00:59:00Z" };
+  const marks: RegistryEntry[] = [
+    worker,
+    { kind: "task_start", ticket: "T-1", task: "1", session_id: "s1", ts: "2026-10-10T01:00:00Z" },
+    { kind: "task_end", ticket: "T-1", task: "1", session_id: "s1", ts: "2026-10-10T02:00:00Z" },
+  ];
+  it("tags a main-thread record by window and a ledger agent by the ledger, each once", () => {
+    const snap = buildSnapshot({
+      ticket: "T-1", generatedAt: "t", entries: marks, inferredSessions: [],
+      taskAgents: { "7": ["a1"] },
+      records: [
+        rec({ ts: "2026-10-10T01:10:00Z", output: 10 }),
+        rec({ ts: "2026-10-10T01:20:00Z", agent_id: "a1", output: 20 }),
+        rec({ ts: "2026-10-10T01:30:00Z", agent_id: "a2", output: 30 }),
+        rec({ ts: "2026-10-10T02:30:00Z", output: 40 }),
+      ],
+    });
+    expect(snap.tasks["1"]["claude-opus-5-5"]).toMatchObject({ output: 40, responses: 2 });
+    expect(snap.tasks["7"]["claude-opus-5-5"]).toMatchObject({ output: 20, responses: 1 });
+    expect(Object.keys(snap.tasks).sort()).toEqual(["1", "7"]);
+  });
+  it("leaves an unregistered session out of the tasks", () => {
+    const snap = buildSnapshot({ ticket: "T-1", generatedAt: "t", entries: marks, inferredSessions: [], records: [rec({ session_id: "s9", ts: "2026-10-10T01:10:00Z" })] });
+    expect(snap.tasks).toEqual({});
   });
 });

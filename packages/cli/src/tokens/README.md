@@ -40,6 +40,10 @@ Result on 2026-10-10, ticket DGS-154, session f94b2d68 (DGS-198 has no transcrip
 - Compaction: 13 `isCompactSummary` lines and 13 `compact_boundary` lines, none with usage. They add nothing. Fixture test pins it.
 - Resumed sessions: 4 session ids appear in two files. The newer file replays the older lines (same message and request ids, old `sessionId`) before adding its own. Fix: `countTicket` dedupes across sessions and tags each record with the session whose file it read. Test added in `count.test.ts`.
 
+## Task tagging
+
+`tokens.json` `tasks` maps a plan task id to its counts. A response gets at most one task. First the SDD ledger: an `agent=<id>` on a `Task <N>: dispatch ...` line (text after the id is ignored). Then the task window: `entry.ts task-start --ticket K --task N` and `task-end` write `task_start`/`task_end` marks; a response of the same session inside a window belongs to that task. A window closes at `task_end`, at the next `task_start`, or at `step_end implementation`. The controller's own turns have no agent id; the window is what tags them. Output outside any window (setup, report, merge prep) stays in its step only.
+
 ## Known limits
 
 - Slice 2 is not built: skills and the SDD ledger do not write registry entries yet, so steps are `other` unless a registry exists.

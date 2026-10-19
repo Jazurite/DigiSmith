@@ -15,6 +15,27 @@ export function stepForRecord(record: UsageRecord, entries: RegistryEntry[]): St
   return last && last.kind === "step_start" ? last.step : "other";
 }
 
+// A task window opens at task_start and closes at task_end, the next task_start, or the end of the
+// implementation step. Same rules as stepForRecord: own session only, parsed instants, an end sorts
+// before a start at the same instant.
+export function taskForRecord(record: UsageRecord, entries: RegistryEntry[]): string | null {
+  const at = Date.parse(record.ts);
+  if (Number.isNaN(at)) return null;
+  const own = entries
+    .filter((e) => e.session_id === record.session_id && (e.kind === "task_start" || e.kind === "task_end" || (e.kind === "step_end" && e.step === "implementation")))
+    .map((e, order) => ({ e, t: Date.parse(e.ts), order }))
+    .filter((x) => !Number.isNaN(x.t) && x.t <= at)
+    .sort((a, b) => a.t - b.t || Number(b.e.kind !== "task_start") - Number(a.e.kind !== "task_start") || a.order - b.order);
+  const last = own[own.length - 1]?.e;
+  return last && last.kind === "task_start" ? last.task : null;
+}
+
+function ledgerTask(record: UsageRecord, taskAgents: Record<string, string[]> | undefined): string | null {
+  if (!record.agent_id) return null;
+  for (const [task, agents] of Object.entries(taskAgents ?? {})) if (agents.includes(record.agent_id)) return task;
+  return null;
+}
+
 function countsOf(record: UsageRecord): Counts {
   return {
     input: record.input,
@@ -58,9 +79,8 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
       continue;
     }
     bump(steps, stepForRecord(record, input.entries), record);
-    for (const [task, agents] of Object.entries(input.taskAgents ?? {})) {
-      if (record.agent_id && agents.includes(record.agent_id)) bump(tasks, task, record);
-    }
+    const task = ledgerTask(record, input.taskAgents) ?? taskForRecord(record, input.entries);
+    if (task) bump(tasks, task, record);
   }
 
   const sessions: Snapshot["sessions"] = [
