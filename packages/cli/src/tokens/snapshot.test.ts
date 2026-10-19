@@ -158,6 +158,11 @@ describe("inferredStep", () => {
     expect(inferredStep(rec({ ts: "2026-10-10T02:00:00Z" }), list, session("worker"))).toBe("implementation");
     expect(inferredStep(rec({ ts: "2026-10-10T02:00:01Z" }), list, session("worker"))).toBeNull();
   });
+  it("uses the earliest finishing end when there are two", () => {
+    const list = [reg, fin("2026-10-10T02:00:00Z"), fin("2026-10-10T04:00:00Z")];
+    expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), list, session("worker"))).toBe("implementation");
+    expect(inferredStep(rec({ ts: "2026-10-10T03:00:00Z" }), list, session("worker"))).toBeNull();
+  });
   it("infers nothing when the session has any step_start, no finishing end, another role or a bad ts", () => {
     const started: RegistryEntry = { kind: "step_start", ticket: "T-1", step: "brainstorming", session_id: "s1", ts: "2026-10-10T00:30:00Z" };
     expect(inferredStep(rec({ ts: "2026-10-10T01:00:00Z" }), [reg, started, fin("2026-10-10T02:00:00Z")], session("worker"))).toBeNull();
