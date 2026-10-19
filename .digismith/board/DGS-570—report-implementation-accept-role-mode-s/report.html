@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Role mode writes the Final review ledger line — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui;max-width:46rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .25em}</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Role mode writes the Final review ledger line — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-19</span>
+    <span>Ticket: <strong>DGS-570</strong></span>
+    <span>Commit range: <code>de84f9f..294655d</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>In role mode the SDD Builder now writes the <code>Final review (...)</code>, <code>Scoped re-review (...)</code> and <code>Final review: parked — ...</code> ledger lines that <code>digismith:report-implementation</code> reads, so nobody adds them by hand. The change is one new paragraph in the Role Mode section of <code>skills/subagent-driven-development/SKILL.md</code>, one test that pins its text, and one sentence in <code>MEMORY.md</code>. <code>report-implementation</code> is unchanged. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (2 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge. Built in role mode: a conductor started each Reviewer (2 task reviews, 1 ticket review).</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>. Review findings: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Task 1</div><h4>The Role Mode paragraph and its test</h4><p>Three ledger line shapes that report-implementation Step 1 and 2c already read.</p></div>
+    <div class="card"><div class="tag">Task 2</div><h4>Record the convention in MEMORY.md</h4><p>One sentence in the Final-review bullet, so the convention is written down.</p></div>
+  </div>
+</div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: The Role Mode paragraph and its test</td><td>Final review lines paragraph and a pinning test</td><td>Approved, clean (2 Minor parked)</td><td>F1 say "model: line of the round 2 pack command" in the Final review lines paragraph<br>F2 sdd.test.ts role-section slice has no guard for a missing or earlier "## Final Review"</td></tr>
+    <tr><td>Task 2: Record the convention in MEMORY.md</td><td>One sentence in MEMORY.md</td><td>Approved, clean (1 Minor parked)</td><td>F1 MEMORY.md appended sentence wraps wider than the rest of the bullet</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes — 3 Minor findings, all fixed in one wave (294655d). Full table: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>Scoped re-review line did not say that FIX_BASE and HEAD come from the round 2 pack and model is its <code>model:</code> line.</td><td>Fixed (294655d)</td></tr>
+    <tr><td>Minor</td><td>Role Mode slice in the new test had no guard for a missing or earlier <code>## Final Review</code> heading.</td><td>Fixed (294655d)</td></tr>
+    <tr><td>Minor</td><td>Appended MEMORY.md sentence made one line about twice as wide as the rest.</td><td>Fixed (294655d)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">5604681</span> docs(dgs-570): spec for role mode final review ledger line</li>
+    <li><span class="sha">2f2f71d</span> docs(dgs-570): implementation plan</li>
+    <li><span class="sha">e9172c9</span> docs(dgs-570): refiner output</li>
+    <li><span class="sha">dd775be</span> feat(dgs-570): role mode writes the Final review ledger lines</li>
+    <li><span class="sha">fd6a660</span> docs(dgs-570): note that role mode writes the Final review lines</li>
+    <li><span class="sha">294655d</span> fix(dgs-570): tighten Final review lines wording and test guard</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-570—report-implementation-accept-role-mode-s/report.html</footer>
+
+</body>
+</html>
