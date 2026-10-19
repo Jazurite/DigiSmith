@@ -11,6 +11,12 @@ export function depotRegistryDir(): string {
 
 const ROLES = ["worker", "maestro", "reviewer", "other"];
 
+const TASK_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+export function isTaskId(value: string): boolean {
+  return TASK_PATTERN.test(value);
+}
+
 function isEntry(v: unknown): v is RegistryEntry {
   if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
   const e = v as Record<string, unknown>;
@@ -18,6 +24,7 @@ function isEntry(v: unknown): v is RegistryEntry {
   if (!str("ticket") || !str("session_id") || !str("ts")) return false;
   if (e.kind === "session") return str("source") && typeof e.role === "string" && ROLES.includes(e.role);
   if (e.kind === "step_start" || e.kind === "step_end") return typeof e.step === "string" && (STEPS as readonly string[]).includes(e.step);
+  if (e.kind === "task_start" || e.kind === "task_end") return typeof e.task === "string" && isTaskId(e.task);
   return false;
 }
 

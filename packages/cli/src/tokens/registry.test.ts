@@ -51,4 +51,16 @@ describe("depot registry", () => {
     reg.append({ kind: "step_start", ticket: "DGS-1", step: "finishing", session_id: "s1", ts: "2026-10-10T02:00:00Z" });
     expect(reg.read("DGS-1").map((e) => e.kind)).toEqual(["session", "step_start"]);
   });
+
+  it("reads task marks and drops a task mark with a bad task id", () => {
+    const dir = mkdtempSync(join(tmpdir(), "reg-"));
+    const reg = createDepotRegistry(dir);
+    reg.append({ kind: "task_start", ticket: "DGS-1", task: "12", session_id: "s1", ts: "2026-10-10T01:00:00Z" });
+    reg.append({ kind: "task_end", ticket: "DGS-1", task: "final", session_id: "s1", ts: "2026-10-10T02:00:00Z" });
+    appendFileSync(
+      join(dir, "DGS-1.jsonl"),
+      ['{"kind":"task_start","ticket":"DGS-1","task":"a b","session_id":"s1","ts":"t"}', '{"kind":"task_end","ticket":"DGS-1","session_id":"s1","ts":"t"}'].join("\n") + "\n",
+    );
+    expect(reg.read("DGS-1").map((e) => e.kind)).toEqual(["task_start", "task_end"]);
+  });
 });

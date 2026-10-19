@@ -46,7 +46,9 @@ export type Role = "worker" | "maestro" | "reviewer" | "other";
 export type RegistryEntry =
   | { kind: "session"; ticket: string; session_id: string; source: string; role: Role; ts: string }
   | { kind: "step_start"; ticket: string; step: Step; session_id: string; ts: string }
-  | { kind: "step_end"; ticket: string; step: Step; session_id: string; ts: string };
+  | { kind: "step_end"; ticket: string; step: Step; session_id: string; ts: string }
+  | { kind: "task_start"; ticket: string; task: string; session_id: string; ts: string }
+  | { kind: "task_end"; ticket: string; task: string; session_id: string; ts: string };
 
 export interface Registry {
   append(entry: RegistryEntry): void;
