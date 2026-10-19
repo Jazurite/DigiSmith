@@ -80,8 +80,17 @@ Check, in order:
 
      `/clear` gives a new session id and a new transcript file; `--resume`
      and `--continue` keep the same id; a fork gets a new id. The command
-     skips a session whose id is already registered. No key → skip; a
-     non-zero exit or warning never blocks. Then read `profile` from
+     skips a session whose id is already registered.
+
+     ```bash
+     node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts step-start --ticket <Key> --step implementation
+     ```
+
+     The plan exists, so the resumed session's work is the build. The command skips a
+     repeat of an open step. Same skip rule as above: no key → skip; a non-zero exit or
+     warning never blocks.
+
+     Then read `profile` from
      `.digismith/config.yml`, or from `.digismith/profile` when
      `config.yml` or its `profile` key is missing (A.4 fallback). If
      `config.yml` exists but cannot be read or parsed, handle it the same
