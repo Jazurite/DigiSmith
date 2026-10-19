@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { findTranscript } from "./attribution.ts";
 import { countTicket, renderTable, resolveSnapshotPath } from "./count.ts";
 import { parseTaskAgents } from "./ledger.ts";
-import { createDepotRegistry } from "./registry.ts";
+import { createDepotRegistry, isTaskId } from "./registry.ts";
 import { STEPS, type Role, type Snapshot, type Step } from "./types.ts";
 
 const ROLES: readonly Role[] = ["worker", "maestro", "reviewer", "other"];
@@ -54,6 +54,12 @@ function stepFlag(flags: Record<string, string>): Step {
   const step = need(flags, "step");
   if (!(STEPS as readonly string[]).includes(step)) throw new UsageError(`invalid --step ${step} (one of ${STEPS.join(", ")})`);
   return step as Step;
+}
+
+function taskFlag(flags: Record<string, string>): string {
+  const task = need(flags, "task");
+  if (!isTaskId(task)) throw new UsageError(`invalid --task ${task}`);
+  return task;
 }
 
 function readLedger(flags: Record<string, string>): Record<string, string[]> | undefined {
@@ -109,6 +115,22 @@ function main(argv: string[]): void {
       registry.append({ kind: cmd === "step-start" ? "step_start" : "step_end", ticket, step, session_id: id, ts: new Date().toISOString() });
       return;
     }
+    case "task-start":
+    case "task-end": {
+      const ticket = need(flags, "ticket");
+      const task = taskFlag(flags);
+      const id = liveSession(cmd, flags);
+      if (!id) return;
+      if (cmd === "task-start") {
+        let latest: { kind: string; task?: string; ts: string } | undefined;
+        for (const e of registry.read(ticket)) {
+          if ((e.kind === "task_start" || e.kind === "task_end") && e.session_id === id && (!latest || e.ts >= latest.ts)) latest = e;
+        }
+        if (latest?.kind === "task_start" && latest.task === task) return;
+      }
+      registry.append({ kind: cmd === "task-start" ? "task_start" : "task_end", ticket, task, session_id: id, ts: new Date().toISOString() });
+      return;
+    }
     case "snapshot": {
       const ticket = need(flags, "ticket");
       const taskAgents = readLedger(flags);
@@ -140,7 +162,7 @@ function main(argv: string[]): void {
       return;
     }
     default:
-      throw new UsageError(`unknown subcommand ${cmd ?? "(none)"} (session, step-start, step-end, snapshot, task-tokens)`);
+      throw new UsageError(`unknown subcommand ${cmd ?? "(none)"} (session, step-start, step-end, task-start, task-end, snapshot, task-tokens)`);
   }
 }
 

@@ -262,4 +262,45 @@ describe("entry.ts", () => {
       expect(kinds(f)).toHaveLength(2);
     });
   });
+
+  it("task-start and task-end append task marks for the session", () => {
+    const f = fixture();
+    const base = ["--ticket", "T-1", "--task", "3", "--session-id", "sess-1"];
+    expect(run(["task-start", ...base], f).status).toBe(0);
+    expect(run(["task-end", ...base], f).status).toBe(0);
+    expect(lines(f.registry).map((l) => [l.kind, l.task, l.session_id])).toEqual([
+      ["task_start", "3", "sess-1"],
+      ["task_end", "3", "sess-1"],
+    ]);
+  });
+
+  it("task-start skips a start that is already open for the same task", () => {
+    const f = fixture();
+    const start = (task: string) => run(["task-start", "--ticket", "T-1", "--task", task, "--session-id", "sess-1"], f);
+    start("3");
+    start("3");
+    expect(lines(f.registry)).toHaveLength(1);
+    start("4");
+    start("3");
+    expect(lines(f.registry).map((l) => l.task)).toEqual(["3", "4", "3"]);
+  });
+
+  it("task-start rejects a missing or malformed --task", () => {
+    const f = fixture();
+    const noTask = run(["task-start", "--ticket", "T-1", "--session-id", "sess-1"], f);
+    expect(noTask.status).toBe(1);
+    expect(noTask.stderr).toContain("missing --task");
+    const bad = run(["task-start", "--ticket", "T-1", "--task", "a b", "--session-id", "sess-1"], f);
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toContain("invalid --task");
+    expect(lines(f.registry)).toHaveLength(0);
+  });
+
+  it("task-start with no session id records nothing and exits 0", () => {
+    const f = fixture();
+    const r = run(["task-start", "--ticket", "T-1", "--task", "3"], f);
+    expect(r.status).toBe(0);
+    expect(r.stderr).toContain("no usable session id");
+    expect(lines(f.registry)).toHaveLength(0);
+  });
 });
