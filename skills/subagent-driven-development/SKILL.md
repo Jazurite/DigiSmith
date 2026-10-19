@@ -478,8 +478,8 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Append the printed `Task <N>: tokens ...` line to the ledger. Same key rule
-as the step-start block in Setup. Then append the completion line in the same message as
-your other bookkeeping:
+as the step-start block in Setup. Then append the completion line in the
+same message as your other bookkeeping:
 
 - `Task <N>: complete (commits <base7>..<head7>, review clean)`
 - `Task <N>: complete (commits <base7>..<head7>, <K> parked)` after a
@@ -638,7 +638,7 @@ run, after digismith:report-implementation and before the deletion:
 node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts snapshot --ticket <Key> --ledger <workspace>/progress.md --write
 ```
 
-Use the key from the start block. Then delete this plan's workspace
+Use the key from the step-start block in Setup. Then delete this plan's workspace
 (`rm -rf <workspace>`) — the git history is the record now. Sibling
 directories belong to other plans; leave them alone.
 

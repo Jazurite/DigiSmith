@@ -15,9 +15,10 @@ export function stepForRecord(record: UsageRecord, entries: RegistryEntry[]): St
   return last && last.kind === "step_start" ? last.step : "other";
 }
 
-// A task window opens at task_start and closes at the task_end of the same task, the next task_start, or the end of the
-// implementation step. Same rules as stepForRecord: own session only, parsed instants, an end sorts
-// before a start at the same instant.
+// A task window opens at task_start and closes at the task_end of the same task,
+// the next task_start, or the end of the implementation step. Same rules as
+// stepForRecord: own session only, parsed instants, an end sorts before a start
+// at the same instant.
 export function taskForRecord(record: UsageRecord, entries: RegistryEntry[]): string | null {
   const at = Date.parse(record.ts);
   if (Number.isNaN(at)) return null;

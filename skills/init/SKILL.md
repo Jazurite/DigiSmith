@@ -94,8 +94,7 @@ Check, in order:
      when `config.yml` or its `profile` key is missing (A.4 fallback). If
      `config.yml` exists but cannot be read or parsed, handle it the same way as a
      stale profile. Use that value as `<name>` and report plainly, naming whichever
-     folder actually
-     matched:
+     folder actually matched:
 
      ```
      Already initialized for DigiSmith (profile: <name>, docs at
