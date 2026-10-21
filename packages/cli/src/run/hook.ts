@@ -1,6 +1,6 @@
 // packages/cli/src/run/hook.ts
-// The Nightwatch hook handler. Imports only node:fs and node:path (through ./paths.ts and ./events.ts) so a
-// hook process starts fast. Never throws; never writes message text, prompts, tool inputs or outputs.
+// The Nightwatch hook handler. Imports only node:fs, node:os and node:path (through ./paths.ts and ./events.ts), with no yargs
+// and no child_process, so a hook process starts fast. Never throws; never writes message text, prompts, tool inputs or outputs.
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findRunDir, isSafe, runsDir } from "./paths.ts";

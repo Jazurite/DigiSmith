@@ -75,7 +75,7 @@ describe("runHook", () => {
     expect(log).toMatch(/lock timeout/);
     expect(log).not.toMatch(/SECRET-INPUT/);
   });
-  it("lets blocked wait for a lock that frees within 2 s, while tool gives up near 150 ms", async () => {
+  it("lets blocked wait for a lock that frees within 2 s", async () => {
     const dir = findRunDir(run, env)!;
     fs.mkdirSync(path.join(dir, "lock"));
     setTimeout(() => fs.rmdirSync(path.join(dir, "lock")), 400);
@@ -90,7 +90,18 @@ describe("runHook", () => {
     expect(code).toBe(0);
     expect(events().map((e) => e.type)).toEqual(["blocked"]);
   });
-  it("waits 150 ms for tool and 2000 ms for every other kind", () => {
+  it("makes the tool hook give up on a held lock after about 150 ms", () => {
+    const dir = findRunDir(run, env)!;
+    fs.mkdirSync(path.join(dir, "lock"));
+    const t0 = performance.now();
+    runHook("tool", JSON.stringify({ tool_name: "Bash", tool_response: {} }), env);
+    const ms = performance.now() - t0;
+    expect(ms).toBeGreaterThanOrEqual(120);
+    expect(ms).toBeLessThan(900);
+    expect(events()).toHaveLength(0);
+    expect(fs.readFileSync(path.join(runsDir(env), "hook-errors.log"), "utf8")).toMatch(/lock timeout/);
+  });
+  it("sets the wait to 150 ms for tool and 2000 ms for every other kind", () => {
     expect(waitFor("tool")).toBe(150);
     for (const k of ["started", "blocked", "turn_end", "ended"] as const) expect(waitFor(k)).toBe(2000);
   });
