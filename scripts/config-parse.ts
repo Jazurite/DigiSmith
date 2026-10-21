@@ -58,12 +58,26 @@ export function parseConfigDocument(text: string, label = "config.yml"): ConfigD
   const emptyOpener = (p: { name: string; line: number }) =>
     errAt(p.line, `'${p.name}:' has no value and no indented lines under it`);
 
+  // The top-level nightwatch: block belongs to the guardrail reader (packages/cli/src/autonomous/guardrails.ts),
+  // which is the only judge of its syntax. This parser skips the whole block and produces nothing for it.
+  let inNightwatch = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
-    const err = (reason: string) => errAt(i, reason);
     const indent = line.length - line.trimStart().length;
+    if (inNightwatch && indent > 0) continue;
+    inNightwatch = false;
+    if (indent === 0 && /^nightwatch:\s*(#.*)?$/.test(line)) {
+      if (pending) throw emptyOpener(pending);
+      if (topNames.has("nightwatch")) throw errAt(i, "duplicate key 'nightwatch'");
+      topNames.add("nightwatch");
+      section = null;
+      array = null;
+      inNightwatch = true;
+      continue;
+    }
+    const err = (reason: string) => errAt(i, reason);
     if (line.slice(0, indent).includes("\t")) throw err("tab in indentation; use spaces");
     const content = line.slice(indent);
     const isItem = content === "-" || content.startsWith("- ");

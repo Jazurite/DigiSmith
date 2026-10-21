@@ -20,7 +20,7 @@ export function readGuardrails(text: string): Guardrails {
   for (let i = start + 1; i < lines.length; i++) if (SIGNIFICANT.test(lines[i]) && indentOf(lines[i]) === 0) { end = i; break; }
   const body = lines.slice(start + 1, end);
   const bad = (m: string): void => { out.problems.push(`nightwatch: ${m}`); };
-  if (body.some((l) => /^\s*\t/.test(l) || /^ *\t/.test(l))) { bad("tab in indentation; use spaces"); return out; }
+  if (body.some((l) => /^[ \t]*\t/.test(l))) { bad("tab in indentation; use spaces"); return out; }
 
   const sig = body.map((l, n) => ({ l, n })).filter((x) => SIGNIFICANT.test(x.l));
   if (sig.length === 0) { bad("'nightwatch:' has no indented lines under it"); return out; }
@@ -28,6 +28,7 @@ export function readGuardrails(text: string): Guardrails {
   const seen = new Set<string>();
   for (let k = 0; k < sig.length; k++) {
     const { l } = sig[k];
+    if (indentOf(l) < childIndent) { bad(`line "${l.trim()}" is indented less than the first key under nightwatch:`); continue; }
     if (indentOf(l) !== childIndent) continue;
     const m = /^\s+([a-z0-9_]+):(.*)$/.exec(l);
     if (!m) { bad(`line "${l.trim()}" is not "key: value"`); continue; }

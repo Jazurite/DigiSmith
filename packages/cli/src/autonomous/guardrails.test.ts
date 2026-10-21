@@ -33,20 +33,27 @@ describe("readGuardrails", () => {
     ["unknown budget key", "nightwatch:\n  budgets:\n    deploy: 5\n"],
     ["duplicate budget key", "nightwatch:\n  budgets:\n    merge: 5\n    merge: 6\n"],
     ["unknown nightwatch key (a typo must not drop the guardrail)", "nightwatch:\n  protected_path:\n    - hooks/\n"],
+    ["a line indented less than the first key under nightwatch", "nightwatch:\n    budgets:\n  protected_paths:\n    - x\n"],
   ])("reports a problem: %s", (_name, text) => {
     expect(readGuardrails(text).problems.length).toBeGreaterThan(0);
+  });
+  it("reports a line indented less than the first key under nightwatch", () => {
+    expect(readGuardrails("nightwatch:\n    budgets:\n      merge: 5\n  protected_paths:\n").problems).toEqual([
+      'nightwatch: line "protected_paths:" is indented less than the first key under nightwatch:',
+    ]);
   });
   it("ignores an error outside the nightwatch block", () => {
     expect(readGuardrails("profile: x\nbroken line without colon\nnightwatch:\n  budgets:\n    merge: 5\n").problems).toEqual([]);
   });
-  it("agrees with scripts/config-parse.ts on syntax inside the block", () => {
-    for (const text of ["nightwatch:\n  budgets: {a: 1}\n", "nightwatch:\n\tx: 1\n", "nightwatch:\n  budgets:\n    merge 5\n"]) {
-      expect(() => parseConfig(text)).toThrow();
-      expect(readGuardrails(text).problems.length).toBeGreaterThan(0);
-    }
-    for (const text of ["nightwatch:\n  protected_paths:\n    - hooks/ # note\n    - \"skills/finishing-*/\"\n"]) {
+  it("parseConfig skips the nightwatch block: the strict reader alone judges it", () => {
+    for (const text of [ok, "nightwatch:\n  budgets:\n    merge: 5 # note\n"]) {
       expect(() => parseConfig(text)).not.toThrow();
       expect(readGuardrails(text).problems).toEqual([]);
+    }
+    expect(readGuardrails(ok).budgets).toEqual({ building: 45, review: 60 });
+    for (const text of ["nightwatch:\n  budgets: {a: 1}\n", "nightwatch:\n\tx: 1\n", "nightwatch:\n  budgets:\n    merge 5\n"]) {
+      expect(() => parseConfig(text)).not.toThrow();
+      expect(readGuardrails(text).problems.length).toBeGreaterThan(0);
     }
   });
 });
@@ -57,7 +64,11 @@ describe("readMainConfig", () => {
     const git: Git = (_cwd, args) => { calls.push(args); return ok; };
     const r = readMainConfig(git, "/repo");
     expect(calls).toEqual([["show", "main:.digismith/config.yml"]]);
-    expect(r.ok && r.guardrails.protectedPaths).toEqual(["hooks/", "skills/finishing-*/"]);
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error("expected ok");
+    expect(r.guardrails.protectedPaths).toEqual(["hooks/", "skills/finishing-*/"]);
+    expect(r.guardrails.budgets).toEqual({ building: 45, review: 60 });
+    expect(r.guardrails.problems).toEqual([]);
   });
   it("fails closed when main has no config", () => {
     const git: Git = () => { throw new Error("fatal: path does not exist"); };

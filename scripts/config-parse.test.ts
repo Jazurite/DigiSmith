@@ -169,3 +169,53 @@ describe("splitConfigLines", () => {
     expect(splitConfigLines("\uFEFFa\r\nb\n")).toEqual(["a", "b"]);
   });
 });
+
+describe("parseConfig: the nightwatch block is skipped", () => {
+  it("parses the other keys around a full nightwatch block", () => {
+    const text = "profile: x\nnightwatch:\n  protected_paths:\n    - hooks/\n  budgets:\n    building: 45\n    review: 60\nrole: worker\n";
+    expect(parseConfig(text)).toEqual(
+      new Map([
+        ["profile", "x"],
+        ["role", "worker"],
+      ]),
+    );
+  });
+
+  it.each([
+    ["a tab-indented line", "nightwatch:\n\tx: 1\n"],
+    ["flow syntax", "nightwatch:\n  budgets: {a: 1}\n"],
+    ["a garbage line", "nightwatch:\n  budgets:\n    merge 5\n"],
+    ["a line indented less than its siblings", "nightwatch:\n    budgets:\n  protected_paths:\n    - x\n"],
+  ])("does not throw on %s inside the block", (_name, text) => {
+    expect(() => parseConfig(text)).not.toThrow();
+  });
+
+  it("produces no entries, values or sections for nightwatch", () => {
+    const doc = parseConfigDocument("nightwatch:\n  budgets:\n    merge: 5\n");
+    expect(doc.values.size).toBe(0);
+    expect(doc.entries.size).toBe(0);
+    expect(doc.sections.size).toBe(0);
+  });
+
+  it("ends the block at the next top-level key, which is parsed", () => {
+    expect(parseConfig("nightwatch:\n  budgets:\n    merge: 5\nprofile: x\n")).toEqual(new Map([["profile", "x"]]));
+  });
+
+  it("still checks lines after the block", () => {
+    expect(errorOf("nightwatch:\n  x: 1\nbroken line\n")).toBe("config.yml line 3: expected 'key: value'");
+  });
+
+  it("does not end the block at a comment at column 0", () => {
+    expect(parseConfig("nightwatch:\n  x: 1\n# note\n\tbad\n")).toEqual(new Map());
+  });
+
+  it("a duplicate top-level nightwatch throws", () => {
+    expect(errorOf("nightwatch:\n  budgets:\n    merge: 5\nnightwatch:\n  budgets:\n    merge: 6\n")).toBe(
+      "config.yml line 4: duplicate key 'nightwatch'",
+    );
+  });
+
+  it("a section opener right above nightwatch still throws its empty-opener error", () => {
+    expect(errorOf("s:\nnightwatch:\n  x: 1\n")).toBe("config.yml line 1: 's:' has no value and no indented lines under it");
+  });
+});
