@@ -152,4 +152,21 @@ describe("runReport", () => {
     expect(text).toContain("away ended 2026-10-20 22:00:00");
     expect(text).not.toContain("still away");
   });
+
+  it("hides an away that ended before the period", async () => {
+    appendEvent(dir, at("2026-10-18T10:00:00Z"), "away-on");
+    appendEvent(dir, at("2026-10-19T10:00:00Z"), "away-off");
+    writeLastReport(dir, FROM);
+    const r = await runReport({ tracker, dir, now: () => TO });
+    const text = readFileSync(r.file, "utf-8");
+    expect(text).not.toContain("away ended");
+    expect(text).toMatch(/Away:\nnone/);
+  });
+
+  it("pins the 30-day look-back: an older open away is not shown", async () => {
+    appendEvent(dir, at("2026-09-01T10:00:00Z"), "away-on");
+    writeLastReport(dir, FROM);
+    const r = await runReport({ tracker, dir, now: () => TO });
+    expect(readFileSync(r.file, "utf-8")).toMatch(/Away:\nnone/);
+  });
 });

@@ -6,6 +6,7 @@ import type { Event, Lock, Tracker } from "./types.ts";
 
 export interface ReportDeps { tracker: Tracker; dir: string; now: () => Date }
 
+// Cap on how far back runReport looks for an away that began before the period; an away older than 30 days is not shown.
 const AWAY_LOOKBACK_MS = 30 * 24 * 3600_000;
 const STALE_LOCK_MS = 8 * 3600_000;
 const str = (v: unknown): string => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
@@ -21,7 +22,7 @@ function awayLines(events: Event[], from: Date): string[] {
       if (!open) {
         if (Date.parse(e.ts) >= from.getTime()) out.push(`away ended ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}`);
       } else if (Date.parse(open.ts) < from.getTime()) {
-        out.push(`away ended ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}, since ${open.tsUtc7}`);
+        if (Date.parse(e.ts) >= from.getTime()) out.push(`away ended ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}, since ${open.tsUtc7}`);
         open = null;
       } else {
         out.push(`${open.tsUtc7} to ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}`);
