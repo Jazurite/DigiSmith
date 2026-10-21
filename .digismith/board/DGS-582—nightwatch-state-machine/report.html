@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch ticket state machine — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}td,th{border:1px solid #ccc;padding:.4rem .6rem}table{border-collapse:collapse}h1,h2{color:#6b3fa0}</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nightwatch ticket state machine — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-22</span>
+    <span>Ticket: <strong>DGS-582</strong></span>
+    <span>Commit range: <code>290603e..d428bee</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Plain code in Nexus holds the state of one unattended ticket (<code>claimed</code>, <code>building</code>, <code>review</code>, <code>merge-ready</code>, <code>merged</code>, <code>released</code>), moves it only on proof from files, commits and refs, orders the conductor in bounded steps, and keeps an append-only action journal that a restart reconciles without repeating a merge. One pure function <code>advanceTicket</code> sits among small units in <code>packages/cli/src/autonomous/</code>: journal, phase state in <code>lock.json</code>, read-only observers, input-box classifier, reconcile, act and tick. Every outside effect is injected, so tests use fakes. The DGS-486 scan calls the tick whenever a lock exists. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (13 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 6 fix rounds before merge. The findings table is in <a href="findings.md">findings.md</a>; the conductor text for the Maestro is <a href="runbook-text.md">runbook-text.md</a>.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Probe the merged code and real panes</h4><p>Pinned names, the real herdr list format, input-box fixtures and the pack format (probe.md).</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Types and the phase state</h4><p>Phase types and lock.json phase fields with strict reading.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>advanceTicket, the pure state machine</h4><p>Pure function from state, observations and journal to one action.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The action journal</h4><p>Append-only journal with plan, settle, closeOpen and torn-line healing.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Input box classifier</h4><p>Classifies the conductor input box so typed text is never overwritten.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>Attention writer</h4><p>Attention lines in the DGS-583 shape.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>Observers contract</h4><p>Six observers with timeouts, one failure hides no other.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>Reconcile (step 0)</h4><p>Settles open journal lines from observations, only with proof.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Act</h4><p>Runs one action with the plan line on disk before the effect.</p></div>
+    <div class="card"><span class="tag">Task 10</span><h4>Tick, and the kill test</h4><p>One tick, plus a child killed during a merge that must not repeat the order.</p></div>
+    <div class="card"><span class="tag">Task 11</span><h4>The real observers, the prompt and the commands</h4><p>Real git, herdr, run and reviewer observers; dg autonomous tick and journal.</p></div>
+    <div class="card"><span class="tag">Task 12</span><h4>Wire the scan, the claim and the release</h4><p>Scan calls the tick when a lock exists; claim and release journal; scan every 5 minutes.</p></div>
+    <div class="card"><span class="tag">Task 13</span><h4>Conductor text, mutation checks, report</h4><p>Conductor text, four mutation checks, this report.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code> in role mode: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each, started by the conductor.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Probe the merged code and real panes</td><td>Pinned names, the real herdr list format, input-box fixtures and the pack format (probe.md).</td><td>Approved, clean (read only)</td><td>-</td></tr>
+    <tr><td>2. Types and the phase state</td><td>Phase types and lock.json phase fields with strict reading.</td><td>Approved after 1 fix round</td><td>-</td></tr>
+    <tr><td>3. advanceTicket, the pure state machine</td><td>Pure function from state, observations and journal to one action.</td><td>Approved after 1 fix round</td><td>tracker-failed note still applies to a released ticket</td></tr>
+    <tr><td>4. The action journal</td><td>Append-only journal with plan, settle, closeOpen and torn-line healing.</td><td>Approved after 1 fix round, 1 parked</td><td>-</td></tr>
+    <tr><td>5. Input box classifier</td><td>Classifies the conductor input box so typed text is never overwritten.</td><td>Approved after 1 fix round, 1 parked</td><td>-</td></tr>
+    <tr><td>6. Attention writer</td><td>Attention lines in the DGS-583 shape.</td><td>Approved, clean</td><td>-</td></tr>
+    <tr><td>7. Observers contract</td><td>Six observers with timeouts, one failure hides no other.</td><td>Approved, clean (1 Minor fixed)</td><td>-</td></tr>
+    <tr><td>8. Reconcile (step 0)</td><td>Settles open journal lines from observations, only with proof.</td><td>Approved after 1 fix round</td><td>-</td></tr>
+    <tr><td>9. Act</td><td>Runs one action with the plan line on disk before the effect.</td><td>Approved, clean (1 Minor fixed)</td><td>-</td></tr>
+    <tr><td>10. Tick, and the kill test</td><td>One tick, plus a child killed during a merge that must not repeat the order.</td><td>Approved, clean (2 Minor fixed)</td><td>-</td></tr>
+    <tr><td>11. The real observers, the prompt and the commands</td><td>Real git, herdr, run and reviewer observers; dg autonomous tick and journal.</td><td>Approved after 1 fix round</td><td>MAIN_CHECKOUT duplicated from registry.ts; on timeout only the direct child gets SIGKILL</td></tr>
+    <tr><td>12. Wire the scan, the claim and the release</td><td>Scan calls the tick when a lock exists; claim and release journal; scan every 5 minutes.</td><td>Approved after 1 fix round</td><td>plan throws if the journal is unusable at claim time; claim-failed appendEvent unguarded</td></tr>
+    <tr><td>13. Conductor text, mutation checks, report</td><td>Conductor text, four mutation checks, this report.</td><td>Steps 1 to 3 done; report after the final review</td><td>-</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes — 4 Important findings and the Minors below, all fixed or parked with a ruling, over one fix wave and five scoped re-reviews (r6 clean). Mutation checks: all four were caught by an existing test. Full table: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1 Task review packs counted as proof for building to review.</td><td>Fixed: only ticket-scope packs count.</td></tr>
+    <tr><td>Important</td><td>F2 The verdicts observer failed while the ticket-final pack had no report.</td><td>Fixed: a folder with pack.md but no report.md is skipped; the phase waits.</td></tr>
+    <tr><td>Important</td><td>F3 A Minor-only review sent the ticket back to building.</td><td>Fixed, then re-decided by the Maestro (F9): no review to building move at all.</td></tr>
+    <tr><td>Important</td><td>F4 A builder run with no recorded pane got a restart order at once.</td><td>Fixed: a null pane is unknown, one note, no order.</td></tr>
+    <tr><td>Minor</td><td>F5 Reconcile read open lines of every ticket.</td><td>Fixed: filtered to the ticket.</td></tr>
+    <tr><td>Minor</td><td>F6 A used move key made every tick throw.</td><td>Fixed: settled by the lock phase; a note (move-key-used).</td></tr>
+    <tr><td>Minor</td><td>F7 A false git note after cleanup (worktree and branch gone).</td><td>Fixed in r2: mergeHead is recorded at merge-ready and checked with merge-base.</td></tr>
+    <tr><td>Minor</td><td>F8 The claim check settled succeeded on the lock alone.</td><td>Fixed in r2: the lock must name the ticket and the tracker must read in progress.</td></tr>
+    <tr><td>Minor</td><td>F9 Spec and code disagreed on fixes inside the review phase.</td><td>Maestro decision: no automatic review to building move; review rounds cap of four; fixed.</td></tr>
+    <tr><td>Minor</td><td>F10, F12 to F18 Plan and design text, the dead fix order, a mutation check that could not fail, an order refusal cause, the MAX_ATTEMPTS number.</td><td>Fixed in the later scoped re-reviews.</td></tr>
+    <tr><td>Minor</td><td>F11 Builder pane check in the review phase.</td><td>Parked: the DGS-583 watchdog covers a lost builder run (lost to attention).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">766f4aa</span> docs(dgs-582): add the nightwatch state machine spec</li>
+    <li><span class="sha">1e98f57</span> docs(dgs-582): add the plan and sync the spec</li>
+    <li><span class="sha">280ebe7</span> docs(dgs-582): fix the journal example in the spec</li>
+    <li><span class="sha">ad68be4</span> docs(dgs-582): add the probe findings</li>
+    <li><span class="sha">2ddbed6</span> docs(dgs-582): fix the plan after the probe</li>
+    <li><span class="sha">fed9cc7</span> feat(dgs-582): add phase types and the lock phase state</li>
+    <li><span class="sha">ac9fe6e</span> fix(dgs-582): reject invalid lock fields and clean up failed temp writes</li>
+    <li><span class="sha">44f1aa3</span> feat(dgs-582): add the pure advanceTicket state machine</li>
+    <li><span class="sha">f219ae8</span> fix(dgs-582): address the advance review findings</li>
+    <li><span class="sha">010ada5</span> feat(dgs-582): add the append-only action journal</li>
+    <li><span class="sha">6076ff0</span> fix(dgs-582): guard journal settle and heal torn lines</li>
+    <li><span class="sha">68cae9a</span> feat(dgs-582): add the input box classifier</li>
+    <li><span class="sha">5a09a72</span> fix(dgs-582): classify the input box by rules, dim state and frames</li>
+    <li><span class="sha">eae6ebf</span> docs(dgs-582): note the parked input box gap</li>
+    <li><span class="sha">f9fd73a</span> feat(dgs-582): add the attention note writer</li>
+    <li><span class="sha">c186cf6</span> feat(dgs-582): add the observer contract</li>
+    <li><span class="sha">6676837</span> test(dgs-582): check each observer value lands in its field</li>
+    <li><span class="sha">35ce8a2</span> feat(dgs-582): add the reconcile step</li>
+    <li><span class="sha">4e289ff</span> fix(dgs-582): settle reconcile only with proof and an uncertain claim as permanent</li>
+    <li><span class="sha">33bf4e0</span> feat(dgs-582): add the action runner</li>
+    <li><span class="sha">985175f</span> fix(dgs-582): refuse an order with a bad ticket key before the journal</li>
+    <li><span class="sha">fd95447</span> feat(dgs-582): add the tick and the kill-during-merge test</li>
+    <li><span class="sha">5389286</span> test(dgs-582): assert the planted-text prompt and a single uncertain note</li>
+    <li><span class="sha">783f7dc</span> feat(dgs-582): add the real observers and the tick and journal commands</li>
+    <li><span class="sha">b794732</span> fix(dgs-582): default the tick repo, name the exec failure cause, read runs once per tick</li>
+    <li><span class="sha">2c376ff</span> feat(dgs-582): run the tick from the scan and journal claim and release</li>
+    <li><span class="sha">b2d9d1d</span> fix(dgs-582): share planIfFree, guard each claim cleanup step, name the tick error</li>
+    <li><span class="sha">2e262e6</span> docs(dgs-582): add the conductor text</li>
+    <li><span class="sha">bcbecc9</span> fix(dgs-582): fix the whole-ticket review findings F1 to F8</li>
+    <li><span class="sha">8f7dba7</span> fix(dgs-582): record the merge head for the post-cleanup git view and keep an unread-tracker claim uncertain</li>
+    <li><span class="sha">3c416cb</span> fix(dgs-582): keep the review phase until findings close and stop at round 3</li>
+    <li><span class="sha">36ca9c4</span> docs(dgs-582): add mergeHead to the plan state and the merge-ready move example</li>
+    <li><span class="sha">3308e48</span> fix(dgs-582): remove the dead fix order and bring the text to the new review rule</li>
+    <li><span class="sha">d428bee</span> fix(dgs-582): cap the review rounds at four and tidy the order refusal</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-582—nightwatch-state-machine/report.html</footer>
+
+</body>
+</html>
