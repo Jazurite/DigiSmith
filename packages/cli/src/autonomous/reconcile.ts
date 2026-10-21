@@ -10,11 +10,18 @@ const rank = (p: string) => PHASES.indexOf(p as Phase);
 
 // succeeded is only ever settled with proof: a missing detail field or an unknown phase is uncertain.
 function check(action: string, line: JournalLine, state: TicketState | null, obs: Observations): Verdict {
-  if (action === "claim") return state !== null ? r("succeeded", "lock held") : r("permanent", "no lock");
+  if (action === "claim") {
+    if (state === null) return r("permanent", "no lock");
+    if (state.ticket !== line.ticket) return r("uncertain", "lock names another ticket");
+    if (obs.tracker.ok && obs.tracker.value.status !== "in progress") return r("uncertain", "tracker is not in progress");
+    return r("succeeded", "lock held");
+  }
   if (action.startsWith("move-to-")) {
     const to = action.slice("move-to-".length);
     if (rank(to) < 0) return r("uncertain", `unknown phase ${to}`);
-    return state !== null && rank(state.phase) >= rank(to) ? r("succeeded", `lock at ${state.phase}`) : r("retryable", "lock not moved");
+    // the lock must be at the target phase; a backward move (review to building) also raises the attempt
+    const attempt = (line.attempt ?? 1) + (line.phase === "review" && to === "building" ? 1 : 0);
+    return state !== null && state.phase === to && state.attempt === attempt ? r("succeeded", `lock at ${state.phase}`) : r("retryable", "lock not moved");
   }
   if (action === "status-write") {
     if (!obs.tracker.ok) return "unknown";
@@ -32,7 +39,8 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
   }
   if (action === "order-restart") {
     if (!obs.herdr.ok) return "unknown";
-    return obs.herdr.value.builderPanePresent ? r("succeeded", "builder pane present") : r("uncertain", "builder pane still gone");
+    if (obs.herdr.value.builderPane === "unknown") return "unknown";
+    return obs.herdr.value.builderPane === "present" ? r("succeeded", "builder pane present") : r("uncertain", "builder pane still gone");
   }
   if (action === "phase-marker") {
     if (state === null) return r("permanent", "no lock");
@@ -49,7 +57,9 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
 // leaves it uncertain: the order may have run, so it must not be freed to run again.
 export function reconcile(d: { dir: string; now: Date; state: TicketState | null; obs: Observations }): ReconcileNote[] {
   const notes: ReconcileNote[] = [];
-  for (const l of openLines(d.dir)) {
+  // only this ticket's lines; with no lock, only claim lines (a claim has no lock to prove it yet)
+  const mine = openLines(d.dir).filter((l) => (d.state !== null ? l.planned.ticket === d.state.ticket : l.planned.action === "claim"));
+  for (const l of mine) {
     const action = l.key.split(":").slice(3).join(":");
     const v = check(action, l.planned, d.state, d.obs);
     if (v === "unknown") continue;

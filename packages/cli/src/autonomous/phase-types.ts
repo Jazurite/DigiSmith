@@ -11,7 +11,7 @@ export interface RunView { id: string; role: string; createdAt: string; started:
 export interface PackView { round: number; head: string; base: string }
 export interface VerdictView { scope: "task" | "ticket"; result: "clean" | "findings"; head: string }
 export interface GitView { head: string | null; base: string | null; onOriginMain: boolean }
-export interface HerdrView { conductorPresent: boolean; conductorWorking: boolean; input: InputBox; builderPanePresent: boolean }
+export interface HerdrView { conductorPresent: boolean; conductorWorking: boolean; input: InputBox; builderPane: "present" | "gone" | "unknown" }
 export interface Observations {
   runs: Obs<RunView[]>; packs: Obs<PackView[]>; verdicts: Obs<VerdictView[]>;
   git: Obs<GitView>; tracker: Obs<{ status: string }>; herdr: Obs<HerdrView>;

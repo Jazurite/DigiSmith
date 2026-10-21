@@ -14,7 +14,7 @@ const O = (o: Partial<Observations> = {}): Observations => ({
   runs: ok([run()]), packs: ok([]), verdicts: ok([]),
   git: ok({ head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }),
   tracker: ok({ status: "in progress" }),
-  herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPanePresent: true }),
+  herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" }),
   ...o });
 const J: JournalResults = {};
 const withEvent = (phaseEvent: RunView["phaseEvent"]) => ({ runs: ok([run({ phaseEvent })]) });
@@ -63,7 +63,7 @@ describe("building", () => {
     expect(advanceTicket(s2, o2, J).kind).toBe("move");
   });
   it("orders a restart when the builder pane is gone and the run has not ended", () => {
-    const o = O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPanePresent: false }) });
+    const o = O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "gone" }) });
     expect(advanceTicket(s, o, J)).toEqual({ kind: "order", order: "restart", head: "aaaaaaa1" });
   });
   it("a failed packs or git observation gives a note", () => {
@@ -121,7 +121,7 @@ describe("merge-ready", () => {
 describe("the conductor gate", () => {
   const s = S({ phase: "merge-ready" });
   const h = (o: Partial<{ conductorPresent: boolean; conductorWorking: boolean; input: "empty" | "suggestion" | "typed" | "unknown" }>) =>
-    O({ ...withEvent("merge"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPanePresent: true, ...o }) });
+    O({ ...withEvent("merge"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "present", ...o }) });
   it("a grey suggestion allows the order", () => expect(advanceTicket(s, h({ input: "suggestion" }), J).kind).toBe("order"));
   it("typed text waits without a note", () => expect(advanceTicket(s, h({ input: "typed" }), J)).toEqual({ kind: "wait", reason: "conductor-input-typed" }));
   it("a working conductor waits without a note", () => expect(advanceTicket(s, h({ conductorWorking: true }), J)).toEqual({ kind: "wait", reason: "conductor-working" }));
@@ -151,7 +151,7 @@ describe("merged, status and tracker", () => {
 });
 
 describe("review fixes: markers, notes, verdict order, restart once", () => {
-  const pane = (builderPanePresent: boolean) => ({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPanePresent });
+  const pane = (present: boolean) => ({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: present ? ("present" as const) : ("gone" as const) });
   const nohead = ok({ head: null, base: "bbbbbbb1", onOriginMain: false });
   const fixPack = { packs: ok([{ round: 1, head: "aaaaaaa1", base: "bbbbbbb1" }]) };
 
@@ -208,8 +208,8 @@ describe("review fixes: markers, notes, verdict order, restart once", () => {
   });
 
   describe("the gate on the fix and restart orders", () => {
-    const gateObs = (over: { conductorPresent?: boolean; conductorWorking?: boolean; input?: "empty" | "typed" | "unknown"; builderPanePresent?: boolean }, extra: Partial<Observations> = {}) =>
-      O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPanePresent: true, ...over }), ...extra });
+    const gateObs = (over: { conductorPresent?: boolean; conductorWorking?: boolean; input?: "empty" | "typed" | "unknown"; builderPane?: "present" | "gone" | "unknown" }, extra: Partial<Observations> = {}) =>
+      O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "present", ...over }), ...extra });
     const fixS = S({ phase: "building", attempt: 2 });
     const restartS = S({ phase: "building" });
 
@@ -218,10 +218,10 @@ describe("review fixes: markers, notes, verdict order, restart once", () => {
     it("fix: an unparsed input box gives a note", () => expect(advanceTicket(fixS, gateObs({ input: "unknown" }, fixPack), J)).toEqual({ kind: "attention", cause: "obs-input-unknown", attKind: "unknown" }));
     it("fix: no conductor gives a note", () => expect(advanceTicket(fixS, gateObs({ conductorPresent: false }, fixPack), J)).toEqual({ kind: "attention", cause: "conductor-missing", attKind: "unknown" }));
 
-    it("restart: a working conductor waits", () => expect(advanceTicket(restartS, gateObs({ builderPanePresent: false, conductorWorking: true }), J)).toEqual({ kind: "wait", reason: "conductor-working" }));
-    it("restart: typed text waits", () => expect(advanceTicket(restartS, gateObs({ builderPanePresent: false, input: "typed" }), J)).toEqual({ kind: "wait", reason: "conductor-input-typed" }));
-    it("restart: an unparsed input box gives a note", () => expect(advanceTicket(restartS, gateObs({ builderPanePresent: false, input: "unknown" }), J)).toEqual({ kind: "attention", cause: "obs-input-unknown", attKind: "unknown" }));
-    it("restart: no conductor gives a note", () => expect(advanceTicket(restartS, gateObs({ builderPanePresent: false, conductorPresent: false }), J)).toEqual({ kind: "attention", cause: "conductor-missing", attKind: "unknown" }));
+    it("restart: a working conductor waits", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", conductorWorking: true }), J)).toEqual({ kind: "wait", reason: "conductor-working" }));
+    it("restart: typed text waits", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", input: "typed" }), J)).toEqual({ kind: "wait", reason: "conductor-input-typed" }));
+    it("restart: an unparsed input box gives a note", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", input: "unknown" }), J)).toEqual({ kind: "attention", cause: "obs-input-unknown", attKind: "unknown" }));
+    it("restart: no conductor gives a note", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", conductorPresent: false }), J)).toEqual({ kind: "attention", cause: "conductor-missing", attKind: "unknown" }));
   });
 });
 
@@ -229,5 +229,18 @@ describe("one action per call", () => {
   it("is deterministic: the same input gives the same output", () => {
     const o = O(withEvent("building"));
     expect(advanceTicket(S({ phase: "building" }), o, J)).toEqual(advanceTicket(S({ phase: "building" }), o, J));
+  });
+});
+
+describe("final fix wave", () => {
+  it("F4: a null pane is unknown: no restart order, one note", () => {
+    const o = O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "unknown" as const }) });
+    expect(advanceTicket(S({ phase: "building" }), o, J)).toEqual({ kind: "attention", cause: "builder-pane-unknown", attKind: "unknown" });
+  });
+  it("F6: a move key that is already used gives a note, not a repeated move", () => {
+    const s = S({ phase: "review" });
+    const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "ticket" as const, result: "findings" as const, head: "aaaaaaa1" }]) });
+    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-building": "succeeded" })).toEqual({ kind: "attention", cause: "move-key-used", attKind: "unknown" });
+    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-building": "retryable" })).toMatchObject({ kind: "move", to: "building" });
   });
 });

@@ -14,7 +14,7 @@ const O = (o: Partial<Observations> = {}): Observations => ({
   runs: ok([{ id: "builder-1", role: "builder", createdAt: "x", started: true, ended: false, merged: false, pushed: false, phaseEvent: "merge" as const }]),
   packs: ok([]), verdicts: ok([]), git: ok({ head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }),
   tracker: ok({ status: "in progress" }),
-  herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPanePresent: true }), ...o });
+  herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "present" }), ...o });
 const open = (d: string, action: string, phase = "merge-ready", detail?: Record<string, string>) =>
   plan(d, T, { ticket: "DGS-1", phase, attempt: 1, action, detail });
 
@@ -42,13 +42,50 @@ describe("reconcile", () => {
     reconcile({ dir: d, now: T, state: state(), obs: O({ git: { ok: false, error: "x" } }) });
     expect(resultsOf(d)[k]).toBe("open");
   });
-  it("move-to-X: done when the lock is at X or later, else retryable", () => {
+  it("move-to-X: done only when the lock is exactly at X, else retryable (F6, changed from the rank rule)", () => {
     const d = tmp(); const k = open(d, "move-to-review", "building");
-    reconcile({ dir: d, now: T, state: state("merge-ready"), obs: O() });
+    reconcile({ dir: d, now: T, state: state("review"), obs: O() });
     expect(resultsOf(d)[k]).toBe("succeeded");
     const d2 = tmp(); const k2 = open(d2, "move-to-review", "building");
     reconcile({ dir: d2, now: T, state: state("building"), obs: O() });
     expect(resultsOf(d2)[k2]).toBe("retryable");
+    const d3 = tmp(); const k3 = open(d3, "move-to-review", "building");
+    reconcile({ dir: d3, now: T, state: state("merge-ready"), obs: O() });
+    expect(resultsOf(d3)[k3]).toBe("retryable");
+  });
+  it("F6: a backward move (review to building) is not done while the lock is still at review", () => {
+    const d = tmp(); const k = open(d, "move-to-building", "review");
+    reconcile({ dir: d, now: T, state: state("review"), obs: O() });
+    expect(resultsOf(d)[k]).toBe("retryable");
+    const d2 = tmp(); const k2 = open(d2, "move-to-building", "review");
+    reconcile({ dir: d2, now: T, state: { ...state("building"), attempt: 2 }, obs: O() });
+    expect(resultsOf(d2)[k2]).toBe("succeeded");
+  });
+  it("F5: lines of another ticket are not settled against this ticket's observations", () => {
+    const d = tmp();
+    const other = plan(d, T, { ticket: "DGS-2", phase: "merge-ready", attempt: 1, action: "order-merge" });
+    settle(d, T, other, "uncertain");
+    const mine = open(d, "order-merge");
+    reconcile({ dir: d, now: T, state: state(), obs: O({ git: ok({ head: "a", base: "b", onOriginMain: true }) }) });
+    expect(resultsOf(d)[other]).toBe("uncertain");
+    expect(resultsOf(d)[mine]).toBe("succeeded");
+  });
+  it("F5: with no lock only claim lines are checked", () => {
+    const d = tmp();
+    const m = open(d, "order-merge"); const c = open(d, "claim", "claimed");
+    reconcile({ dir: d, now: T, state: null, obs: O() });
+    expect(resultsOf(d)[m]).toBe("open");
+    expect(resultsOf(d)[c]).toBe("permanent");
+  });
+  it("F8: a claim is succeeded only when the lock names this ticket and the tracker reads in progress", () => {
+    const d = tmp(); const k = open(d, "claim", "claimed");
+    reconcile({ dir: d, now: T, state: state("claimed"), obs: O({ tracker: ok({ status: "to do" }) }) });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+    reconcile({ dir: d, now: T, state: state("claimed"), obs: O({ tracker: { ok: false, error: "x" } }) });
+    expect(resultsOf(d)[k]).toBe("succeeded"); // tracker not observed: the lock alone counts
+    const d2 = tmp(); const k2 = open(d2, "claim", "claimed");
+    reconcile({ dir: d2, now: T, state: state("claimed"), obs: O() });
+    expect(resultsOf(d2)[k2]).toBe("succeeded");
   });
   it("status-write: reads the status back", () => {
     const d = tmp(); const k = open(d, "status-write");

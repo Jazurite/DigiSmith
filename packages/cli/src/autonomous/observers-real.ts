@@ -1,11 +1,12 @@
 import { execFile } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { appendEvent, readEvents } from "../run/events.ts";
 import { findRunDir } from "../run/paths.ts";
 import { listRuns } from "../run/read.ts";
-import { readReviews } from "../reviewer/findings.ts";
+import { extractFindings } from "../reviewer/findings.ts";
+import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { PromptError, type ActDeps } from "./act.ts";
 import { classifyInputBox } from "./input-box.ts";
 import type { Observers } from "./observe.ts";
@@ -15,7 +16,7 @@ import type { GitView, HerdrView, InputBox, MarkerPhase, PackView, RunView, Verd
 export type ExecOut = (file: string, args: string[], opts?: { cwd?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv; maxBuffer?: number }) => Promise<{ stdout: string }>;
 export interface RunRecord {
   id: string; role: string; created_at: string; worktree: string | null; base_sha: string | null;
-  herdrPane?: string | null;
+  herdrPane?: string | null; branch?: string | null;
   events: { type: string; data?: Record<string, unknown> }[];
 }
 export interface RunStore { runsOf(ticket: string, sinceIso: string): Promise<RunRecord[]> }
@@ -50,7 +51,10 @@ export function parseAgentList(stdout: string): AgentEntry[] {
 async function gitView(exec: ExecOut, mainRepo: string, run: RunRecord | undefined): Promise<GitView> {
   if (run === undefined || run.worktree === null) throw new Error("no worktree");
   await exec("git", ["-C", mainRepo, "fetch", "origin", "main"], { timeoutMs: 15000 });
-  const head = (await exec("git", ["-C", run.worktree, "rev-parse", "HEAD"])).stdout.trim();
+  let head: string;
+  if (existsSync(run.worktree)) head = (await exec("git", ["-C", run.worktree, "rev-parse", "HEAD"])).stdout.trim();
+  else if (run.branch) head = (await exec("git", ["-C", mainRepo, "rev-parse", run.branch])).stdout.trim(); // worktree removed after the merge: the branch sha, from the main checkout
+  else throw new Error("worktree is gone and the run has no branch");
   let onOriginMain = false;
   try {
     await exec("git", ["-C", mainRepo, "merge-base", "--is-ancestor", head, "origin/main"]);
@@ -116,8 +120,9 @@ export function makeObservers(d: ObserverDeps): Observers {
       const id = d.builderRunId();
       const run = id === null ? undefined : (await records()).find((r) => r.id === id);
       const pane = run?.herdrPane ?? null;
-      const builderPanePresent = pane !== null && agents.some((a) => a.pane === pane || a.pane.endsWith(`:${pane}`));
-      return { conductorPresent: conductor !== undefined, conductorWorking: conductor?.status === "working", input, builderPanePresent };
+      // no recorded pane is "unknown", never "gone": we cannot tell, so no restart order
+      const builderPane: HerdrView["builderPane"] = pane === null ? "unknown" : agents.some((a) => a.pane === pane || a.pane.endsWith(`:${pane}`)) ? "present" : "gone";
+      return { conductorPresent: conductor !== undefined, conductorWorking: conductor?.status === "working", input, builderPane };
     },
   };
 }
@@ -181,7 +186,7 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
           const dir = findRunDir(row.record.run, d.env);
           return {
             id: row.record.run, role: row.record.role, created_at: row.record.created_at,
-            worktree: row.record.worktree, base_sha: row.record.base_sha, herdrPane: row.record.herdr.pane,
+            worktree: row.record.worktree, branch: row.record.branch, base_sha: row.record.base_sha, herdrPane: row.record.herdr.pane,
             events: dir === null ? [] : readEvents(dir).map((e) => ({ type: e.type, data: e.data })),
           };
         }),
@@ -192,6 +197,7 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
     const row = listRuns(d.env, d.ticket).find((r) => r.record.run === id);
     return row?.record.worktree ? findWorkspace(row.record.worktree, d.ticket) : null;
   };
+  const TICKET_PACK_DIR = /^ticket-final-r\d+$/;
   const packOf = (dir: string): { round: number; head: string; base: string } | null => {
     let text: string;
     try { text = readFileSync(join(dir, "pack.md"), "utf8"); } catch { return null; }
@@ -208,6 +214,7 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
         if (ws === null || !existsSync(join(ws, "reviews"))) return [];
         const out: PackView[] = [];
         for (const n of readdirSync(join(ws, "reviews")).sort()) {
+          if (!TICKET_PACK_DIR.test(n)) continue; // only ticket-scope packs are proof; task packs are not
           const p = packOf(join(ws, "reviews", n));
           if (p !== null) out.push(p);
         }
@@ -217,11 +224,28 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
         const ws = workspace();
         if (ws === null) return [];
         // a review is joined with the pack.md of its own round folder; a review without a pack is an error, not a guess
-        return readReviews(ws).map((r) => {
-          const p = packOf(dirname(r.file));
-          if (p === null) throw new Error(`no readable pack.md next to ${r.file}`);
-          return { scope: r.kind, result: r.findings.length === 0 ? "clean" : "findings", head: p.head } as VerdictView;
-        });
+        const root = join(ws, "reviews");
+        if (!existsSync(root)) return [];
+        let entries: ReturnType<typeof parseVerdictEntries> = [];
+        try { entries = parseVerdictEntries(readFileSync(join(ws, "progress.md"), "utf8")); } catch (e) {
+          if ((e as { code?: unknown }).code !== "ENOENT") throw e;
+        }
+        const out: VerdictView[] = [];
+        for (const name of readdirSync(root).sort()) {
+          const m = /^(task|ticket)-(\d+|final)-r(\d+)$/.exec(name);
+          const dir = join(root, name);
+          if (m === null || !statSync(dir).isDirectory()) continue;
+          const report = join(dir, "report.md");
+          if (!existsSync(report)) continue; // the Reviewer has not finished: the phase waits
+          const p = packOf(dir);
+          if (p === null) throw new Error(`no readable pack.md next to ${report}`);
+          // a finding blocks only when it is Critical or Important and the ledger has no ruling for it
+          const blocking = extractFindings(readFileSync(report, "utf8"), report).filter((f) =>
+            (f.severity === "Critical" || f.severity === "Important") &&
+            !entries.some((e) => e.kind === m[1] && e.id === m[2] && e.round === Number(m[3]) && e.finding === f.id));
+          out.push({ scope: m[1] as "task" | "ticket", result: blocking.length === 0 ? "clean" : "findings", head: p.head });
+        }
+        return out;
       },
     },
   };

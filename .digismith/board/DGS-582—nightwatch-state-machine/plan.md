@@ -14,6 +14,7 @@ Design: `design.html` (same folder), approved at checkpoint 1 on 2026-10-21 with
 - Folder `packages/cli/src/autonomous/`; state folder = `autonomousDir()` of DGS-486 (`AUTONOMOUS_DIR`, else `<DIGISMITH_DEPOT_DIR or ~/.digismith-depot>/autonomous`).
 - Phases: `claimed`, `building`, `review`, `merge-ready`, `merged`, `released`. State = DGS-486's `lock.json` plus `phase`, `phaseStartedAt`, `attempt` (starts at 1), `runs: { builder }`. A lock without these fields reads as `claimed`, attempt 1.
 - **Proof rule:** a phase moves only on an artefact (a run `started` event, a review pack for the current head, a Reviewer verdict row for the current head, git showing the head on `origin/main`). Pane text is never proof. `MAX_ATTEMPTS = 3` review rounds, `MAX_TRIES = 3` per journal key.
+- **Findings send work back only when open:** a ticket review sends the ticket back to `building` (attempt + 1) only when a Critical or Important finding is open (no `fixed`, `parked` or `rejected` ledger line). Minor-only or ruled findings give `clean` and the ticket goes on to `merge-ready`. Fixes and parks happen inside the review phase.
 - **Unknown is not progress:** an observation with `ok: false` gives no action that depends on it and one attention note. It never moves a phase.
 - **Ticket text is data:** only the validated key (`^[A-Z][A-Z0-9]*-\d+$`) and the ClickUp status string enter the controller. No title, description or comment is read, journaled or put into an order.
 - **Orders:** to the conductor only, through `herdr-ws` only, one per action, at most one action per ticket per tick. Before a prompt the conductor's input box must be `empty` or `suggestion`; `typed` or a working conductor means `wait`.
@@ -285,7 +286,7 @@ describe("review", () => {
     const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "task" as const, result: "clean" as const, head: "aaaaaaa1" }]) });
     expect(advanceTicket(s, o, J).kind).toBe("wait");
   });
-  it("findings send the work back with attempt + 1, and stop at the cap", () => {
+  it("open Critical or Important findings send the work back with attempt + 1, and stop at the cap", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings") }), J)).toEqual({ kind: "move", to: "building", proof: "findings for aaaaaaa", attempt: 2 });
     expect(advanceTicket(S({ phase: "review", attempt: 3 }), O({ ...withEvent("review"), verdicts: v("findings") }), J)).toEqual({ kind: "attention", cause: "attempts-exhausted", attKind: "failed" });
   });
@@ -1552,6 +1553,6 @@ Small changes. No design change. Tasks 11 and 12 only.
 - `parseAgentList` reads `{"result":{"agents":[{"name","agent_status","pane_id",...}]}}`, not a bare array. `status` = `agent_status` (`idle`, `done`, `working`). Add `pane` = `pane_id` to its return type; the input box is read from the conductor's `pane_id`.
 - `herdr-ws` refuses without `HERDR_WS`. `makeObservers` and `makeWriters` run it with `env: { ...process.env, HERDR_WS: herdrWs }`, so the plan's `Exec` takes `opts.env`.
 - The `Exec` of `observers-real.ts` (with `stdout`) is a second type. The DGS-486 `Exec` in `conductor.ts` has no stdout. Name the new one `ExecOut`; the prompt may keep using `promptConductor` with the DGS-486 `Exec`.
-- Run and review data are imported, not called through `dg`: `listRuns`, `readEvents`, `findRunDir` (run/), `readReviews`, `pack.md` `head:` (reviewer/). A verdict `head` is the `head:` of the `pack.md` in the same `reviews/ticket-final-r<N>/` folder; clean = the review has no findings.
+- Run and review data are imported, not called through `dg`: `listRuns`, `readEvents`, `findRunDir` (run/), `readReviews`, `pack.md` `head:` (reviewer/). A verdict `head` is the `head:` of the `pack.md` in the same `reviews/ticket-final-r<N>/` folder; clean = the review has no open Critical or Important finding. Open means the ledger (`progress.md`) has no `fixed`, `parked` or `rejected` line for it. Minor findings never block.
 - Task 12 (a): the busy test in `scan.test.ts` (line 153) must still see exactly one `busy` event and no tracker call when no `tick` is injected.
 - Task 5 rule for the box is in `probe.md` Step 4. The `typed` fixture is hand-made.

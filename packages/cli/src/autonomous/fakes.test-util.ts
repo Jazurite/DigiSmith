@@ -12,7 +12,7 @@ export function makeWorld(): World {
   return {
     runs: [{ id: "builder-1", role: "builder", createdAt: "2026-10-21T00:01:00.000Z", started: true, ended: false, merged: false, pushed: false, phaseEvent: null }],
     packs: [], verdicts: [], git: { head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }, status: "in progress",
-    herdr: { conductorPresent: true, conductorWorking: false, input: "empty", builderPanePresent: true },
+    herdr: { conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" },
     fail: {}, prompts: [], markers: [], statuses: [],
   };
 }

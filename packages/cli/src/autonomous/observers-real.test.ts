@@ -32,7 +32,7 @@ function fakeExec(handler: (file: string, args: string[]) => string | Error = ()
 const codeErr = (code: number | string) => Object.assign(new Error(`exit ${String(code)}`), { code });
 
 const run = (o: Partial<RunRecord> = {}): RunRecord => ({
-  id: "builder-1", role: "builder", created_at: "2026-10-21T00:01:00.000Z", worktree: "/wt", base_sha: "bbbbbbb1",
+  id: "builder-1", role: "builder", created_at: "2026-10-21T00:01:00.000Z", worktree: tmpdir(), base_sha: "bbbbbbb1",
   herdrPane: "w2:p5", events: [{ type: "started" }], ...o,
 });
 
@@ -63,7 +63,7 @@ describe("git observer", () => {
     const g = await makeObservers(deps(f.exec)).git();
     expect(f.argv()).toEqual([
       ["git", "-C", "/main", "fetch", "origin", "main"],
-      ["git", "-C", "/wt", "rev-parse", "HEAD"],
+      ["git", "-C", tmpdir(), "rev-parse", "HEAD"],
       ["git", "-C", "/main", "merge-base", "--is-ancestor", "abc123", "origin/main"],
     ]);
     expect(g).toEqual({ head: "abc123", base: "bbbbbbb1", onOriginMain: true });
@@ -74,6 +74,17 @@ describe("git observer", () => {
   });
   it("exit 128 throws", async () => {
     await expect(makeObservers(deps(fakeExec(gitHandler(codeErr(128))).exec)).git()).rejects.toThrow();
+  });
+  it("F7: the worktree is gone: the branch sha is read from the main checkout, no git in the removed folder", async () => {
+    const f = fakeExec(gitHandler(""));
+    const g = await makeObservers(deps(f.exec, [run({ worktree: "/nonexistent/wt-gone", branch: "DGS-1__x" })])).git();
+    expect(f.argv()).toEqual([
+      ["git", "-C", "/main", "fetch", "origin", "main"],
+      ["git", "-C", "/main", "rev-parse", "DGS-1__x"],
+      ["git", "-C", "/main", "merge-base", "--is-ancestor", "abc123", "origin/main"],
+    ]);
+    expect(g.head).toBe("abc123");
+    expect(g.onOriginMain).toBe(true);
   });
   it("no worktree throws", async () => {
     await expect(makeObservers(deps(fakeExec().exec, [run({ worktree: null })])).git()).rejects.toThrow("no worktree");
@@ -103,7 +114,7 @@ describe("herdr observer", () => {
     const v = await makeObservers(deps(f.exec)).herdr();
     expect(f.argv()).toEqual([[BIN, "agent", "list"], [BIN, "pane", "read", "w2:p1", "--format", "ansi"]]);
     expect(f.calls.every((c) => c.env?.HERDR_WS === "w2")).toBe(true);
-    expect(v).toEqual({ conductorPresent: true, conductorWorking: true, input: "empty", builderPanePresent: true });
+    expect(v).toEqual({ conductorPresent: true, conductorWorking: true, input: "empty", builderPane: "present" });
   });
   it("a typed box is typed, a suggestion is suggestion", async () => {
     expect((await makeObservers(deps(fakeExec(h(here("input-box-typed.ansi"))).exec)).herdr()).input).toBe("typed");
@@ -115,7 +126,12 @@ describe("herdr observer", () => {
   it("a missing conductor and builder pane are reported", async () => {
     const f = fakeExec(() => JSON.stringify({ result: { agents: [] } }));
     const v = await makeObservers(deps(f.exec)).herdr();
-    expect(v).toEqual({ conductorPresent: false, conductorWorking: false, input: "unknown", builderPanePresent: false });
+    expect(v).toEqual({ conductorPresent: false, conductorWorking: false, input: "unknown", builderPane: "gone" });
+  });
+  it("F4: a run with no recorded pane is unknown, not gone", async () => {
+    const f = fakeExec(h(""));
+    const v = await makeObservers(deps(f.exec, [run({ herdrPane: null })])).herdr();
+    expect(v.builderPane).toBe("unknown");
   });
   it("HERDR_WS follows the dep", async () => {
     const f = fakeExec(h(""));
@@ -194,7 +210,7 @@ describe("realStores", () => {
     root = mkdtempSync(join(tmpdir(), "obs-stores-"));
     const wt = join(root, "wt");
     const ws = join(wt, ".digismith", "board", "DGS-1—thing", ".sdd-workspace", "reviews");
-    for (const [name, head, findings] of [["ticket-final-r1", "aaaaaaa1", '[{"id":"F1","path":"a.ts","line":1,"severity":"Minor","what":"w","scenario":"s"}]'], ["ticket-final-r2", "ccccccc2", "[]"]] as const) {
+    for (const [name, head, findings] of [["ticket-final-r1", "aaaaaaa1", '[{"id":"F1","path":"a.ts","line":1,"severity":"Important","what":"w","scenario":"s"}]'], ["ticket-final-r2", "ccccccc2", "[]"]] as const) {
       mkdirSync(join(ws, name), { recursive: true });
       const round = name.slice(-1);
       writeFileSync(join(ws, name, "pack.md"), `# Review pack: ticket round ${round}\n\nticket: DGS-1\ntype: ticket\nid: final\nround: ${round}\nmodel: m\nbase: bbbbbbb1\nhead: ${head}\n`);
@@ -219,6 +235,38 @@ describe("realStores", () => {
       { scope: "ticket", result: "findings", head: "aaaaaaa1" },
       { scope: "ticket", result: "clean", head: "ccccccc2" },
     ]);
+  });
+  const addReview = (name: string, type: string, head: string, report: string | null) => {
+    const dir = join(root, "wt", ".digismith", "board", "DGS-1—thing", ".sdd-workspace", "reviews", name);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "pack.md"), `# p\n\nticket: DGS-1\ntype: ${type}\nid: x\nround: 1\nmodel: m\nbase: bbbbbbb1\nhead: ${head}\n`);
+    if (report !== null) writeFileSync(join(dir, "report.md"), report);
+  };
+  const sdd = () => join(root, "wt", ".digismith", "board", "DGS-1—thing", ".sdd-workspace");
+  const finding = (id: string, sev: string) => `{"id":"${id}","path":"a.ts","line":1,"severity":"${sev}","what":"w","scenario":"s"}`;
+  it("F1: a task pack at the current head is not a pack proof", async () => {
+    addReview("task-3-r1", "task", "ddddddd3", report("[]"));
+    const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" });
+    expect((await s.reviewerData.packs()).map((p) => p.head)).toEqual(["aaaaaaa1", "ccccccc2"]);
+  });
+  it("F2: a ticket folder with a pack and no report.md does not throw and gives no row", async () => {
+    addReview("ticket-final-r3", "ticket", "eeeeeee3", null);
+    const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" });
+    const v = await s.reviewerData.verdicts();
+    expect(v.map((x) => x.head)).toEqual(["aaaaaaa1", "ccccccc2"]);
+  });
+  it("F3: Minor-only is clean; Important open is findings; Important ruled fixed, parked or rejected is clean", async () => {
+    const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" });
+    addReview("ticket-final-r1", "ticket", "aaaaaaa1", report(`[${finding("F1", "Minor")}]`));
+    expect((await s.reviewerData.verdicts())[0].result).toBe("clean");
+    addReview("ticket-final-r1", "ticket", "aaaaaaa1", report(`[${finding("F1", "Important")}, ${finding("F2", "Critical")}]`));
+    expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> parked (later)\nReview ticket final r1: F2 -> rejected (not real)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("clean");
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> fixed\nReview ticket final r1: F2 -> parked (x)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("clean");
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> parked (later)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
   });
   it("without a builder run there are no packs", async () => {
     const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => null });

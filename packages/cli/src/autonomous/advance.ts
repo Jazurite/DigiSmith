@@ -64,7 +64,9 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   if (!obs.runs.ok) return note("obs-runs-failed");
   const r = obs.runs.value.find((x) => x.id === s.runs.builder);
   // one restart per attempt: the order-restart key carries the attempt, and order() holds it once sent
-  if (!obs.herdr.value.builderPanePresent && r !== undefined && !r.ended) return order("restart", s, obs, j, g.head);
+  if (obs.herdr.value.builderPane === "gone" && r !== undefined && !r.ended) return order("restart", s, obs, j, g.head);
+  // a run with no recorded pane: we cannot tell, so no restart order, one note
+  if (obs.herdr.value.builderPane === "unknown" && r !== undefined && !r.ended) return note("builder-pane-unknown");
   return wait("building");
 }
 
@@ -105,6 +107,7 @@ export function advanceTicket(s: TicketState, obs: Observations, j: JournalResul
     case "merged": a = wait("merged-awaiting-release"); break;
     case "released": a = wait("released"); break;
   }
+  if (a.kind === "move" && used(j, keyOf(s, `move-to-${a.to}`))) return note("move-key-used");
   if (a.kind === "wait" && !obs.tracker.ok && s.phase !== "merged") return note("obs-tracker-failed");
   return a;
 }

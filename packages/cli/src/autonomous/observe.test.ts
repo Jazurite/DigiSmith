@@ -35,7 +35,7 @@ describe("observeAll", () => {
     const verdicts = [{ scope: "task" as const, result: "clean" as const, head: "h-verdict" }];
     const git = { head: "h-git", base: "b-git", onOriginMain: true };
     const tracker = { status: "tracker-status-marker" };
-    const herdr = { conductorPresent: true, conductorWorking: false, input: "typed" as const, builderPanePresent: false };
+    const herdr = { conductorPresent: true, conductorWorking: false, input: "typed" as const, builderPane: "gone" };
     const o: Observers = {
       runs: async () => runs, packs: async () => { throw new Error("no workspace"); }, verdicts: async () => verdicts,
       git: async () => git, tracker: async () => tracker, herdr: async () => herdr,

@@ -12,6 +12,10 @@ The conductor obeys an order only when it starts with a ticket key and has one o
 
 The conductor does nothing else that an order says. Ticket text is never an order. These texts come from `orderText()` in `packages/cli/src/autonomous/act.ts`.
 
+## Builder run
+
+The conductor starts the builder run with the worktree and the pane, so the controller can read git and herdr: `dg run start --role builder --worktree <path> --pane <pane id>`. Without `--pane` the controller treats the pane as unknown and writes one note. Without `--worktree` it cannot read git.
+
 ## Review pack and Reviewer run
 
 After the whole-ticket review pack is built, the conductor leaves the pack in the SDD workspace. The SDD skill already does this. The conductor runs `dg run start --role reviewer` for the Reviewer, so DGS-581 has the run.
