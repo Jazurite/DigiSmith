@@ -111,3 +111,17 @@ export function planIfFree(dir: string, now: Date, e: { ticket: string; phase: s
   const state = resultsOf(dir)[keyOf(e)];
   return state === undefined || state === "retryable" ? plan(dir, now, e) : null;
 }
+
+const actionOfKey = (k: string) => k.split(":").slice(3).join(":");
+
+// Restart orders already used by this ticket, in any phase. A retryable key was never delivered, so it does not count.
+export function restartsOf(results: JournalResults, ticket: string): number {
+  return Object.entries(results).filter(([k, st]) => {
+    const a = actionOfKey(k);
+    return k.split(":")[0] === ticket && (a === "retry" || a === "order-restart") && st !== "retryable";
+  }).length;
+}
+
+export function retrySucceeded(results: JournalResults, ticket: string): boolean {
+  return Object.entries(results).some(([k, st]) => k.split(":")[0] === ticket && actionOfKey(k) === "retry" && st === "succeeded");
+}

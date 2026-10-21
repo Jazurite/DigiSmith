@@ -2,6 +2,7 @@ export type Phase = "claimed" | "building" | "review" | "merge-ready" | "merged"
 export const PHASES: Phase[] = ["claimed", "building", "review", "merge-ready", "merged", "released"];
 export const MAX_ATTEMPTS = 4; // ticket-review rounds: three fix waves and the review that checks them
 export const MAX_TRIES = 3;
+export const RETRY_PROOF_WAIT_MS = 15 * 60 * 1000;
 export const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 export type Obs<T> = { ok: true; value: T } | { ok: false; error: string };
 export type MarkerPhase = "building" | "review" | "merge";
@@ -12,9 +13,10 @@ export interface PackView { round: number; head: string; base: string }
 export interface VerdictView { scope: "task" | "ticket"; result: "clean" | "findings"; head: string }
 export interface GitView { head: string | null; base: string | null; onOriginMain: boolean }
 export interface HerdrView { conductorPresent: boolean; conductorWorking: boolean; input: InputBox; builderPane: "present" | "gone" | "unknown" }
+export interface AttentionView { id: string; ticket: string | null; kind: string; retryEligible: boolean }
 export interface Observations {
   runs: Obs<RunView[]>; packs: Obs<PackView[]>; verdicts: Obs<VerdictView[]>;
-  git: Obs<GitView>; tracker: Obs<{ status: string }>; herdr: Obs<HerdrView>;
+  git: Obs<GitView>; tracker: Obs<{ status: string }>; herdr: Obs<HerdrView>; attention: Obs<AttentionView[]>;
 }
 export type SettleResult = "succeeded" | "uncertain" | "retryable" | "permanent";
 export type JournalState = "open" | SettleResult;
@@ -25,4 +27,6 @@ export type Action =
   | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string; head?: string }
   | { kind: "marker"; phase: MarkerPhase; run: string }
   | { kind: "order"; order: "merge" | "restart"; head: string }
-  | { kind: "status"; status: string };
+  | { kind: "status"; status: string }
+  | { kind: "retry"; item: string; run: string }
+  | { kind: "adopt"; run: string; items: string[] };

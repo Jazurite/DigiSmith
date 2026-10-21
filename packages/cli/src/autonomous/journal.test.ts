@@ -125,3 +125,28 @@ describe("planIfFree", () => {
     expect(readJournal(dir)).toHaveLength(4);
   });
 });
+
+import { restartsOf, retrySucceeded } from "./journal.ts";
+
+describe("restartsOf", () => {
+  const J = (o: Record<string, string>) => o as never;
+  it("counts retry and order-restart keys of the ticket in any phase", () => {
+    expect(restartsOf(J({ "DGS-1:building:1:retry": "uncertain", "DGS-1:review:1:order-restart": "succeeded" }), "DGS-1")).toBe(2);
+  });
+  it("ignores a retryable key (the prompt was never delivered)", () => {
+    expect(restartsOf(J({ "DGS-1:building:1:retry": "retryable" }), "DGS-1")).toBe(0);
+  });
+  it("ignores other tickets and other actions", () => {
+    expect(restartsOf(J({ "DGS-2:building:1:retry": "open", "DGS-1:building:1:order-merge": "open", "DGS-1:building:1:adopt-retry": "open" }), "DGS-1")).toBe(0);
+  });
+  it("counts open, uncertain, succeeded and permanent", () => {
+    for (const st of ["open", "uncertain", "succeeded", "permanent"]) expect(restartsOf(J({ "DGS-1:building:1:retry": st }), "DGS-1")).toBe(1);
+  });
+});
+describe("retrySucceeded", () => {
+  it("is true only for a succeeded retry key of the ticket", () => {
+    expect(retrySucceeded({ "DGS-1:building:1:retry": "succeeded" } as never, "DGS-1")).toBe(true);
+    expect(retrySucceeded({ "DGS-1:building:1:retry": "uncertain" } as never, "DGS-1")).toBe(false);
+    expect(retrySucceeded({ "DGS-2:building:1:retry": "succeeded" } as never, "DGS-1")).toBe(false);
+  });
+});
