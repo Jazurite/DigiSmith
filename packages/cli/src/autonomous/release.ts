@@ -1,7 +1,7 @@
 import { appendFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7 } from "./clock.ts";
-import { closeOpen, plan, resultsOf, settle } from "./journal.ts";
+import { closeOpen, planIfFree, settle } from "./journal.ts";
 import { runNow, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { appendEvent, clearLock, readLock } from "./state.ts";
 import type { Tracker } from "./types.ts";
@@ -60,9 +60,7 @@ export async function runRelease(
     const phase = lock.phase ?? "claimed";
     const attempt = lock.attempt ?? 1;
     const jkey = `${a.ticket}:${phase}:${attempt}:released`;
-    const used = resultsOf(d.dir)[jkey];
-    const journaled = !corrupt && (used === undefined || used === "retryable");
-    if (journaled) plan(d.dir, now, { ticket: a.ticket, phase, attempt, action: "released" });
+    const journaled = !corrupt && planIfFree(d.dir, now, { ticket: a.ticket, phase, attempt, action: "released" }) !== null;
     clearLock(d.dir);
     lockCleared = true;
     if (journaled) settle(d.dir, now, jkey, "succeeded", a.result);

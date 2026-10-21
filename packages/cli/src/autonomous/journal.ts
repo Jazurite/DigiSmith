@@ -105,3 +105,9 @@ export function closeOpen(dir: string, now: Date, ticket: string, note: string):
   for (const l of mine) settle(dir, now, l.key, "permanent", note);
   return mine.length;
 }
+
+/** plan() unless the key is already used (anything but absent or retryable); returns the key, or null when it was used. */
+export function planIfFree(dir: string, now: Date, e: { ticket: string; phase: string; attempt: number; action: string; detail?: Record<string, string> }): string | null {
+  const state = resultsOf(dir)[keyOf(e)];
+  return state === undefined || state === "retryable" ? plan(dir, now, e) : null;
+}

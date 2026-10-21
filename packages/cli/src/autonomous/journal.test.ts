@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, appendFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { plan, settle, resultsOf, openLines, closeOpen, readJournal, journalPath } from "./journal.ts";
+import { planIfFree, plan, settle, resultsOf, openLines, closeOpen, readJournal, journalPath } from "./journal.ts";
 
 const tmp = () => mkdtempSync(join(tmpdir(), "nw-journal-"));
 const T0 = new Date("2026-10-21T01:00:00.000Z");
@@ -108,5 +108,20 @@ describe("journal", () => {
     expect(lines).toHaveLength(200);
     for (const l of lines) JSON.parse(l);
     expect(statSync(journalPath(d)).size).toBe(text.length);
+  });
+});
+
+describe("planIfFree", () => {
+  const e = { ticket: "DGS-1", phase: "claimed", attempt: 1, action: "claim" };
+  it("plans a free key, returns null for a used key, plans again after retryable", () => {
+    const dir = mkdtempSync(join(tmpdir(), "jr-"));
+    const now = new Date("2026-10-20T17:00:00Z");
+    expect(planIfFree(dir, now, e)).toBe("DGS-1:claimed:1:claim");
+    expect(planIfFree(dir, now, e)).toBeNull();
+    settle(dir, now, "DGS-1:claimed:1:claim", "retryable");
+    expect(planIfFree(dir, now, e)).toBe("DGS-1:claimed:1:claim");
+    settle(dir, now, "DGS-1:claimed:1:claim", "succeeded");
+    expect(planIfFree(dir, now, e)).toBeNull();
+    expect(readJournal(dir)).toHaveLength(4);
   });
 });

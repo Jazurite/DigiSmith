@@ -7,7 +7,7 @@ import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
 import { checkReady, TYPE_BUG, TYPE_TASK } from "./ready.ts";
-import { plan, resultsOf, settle } from "./journal.ts";
+import { planIfFree, settle } from "./journal.ts";
 import { acquireLock, appendEvent, clearLock, readLock, readNotes, writeNotes } from "./state.ts";
 import { runBack } from "./switch.ts";
 import type { TickResult } from "./tick.ts";
@@ -46,8 +46,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   const order = orderPath(d.ordersDir, stampOf(now), key);
   const claimedAtUtc7 = fmtUtc7(now);
   // A key used by an earlier failed claim of the same ticket is not planned again.
-  const used = resultsOf(d.dir)[`${key}:claimed:1:claim`];
-  const jkey = used === undefined || used === "retryable" ? plan(d.dir, now, { ticket: key, phase: "claimed", attempt: 1, action: "claim" }) : null;
+  const jkey = planIfFree(d.dir, now, { ticket: key, phase: "claimed", attempt: 1, action: "claim" });
   const close = (r: "succeeded" | "retryable" | "permanent", note = ""): void => { if (jkey !== null) settle(d.dir, now, jkey, r, note); };
   const got = acquireLock(d.dir, {
     ticket: key, taskId: t.id, claimedAt: now.toISOString(), claimedAtUtc7, order, scanId: d.scanId,
@@ -72,9 +71,10 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   } catch (e) {
     // Remove only the order file this scan created, so a later scan in the same minute can write it again.
     if (wroteOrder) rmSync(order, { force: true });
-    clearLock(d.dir);
-    close("permanent", errText(e));
+    // Each cleanup step is independent: one failing never skips the others.
+    try { clearLock(d.dir); } catch { /* best effort */ }
     try { await d.tracker.setStatus(t.id, "to do"); } catch { /* best effort */ }
+    try { close("permanent", errText(e)); } catch { /* best effort */ }
     appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
     return "claim-failed";
   }
@@ -94,13 +94,15 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   // 0b. A held lock with a tick: the tick advances the ticket, the scan reports busy. A failing tick never stops the scan.
   if (!d.dryRun && d.tick !== undefined && readLock(d.dir) !== null) {
     let action: string;
+    let error: string | undefined;
     try {
       const t = await d.tick();
       action = t.action?.kind ?? t.outcome;
-    } catch {
+    } catch (e) {
       action = "tick-failed";
+      error = errText(e).replace(/\s+/g, " ").slice(0, 200);
     }
-    appendEvent(d.dir, now, "busy", { ticket: readLock(d.dir)?.ticket ?? "?", action });
+    appendEvent(d.dir, now, "busy", { ticket: readLock(d.dir)?.ticket ?? "?", action, ...(error === undefined ? {} : { error }) });
     return { outcome: "busy", candidates: 0, skipped };
   }
   // 1. The work rule: nothing else runs outside it.

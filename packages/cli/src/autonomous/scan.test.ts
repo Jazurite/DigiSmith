@@ -7,7 +7,7 @@ import type { Exec } from "./conductor.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { TYPE_BUG } from "./ready.ts";
 import { runScan, type ScanDeps } from "./scan.ts";
-import { readJournal, resultsOf } from "./journal.ts";
+import { readJournal, resultsOf, journalPath } from "./journal.ts";
 import type { TickResult } from "./tick.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
 
@@ -131,7 +131,35 @@ describe("runScan: the tick and the journal", () => {
     held();
     const r = await runScan(mk({ tick: async () => { throw new Error("boom"); } }));
     expect(r.outcome).toBe("busy");
-    expect(events()).toMatchObject([{ kind: "busy", ticket: "DGS-9", action: "tick-failed" }]);
+    expect(events()).toMatchObject([{ kind: "busy", ticket: "DGS-9", action: "tick-failed", error: "boom" }]);
+  });
+  it("the tick error is one line, cut to 200 chars", async () => {
+    now = DAY;
+    held();
+    await runScan(mk({ tick: async () => { throw new Error(`a\nb ${"x".repeat(500)}`); } }));
+    const err = (events()[0] as { error: string }).error;
+    expect(err).not.toContain("\n");
+    expect(err.length).toBe(200);
+  });
+  it("a settle that throws in the failed-claim path still clears the lock and reverts the status", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    execImpl = async () => { rmSync(journalPath(dir), { force: true }); mkdirSync(journalPath(dir)); return { code: 1, stderr: "no" }; };
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claim-failed");
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+  });
+  it("the lock is held at claim time: the claim key settles retryable busy, no second claim", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const orig = tracker.listToDo.bind(tracker);
+    tracker.listToDo = async () => { const r = await orig(); held(); return r; };
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("busy");
+    const settled = readJournal(dir).filter((l) => l.status === "settled");
+    expect(settled).toMatchObject([{ key: "DGS-1:claimed:1:claim", result: "retryable", note: "busy" }]);
+    expect(readJournal(dir).filter((l) => l.status === "planned")).toHaveLength(1);
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
+    expect(execCalls).toEqual([]);
   });
   it("no lock: off as before, the tick is not called", async () => {
     now = DAY;
