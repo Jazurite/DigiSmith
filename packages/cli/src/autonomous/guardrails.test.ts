@@ -28,6 +28,8 @@ describe("readGuardrails", () => {
     ["flow list", "nightwatch:\n  protected_paths: [hooks/]\n"],
     ["empty list", "nightwatch:\n  protected_paths:\n"],
     ["tab indent", "nightwatch:\n\tbudgets:\n"],
+    ["empty budgets block", "nightwatch:\n  budgets:\n"],
+    ["budgets with only comment lines under it", "nightwatch:\n  budgets:\n    # none yet\n"],
     ["budget not a number", "nightwatch:\n  budgets:\n    building: soon\n"],
     ["budget zero", "nightwatch:\n  budgets:\n    merge: 0\n"],
     ["unknown budget key", "nightwatch:\n  budgets:\n    deploy: 5\n"],

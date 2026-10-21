@@ -46,6 +46,7 @@ export function readGuardrails(text: string): Guardrails {
       out.protectedPaths = items.map((x) => unquote(stripComment(x as string)));
     } else if (key === "budgets") {
       if (inline !== "") { bad("budgets must be a block of 'phase: minutes' lines"); continue; }
+      if (kids.length === 0) { bad("budgets must hold at least one 'phase: minutes' line (remove the key to use the defaults)"); continue; }
       const bseen = new Set<string>();
       for (const kid of kids) {
         const b = /^\s+([A-Za-z_]+):\s*(.*)$/.exec(kid);
