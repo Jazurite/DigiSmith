@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync, existsSync, realpathSync } from 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { cleanup } from "./post-merge-cleanup.ts";
+import { cleanup, defaultSalvage } from "./post-merge-cleanup.ts";
 
 type Salvage = (a: { ticket: string; worktree: string }) => { ok: boolean; message: string };
 const failing: Salvage = () => ({ ok: false, message: "not salvaged: test" });
@@ -162,6 +162,54 @@ describe("cleanup", () => {
       const r = cleanup({ repo, branch: BRANCH, worktree });
       expect(r.ok).toBe(true);
       expect(branches()).toBe("");
+    });
+  });
+
+  describe("worktree removal and salvage guards", () => {
+    beforeEach(() => setup(true));
+    it("stops with the rescue branch and bundle when removal fails after an ok salvage", () => {
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const salvage: Salvage = (a) => {
+        committing([])(a);
+        git(repo, "worktree", "lock", a.worktree);
+        return { ok: true, message: "salvaged: /depot/bundle-1" };
+      };
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage });
+      expect(r.ok).toBe(false);
+      expect(r.message).toMatch(/removal failed after salvage/);
+      expect(r.message).toMatch(/rescue\/DGS-1/);
+      expect(r.message).toMatch(/bundle \/depot\/bundle-1/);
+      expect(r.message).toMatch(/nothing more was removed/);
+      expect(existsSync(worktree)).toBe(true);
+      expect(branches()).not.toBe("");
+    });
+    it("stops when salvage says ok but the tree is still dirty", () => {
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: () => ({ ok: true, message: "salvaged" }) });
+      expect(r.ok).toBe(false);
+      expect(r.message).toMatch(/^salvage reported ok but the tree is still dirty; nothing removed/);
+      expect(existsSync(join(worktree, "notes.md"))).toBe(true);
+      expect(branches()).not.toBe("");
+    });
+  });
+
+  describe("defaultSalvage", () => {
+    const a = { ticket: "DGS-1", worktree: "/w" };
+    it("dg missing gives ok:false with a message", () => {
+      const r = defaultSalvage(a, () => { throw Object.assign(new Error("spawnSync dg ENOENT"), { code: "ENOENT" }); });
+      expect(r.ok).toBe(false);
+      expect(r.message).toMatch(/ENOENT/);
+    });
+    it("non-zero exit gives ok:false with the first stderr line", () => {
+      const r = defaultSalvage(a, () => { throw Object.assign(new Error("failed"), { stderr: "not salvaged: .env\nmore\n" }); });
+      expect(r).toEqual({ ok: false, message: "not salvaged: .env" });
+    });
+    it("zero exit gives ok:true and passes the bundle line through", () => {
+      let seen: string[] = [];
+      const r = defaultSalvage(a, (cmd, args) => { seen = [cmd, ...args]; return "x\nsalvaged: /depot/b\n"; });
+      expect(r).toEqual({ ok: true, message: "salvaged: /depot/b" });
+      expect(seen).toEqual(["dg", "salvage", "--ticket", "DGS-1", "--worktree", "/w"]);
+      expect(defaultSalvage(a, () => "").message).toBe("salvaged");
     });
   });
 

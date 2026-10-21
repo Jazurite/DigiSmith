@@ -21,10 +21,15 @@ export interface CleanupResult {
   message: string;
 }
 
-const defaultSalvage = ({ ticket, worktree }: { ticket: string; worktree: string }): { ok: boolean; message: string } => {
+type Exec = (cmd: string, args: string[], opts: { encoding: "utf8"; stdio: ["ignore", "pipe", "pipe"] }) => string;
+
+export const defaultSalvage = (
+  { ticket, worktree }: { ticket: string; worktree: string },
+  run: Exec = execFileSync as Exec,
+): { ok: boolean; message: string } => {
   try {
-    execFileSync("dg", ["salvage", "--ticket", ticket, "--worktree", worktree], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-    return { ok: true, message: "salvaged" };
+    const out = run("dg", ["salvage", "--ticket", ticket, "--worktree", worktree], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return { ok: true, message: /^salvaged: .+$/m.exec(String(out))?.[0] ?? "salvaged" };
   } catch (e) {
     const err = e as { stderr?: string; message: string };
     return { ok: false, message: (err.stderr || err.message).trim().split("\n")[0] };
@@ -35,7 +40,22 @@ const gitRaw = (cwd: string, ...args: string[]): string =>
   execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const git = (cwd: string, ...args: string[]): string => gitRaw(cwd, ...args).trim();
 
-export function cleanup({ repo, branch, worktree, base = "main", dryRun = false, salvage = defaultSalvage }: CleanupOptions): CleanupResult {
+function inspect(worktree: string) {
+  // -z: paths come raw (no quoting, no octal escapes); a rename entry carries its source path as an extra token.
+  const tokens = gitRaw(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0").filter(Boolean);
+  const dirty: { code: string; path: string }[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const code = tokens[i].slice(0, 2);
+    dirty.push({ code, path: tokens[i].slice(3) });
+    if (code[0] === "R" || code[0] === "C") i++;
+  }
+  const tracked = dirty.filter((f) => f.code !== "??");
+  const untracked = dirty.filter((f) => f.code === "??");
+  const other = untracked.filter((f) => !KNOWN_CACHES.some((c) => f.path.startsWith(c)));
+  return { tracked, untracked, other };
+}
+
+export function cleanup({ repo, branch, worktree, base = "main", dryRun = false, salvage = (a) => defaultSalvage(a) }: CleanupOptions): CleanupResult {
   const steps: string[] = [];
   const stop = (message: string): CleanupResult => ({ ok: false, steps, message });
   const act = (label: string, run: () => void) => {
@@ -56,19 +76,10 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
   }
 
   let salvaged = false;
+  let bundle: string | undefined;
   const key = /^([A-Z]+-\d+)__/.exec(branch)?.[1];
   if (existsSync(worktree)) {
-    // -z: paths come raw (no quoting, no octal escapes); a rename entry carries its source path as an extra token.
-    const tokens = gitRaw(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0").filter(Boolean);
-    const dirty: { code: string; path: string }[] = [];
-    for (let i = 0; i < tokens.length; i++) {
-      const code = tokens[i].slice(0, 2);
-      dirty.push({ code, path: tokens[i].slice(3) });
-      if (code[0] === "R" || code[0] === "C") i++;
-    }
-    const tracked = dirty.filter((f) => f.code !== "??");
-    const untracked = dirty.filter((f) => f.code === "??");
-    const other = untracked.filter((f) => !KNOWN_CACHES.some((c) => f.path.startsWith(c)));
+    let { tracked, untracked, other } = inspect(worktree);
     if (tracked.length > 0 || other.length > 0) {
       if (!key) return stop(`no ticket key in branch ${branch}; cannot salvage; nothing was changed`);
       if (dryRun) {
@@ -78,12 +89,23 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
         if (!r.ok) return stop(`salvage failed, nothing removed: ${r.message}`);
         steps.push(`salvaged ${worktree} with dg salvage --ticket ${key}`);
         salvaged = true;
+        bundle = /^salvaged: (.+)$/m.exec(r.message)?.[1];
+        ({ tracked, untracked, other } = inspect(worktree));
+        if (tracked.length > 0 || other.length > 0) {
+          return stop(`salvage reported ok but the tree is still dirty; nothing removed (${worktree})`);
+        }
       }
     }
     const force = untracked.length > other.length;
-    act(`remove worktree ${worktree}${force ? " (--force, caches only)" : ""}`, () =>
-      git(repo, "worktree", "remove", ...(force ? ["--force"] : []), worktree),
-    );
+    try {
+      act(`remove worktree ${worktree}${force ? " (--force, caches only)" : ""}`, () =>
+        git(repo, "worktree", "remove", ...(force ? ["--force"] : []), worktree),
+      );
+    } catch (e) {
+      if (!salvaged) throw e;
+      const why = (e as { stderr?: string; message: string }).stderr?.trim().split("\n")[0] || (e as Error).message.split("\n")[0];
+      return stop(`worktree removal failed after salvage: ${why}; rescue/${key} holds the work${bundle ? `, bundle ${bundle}` : ""}; nothing more was removed`);
+    }
   } else {
     steps.push(`worktree ${worktree} already gone`);
   }
