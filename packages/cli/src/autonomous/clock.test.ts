@@ -45,6 +45,9 @@ describe("nextClock", () => {
   it("rolls to the next day when the time has passed", () => {
     expect(nextClock(now, "14:00").toISOString()).toBe("2026-10-20T07:00:00.000Z");
   });
+  it("crosses a month end in UTC+7", () => {
+    expect(nextClock(new Date("2026-10-31T20:00:00Z"), "10:00").toISOString()).toBe("2026-11-01T03:00:00.000Z");
+  });
   it("is strictly after now, so an equal time means the next day", () => {
     expect(nextClock(now, "14:32").toISOString()).toBe("2026-10-20T07:32:00.000Z");
   });

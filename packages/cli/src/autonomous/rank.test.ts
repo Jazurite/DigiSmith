@@ -25,6 +25,13 @@ describe("rankTasks", () => {
     const out = rankTasks([task("new", { created: 20 }), task("old", { created: 10 })]);
     expect(ids(out)).toEqual(["old", "new"]);
   });
+  it("breaks equal priority and equal due by older created first", () => {
+    const out = rankTasks([
+      task("newer", { priority: 2, due: 100, created: 30 }),
+      task("older", { priority: 2, due: 100, created: 10 }),
+    ]);
+    expect(ids(out)).toEqual(["older", "newer"]);
+  });
   it("falls through to due when both have no priority", () => {
     const out = rankTasks([task("nodueB", { created: 1 }), task("dueA", { due: 5, created: 9 }), task("dueB", { due: 7, created: 2 })]);
     expect(ids(out)).toEqual(["dueA", "dueB", "nodueB"]);
