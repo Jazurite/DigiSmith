@@ -31,13 +31,23 @@ describe("safe", () => {
 
 describe("observeAll", () => {
   it("one failing observer does not hide the others", async () => {
+    const runs = [{ id: "r1", role: "builder", createdAt: "t1", started: true, ended: false, merged: false, pushed: false, phaseEvent: null }];
+    const verdicts = [{ scope: "task" as const, result: "clean" as const, head: "h-verdict" }];
+    const git = { head: "h-git", base: "b-git", onOriginMain: true };
+    const tracker = { status: "tracker-status-marker" };
+    const herdr = { conductorPresent: true, conductorWorking: false, input: "typed" as const, builderPanePresent: false };
     const o: Observers = {
-      runs: async () => [], packs: async () => { throw new Error("no workspace"); }, verdicts: async () => [],
-      git: async () => ({ head: "a", base: "b", onOriginMain: false }), tracker: async () => ({ status: "in progress" }),
-      herdr: async () => ({ conductorPresent: true, conductorWorking: false, input: "empty", builderPanePresent: true }),
+      runs: async () => runs, packs: async () => { throw new Error("no workspace"); }, verdicts: async () => verdicts,
+      git: async () => git, tracker: async () => tracker, herdr: async () => herdr,
     };
     const r = await observeAll(o, 100);
-    expect(r.packs).toEqual({ ok: false, error: "no workspace" });
-    expect(r.runs.ok && r.git.ok && r.tracker.ok && r.herdr.ok && r.verdicts.ok).toBe(true);
+    expect(r).toEqual({
+      runs: { ok: true, value: runs },
+      packs: { ok: false, error: "no workspace" },
+      verdicts: { ok: true, value: verdicts },
+      git: { ok: true, value: git },
+      tracker: { ok: true, value: tracker },
+      herdr: { ok: true, value: herdr },
+    });
   });
 });
