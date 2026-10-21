@@ -14,6 +14,7 @@ import sessionsCommand from "./sessions/index.ts";
 import stewardCommand from "./steward/index.ts";
 import reviewerCommand from "./reviewer/index.ts";
 import autonomousCommand from "./autonomous/index.ts";
+import runCommand from "./run/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -39,6 +40,7 @@ export function buildCli(argv: string[]): Argv {
     .command(stewardCommand)
     .command(reviewerCommand)
     .command(autonomousCommand)
+    .command(runCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());
