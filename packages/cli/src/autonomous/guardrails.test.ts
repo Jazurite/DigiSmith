@@ -44,6 +44,12 @@ describe("readGuardrails", () => {
       'nightwatch: line "protected_paths:" is indented less than the first key under nightwatch:',
     ]);
   });
+  it.each(["nightwatch: {}\n", "nightwatch: off\n", "nightwatch: {}\nprofile: x\n"])("reports an inline nightwatch value %j", (t) => {
+    expect(readGuardrails(t).problems).toEqual(["nightwatch: must be a block with indented lines under it, not an inline value"]);
+  });
+  it("nightwatch: with a trailing comment and indented lines stays fine", () => {
+    expect(readGuardrails("nightwatch: # note\n  budgets:\n    merge: 5\n").problems).toEqual([]);
+  });
   it("ignores an error outside the nightwatch block", () => {
     expect(readGuardrails("profile: x\nbroken line without colon\nnightwatch:\n  budgets:\n    merge: 5\n").problems).toEqual([]);
   });

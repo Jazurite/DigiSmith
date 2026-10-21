@@ -15,7 +15,10 @@ export function readGuardrails(text: string): Guardrails {
   const out: Guardrails = { protectedPaths: null, budgets: {}, problems: [] };
   const lines = text.replace(/^﻿/, "").split(/\r?\n/);
   const start = lines.findIndex((l) => /^nightwatch:\s*(#.*)?$/.test(l));
-  if (start < 0) return out;
+  if (start < 0) {
+    if (lines.some((l) => /^nightwatch:/.test(l))) out.problems.push("nightwatch: must be a block with indented lines under it, not an inline value");
+    return out;
+  }
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i++) if (SIGNIFICANT.test(lines[i]) && indentOf(lines[i]) === 0) { end = i; break; }
   const body = lines.slice(start + 1, end);
