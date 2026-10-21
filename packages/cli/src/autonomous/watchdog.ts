@@ -59,7 +59,7 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   return { state: "healthy", cause: "", since: "" };
 }
 
-/** Only a transient failure or a lost run gets one automatic retry; the journal supplies retriesUsed. */
+/** Only a transient failure or a lost run is retry-eligible; decideRetry only records eligibility (the attention item gets retryEligible). Nothing retries in DGS-583; DGS-588 supplies the retriesUsed count. */
 export function decideRetry(kind: string, causeClass: CauseClass, retriesUsed: number): "retry" | "attention" {
   if (retriesUsed > 0) return "attention";
   return (kind === "failed" && causeClass === "transient") || kind === "lost" ? "retry" : "attention";
