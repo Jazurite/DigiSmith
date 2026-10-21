@@ -1,0 +1,79 @@
+// packages/cli/src/run/hook.ts
+// The Nightwatch hook handler. Imports only node:fs and node:path (through ./paths.ts and ./events.ts) so a
+// hook process starts fast. Never throws; never writes message text, prompts, tool inputs or outputs.
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { findRunDir, isSafe, runsDir } from "./paths.ts";
+import { appendEvent, HOOK_TYPES } from "./events.ts";
+
+export type HookKind = (typeof HOOK_TYPES)[number];
+
+const LOG_CAP = 256 * 1024;
+const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/;
+
+export function waitFor(kind: HookKind): number {
+  return kind === "tool" ? 150 : 2000;
+}
+
+// A name or id from the payload, or null. Anything with spaces or text in it is dropped.
+function name(v: unknown): string | null {
+  return typeof v === "string" && NAME_RE.test(v) ? v : null;
+}
+
+function toolOk(response: unknown): boolean {
+  if (typeof response !== "object" || response === null) return true;
+  const r = response as Record<string, unknown>;
+  return !(r.is_error === true || r.success === false || (r.error !== undefined && r.error !== null && r.error !== false));
+}
+
+export function buildData(kind: HookKind, payload: unknown): Record<string, unknown> {
+  const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+  switch (kind) {
+    case "started":
+      return { source: name(p.source), session_id: name(p.session_id) };
+    case "blocked":
+      return { kind: name(p.notification_type) };
+    case "tool":
+      return { tool: name(p.tool_name), ok: toolOk(p.tool_response) };
+    case "ended":
+      return { reason: name(p.reason) };
+    case "turn_end":
+      return {};
+  }
+}
+
+function logError(kind: string, message: string, env: NodeJS.ProcessEnv): void {
+  try {
+    const root = runsDir(env);
+    if (!fs.existsSync(root)) return;
+    const file = path.join(root, "hook-errors.log");
+    if (fs.existsSync(file) && fs.statSync(file).size >= LOG_CAP) return;
+    fs.appendFileSync(file, `${new Date().toISOString()} ${kind} ${message.replace(/\s+/g, " ").slice(0, 200)}\n`);
+  } catch {
+    /* the log must never hurt a session either */
+  }
+}
+
+export function runHook(kind: string, stdin: string, env: NodeJS.ProcessEnv = process.env): void {
+  try {
+    const id = env.DIGISMITH_RUN_ID;
+    if (!id || !isSafe(id)) return;
+    if (!(HOOK_TYPES as readonly string[]).includes(kind)) return;
+    const k = kind as HookKind;
+    const dir = findRunDir(id, env);
+    if (!dir) return;
+    let payload: unknown = {};
+    try {
+      payload = JSON.parse(stdin || "{}");
+    } catch {
+      /* not JSON: the event is still written, with empty data */
+    }
+    try {
+      appendEvent(dir, id, k, buildData(k, payload), waitFor(k));
+    } catch (e) {
+      logError(k, (e as Error).message, env);
+    }
+  } catch (e) {
+    logError(kind, (e as Error).message, env);
+  }
+}
