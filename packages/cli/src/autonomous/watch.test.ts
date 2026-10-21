@@ -84,6 +84,44 @@ describe("runWatch", () => {
     expect(readOpen(dir).map((i) => i.kind).sort()).toEqual(["lost", "stalled"].sort());
   });
 
+  it("closes the blocked item and opens a stalled one when the run moves blocked -> stalled", async () => {
+    present = new Set(["w2:DGS-1"]);
+    const run = mk("DGS-1", "builder", 52, [[50, "started"], [5, "blocked"]]);
+    await runWatch(deps());
+    expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    addEvent(run, 0, "tool", 3);
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(1);
+    expect(r.resolved).toBe(1);
+    expect(readOpen(dir).map((i) => i.kind)).toEqual(["stalled"]);
+    expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain('"by":"watchdog"');
+  });
+
+  it("closes the stalled item and opens a blocked one when the run moves stalled -> blocked", async () => {
+    present = new Set(["w2:DGS-1"]);
+    const run = mk("DGS-1", "builder", 52, [[50, "started"], [1, "tool"]]);
+    await runWatch(deps());
+    expect(readOpen(dir).map((i) => i.kind)).toEqual(["stalled"]);
+    addEvent(run, 0, "blocked", 3);
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(1);
+    expect(r.resolved).toBe(1);
+    expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+  });
+
+  it("a dry run says what it would do and resolves nothing", async () => {
+    present = new Set(["w2:DGS-1"]);
+    const run = mk("DGS-1", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    await runWatch(deps());
+    addEvent(run, 0, "tool", 3);
+    const before = readFileSync(join(dir, "attention.jsonl"), "utf-8");
+    const r = await runWatch(deps({ dryRun: true }));
+    expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toBe(before);
+    expect(readOpen(dir)).toHaveLength(1);
+    expect(r.lines[r.lines.length - 1]).toContain("would resolve 1");
+    expect(r.lines[r.lines.length - 1]).not.toMatch(/\d+ resolved/);
+  });
+
   it("dry run prints the same lines, writes nothing and calls runDg never", async () => {
     fiveRuns();
     const wet = await runWatch(deps({ dryRun: true }));

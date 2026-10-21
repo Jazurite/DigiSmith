@@ -34,9 +34,18 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   const nowMs = d.now();
   const nowIso = new Date(nowMs).toISOString();
   const { budgets, problems } = readBudgets(d.cwd);
+  // The attention file is read once per pass; the list follows what the pass opens and resolves.
+  let items = readOpen(d.dir);
   const open = (i: Omit<OpenItem, "id" | "ts">): void => {
-    if (d.dryRun) { if (!readOpen(d.dir).some((o) => o.run === i.run && o.kind === i.kind)) res.opened++; return; }
-    if (appendOpen(d.dir, { ...i, ts: nowIso })) res.opened++;
+    if (items.some((o) => o.run === i.run && o.kind === i.kind)) return;
+    if (d.dryRun) { res.opened++; items.push({ ...i, id: `${i.run}.${i.kind}.dry`, ts: nowIso }); return; }
+    const made = appendOpen(d.dir, { ...i, ts: nowIso });
+    if (made) { res.opened++; items.push(made); }
+  };
+  const close = (it: OpenItem, note: string): void => {
+    if (!d.dryRun) appendResolved(d.dir, it.id, "watchdog", nowIso, note);
+    res.resolved++;
+    items = items.filter((o) => o.id !== it.id);
   };
 
   for (const p of problems) {
@@ -57,18 +66,12 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     if (nowMs - Date.parse(record.created_at) > RETENTION_MS && !events.some((e) => e.type === "ended")) continue;
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);
     const v = classify(record, events, pane, nowMs, budgets);
-    const mine = readOpen(d.dir).filter((o) => o.run === record.run && AUTO.includes(o.kind));
+    const mine = items.filter((o) => o.run === record.run && AUTO.includes(o.kind));
     if (v.state === "ended" || v.state === "healthy") {
-      for (const it of mine) {
-        if (!d.dryRun) appendResolved(d.dir, it.id, "watchdog", nowIso, `run is ${v.state} again`);
-        res.resolved++;
-      }
+      for (const it of mine) close(it, `run is ${v.state} again`);
       continue;
     }
-    for (const it of mine.filter((o) => o.kind !== v.state)) {
-      if (!d.dryRun) appendResolved(d.dir, it.id, "watchdog", nowIso, `run is ${v.state} now`);
-      res.resolved++;
-    }
+    for (const it of mine.filter((o) => o.kind !== v.state)) close(it, `run is ${v.state} now`);
     open({
       ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause: v.cause, since: v.since,
       retryEligible: decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
@@ -81,6 +84,8 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     const n = await notifyNew({ dir: d.dir, now: d.now, runDg: d.runDg }, readOpen(d.dir));
     res.commented = n.sent;
   }
-  res.lines.push(`watch: ${runs.length} runs, ${res.opened} opened, ${res.resolved} resolved, ${res.commented} commented${d.dryRun ? " (dry run, nothing written)" : ""}`);
+  res.lines.push(d.dryRun
+    ? `watch (dry run, nothing written): ${runs.length} runs, would open ${res.opened}, would resolve ${res.resolved}`
+    : `watch: ${runs.length} runs, ${res.opened} opened, ${res.resolved} resolved, ${res.commented} commented`);
   return res;
 }
