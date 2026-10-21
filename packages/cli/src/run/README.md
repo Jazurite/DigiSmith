@@ -59,7 +59,7 @@ The `tool` hook waits at most 150 ms for the lock, then drops its event and logs
 - `dg run start --ticket KEY --role R --order PATH [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]` writes `run.json` and prints the run id alone.
 - `dg run event <run-id> <type> [--data JSON]` appends one conductor event. Exit 1 on an unknown run or type. `--data` must be a JSON object.
 - `dg run list [--ticket KEY] [--json]` prints one row per run, newest first.
-- `dg run show <run-id> [--json]` prints `run.json` and a summary.
+- `dg run show <run-id>` prints the main fields (run, ticket, role, seat, model, branch, worktree, herdr, created) and a summary. `dg run show <run-id> --json` prints the full `run.json` and the summary.
 - `dg run tail <run-id> [--since seq]` prints the lines in file order, once, and exits. It keeps the lines whose `seq` is greater than the value (default 0). It skips a line that does not parse.
 
 Cursor caveat: a follower that uses `--since` as a cursor may miss a line that repeats a `seq` it already passed.
