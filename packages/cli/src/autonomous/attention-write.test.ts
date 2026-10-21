@@ -101,3 +101,14 @@ describe("appendAttentionId", () => {
     expect(appendAttention(dir, new Date("2026-10-22T00:00:00Z"), { ...a, run: "r2" })).toBe("written");
   });
 });
+
+describe("controller resolve", () => {
+  it("a controller resolve closes the item and records by", () => {
+    const d = tmp();
+    appendAttention(d, new Date("2026-10-21T00:00:00.000Z"), { ticket: "DGS-1", run: "builder-1", kind: "lost", cause: "pane-gone" });
+    expect(appendResolved(d, "builder-1.lost.0", "controller", "2026-10-21T00:05:00.000Z", "new run builder-2 started")).toBe(true);
+    const last = JSON.parse(readFileSync(join(d, "attention.jsonl"), "utf8").trim().split("\n").pop()!);
+    expect(last).toMatchObject({ resolved: true, by: "controller" });
+    expect(appendResolved(d, "builder-1.lost.0", "controller", "2026-10-21T00:06:00.000Z")).toBe(false);
+  });
+});

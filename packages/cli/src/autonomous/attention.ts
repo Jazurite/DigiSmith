@@ -62,7 +62,7 @@ export function appendOpen(dir: string, i: Omit<OpenItem, "id" | "ts"> & { ts: s
   return item;
 }
 
-export function appendResolved(dir: string, id: string, by: "watchdog" | "jack", ts: string, note?: string): boolean {
+export function appendResolved(dir: string, id: string, by: "watchdog" | "jack" | "controller", ts: string, note?: string): boolean {
   return writeResolved(dir, id, by, ts, note);
 }
 

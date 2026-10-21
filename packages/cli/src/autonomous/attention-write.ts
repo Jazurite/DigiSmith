@@ -55,7 +55,7 @@ export function appendAttentionId(dir: string, now: Date, a: AttentionInput): st
 }
 
 /** Closes an open item. Returns false (and writes nothing) when the id is not open. */
-export function appendResolved(dir: string, id: string, by: "watchdog" | "jack", ts: string, note = ""): boolean {
+export function appendResolved(dir: string, id: string, by: "watchdog" | "jack" | "controller", ts: string, note = ""): boolean {
   const file = join(dir, "attention.jsonl");
   const raw = readRaw(file);
   const lines = parseLines(raw);
