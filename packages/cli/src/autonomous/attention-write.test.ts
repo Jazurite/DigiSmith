@@ -70,6 +70,7 @@ describe("appendAttention", () => {
     expect(appendResolved(d, "builder-1.unknown.0", "jack", T.toISOString(), "ok")).toBe(true);
     expect(lines(d).at(-1)).toEqual({ schema: "nightwatch-attention/v1", id: "builder-1.unknown.0", ts: T.toISOString(), resolved: true, by: "jack", note: "ok" });
     expect(appendAttention(d, T, a)).toBe("written");
+    expect(lines(d).at(-1).id).toBe("builder-1.unknown.1");
   });
   it("appendResolved returns false for an unknown or already resolved id and writes nothing", () => {
     const d = tmp();
