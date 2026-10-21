@@ -175,9 +175,9 @@
 <section id="s7">
 <h2>7. The action journal</h2>
 <p><code>~/.digismith-depot/autonomous/journal.jsonl</code>. The folder follows DGS-486 (<code>AUTONOMOUS_DIR</code>, else <code>DIGISMITH_DEPOT_DIR</code>, else <code>~/.digismith-depot</code>). Append only: one <code>appendFileSync</code> of one short line, never a rewrite. Readers skip a line that does not parse.</p>
-<pre><code>{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:review:1:order-review","status":"planned",
- "ticket":"DGS-123","phase":"review","attempt":1,"action":"order-review","try":1}
-{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:review:1:order-review","status":"settled",
+<pre><code>{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:merge-ready:1:order-merge","status":"planned",
+ "ticket":"DGS-123","phase":"merge-ready","attempt":1,"action":"order-merge","try":1}
+{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:merge-ready:1:order-merge","status":"settled",
  "result":"succeeded|uncertain|retryable|permanent","note":"&lt;short, no ticket text&gt;"}</code></pre>
 <p>Key: <code>&lt;KEY&gt;:&lt;phase&gt;:&lt;attempt&gt;:&lt;action&gt;</code>. Actions: <code>claim</code> (written by the DGS-486 scan), <code>move-to-&lt;phase&gt;</code>, <code>status-write</code>, <code>order-fix</code>, <code>order-merge</code>, <code>order-restart</code>, <code>phase-marker</code>, <code>released</code>.</p>
 <p><strong>Rules.</strong></p>
