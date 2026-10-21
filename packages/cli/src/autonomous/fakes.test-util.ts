@@ -1,10 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Observers } from "./observe.ts";
-import type { GitView, HerdrView, PackView, RunView, TicketState, VerdictView } from "./phase-types.ts";
+import type { AttentionView, GitView, HerdrView, PackView, RunView, TicketState, VerdictView } from "./phase-types.ts";
 
 export interface World {
-  runs: RunView[]; packs: PackView[]; verdicts: VerdictView[]; git: GitView; status: string; herdr: HerdrView;
+  runs: RunView[]; packs: PackView[]; verdicts: VerdictView[]; git: GitView; status: string; herdr: HerdrView; attention: AttentionView[];
   fail: Partial<Record<keyof Observers, string>>;
   prompts: string[]; markers: [string, string][]; statuses: string[];
 }
@@ -12,7 +12,7 @@ export function makeWorld(): World {
   return {
     runs: [{ id: "builder-1", role: "builder", createdAt: "2026-10-21T00:01:00.000Z", started: true, ended: false, merged: false, pushed: false, phaseEvent: null }],
     packs: [], verdicts: [], git: { head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }, status: "in progress",
-    herdr: { conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" },
+    herdr: { conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" }, attention: [],
     fail: {}, prompts: [], markers: [], statuses: [],
   };
 }
@@ -24,6 +24,7 @@ export function fakeObservers(w: World): Observers {
   return {
     runs: get("runs", () => w.runs), packs: get("packs", () => w.packs), verdicts: get("verdicts", () => w.verdicts),
     git: get("git", () => w.git), tracker: get("tracker", () => ({ status: w.status })), herdr: get("herdr", () => w.herdr),
+    attention: get("attention", () => w.attention),
   } as Observers;
 }
 export function writeLock(dir: string, o: Partial<TicketState> & { phase?: string } = {}): void {

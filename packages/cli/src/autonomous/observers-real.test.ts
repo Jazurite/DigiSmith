@@ -42,9 +42,16 @@ function deps(exec: ExecOut, records: RunRecord[] = [run()], over: Partial<Obser
     builderRunId: () => "builder-1", conductorName: "digismith-conductor",
     runs: { runsOf: async () => records },
     reviewerData: { packs: async () => [], verdicts: async () => [] },
-    tracker: { getStatus: async () => "in progress" }, herdrBin: BIN, herdrWs: "w2", ...over,
+    tracker: { getStatus: async () => "in progress" }, herdrBin: BIN, herdrWs: "w2", attention: async () => [], ...over,
   };
 }
+
+describe("attention observer", () => {
+  it("returns what the dep reads", async () => {
+    const item = { id: "a.0", ticket: "DGS-1", kind: "stalled", retryEligible: true };
+    expect(await makeObservers(deps(fakeExec().exec, [run()], { attention: async () => [item] })).attention()).toEqual([item]);
+  });
+});
 
 describe("parseAgentList", () => {
   it("reads the real shape", () => {

@@ -100,6 +100,9 @@ function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Prom
         return r.kind === "ok" ? (r.state.mergeHead ?? null) : null;
       }, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
       tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
+      attention: async () => readOpen(d.dir)
+        .filter((i) => i.ticket === state?.ticket)
+        .map((i) => ({ id: i.id, ticket: i.ticket, kind: i.kind, retryEligible: i.retryEligible === true })),
     });
     const writers = makeWriters({
       exec, herdrBin, herdrWs, conductorName: CONDUCTOR,

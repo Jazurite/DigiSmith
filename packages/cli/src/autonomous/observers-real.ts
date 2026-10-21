@@ -10,7 +10,7 @@ import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { PromptError, type ActDeps } from "./act.ts";
 import { classifyInputBox } from "./input-box.ts";
 import type { Observers } from "./observe.ts";
-import type { GitView, HerdrView, InputBox, MarkerPhase, PackView, RunView, VerdictView } from "./phase-types.ts";
+import type { AttentionView, GitView, HerdrView, InputBox, MarkerPhase, PackView, RunView, VerdictView } from "./phase-types.ts";
 
 /** Runs a file and returns its stdout. Rejects with an Error whose numeric `code` is the exit code on a non-zero exit. */
 export type ExecOut = (file: string, args: string[], opts?: { cwd?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv; maxBuffer?: number }) => Promise<{ stdout: string }>;
@@ -89,6 +89,7 @@ export interface ObserverDeps {
   reviewerData: { packs(): Promise<PackView[]>; verdicts(): Promise<VerdictView[]> };
   tracker: { getStatus(): Promise<string> };
   herdrBin: string; herdrWs: string;
+  attention: () => Promise<AttentionView[]>;
 }
 
 export function makeObservers(d: ObserverDeps): Observers {
@@ -106,6 +107,7 @@ export function makeObservers(d: ObserverDeps): Observers {
       return gitView(d.exec, d.mainRepo, run, d.mergeHead?.() ?? null);
     },
     tracker: async () => ({ status: await d.tracker.getStatus() }),
+    attention: () => d.attention(),
     herdr: async (): Promise<HerdrView> => {
       const agents = parseAgentList((await d.exec(d.herdrBin, ["agent", "list"], { env: env(), timeoutMs: 15000 })).stdout);
       const conductor = agents.find((a) => a.name === d.conductorName);

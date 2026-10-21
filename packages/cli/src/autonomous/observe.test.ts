@@ -38,7 +38,7 @@ describe("observeAll", () => {
     const herdr = { conductorPresent: true, conductorWorking: false, input: "typed" as const, builderPane: "gone" };
     const o: Observers = {
       runs: async () => runs, packs: async () => { throw new Error("no workspace"); }, verdicts: async () => verdicts,
-      git: async () => git, tracker: async () => tracker, herdr: async () => herdr,
+      git: async () => git, tracker: async () => tracker, herdr: async () => herdr, attention: async () => [],
     };
     const r = await observeAll(o, 100);
     expect(r).toEqual({
@@ -48,6 +48,18 @@ describe("observeAll", () => {
       git: { ok: true, value: git },
       tracker: { ok: true, value: tracker },
       herdr: { ok: true, value: herdr },
+      attention: { ok: true, value: [] },
     });
+  });
+  it("a failing attention observer is isolated", async () => {
+    const o: Observers = {
+      runs: async () => [], packs: async () => [], verdicts: async () => [],
+      git: async () => ({ head: "h", base: null, onOriginMain: false }), tracker: async () => ({ status: "s" }),
+      herdr: async () => ({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" }),
+      attention: async () => { throw new Error("no file"); },
+    };
+    const r = await observeAll(o, 100);
+    expect(r.attention).toEqual({ ok: false, error: "no file" });
+    for (const k of ["runs", "packs", "verdicts", "git", "tracker", "herdr"] as const) expect(r[k].ok).toBe(true);
   });
 });
