@@ -88,7 +88,7 @@
 
 <section id="goal">
 <h2>Goal</h2>
-<p>On 2026-10-19 a night merge stood still from 04:21 to about 07:50 UTC+7 (a classifier block, DGS-572) and nobody knew. This ticket adds a plain-code watchdog that reads the run record of DGS-581 and puts a stuck run on an attention list within minutes. It also adds the circuit breaker and the failure causes with one bounded retry. It uses no model tokens and no new service. The ten decisions and the four open points come from the Maestro and are settled (checkpoint 1, 2026-10-21). Warren (MIT) gave ideas only; no code is copied.</p>
+<p>On 2026-10-19 a night merge stood still from 04:21 to about 07:50 UTC+7 (a classifier block, DGS-572) and nobody knew. This ticket adds a plain-code watchdog that reads the run record of DGS-581 and puts a stuck run on an attention list within minutes. It also adds the circuit breaker and the failure causes, and records which failures are retry-eligible (the retry itself is DGS-588). It uses no model tokens and no new service. The ten decisions and the four open points come from the Maestro and are settled (checkpoint 1, 2026-10-21). Warren (MIT) gave ideas only; no code is copied.</p>
 <p>Out of scope: the night mandate hook (DGS-584), merge and cleanup safety (DGS-585), the UI (DGS-586), push and email (DGS-448).</p>
 </section>
 
