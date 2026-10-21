@@ -8,6 +8,7 @@ import { readAway } from "./away.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { createAutonomousCommand, type AutonomousDeps } from "./index.ts";
 import { appendEvent } from "./state.ts";
+import { plan, readJournal, resultsOf, settle } from "./journal.ts";
 
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
 
@@ -193,5 +194,71 @@ describe("dg autonomous release and report", () => {
     expect(process.exitCode ?? 0).toBe(0);
     expect(readdirSync(join(dir, "reports"))).toHaveLength(1);
     expect(out()).toContain(join(dir, "reports"));
+  });
+});
+
+describe("dg autonomous tick, journal and the Phase line", () => {
+  const tickDeps = (): AutonomousDeps => ({ ...deps(), execOut: async () => { throw new Error("no real exec in tests"); } });
+  const parseT = (args: string[]) => yargs(args).exitProcess(false).command(createAutonomousCommand(tickDeps)).strict().parseAsync();
+  const lock = (extra: object = {}) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "lock.json"), JSON.stringify({ ticket: "DGS-1", taskId: "t1", claimedAt: "2026-10-21T00:00:00.000Z", order: "", scanId: "", ...extra }));
+  };
+  const key = () => plan(dir, DAY, { ticket: "DGS-1", phase: "merge-ready", attempt: 1, action: "order-merge" });
+
+  it("tick with no lock prints no lock", async () => {
+    await parseT(["autonomous", "tick"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toContain("no lock");
+  });
+  it("tick --dry-run says nothing is written", async () => {
+    await parseT(["autonomous", "tick", "--dry-run"]);
+    expect(out()).toContain("dry run, nothing written");
+  });
+  it("journal settle on a succeeded key exits 1 and writes nothing", async () => {
+    const k = key();
+    settle(dir, DAY, k, "succeeded", "done");
+    const before = readJournal(dir).length;
+    await parseT(["autonomous", "journal", "settle", k, "--result", "retryable"]);
+    expect(process.exitCode).toBe(1);
+    expect(errLog.mock.calls.flat().join("\n")).toContain("succeeded");
+    expect(readJournal(dir)).toHaveLength(before);
+  });
+  it("journal settle on an uncertain key appends one jack line and frees the key", async () => {
+    const k = key();
+    settle(dir, DAY, k, "uncertain", "maybe");
+    const before = readJournal(dir).length;
+    await parseT(["autonomous", "journal", "settle", k, "--result", "retryable", "--note", "checked"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    const lines = readJournal(dir);
+    expect(lines).toHaveLength(before + 1);
+    expect(lines[lines.length - 1]).toMatchObject({ status: "settled", result: "retryable", by: "jack", note: "checked" });
+    expect(resultsOf(dir)[k]).toBe("retryable");
+    expect(() => plan(dir, DAY, { ticket: "DGS-1", phase: "merge-ready", attempt: 1, action: "order-merge" })).not.toThrow();
+  });
+  it("journal settle on an unknown key exits 1", async () => {
+    await parseT(["autonomous", "journal", "settle", "DGS-1:x:1:y", "--result", "permanent"]);
+    expect(process.exitCode).toBe(1);
+  });
+  it("journal lists keys, and --open only the open ones", async () => {
+    const a = key();
+    settle(dir, DAY, a, "succeeded", "done");
+    const b = plan(dir, DAY, { ticket: "DGS-1", phase: "merge-ready", attempt: 1, action: "status-write" });
+    await parseT(["autonomous", "journal"]);
+    expect(out()).toMatch(/order-merge\s+succeeded/);
+    expect(out()).toMatch(/status-write\s+open/);
+    log.mockClear();
+    await parseT(["autonomous", "journal", "--open"]);
+    expect(out()).toContain(b);
+    expect(out()).not.toContain(a);
+  });
+  it("status shows a Phase line when a lock exists", async () => {
+    lock({ phase: "review", attempt: 2, phaseStartedAt: "2026-10-21T00:00:00.000Z", runs: { builder: "b-1" } });
+    await parseT(["autonomous", "status"]);
+    expect(out()).toContain("Phase: review (attempt 2, since 2026-10-21 07:00:00) builder run b-1");
+  });
+  it("status has no Phase line without a lock", async () => {
+    await parseT(["autonomous", "status"]);
+    expect(out()).not.toContain("Phase:");
   });
 });

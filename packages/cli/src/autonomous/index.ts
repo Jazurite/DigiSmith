@@ -7,6 +7,10 @@ import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { readAway, isAway } from "./away.ts";
 import { fmtUtc7, parseHhmm } from "./clock.ts";
 import { realExec, type Exec } from "./conductor.ts";
+import { openLines, readJournal, resultsOf, settle } from "./journal.ts";
+import { makeObservers, makeWriters, realExecOut, realRunEvent, realStores, type ExecOut } from "./observers-real.ts";
+import { readPhaseState } from "./phase-state.ts";
+import { runTick } from "./tick.ts";
 import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
@@ -26,6 +30,10 @@ export interface AutonomousDeps {
   exec: Exec;
   fileExists: (p: string) => boolean;
   nexus: NexusDeps;
+  /** runs git and herdr-ws for `tick`; the real one by default */
+  execOut?: ExecOut;
+  /** the checkout `git fetch origin main` runs in (default: the current folder) */
+  mainRepo?: string;
 }
 
 const RESULTS: ReleaseResult[] = ["merged", "failed", "stopped", "awaiting-jack"];
@@ -61,6 +69,49 @@ function lazyTracker(make: () => Tracker): Tracker {
     getStatus: (id) => get().getStatus(id),
     comment: (ref, text) => get().comment(ref, text),
   };
+}
+
+const CONDUCTOR = "digismith-conductor";
+
+async function tickLines(d: AutonomousDeps, dryRun: boolean): Promise<string[]> {
+  const lines: string[] = [];
+  if (dryRun) lines.push("dry run, nothing written");
+  const read = readPhaseState(d.dir);
+  const state = read.kind === "ok" ? read.state : null;
+  const lock = readLock(d.dir);
+  const exec = d.execOut ?? realExecOut;
+  const herdrBin = join(homedir(), ".digismith-depot", "bin", "herdr-ws");
+  const herdrWs = process.env.HERDR_WS || "w2";
+  const builderRunId = () => state?.runs.builder ?? null;
+  const tracker = lazyTracker(d.tracker);
+  const taskId = lock?.taskId ?? "";
+  const stores = realStores({ env: process.env, ticket: state?.ticket ?? "", builderRunId });
+  const observers = makeObservers({
+    exec, mainRepo: d.mainRepo ?? process.cwd(), ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
+    builderRunId, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
+    tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
+  });
+  const writers = makeWriters({
+    exec, herdrBin, herdrWs, conductorName: CONDUCTOR,
+    tracker: { setStatus: (s) => tracker.setStatus(taskId, s) }, runEvent: realRunEvent(),
+  });
+  const r = await runTick({ dir: d.dir, now: d.now, observers, dryRun, ...writers });
+  lines.push(`tick: ${r.outcome === "no-lock" ? "no lock" : r.outcome}`);
+  if (state) lines.push(`state: ${state.ticket} ${state.phase} attempt ${state.attempt}`);
+  if (r.action) {
+    const { kind, ...rest } = r.action;
+    lines.push(`action: ${kind}${Object.entries(rest).map(([k, v]) => ` ${k}=${String(v)}`).join("")}`);
+  }
+  for (const n of r.notes) lines.push(`note: ${n.ticket} ${n.cause}`);
+  return lines;
+}
+
+function journalLines(d: AutonomousDeps, openOnly: boolean): string[] {
+  if (openOnly) return openLines(d.dir).map((l) => `${l.key}  ${l.state}  ${l.planned.ts}`);
+  const results = resultsOf(d.dir);
+  const last = new Map<string, string>();
+  for (const l of readJournal(d.dir)) last.set(l.key, l.ts);
+  return [...last].map(([key, ts]) => `${key}  ${results[key]}  ${ts}`);
 }
 
 function guarded(depsFactory: () => AutonomousDeps, body: (deps: AutonomousDeps) => Promise<string[]>): Promise<void> {
@@ -112,6 +163,11 @@ function statusLines(d: AutonomousDeps): string[] {
   else lines.push("away: off");
   const lock = readLock(d.dir);
   lines.push(lock ? `lock: ${lock.ticket} since ${lock.claimedAtUtc7 || utc7(lock.claimedAt)}` : "lock: none");
+  const phase = readPhaseState(d.dir);
+  if (phase.kind === "ok") {
+    const s = phase.state;
+    lines.push(`Phase: ${s.phase} (attempt ${s.attempt}, since ${utc7(s.phaseStartedAt)}) builder run ${s.runs.builder ?? "none"}`);
+  }
   const ev = newestEvent(d.dir, SCAN_KINDS);
   lines.push(ev ? `last scan: ${utc7(ev.ts)} ${ev.kind}` : "last scan: none");
   const report = newestReport(d.dir);
@@ -212,6 +268,37 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           command: "status",
           describe: "show the away switch, the lock, the last scan and the newest report",
           handler: () => guarded(depsFactory, async (d) => statusLines(d)),
+        })
+        .command({
+          command: "tick",
+          describe: "advance the locked ticket one step (read the world, decide, act)",
+          builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "observe and decide, write nothing" }),
+          handler: (argv) => guarded(depsFactory, (d) => tickLines(d, argv.dryRun as boolean)),
+        })
+        .command({
+          command: "journal",
+          describe: "list the action journal, or settle an uncertain key",
+          builder: (e) =>
+            e
+              .option("open", { type: "boolean", default: false, describe: "only open and uncertain keys" })
+              .command({
+                command: "settle <key>",
+                describe: "settle an uncertain or open key by hand (recorded as jack)",
+                builder: (s) =>
+                  s
+                    .positional("key", { type: "string", demandOption: true })
+                    .option("result", { type: "string", choices: ["retryable", "permanent"] as const, demandOption: true })
+                    .option("note", { type: "string", requiresArg: true }),
+                handler: (argv) =>
+                  guarded(depsFactory, async (d) => {
+                    const key = argv.key as string;
+                    const state = resultsOf(d.dir)[key];
+                    if (state !== "uncertain" && state !== "open") throw new Error(`${key}: ${state ?? "not in the journal"}, only uncertain or open keys can be settled`);
+                    const final = settle(d.dir, d.now(), key, argv.result as "retryable" | "permanent", (argv.note as string | undefined) ?? "", "jack");
+                    return [`${key}  ${final}`];
+                  }),
+              }),
+          handler: (argv) => guarded(depsFactory, async (d) => journalLines(d, argv.open as boolean)),
         })
         .demandCommand(1, ""),
     handler: () => {},
