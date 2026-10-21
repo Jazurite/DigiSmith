@@ -257,8 +257,16 @@ describe("runRelease: causes and the breaker", () => {
     expect(r.breakerOpened).toBe(true);
     const cb = (await items()).filter((i) => i.cause === "circuit-breaker-open");
     expect(cb).toHaveLength(1);
-    expect(cb[0]).toMatchObject({ kind: "failed", run: "breaker", ticket: "DGS-2" });
+    expect(cb[0]).toMatchObject({ kind: "failed", run: "breaker", ticket: null });
     expect(tracker.comments.some((c) => c.text.includes("2 failed tickets in a row (DGS-1, DGS-2)") && c.text.includes("dg autonomous resume"))).toBe(true);
+  });
+  it("F9: a failed release with a corrupt lock is not hidden by the bad-budget-config item", async () => {
+    const { appendAttention } = await import("./attention-write.ts");
+    appendAttention(dir, NOW, { ticket: null, run: "-", kind: "failed", cause: "bad-budget-config" });
+    writeFileSync(join(dir, "lock.json"), "{broken");
+    await runRelease(mk(), { ticket: "?", result: "failed", cause: "test-red" });
+    const all = await items();
+    expect(all.map((i) => i.id).sort()).toEqual(["-.failed.0", "corrupt-lock.failed.0"]);
   });
   it("two failed tickets both get an item; the breaker item coexists with the file-problem item", async () => {
     const { appendAttention } = await import("./attention-write.ts");

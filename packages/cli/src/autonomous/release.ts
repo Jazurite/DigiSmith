@@ -84,14 +84,15 @@ export async function runRelease(
       warning = n.warning;
       const klass = classOfCause(n.code);
       retryEligible = decideRetry("failed", klass, 0) === "retry";
-      appendOpen(d.dir, { ticket: corrupt ? null : a.ticket, run: corrupt ? "-" : a.ticket, kind: kindOf(n.code), cause: n.code, causeClass: klass, retryEligible, since: nowIso, ts: nowIso });
+      appendOpen(d.dir, { ticket: corrupt ? null : a.ticket, run: corrupt ? "corrupt-lock" : a.ticket, kind: kindOf(n.code), cause: n.code, causeClass: klass, retryEligible, since: nowIso, ts: nowIso });
     }
     const b = recordRelease(d.dir, { ticket: a.ticket, result: a.result }, now);
     if (b.opened) {
       breakerOpened = true;
       breakerList = b.breaker.failed.join(", ");
       // run "breaker": its own slot, apart from the per-ticket failed items
-      appendOpen(d.dir, { ticket: a.ticket, run: "breaker", kind: "failed", cause: "circuit-breaker-open", since: nowIso, ts: nowIso });
+      // ticket null: release already commented the breaker on the ticket, notify must not comment again
+      appendOpen(d.dir, { ticket: null, run: "breaker", kind: "failed", cause: "circuit-breaker-open", since: nowIso, ts: nowIso });
     }
     clearLock(d.dir);
     lockCleared = true;
