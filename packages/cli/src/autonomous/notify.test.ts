@@ -23,6 +23,13 @@ describe("notifyNew", () => {
     expect(calls[0]).toContain("--yes");
     expect(calls[0].join(" ")).toContain("17:00");
   });
+  it("a lost item comment ends with the salvage ask; other kinds do not", async () => {
+    const { d, calls } = setup();
+    await notifyNew(d, [item(1), item(2, { id: "r2.stuck.0", kind: "stuck" as OpenItem["kind"] })]);
+    const text = (i: number) => calls[i][calls[i].indexOf("--text") + 1];
+    expect(text(0).endsWith(" Before any teardown run dg salvage --ticket DGS-1.")).toBe(true);
+    expect(text(1)).not.toContain("dg salvage");
+  });
   it("the same item is not sent twice", async () => {
     const { d, calls, t } = setup();
     await notifyNew(d, [item(1)]);

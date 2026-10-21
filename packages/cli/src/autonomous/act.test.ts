@@ -20,8 +20,8 @@ const deps = (dir: string, o: Partial<ActDeps> = {}): ActDeps & { sent: string[]
 
 describe("orderText", () => {
   it("is a fixed template with the key and nothing else", () => {
-    expect(orderText("merge", "DGS-1", 1)).toBe("DGS-1: merge per hooks 01-03, then release merged");
-    expect(orderText("restart", "DGS-1", 1)).toBe("DGS-1: restart the builder, its pane is gone");
+    expect(orderText("merge", "DGS-1", 1)).toBe("DGS-1: run dg autonomous merge-gate --ticket DGS-1 first; merge per hooks 01-03 only if it prints go, then release merged");
+    expect(orderText("restart", "DGS-1", 1)).toBe("DGS-1: restart the builder, its pane is gone; before any teardown run dg salvage --ticket DGS-1, and if it fails stop and tell Jack");
   });
   it("F12: has exactly the merge and restart forms; fix is refused", () => {
     expect(Object.keys(ORDER_TEXTS).sort()).toEqual(["merge", "restart"]);
@@ -45,7 +45,7 @@ describe("act", () => {
   it("an order: planned, sent once, settled succeeded", async () => {
     const d = tmp(); const x = deps(d);
     await act(x, state(), { kind: "order", order: "merge", head: "aaaaaaa1" });
-    expect(x.sent).toEqual(["DGS-1: merge per hooks 01-03, then release merged"]);
+    expect(x.sent).toEqual(["DGS-1: run dg autonomous merge-gate --ticket DGS-1 first; merge per hooks 01-03 only if it prints go, then release merged"]);
     expect(resultsOf(d)["DGS-1:merge-ready:1:order-merge"]).toBe("succeeded");
     expect(readJournal(d).map((l) => l.status)).toEqual(["planned", "settled"]);
   });

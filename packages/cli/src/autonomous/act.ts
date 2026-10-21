@@ -13,8 +13,8 @@ export class PromptError extends Error {
 }
 
 export const ORDER_TEXTS = {
-  merge: (t: string) => `${t}: merge per hooks 01-03, then release merged`,
-  restart: (t: string) => `${t}: restart the builder, its pane is gone`,
+  merge: (t: string) => `${t}: run dg autonomous merge-gate --ticket ${t} first; merge per hooks 01-03 only if it prints go, then release merged`,
+  restart: (t: string) => `${t}: restart the builder, its pane is gone; before any teardown run dg salvage --ticket ${t}, and if it fails stop and tell Jack`,
 };
 
 export function orderText(order: "merge" | "restart", ticket: string, _attempt: number): string {

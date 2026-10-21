@@ -42,7 +42,7 @@ export async function notifyNew(d: NotifyDeps, items: OpenItem[]): Promise<{ sen
     const key = `${it.ticket}:${it.kind}`;
     const limited = d.now() - (st.last[key] ?? -Infinity) < HOUR_MS;
     if (limited || sent >= MAX_PER_PASS) { pending++; continue; }
-    const text = `Nightwatch ${it.kind}: run ${it.run}, ${it.cause}, since ${utc7(it.since)} (UTC+7). Needs Jack.`;
+    const text = `Nightwatch ${it.kind}: run ${it.run}, ${it.cause}, since ${utc7(it.since)} (UTC+7). Needs Jack.${it.kind === "lost" ? ` Before any teardown run dg salvage --ticket ${it.ticket}.` : ""}`;
     let ok = false;
     try { ok = (await d.runDg(["clickup", "add-comment", "--task", it.ticket, "--text", text, "--yes"])).ok; } catch { ok = false; }
     if (!ok) { pending++; continue; }

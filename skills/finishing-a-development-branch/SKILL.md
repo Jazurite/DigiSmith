@@ -377,7 +377,8 @@ This will permanently delete:
 Type 'discard' to confirm.
 ```
 
-Wait for that exact confirmation. When it arrives:
+Wait for that exact confirmation. When it arrives, run `dg salvage --ticket <KEY>`
+first; if it fails, stop and tell your human partner.
 
 ```bash
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
@@ -436,10 +437,14 @@ when any check fails. In order, it:
 1. checks `<feature-branch>` is in `git branch --merged main`;
 2. deletes the pins `refs/digismith/post-finish/<feature-branch>/{base,head}`
    (a missing pin is fine, so a re-run works);
-3. lists untracked files in the worktree. None: `git worktree remove`. Only known
-   tool caches (`.impeccable/`): `git worktree remove --force`. Anything else, or
-   a tracked change: it stops and lists the files;
-4. runs `git worktree prune` and `git branch -d` (never `-D`).
+3. when the worktree holds changes that are not known caches, runs
+   `dg salvage --ticket <KEY> --worktree <path>`; a failed salvage stops here and
+   nothing is removed (a branch without a ticket key stops too);
+4. lists untracked files in the worktree. None: `git worktree remove`. Only known
+   tool caches (`.impeccable/`): `git worktree remove --force`;
+5. runs `git worktree prune` and `git branch -d` (never `-D`). After a salvage the
+   branch holds the WIP commit, so `-d` refuses and the script reports
+   `rescue/<KEY> holds the work; branch kept`.
 
 The script stops after the hooks fired, so the pins it already deleted are not
 needed again: never re-fire a hook after a stop. When the script stops, report its

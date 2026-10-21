@@ -5,6 +5,16 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { cleanup } from "./post-merge-cleanup.ts";
 
+type Salvage = (a: { ticket: string; worktree: string }) => { ok: boolean; message: string };
+const failing: Salvage = () => ({ ok: false, message: "not salvaged: test" });
+// Stands in for dg salvage: commits everything in the worktree like the real WIP commit.
+const committing = (calls: { ticket: string; worktree: string }[]): Salvage => (a) => {
+  calls.push(a);
+  git(a.worktree, "add", "-A");
+  git(a.worktree, "commit", "-qm", "wip");
+  return { ok: true, message: "salvaged" };
+};
+
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 
@@ -64,22 +74,55 @@ describe("cleanup", () => {
       expect(existsSync(worktree)).toBe(false);
       expect(branches()).toBe("");
     });
-    it("stops and lists real untracked files; pins are already gone, branch stays", () => {
+    it("stops when salvage fails on real untracked files; pins are already gone, nothing removed", () => {
       mkdirSync(join(worktree, ".impeccable"));
       writeFileSync(join(worktree, ".impeccable", "config.json"), "{}");
-      writeFileSync(join(worktree, "notes.txt"), "mine");
-      const r = cleanup({ repo, branch: BRANCH, worktree });
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: () => ({ ok: false, message: "not salvaged: .env" }) });
       expect(r.ok).toBe(false);
-      expect(r.message).toMatch(/notes\.txt/);
-      expect(r.message).not.toMatch(/\.impeccable\/config\.json/);
+      expect(r.message).toMatch(/^salvage failed, nothing removed/);
+      expect(r.message).toMatch(/not salvaged: \.env/);
       expect(existsSync(worktree)).toBe(true);
       expect(branches()).not.toBe("");
     });
-    it("stops on a tracked change", () => {
+    it("stops on a tracked change when salvage fails", () => {
       writeFileSync(join(worktree, "b.txt"), "changed");
-      const r = cleanup({ repo, branch: BRANCH, worktree });
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: failing });
       expect(r.ok).toBe(false);
-      expect(r.message).toMatch(/b\.txt/);
+      expect(r.message).toMatch(/^salvage failed, nothing removed/);
+      expect(existsSync(worktree)).toBe(true);
+    });
+    it("salvages a dirty tree, removes the worktree and keeps the branch with the rescue message", () => {
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const calls: { ticket: string; worktree: string }[] = [];
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: committing(calls) });
+      expect(calls).toEqual([{ ticket: "DGS-1", worktree }]);
+      expect(existsSync(worktree)).toBe(false);
+      expect(branches()).not.toBe("");
+      expect(r.ok).toBe(false);
+      expect(r.message).toMatch(/^rescue\/DGS-1 holds the work; branch kept: /);
+    });
+    it("does not call salvage on a clean worktree", () => {
+      const calls: { ticket: string; worktree: string }[] = [];
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: (a) => (calls.push(a), { ok: true, message: "" }) });
+      expect(r.ok).toBe(true);
+      expect(calls).toEqual([]);
+    });
+    it("does not call salvage on a caches-only worktree", () => {
+      mkdirSync(join(worktree, ".impeccable"));
+      writeFileSync(join(worktree, ".impeccable", "config.json"), "{}");
+      const calls: { ticket: string; worktree: string }[] = [];
+      const r = cleanup({ repo, branch: BRANCH, worktree, salvage: (a) => (calls.push(a), { ok: true, message: "" }) });
+      expect(r.ok).toBe(true);
+      expect(calls).toEqual([]);
+    });
+    it("on --dry-run with a dirty tree does not call salvage and lists would salvage", () => {
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const calls: { ticket: string; worktree: string }[] = [];
+      const r = cleanup({ repo, branch: BRANCH, worktree, dryRun: true, salvage: (a) => (calls.push(a), { ok: true, message: "" }) });
+      expect(r.ok).toBe(true);
+      expect(calls).toEqual([]);
+      expect(r.steps.some((x) => x.startsWith("would salvage"))).toBe(true);
       expect(existsSync(worktree)).toBe(true);
     });
     it("treats cache files with spaces and non-ASCII names as caches", () => {
@@ -119,6 +162,20 @@ describe("cleanup", () => {
       const r = cleanup({ repo, branch: BRANCH, worktree });
       expect(r.ok).toBe(true);
       expect(branches()).toBe("");
+    });
+  });
+
+  describe("branch without a ticket key", () => {
+    it("stops when the worktree needs salvage", () => {
+      setup(true);
+      git(repo, "worktree", "remove", worktree);
+      git(repo, "branch", "-m", BRANCH, "plain");
+      git(repo, "worktree", "add", "-q", worktree, "plain");
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      const r = cleanup({ repo, branch: "plain", worktree, salvage: failing });
+      expect(r.ok).toBe(false);
+      expect(r.message).toBe("no ticket key in branch plain; cannot salvage; nothing was changed");
+      expect(existsSync(worktree)).toBe(true);
     });
   });
 });
