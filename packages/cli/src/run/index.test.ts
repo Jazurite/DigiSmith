@@ -5,6 +5,7 @@ import * as path from "node:path";
 import yargs from "yargs";
 import runCommand from "./index.ts";
 import { buildCli } from "../index.ts";
+import { findRunDir } from "./paths.ts";
 
 let tmp: string;
 let savedDepot: string | undefined;
@@ -115,6 +116,24 @@ describe("dg run", () => {
     }
     const tail = (await dg("tail", id)).stdout.trim().split("\n").map((l) => JSON.parse(l));
     expect(tail.map((e) => [e.seq, e.type, e.data.phase])).toEqual([[1, "phase", "building"], [2, "phase", "review"], [3, "phase", "merge"]]);
+  });
+  it("keeps file order and tolerates two lines that share a seq", async () => {
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder")).stdout.trim();
+    const dir = findRunDir(id)!;
+    const line = (seq: number, type: string, ts: string) => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts, run: id, type, data: {} });
+    fs.writeFileSync(
+      path.join(dir, "events.jsonl"),
+      [line(1, "started", "2026-10-21T01:00:00Z"), line(2, "tool", "2026-10-21T01:00:01Z"), line(2, "blocked", "2026-10-21T01:00:02Z"), line(3, "turn_end", "2026-10-21T01:00:03Z")].join("\n") + "\n",
+    );
+    const tail = await dg("tail", id);
+    expect(tail.status).toBe(0);
+    expect(tail.stdout.trim().split("\n").map((l) => JSON.parse(l).type)).toEqual(["started", "tool", "blocked", "turn_end"]);
+    const show = await dg("show", id, "--json");
+    expect(show.status).toBe(0);
+    expect(JSON.parse(show.stdout).summary.events).toBe(4);
+    const list = await dg("list", "--json");
+    expect(list.status).toBe(0);
+    expect(JSON.parse(list.stdout)).toHaveLength(1);
   });
   it("the root CLI registers run", async () => {
     const r = await capture((a) => buildCli(a).exitProcess(false).parseAsync(a), ["run", "list", "--json"]);

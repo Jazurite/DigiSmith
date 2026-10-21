@@ -51,6 +51,21 @@ describe("readers", () => {
     expect(tailEvents(a.run, 3, env)).toEqual([]);
     expect(tailEvents("builder-x-000000", 0, env)).toBeNull();
   });
+  it("keeps file order and tolerates two lines that share a seq", () => {
+    const a = createRun({ ticket: "DGS-1", role: "builder" }, env);
+    const dir = findRunDir(a.run, env)!;
+    const line = (seq: number, type: string, ts: string) => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts, run: a.run, type, data: {} });
+    // a hand-written file: seq 2 appears twice (the accepted residual of the stale-lock race)
+    fs.writeFileSync(
+      path.join(dir, "events.jsonl"),
+      [line(1, "started", "2026-10-21T01:00:00Z"), line(2, "tool", "2026-10-21T01:00:01Z"), line(2, "blocked", "2026-10-21T01:00:02Z"), line(3, "turn_end", "2026-10-21T01:00:03Z")].join("\n") + "\n",
+    );
+    expect(tailEvents(a.run, 0, env)!.map((e) => e.type)).toEqual(["started", "tool", "blocked", "turn_end"]);
+    expect(tailEvents(a.run, 2, env)!.map((e) => e.type)).toEqual(["turn_end"]);
+    const shown = showRun(a.run, env)!;
+    expect(shown.summary).toMatchObject({ events: 4, last_type: "turn_end", first_ts: "2026-10-21T01:00:00Z", last_ts: "2026-10-21T01:00:03Z", ended: false });
+    expect(listRuns(env)[0].summary.events).toBe(4);
+  });
   it("summarize of no events is empty", () => {
     expect(summarize([])).toEqual({ events: 0, first_ts: null, last_ts: null, last_type: null, ended: false });
   });
