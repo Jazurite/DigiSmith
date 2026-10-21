@@ -15,8 +15,10 @@ const O = (o: Partial<Observations> = {}): Observations => ({
   git: ok({ head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }),
   tracker: ok({ status: "in progress" }),
   herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "present" }),
+  attention: ok([]),
   ...o });
 const J: JournalResults = {};
+const item = (o = {}) => ({ id: "builder-1.lost.0", ticket: "DGS-1", kind: "lost", retryEligible: true, ...o }) as never;
 const withEvent = (phaseEvent: RunView["phaseEvent"]) => ({ runs: ok([run({ phaseEvent })]) });
 
 describe("claimed", () => {
@@ -234,5 +236,62 @@ describe("final fix wave", () => {
     const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "ticket" as const, result: "clean" as const, head: "aaaaaaa1" }]) });
     expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-merge-ready": "succeeded" })).toEqual({ kind: "attention", cause: "move-key-used", attKind: "unknown" });
     expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-merge-ready": "retryable" })).toMatchObject({ kind: "move", to: "merge-ready" });
+  });
+});
+
+describe("retry", () => {
+  const s = S({ phase: "building" });
+  const base = (extra: Partial<Observations> = {}) => O({ ...withEvent("building"), attention: ok([item()]), ...extra });
+  it("a lost run with 0 restarts gives one retry", () => {
+    expect(advanceTicket(s, base(), J)).toEqual({ kind: "retry", item: "builder-1.lost.0", run: "builder-1" });
+  });
+  it("a transient failed item gives a retry too", () => {
+    expect(advanceTicket(s, base({ attention: ok([item({ id: "DGS-1.failed.0", kind: "failed" })]) }), J)).toMatchObject({ kind: "retry", item: "DGS-1.failed.0" });
+  });
+  it("retryEligible false, kind blocked or stalled, or another ticket give no retry", () => {
+    for (const i of [item({ retryEligible: false }), item({ kind: "blocked" }), item({ kind: "stalled" }), item({ ticket: "DGS-2" })])
+      expect(advanceTicket(s, base({ attention: ok([i]) }), J).kind).not.toBe("retry");
+  });
+  it("a used retry key in any phase gives no second retry", () => {
+    for (const st of ["open", "uncertain", "succeeded", "permanent"])
+      expect(advanceTicket(s, base(), { "DGS-1:review:1:retry": st } as JournalResults).kind).not.toBe("retry");
+  });
+  it("a retryable key may be sent again", () => {
+    expect(advanceTicket(s, base(), { "DGS-1:building:1:retry": "retryable" }).kind).toBe("retry");
+  });
+  it("a second failure after the retry gives no order and no note from advance", () => {
+    const j: JournalResults = { "DGS-1:building:1:retry": "succeeded", "DGS-1:building:1:adopt-retry": "succeeded" };
+    expect(advanceTicket(s, base({ attention: ok([item({ id: "builder-2.lost.0" })]) }), j).kind).not.toBe("retry");
+  });
+  it("a restart order already sent blocks the retry", () => {
+    expect(advanceTicket(s, base(), { "DGS-1:building:1:order-restart": "succeeded" }).kind).not.toBe("retry");
+  });
+  it("the pane-gone restart waits once a retry is used", () => {
+    const o = O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "gone" }) });
+    expect(advanceTicket(s, o, { "DGS-1:building:1:retry": "uncertain" })).toEqual({ kind: "wait", reason: "restart-used" });
+  });
+  it("a busy conductor, a typed input box or no conductor fall through to the phase rules", () => {
+    const o = base({ herdr: ok({ conductorPresent: true, conductorWorking: true, input: "empty", builderPane: "present" }) });
+    expect(advanceTicket(s, o, J)).toEqual({ kind: "wait", reason: "building" });
+  });
+  it("merged and released tickets never retry", () => {
+    for (const phase of ["merged", "released"] as const) expect(advanceTicket(S({ phase }), base(), J).kind).toBe("wait");
+  });
+  it("a failed attention read gives one note when the phase would only wait", () => {
+    expect(advanceTicket(s, O({ ...withEvent("building"), attention: bad() }), J)).toEqual({ kind: "attention", cause: "obs-attention-failed", attKind: "unknown" });
+  });
+});
+describe("adopt", () => {
+  const s = S({ phase: "building" });
+  const j: JournalResults = { "DGS-1:building:1:retry": "succeeded" };
+  const old = run({ phaseEvent: "building" });
+  const fresh = run({ id: "builder-2", createdAt: "2026-10-21T02:00:00.000Z", phaseEvent: null });
+  it("a started newer builder run after a succeeded retry gives adopt with the item ids", () => {
+    expect(advanceTicket(s, O({ runs: ok([old, fresh]), attention: ok([item()]) }), j)).toEqual({ kind: "adopt", run: "builder-2", items: ["builder-1.lost.0"] });
+  });
+  it("no adopt before the retry is succeeded, for an unstarted run, or twice", () => {
+    expect(advanceTicket(s, O({ runs: ok([old, fresh]), attention: ok([item()]) }), { "DGS-1:building:1:retry": "uncertain" }).kind).not.toBe("adopt");
+    expect(advanceTicket(s, O({ runs: ok([old, { ...fresh, started: false }]) }), j).kind).not.toBe("adopt");
+    expect(advanceTicket(s, O({ runs: ok([old, fresh]) }), { ...j, "DGS-1:building:1:adopt-retry": "succeeded" }).kind).not.toBe("adopt");
   });
 });

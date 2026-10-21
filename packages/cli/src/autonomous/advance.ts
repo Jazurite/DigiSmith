@@ -1,3 +1,4 @@
+import { restartsOf, retrySucceeded } from "./journal.ts";
 import { MAX_ATTEMPTS } from "./phase-types.ts";
 import type { Action, JournalResults, MarkerPhase, Observations, Phase, TicketState } from "./phase-types.ts";
 
@@ -42,6 +43,25 @@ function order(o: "merge" | "restart", s: TicketState, obs: Observations, j: Jou
   return gate(obs) ?? { kind: "order", order: o, head };
 }
 
+const RETRY_KINDS = ["lost", "failed"];
+const eligible = (s: TicketState, obs: Observations) =>
+  obs.attention.ok ? obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind)) : [];
+
+// null = no retry business this tick
+function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action | null {
+  if (s.phase === "merged" || s.phase === "released" || !obs.attention.ok) return null;
+  const items = eligible(s, obs);
+  if (retrySucceeded(j, s.ticket) && !used(j, keyOf(s, "adopt-retry")) && obs.runs.ok) {
+    const cur = obs.runs.value.find((x) => x.id === s.runs.builder);
+    const later = obs.runs.value
+      .filter((x) => x.role === "builder" && x.started && x.id !== s.runs.builder && (cur === undefined || Date.parse(x.createdAt) > Date.parse(cur.createdAt)))
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+    if (later !== undefined) return { kind: "adopt", run: later.id, items: items.map((i) => i.id) };
+  }
+  if (items.length === 0 || restartsOf(j, s.ticket) > 0 || gate(obs) !== null) return null;
+  return { kind: "retry", item: items[0].id, run: s.runs.builder ?? "-" };
+}
+
 function claimed(s: TicketState, obs: Observations): Action {
   if (!obs.runs.ok) return note("obs-runs-failed");
   const r = obs.runs.value.find((x) => x.role === "builder" && x.started);
@@ -61,7 +81,11 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   if (!obs.runs.ok) return note("obs-runs-failed");
   const r = obs.runs.value.find((x) => x.id === s.runs.builder);
   // one restart per attempt: the order-restart key carries the attempt, and order() holds it once sent
-  if (obs.herdr.value.builderPane === "gone" && r !== undefined && !r.ended) return order("restart", s, obs, j, g.head);
+  if (obs.herdr.value.builderPane === "gone" && r !== undefined && !r.ended) {
+    const own = j[keyOf(s, "order-restart")];
+    if ((own === undefined || own === "retryable") && restartsOf(j, s.ticket) > 0) return wait("restart-used");
+    return order("restart", s, obs, j, g.head);
+  }
   // a run with no recorded pane: we cannot tell, so no restart order, one note
   if (obs.herdr.value.builderPane === "unknown" && r !== undefined && !r.ended) return note("builder-pane-unknown");
   return wait("building");
@@ -101,6 +125,8 @@ function mergeReady(s: TicketState, obs: Observations, j: JournalResults): Actio
 export function advanceTicket(s: TicketState, obs: Observations, j: JournalResults): Action {
   if (obs.tracker.ok && obs.tracker.value.status === "to do" && s.phase !== "merged" && s.phase !== "released" && !used(j, keyOf(s, "status-write")))
     return { kind: "status", status: "in progress" };
+  const r = retryStep(s, obs, j);
+  if (r !== null) return r;
   let a: Action;
   switch (s.phase) {
     case "claimed": a = claimed(s, obs); break;
@@ -112,5 +138,6 @@ export function advanceTicket(s: TicketState, obs: Observations, j: JournalResul
   }
   if (a.kind === "move" && used(j, keyOf(s, `move-to-${a.to}`))) return note("move-key-used");
   if (a.kind === "wait" && !obs.tracker.ok && s.phase !== "merged") return note("obs-tracker-failed");
+  if (a.kind === "wait" && !obs.attention.ok && s.phase !== "merged" && s.phase !== "released") return note("obs-attention-failed");
   return a;
 }
