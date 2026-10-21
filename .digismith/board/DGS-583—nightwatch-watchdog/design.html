@@ -157,7 +157,7 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <p>State file <code>~/.digismith-depot/autonomous/breaker.json</code>: <code>{ "open": boolean, "streak": number, "failed": ["DGS-1", ..], "openedAt": ISO | null }</code>, written with a temp file and rename.</p>
 <ul>
 <li><code>dg autonomous release --result failed</code> adds one to <code>streak</code> and records the ticket. <code>--result merged</code> sets <code>streak</code> to 0. <code>stopped</code> and <code>awaiting-jack</code> change nothing: Jack's wait is not a failure. Every failed release counts, whatever its cause class.</li>
-<li><code>streak</code> reaching 2 sets <code>open: true</code>, writes an attention item (kind <code>failed</code>, run <code>-</code>, cause <code>circuit-breaker-open</code>) and one comment on the second ticket.</li>
+<li><code>streak</code> reaching 2 sets <code>open: true</code>, writes an attention item (kind <code>failed</code>, run <code>breaker</code>, cause <code>circuit-breaker-open</code>; a failed release itself uses the ticket key as run, so the one-open-item rule never hides one) and one comment on the second ticket.</li>
 <li><code>autonomous-scan</code> reads the file first. When open it exits with the outcome <code>breaker</code> and claims nothing, makes no ClickUp call and writes one event. An unreadable or malformed file counts as open (fail closed).</li>
 <li><code>dg autonomous back</code> and the new <code>dg autonomous resume</code> set <code>open: false</code> and <code>streak: 0</code> and resolve the breaker item. <code>resume</code> only closes the breaker; it does not touch the away switch. Nothing else closes it, not even a day passing.</li>
 </ul>

@@ -1107,11 +1107,11 @@ git commit -m "feat(dgs-583): add the watch pass and the pane lookup"
 - With the breaker closed, existing behaviour is unchanged (the existing tests cover it).
 
 `release.test.ts`:
-- `--result failed --cause test-red` (durable): one `refused`-or-`failed` open item per `kindOf` (here `failed`; run `-`, ticket the key, cause `test-red`, `causeClass: "durable"`, `retryEligible: false`), one comment (the existing release comment), breaker streak 1.
+- `--result failed --cause test-red` (durable): one `refused`-or-`failed` open item per `kindOf` (here `failed`; run = the ticket key, ticket the key, cause `test-red`, `causeClass: "durable"`, `retryEligible: false`), one comment (the existing release comment), breaker streak 1.
 - `--result failed --cause gateway-5xx` (transient): the item has `causeClass: "transient"` and `retryEligible: true`; `retryEligible: true` is returned; the breaker streak still goes up by 1 (every failed release counts); no journal file is created.
 - `--cause weird`: recorded as `unknown`, `warning` set, the release still clears the lock and returns normally; `retryEligible: false`.
 - `--result failed` with no cause: `unknown`, `retryEligible: false`.
-- Two failed releases: `breakerOpened` true on the second, one `failed` item with cause `circuit-breaker-open` (ticket the second key, run `-`).
+- Two failed releases: `breakerOpened` true on the second, one `failed` item with cause `circuit-breaker-open` (ticket the second key, run `breaker`; the failed-release items use the ticket key as run so the one-open-item-per-(run,kind) rule does not hide any of them). `runBack` resolves it only for the explicit `back` and `resume` commands, never on away expiry. A breaker file that cannot be read or has the wrong shape reads as open and the scan writes an item with run `breaker`, kind `unknown`, cause `breaker-file-unreadable: <problem>`; `back` and `resume` resolve it too.
 - `merged` resets the streak. `stopped` and `awaiting-jack` do not change it and write no attention item.
 - A lock for another ticket still throws and changes nothing (the existing test stays green).
 
