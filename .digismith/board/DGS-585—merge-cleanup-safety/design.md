@@ -89,7 +89,7 @@ Skip reasons join the existing `REASON` list so the skip comment, the event and 
 | any | the claim's branch exists with 0 commits ahead | `<KEY>: branch has no commits` |
 | matches | | no line |
 
-No drift prints `none`. `runReport` reads the statuses (`Tracker` gets a read-only `statusOf(taskIds)`; a failed read prints `<KEY>: status unreadable` so a gap is shown, not hidden). `buildReport` stays a pure function: the git facts and statuses come in as an argument, and a fake supplies them in tests. The same drift lines go into the ClickUp comment on DGS-548, because the report text is the comment text.
+No drift prints `none`. `runReport` reads the statuses with the existing `Tracker.getStatus(taskId)` (no new tracker method; a failed read prints `<KEY>: status unreadable` so a gap is shown, not hidden). `buildReport` stays a pure function: the git facts and statuses come in as an argument, and a fake supplies them in tests. The same drift lines go into the ClickUp comment on DGS-548, because the report text is the comment text.
 
 ## Order of work and files
 
