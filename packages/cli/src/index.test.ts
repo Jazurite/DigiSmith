@@ -17,6 +17,11 @@ describe("buildCli", () => {
     expect(help).toMatch(/tokens/);
     expect(help).toMatch(/steward/);
   });
+
+  it("registers the autonomous command group", async () => {
+    const help = await buildCli([]).getHelp();
+    expect(help).toMatch(/autonomous/);
+  });
 });
 
 describe("buildCli end-to-end via parse()", () => {

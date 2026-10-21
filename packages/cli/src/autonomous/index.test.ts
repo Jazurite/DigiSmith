@@ -1,0 +1,189 @@
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import yargs from "yargs";
+import { buildCli } from "../index.ts";
+import { readAway } from "./away.ts";
+import { FakeTracker } from "./fake-tracker.test-util.ts";
+import { createAutonomousCommand, type AutonomousDeps } from "./index.ts";
+import { appendEvent } from "./state.ts";
+
+const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
+
+let root: string;
+let dir: string;
+let ordersDir: string;
+let tracker: FakeTracker;
+let fetchCalls: string[];
+let execCalls: string[][];
+
+const deps = (): AutonomousDeps => ({
+  tracker: () => tracker,
+  dir,
+  ordersDir,
+  conductorsJson: join(root, "conductors.json"),
+  now: () => DAY,
+  scanId: () => "scan-1",
+  exec: async (file, args) => { execCalls.push([file, ...args]); return { code: 0, stderr: "" }; },
+  fileExists: () => false,
+  nexus: {
+    baseUrl: "http://fake",
+    tokenFile: join(root, "token"),
+    fetch: (async (url: string) => { fetchCalls.push(url); return new Response("{}", { status: 202 }); }) as unknown as typeof fetch,
+  },
+});
+
+const parse = (args: string[]) =>
+  yargs(args).exitProcess(false).command(createAutonomousCommand(deps)).strict().parseAsync();
+
+function viaBuildCli(argv: string[]): Promise<{ err: unknown; output: string }> {
+  return new Promise((resolve) => {
+    buildCli(argv).exitProcess(false).parse(argv, {}, (err, _a, output) => resolve({ err, output }));
+  });
+}
+
+let log: ReturnType<typeof vi.spyOn>;
+let errLog: ReturnType<typeof vi.spyOn>;
+const out = () => log.mock.calls.flat().join("\n");
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "auto-idx-"));
+  dir = join(root, "autonomous");
+  ordersDir = join(root, "orders");
+  writeFileSync(join(root, "token"), "tok\n");
+  writeFileSync(join(root, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { tab: 1 } }));
+  tracker = new FakeTracker();
+  fetchCalls = [];
+  execCalls = [];
+  log = vi.spyOn(console, "log").mockImplementation(() => {});
+  errLog = vi.spyOn(console, "error").mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  process.exitCode = 0;
+  rmSync(root, { recursive: true, force: true });
+});
+
+describe("dg autonomous: argument checks", () => {
+  it("scan --help lists --dry-run and --repo", async () => {
+    const r = await viaBuildCli(["autonomous", "scan", "--help"]);
+    expect(r.output).toContain("--dry-run");
+    expect(r.output).toContain("--repo");
+  });
+  it("scan without --repo fails with a message", async () => {
+    const r = await viaBuildCli(["autonomous", "scan"]);
+    expect(r.err).toBeTruthy();
+    expect(r.output).toMatch(/repo/);
+  });
+  it("release --result bogus is refused by the choices", async () => {
+    const r = await viaBuildCli(["autonomous", "release", "--ticket", "DGS-1", "--result", "bogus"]);
+    expect(r.err).toBeTruthy();
+    expect(r.output).toMatch(/bogus/);
+  });
+});
+
+describe("dg autonomous: away and back", () => {
+  it("away --until 7pm exits non-zero and writes no file", async () => {
+    await parse(["autonomous", "away", "--until", "7pm"]);
+    expect(process.exitCode).not.toBe(0);
+    expect(errLog.mock.calls.flat().join("\n")).toMatch(/HH:MM/);
+    expect(existsSync(join(dir, "away.json"))).toBe(false);
+    expect(fetchCalls).toEqual([]);
+  });
+  it("away --until 18:00 prints the resolved time and writes away.json", async () => {
+    await parse(["autonomous", "away", "--until", "18:00"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toContain("2026-10-21 18:00:00");
+    expect(out()).toMatch(/run-now: ok/);
+    expect(readAway(dir)).toMatchObject({ away: true, until: "2026-10-21T11:00:00.000Z" });
+    expect(fetchCalls).toEqual(["http://fake/api/v1/jobs/autonomous-scan/run"]);
+  });
+  it("back leaves away.json with away false", async () => {
+    await parse(["autonomous", "away"]);
+    await parse(["autonomous", "back"]);
+    expect(readAway(dir)?.away).toBe(false);
+    expect(out()).toMatch(/run-now: ok/);
+  });
+});
+
+describe("dg autonomous status", () => {
+  it("on an empty dir prints away off, lock none, last scan none, exit 0", async () => {
+    await parse(["autonomous", "status"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toContain("away: off");
+    expect(out()).toContain("lock: none");
+    expect(out()).toContain("last scan: none");
+  });
+  it("after away prints away: on until", async () => {
+    await parse(["autonomous", "away", "--until", "18:00"]);
+    log.mockClear();
+    await parse(["autonomous", "status"]);
+    expect(out()).toContain("away: on until 2026-10-21 18:00:00");
+  });
+  it("shows the newest scan event, the lock and the newest report", async () => {
+    appendEvent(dir, new Date("2026-10-20T17:00:00.000Z"), "scan");
+    appendEvent(dir, new Date("2026-10-20T18:00:00.000Z"), "off");
+    appendEvent(dir, new Date("2026-10-20T19:00:00.000Z"), "skip");
+    writeFileSync(join(dir, "lock.json"), JSON.stringify({ ticket: "DGS-9", taskId: "t9", claimedAt: "2026-10-20T17:00:00.000Z", claimedAtUtc7: "2026-10-21 00:00:00", order: "", scanId: "" }));
+    mkdirSync(join(dir, "reports"));
+    writeFileSync(join(dir, "reports", "2026-10-21-0600.md"), "# Report line 1\nline 2\n");
+    await parse(["autonomous", "status"]);
+    expect(out()).toContain("lock: DGS-9 since 2026-10-21 00:00:00");
+    expect(out()).toContain("last scan: 2026-10-21 01:00:00 off");
+    expect(out()).toContain(join(dir, "reports", "2026-10-21-0600.md"));
+    expect(out()).toContain("# Report line 1");
+  });
+});
+
+describe("dg autonomous scan", () => {
+  it("--dry-run prints the verdict rows at any hour and writes nothing", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.add({ id: "t2", key: "DGS-2", attachments: [] });
+    await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toMatch(/DGS-1\s+ready/);
+    expect(out()).toMatch(/DGS-2\s+\S/);
+    expect(out()).not.toMatch(/DGS-2\s+ready/);
+    expect(tracker.writeCalls()).toEqual([]);
+    expect(existsSync(dir)).toBe(false);
+    expect(existsSync(ordersDir)).toBe(false);
+    expect(execCalls).toEqual([]);
+  });
+  it("in the day and not away prints the off outcome and exits 0", async () => {
+    await parse(["autonomous", "scan", "--repo", "/repo"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toMatch(/scan: off/);
+  });
+  it("an unexpected throw exits 1", async () => {
+    tracker.hasStatus = async () => { throw new Error("network down"); };
+    await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
+    expect(process.exitCode).toBe(1);
+    expect(errLog.mock.calls.flat().join("\n")).toMatch(/network down/);
+  });
+  it("--orders overrides the orders dir", async () => {
+    const other = join(root, "other-orders");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
+    tracker.add({ id: "t1", key: "DGS-1" });
+    await parse(["autonomous", "scan", "--repo", "/repo", "--orders", other]);
+    expect(out()).toMatch(/scan: claimed DGS-1/);
+    expect(readdirSync(other)).toHaveLength(1);
+    expect(existsSync(ordersDir)).toBe(false);
+  });
+});
+
+describe("dg autonomous release and report", () => {
+  it("release with no lock prints the result and kicks the scan", async () => {
+    await parse(["autonomous", "release", "--ticket", "DGS-1", "--result", "merged", "--commit", "abc"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toMatch(/lock cleared: no/);
+    expect(fetchCalls).toEqual(["http://fake/api/v1/jobs/autonomous-scan/run"]);
+  });
+  it("report writes a report file and prints its path", async () => {
+    await parse(["autonomous", "report"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(readdirSync(join(dir, "reports"))).toHaveLength(1);
+    expect(out()).toContain(join(dir, "reports"));
+  });
+});
