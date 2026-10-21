@@ -37,6 +37,14 @@ describe("checkReady", () => {
     expect(checkReady(t, { repo: "/r", fileExists: (p) => p === dir + "plan.md" || p === dir + "spec.md" })).toEqual([]);
     expect(checkReady(t, { repo: "/r", fileExists: (p) => p === dir + "plan.md" || p === dir + "design.html" })).toEqual([]);
   });
+  it("checks every board link", () => {
+    const good = "/r/.digismith/board/DGS-2—good/";
+    const fe = (p: string) => p === good + "plan.md" || p === good + "design.md";
+    const two = { ...base, attachments: [], text: ".digismith/board/DGS-1—bad/ then .digismith/board/DGS-2—good/" };
+    expect(checkReady(two, { repo: "/r", fileExists: fe })).toEqual([]);
+    const bad = { ...base, attachments: [], text: ".digismith/board/DGS-1—bad/ and .digismith/board/DGS-3—bad/" };
+    expect(checkReady(bad, { repo: "/r", fileExists: fe })).toEqual([REASON.specPlan]);
+  });
   it("done blocker does not block", () => {
     expect(checkReady({ ...base, blockers: [{ key: "DGS-2", done: true }] }, ctx)).toEqual([]);
   });

@@ -16,11 +16,12 @@ function hasSpecPlan(t: LoTask, ctx: ReadyCtx): boolean {
   const spec = t.attachments.some((a) => /^(design|spec)\./i.test(a));
   const plan = t.attachments.some((a) => /^plan\./i.test(a));
   if (spec && plan) return true;
-  const m = /\.digismith\/board\/([A-Z]+-\d+—[^\s/)]+)/.exec(t.text);
-  if (!m) return false;
-  const dir = `${ctx.repo}/.digismith/board/${m[1]}/`;
-  return ctx.fileExists(`${dir}plan.md`)
-    && ["design.md", "design.html", "spec.md"].some((f) => ctx.fileExists(dir + f));
+  for (const m of t.text.matchAll(/\.digismith\/board\/([A-Z]+-\d+—[^\s/)]+)/g)) {
+    const dir = `${ctx.repo}/.digismith/board/${m[1]}/`;
+    if (ctx.fileExists(`${dir}plan.md`)
+      && ["design.md", "design.html", "spec.md"].some((f) => ctx.fileExists(dir + f))) return true;
+  }
+  return false;
 }
 
 export function checkReady(t: LoTask, ctx: ReadyCtx): string[] {
