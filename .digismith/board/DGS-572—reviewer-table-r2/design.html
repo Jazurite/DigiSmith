@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-572 reviewer table accepts r2+ verdict lines</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>dg reviewer table accepts r2+ verdict lines</h1>
+  <div class="meta"><span>Date: 2026-10-21</span><span>Ticket: DGS-572</span></div>
+</header>
+
+<section><h2>Problem</h2>
+<p>In DGS-456 the Builder wrote verdict lines for round r2 that name findings an r1 pack raised. <code>dg reviewer table</code> failed with "verdict line names no finding", because it matches a line only to a finding of the pack with the same round. The ledger is an audit record, so nobody may delete the lines. The table must accept them.</p></section>
+
+<section><h2>Rules for the table</h2>
+<ol>
+<li><b>Identity.</b> A finding is identified by review kind, review id and finding id (<code>F1</code>), raised by the pack of round R. Example: <code>task 4 r1 F1</code>.</li>
+<li><b>Own-round line.</b> A line <code>Review task 4 r1: F1 -&gt; ...</code> for a pack that raised F1 in that round is the ruling of round R, as today.</li>
+<li><b>Re-ruling line (new).</b> A line with round N &gt; R for the same kind and id, naming a finding id that no pack of round N raised, but an earlier pack raised, is a re-ruling of that earlier finding. If a pack of round N did raise that id, the line belongs to that pack's finding (exact match first).</li>
+<li><b>Latest ruling.</b> The table shows, per finding, the ruling with the highest round. For the same round, the later ledger line wins. The Round column shows the round that raised the finding. The Verdict column shows the latest ruling, and when it came from a later round it appends <code>[r2]</code>, for example <code>fixed (abc123) [r2]</code>.</li>
+<li><b>Missing ruling.</b> A finding with no line at its own round or later still fails: "findings with no verdict line".</li>
+<li><b>Unknown id stays an error.</b> A line that matches no finding in any pack fails with: <code>ledger line &lt;n&gt;: &lt;line&gt;: no pack raised &lt;kind&gt; &lt;id&gt; &lt;Fk&gt;; packs read: &lt;list of pack folders&gt;</code>. The same holds for a re-ruling line whose round is lower than or equal to the raising round of every match.</li>
+<li><b>Ledger is read only.</b> The change reads the ledger. No code or test deletes or rewrites a ledger line; tests write a fresh fake ledger in a temp folder.</li>
+</ol></section>
+
+<section><h2>JSON output (schema 1)</h2>
+<p><code>dg reviewer table --json</code> prints JSON to stdout. With <code>--out &lt;file&gt;</code> it writes the file instead. Without <code>--json</code>, <code>--out</code> is required and the markdown is unchanged in shape. DGS-582 reads this JSON; the shape is stable and a change needs a new <code>schema</code> number.</p>
+<pre><code>{
+  "schema": 1,
+  "findings": [
+    {
+      "id": "task 4 r1 F1",
+      "review": { "kind": "task", "id": "4" },
+      "finding": "F1",
+      "severity": "Important",
+      "raisedRound": 1,
+      "latestRound": 2,
+      "latestRuling": { "verdict": "fixed", "reason": "abc123" },
+      "history": [
+        { "round": 1, "verdict": "parked", "reason": "wait" },
+        { "round": 2, "verdict": "fixed", "reason": "abc123" }
+      ]
+    }
+  ],
+  "approvedReviews": [ { "kind": "task", "id": "7", "round": 2 } ]
+}</code></pre>
+<p>Findings are in the table order (kind, id, round, finding number). <code>history</code> is in round order, ledger order within a round. <code>reason</code> is an empty string when the line has none. <code>approvedReviews</code> lists packs with no findings (the "approved, no findings" rows).</p></section>
+
+<section><h2>Skill text</h2>
+<p>The SDD skill (role mode, "Verdict lines") and the Reviewer card ("Report and table") say: write the verdict line of a re-review as <code>Review task 4 r2: F1 -&gt; fixed (abc123)</code>, where r2 is the re-review round and F1 is the finding the earlier pack raised. One example in each. The rule "r&lt;R&gt; is the round of the pack that raised the finding" is replaced: a line may use the raising round or a later round. The existing skill tests that check the text are updated, and a test checks the example line parses.</p></section>
+
+<section><h2>Components</h2>
+<ul>
+<li><code>packages/cli/src/reviewer/verdicts.ts</code>: parse lines into entries with the ledger line number, keeping every line (no overwrite in a map).</li>
+<li><code>packages/cli/src/reviewer/table.ts</code>: resolve entries to findings, build rows, build the JSON model, render.</li>
+<li><code>packages/cli/src/reviewer/index.ts</code>: <code>--json</code> flag, <code>--out</code> optional with <code>--json</code>.</li>
+<li><code>skills/subagent-driven-development/SKILL.md</code>, <code>skills/reviewer/SKILL.md</code>: format text and example.</li>
+</ul>
+<p>Consumers of <code>parseVerdictLines</code> are checked in the plan; the return type change must not break them.</p></section>
+
+<section><h2>Tests</h2>
+<p>Test first, with fake pack folders and a fake ledger in a temp folder: r2 re-ruling accepted and latest wins; same-round exact match preferred; unknown id error text names line, id and packs; missing ruling still fails; JSON shape and <code>schema</code>; <code>--out</code> rules; the SDD and card example parses; the ledger file bytes are the same after a run. No ClickUp call.</p></section>
+
+<footer>DigiSmith · .digismith/board/DGS-572—reviewer-table-r2/design.html</footer>
+</body>
+</html>
