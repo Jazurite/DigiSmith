@@ -25,7 +25,14 @@ export function readAway(dir: string): Away | null {
   }
   try {
     const v: unknown = JSON.parse(text);
-    if (isAwayShape(v)) return v;
+    if (isAwayShape(v)) {
+      return {
+        away: v.away,
+        since: v.since ?? "",
+        until: v.until ?? null,
+        endedAt: v.endedAt ?? null,
+      };
+    }
   } catch {
     // fall through: a corrupt away file is treated as not away
   }

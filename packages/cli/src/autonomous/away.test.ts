@@ -76,6 +76,18 @@ describe("away file", () => {
     expect(readAway(dir)).toBeNull();
   });
 
+  it("defaults missing fields when reading an away:true object", () => {
+    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true }));
+    const read = readAway(dir);
+    expect(read).toEqual({ away: true, since: "", until: null, endedAt: null });
+    expect(isAway(read, NOW)).toBe(true);
+  });
+
+  it("defaults missing fields when reading an away:false object", () => {
+    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: false }));
+    expect(readAway(dir)).toEqual({ away: false, since: "", until: null, endedAt: null });
+  });
+
   it("keeps a record whose until does not parse, and treats it as expired, not away", () => {
     const a: Away = { ...base, away: true, until: "tomorrow" };
     writeAway(dir, a);
