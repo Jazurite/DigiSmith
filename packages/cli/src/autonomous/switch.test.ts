@@ -115,7 +115,7 @@ describe("runBack and the breaker", () => {
     const { appendOpen, readOpen } = await import("./attention.ts");
     recordRelease(dir, { ticket: "DGS-1", result: "failed" }, NOW);
     recordRelease(dir, { ticket: "DGS-2", result: "failed" }, NOW);
-    appendOpen(dir, { ticket: "DGS-2", run: "-", kind: "failed", cause: "circuit-breaker-open", since: NOW.toISOString(), ts: NOW.toISOString() });
+    appendOpen(dir, { ticket: null, run: "breaker", kind: "failed", cause: "circuit-breaker-open", since: NOW.toISOString(), ts: NOW.toISOString() });
     await runBack(mk());
     expect(readBreaker(dir).open).toBe(false);
     expect(readOpen(dir)).toEqual([]);

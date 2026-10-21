@@ -330,7 +330,7 @@ describe("dg autonomous: attention, resume, watch", () => {
     const { appendOpen, readOpen } = await import("./attention.ts");
     recordRelease(dir, { ticket: "DGS-1", result: "failed" }, DAY);
     recordRelease(dir, { ticket: "DGS-2", result: "failed" }, DAY);
-    appendOpen(dir, { ticket: "DGS-2", run: "-", kind: "failed", cause: "circuit-breaker-open", since: DAY.toISOString(), ts: DAY.toISOString() });
+    appendOpen(dir, { ticket: null, run: "breaker", kind: "failed", cause: "circuit-breaker-open", since: DAY.toISOString(), ts: DAY.toISOString() });
     await parse(["autonomous", "resume"]);
     expect(out()).toContain("breaker closed");
     expect(readBreaker(dir).open).toBe(false);
