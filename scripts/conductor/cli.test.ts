@@ -130,3 +130,26 @@ describe("cli", () => {
     expect(ran).toBe(false);
   });
 });
+
+describe("cli consult autonomous section", () => {
+  const consultOut = async (env: NodeJS.ProcessEnv) => {
+    const i = io();
+    await main(["consult", "--note", note, "--repo", tmp], { ...i, env, runner });
+    return i.out;
+  };
+  it("appends the last report and leaves the output otherwise identical", async () => {
+    withNote();
+    const base = io().env;
+    const plain = await consultOut(base);
+    const adir = path.join(tmp, "auto");
+    fs.mkdirSync(path.join(adir, "reports"), { recursive: true });
+    const f = path.join(adir, "reports", "r.md");
+    fs.writeFileSync(f, "# Autonomous Operation report, x\nBuilt\n- DGS-9\n");
+    const t = new Date("2026-10-13T06:00:00Z");
+    fs.utimesSync(f, t, t);
+    const withReport = await consultOut({ ...base, AUTONOMOUS_DIR: adir });
+    expect(withReport.startsWith(plain)).toBe(true);
+    expect(withReport.slice(plain.length)).toBe("\n## Autonomous Operation, last report\nBuilt\n- DGS-9\n");
+    expect(await consultOut({ ...base, AUTONOMOUS_DIR: path.join(tmp, "none") })).toBe(plain);
+  });
+});

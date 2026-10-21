@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { listCards } from "../session-card.ts";
+import { autonomousDirFor, autonomousSection } from "./autonomous-section.ts";
 import { consult, DEFAULT_REMOTE_REPO, renderText } from "./consult.ts";
 import { execRunner, readOnlyRunner, type Runner } from "./runner.ts";
 import { collectState, iso7, resolveNotePath, type CardRef } from "./state.ts";
@@ -126,6 +127,7 @@ export async function main(argv: string[], io: Io & { runner?: Runner; ticketSta
     if (v.json) io.stdout(`${JSON.stringify(r)}\n`);
     else {
       io.stdout(renderText(r.state));
+      io.stdout(autonomousSection(autonomousDirFor(io.env), io.now()));
       if (r.live) io.stdout(`\n## Live panes\n${r.live.map((l) => `- ${l.pane} | ${l.name} | ${l.status}`).join("\n") || "none"}\n`);
       for (const w of r.warnings) io.stderr(`warning: ${w}\n`);
     }
