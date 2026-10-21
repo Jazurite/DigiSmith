@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { runTick, type TickDeps } from "./tick.ts";
 import { readPhaseState } from "./phase-state.ts";
-import { resultsOf, readJournal, plan } from "./journal.ts";
+import { resultsOf, readJournal, plan, restartsOf } from "./journal.ts";
+import { appendAttentionId } from "./attention-write.ts";
+import { readOpen } from "./attention.ts";
 import { fakeObservers, makeWorld, writeLock, type World } from "./fakes.test-util.ts";
 
 const T = new Date("2026-10-21T05:00:00.000Z");
@@ -147,5 +149,94 @@ describe("tick guards", () => {
     expect(r.action).toMatchObject({ kind: "attention", cause: "conductor-missing" });
     expect(w.prompts).toEqual([]);
     expect(readFileSync(join(d, "attention.jsonl"), "utf8")).toContain("conductor-missing");
+  });
+});
+
+describe("controller retry through the tick", () => {
+  const LATER = "2026-10-21T05:00:30.000Z";
+  const at = (min: number) => new Date(T.getTime() + min * 60_000);
+  const lostItem = (d: string, run: string, retryEligible = true, kind: "lost" | "failed" | "refused" = "lost") => {
+    const id = appendAttentionId(d, T, { ticket: "DGS-1", run, kind, cause: "pane gone", causeClass: retryEligible ? "transient" : "durable", retryEligible });
+    return { id: id ?? `${run}.${kind}.0`, ticket: "DGS-1", kind, retryEligible };
+  };
+  const lostWorld = (d: string, w: World) => {
+    writeLock(d, { phase: "building", runs: { builder: "builder-1" } });
+    w.runs[0].phaseEvent = "building"; w.herdr.builderPane = "gone";
+    w.attention = [lostItem(d, "builder-1")];
+  };
+  const newRun = (w: World) => { w.runs.push({ id: "builder-2", role: "builder", createdAt: LATER, started: true, ended: false, merged: false, pushed: false, phaseEvent: null }); };
+  const RETRY = "DGS-1: restart the builder, its pane is gone";
+
+  it("transient gives one restart order", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    await runTick(deps(d, w));
+    expect(w.prompts).toEqual([RETRY]);
+    expect(resultsOf(d)["DGS-1:building:1:retry"]).toBe("uncertain");
+    await runTick(deps(d, w, { now: () => at(1) }));
+    expect(w.prompts).toEqual([RETRY]);
+  });
+  it("the pane-gone restart does not add a second order", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    for (let i = 0; i < 3; i++) await runTick(deps(d, w, { now: () => at(i) }));
+    expect(w.prompts).toEqual([RETRY]);
+    expect(Object.keys(resultsOf(d)).some((k) => k.endsWith("order-restart"))).toBe(false);
+  });
+  it("a second failure gives attention only", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    await runTick(deps(d, w));
+    newRun(w);
+    await runTick(deps(d, w, { now: () => at(1) }));
+    expect(resultsOf(d)["DGS-1:building:1:retry"]).toBe("succeeded");
+    await runTick(deps(d, w, { now: () => at(2) }));
+    w.attention = [lostItem(d, "builder-2")];
+    const sent = w.prompts.length;
+    for (let i = 3; i < 6; i++) await runTick(deps(d, w, { now: () => at(i) }));
+    expect(w.prompts.length).toBe(sent);
+    expect(restartsOf(resultsOf(d), "DGS-1")).toBe(1);
+    expect(readOpen(d).some((x) => x.id === w.attention[0].id)).toBe(true);
+  });
+  it("a controller restart between plan and settle sends no second order", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    plan(d, T, { ticket: "DGS-1", phase: "building", attempt: 1, action: "retry", detail: { item: "builder-1.lost.0", run: "builder-1" } });
+    for (let i = 0; i < 3; i++) await runTick(deps(d, w, { now: () => at(i * 0) }));
+    expect(w.prompts).toEqual([]);
+    expect(readJournal(d).filter((l) => l.status === "planned")).toHaveLength(1);
+    newRun(w);
+    await runTick(deps(d, w, { now: () => at(1) }));
+    expect(resultsOf(d)["DGS-1:building:1:retry"]).toBe("succeeded");
+  });
+  it("a durable or unknown cause never retries", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    w.herdr.builderPane = "present"; // a gone pane would still get the older order-restart; this test is about the retry
+    w.attention = [
+      { id: "a.failed.0", ticket: "DGS-1", kind: "failed", retryEligible: false },
+      { id: "a.refused.0", ticket: "DGS-1", kind: "refused", retryEligible: false },
+      { id: "a.lost.0", ticket: "DGS-1", kind: "lost", retryEligible: false },
+    ];
+    for (let i = 0; i < 3; i++) await runTick(deps(d, w, { now: () => at(i) }));
+    expect(w.prompts).toEqual([]);
+    expect(Object.keys(resultsOf(d)).some((k) => k.endsWith(":retry"))).toBe(false);
+  });
+  it("end to end: lost run, one order, new run adopted, item resolved", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w);
+    const id = w.attention[0].id;
+    await runTick(deps(d, w));
+    newRun(w);
+    await runTick(deps(d, w, { now: () => at(1) }));
+    await runTick(deps(d, w, { now: () => at(2) }));
+    expect(JSON.parse(readFileSync(join(d, "lock.json"), "utf8")).runs.builder).toBe("builder-2");
+    expect(readOpen(d).some((x) => x.id === id)).toBe(false);
+    const lines = readFileSync(join(d, "attention.jsonl"), "utf8").trimEnd().split("\n");
+    expect(JSON.parse(lines[lines.length - 1]).by).toBe("controller");
+    const sent = w.prompts.length;
+    await runTick(deps(d, w, { now: () => at(3) }));
+    expect(w.prompts.length).toBe(sent);
+    expect(sent).toBe(1);
+  });
+  it("an unreadable attention read does not retry", async () => {
+    const d = tmp(); const w = makeWorld(); lostWorld(d, w); w.herdr.builderPane = "present"; w.fail.attention = "boom";
+    const r = await runTick(deps(d, w));
+    expect(w.prompts).toEqual([]);
+    expect(JSON.stringify(r)).toContain("obs-attention-failed");
   });
 });
