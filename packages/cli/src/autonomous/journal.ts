@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { MAX_TRIES } from "./phase-types.ts";
 import type { JournalResults, JournalState, SettleResult } from "./phase-types.ts";
@@ -11,9 +11,26 @@ export interface JournalLine {
 const SCHEMA = "nightwatch-journal/v1";
 export const journalPath = (dir: string) => join(dir, "journal.jsonl");
 
+function lastByteIsTorn(path: string): boolean {
+  if (!existsSync(path)) return false;
+  const size = statSync(path).size;
+  if (size === 0) return false;
+  const fd = openSync(path, "r");
+  try {
+    const buf = Buffer.alloc(1);
+    readSync(fd, buf, 0, 1, size - 1);
+    return buf[0] !== 0x0a;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 function append(dir: string, line: JournalLine): void {
   mkdirSync(dir, { recursive: true });
-  appendFileSync(journalPath(dir), `${JSON.stringify(line)}\n`);
+  const path = journalPath(dir);
+  // A torn last line (no newline) would otherwise swallow this line; start a fresh one.
+  const prefix = lastByteIsTorn(path) ? "\n" : "";
+  appendFileSync(path, `${prefix}${JSON.stringify(line)}\n`);
 }
 
 export function readJournal(dir: string): JournalLine[] {
@@ -43,6 +60,8 @@ export function keyOf(e: { ticket: string; phase: string; attempt: number; actio
   return `${e.ticket}:${e.phase}:${e.attempt}:${e.action}`;
 }
 
+// The read-then-append in plan() is not atomic across processes. It is safe because the
+// scan job is single-flight in the Nexus scheduler and the ticket lock allows one controller at a time.
 export function plan(dir: string, now: Date, e: { ticket: string; phase: string; attempt: number; action: string; detail?: Record<string, string> }): string {
   const key = keyOf(e);
   const lines = readJournal(dir);
@@ -54,9 +73,14 @@ export function plan(dir: string, now: Date, e: { ticket: string; phase: string;
 }
 
 export function settle(dir: string, now: Date, key: string, result: SettleResult, note = "", by = "controller"): SettleResult {
+  const lines = readJournal(dir);
+  const plannedCount = lines.filter((l) => l.key === key && l.status === "planned").length;
+  if (plannedCount === 0) throw new Error(`journal key was never planned: ${key}`);
+  const current = stateMap(lines).get(key);
+  if (current === "succeeded" || current === "permanent") throw new Error(`journal key already settled: ${key}`);
   let final = result;
   let text = note;
-  if (result === "retryable" && readJournal(dir).filter((l) => l.key === key && l.status === "planned").length >= MAX_TRIES) {
+  if (result === "retryable" && plannedCount >= MAX_TRIES) {
     final = "permanent";
     text = note === "" ? "retries exhausted" : `${note}; retries exhausted`;
   }

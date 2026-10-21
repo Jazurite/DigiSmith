@@ -66,7 +66,37 @@ describe("journal", () => {
     expect(resultsOf(d)[a]).toBe("permanent");
     expect(resultsOf(d)["DGS-2:building:1:phase-marker"]).toBe("open");
   });
-  it("two writer processes keep every line whole", () => {
+  it("a torn last line does not swallow the next line", () => {
+    const d = tmp();
+    const k1 = plan(d, T0, e);
+    appendFileSync(journalPath(d), "{\"schema\":\"nightwatch-journal/v1\",\"key\":\"torn");
+    const k2 = plan(d, T0, { ...e, action: "order-fix" });
+    expect(readJournal(d).map((l) => l.key)).toEqual([k1, k2]);
+    expect(readJournal(d).some((l) => l.key.includes("torn"))).toBe(false);
+    settle(d, T0, k2, "succeeded");
+    expect(resultsOf(d)[k2]).toBe("succeeded");
+  });
+  it("settle refuses a key that was never planned", () => {
+    const d = tmp();
+    expect(() => settle(d, T0, "DGS-1:merge-ready:1:never", "succeeded")).toThrow(/never planned/);
+  });
+  it("settle refuses a key that is already succeeded or permanent", () => {
+    for (const r of ["succeeded", "permanent"] as const) {
+      const d = tmp();
+      const k = plan(d, T0, e);
+      settle(d, T0, k, r);
+      expect(() => settle(d, T0, k, "uncertain")).toThrow(/already settled/);
+    }
+  });
+  it("settle still frees an uncertain key to retryable, and settles an open or re-planned key", () => {
+    const d = tmp();
+    const k = plan(d, T0, e);
+    settle(d, T0, k, "uncertain");
+    expect(settle(d, T0, k, "retryable")).toBe("retryable");
+    plan(d, T0, e);
+    expect(settle(d, T0, k, "succeeded")).toBe("succeeded");
+  });
+  it("two writers in turn keep every line whole", () => {
     const d = tmp();
     const script = join(import.meta.dirname, "journal-writer.test-util.ts");
     const run = (tag: string) => spawnSync(process.execPath, ["--experimental-strip-types", script, d, tag, "50"], { encoding: "utf8" });
