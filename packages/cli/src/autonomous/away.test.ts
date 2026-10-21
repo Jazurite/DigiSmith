@@ -60,6 +60,31 @@ describe("away file", () => {
     expect(readAway(dir)).toBeNull();
   });
 
+  it.each(["[]", "null", "\"x\"", "42"])("reads valid non-object JSON %s as null", (text) => {
+    writeFileSync(join(dir, "away.json"), text);
+    expect(readAway(dir)).toBeNull();
+  });
+
+  it.each([
+    ["an empty object", "{}"],
+    ["a non-boolean away", JSON.stringify({ away: "yes", until: null })],
+    ["a non-string since", JSON.stringify({ away: true, since: 5, until: null })],
+    ["a non-string until", JSON.stringify({ away: true, since: base.since, until: 5 })],
+    ["a non-string endedAt", JSON.stringify({ away: false, since: base.since, until: null, endedAt: 5 })],
+  ])("reads an object with %s as null", (_label, text) => {
+    writeFileSync(join(dir, "away.json"), text);
+    expect(readAway(dir)).toBeNull();
+  });
+
+  it("keeps a record whose until does not parse, and treats it as expired, not away", () => {
+    const a: Away = { ...base, away: true, until: "tomorrow" };
+    writeAway(dir, a);
+    const read = readAway(dir);
+    expect(read).toEqual(a);
+    expect(isAway(read, NOW)).toBe(false);
+    expect(awayExpired(read, NOW)).toBe(true);
+  });
+
   it("leaves no .tmp file behind after writeAway", () => {
     writeAway(dir, { ...base, away: true, until: null });
     expect(readdirSync(dir).filter((f) => f.endsWith(".tmp"))).toEqual([]);

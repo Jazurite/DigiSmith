@@ -1,7 +1,20 @@
-import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { atomicWrite } from "./state.ts";
 import type { Away } from "./types.ts";
+
+function isStringOrNullOrAbsent(v: unknown): boolean {
+  return v === undefined || v === null || typeof v === "string";
+}
+
+function isAwayShape(v: unknown): v is Away {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+  const a = v as Record<string, unknown>;
+  return typeof a.away === "boolean"
+    && isStringOrNullOrAbsent(a.since)
+    && isStringOrNullOrAbsent(a.until)
+    && isStringOrNullOrAbsent(a.endedAt);
+}
 
 export function readAway(dir: string): Away | null {
   let text: string;
@@ -12,7 +25,7 @@ export function readAway(dir: string): Away | null {
   }
   try {
     const v: unknown = JSON.parse(text);
-    if (typeof v === "object" && v !== null && !Array.isArray(v)) return v as Away;
+    if (isAwayShape(v)) return v;
   } catch {
     // fall through: a corrupt away file is treated as not away
   }
@@ -20,17 +33,16 @@ export function readAway(dir: string): Away | null {
 }
 
 export function writeAway(dir: string, a: Away): void {
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, "away.json");
-  const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(a, null, 2)}\n`);
-  renameSync(tmp, file);
+  atomicWrite(dir, "away.json", `${JSON.stringify(a, null, 2)}\n`);
 }
 
 export function isAway(a: Away | null, now: Date): boolean {
   return a !== null && a.away && (a.until === null || now.getTime() < Date.parse(a.until));
 }
 
+// An unparseable until is expired (not away), so the next scan clears it the way `back` does.
 export function awayExpired(a: Away | null, now: Date): boolean {
-  return a !== null && a.away && a.until !== null && now.getTime() >= Date.parse(a.until);
+  if (a === null || !a.away || a.until === null) return false;
+  const until = Date.parse(a.until);
+  return Number.isNaN(until) || now.getTime() >= until;
 }

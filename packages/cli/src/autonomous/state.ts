@@ -12,7 +12,7 @@ export function autonomousDir(env: NodeJS.ProcessEnv = process.env): string {
   return join(env.DIGISMITH_DEPOT_DIR || join(homedir(), ".digismith-depot"), "autonomous");
 }
 
-function atomicWrite(dir: string, name: string, text: string): void {
+export function atomicWrite(dir: string, name: string, text: string): void {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, name);
   const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
