@@ -99,11 +99,14 @@ describe('JOBS', () => {
       expect(command.args).not.toContain('--experimental-strip-types')
     }
   })
-  it('autonomous-scan has 24 hourly slots for one night key', () => {
+  it('autonomous-scan has 288 five-minute slots for one night key', () => {
     const scan = JOBS.find((j) => j.name === 'autonomous-scan')!
     const slots = slotsOfNight('2026-10-19', scan.schedule!)
-    expect(slots.map((s) => s.key)).toEqual(Array.from({ length: 24 }, (_, h) => `2026-10-19@${String(h).padStart(2, '0')}:00`))
+    expect(slots.map((s) => s.key)).toEqual(Array.from({ length: 288 }, (_, i) => `2026-10-19@${String(Math.floor(i / 12)).padStart(2, '0')}:${String((i % 12) * 5).padStart(2, '0')}`))
     for (const s of slots) expect(s.atMs).toBeLessThan(s.windowEndMs)
+    expect(scan.schedule!.everyMinutes).toBe(5)
+    expect(slots[0]!.key).toBe('2026-10-19@00:00')
+    expect(slots[287]!.key).toBe('2026-10-19@23:55')
     expect(scan.catchUp).toBe('skip')
     expect(scan.manualOutsideWindow).toBe('allowed')
     expect(scan.command.args).toContain('autonomous')

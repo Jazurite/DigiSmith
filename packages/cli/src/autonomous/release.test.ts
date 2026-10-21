@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { runRelease, type ReleaseDeps } from "./release.ts";
+import { plan, readJournal, resultsOf } from "./journal.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
 
 const CLAIMED = new Date("2026-10-20T17:00:00.000Z");
@@ -171,5 +172,33 @@ describe("runRelease", () => {
     const r = await runRelease(mk({ now: () => new Date("2026-10-21T03:00:00.000Z") }), { ticket: "DGS-1", result: "merged" });
     expect(r.lockCleared).toBe(true);
     expect(fetchCalls).toHaveLength(1);
+  });
+
+  it("merged writes a released pair and closes the ticket's other open keys", async () => {
+    acquireLock(dir, { ...lock(), phase: "merge-ready", attempt: 2, runs: { builder: null } });
+    plan(dir, CLAIMED, { ticket: "DGS-1", phase: "merge-ready", attempt: 2, action: "order-merge" });
+    plan(dir, CLAIMED, { ticket: "DGS-2", phase: "building", attempt: 1, action: "x" });
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    const r = resultsOf(dir);
+    expect(r["DGS-1:merge-ready:2:released"]).toBe("succeeded");
+    expect(r["DGS-1:merge-ready:2:order-merge"]).toBe("permanent");
+    expect(r["DGS-2:building:1:x"]).toBe("open");
+    expect(readJournal(dir).find((l) => l.key === "DGS-1:merge-ready:2:order-merge" && l.status === "settled")?.note).toBe("released");
+    expect(readJournal(dir).find((l) => l.key.endsWith(":released") && l.status === "settled")?.note).toBe("merged");
+  });
+  it("a second release with the key used does not throw and writes no second pair", async () => {
+    acquireLock(dir, lock());
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    const n = readJournal(dir).length;
+    acquireLock(dir, lock());
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(readJournal(dir)).toHaveLength(n);
+    expect(readLock(dir)).toBeNull();
+  });
+  it("a release with no lock changes no journal line", async () => {
+    plan(dir, CLAIMED, { ticket: "DGS-1", phase: "building", attempt: 1, action: "x" });
+    const before = readJournal(dir);
+    await runRelease(mk(), { ticket: "DGS-1", result: "stopped" });
+    expect(readJournal(dir)).toEqual(before);
   });
 });

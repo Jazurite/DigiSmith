@@ -7,6 +7,8 @@ import type { Exec } from "./conductor.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { TYPE_BUG } from "./ready.ts";
 import { runScan, type ScanDeps } from "./scan.ts";
+import { readJournal, resultsOf } from "./journal.ts";
+import type { TickResult } from "./tick.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
@@ -107,6 +109,62 @@ describe("runScan: the work rule", () => {
     writeAway(dir, { away: false, since: "", until: null, endedAt: DAY.toISOString() });
     tracker.add({ id: "t1" });
     expect((await runScan(mk())).outcome).toBe("claimed");
+  });
+});
+
+describe("runScan: the tick and the journal", () => {
+  const held = () => acquireLock(dir, { ticket: "DGS-9", taskId: "t9", claimedAt: "", claimedAtUtc7: "", order: "", scanId: "x" });
+  it("a lock and a tick, daytime and not away: tick once, busy, no tracker call, action in the event", async () => {
+    now = DAY;
+    tracker.add({ id: "t1" });
+    held();
+    let calls = 0;
+    const tick = async (): Promise<TickResult> => { calls++; return { outcome: "ticked", action: { kind: "wait", reason: "x" }, notes: [] }; };
+    const r = await runScan(mk({ tick }));
+    expect(r.outcome).toBe("busy");
+    expect(calls).toBe(1);
+    expect(tracker.calls).toEqual([]);
+    expect(events()).toMatchObject([{ kind: "busy", ticket: "DGS-9", action: "wait" }]);
+  });
+  it("a tick that throws: still busy, action tick-failed", async () => {
+    now = DAY;
+    held();
+    const r = await runScan(mk({ tick: async () => { throw new Error("boom"); } }));
+    expect(r.outcome).toBe("busy");
+    expect(events()).toMatchObject([{ kind: "busy", ticket: "DGS-9", action: "tick-failed" }]);
+  });
+  it("no lock: off as before, the tick is not called", async () => {
+    now = DAY;
+    let calls = 0;
+    const r = await runScan(mk({ tick: async () => { calls++; return { outcome: "no-lock", notes: [] }; } }));
+    expect(r.outcome).toBe("off");
+    expect(calls).toBe(0);
+    expect(tracker.calls).toEqual([]);
+  });
+  it("a dry run never calls the tick", async () => {
+    held();
+    let calls = 0;
+    await runScan(mk({ dryRun: true, tick: async () => { calls++; return { outcome: "no-lock", notes: [] }; } }));
+    expect(calls).toBe(0);
+  });
+  it("a claim writes the phase lock and a succeeded claim pair", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    await runScan(mk());
+    expect(readLock(dir)).toMatchObject({ ticket: "DGS-1", phase: "claimed", attempt: 1, runs: { builder: null }, phaseStartedAt: NIGHT.toISOString() });
+    expect(readJournal(dir).map((l) => [l.key, l.status, l.result])).toEqual([
+      ["DGS-1:claimed:1:claim", "planned", undefined], ["DGS-1:claimed:1:claim", "settled", "succeeded"],
+    ]);
+  });
+  it("a failed claim settles the claim key permanent, and a later claim of the same ticket does not throw", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.readBackWrong = true;
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claim-failed");
+    expect(resultsOf(dir)["DGS-1:claimed:1:claim"]).toBe("permanent");
+    tracker.readBackWrong = false;
+    const r2 = await runScan(mk());
+    expect(r2.outcome).toBe("claimed");
+    expect(readLock(dir)?.ticket).toBe("DGS-1");
   });
 });
 

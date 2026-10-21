@@ -10,7 +10,7 @@ import { realExec, type Exec } from "./conductor.ts";
 import { openLines, readJournal, resultsOf, settle } from "./journal.ts";
 import { MAIN_CHECKOUT, makeObservers, makeWriters, realExecOut, realRunEvent, realStores, type ExecOut } from "./observers-real.ts";
 import { readPhaseState } from "./phase-state.ts";
-import { runTick } from "./tick.ts";
+import { runTick, type TickResult } from "./tick.ts";
 import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
@@ -74,29 +74,40 @@ function lazyTracker(make: () => Tracker): Tracker {
 
 const CONDUCTOR = "digismith-conductor";
 
+/** The real tick for `d`: the state and the lock are read on each call, `repo` is the checkout git fetch runs in. */
+function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Promise<TickResult> {
+  const exec = d.execOut ?? realExecOut;
+  const herdrBin = join(homedir(), ".digismith-depot", "bin", "herdr-ws");
+  const herdrWs = process.env.HERDR_WS || "w2";
+  const tracker = lazyTracker(d.tracker);
+  return () => {
+    const read = readPhaseState(d.dir);
+    const state = read.kind === "ok" ? read.state : null;
+    const taskId = readLock(d.dir)?.taskId ?? "";
+    const builderRunId = () => {
+      const r = readPhaseState(d.dir);
+      return r.kind === "ok" ? r.state.runs.builder : null;
+    };
+    const stores = realStores({ env: process.env, ticket: state?.ticket ?? "", builderRunId });
+    const observers = makeObservers({
+      exec, mainRepo: repo ?? d.mainRepo ?? MAIN_CHECKOUT, ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
+      builderRunId, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
+      tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
+    });
+    const writers = makeWriters({
+      exec, herdrBin, herdrWs, conductorName: CONDUCTOR,
+      tracker: { setStatus: (s) => tracker.setStatus(taskId, s) }, runEvent: realRunEvent(),
+    });
+    return runTick({ dir: d.dir, now: d.now, observers, dryRun, ...writers });
+  };
+}
+
 async function tickLines(d: AutonomousDeps, dryRun: boolean, repo?: string): Promise<string[]> {
   const lines: string[] = [];
   if (dryRun) lines.push("dry run, nothing written");
   const read = readPhaseState(d.dir);
   const state = read.kind === "ok" ? read.state : null;
-  const lock = readLock(d.dir);
-  const exec = d.execOut ?? realExecOut;
-  const herdrBin = join(homedir(), ".digismith-depot", "bin", "herdr-ws");
-  const herdrWs = process.env.HERDR_WS || "w2";
-  const builderRunId = () => state?.runs.builder ?? null;
-  const tracker = lazyTracker(d.tracker);
-  const taskId = lock?.taskId ?? "";
-  const stores = realStores({ env: process.env, ticket: state?.ticket ?? "", builderRunId });
-  const observers = makeObservers({
-    exec, mainRepo: repo ?? d.mainRepo ?? MAIN_CHECKOUT, ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
-    builderRunId, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
-    tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
-  });
-  const writers = makeWriters({
-    exec, herdrBin, herdrWs, conductorName: CONDUCTOR,
-    tracker: { setStatus: (s) => tracker.setStatus(taskId, s) }, runEvent: realRunEvent(),
-  });
-  const r = await runTick({ dir: d.dir, now: d.now, observers, dryRun, ...writers });
+  const r = await makeTick(d, dryRun, repo)();
   lines.push(`tick: ${r.outcome === "no-lock" ? "no lock" : r.outcome}`);
   if (state) lines.push(`state: ${state.ticket} ${state.phase} attempt ${state.attempt}`);
   if (r.action) {
@@ -203,6 +214,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 tracker: lazyTracker(d.tracker), dir: d.dir, ordersDir: (argv.orders as string | undefined) ?? d.ordersDir,
                 conductorsJson: d.conductorsJson, repo: argv.repo as string, now: d.now, scanId: d.scanId(),
                 exec: d.exec, fileExists: d.fileExists, dryRun: argv.dryRun as boolean, nexus: d.nexus,
+                tick: makeTick(d, false, argv.repo as string),
               });
               const lines: string[] = [];
               lines.push(`scan: ${r.outcome}${r.claimed ? ` ${r.claimed}` : ""} (${r.candidates} candidates, ${r.skipped.length} skipped)`);

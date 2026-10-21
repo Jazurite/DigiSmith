@@ -60,7 +60,7 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'autonomous-scan',
     description: 'Autonomous Operation: at night or while Jack is away, claim one ready to-do ticket and hand it to the conductor',
-    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 60 },
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
     command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },
     timeoutMs: 5 * 60 * 1000, catchUp: 'skip', order: 50, notify: 'failures', manualOutsideWindow: 'allowed',
   }),

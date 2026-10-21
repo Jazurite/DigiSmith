@@ -1,6 +1,7 @@
 import { appendFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7 } from "./clock.ts";
+import { closeOpen, plan, resultsOf, settle } from "./journal.ts";
 import { runNow, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { appendEvent, clearLock, readLock } from "./state.ts";
 import type { Tracker } from "./types.ts";
@@ -55,8 +56,17 @@ export async function runRelease(
         appendEvent(d.dir, now, "comment-failed", { ticket: a.ticket, error: e instanceof Error ? e.message : String(e) });
       }
     }
+    // plan runs before clearLock: a crash between leaves an open line that closeOpen settles on the next release.
+    const phase = lock.phase ?? "claimed";
+    const attempt = lock.attempt ?? 1;
+    const jkey = `${a.ticket}:${phase}:${attempt}:released`;
+    const used = resultsOf(d.dir)[jkey];
+    const journaled = !corrupt && (used === undefined || used === "retryable");
+    if (journaled) plan(d.dir, now, { ticket: a.ticket, phase, attempt, action: "released" });
     clearLock(d.dir);
     lockCleared = true;
+    if (journaled) settle(d.dir, now, jkey, "succeeded", a.result);
+    if (!corrupt) closeOpen(d.dir, now, a.ticket, "released");
     const minutes = Number.isFinite(claimedMs) ? Math.round((now.getTime() - claimedMs) / 60_000) : null;
     appendEvent(d.dir, now, "release", { ticket: a.ticket, result: a.result, reason: a.reason, commit: a.commit, minutes });
     if (lateReport !== null) {
