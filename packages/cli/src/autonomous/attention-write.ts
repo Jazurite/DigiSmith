@@ -29,6 +29,11 @@ export interface AttentionInput {
 }
 
 export function appendAttention(dir: string, now: Date, a: AttentionInput): "written" | "exists" {
+  return appendAttentionId(dir, now, a) === null ? "exists" : "written";
+}
+
+/** Writes the item and returns its id; null when (run, kind) is already open. One read of the file. */
+export function appendAttentionId(dir: string, now: Date, a: AttentionInput): string | null {
   const file = join(dir, "attention.jsonl");
   const run = a.run ?? "-";
   const raw = readRaw(file);
@@ -36,7 +41,7 @@ export function appendAttention(dir: string, now: Date, a: AttentionInput): "wri
   const prefix = `${run}.${a.kind}.`;
   const resolved = new Set(lines.filter((l) => l.resolved === true && typeof l.id === "string").map((l) => l.id as string));
   const opened = lines.filter((l) => l.resolved !== true && typeof l.id === "string" && l.id.startsWith(prefix)).map((l) => l.id as string);
-  if (opened.some((id) => !resolved.has(id))) return "exists";
+  if (opened.some((id) => !resolved.has(id))) return null;
   const n = opened.length;
   mkdirSync(dir, { recursive: true });
   const ts = now.toISOString();
@@ -46,7 +51,7 @@ export function appendAttention(dir: string, now: Date, a: AttentionInput): "wri
   if (a.causeClass !== undefined) line.causeClass = a.causeClass;
   if (a.retryEligible !== undefined) line.retryEligible = a.retryEligible;
   appendFileSync(file, `${sep}${JSON.stringify(line)}\n`);
-  return "written";
+  return `${prefix}${n}`;
 }
 
 /** Closes an open item. Returns false (and writes nothing) when the id is not open. */

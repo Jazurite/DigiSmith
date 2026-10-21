@@ -1,12 +1,12 @@
 import { execFile } from "node:child_process";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { depotDir } from "../run/paths.ts";
 
 export type PaneLookup = (workspace: string) => Promise<Set<string> | null>;
 type Exec = (workspace: string) => Promise<{ code: number; stdout: string }>;
 
 export function buildHerdrCall(workspace: string, env: NodeJS.ProcessEnv = process.env): { file: string; args: string[]; env: NodeJS.ProcessEnv } {
-  return { file: join(homedir(), ".digismith-depot", "bin", "herdr-ws"), args: ["pane", "list"], env: { ...env, HERDR_WS: workspace } };
+  return { file: join(depotDir(env), "bin", "herdr-ws"), args: ["pane", "list"], env: { ...env, HERDR_WS: workspace } };
 }
 
 const realExec: Exec = (workspace) =>

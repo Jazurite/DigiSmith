@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, readFileSync, appendFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { appendAttention, appendResolved } from "./attention-write.ts";
+import { appendAttention, appendAttentionId, appendResolved } from "./attention-write.ts";
 
 const tmp = () => mkdtempSync(join(tmpdir(), "nw-att-"));
 const T = new Date("2026-10-21T02:00:00.000Z");
@@ -88,5 +88,16 @@ describe("appendAttention", () => {
     expect(appendResolved(d, "builder-1.unknown.0", "watchdog", T.toISOString())).toBe(true);
     const parsed = readFileSync(join(d, "attention.jsonl"), "utf8").split("\n").filter((l) => l).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
     expect(parsed.at(-1).resolved).toBe(true);
+  });
+});
+
+describe("appendAttentionId", () => {
+  it("F7: returns the new id, then null while it is open, and appendAttention keeps its contract", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nw-att-id-"));
+    const a = { ticket: null, run: "r1", kind: "lost" as const, cause: "x" };
+    expect(appendAttentionId(dir, new Date("2026-10-22T00:00:00Z"), a)).toBe("r1.lost.0");
+    expect(appendAttentionId(dir, new Date("2026-10-22T00:00:00Z"), a)).toBeNull();
+    expect(appendAttention(dir, new Date("2026-10-22T00:00:00Z"), a)).toBe("exists");
+    expect(appendAttention(dir, new Date("2026-10-22T00:00:00Z"), { ...a, run: "r2" })).toBe("written");
   });
 });

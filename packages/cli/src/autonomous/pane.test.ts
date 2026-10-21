@@ -23,6 +23,10 @@ describe("herdrPaneLookup", () => {
     await herdrPaneLookup(async (w) => { seen.push(w); return { code: 0, stdout: '{"result":{"panes":[]}}' }; })("w3");
     expect(seen).toEqual(["w3"]);
   });
+  it("F8: the herdr-ws path follows DIGISMITH_DEPOT_DIR", () => {
+    const c = buildHerdrCall("w2", { DIGISMITH_DEPOT_DIR: "/x/depot" });
+    expect(c.file).toBe(join("/x/depot", "bin", "herdr-ws"));
+  });
   it("builds a read-only pane list call with HERDR_WS", () => {
     const c = buildHerdrCall("w2", { PATH: "/bin" });
     expect(c.file).toBe(join(homedir(), ".digismith-depot", "bin", "herdr-ws"));

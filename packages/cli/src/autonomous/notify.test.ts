@@ -75,4 +75,10 @@ describe("notifyNew", () => {
     await notifyNew(d, [item(1), item(2)]);
     expect(JSON.parse(onDisk).sent).toEqual(["r1.lost.0"]);
   });
+  it("F7: sent keeps only the ids that are still open", async () => {
+    const { d } = setup();
+    await notifyNew(d, [item(1), item(2)]);
+    await notifyNew(d, [item(2)]);
+    expect(JSON.parse(readFileSync(join(d.dir, "notify-state.json"), "utf-8")).sent).toEqual(["r2.lost.0"]);
+  });
 });

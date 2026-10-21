@@ -31,6 +31,10 @@ const utc7 = (raw: string): string => {
 
 export async function notifyNew(d: NotifyDeps, items: OpenItem[]): Promise<{ sent: number; pending: number }> {
   const st = load(d.dir);
+  const openIds = new Set(items.map((i) => i.id));
+  const kept = st.sent.filter((id) => openIds.has(id));
+  const pruned = kept.length !== st.sent.length;
+  st.sent = kept;
   let sent = 0;
   let pending = 0;
   for (const it of items) {
@@ -47,5 +51,6 @@ export async function notifyNew(d: NotifyDeps, items: OpenItem[]): Promise<{ sen
     sent++;
     save(d.dir, st);
   }
+  if (pruned && sent === 0) save(d.dir, st);
   return { sent, pending };
 }

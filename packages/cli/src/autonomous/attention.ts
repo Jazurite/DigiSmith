@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAttention, appendResolved as writeResolved } from "./attention-write.ts";
+import { appendAttentionId, appendResolved as writeResolved } from "./attention-write.ts";
 import type { AttentionKind } from "./attention-write.ts";
 
 export type { AttentionKind } from "./attention-write.ts";
@@ -53,10 +53,13 @@ export function readOpen(dir: string): OpenItem[] {
 
 /** Thin wrapper over the single writer. Returns the new item, or null when (run, kind) is already open. */
 export function appendOpen(dir: string, i: Omit<OpenItem, "id" | "ts"> & { ts: string }): OpenItem | null {
-  const before = new Set(readOpen(dir).map((o) => o.id));
-  const res = appendAttention(dir, new Date(i.ts), { ticket: i.ticket, run: i.run, kind: i.kind, cause: i.cause, since: i.since, causeClass: i.causeClass, retryEligible: i.retryEligible });
-  if (res === "exists") return null;
-  return readOpen(dir).find((o) => !before.has(o.id)) ?? null;
+  const when = new Date(i.ts);
+  const id = appendAttentionId(dir, when, { ticket: i.ticket, run: i.run, kind: i.kind, cause: i.cause, since: i.since, causeClass: i.causeClass, retryEligible: i.retryEligible });
+  if (id === null) return null;
+  const item: OpenItem = { id, ts: when.toISOString(), ticket: i.ticket, run: i.run, kind: i.kind, cause: i.cause, since: i.since };
+  if (i.causeClass !== undefined) item.causeClass = i.causeClass;
+  if (i.retryEligible !== undefined) item.retryEligible = i.retryEligible;
+  return item;
 }
 
 export function appendResolved(dir: string, id: string, by: "watchdog" | "jack", ts: string, note?: string): boolean {
