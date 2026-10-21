@@ -9,55 +9,138 @@ export type EventType = (typeof HOOK_TYPES)[number] | (typeof CONDUCTOR_TYPES)[n
 
 export type EventLine = { schema: string; seq: number; ts: string; run: string; type: string; data: Record<string, unknown> };
 
-// A holder keeps the lock for a few milliseconds; a lock this old was left behind by a crash.
+// A lock with no readable owner file this old was left by a crash between mkdir and the owner write, or made by hand.
 const STALE_MS = 1000;
+// A lock this old is broken whatever its pid says (guards against pid reuse).
+const MAX_HOLD_MS = 30_000;
+
+// Seams that exist for the tests only.
+export const _testHooks: { beforeBreakRename?: () => void; beforeOwnerWrite?: () => void; beforeOwnerCheck?: () => void } = {};
 
 function sleep(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-// Returns the owner token on success, null on timeout.
+function readOwner(lockDir: string): string | null {
+  try {
+    return fs.readFileSync(path.join(lockDir, "owner"), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+// Stale: holder pid gone, or no readable owner and older than STALE_MS, or older than MAX_HOLD_MS.
+function isStale(owner: string | null, ageMs: number): boolean {
+  if (ageMs > MAX_HOLD_MS) return true;
+  const pid = owner === null ? Number.NaN : Number.parseInt(owner.split(":")[0], 10);
+  if (Number.isInteger(pid) && pid > 0) return !pidAlive(pid);
+  return ageMs > STALE_MS;
+}
+
+// Removes aside directories that an earlier breaker dropped.
+function sweep(lockDir: string): void {
+  try {
+    const parent = path.dirname(lockDir);
+    const prefix = `${path.basename(lockDir)}.stale-`;
+    for (const name of fs.readdirSync(parent)) {
+      if (!name.startsWith(prefix)) continue;
+      try {
+        const p = path.join(parent, name);
+        if (Date.now() - fs.statSync(p).mtimeMs > MAX_HOLD_MS) fs.rmSync(p, { recursive: true, force: true });
+      } catch {
+        /* best effort */
+      }
+    }
+  } catch {
+    /* best effort */
+  }
+}
+
+// Tries to break the lock if it is stale. Moves it aside first, then checks that the moved directory is the one
+// that was seen as stale; a fresh lock that got moved is put back, never deleted.
+// A very small window remains: a process paused between two adjacent syscalls while two others act can still let
+// a fresh lock be missing from `lock` for a moment. That is accepted; the holder narrows it by re-reading its
+// owner token right before it writes (appendEvent).
+function tryBreak(lockDir: string): void {
+  let seen: string | null;
+  let ageMs: number;
+  try {
+    seen = readOwner(lockDir);
+    ageMs = Date.now() - fs.statSync(lockDir).mtimeMs;
+  } catch {
+    return; // released or broken by someone else
+  }
+  if (!isStale(seen, ageMs)) return;
+  _testHooks.beforeBreakRename?.();
+  const aside = `${lockDir}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+  try {
+    fs.renameSync(lockDir, aside);
+  } catch {
+    return;
+  }
+  const moved = readOwner(aside);
+  let same: boolean;
+  if (seen !== null || moved !== null) {
+    same = moved === seen;
+  } else {
+    try {
+      same = Date.now() - fs.statSync(aside).mtimeMs > STALE_MS;
+    } catch {
+      same = false;
+    }
+  }
+  if (same) {
+    fs.rmSync(aside, { recursive: true, force: true });
+    return;
+  }
+  try {
+    fs.renameSync(aside, lockDir);
+  } catch {
+    /* the name is taken: leave the aside directory for the sweep */
+  }
+}
+
+// Returns the owner content ("<pid>:<token>") on success, null on timeout.
 function acquire(lockDir: string, waitMs: number): string | null {
   const deadline = Date.now() + waitMs;
+  sweep(lockDir);
   for (;;) {
+    let made = false;
     try {
       fs.mkdirSync(lockDir);
-      const token = randomBytes(8).toString("hex");
-      fs.writeFileSync(path.join(lockDir, "owner"), token);
-      return token;
+      made = true;
+      const owner = `${process.pid}:${randomBytes(8).toString("hex")}`;
+      _testHooks.beforeOwnerWrite?.();
+      fs.writeFileSync(path.join(lockDir, "owner"), owner);
+      return owner;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-    }
-    try {
-      if (Date.now() - fs.statSync(lockDir).mtimeMs > STALE_MS) {
-        // Only one waiter wins the rename; the others throw and loop again.
-        const aside = `${lockDir}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
-        fs.renameSync(lockDir, aside);
-        if (Date.now() - fs.statSync(aside).mtimeMs > STALE_MS) {
-          fs.rmSync(aside, { recursive: true, force: true });
-        } else {
-          // Another waiter broke the stale lock and took a fresh one between our stat and our rename: put it back.
-          try {
-            fs.renameSync(aside, lockDir);
-          } catch {
-            /* the name is taken again: the moved lock is dead, drop it */
-            fs.rmSync(aside, { recursive: true, force: true });
-          }
-        }
-        continue;
+      const code = (e as NodeJS.ErrnoException).code;
+      if (made && code !== "ENOENT") {
+        fs.rmSync(lockDir, { recursive: true, force: true });
+        throw e;
       }
-    } catch {
-      /* the holder released it, or another waiter broke it first: try again */
+      // ENOENT on the owner write: a breaker moved our fresh lock aside; it puts it back or drops it. Loop again.
+      if (!made && code !== "EEXIST") throw e;
     }
+    tryBreak(lockDir);
     if (Date.now() >= deadline) return null;
     sleep(5);
   }
 }
 
-// Removes the lock only when it still carries our token.
-function release(lockDir: string, token: string): void {
+// Removes the lock only when it still carries our owner content.
+function release(lockDir: string, owner: string): void {
   try {
-    if (fs.readFileSync(path.join(lockDir, "owner"), "utf8") === token) fs.rmSync(lockDir, { recursive: true, force: true });
+    if (readOwner(lockDir) === owner) fs.rmSync(lockDir, { recursive: true, force: true });
   } catch {
     /* already gone, or now owned by someone else */
   }
@@ -80,16 +163,18 @@ function lastSeq(runDir: string): number {
 // Appends one event under the run's lock and returns the line. Throws Error("lock timeout") when the lock stays taken.
 export function appendEvent(runDir: string, run: string, type: string, data: Record<string, unknown>, waitMs: number): EventLine {
   const lockDir = path.join(runDir, "lock");
-  const token = acquire(lockDir, waitMs);
-  if (token === null) throw new Error("lock timeout");
+  const owner = acquire(lockDir, waitMs);
+  if (owner === null) throw new Error("lock timeout");
   try {
+    _testHooks.beforeOwnerCheck?.();
+    if (readOwner(lockDir) !== owner) throw new Error("lock lost");
     const line: EventLine = { schema: EVENT_SCHEMA, seq: lastSeq(runDir) + 1, ts: new Date().toISOString(), run, type, data };
     // Reserve the number first: a crash between the two writes leaves a gap, never a duplicate.
     fs.writeFileSync(path.join(runDir, "seq"), String(line.seq));
     fs.appendFileSync(path.join(runDir, "events.jsonl"), JSON.stringify(line) + "\n");
     return line;
   } finally {
-    release(lockDir, token);
+    release(lockDir, owner);
   }
 }
 

@@ -3,13 +3,31 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import { appendEvent, readEvents } from "./events.ts";
+import { appendEvent, readEvents, _testHooks } from "./events.ts";
 
 let dir: string;
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "nw-events-"));
 });
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+afterEach(() => {
+  _testHooks.beforeBreakRename = undefined;
+  _testHooks.beforeOwnerWrite = undefined;
+  _testHooks.beforeOwnerCheck = undefined;
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+function deadPid(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, ["-e", ""]);
+    p.on("exit", () => resolve(p.pid as number));
+    p.on("error", reject);
+  });
+}
+function age(p: string, ms: number): void {
+  const old = new Date(Date.now() - ms);
+  fs.utimesSync(p, old, old);
+}
+const lockDirs = (d: string) => fs.readdirSync(d).filter((n) => n === "lock" || n.startsWith("lock.stale-"));
 
 describe("appendEvent", () => {
   it("numbers events 1..n and writes the documented line", () => {
@@ -98,6 +116,86 @@ describe("appendEvent", () => {
     expect(raw).toHaveLength(80);
     raw.forEach((l) => expect(() => JSON.parse(l)).not.toThrow());
   }, 30_000);
+});
+
+describe("stale lock breaking", () => {
+  it("three waiters on one lock of a dead pid never duplicate a seq or leave a lock behind", async () => {
+    const worker = path.join(import.meta.dirname, "stale-worker.ts");
+    const run = (d: string, startAt: number) =>
+      new Promise<void>((resolve, reject) => {
+        const p = spawn(process.execPath, ["--experimental-strip-types", worker, d, String(startAt)], { stdio: "inherit" });
+        p.on("exit", (c) => (c === 0 ? resolve() : reject(new Error(`stale worker exited ${c}`))));
+      });
+    const pid = await deadPid();
+    for (let round = 0; round < 10; round++) {
+      const d = path.join(dir, `round-${round}`);
+      fs.mkdirSync(path.join(d, "lock"), { recursive: true });
+      fs.writeFileSync(path.join(d, "lock", "owner"), `${pid}:deadbeef`);
+      const startAt = Date.now() + 400;
+      await Promise.all([run(d, startAt), run(d, startAt), run(d, startAt)]);
+      expect(readEvents(d).map((e) => e.seq)).toEqual([1, 2, 3]);
+      expect(lockDirs(d)).toEqual([]);
+    }
+  }, 60_000);
+  it("does not break a lock held by a live pid for under 30 s", () => {
+    const lock = path.join(dir, "lock");
+    fs.mkdirSync(lock);
+    fs.writeFileSync(path.join(lock, "owner"), `${process.pid}:abc`);
+    age(lock, 5000);
+    expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/lock timeout/);
+    expect(fs.readFileSync(path.join(lock, "owner"), "utf8")).toBe(`${process.pid}:abc`);
+    expect(fs.existsSync(path.join(dir, "events.jsonl"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "seq"))).toBe(false);
+  });
+  it("breaks a lock older than 30 s whatever the pid", () => {
+    const lock = path.join(dir, "lock");
+    fs.mkdirSync(lock);
+    fs.writeFileSync(path.join(lock, "owner"), `${process.pid}:abc`);
+    age(lock, 31_000);
+    expect(appendEvent(dir, "r1", "tool", {}, 2000).seq).toBe(1);
+    expect(lockDirs(dir)).toEqual([]);
+  });
+  it("puts back a fresh lock that a slow breaker moved aside, and waits for its holder", async () => {
+    const pid = await deadPid();
+    const lock = path.join(dir, "lock");
+    fs.mkdirSync(lock);
+    fs.writeFileSync(path.join(lock, "owner"), `${pid}:old`);
+    _testHooks.beforeBreakRename = () => {
+      _testHooks.beforeBreakRename = undefined;
+      // Another acquirer breaks the stale lock and takes a fresh live one before our rename.
+      fs.rmSync(lock, { recursive: true, force: true });
+      fs.mkdirSync(lock);
+      fs.writeFileSync(path.join(lock, "owner"), `${process.pid}:fresh`);
+    };
+    expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/lock timeout/);
+    expect(fs.readFileSync(path.join(lock, "owner"), "utf8")).toBe(`${process.pid}:fresh`);
+    expect(fs.existsSync(path.join(dir, "events.jsonl"))).toBe(false);
+    expect(fs.readdirSync(dir).filter((n) => n.startsWith("lock.stale-"))).toEqual([]);
+  });
+  it("removes the lock it just made when the owner write fails", () => {
+    _testHooks.beforeOwnerWrite = () => {
+      throw new Error("ENOSPC");
+    };
+    expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/ENOSPC/);
+    expect(fs.existsSync(path.join(dir, "lock"))).toBe(false);
+  });
+  it("aborts with lock lost, writing nothing, when the owner token changed before the write", () => {
+    _testHooks.beforeOwnerCheck = () => fs.writeFileSync(path.join(dir, "lock", "owner"), "someone-else");
+    expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/lock lost/);
+    expect(fs.existsSync(path.join(dir, "seq"))).toBe(false);
+    expect(fs.existsSync(path.join(dir, "events.jsonl"))).toBe(false);
+    expect(fs.readFileSync(path.join(dir, "lock", "owner"), "utf8")).toBe("someone-else");
+  });
+  it("sweeps lock.stale-* directories older than 30 s", () => {
+    const old = path.join(dir, "lock.stale-1-aa");
+    const young = path.join(dir, "lock.stale-1-bb");
+    fs.mkdirSync(old);
+    fs.mkdirSync(young);
+    age(old, 31_000);
+    appendEvent(dir, "r1", "tool", {}, 2000);
+    expect(fs.existsSync(old)).toBe(false);
+    expect(fs.existsSync(young)).toBe(true);
+  });
 });
 
 describe("readEvents", () => {
