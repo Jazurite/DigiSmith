@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { readReviews, type Review } from "./findings.ts";
-import { judgementKey, parseVerdictLines, type Judgement } from "./verdicts.ts";
+import { readReviews, type Finding, type Review } from "./findings.ts";
+import { parseVerdictEntries, type VerdictEntry } from "./verdicts.ts";
 import { REVIEWER_TYPES } from "./types.ts";
 
 export type Row = {
@@ -25,36 +25,96 @@ function typeLabel(r: Review): string {
   return r.kind === "task" ? `task ${r.id}` : "ticket";
 }
 
-export function buildRows(reviews: Review[], judgements: Map<string, Judgement>): Row[] {
-  const sorted = [...reviews].sort((a, b) => {
+type Ruling = { round: number; verdict: string; reason: string };
+type Resolved = { review: Review; finding: Finding; history: Ruling[] };
+
+const sortReviews = (reviews: Review[]): Review[] =>
+  [...reviews].sort((a, b) => {
     const [ak, bk] = [orderKey(a), orderKey(b)];
     return ak[0] - bk[0] || ak[1] - bk[1] || ak[2] - bk[2];
   });
-  const used = new Set<string>();
-  const unjudged: string[] = [];
+
+const packName = (r: Review): string => `${r.kind}-${r.id}-r${r.round}`;
+
+// One entry rules on the finding of the pack with the same round, else on the latest earlier raise.
+function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resolved> {
+  const raised = new Map<string, Resolved[]>();
+  const all = new Map<Finding, Resolved>();
+  for (const r of sortReviews(reviews)) {
+    for (const f of r.findings) {
+      const res: Resolved = { review: r, finding: f, history: [] };
+      all.set(f, res);
+      const key = `${r.kind} ${r.id} ${f.id}`;
+      raised.set(key, [...(raised.get(key) ?? []), res]);
+    }
+  }
+  for (const e of entries) {
+    const candidates = raised.get(`${e.kind} ${e.id} ${e.finding}`) ?? [];
+    const target = candidates.find((c) => c.review.round === e.round)
+      ?? [...candidates].reverse().find((c) => c.review.round < e.round);
+    if (!target) {
+      const packs = sortReviews(reviews).map(packName).join(", ");
+      throw new Error(`ledger line ${e.line}: ${e.text}: no pack raised ${e.kind} ${e.id} ${e.finding}; packs read: ${packs}`);
+    }
+    target.history.push({ round: e.round, verdict: e.verdict, reason: e.reason });
+  }
+  const unjudged = [...all.values()]
+    .filter((r) => r.history.length === 0)
+    .map((r) => judgementKeyOf(r));
+  if (unjudged.length > 0) throw new Error(`findings with no verdict line: ${unjudged.join(", ")}`);
+  for (const r of all.values()) r.history.sort((a, b) => a.round - b.round); // stable: ledger order inside a round
+  return all;
+}
+
+const judgementKeyOf = (r: Resolved): string => `${r.review.kind} ${r.review.id} r${r.review.round} ${r.finding.id}`;
+const latest = (r: Resolved): Ruling => r.history[r.history.length - 1];
+
+export function buildRows(reviews: Review[], entries: VerdictEntry[]): Row[] {
+  const resolved = resolve(reviews, entries);
   const rows: Row[] = [];
-  for (const r of sorted) {
+  for (const r of sortReviews(reviews)) {
     if (r.findings.length === 0) {
       rows.push({ type: typeLabel(r), round: r.round, where: "-", severity: "-", what: "approved, no findings", scenario: "-", verdict: "-" });
       continue;
     }
     for (const f of [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))) {
-      const key = judgementKey(r.kind, r.id, r.round, f.id);
-      const j = judgements.get(key);
-      if (!j) { unjudged.push(key); continue; }
-      used.add(key);
+      const l = latest(resolved.get(f) as Resolved);
+      const text = l.reason === "" ? l.verdict : `${l.verdict} (${l.reason})`;
       rows.push({
         type: typeLabel(r), round: r.round,
         where: f.line === null ? f.path : `${f.path}:${f.line}`,
         severity: f.severity, what: f.what, scenario: f.scenario,
-        verdict: j.reason === "" ? j.verdict : `${j.verdict} (${j.reason})`,
+        verdict: l.round === r.round ? text : `${text} [r${l.round}]`,
       });
     }
   }
-  if (unjudged.length > 0) throw new Error(`findings with no verdict line: ${unjudged.join(", ")}`);
-  const orphans = [...judgements.keys()].filter((k) => !used.has(k));
-  if (orphans.length > 0) throw new Error(`verdict line names no finding: ${orphans.join(", ")}`);
   return rows;
+}
+
+export type JsonFinding = {
+  id: string; review: { kind: string; id: string }; finding: string; severity: string;
+  raisedRound: number; latestRound: number; latestRuling: { verdict: string; reason: string };
+  history: Ruling[];
+};
+export type TableJson = { schema: 1; findings: JsonFinding[]; approvedReviews: { kind: string; id: string; round: number }[] };
+
+export function buildJson(reviews: Review[], entries: VerdictEntry[]): TableJson {
+  const resolved = resolve(reviews, entries);
+  const findings: JsonFinding[] = [];
+  const approvedReviews: TableJson["approvedReviews"] = [];
+  for (const r of sortReviews(reviews)) {
+    if (r.findings.length === 0) { approvedReviews.push({ kind: r.kind, id: r.id, round: r.round }); continue; }
+    for (const f of [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))) {
+      const res = resolved.get(f) as Resolved;
+      const l = latest(res);
+      findings.push({
+        id: judgementKeyOf(res), review: { kind: r.kind, id: r.id }, finding: f.id, severity: f.severity,
+        raisedRound: r.round, latestRound: l.round, latestRuling: { verdict: l.verdict, reason: l.reason },
+        history: res.history.map((h) => ({ round: h.round, verdict: h.verdict, reason: h.reason })),
+      });
+    }
+  }
+  return { schema: 1, findings, approvedReviews };
 }
 
 const cell = (v: string | number): string => {
@@ -74,16 +134,32 @@ export function renderMarkdown(rows: Row[]): string {
   return lines.join("\n");
 }
 
-export function runTable(opts: { workspace: string; ledger?: string; out: string }): { written: boolean; message: string } {
+export function runTable(opts: { workspace: string; ledger?: string; out?: string; json?: boolean }): { written: boolean; message: string; json?: string } {
+  if (!opts.json && !opts.out) throw new Error("--out is required without --json");
   if (!fs.existsSync(opts.workspace) || !fs.statSync(opts.workspace).isDirectory()) {
     throw new Error(`workspace: no such folder: ${opts.workspace}`);
   }
   const reviews = readReviews(opts.workspace);
-  if (reviews.length === 0) return { written: false, message: "no reviews found" };
+  if (reviews.length === 0) {
+    if (!opts.json) return { written: false, message: "no reviews found" };
+    const empty = `${JSON.stringify({ schema: 1, findings: [], approvedReviews: [] }, null, 2)}\n`;
+    if (!opts.out) return { written: false, message: "no reviews found", json: empty };
+    fs.mkdirSync(path.dirname(path.resolve(opts.out)), { recursive: true });
+    fs.writeFileSync(opts.out, empty);
+    return { written: true, message: `wrote ${opts.out} (0 finding(s))` };
+  }
   const ledger = opts.ledger ?? path.join(opts.workspace, "progress.md");
   if (!fs.existsSync(ledger)) throw new Error(`ledger: no such file: ${ledger}`);
-  const rows = buildRows(reviews, parseVerdictLines(fs.readFileSync(ledger, "utf8")));
-  fs.mkdirSync(path.dirname(path.resolve(opts.out)), { recursive: true });
-  fs.writeFileSync(opts.out, renderMarkdown(rows));
+  const entries = parseVerdictEntries(fs.readFileSync(ledger, "utf8"));
+  if (opts.json) {
+    const json = `${JSON.stringify(buildJson(reviews, entries), null, 2)}\n`;
+    if (!opts.out) return { written: false, message: "json", json };
+    fs.mkdirSync(path.dirname(path.resolve(opts.out)), { recursive: true });
+    fs.writeFileSync(opts.out, json);
+    return { written: true, message: `wrote ${opts.out}` };
+  }
+  const rows = buildRows(reviews, entries);
+  fs.mkdirSync(path.dirname(path.resolve(opts.out as string)), { recursive: true });
+  fs.writeFileSync(opts.out as string, renderMarkdown(rows));
   return { written: true, message: `wrote ${opts.out} (${rows.length} row(s))` };
 }

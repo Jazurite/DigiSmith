@@ -3,7 +3,7 @@ import { buildPack } from "./pack.ts";
 import { runTable } from "./table.ts";
 import { REVIEWER_TYPES, type ReviewerType } from "./types.ts";
 
-interface TableArgs { workspace: string; ledger?: string; out: string }
+interface TableArgs { workspace: string; ledger?: string; out?: string; json?: boolean }
 interface PackArgs {
   type: ReviewerType; task?: number; round: number; ticket?: string; workspace: string; base: string; head: string;
   diff: string; plan?: string; brief?: string; report?: string; constraints?: string;
@@ -23,10 +23,12 @@ const tableCommand: CommandModule<object, TableArgs> = {
     y
       .option("workspace", { type: "string", demandOption: true, describe: "the SDD workspace folder (skills/subagent-driven-development/scripts/sdd-workspace PLAN prints it)" })
       .option("ledger", { type: "string", describe: "the ledger file (default: <workspace>/progress.md)" })
-      .option("out", { type: "string", demandOption: true, describe: "the findings.md file to write" }),
+      .option("out", { type: "string", describe: "the findings.md file to write (required without --json)" })
+      .option("json", { type: "boolean", default: false, describe: "print the findings model as JSON (schema 1) to stdout, or write it to --out" }),
   handler: (args) => {
     try {
-      console.log(runTable({ workspace: args.workspace, ledger: args.ledger, out: args.out }).message);
+      const r = runTable({ workspace: args.workspace, ledger: args.ledger, out: args.out, json: args.json });
+      console.log(args.json && !args.out ? r.json : r.message);
     } catch (e) {
       fail(e);
     }
