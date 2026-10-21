@@ -31,24 +31,34 @@ function signOff(t: ClickUpTask): "Auto" | "Jack" | null {
 /** Tracker over the ClickUp API for one space. Reads only, except setStatus and comment. */
 export class ClickUpLoTracker implements Tracker {
   private milestones: Promise<Map<string, string>> | null = null;
-  private statuses: Promise<Set<string>> | null = null;
+  private lists: Promise<string[]> | null = null;
+  private readonly listStatuses = new Map<string, Promise<string[]>>();
 
   constructor(private readonly client: ClickUpClient, private readonly spaceId: string) {}
 
-  /** True when any list in the space has the status (the status is not in every list). Lists are read once per tracker. */
+  /**
+   * True when any list in the space has the status (the status is not in every list).
+   * Stops at the first list that has it; each list's statuses are read at most once per tracker.
+   */
   async hasStatus(name: string): Promise<boolean> {
-    this.statuses ??= this.loadStatuses().catch((err) => { this.statuses = null; throw err; });
-    return (await this.statuses).has(name.toLowerCase());
+    const want = name.toLowerCase();
+    this.lists ??= this.loadLists().catch((err) => { this.lists = null; throw err; });
+    const lists = await this.lists;
+    for (const id of lists) {
+      let read = this.listStatuses.get(id);
+      if (!read) {
+        read = this.client.getListStatuses(id).catch((err) => { this.listStatuses.delete(id); throw err; });
+        this.listStatuses.set(id, read);
+      }
+      if ((await read).some((s) => s.toLowerCase() === want)) return true;
+    }
+    return false;
   }
 
-  private async loadStatuses(): Promise<Set<string>> {
+  private async loadLists(): Promise<string[]> {
     const folders = await this.client.getSpaceFolders(this.spaceId);
     const folderless = await this.client.getFolderlessLists(this.spaceId);
-    const all = new Set<string>();
-    for (const l of [...folders.flatMap((f) => f.lists ?? []), ...folderless]) {
-      for (const s of await this.client.getListStatuses(l.id)) all.add(s.toLowerCase());
-    }
-    return all;
+    return [...folders.flatMap((f) => f.lists ?? []), ...folderless].map((l) => l.id);
   }
 
   async listToDo(): Promise<LoTask[]> {
@@ -87,6 +97,8 @@ export class ClickUpLoTracker implements Tracker {
   }
 
   private async milestone(t: ClickUpTask): Promise<string | null> {
+    // Only the link form is read. The older form, where the milestone waits on the ticket through
+    // `dependencies` (probe.md row a), is not read: such a ticket reads "no milestone" until it gets a link.
     const names = await this.loadMilestones();
     for (const link of (t.linked_tasks ?? []) as Link[]) {
       const other = link.task_id === t.id ? link.link_id : link.link_id === t.id ? link.task_id : undefined;

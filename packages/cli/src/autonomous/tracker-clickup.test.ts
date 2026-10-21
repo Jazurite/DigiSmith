@@ -241,6 +241,13 @@ describe("ClickUpLoTracker writes and reads", () => {
     expect(calls.length).toBe(after);
   });
 
+  it("hasStatus stops at the first list that has the status", async () => {
+    const { client, calls } = fakeClient({ search: [], folderLists: ["l1", "l2", "l3"], folderless: ["l4"],
+      lists: { l1: ["backlog"], l2: ["to do"], l3: ["to do"], l4: ["to do"] } });
+    expect(await new ClickUpLoTracker(client, SPACE).hasStatus("To Do")).toBe(true);
+    expect(calls.filter((c) => c.startsWith("getListStatuses"))).toEqual(["getListStatuses l1", "getListStatuses l2"]);
+  });
+
   it("hasStatus is false when no list in the space has it", async () => {
     const { client } = fakeClient({ search: [], folderLists: ["l1"], folderless: ["l3"],
       lists: { l1: ["backlog", "in progress"], l3: ["done"] } });
