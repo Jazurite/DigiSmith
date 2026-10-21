@@ -1,7 +1,7 @@
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import type { Git } from "../autonomous/gitx.ts";
-import { secretFiles } from "./secrets.ts";
+import { notSalvagedMessage, secretHits } from "./secrets.ts";
 
 export interface SalvageDeps { git: Git; repo: string; depotDir: string; now: () => Date; statSize: (path: string) => number }
 export type SalvageResult = { ok: true; steps: string[]; bundle: string | null } | { ok: false; steps: string[]; message: string };
@@ -34,13 +34,28 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     const merged = d.git(d.repo, ["branch", "--merged", "main", "--format=%(refname:short)"]).split("\n").includes(branch);
     if (!dirty && merged) return { ok: true, steps: ["nothing to salvage"], bundle: null };
 
-    // 3. secret check before any commit
+    // 3a. the push sends every commit on the branch: check the files those commits add or change
+    const toks = d.git(wt, ["diff", "--name-status", "--diff-filter=ACMR", "-z", `main...${branch}`]).split("\0").filter(Boolean);
+    const committed: string[] = [];
+    for (let i = 0; i < toks.length;) {
+      const copyOrRename = /^[RC]/.test(toks[i]);
+      committed.push(toks[i + (copyOrRename ? 2 : 1)]);
+      i += copyOrRename ? 3 : 2;
+    }
+    const sizeOf = (p: string): number => {
+      const f = join(wt, p);
+      return existsSync(f) ? d.statSize(f) : Number(d.git(wt, ["cat-file", "-s", `${branch}:${p}`]).trim());
+    };
+    const committedHits = secretHits([...new Set(committed)].map((p) => ({ path: p, size: sizeOf(p) })));
+    if (committedHits.length > 0) return fail(notSalvagedMessage(committedHits));
+
+    // 3b. secret check before any commit
     if (dirty) {
       const untracked = d.git(wt, ["ls-files", "--others", "--exclude-standard", "-z"]).split("\0").filter(Boolean);
       const changed = d.git(wt, ["diff", "--name-only", "--diff-filter=ACMR", "-z", "HEAD"]).split("\0").filter(Boolean);
       const names = [...new Set([...untracked, ...changed])];
-      const hits = secretFiles(names.map((p) => ({ path: p, size: d.statSize(join(wt, p)) })));
-      if (hits.length > 0) return fail(`not salvaged: ${hits.join(", ")}`);
+      const hits = secretHits(names.map((p) => ({ path: p, size: d.statSize(join(wt, p)) })));
+      if (hits.length > 0) return fail(notSalvagedMessage(hits));
       // 4. WIP commit
       act("make the WIP commit", () => {
         d.git(wt, ["add", "-A"]);
@@ -65,4 +80,11 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
   } catch (e) {
     return fail(`salvage failed (${steps[steps.length - 1] ?? "start"}): ${msg(e)}`);
   }
+}
+
+/** The main checkout: the parent of a `.git` common dir; for a separate git dir or a bare repo, the top level. */
+export function resolveRepo(git: Git, cwd: string): string {
+  const common = git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim();
+  if (basename(common) === ".git") return dirname(common);
+  return git(cwd, ["rev-parse", "--show-toplevel"]).trim();
 }

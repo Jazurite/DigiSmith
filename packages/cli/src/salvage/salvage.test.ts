@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { realGit } from "../autonomous/gitx.ts";
-import { salvage, type SalvageDeps } from "./salvage.ts";
+import { resolveRepo, salvage, type SalvageDeps } from "./salvage.ts";
 
 const sh = (cwd: string, ...a: string[]) => execFileSync("git", a, { cwd, encoding: "utf8" }).trim();
 let root: string, origin: string, repo: string, wt: string, depot: string;
@@ -54,7 +54,7 @@ describe("salvage", () => {
     const before = sh(wt, "rev-parse", "HEAD");
     const r = salvage(mk(), { ticket: "DGS-9" });
     expect(r).toMatchObject({ ok: false });
-    expect(!r.ok && r.message).toBe(`not salvaged: ${name}`);
+    expect(!r.ok && r.message).toMatch(new RegExp(`^not salvaged: ${name.replace(/\./g, "\\.")} \\(matches .+\\); Jack decides$`));
     expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
@@ -63,7 +63,7 @@ describe("salvage", () => {
     writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", ".env");
     const before = sh(wt, "rev-parse", "HEAD");
     const r = salvage(mk(), { ticket: "DGS-9" });
-    expect(!r.ok && r.message).toBe("not salvaged: .env");
+    expect(!r.ok && r.message).toBe("not salvaged: .env (matches .env*); Jack decides");
     expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
@@ -74,7 +74,7 @@ describe("salvage", () => {
     writeFileSync(join(wt, "api-token.json"), "{\"a\":1}\n");
     const before = sh(wt, "rev-parse", "HEAD");
     const r = salvage(mk(), { ticket: "DGS-9" });
-    expect(!r.ok && r.message).toBe("not salvaged: api-token.json");
+    expect(!r.ok && r.message).toBe("not salvaged: api-token.json (matches *token*); Jack decides");
     expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
@@ -86,10 +86,29 @@ describe("salvage", () => {
     expect(sh(wt, "show", "HEAD:a.txt")).toBe("changed");
     expect(rescue()).toContain("rescue/DGS-9");
   });
+  it("a committed .env on a clean unmerged branch stops everything", () => {
+    writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", "-f", "."); sh(wt, "commit", "-qm", "oops");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: .env (matches .env*); Jack decides");
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
+  it("a committed file over 5 MB stops everything", () => {
+    writeFileSync(join(wt, "big.bin"), Buffer.alloc(5 * 1024 * 1024 + 1)); sh(wt, "add", "."); sh(wt, "commit", "-qm", "big");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: big.bin (matches over 5 MB); Jack decides");
+    expect(rescue()).toBe("");
+  });
+  it("a committed secret file deleted from the working tree is still found, with its size from git", () => {
+    writeFileSync(join(wt, "my.pem"), "s\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "pem");
+    rmSync(join(wt, "my.pem"));
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: my.pem (matches *.pem); Jack decides");
+  });
   it("a file over 5 MB stops everything", () => {
     writeFileSync(join(wt, "big.bin"), Buffer.alloc(5 * 1024 * 1024 + 1));
     const r = salvage(mk(), { ticket: "DGS-9" });
-    expect(!r.ok && r.message).toBe("not salvaged: big.bin");
+    expect(!r.ok && r.message).toBe("not salvaged: big.bin (matches over 5 MB); Jack decides");
     expect(rescue()).toBe("");
   });
   it("a rejected push is a failure and leaves no rescue branch", () => {
@@ -105,6 +124,7 @@ describe("salvage", () => {
     sh(repo, "worktree", "add", "-q", "-b", "DGS-9__y", join(root, "wt2"), "main");
     const r = salvage(mk(), { ticket: "DGS-9" });
     expect(r.ok).toBe(false);
+    expect(!r.ok && r.message).toBe("expected one worktree for DGS-9, found 2");
   });
   it("dry run changes nothing", () => {
     writeFileSync(join(wt, "new.ts"), "x\n");
@@ -114,5 +134,17 @@ describe("salvage", () => {
     expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
+  });
+});
+
+describe("resolveRepo", () => {
+  const real = (p: string) => realpathSync(p);
+  it("a normal repo gives its top level", () => expect(real(resolveRepo(realGit, repo))).toBe(real(repo)));
+  it("a linked worktree gives the main checkout", () => expect(real(resolveRepo(realGit, wt))).toBe(real(repo)));
+  it("a repo with a separate git dir gives its work tree", () => {
+    const sep = join(root, "sep"), gd = join(root, "sep-gitdir");
+    mkdirSync(sep);
+    execFileSync("git", ["init", "-q", "-b", "main", "--separate-git-dir", gd, sep]);
+    expect(real(resolveRepo(realGit, sep))).toBe(real(sep));
   });
 });

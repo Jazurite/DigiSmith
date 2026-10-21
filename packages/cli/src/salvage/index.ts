@@ -3,7 +3,7 @@ import { statSync } from "node:fs";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { realGit } from "../autonomous/gitx.ts";
-import { salvage } from "./salvage.ts";
+import { resolveRepo, salvage } from "./salvage.ts";
 
 const command: CommandModule = {
   command: "salvage",
@@ -15,7 +15,7 @@ const command: CommandModule = {
       .option("repo", { type: "string", describe: "the main checkout (default: the current directory's repo)" })
       .option("dry-run", { type: "boolean", default: false }),
   handler: (a) => {
-    const repo = (a.repo as string | undefined) ?? realGit(process.cwd(), ["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim().replace(/\/\.git$/, "");
+    const repo = (a.repo as string | undefined) ?? resolveRepo(realGit, process.cwd());
     const r = salvage(
       { git: realGit, repo, depotDir: join(homedir(), ".digismith-depot"), now: () => new Date(), statSize: (p) => statSync(p).size },
       { ticket: a.ticket as string, worktree: a.worktree as string | undefined, dryRun: a["dry-run"] as boolean },
