@@ -232,6 +232,7 @@ describe("reconcile retry", () => {
     const d = tmp(); const k = open(d, "retry", "building", { item: "i", run: "builder-1" });
     reconcile({ dir: d, now: at(5), state: state("building"), obs: O({ runs: ok([old]) }) });
     expect(resultsOf(d)[k]).toBe("open");
+    expect(readJournal(d).filter((l) => l.key === k && l.status === "planned")).toHaveLength(1);
   });
   it("an open line settles succeeded when the new run is there", () => {
     const d = tmp(); const k = open(d, "retry", "building", { item: "i", run: "builder-1" });
