@@ -24,7 +24,10 @@ function save(dir: string, s: State): void {
   renameSync(tmp, join(dir, "notify-state.json"));
 }
 
-const utc7 = (ms: number): string => new Date(ms + 7 * 3600_000).toISOString().slice(0, 16).replace("T", " ");
+const utc7 = (raw: string): string => {
+  const ms = Date.parse(raw);
+  return Number.isNaN(ms) ? raw : new Date(ms + 7 * 3600_000).toISOString().slice(0, 16).replace("T", " ");
+};
 
 export async function notifyNew(d: NotifyDeps, items: OpenItem[]): Promise<{ sent: number; pending: number }> {
   const st = load(d.dir);
@@ -35,14 +38,14 @@ export async function notifyNew(d: NotifyDeps, items: OpenItem[]): Promise<{ sen
     const key = `${it.ticket}:${it.kind}`;
     const limited = d.now() - (st.last[key] ?? -Infinity) < HOUR_MS;
     if (limited || sent >= MAX_PER_PASS) { pending++; continue; }
-    const text = `Nightwatch ${it.kind}: run ${it.run}, ${it.cause}, since ${utc7(Date.parse(it.since))} (UTC+7). Needs Jack.`;
+    const text = `Nightwatch ${it.kind}: run ${it.run}, ${it.cause}, since ${utc7(it.since)} (UTC+7). Needs Jack.`;
     let ok = false;
     try { ok = (await d.runDg(["clickup", "add-comment", "--task", it.ticket, "--text", text, "--yes"])).ok; } catch { ok = false; }
     if (!ok) { pending++; continue; }
     st.sent.push(it.id);
     st.last[key] = d.now();
     sent++;
+    save(d.dir, st);
   }
-  save(d.dir, st);
   return { sent, pending };
 }

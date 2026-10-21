@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -53,5 +53,25 @@ describe("notifyNew", () => {
     const { d, calls } = setup();
     expect(await notifyNew(d, [item(1, { ticket: null, run: "-", kind: "failed" })])).toEqual({ sent: 0, pending: 0 });
     expect(calls).toHaveLength(0);
+  });
+  it("an unparseable since is shown raw and does not reject the pass", async () => {
+    const { d, calls } = setup();
+    const r = await notifyNew(d, [item(1), item(2, { since: "garbage" })]);
+    expect(r).toEqual({ sent: 2, pending: 0 });
+    expect(calls[1].join(" ")).toContain("garbage");
+    expect(await notifyNew(d, [item(1), item(2, { since: "garbage" })])).toEqual({ sent: 0, pending: 0 });
+    expect(calls).toHaveLength(2);
+  });
+  it("state is saved after each send, before the next dg call", async () => {
+    const { d } = setup();
+    let n = 0;
+    let onDisk = "";
+    d.runDg = async () => {
+      n++;
+      if (n === 2) onDisk = readFileSync(join(d.dir, "notify-state.json"), "utf-8");
+      return { ok: true };
+    };
+    await notifyNew(d, [item(1), item(2)]);
+    expect(JSON.parse(onDisk).sent).toEqual(["r1.lost.0"]);
   });
 });
