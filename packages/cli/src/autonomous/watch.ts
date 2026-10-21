@@ -1,9 +1,11 @@
-import { listRuns } from "../run/read.ts";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { readEvents, type EventLine } from "../run/events.ts";
-import { findRunDir } from "../run/paths.ts";
-import type { RunRecord } from "../run/record.ts";
+import { runsDir } from "../run/paths.ts";
+import { readRun, type RunRecord } from "../run/record.ts";
 import { appendOpen, appendResolved, readOpen, type AttentionKind, type OpenItem } from "./attention.ts";
 import { readBudgets } from "./budgets.ts";
+import { atomicWrite } from "./state.ts";
 import { notifyNew, type RunDg } from "./notify.ts";
 import type { PaneLookup } from "./pane.ts";
 import { classify, decideRetry, type Pane } from "./watchdog.ts";
@@ -17,16 +19,41 @@ export interface WatchResult { lines: string[]; opened: number; resolved: number
 const RETENTION_MS = 7 * 24 * 3600_000;
 const AUTO: AttentionKind[] = ["blocked", "stalled"];
 
-function withEvents(env: NodeJS.ProcessEnv): { record: RunRecord; events: EventLine[] }[] {
+/** Each run is read once; a run older than 7 days is skipped before its events are read. A broken run dir gives one stderr line; an unreadable runs root throws. */
+function withEvents(env: NodeJS.ProcessEnv, nowMs: number): { record: RunRecord; events: EventLine[] }[] {
+  const root = runsDir(env);
+  let keys: string[];
+  try {
+    keys = readdirSync(root);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw new Error(`watch: cannot read the runs folder ${root}: ${e instanceof Error ? e.message : String(e)}`);
+  }
   const out: { record: RunRecord; events: EventLine[] }[] = [];
-  for (const { record } of listRuns(env)) {
-    try {
-      const rd = findRunDir(record.run, env);
-      if (!rd) continue;
-      out.push({ record, events: readEvents(rd) });
-    } catch { /* skip a run that cannot be read */ }
+  for (const key of keys) {
+    const keyDir = join(root, key);
+    let ids: string[];
+    try { ids = readdirSync(keyDir); } catch { continue; } // hook-errors.log is a file, not a ticket folder
+    for (const id of ids) {
+      const rd = join(keyDir, id);
+      try {
+        const record = readRun(rd);
+        if (nowMs - Date.parse(record.created_at) > RETENTION_MS) continue;
+        out.push({ record, events: readEvents(rd) });
+      } catch (e) {
+        console.error(`watch: skipped run ${rd}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
   }
   return out;
+}
+
+/** What the pass remembers between runs: the (run, kind) pairs it opened, cleared when the run is seen healthy or ended again. */
+function loadState(dir: string): Set<string> {
+  try {
+    const v = JSON.parse(readFileSync(join(dir, "watch-state.json"), "utf-8")) as { opened?: unknown };
+    return new Set(Array.isArray(v.opened) ? v.opened.filter((x): x is string => typeof x === "string") : []);
+  } catch { return new Set(); }
 }
 
 export async function runWatch(d: WatchDeps): Promise<WatchResult> {
@@ -36,8 +63,15 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   const { budgets, problems } = readBudgets(d.cwd);
   // The attention file is read once per pass; the list follows what the pass opens and resolves.
   let items = readOpen(d.dir);
+  // A (run, kind) opened earlier and no longer open was resolved: it stays closed until the run is seen healthy.
+  const opened = loadState(d.dir);
+  const key = (run: string, kind: string): string => `${run}|${kind}`;
   const open = (i: Omit<OpenItem, "id" | "ts">): void => {
     if (items.some((o) => o.run === i.run && o.kind === i.kind)) return;
+    if (i.run !== "-") { // "-" is the config item: it follows the config, not a run
+      if (opened.has(key(i.run, i.kind))) return;
+      opened.add(key(i.run, i.kind));
+    }
     if (d.dryRun) { res.opened++; items.push({ ...i, id: `${i.run}.${i.kind}.dry`, ts: nowIso }); return; }
     const made = appendOpen(d.dir, { ...i, ts: nowIso });
     if (made) { res.opened++; items.push(made); }
@@ -61,17 +95,17 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     return set ? (set.has(pane) ? "present" : "gone") : "unknown";
   };
 
-  const runs = withEvents(d.env);
+  const runs = withEvents(d.env, nowMs);
   for (const { record, events } of runs) {
-    if (nowMs - Date.parse(record.created_at) > RETENTION_MS && !events.some((e) => e.type === "ended")) continue;
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);
     const v = classify(record, events, pane, nowMs, budgets);
     const mine = items.filter((o) => o.run === record.run && AUTO.includes(o.kind));
     if (v.state === "ended" || v.state === "healthy") {
+      for (const k of [...opened]) if (k.startsWith(`${record.run}|`)) opened.delete(k);
       for (const it of mine) close(it, `run is ${v.state} again`);
       continue;
     }
-    for (const it of mine.filter((o) => o.kind !== v.state)) close(it, `run is ${v.state} now`);
+    for (const it of mine.filter((o) => o.kind !== v.state)) { close(it, `run is ${v.state} now`); opened.delete(key(it.run, it.kind)); }
     open({
       ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause: v.cause, since: v.since,
       retryEligible: decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
@@ -80,6 +114,9 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   }
 
   if (!d.dryRun) {
+    const live = new Set(runs.map((r) => r.record.run));
+    const keep = [...opened].filter((k) => live.has(k.slice(0, k.lastIndexOf("|"))));
+    try { atomicWrite(d.dir, "watch-state.json", `${JSON.stringify({ opened: keep })}\n`); } catch { /* the state is a convenience */ }
     // earlier sends that failed are offered again with this pass's new items
     const n = await notifyNew({ dir: d.dir, now: d.now, runDg: d.runDg }, readOpen(d.dir));
     res.commented = n.sent;

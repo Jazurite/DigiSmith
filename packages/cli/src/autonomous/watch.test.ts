@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRun } from "../run/record.ts";
 import { findRunDir } from "../run/paths.ts";
-import { readOpen } from "./attention.ts";
+import { appendResolved, readOpen } from "./attention.ts";
 import { runWatch, type WatchDeps } from "./watch.ts";
 
 const NOW = Date.parse("2026-10-22T10:00:00Z");
@@ -31,13 +31,13 @@ afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 function mk(ticket: string, role: string, createdMin: number, evs: [number, string][], opts: { workspace?: string | null; pane?: string } = {}): string {
   const rec = createRun({ ticket, role, order: "/o.md", workspace: opts.workspace === null ? undefined : (opts.workspace ?? "w2"), pane: opts.pane ?? `w2:${ticket}` }, env, new Date(NOW - createdMin * 60_000));
   const rd = findRunDir(rec.run, env)!;
-  const lines = evs.map(([m, type], i) => JSON.stringify({ schema: "nightwatch-event/v1", seq: i + 1, ts: ago(m), run: rec.run, type, data: {} }));
+  const lines = evs.map(([m, type], i) => JSON.stringify({ schema: "nightwatch-event/v1", seq: i + 1, ts: ago(m), run: rec.run, type, data: type === "blocked" ? { kind: "permission_prompt" } : {} }));
   if (lines.length) writeFileSync(join(rd, "events.jsonl"), lines.join("\n") + "\n");
   return rec.run;
 }
 const addEvent = (run: string, m: number, type: string, seq: number): void => {
   const rd = findRunDir(run, env)!;
-  writeFileSync(join(rd, "events.jsonl"), JSON.stringify({ schema: "nightwatch-event/v1", seq, ts: ago(m), run, type, data: {} }) + "\n", { flag: "a" });
+  writeFileSync(join(rd, "events.jsonl"), JSON.stringify({ schema: "nightwatch-event/v1", seq, ts: ago(m), run, type, data: type === "blocked" ? { kind: "permission_prompt" } : {} }) + "\n", { flag: "a" });
 };
 
 const deps = (over: Partial<WatchDeps> = {}): WatchDeps => ({
@@ -194,5 +194,93 @@ describe("runWatch", () => {
     }
     const pane = readFileSync(join(import.meta.dirname, "pane.ts"), "utf-8");
     expect(pane.match(/args: \[([^\]]*)\]/)?.[1]).toBe('"pane", "list"');
+  });
+});
+
+describe("runWatch: review fixes", () => {
+  it("F1: a run that was cleared (ended, started) and then blocked is watched and gets its item", async () => {
+    present = new Set(["w2:DGS-1"]);
+    mk("DGS-1", "builder", 22, [[20, "started"], [15, "ended"], [14, "started"], [5, "blocked"]]);
+    const r = await runWatch(deps());
+    expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    expect(r.opened).toBe(1);
+  });
+
+  it("F1: retention keeps a cleared old run (ended, started) out of the ended shortcut", async () => {
+    present = new Set(["w2:DGS-1"]);
+    mk("DGS-1", "builder", 8 * 24 * 60, [[8 * 24 * 60 - 1, "started"], [8 * 24 * 60 - 2, "ended"], [8 * 24 * 60 - 3, "started"]]);
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(0);
+  });
+
+  it("F3a: a lost item Jack resolved stays closed while the run is still lost, with no comment", async () => {
+    mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]); // pane absent: lost
+    await runWatch(deps());
+    const lost = readOpen(dir)[0];
+    expect(lost.kind).toBe("lost");
+    appendResolved(dir, lost.id, "jack", ago(0), "seen");
+    const before = calls.length;
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(0);
+    expect(readOpen(dir)).toEqual([]);
+    expect(calls).toHaveLength(before);
+    const r3 = await runWatch(deps());
+    expect(r3.opened).toBe(0);
+  });
+
+  it("F3b: resolved, seen healthy, then lost again opens n+1 with one comment", async () => {
+    const run = mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]);
+    await runWatch(deps());
+    appendResolved(dir, readOpen(dir)[0].id, "jack", ago(0));
+    present = new Set(["w2:DGS-1"]);
+    addEvent(run, 0, "tool", 3);
+    await runWatch(deps()); // healthy
+    present = new Set();
+    const before = calls.length;
+    const r = await runWatch({ ...deps(), now: () => NOW + 2 * 3600_000 });
+    expect(r.opened).toBe(1);
+    expect(readOpen(dir).map((i) => i.id)).toEqual([`${run}.lost.1`]);
+    expect(calls.length).toBe(before + 1);
+  });
+
+  it("F3c: a corrupt watch-state file does not crash the pass; a dry run writes no state", async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "watch-state.json"), "{broken");
+    mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]);
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(1);
+    rmSync(join(dir, "watch-state.json"));
+    await runWatch(deps({ dryRun: true }));
+    expect(existsSync(join(dir, "watch-state.json"))).toBe(false);
+  });
+
+  it("F4: old runs are skipped before their events are read and do not count", async () => {
+    present = new Set(["w2:DGS-1"]);
+    mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]);
+    const old = mk("DGS-2", "builder", 9 * 24 * 60, [[9 * 24 * 60 - 1, "started"], [9 * 24 * 60 - 2, "ended"]]);
+    // an unreadable events file would show up as a stderr line if it were read
+    const rd = findRunDir(old, env)!;
+    rmSync(join(rd, "events.jsonl"));
+    mkdirSync(join(rd, "events.jsonl"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await runWatch(deps());
+    expect(err).not.toHaveBeenCalled();
+    err.mockRestore();
+    expect(r.lines[r.lines.length - 1]).toContain("watch: 1 runs");
+  });
+
+  it("F5: a broken run directory gives one stderr line; an unreadable depot root rejects", async () => {
+    mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]);
+    const bad = join(env.DIGISMITH_DEPOT_DIR!, "runs", "DGS-9", "builder-bad");
+    mkdirSync(bad, { recursive: true });
+    writeFileSync(join(bad, "run.json"), "{not json");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await runWatch(deps());
+    expect(err).toHaveBeenCalledTimes(1);
+    expect(String(err.mock.calls[0][0])).toContain("builder-bad");
+    err.mockRestore();
+    const root = join(tmp, "other");
+    writeFileSync(root, "i am a file");
+    await expect(runWatch(deps({ env: { ...env, DIGISMITH_DEPOT_DIR: root } }))).rejects.toThrow();
   });
 });
