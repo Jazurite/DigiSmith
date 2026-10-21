@@ -125,6 +125,14 @@ describe("act", () => {
     expect(x.sent[0]).not.toContain(head);
     expect(x.sent[0]).not.toContain("rm -rf");
   });
+  it("an order with an invalid ticket key is refused before the journal, with no prompt", async () => {
+    const d = tmp(); const x = deps(d);
+    const r = await act(x, state({ ticket: "DGS-1; rm -rf /" }), { kind: "order", order: "merge", head: "a" });
+    expect(r.result).toBeNull();
+    expect(x.sent).toEqual([]);
+    expect(readJournal(d)).toEqual([]);
+    expect(readFileSync(join(d, "attention.jsonl"), "utf8")).toContain("order-refused-bad-ticket-key");
+  });
   it("the planned line for an order carries detail.head", async () => {
     const d = tmp();
     await act(deps(d), state(), { kind: "order", order: "merge", head: "abc1234" });

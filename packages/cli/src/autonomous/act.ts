@@ -74,8 +74,17 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
       return run("phase-marker", { phase: a.phase }, () => d.writeMarker(a.run, a.phase), retry);
     case "status":
       return run("status-write", undefined, () => d.setStatus(a.status), retry);
-    case "order":
-      return run(`order-${a.order}`, { head: a.head }, () => d.prompt(orderText(a.order, state.ticket, state.attempt)),
+    case "order": {
+      // Build the text before any journal line: a bad key sends nothing, so it is refused, not uncertain.
+      let text: string;
+      try {
+        text = orderText(a.order, state.ticket, state.attempt);
+      } catch {
+        appendAttention(d.dir, d.now(), { ticket: state.ticket, run: state.runs.builder, kind: "failed", cause: "order-refused-bad-ticket-key" });
+        return { result: null };
+      }
+      return run(`order-${a.order}`, { head: a.head }, () => d.prompt(text),
         (e) => (e instanceof PromptError && e.delivered === "no" ? "retryable" : "uncertain"));
+    }
   }
 }
