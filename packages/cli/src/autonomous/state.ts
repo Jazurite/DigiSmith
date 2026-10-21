@@ -117,34 +117,54 @@ export function writeLastReport(dir: string, at: Date): void {
   atomicWrite(dir, "last-report.json", `${JSON.stringify({ at: at.toISOString() })}\n`);
 }
 
-/** The newest event whose kind is in `kinds`: day files newest first, stops at the first file with a match; no window limit. */
-export function newestEvent(dir: string, kinds: readonly EventKind[]): Event | null {
-  let files: string[];
+/** The day file names in `dir`, oldest first; a missing dir gives none. */
+function eventFiles(dir: string): string[] {
   try {
-    files = readdirSync(dir).filter((f) => EVENT_FILE.test(f)).sort().reverse();
+    return readdirSync(dir).filter((f) => EVENT_FILE.test(f)).sort();
+  } catch {
+    return [];
+  }
+}
+
+/** The valid events of one day file, in file order; null when the file cannot be read. */
+function readEventFile(dir: string, f: string): Event[] | null {
+  let text: string;
+  try {
+    text = readFileSync(join(dir, f), "utf-8");
   } catch {
     return null;
   }
-  const want = new Set<string>(kinds);
-  for (const f of files) {
-    let text: string;
+  const out: Event[] = [];
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
     try {
-      text = readFileSync(join(dir, f), "utf-8");
+      const ev = JSON.parse(line) as Event;
+      if (Number.isFinite(Date.parse(ev.ts))) out.push(ev);
     } catch {
-      continue;
+      // skip a bad line
     }
+  }
+  return out;
+}
+
+/** The newest event whose kind is in `kinds`: day files newest first, stops at the first file with a match; no window limit. */
+export function newestEvent(dir: string, kinds: readonly EventKind[]): Event | null {
+  const want = new Set<string>(kinds);
+  for (const f of eventFiles(dir).reverse()) {
     let best: Event | null = null;
-    for (const line of text.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const ev = JSON.parse(line) as Event;
-        const ms = Date.parse(ev.ts);
-        if (want.has(ev.kind) && Number.isFinite(ms) && (best === null || ms >= Date.parse(best.ts))) best = ev;
-      } catch {
-        // skip a bad line
-      }
+    for (const ev of readEventFile(dir, f) ?? []) {
+      if (want.has(ev.kind) && (best === null || Date.parse(ev.ts) >= Date.parse(best.ts))) best = ev;
     }
     if (best) return best;
+  }
+  return null;
+}
+
+/** The first valid event of the oldest day file that has one; an unreadable file is skipped. */
+export function firstEvent(dir: string): Event | null {
+  for (const f of eventFiles(dir)) {
+    const first = readEventFile(dir, f)?.[0];
+    if (first) return first;
   }
   return null;
 }

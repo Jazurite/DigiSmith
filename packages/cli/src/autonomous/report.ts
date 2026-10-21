@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7, stampOf } from "./clock.ts";
-import { atomicWrite, readEvents, readLastReport, readLock, writeLastReport } from "./state.ts";
+import { atomicWrite, firstEvent, readEvents, readLastReport, readLock, writeLastReport } from "./state.ts";
 import type { Event, Lock, Tracker } from "./types.ts";
 
 export interface ReportDeps { tracker: Tracker; dir: string; now: () => Date }
@@ -43,7 +43,7 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
     .map((e) => `${str(e.ticket)}: commit ${str(e.commit) || "unknown"}, ${str(e.minutes) || "?"} min`);
   const failed = releases.filter((e) => e.result === "failed" || e.result === "stopped")
     .map((e) => `${str(e.ticket)}: ${str(e.result)}${e.reason ? `, ${str(e.reason)}` : ""}`);
-  const waiting = releases.filter((e) => e.result === "awaiting-jack")
+  const waiting = releases.filter((e) => e.result === "awaiting-jack" || e.result === "stopped")
     .map((e) => `${str(e.ticket)}${e.reason ? `: ${str(e.reason)}` : ""}`);
 
   const seen = new Set<string>();
@@ -77,29 +77,14 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
   ].join("\n");
 }
 
-function firstEventTime(dir: string): Date | null {
-  let files: string[];
-  try {
-    files = readdirSync(dir).filter((f) => /^events-.*\.jsonl$/.test(f)).sort();
-  } catch {
-    return null;
-  }
-  for (const f of files) {
-    const first = readFileSync(join(dir, f), "utf-8").split("\n").find((l) => l.trim());
-    if (!first) continue;
-    try {
-      const ms = Date.parse((JSON.parse(first) as Event).ts);
-      if (Number.isFinite(ms)) return new Date(ms);
-    } catch {
-      // bad first line: try the next file
-    }
-  }
-  return null;
+function firstEventDate(dir: string): Date | null {
+  const ev = firstEvent(dir);
+  return ev ? new Date(Date.parse(ev.ts)) : null;
 }
 
 export async function runReport(d: ReportDeps): Promise<{ file: string; commented: boolean }> {
   const to = d.now();
-  const from = readLastReport(d.dir) ?? firstEventTime(d.dir) ?? to;
+  const from = readLastReport(d.dir) ?? firstEventDate(d.dir) ?? to;
   const events = readEvents(d.dir, from.getTime() - AWAY_LOOKBACK_MS, to.getTime());
   const text = buildReport(from, to, events, readLock(d.dir));
   const reports = join(d.dir, "reports");

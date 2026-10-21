@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  acquireLock, appendEvent, autonomousDir, clearLock, newestEvent, readEvents, readLastReport, readLock, readNotes,
+  acquireLock, appendEvent, autonomousDir, clearLock, firstEvent, newestEvent, readEvents, readLastReport, readLock, readNotes,
   writeLastReport, writeNotes,
 } from "./state.ts";
 import type { Lock } from "./types.ts";
@@ -150,5 +150,20 @@ describe("newestEvent", () => {
   it("gives null when no event has a wanted kind", () => {
     appendEvent(dir, new Date("2026-10-18T05:00:00.000Z"), "skip");
     expect(newestEvent(dir, ["scan"])).toBeNull();
+  });
+});
+
+describe("firstEvent", () => {
+  it("an empty or missing dir gives null", () => {
+    expect(firstEvent(dir)).toBeNull();
+    expect(firstEvent(join(dir, "missing"))).toBeNull();
+  });
+  it("gives the first valid event of the oldest readable day file", () => {
+    mkdirSync(join(dir, "events-2026-10-17.jsonl"));
+    writeFileSync(join(dir, "events-2026-10-18.jsonl"), "not json\n");
+    writeFileSync(join(dir, "events-other.jsonl"), `${JSON.stringify({ ts: "2026-01-01T00:00:00.000Z", tsUtc7: "", kind: "scan" })}\n`);
+    appendEvent(dir, new Date("2026-10-19T05:00:00.000Z"), "scan", { n: 1 });
+    appendEvent(dir, new Date("2026-10-19T06:00:00.000Z"), "off", { n: 2 });
+    expect(firstEvent(dir)).toMatchObject({ kind: "scan", n: 1 });
   });
 });

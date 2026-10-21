@@ -49,6 +49,15 @@ describe("buildReport", () => {
     expect(text).not.toContain("lock older than 8 h");
   });
 
+  it("lists stopped under Waiting for Jack as well as under Failed or stopped", async () => {
+    appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-5", result: "stopped", reason: "needs sudo" });
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    const failed = text.split("Failed or stopped")[1].split("Waiting for Jack")[0];
+    const waiting = text.split("Waiting for Jack")[1].split("Skipped")[0];
+    expect(failed).toMatch(/DGS-5[^\n]*stopped[^\n]*needs sudo/);
+    expect(waiting).toMatch(/DGS-5[^\n]*needs sudo/);
+  });
+
   it("counts off events and does not list them", async () => {
     seed();
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
@@ -102,6 +111,15 @@ describe("runReport", () => {
     const r = await runReport({ tracker, dir, now: () => TO });
     const text = readFileSync(r.file, "utf-8");
     expect(text).toContain("DGS-FIRST");
+    expect(text).toContain("Scans: 1");
+  });
+
+  it("skips an unreadable events file when it looks for the first event", async () => {
+    mkdirSync(join(dir, "events-2026-09-01.jsonl"));
+    appendEvent(dir, at("2026-10-20T10:00:00Z"), "scan", { candidates: 0, skipped: 0, claimed: null });
+    const r = await runReport({ tracker, dir, now: () => TO });
+    const text = readFileSync(r.file, "utf-8");
+    expect(text).toContain("report, 2026-10-20 17:00:00 to");
     expect(text).toContain("Scans: 1");
   });
 
