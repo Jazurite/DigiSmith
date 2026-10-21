@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-init.ts\""
+          },
+          {
+            "type": "command",
+            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" started"
           }
         ]
       }
@@ -25,12 +29,47 @@
         ]
       }
     ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" blocked"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" tool"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" turn_end"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cards/hook-cli.ts\" end"
+          },
+          {
+            "type": "command",
+            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" ended"
           }
         ]
       }
