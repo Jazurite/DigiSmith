@@ -68,7 +68,7 @@ h1 { font-size: 20px; line-height: 24px; letter-spacing: -.025em; margin: 0 0 4p
 .grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; } .grid.wide { grid-template-columns: 2fr 1fr; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px; min-width: 0; }
 .card > h3 { margin: 0; padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
-.card > h3 small { font: 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text3); font-weight: 400; }
+.card > h3 small { font: 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text3); font-weight: 400; }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; background: var(--thead); font: 600 11px/14px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text3); padding: 8px 14px; }
 td { padding: 9px 14px; border-top: 1px solid var(--border); }
@@ -86,7 +86,7 @@ td.num, th.num { text-align: right; font-family: var(--mono); }
 .kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; padding: 12px 14px; font-family: var(--mono); font-size: 11px; } .kv span:nth-child(odd) { color: var(--text3); font-family: var(--sans); }
 .bar2 { height: 6px; background: var(--raised); border-radius: 2px; margin: 4px 0 10px; overflow: hidden; } .bar2 i { display: block; height: 100%; background: var(--primary); }
 .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; } .filters select, .filters input { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; font: inherit; }
-.tag { font: 10px var(--mono); border: 1px solid var(--strong); border-radius: 2px; padding: 1px 5px; color: var(--text2); }
+.tag { font: 11px var(--mono); border: 1px solid var(--strong); border-radius: 2px; padding: 1px 5px; color: var(--text2); }
 .banner { background: var(--raised); border: 1px solid var(--border); border-left: 3px solid var(--warn); padding: 8px 12px; margin-bottom: 16px; color: var(--text2); }
 .state-demo { display: flex; gap: 12px; flex-wrap: wrap; } .state-demo .card { flex: 1; min-width: 220px; }
 @media (max-width: 760px) { .shell { grid-template-columns: 1fr; } nav.side { display: flex; overflow-x: auto; padding: 6px; border: 0; border-bottom: 1px solid var(--border); } nav.side .brand, nav.side h2 { display: none; } nav.side button { width: auto; white-space: nowrap; gap: 8px; } .grid, .grid.wide { grid-template-columns: 1fr; } .pipe { grid-template-columns: repeat(2, 1fr); } .page { padding: 16px; } }
