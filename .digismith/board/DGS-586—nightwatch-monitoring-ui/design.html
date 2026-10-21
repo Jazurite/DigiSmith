@@ -20,7 +20,7 @@
 <body>
 <header>
   <h1>Nightwatch monitoring UI</h1>
-  <p class="meta"><span>Ticket: DGS-586 (J.5, Nightwatch DGS-580)</span><span>Date: 2026-10-22 (UTC+7)</span><span>Status: spec, waiting for checkpoint 1</span></p>
+  <p class="meta"><span>Ticket: DGS-586 (J.5, Nightwatch DGS-580)</span><span>Date: 2026-10-22 (UTC+7)</span><span>Status: spec approved at checkpoint 1, with changes applied</span></p>
   <p class="meta">Layout mock for Jack: <a href="mock.html">mock.html</a> (static, fake data).</p>
 </header>
 
@@ -61,7 +61,7 @@
 <ul>
 <li>The API already binds <code>127.0.0.1:4300</code> and Caddy proxies <code>/api/*</code> to it. The new routes sit under that prefix. No Caddy change, no new port.</li>
 <li>The web pages are static files. <code>nuxt generate</code> writes one folder per page, and Caddy's <code>file_server</code> serves <code>/nightwatch/runs/</code> from <code>runs/index.html</code>. A run or plan id travels in the query string (<code>/nightwatch/run/?id=...</code>), because a static host cannot serve an unknown path. No Caddy rewrite is needed.</li>
-<li><strong>Open point for the Maestro: there is no login today.</strong> <code>scripts/caddy/Caddyfile</code> says "No login for now (tailnet only, read-only; login design: DGS-458)", and <code>test-config.mjs</code> checks that no <code>basic_auth</code> exists. The brief says "the existing front door with its login". I found no login to reach. The dashboard is read-only and reaches the site through the same tailnet-only door as the Life Calendar. It shows ticket keys, run ids, branch names and phase times, but no prompts and no secrets. <strong>Proposal:</strong> ship without a login, as the Life Calendar does, and let DGS-458 add one for the whole site. A login for this dashboard alone needs a Caddy change, which needs your order.</li>
+<li><strong>No login in v1 (Maestro decision, checkpoint 1).</strong> The door is tailnet-only, like the Life Calendar. <code>scripts/caddy/Caddyfile</code> has no login, and <code>test-config.mjs</code> checks that no <code>basic_auth</code> exists. DGS-458 adds a login for the whole site later. The dashboard shows ticket keys, run ids, branch names and phase times. It shows no prompts and no secrets. A login for this dashboard alone is not part of this ticket.</li>
 </ul>
 
 <h2 id="screens">5. Screens</h2>
@@ -80,7 +80,7 @@
 
 <h3>Operations - <code>/overview</code></h3>
 <ul>
-<li><strong>Tickets per phase.</strong> Table: phase (claimed, building, review, merge-ready, merged, released, lost), count, oldest (age of the oldest <code>phaseStartedAt</code>). The scan is single flight, so the lock holds one ticket at a time. So: claimed to merge-ready come from <code>lock.json</code> (one ticket at most). Merged and released count the <code>release</code> events of the last 7 days. Lost counts open attention items of kind <code>lost</code>. The page says "window: 7 days" in the table footer.</li>
+<li><strong>Tickets per phase.</strong> Table: phase (claimed, building, review, merge-ready, merged, released, lost), count, oldest (age of the oldest <code>phaseStartedAt</code>). The scan is single flight, so the lock holds <strong>one claimed ticket at a time</strong>. So: claimed to merge-ready come from <code>lock.json</code> (one ticket at most). Merged and released count the <code>release</code> events of the last 7 days. Lost counts open attention items of kind <code>lost</code>. The table footer states both limits on screen: "one claimed ticket at a time (scan lock)" and "window: 7 days".</li>
 <li><strong>Active workers.</strong> One row per open run: key, role, seat, phase (from <code>phaseOf</code>), health (<code>classify</code>: healthy / blocked / stalled / lost), elapsed since <code>started</code>. Tokens column: "-" in v1 (section 7). Row link: run detail.</li>
 <li><strong>Last events.</strong> The newest 20 events of all open runs, merged by time, plus scan events (<code>claim</code>, <code>release</code>, <code>breaker</code>). Link: run detail.</li>
 <li><strong>Empty:</strong> "No worker is running. The next scan starts at 00:00 (UTC+7)" (read from the registry window). <strong>Error:</strong> shared panel.</li>
@@ -128,7 +128,7 @@
 </ul>
 
 <h2 id="tokens">7. Token burn per hour and seat windows</h2>
-<p><strong>Marked out of scope for v1.</strong> The token counter (DGS-214, <code>dg tokens</code>) counts one ticket by reading whole Claude transcripts. That is too slow for a 10 s poll and has no per-hour series. Seat 5h and weekly usage come from the Claude status line <code>rate_limits</code> probe that runs in a seat's own session; no file or API exposes it to Nexus. The UI keeps the slots ("burn -/h", seat windows, tokens columns) so the layout does not change later. A follow-up ticket should add (a) a small job that writes a per-run token snapshot and (b) a depot file with the last probe of each seat. I will propose that ticket text to the Maestro after the build; I do not create it.</p>
+<p><strong>Out of scope for v1 (Maestro decision, checkpoint 1): token burn per hour, tokens and seat windows.</strong> The token counter (DGS-214, <code>dg tokens</code>) counts one ticket by reading whole Claude transcripts. That is too slow for a 10 s poll and has no per-hour series. Seat 5h and weekly usage come from the Claude status line <code>rate_limits</code> probe that runs in a seat's own session; no file or API exposes it to Nexus. The UI keeps the slots ("burn -/h", seat windows, tokens columns) so the layout does not change later. A follow-up ticket should add (a) a small job that writes a per-run token snapshot and (b) a depot file with the last probe of each seat. The Maestro files that follow-up (Maestro decision, checkpoint 1); this ticket does not create it.</p>
 
 <h2 id="design">8. Visual design and gates</h2>
 <ul>
@@ -166,11 +166,12 @@
 <li><code>packages/cli/src/run/README.md</code> or a new <code>nightwatch/README.md</code> line for the new command; the runbook block only if the Maestro asks.</li>
 </ul>
 
-<h2 id="open">12. Decisions the Maestro should confirm</h2>
+<h2 id="open">12. Decisions made at checkpoint 1 (Maestro, 2026-10-22)</h2>
 <ol>
-<li>No login exists (section 4). Ship without one, as the Life Calendar does?</li>
-<li>Tokens, token burn and seat windows are out of scope in v1 (section 7).</li>
-<li>Ticket phases are limited by the single-ticket lock (section 5, Operations). The table says so on screen.</li>
+<li>No login in v1. The door is tailnet-only; DGS-458 adds a site login later (section 4).</li>
+<li>Token burn, tokens and seat windows are out of scope. The layout keeps the slots. The Maestro files the follow-up (section 7).</li>
+<li>The phase table states the single-ticket lock on screen (section 5, Operations).</li>
+<li>Only <code>mock.html</code> is committed; the sed backup <code>mock.html-E</code> was my own scratch file and is deleted.</li>
 </ol>
 
 <footer>DigiSmith · .digismith/board/DGS-586—nightwatch-monitoring-ui/design.html. Warren (MIT, Copyright (c) 2026 Jaymin West) is the design source; only its tokens are reused.</footer>
