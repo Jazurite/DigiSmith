@@ -283,4 +283,38 @@ describe("runWatch: review fixes", () => {
     writeFileSync(root, "i am a file");
     await expect(runWatch(deps({ env: { ...env, DIGISMITH_DEPOT_DIR: root } }))).rejects.toThrow();
   });
+
+  it("F10a: after Jack resolves a blocked item, a new permission prompt with a later since opens n+1 with one comment", async () => {
+    present = new Set(["w2:DGS-1"]);
+    const run = mk("DGS-1", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    await runWatch(deps());
+    appendResolved(dir, readOpen(dir)[0].id, "jack", ago(0));
+    addEvent(run, -100, "blocked", 3);
+    const before = calls.length;
+    const r = await runWatch({ ...deps(), now: () => NOW + 2 * 3600_000 });
+    expect(r.opened).toBe(1);
+    expect(readOpen(dir).map((i) => i.id)).toEqual([`${run}.blocked.1`]);
+    expect(calls.length).toBe(before + 1);
+  });
+
+  it("F10b: the same since stays closed with no comment; an old state file without a since behaves as before", async () => {
+    present = new Set(["w2:DGS-1"]);
+    const run = mk("DGS-1", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    await runWatch(deps());
+    appendResolved(dir, readOpen(dir)[0].id, "jack", ago(0));
+    const before = calls.length;
+    expect((await runWatch(deps())).opened).toBe(0);
+    writeFileSync(join(dir, "watch-state.json"), JSON.stringify({ opened: [`${run}|blocked`] }));
+    expect((await runWatch(deps())).opened).toBe(0);
+    expect(calls).toHaveLength(before);
+  });
+
+  it("F11: an old ended run still closes its open items", async () => {
+    const { appendAttention } = await import("./attention-write.ts");
+    const run = mk("DGS-1", "builder", 9 * 24 * 60, [[9 * 24 * 60 - 1, "started"], [9 * 24 * 60 - 2, "blocked"], [9 * 24 * 60 - 3, "ended"]]);
+    appendAttention(dir, new Date(NOW), { ticket: "DGS-1", run, kind: "blocked", cause: "waiting-for-answer" });
+    const r = await runWatch(deps());
+    expect(r.resolved).toBe(1);
+    expect(readOpen(dir)).toEqual([]);
+  });
 });
