@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -92,6 +92,16 @@ describe("runScan: the work rule", () => {
     writeAway(dir, { away: true, since: "", until: new Date(DAY.getTime() - 60_000).toISOString(), endedAt: null });
     const r = await runScan(mk({ nexus: { baseUrl: "http://fake", tokenFile: join(root, "token"), fetch: (async () => { throw new Error("x"); }) as unknown as typeof fetch } }));
     expect(r.outcome).toBe("off");
+    expect(readAway(dir)?.away).toBe(false);
+    expect(events()).toMatchObject([{ kind: "away-expired" }, { kind: "run-now", job: "autonomous-report", ok: false }, { kind: "off" }]);
+  });
+  it("a run-now answering 500 at night: the scan goes on and claims", async () => {
+    writeAway(dir, { away: true, since: "", until: new Date(NIGHT.getTime() - 60_000).toISOString(), endedAt: null });
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const r = await runScan(mk({ nexus: { baseUrl: "http://fake", tokenFile: join(root, "token"), fetch: (async () => new Response("{}", { status: 500 })) as unknown as typeof fetch } }));
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
+    expect(readAway(dir)?.away).toBe(false);
+    expect(events()).toMatchObject([{ kind: "away-expired" }, { kind: "run-now", ok: false, status: 500 }, { kind: "claim" }, { kind: "scan" }]);
   });
   it("night window with away false: works", async () => {
     writeAway(dir, { away: false, since: "", until: null, endedAt: DAY.toISOString() });
@@ -180,6 +190,19 @@ describe("runScan: walk and claim", () => {
     expect(readLock(dir)).toBeNull();
     expect(tracker.tasks.get("t1")?.status).toBe("to do");
     expect(events()[0]).toMatchObject({ kind: "claim-failed", ticket: "DGS-1", error: "herdr down" });
+    expect(orders()).toEqual([]);
+    execImpl = async () => ({ code: 0, stderr: "" });
+    const r2 = await runScan(mk());
+    expect(r2).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
+    expect(orders()).toEqual(["order-ao-2026-10-21-0000-DGS-1.md"]);
+  });
+  it("a claim failure never removes an order file it did not create", async () => {
+    tracker.add({ id: "t1", key: "DGS-1" });
+    mkdirSync(ordersDir, { recursive: true });
+    writeFileSync(join(ordersDir, "order-ao-2026-10-21-0000-DGS-1.md"), "someone else's\n");
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claim-failed");
+    expect(readFileSync(join(ordersDir, "order-ao-2026-10-21-0000-DGS-1.md"), "utf-8")).toBe("someone else's\n");
   });
   it("failSetStatus: claim-failed, the revert failure is swallowed", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
@@ -188,6 +211,8 @@ describe("runScan: walk and claim", () => {
     expect(r.outcome).toBe("claim-failed");
     expect(readLock(dir)).toBeNull();
     expect(execCalls).toEqual([]);
+    expect(tracker.calls).toContain("setStatus t1 to do");
+    expect(events()).toMatchObject([{ kind: "claim-failed", ticket: "DGS-1", error: "setStatus failed" }, { kind: "scan" }]);
   });
   it("Epic, Initiative, Spike: skipped with reason type, no comment", async () => {
     tracker.add({ id: "e", key: "DGS-E", typeId: 1, milestone: null });
@@ -226,6 +251,7 @@ describe("runScan: walk and claim", () => {
     const r = await runScan(mk({ dryRun: true }));
     expect(r.outcome).toBe("none");
     expect(r.verdicts).toEqual([{ key: "DGS-1", reasons: ["no milestone"] }, { key: "DGS-2", reasons: [] }]);
+    expect(r.skipped).toEqual([{ key: "DGS-E", reason: "type" }]);
     expect(tracker.writeCalls()).toEqual([]);
     expect(existsSync(dir)).toBe(false);
     expect(orders()).toEqual([]);

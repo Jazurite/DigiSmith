@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { awayExpired, isAway, readAway } from "./away.ts";
 import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
 import { promptConductor, type Exec } from "./conductor.ts";
@@ -46,6 +46,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     appendEvent(d.dir, now, "busy", { ticket: readLock(d.dir)?.ticket ?? "?" });
     return "busy";
   }
+  let wroteOrder = false;
   try {
     await d.tracker.setStatus(t.id, "in progress");
     const back = await d.tracker.getStatus(t.id);
@@ -54,8 +55,11 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     writeFileSync(order, renderOrder({
       key, name: t.name, taskId: t.id, signOff: t.signOff ?? "Jack", claimedAtUtc7, stamp: stampOf(now), specPlan: specPlanText(t),
     }), { flag: "wx" });
+    wroteOrder = true;
     await promptConductor(d.exec, d.conductorsJson, `Autonomous order: build ${key}, read ${order}`);
   } catch (e) {
+    // Remove only the order file this scan created, so a later scan in the same minute can write it again.
+    if (wroteOrder) rmSync(order, { force: true });
     clearLock(d.dir);
     try { await d.tracker.setStatus(t.id, "to do"); } catch { /* best effort */ }
     appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
@@ -126,7 +130,6 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     const reasons = checkReady(t, ctx);
     if (d.dryRun) {
       verdicts.push({ key, reasons });
-      if (reasons.length > 0) skipped.push({ key, reason: reasons.join("; ") });
       continue;
     }
     if (reasons.length > 0) {
