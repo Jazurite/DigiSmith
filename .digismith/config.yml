@@ -5,3 +5,16 @@ preferences:
   finish_option: merge_locally
   clear_context: no
   post_merge_cleanup: auto
+
+nightwatch:
+  protected_paths:
+    - hooks/
+    - hooks/hooks.json
+    - .digismith/config.yml
+    - skills/finishing-*/
+    - skills/reviewer/
+    - packages/cli/src/reviewer/
+    - packages/cli/src/autonomous/
+    - scripts/nexus-api/src/scheduler/
+    - .digismith/mandate.yml
+    - .digismith/profiles/

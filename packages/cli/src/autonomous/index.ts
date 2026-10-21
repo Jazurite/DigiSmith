@@ -6,6 +6,8 @@ import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { appendResolved, attentionViews, formatOpen, readOpen } from "./attention.ts";
+import { realGit } from "./gitx.ts";
+import { runMergeGate } from "./merge-gate.ts";
 import { herdrPaneLookup } from "./pane.ts";
 import { runWatch } from "./watch.ts";
 import { readAway, isAway } from "./away.ts";
@@ -280,6 +282,20 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
               if (r.breakerOpened) lines.push("breaker: open, scans stop until dg autonomous resume");
               lines.push(runNowLine(r.runNow));
               return lines;
+            }),
+        })
+        .command({
+          command: "merge-gate",
+          describe: "before a night merge: go, or refuse (no commits ahead, a protected path, a bad config on main)",
+          builder: (e) =>
+            e
+              .option("ticket", { type: "string", requiresArg: true, demandOption: true, describe: "ticket key, e.g. DGS-585" })
+              .option("repo", { type: "string", requiresArg: true, describe: "the main checkout (default: the main checkout)" }),
+          handler: (argv) =>
+            guarded(depsFactory, async (d) => {
+              const r = runMergeGate({ git: realGit, repo: (argv.repo as string | undefined) ?? d.mainRepo ?? MAIN_CHECKOUT, dir: d.dir, now: d.now }, argv.ticket as string);
+              if (!r.go) throw new Error(`refused: ${r.reason}`);
+              return ["go"];
             }),
         })
         .command({

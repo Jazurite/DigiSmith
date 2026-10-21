@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -358,5 +359,42 @@ describe("dg autonomous: attention, resume, watch", () => {
     expect(out()).toContain("watch (dry run, nothing written)");
     expect(existsSync(join(dir, "attention.jsonl"))).toBe(false);
     expect(existsSync(join(dir, "journal.jsonl"))).toBe(false);
+  });
+});
+
+describe("dg autonomous merge-gate", () => {
+  const g = (cwd: string, ...a: string[]) => execFileSync("git", a, { cwd, encoding: "utf8" });
+  function tempRepo(): string {
+    const r = join(root, "gate-repo");
+    mkdirSync(r);
+    g(r, "init", "-q", "-b", "main");
+    g(r, "config", "user.email", "t@example.com");
+    g(r, "config", "user.name", "T");
+    mkdirSync(join(r, ".digismith"));
+    writeFileSync(join(r, ".digismith/config.yml"), "profile: x\n");
+    g(r, "add", "-A");
+    g(r, "commit", "-q", "-m", "init");
+    g(r, "checkout", "-q", "-b", "DGS-9__x");
+    writeFileSync(join(r, "a.ts"), "x\n");
+    g(r, "add", "-A");
+    g(r, "commit", "-q", "-m", "a");
+    return r;
+  }
+  it("prints go for a clean branch", async () => {
+    const r = tempRepo();
+    await parse(["autonomous", "merge-gate", "--ticket", "DGS-9", "--repo", r]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toContain("go");
+  });
+  it("exits 1 with the reason on a refusal and writes one attention item", async () => {
+    const r = tempRepo();
+    mkdirSync(join(r, "hooks"));
+    writeFileSync(join(r, "hooks/a"), "x\n");
+    g(r, "add", "-A");
+    g(r, "commit", "-q", "-m", "h");
+    await parse(["autonomous", "merge-gate", "--ticket", "DGS-9", "--repo", r]);
+    expect(process.exitCode).toBe(1);
+    expect(errLog.mock.calls.flat().join("\n")).toMatch(/refused: protected path: hooks\/a/);
+    expect(existsSync(join(dir, "attention.jsonl"))).toBe(true);
   });
 });
