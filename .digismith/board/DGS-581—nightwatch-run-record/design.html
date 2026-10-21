@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch run record and event log</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Nightwatch run record and event log</h1>
+  <div class="meta">
+    <span>Date: 2026-10-21</span>
+    <span>Ticket: DGS-581</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal</a></li>
+    <li><a href="#files">Files and ids</a></li>
+    <li><a href="#runjson">run.json</a></li>
+    <li><a href="#events">Events and seq</a></li>
+    <li><a href="#hooks">Hooks</a></li>
+    <li><a href="#cli">dg run commands</a></li>
+    <li><a href="#dispatch">Dispatch and runbook</a></li>
+    <li><a href="#tests">Tests and first use</a></li>
+    <li><a href="#out">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>Goal</h2>
+<p>Every worker run (Builder, Reviewer, Scout) gets two files in the depot: a frozen <code>run.json</code> written at dispatch, and an append-only <code>events.jsonl</code> written by plugin hooks and by <code>dg run event</code>. Later Nightwatch tickets (DGS-582, 583, 585, 586) read these two files and nothing else. This ticket builds the writers and three readers. The nine decisions below come from the Maestro and are settled.</p>
+</section>
+
+<section id="files">
+<h2>Files and ids</h2>
+<ul>
+  <li>Root: <code>$DIGISMITH_DEPOT_DIR</code> when set, else <code>~/.digismith-depot</code> (the existing convention in <code>sessions/cleanup.ts</code>). Tests point this at a temp dir.</li>
+  <li>Run directory: <code>&lt;root&gt;/runs/&lt;KEY&gt;/&lt;run-id&gt;/</code> with <code>run.json</code> and <code>events.jsonl</code>. Two helper files may sit beside them: <code>seq</code> (counter) and <code>lock/</code> (lock directory, see below).</li>
+  <li>Run id: <code>&lt;role&gt;-&lt;UTC yyyymmddThhmmss&gt;-&lt;6 hex&gt;</code>, for example <code>builder-20261021T133005-a1b2c3</code>. Every attempt gets a new id. <code>dg run start</code> creates the directory with a non-recursive <code>mkdir</code>; if it exists, it draws a new suffix. A run id is never reused.</li>
+  <li>The ticket key and run id are checked against <code>^[A-Za-z0-9][A-Za-z0-9._-]*$</code> before they join a path.</li>
+</ul>
+</section>
+
+<section id="runjson">
+<h2>run.json (frozen)</h2>
+<p>Written once with the <code>wx</code> flag (fails if present), never edited. Later facts go into events.</p>
+<pre><code>{ "schema": "nightwatch-run/v1", "run": "&lt;run-id&gt;", "ticket": "DGS-581",
+  "role": "builder|reviewer|scout|other", "order": "&lt;path&gt;", "seat": "dev0",
+  "model": "&lt;id&gt;", "plugin_version": "1.21.0", "base_sha": "&lt;sha&gt;",
+  "branch": "&lt;name&gt;", "worktree": "&lt;path&gt;",
+  "herdr": { "workspace": "w2", "tab": "&lt;label&gt;", "pane": "&lt;id&gt;" },
+  "budget": { ... } /* optional */, "created_at": "&lt;ISO UTC&gt;" }</code></pre>
+<p>Unknown facts (no seat flag, no git worktree) are written as <code>null</code>, so the field set is always the same. <code>plugin_version</code> is read from <code>.claude-plugin/plugin.json</code>. <code>base_sha</code>, <code>branch</code> and <code>worktree</code> default from <code>git</code> in the <code>--worktree</code> directory when it exists.</p>
+</section>
+
+<section id="events">
+<h2>Events and seq</h2>
+<p>One JSON object per line: <code>{"schema":"nightwatch-event/v1","seq":1,"ts":"&lt;ISO UTC&gt;","run":"&lt;run-id&gt;","type":"started","data":{}}</code>.</p>
+<ul>
+  <li><strong>Types:</strong> <code>started</code>, <code>blocked</code>, <code>tool</code>, <code>turn_end</code>, <code>ended</code> (hooks); <code>review_ready</code>, <code>merged</code>, <code>pushed</code>, <code>lost</code> (<code>dg run event</code>). The set is closed; an unknown type is refused by the CLI. <code>dispatched</code> is not an event: <code>created_at</code> in run.json is the dispatch time.</li>
+  <li><strong>seq:</strong> starts at 1, grows by 1, no gaps in the file. A writer takes a lock by <code>mkdir &lt;run-dir&gt;/lock</code> (atomic on one machine), reads the <code>seq</code> counter file, writes the next number, appends the line with one <code>appendFileSync</code>, then removes the lock. A lock older than 2 s is treated as stale and broken. The hook waits at most 150 ms for the lock and then drops its event and logs (a missing event is better than a slow session). <code>dg run event</code> waits up to 2 s and then exits non-zero.</li>
+  <li>If the counter file is missing or unreadable, the writer counts the lines of <code>events.jsonl</code> instead.</li>
+  <li>Append only. No code in this ticket rewrites or truncates either file.</li>
+</ul>
+</section>
+
+<section id="hooks">
+<h2>Hooks</h2>
+<p>New entries in <code>hooks/hooks.json</code> call one script, <code>scripts/run-events/hook-cli.ts &lt;kind&gt;</code>. It imports only the small event writer (<code>node:fs</code> and <code>node:path</code> only, no yargs), so it starts fast. The existing hooks stay as they are; the new commands are added next to them.</p>
+<div class="table-wrap"><table>
+<tr><th>Hook</th><th>Type</th><th>data (ids, names, counts only)</th></tr>
+<tr><td>SessionStart</td><td><code>started</code></td><td><code>{source}</code> (startup, resume, clear), <code>session_id</code></td></tr>
+<tr><td>Notification</td><td><code>blocked</code></td><td><code>{kind}</code> from <code>notification_type</code> (permission_prompt, idle_prompt, other kinds copied as the name)</td></tr>
+<tr><td>PostToolUse</td><td><code>tool</code></td><td><code>{tool, ok}</code>; <code>ok</code> is false when the response carries an error flag</td></tr>
+<tr><td>Stop</td><td><code>turn_end</code></td><td><code>{}</code></td></tr>
+<tr><td>SessionEnd</td><td><code>ended</code></td><td><code>{reason}</code></td></tr>
+</table></div>
+<p>Rules (decision 6):</p>
+<ul>
+  <li>No <code>DIGISMITH_RUN_ID</code> in the environment: return at once, write nothing. Also nothing when the run directory has no <code>run.json</code> (a wrong id never creates a directory).</li>
+  <li>The whole body is in one <code>try/catch</code>; exit code is always 0; no output on stdout; stdin that is not JSON still writes the event with empty data. Hooks never block a tool call (PostToolUse and Stop are observation only).</li>
+  <li>An error goes to <code>&lt;root&gt;/runs/hook-errors.log</code> as one line (time, hook, error message, no payload), and that log stops growing at 256 KB.</li>
+  <li>Never written: message text, prompts, tool inputs, tool outputs. Fields not listed in the table are dropped, not copied. A test feeds a payload full of secrets and checks that none of it appears.</li>
+  <li>Target under 100 ms per hook; a test measures one call and reports the time, with a loose ceiling so a slow CI machine does not fail it.</li>
+</ul>
+</section>
+
+<section id="cli">
+<h2>dg run commands (packages/cli/src/run/)</h2>
+<ul>
+  <li><code>dg run start --ticket KEY --role R --order PATH [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]</code>: writes run.json, prints the run id alone on stdout (so the runbook can capture it).</li>
+  <li><code>dg run event &lt;run-id&gt; &lt;type&gt; [--data JSON]</code>: appends one event of the four conductor types. Finds the run directory by scanning <code>runs/*/&lt;run-id&gt;</code>. Exit 1 on an unknown run or type; <code>--data</code> must be a JSON object.</li>
+  <li><code>dg run list [--ticket KEY] [--json]</code>: one row per run (id, ticket, role, seat, created, event count, last event type). Newest first.</li>
+  <li><code>dg run show &lt;run-id&gt; [--json]</code>: run.json plus a summary (event count, first and last timestamp, last type, whether <code>ended</code> was seen).</li>
+  <li><code>dg run tail &lt;run-id&gt; [--since seq]</code>: prints the event lines with seq greater than the value (default 0), one JSON line each. It reads the file once and exits; it does not follow. A line that does not parse is skipped.</li>
+</ul>
+</section>
+
+<section id="dispatch">
+<h2>Dispatch and runbook</h2>
+<p>The conductor's worker-start step runs <code>RUN_ID=$(dg run start ...)</code> and starts the worker with <code>DIGISMITH_RUN_ID=$RUN_ID</code> in its environment. The repo holds no tracked start script (<code>scripts/conductor/</code> has none), and the runbook <code>.digismith/sessions/workbox.md</code> is git-excluded. So the runbook change is a text block in <code>report.md</code> for the conductor to apply. A Reviewer or a retry runs <code>dg run start</code> again and gets a new id.</p>
+</section>
+
+<section id="tests">
+<h2>Tests and first use</h2>
+<p><strong>Tested without Jack</strong> (vitest, <code>DIGISMITH_DEPOT_DIR</code> set to a temp dir, no real depot, no ClickUp):</p>
+<ul>
+  <li>run.json: all fields, <code>null</code> for unknown ones, refused overwrite, new id on a clash, bad key or id refused.</li>
+  <li>Events: seq 1..n in order; <strong>two parallel writers</strong> (child processes, 40 events each) give seq 1..80 with no gap and no duplicate and 80 valid lines; stale lock is broken; missing counter file falls back to line count.</li>
+  <li>Hooks, with fake stdin payloads piped to the real script: each of the five kinds writes the right type and data; no <code>DIGISMITH_RUN_ID</code> writes nothing (no directory, no log); wrong id writes nothing; bad JSON and a missing run directory exit 0; secrets in the payload never reach the file; time of one call recorded.</li>
+  <li><code>hooks.json</code>: the five new entries exist, the existing three keep their commands, and the existing hook tests stay green.</li>
+  <li>Readers: list (with and without <code>--ticket</code>, <code>--json</code>), show, tail with <code>--since</code>, on a fake depot.</li>
+</ul>
+<p><strong>Jack's first use</strong> (the real check, after merge and plugin update): start a throwaway worker through the runbook with <code>dg run start</code>, let it run one tool call and one turn, trigger one permission prompt, then close it. Then <code>dg run show &lt;id&gt;</code> must show <code>started</code>, <code>tool</code>, <code>blocked</code>, <code>turn_end</code>, <code>ended</code> in seq order, and a plain Claude session without <code>DIGISMITH_RUN_ID</code> must leave <code>runs/</code> unchanged.</p>
+</section>
+
+<section id="out">
+<h2>Out of scope</h2>
+<p>Watchdog, state machine, Nexus API routes, UI. The running Nexus API is not changed. No sudo, no launchctl, no new LaunchAgent or background service, no delete outside the worktree, no real ClickUp write in tests. No Claude Code hook outside <code>hooks/hooks.json</code> and no change to <code>.claude/settings*</code>.</p>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-581—nightwatch-run-record/design.html</footer>
+
+</body>
+</html>
