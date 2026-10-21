@@ -131,13 +131,14 @@
 <pre><code>[ -z "$DIGISMITH_RUN_ID" ] || node --experimental-strip-types "${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts" tool</code></pre>
 <p>The shell test returns 0 when the variable is empty or unset, so the command still exits 0. The script keeps its own check as a second guard.</p>
 <div class="table-wrap"><table>
-<tr><th>Hook</th><th>Type</th><th>data (ids, names, counts only)</th></tr>
+<tr><th>Hook</th><th>Type</th><th>data (ids, names, counts only; every hook event also carries <code>session_id</code>)</th></tr>
 <tr><td>SessionStart</td><td><code>started</code></td><td><code>{source}</code> (startup, resume, clear), <code>session_id</code></td></tr>
-<tr><td>Notification</td><td><code>blocked</code></td><td><code>{kind}</code> from <code>notification_type</code> (permission_prompt, idle_prompt, other kinds copied as the name)</td></tr>
-<tr><td>PostToolUse</td><td><code>tool</code></td><td><code>{tool, ok}</code>; <code>ok</code> is false when the response carries an error flag</td></tr>
-<tr><td>Stop</td><td><code>turn_end</code></td><td><code>{}</code></td></tr>
-<tr><td>SessionEnd</td><td><code>ended</code></td><td><code>{reason}</code></td></tr>
+<tr><td>Notification</td><td><code>blocked</code></td><td><code>{kind, session_id}</code> from <code>notification_type</code> (permission_prompt, idle_prompt, other kinds copied as the name)</td></tr>
+<tr><td>PostToolUse</td><td><code>tool</code></td><td><code>{tool, ok, session_id}</code>; <code>ok</code> is false when the response carries an error flag</td></tr>
+<tr><td>Stop</td><td><code>turn_end</code></td><td><code>{session_id}</code></td></tr>
+<tr><td>SessionEnd</td><td><code>ended</code></td><td><code>{reason, session_id}</code></td></tr>
 </table></div>
+<p>Every hook event carries the <code>session_id</code> of the Claude session that fired it (an id, never text). A child <code>claude -p</code> session that inherits <code>DIGISMITH_RUN_ID</code> (the steward does this) writes into the same run; its <code>session_id</code> tells a reader that its <code>ended</code> is not the worker's own end.</p>
 <p>Rules (decision 6):</p>
 <ul>
   <li>No <code>DIGISMITH_RUN_ID</code> in the environment: the shell test in the command stops first; if the script is started anyway, it returns at once and writes nothing. Also nothing when the run directory has no <code>run.json</code> (a wrong id never creates a directory).</li>
@@ -151,10 +152,10 @@
 <section id="cli">
 <h2>dg run commands (packages/cli/src/run/)</h2>
 <ul>
-  <li><code>dg run start --ticket KEY --role R --order PATH [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]</code>: writes run.json, prints the run id alone on stdout (so the runbook can capture it).</li>
+  <li><code>dg run start --ticket KEY --role R --order PATH [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]</code>: writes run.json, prints the run id alone on stdout (so the runbook can capture it). <code>--order</code> is required; a Scout without an order file passes the path of its brief.</li>
   <li><code>dg run event &lt;run-id&gt; &lt;type&gt; [--data JSON]</code>: appends one event of the five conductor types (<code>review_ready</code>, <code>merged</code>, <code>pushed</code>, <code>lost</code>, <code>phase</code>; for <code>phase</code>, <code>--data '{"phase":"building"}'</code> is required and checked). The readers do not change. Finds the run directory by scanning <code>runs/*/&lt;run-id&gt;</code>. Exit 1 on an unknown run or type; <code>--data</code> must be a JSON object.</li>
   <li><code>dg run list [--ticket KEY] [--json]</code>: one row per run (id, ticket, role, seat, created, event count, last event type). Newest first.</li>
-  <li><code>dg run show &lt;run-id&gt; [--json]</code>: the plain output prints the main run.json fields (run, ticket, role, seat, model, branch, worktree, herdr, created) and a summary; <code>--json</code> prints the full run.json and the summary. The summary has the event count, first and last timestamp, last type, and whether <code>ended</code> was seen.</li>
+  <li><code>dg run show &lt;run-id&gt; [--json]</code>: the plain output prints the main run.json fields (run, ticket, role, seat, model, branch, worktree, herdr, created) and a summary; <code>--json</code> prints the full run.json and the summary. The summary has the event count, first and last timestamp, last type, and whether the run has ended: <code>ended</code> is true only when an <code>ended</code> event comes after the last <code>started</code>, because a <code>/clear</code> fires <code>ended</code> with reason <code>clear</code> and then <code>started</code> again, which is not an end.</li>
   <li><code>dg run tail &lt;run-id&gt; [--since seq]</code>: prints the event lines with seq greater than the value (default 0), one JSON line each. It reads the file once and exits; it does not follow. A line that does not parse is skipped.</li>
 </ul>
 </section>
