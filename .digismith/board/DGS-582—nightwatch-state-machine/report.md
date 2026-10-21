@@ -1,6 +1,6 @@
 # DGS-582 Nightwatch ticket state machine: implementation report
 
-Date: 2026-10-22 (UTC+7). Branch `DGS-582__nightwatch-state-machine`. Range `290603e..d428bee` (35 commits). Builder: dgs-582 (herdr, seat dev0, role mode). Spec: `design.html`. Plan: `plan.md`. Findings: `findings.md`. Probe: `probe.md`. Conductor text: `runbook-text.md`. HTML report: `report.html`.
+Date: 2026-10-22 (UTC+7). Branch `DGS-582__nightwatch-state-machine`. Range `290603e..d428bee` (34 commits). Builder: dgs-582 (herdr, seat dev0, role mode). Spec: `design.html`. Plan: `plan.md`. Findings: `findings.md`. Probe: `probe.md`. Conductor text: `runbook-text.md`. HTML report: `report.html`.
 
 ## What shipped
 
