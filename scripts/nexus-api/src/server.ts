@@ -15,6 +15,7 @@ import { createEngine, type Engine } from './scheduler/engine.ts'
 import { ensureToken } from './scheduler/guard.ts'
 import { createClickupNotifier } from './scheduler/notify.ts'
 import { JOBS } from './scheduler/registry.ts'
+import type { JobDef } from './scheduler/types.ts'
 import { stateDir } from './scheduler/runlog.ts'
 
 export const HOST = '127.0.0.1'
@@ -68,17 +69,19 @@ export interface NexusOptions {
   loadProfile?: AppDeps['loadProfile']
   stateDir: string
   dg: { file: string; args: string[] }
+  jobs?: readonly JobDef[]
 }
 
 export async function startNexus(opts: NexusOptions): Promise<{ server: Server; scheduler: boolean; stop: () => Promise<void> }> {
   const { logger } = opts
+  const list = opts.jobs ?? JOBS
   let jobs: AppDeps['jobs']
   let engine: Engine | null = null
   try {
     const token = ensureToken(opts.stateDir)
-    engine = createEngine({ jobs: JOBS, stateDir: opts.stateDir, logger, notify: createClickupNotifier({ dg: opts.dg, logger }) })
+    engine = createEngine({ jobs: list, stateDir: opts.stateDir, logger, notify: createClickupNotifier({ dg: opts.dg, logger }) })
     await engine.start()
-    jobs = { engine, jobs: JOBS, token }
+    jobs = { engine, jobs: list, token }
   } catch (err) {
     logger.error('scheduler_error', { where: 'start', code: errorCode(err) })
     if (engine) await engine.stop().catch(() => undefined)

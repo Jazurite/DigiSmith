@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net'
 import { API_VERSION } from './version.ts'
 import { createApiServer, HOST, parsePort, startNexus } from './server.ts'
 import { createLogger } from './logger.ts'
+import { defineJob } from './scheduler/registry.ts'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -85,9 +86,10 @@ describe('server', () => {
 
 describe('startNexus', () => {
   const dg = { file: '/nonexistent/dg', args: [] }
+  const testJobs = [defineJob({ name: 'test-only', description: 'never runs here', command: { file: process.execPath, args: ['-e', ''] } })]
   async function boot(dir: string) {
     const lines: string[] = []
-    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg })
+    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg, jobs: testJobs })
     server = nexus.server
     await new Promise<void>(r => server!.listen(0, HOST, r))
     const { port } = server.address() as AddressInfo
@@ -121,7 +123,9 @@ describe('startNexus', () => {
       expect(lines).toEqual([])
       const jobs = await fetch(`${base}/api/${API_VERSION}/jobs`)
       expect(jobs.status).toBe(200)
-      expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
+      expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['test-only'])
+      // no job in the list points at the real dg entry point
+      for (const j of testJobs) expect(j.command.args.join(' ')).not.toContain('.digismith-depot')
       await nexus.stop()
     } finally {
       rmSync(tmp, { recursive: true, force: true })
