@@ -79,7 +79,7 @@
     <li><a href="#attention">The attention list</a></li>
     <li><a href="#notify">Notify</a></li>
     <li><a href="#breaker">Circuit breaker</a></li>
-    <li><a href="#causes">Failure causes and one retry</a></li>
+    <li><a href="#causes">Failure causes and retry eligibility</a></li>
     <li><a href="#never">What the watchdog never does</a></li>
     <li><a href="#tests">Tests and first use</a></li>
     <li><a href="#deps">Dependencies and open points</a></li>
@@ -156,7 +156,7 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <h2>Circuit breaker</h2>
 <p>State file <code>~/.digismith-depot/autonomous/breaker.json</code>: <code>{ "open": boolean, "streak": number, "failed": ["DGS-1", ..], "openedAt": ISO | null }</code>, written with a temp file and rename.</p>
 <ul>
-<li><code>dg autonomous release --result failed</code> adds one to <code>streak</code> and records the ticket. <code>--result merged</code> sets <code>streak</code> to 0. <code>stopped</code> and <code>awaiting-jack</code> change nothing: Jack's wait is not a failure. A <code>failed</code> release whose cause class is transient and that gets its one retry (next section) does not count yet; the retry's own result counts.</li>
+<li><code>dg autonomous release --result failed</code> adds one to <code>streak</code> and records the ticket. <code>--result merged</code> sets <code>streak</code> to 0. <code>stopped</code> and <code>awaiting-jack</code> change nothing: Jack's wait is not a failure. Every failed release counts, whatever its cause class.</li>
 <li><code>streak</code> reaching 2 sets <code>open: true</code>, writes an attention item (kind <code>failed</code>, run <code>-</code>, cause <code>circuit-breaker-open</code>) and one comment on the second ticket.</li>
 <li><code>autonomous-scan</code> reads the file first. When open it exits with the outcome <code>breaker</code> and claims nothing, makes no ClickUp call and writes one event. An unreadable or malformed file counts as open (fail closed).</li>
 <li><code>dg autonomous back</code> and the new <code>dg autonomous resume</code> set <code>open: false</code> and <code>streak: 0</code> and resolve the breaker item. <code>resume</code> only closes the breaker; it does not touch the away switch. Nothing else closes it, not even a day passing.</li>
@@ -164,18 +164,18 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 </section>
 
 <section id="causes">
-<h2>Failure causes and one retry</h2>
+<h2>Failure causes and retry eligibility</h2>
 <p><code>dg autonomous release --ticket K --result failed --cause &lt;code&gt;</code>. The list is a constant in <code>causes.ts</code>, each code in one class. A code outside the list is recorded as <code>unknown</code> with a warning (the release itself never fails, or the lock would stay held at night).</p>
 <div class="table-wrap"><table>
-<tr><th>Class</th><th>Codes</th><th>Retry</th></tr>
-<tr><td>transient</td><td><code>gateway-5xx</code>, <code>gateway-timeout</code>, <code>rate-limited</code>, <code>pane-died</code>, <code>tab-lost</code></td><td>one automatic retry</td></tr>
-<tr><td>durable</td><td><code>classifier-block</code>, <code>merge-refused</code>, <code>test-red</code>, <code>review-rejected</code>, <code>spec-gap</code></td><td>none; goes to Jack</td></tr>
-<tr><td>unknown</td><td><code>unknown</code> (also no <code>--cause</code>, or any other text)</td><td>none (fails closed)</td></tr>
+<tr><th>Class</th><th>Codes</th><th>Retry eligible</th></tr>
+<tr><td>transient</td><td><code>gateway-5xx</code>, <code>gateway-timeout</code>, <code>rate-limited</code>, <code>pane-died</code>, <code>tab-lost</code></td><td>yes (the retry itself is DGS-588)</td></tr>
+<tr><td>durable</td><td><code>classifier-block</code>, <code>merge-refused</code>, <code>test-red</code>, <code>review-rejected</code>, <code>spec-gap</code></td><td>no; goes to Jack</td></tr>
+<tr><td>unknown</td><td><code>unknown</code> (also no <code>--cause</code>, or any other text)</td><td>no (fails closed)</td></tr>
 </table></div>
 <p>A classifier block is durable by rule: it can only be fixed by Jack.</p>
 <ul>
-<li><b>Pure decision:</b> <code>decideRetry(kind, causeClass, retriesUsed) -&gt; 'retry' | 'attention'</code>. Retry only when the class is transient, or the kind is <code>lost</code>, and <code>retriesUsed</code> is 0. A <code>lost</code> run is re-dispatched once; <code>blocked</code> and <code>stalled</code> never retry (a human looks).</li>
-<li><b>The retry count lives in the DGS-582 journal.</b> The decision reads it through <code>journal.retryCount(ticket)</code> and records a retry as a <code>planned</code> entry before anything runs, so a restart of the watchdog, the controller or Nexus never gives a second retry. The retry itself is a controller action (<code>planned</code>, then <code>settled</code>); the watchdog and <code>release</code> only <b>plan</b> it. They never start a worker.</li>
+<li><b>No automatic retry in this ticket (Maestro, 2026-10-22).</b> The watchdog and <code>release</code> write nothing to the DGS-582 journal: a <code>planned</code> line that nothing consumes would make the reconcile raise attention on every tick. The retry is the follow-up DGS-588 (J.5, waits on DGS-583).</li>
+<li><b>Pure decision, kept:</b> <code>decideRetry(kind, causeClass, retriesUsed) -&gt; 'retry' | 'attention'</code>. Eligible when the kind is <code>failed</code> with a transient class, or the kind is <code>lost</code>, and <code>retriesUsed</code> is 0; <code>blocked</code> and <code>stalled</code> never (a human looks). DGS-583 calls it with 0 and records the answer on the attention item as <code>retryEligible</code> (true or false) next to <code>causeClass</code>. DGS-588 reads those two fields and supplies the real count.</li>
 <li>When the decision is <code>attention</code>, the open item is the result, and Jack sees it in the catch-up.</li>
 </ul>
 </section>
@@ -193,8 +193,8 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <li><b>budgets:</b> defaults, an override, a negative, a string and a broken block (one item, defaults used, the watchdog still runs).</li>
 <li><b>attention:</b> open, one open per (run, kind) on two passes, auto-resolve of blocked, a reopened item gets <code>n+1</code>, <code>lost</code> stays open, <code>resolve</code> of an unknown id exits 1, an unparsable line in the file.</li>
 <li><b>notify:</b> one comment per new item, none on the second pass, the per-hour limit, the 10 per pass cap, a failing <code>dg</code> keeps the item unsent and retries, no comment for a ticket-less item.</li>
-<li><b>breaker:</b> two failed releases open it; a merged release between them resets; <code>stopped</code> does not count; a transient retry does not count; the scan exits <code>breaker</code> with zero ClickUp calls; a malformed file is open; <code>back</code> and <code>resume</code> close it.</li>
-<li><b>causes and retry:</b> every code in exactly one class; an unknown code becomes <code>unknown</code>; <code>decideRetry</code> table; a second pass after a restart does not plan a second retry (journal count 1); the watchdog plans but never starts a worker.</li>
+<li><b>breaker:</b> two failed releases open it; a merged release between them resets; <code>stopped</code> does not count; the scan exits <code>breaker</code> with zero ClickUp calls; a malformed file is open; <code>back</code> and <code>resume</code> close it.</li>
+<li><b>causes and retry eligibility:</b> every code in exactly one class; an unknown code becomes <code>unknown</code>; <code>decideRetry</code> table; the attention item carries <code>retryEligible</code> and <code>causeClass</code>; neither the watchdog nor <code>release</code> creates a journal file or starts a worker.</li>
 <li><b>watch command:</b> a depot with a healthy, a blocked, a stalled, a lost and an ended run gives four items and one comment each, then a second pass adds nothing; <code>--dry-run</code> writes nothing; the 7 day skip; a broken run directory is skipped; the "never" source test.</li>
 <li><b>registry:</b> the new entry passes <code>validateJobs</code>, runs every 5 minutes and sits in the window all day.</li>
 <li><b>readers:</b> the catch-up and <code>autonomous-report</code> show the open items and <code>none</code>.</li>
@@ -205,7 +205,7 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <section id="deps">
 <h2>Dependencies and open points</h2>
 <ul>
-<li><b>Needs DGS-581</b> (run record, merged or in review) and <b>DGS-582</b> (controller and journal). No build starts before the Maestro orders it, after DGS-582 is merged. The plan sets the interfaces it needs from DGS-582 (<code>journal.retryCount</code>, <code>journal.plan</code>) as a small file the build checks first.</li>
+<li><b>Needs DGS-581</b> (run record, merged or in review) and <b>DGS-582</b> (controller and journal). No build starts before the Maestro orders it, after DGS-582 is merged. It extends DGS-582's <code>appendAttention</code> (more kinds, a resolved line) and does not write a second attention writer.</li>
 <li><b>Needs DGS-486</b> (<code>autonomous-scan</code>, <code>release</code>, <code>back</code>, <code>report</code>). At the time of this spec the code is in a worktree, not on main, and <code>packages/cli/src/autonomous/</code> does not exist on main. If DGS-486 is not merged when the build starts, the Builder stops and tells the conductor.</li>
 <li><b>Settled, attention file shape:</b> the shape in this spec is DGS-583's; DGS-582 follows it (the conductor tells dgs-582).</li>
 <li><b>Settled, merge phase marker:</b> the <code>phase</code> event type in DGS-581 (see "The classifier"). The build needs DGS-581 to have it on main first; the plan's first task checks that.</li>

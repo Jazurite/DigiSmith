@@ -20,11 +20,11 @@ Spec: `.digismith/board/DGS-583—nightwatch-watchdog/design.html`. Read it firs
 - Budgets in `.digismith/config.yml` under `nightwatch.budgets` (minutes): defaults `building: 45`, `review: 60`, `merge: 20`. A bad value gives one attention item (kind `failed`, cause `bad-budget-config`, run `-`) and the default for that value. The watchdog is never turned off by it.
 - Watch: every open run in `<depot>/runs/*/*/` (root `$DIGISMITH_DEPOT_DIR`, else `~/.digismith-depot`), not only autonomous ones; runs created more than 7 days ago with no `ended` are skipped. A broken run directory is skipped. Exit 0 unless the depot root cannot be read.
 - Registry entry: name `nightwatch-watchdog`, `atUtc7: '00:00'`, `windowEndUtc7: '23:59'`, `everyMinutes: 5`, `catchUp: 'skip'`, `manualOutsideWindow: 'allowed'`, `timeoutMs` 2 minutes, `notify: 'failures'`, `order: 40`.
-- Attention file: `<autonomousDir>/attention.jsonl` (`AUTONOMOUS_DIR` overrides). Append only. Open line: `{schema:"nightwatch-attention/v1", id:"<run>.<kind>.<n>", ts, ticket, run, kind, cause, since}`, kind `blocked|stalled|lost|refused|failed|unknown`. Resolved line: `{schema, id, ts, resolved:true, by:"watchdog"|"jack", note}`. One open item per (run, kind); `n` counts earlier resolved items of that pair. The watchdog auto-resolves only `blocked` and `stalled`.
+- Attention file: `<autonomousDir>/attention.jsonl` (`AUTONOMOUS_DIR` overrides). Append only. Open line: `{schema:"nightwatch-attention/v1", id:"<run>.<kind>.<n>", ts, ticket, run, kind, cause, since}` plus, when known, `causeClass` and `retryEligible`, kind `blocked|stalled|lost|refused|failed|unknown`. Resolved line: `{schema, id, ts, resolved:true, by:"watchdog"|"jack", note}`. One open item per (run, kind); `n` counts earlier resolved items of that pair. The watchdog auto-resolves only `blocked` and `stalled`.
 - Notify: one `dg clickup add-comment --task <ticket> --text .. --yes` per new item; at most one per ticket and kind per hour and 10 per pass; state in `<autonomousDir>/notify-state.json` (temp file and rename). A failed or limited comment stays unsent and is retried. No comment for a ticket-less item.
-- Breaker: `<autonomousDir>/breaker.json` `{open, streak, failed, openedAt}`. `release --result failed` adds 1; `merged` resets to 0; `stopped` and `awaiting-jack` change nothing; a failure that gets its retry does not count. Streak 2 opens it. `autonomous-scan` exits `breaker` (no claim, no ClickUp call) while open; a malformed file counts as open. `dg autonomous back` and `dg autonomous resume` close it.
+- Breaker: `<autonomousDir>/breaker.json` `{open, streak, failed, openedAt}`. `release --result failed` adds 1; `merged` resets to 0; `stopped` and `awaiting-jack` change nothing; every failed release counts. Streak 2 opens it. `autonomous-scan` exits `breaker` (no claim, no ClickUp call) while open; a malformed file counts as open. `dg autonomous back` and `dg autonomous resume` close it.
 - Causes (`causes.ts`): transient `gateway-5xx`, `gateway-timeout`, `rate-limited`, `pane-died`, `tab-lost`; durable `classifier-block`, `merge-refused`, `test-red`, `review-rejected`, `spec-gap`; unknown `unknown`. A code outside the list, or none, is recorded as `unknown` with a warning; the release never fails because of it.
-- Retry: `decideRetry(kind, causeClass, retriesUsed) -> 'retry' | 'attention'`: retry only when (class is transient or kind is `lost`) and `retriesUsed` is 0. The count comes from the DGS-582 journal; a retry is recorded as a journal `planned` entry before anything runs; the watchdog and `release` only plan, the controller acts.
+- Retry (decided by the Maestro, 2026-10-22): there is **no automatic retry in DGS-583** and **no journal write** from the watchdog or from `release` (an open planned line that nothing consumes would make the DGS-582 reconcile raise attention on every tick). The retry is the follow-up DGS-588. `decideRetry(kind, causeClass, retriesUsed)` stays as a pure function (Task 2 built it); the attention item records `retryEligible` (`decideRetry(kind, class, 0) === 'retry'`) and `causeClass`, so DGS-588 can act on them. A `lost` run is retry-eligible; so is a `failed` release with a transient cause.
 - The watchdog never answers a prompt, never sends keys to a pane, never kills a process, never deletes or rewrites a file. Herdr access is one read-only `herdr-ws pane list` per workspace.
 - Write only inside this worktree and the board folder. No push, no merge, no ClickUp write in tests (a fake `dg` records comments), no sudo, no launchctl, no new service. pnpm only. Never read or print a token, key or `.env` value.
 - Style: double quotes and semicolons in `packages/cli`, single quotes and no semicolons in `scripts/nexus-api` (follow each file's own style). Commits are title-only, conventional, no AI attribution.
@@ -42,7 +42,6 @@ packages/cli/src/autonomous/
   causes.ts          CAUSES, classOfCause(), normalizeCause()
   pane.ts            panesByWorkspace()  (the one herdr call)
   watch.ts           runWatch()
-  journal-port.ts    the two functions needed from DGS-582 (type + adapter)
   index.ts           (DGS-486 file) add: watch, attention, attention resolve, resume; release --cause
   scan.ts, release.ts, report.ts   (DGS-486 files) breaker check, cause handling, Attention block
   *.test.ts
@@ -82,7 +81,7 @@ Expected: JSON `{"id":..,"result":{"panes":[{"pane_id":"w2:p1",...}]},"type":"pa
 
 - [ ] **Step 3: Write `preflight.md` and commit**
 
-Content: a table (item, answer, source command): DGS-581 on main with `phase`; DGS-486 on main; DGS-582 journal path and the two function names and signatures; the pane list shape; the `dg` entry path used by the registry (`grep -n "DG\b" scripts/nexus-api/src/scheduler/registry.ts`). No token, key or `.env` value.
+Content: a table (item, answer, source command): DGS-581 on main with `phase`; DGS-486 on main; the pane list shape; the `dg` entry path used by the registry (`grep -n "DG\b" scripts/nexus-api/src/scheduler/registry.ts`). No token, key or `.env` value.
 ```bash
 git add ".digismith/board/DGS-583—nightwatch-watchdog/preflight.md"
 git commit -m "docs(dgs-583): record the preflight findings" -- ".digismith/board/DGS-583—nightwatch-watchdog/preflight.md"
@@ -289,10 +288,10 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   return { state: "healthy", cause: "", since: "" };
 }
 
-/** Only a transient failure or a lost run gets one automatic retry; the journal supplies retriesUsed. */
+/** Whether a run or release is eligible for one retry. DGS-583 only records the answer (retryEligible); DGS-588 acts on it and supplies retriesUsed. */
 export function decideRetry(kind: string, causeClass: CauseClass, retriesUsed: number): "retry" | "attention" {
   if (retriesUsed > 0) return "attention";
-  return causeClass === "transient" || kind === "lost" ? "retry" : "attention";
+  return (kind === "failed" && causeClass === "transient") || kind === "lost" ? "retry" : "attention";
 }
 ```
 
@@ -425,6 +424,8 @@ git commit -m "feat(dgs-583): read the phase budgets from the config"
 
 ### Task 4: Attention list and notify
 
+**Extend, do not fork (Maestro, 2026-10-22).** DGS-582 already writes `attention.jsonl` through `appendAttention` in `attention-write.ts`. Widen that file: its `kind` accepts all six `AttentionKind` values, it takes an optional `since`, `causeClass` and `retryEligible` (written only when given), and it takes `ticket: string | null`. Add `appendResolved` there too. Existing `attention-write.test.ts` cases stay green and unchanged. `attention.ts` below keeps `appendOpen` as a thin wrapper over `appendAttention` (the single writer of open lines) and owns reading and formatting. `appendOpen` returns the new item, or null when `appendAttention` answered `exists`.
+
 **Files:**
 - Create: `packages/cli/src/autonomous/attention.ts`, `packages/cli/src/autonomous/notify.ts`
 - Test: `packages/cli/src/autonomous/attention.test.ts`, `packages/cli/src/autonomous/notify.test.ts`
@@ -435,7 +436,7 @@ git commit -m "feat(dgs-583): read the phase budgets from the config"
 ```ts
 // attention.ts
 export type AttentionKind = "blocked" | "stalled" | "lost" | "refused" | "failed" | "unknown";
-export interface OpenItem { id: string; ts: string; ticket: string | null; run: string; kind: AttentionKind; cause: string; since: string }
+export interface OpenItem { id: string; ts: string; ticket: string | null; run: string; kind: AttentionKind; cause: string; since: string; causeClass?: "transient" | "durable" | "unknown"; retryEligible?: boolean }
 export function attentionFile(dir: string): string;
 export function readOpen(dir: string): OpenItem[];                       // open = no later resolved line with the same id; oldest first; bad lines skipped
 export function appendOpen(dir: string, i: Omit<OpenItem, "id" | "ts"> & { ts: string }): OpenItem | null;  // null when (run, kind) is already open
@@ -706,10 +707,10 @@ git add packages/cli/src/autonomous/attention.ts packages/cli/src/autonomous/att
 git commit -m "feat(dgs-583): add the attention list and ticket notify"
 ```
 
-### Task 5: Failure causes, breaker, and the journal port
+### Task 5: Failure causes and the breaker
 
 **Files:**
-- Create: `packages/cli/src/autonomous/causes.ts`, `breaker.ts`, `journal-port.ts`
+- Create: `packages/cli/src/autonomous/causes.ts`, `breaker.ts`
 - Test: `causes.test.ts`, `breaker.test.ts`
 
 **Interfaces:**
@@ -724,11 +725,8 @@ export function normalizeCause(code: string | undefined): { code: string; warnin
 export interface Breaker { open: boolean; streak: number; failed: string[]; openedAt: string | null }
 export function readBreaker(dir: string): Breaker;             // no file: closed, streak 0; a file that does not parse: open (fail closed)
 export function isOpen(dir: string): boolean;
-export function recordRelease(dir: string, a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack"; counts: boolean }, now: Date): { opened: boolean; breaker: Breaker };
+export function recordRelease(dir: string, a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack" }, now: Date): { opened: boolean; breaker: Breaker };
 export function closeBreaker(dir: string): void;               // open false, streak 0, failed []
-// journal-port.ts  (names and paths from preflight.md; DGS-582 owns the journal)
-export interface JournalPort { retryCount(ticket: string): number; planRetry(a: { ticket: string; run: string | null; kind: string; cause: string }): void }
-export function defaultJournal(): JournalPort;
 ```
 
 - [ ] **Step 1: Write the failing tests**
@@ -765,7 +763,7 @@ import { closeBreaker, isOpen, readBreaker, recordRelease } from "./breaker.ts";
 
 const dir = () => mkdtempSync(join(tmpdir(), "nw-brk-"));
 const now = new Date("2026-10-21T10:00:00Z");
-const fail = (d: string, t: string, counts = true) => recordRelease(d, { ticket: t, result: "failed", counts }, now);
+const fail = (d: string, t: string) => recordRelease(d, { ticket: t, result: "failed" }, now);
 
 describe("breaker", () => {
   it("no file: closed", () => expect(readBreaker(dir())).toEqual({ open: false, streak: 0, failed: [], openedAt: null }));
@@ -781,22 +779,16 @@ describe("breaker", () => {
   it("a merged release resets the streak", () => {
     const d = dir();
     fail(d, "DGS-1");
-    recordRelease(d, { ticket: "DGS-2", result: "merged", counts: true }, now);
+    recordRelease(d, { ticket: "DGS-2", result: "merged" }, now);
     fail(d, "DGS-3");
     expect(isOpen(d)).toBe(false);
   });
   it("stopped and awaiting-jack change nothing", () => {
     const d = dir();
     fail(d, "DGS-1");
-    recordRelease(d, { ticket: "DGS-2", result: "stopped", counts: true }, now);
-    recordRelease(d, { ticket: "DGS-3", result: "awaiting-jack", counts: true }, now);
+    recordRelease(d, { ticket: "DGS-2", result: "stopped" }, now);
+    recordRelease(d, { ticket: "DGS-3", result: "awaiting-jack" }, now);
     expect(readBreaker(d).streak).toBe(1);
-  });
-  it("a failure that gets its retry does not count", () => {
-    const d = dir();
-    fail(d, "DGS-1", false);
-    fail(d, "DGS-2", false);
-    expect(readBreaker(d).streak).toBe(0);
   });
   it("a file that does not parse is open (fail closed)", () => {
     const d = dir();
@@ -840,8 +832,8 @@ export const CAUSES: Record<string, CauseClass> = {
 export const classOfCause = (code: string): CauseClass => (Object.hasOwn(CAUSES, code) ? CAUSES[code] : "unknown");
 
 export function normalizeCause(code: string | undefined): { code: string; warning: string | null } {
-  if (code === undefined || code === "") return { code: "unknown", warning: "no --cause given; recorded as unknown (no retry)" };
-  if (!Object.hasOwn(CAUSES, code)) return { code: "unknown", warning: `cause "${code}" is not in the list (${Object.keys(CAUSES).join(", ")}); recorded as unknown (no retry)` };
+  if (code === undefined || code === "") return { code: "unknown", warning: "no --cause given; recorded as unknown" };
+  if (!Object.hasOwn(CAUSES, code)) return { code: "unknown", warning: `cause "${code}" is not in the list (${Object.keys(CAUSES).join(", ")}); recorded as unknown` };
   return { code, warning: null };
 }
 ```
@@ -879,12 +871,12 @@ function write(dir: string, b: Breaker): void {
 
 export function recordRelease(
   dir: string,
-  a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack"; counts: boolean },
+  a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack" },
   now: Date,
 ): { opened: boolean; breaker: Breaker } {
   const b = readBreaker(dir);
   if (a.result === "merged") { const n = { ...b, streak: 0, failed: [] }; write(dir, n); return { opened: false, breaker: n }; }
-  if (a.result !== "failed" || !a.counts) return { opened: false, breaker: b };
+  if (a.result !== "failed") return { opened: false, breaker: b };
   const n: Breaker = { ...b, streak: b.streak + 1, failed: [...b.failed, a.ticket] };
   let opened = false;
   if (n.streak >= 2 && !n.open) { n.open = true; n.openedAt = now.toISOString(); opened = true; }
@@ -897,34 +889,13 @@ export function closeBreaker(dir: string): void {
 }
 ```
 
-- [ ] **Step 5: Write `journal-port.ts`**
+- [ ] **Step 5: Run, then commit**
 
-Use the module path and function names that `preflight.md` recorded for the DGS-582 journal. The shape below is the contract; wire `defaultJournal()` to the real functions:
-
-```ts
-// The two things this ticket needs from DGS-582's journal. DGS-582 owns the file and its format.
-export interface JournalPort {
-  /** How many automatic retries this ticket has already used (counted from `planned` retry entries). */
-  retryCount(ticket: string): number;
-  /** Record one retry as a `planned` entry; the controller performs it and writes `settled`. */
-  planRetry(a: { ticket: string; run: string | null; kind: string; cause: string }): void;
-}
-
-export function defaultJournal(): JournalPort {
-  // Replace the body with the DGS-582 imports named in preflight.md, for example:
-  //   import { countRetries, planAction } from "../nightwatch/journal.ts";
-  throw new Error("defaultJournal: wire the DGS-582 journal (see preflight.md)");
-}
-```
-Replace the `throw` and the comment with the real import and calls; the file must not keep a `throw`. Add a test `journal-port.test.ts` that calls `defaultJournal()` against a temp depot (`DIGISMITH_DEPOT_DIR`) and checks that `retryCount("DGS-1")` is `0`, then `planRetry` once, then `retryCount("DGS-1")` is `1`. If the DGS-582 journal has no such pair of functions, **stop and tell the conductor**; do not write a second journal.
-
-- [ ] **Step 6: Run, then commit**
-
-Run: `pnpm vitest run packages/cli/src/autonomous/causes.test.ts packages/cli/src/autonomous/breaker.test.ts packages/cli/src/autonomous/journal-port.test.ts`
+Run: `pnpm vitest run packages/cli/src/autonomous/causes.test.ts packages/cli/src/autonomous/breaker.test.ts`
 Expected: PASS.
 ```bash
-git add packages/cli/src/autonomous/causes.ts packages/cli/src/autonomous/causes.test.ts packages/cli/src/autonomous/breaker.ts packages/cli/src/autonomous/breaker.test.ts packages/cli/src/autonomous/journal-port.ts packages/cli/src/autonomous/journal-port.test.ts
-git commit -m "feat(dgs-583): add failure causes, the breaker and the journal port"
+git add packages/cli/src/autonomous/causes.ts packages/cli/src/autonomous/causes.test.ts packages/cli/src/autonomous/breaker.ts packages/cli/src/autonomous/breaker.test.ts
+git commit -m "feat(dgs-583): add failure causes and the breaker"
 ```
 
 ### Task 6: The watch pass
@@ -934,7 +905,7 @@ git commit -m "feat(dgs-583): add failure causes, the breaker and the journal po
 - Test: `packages/cli/src/autonomous/pane.test.ts`, `packages/cli/src/autonomous/watch.test.ts`
 
 **Interfaces:**
-- Consumes: `listRuns(env, ticket?)` and `readEvents(runDir)` from `run/read.ts` and `run/events.ts` (DGS-581; check in preflight whether `RunRow` carries the run directory, and if not use `findRunDir(runId, env)` from `run/paths.ts`), `classify`, `decideRetry`, `Budgets` (Task 2), `readBudgets` (Task 3), attention and notify (Task 4), `classOfCause`, `JournalPort` (Task 5).
+- Consumes: `listRuns(env, ticket?)` and `readEvents(runDir)` from `run/read.ts` and `run/events.ts` (DGS-581; check in preflight whether `RunRow` carries the run directory, and if not use `findRunDir(runId, env)` from `run/paths.ts`), `classify`, `decideRetry`, `Budgets` (Task 2), `readBudgets` (Task 3), attention and notify (Task 4), `classOfCause` (Task 5).
 - Produces:
 ```ts
 // pane.ts
@@ -943,9 +914,9 @@ export function herdrPaneLookup(exec?: (workspace: string) => Promise<{ code: nu
 // watch.ts
 export interface WatchDeps {
   env: NodeJS.ProcessEnv; dir: string; cwd: string; now: () => number;
-  panes: PaneLookup; runDg: RunDg; journal: JournalPort; dryRun: boolean;
+  panes: PaneLookup; runDg: RunDg; dryRun: boolean;
 }
-export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number; retriesPlanned: number }
+export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number }
 export async function runWatch(d: WatchDeps): Promise<WatchResult>;
 ```
 
@@ -961,7 +932,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult>;
 - `panes` returning `null` for a workspace: runs of that workspace get `pane: "unknown"`; a healthy run stays healthy.
 - A run with `herdr.workspace` `null` gets `pane: "unknown"`.
 - A bad budget block in `<cwd>/.digismith/config.yml`: one open item (kind `failed`, cause `bad-budget-config`, run `-`, ticket `null`, **no comment**); the pass still classifies with defaults; a second pass adds no second item.
-- Retry: a `lost` run with `journal.retryCount` 0 calls `journal.planRetry` once with `{ ticket, run, kind: "lost", cause }` and the item's cause text says `retry planned`; with `retryCount` 1 it does not plan. A `blocked` run never plans. A second pass over the same lost run (journal now at 1) does not plan again. The watchdog starts no worker: the fake `runDg` only ever receives `clickup add-comment` calls (assert on every call's first two args).
+- Retry: no journal read and no journal write. A `lost` item has `retryEligible: true` and `causeClass: "unknown"`; `blocked` and `stalled` items have `retryEligible: false`. The watchdog starts no worker: the fake `runDg` only ever receives `clickup add-comment` calls (assert on every call's first two args). A test asserts the pass creates no `journal.jsonl` in the dir.
 
 - [ ] **Step 2: Run to verify they fail**
 
@@ -1015,22 +986,21 @@ import { listRuns } from "../run/read.ts";
 import { appendOpen, appendResolved, readOpen, type AttentionKind, type OpenItem } from "./attention.ts";
 import { readBudgets } from "./budgets.ts";
 import { classOfCause } from "./causes.ts";
-import type { JournalPort } from "./journal-port.ts";
 import { notifyNew, type RunDg } from "./notify.ts";
 import type { PaneLookup } from "./pane.ts";
 import { classify, decideRetry, type Pane } from "./watchdog.ts";
 
 export interface WatchDeps {
   env: NodeJS.ProcessEnv; dir: string; cwd: string; now: () => number;
-  panes: PaneLookup; runDg: RunDg; journal: JournalPort; dryRun: boolean;
+  panes: PaneLookup; runDg: RunDg; dryRun: boolean;
 }
-export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number; retriesPlanned: number }
+export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number }
 
 const RETENTION_MS = 7 * 24 * 3600_000;
 const AUTO: AttentionKind[] = ["blocked", "stalled"];
 
 export async function runWatch(d: WatchDeps): Promise<WatchResult> {
-  const res: WatchResult = { lines: [], opened: 0, resolved: 0, commented: 0, retriesPlanned: 0 };
+  const res: WatchResult = { lines: [], opened: 0, resolved: 0, commented: 0 };
   const nowMs = d.now();
   const nowIso = new Date(nowMs).toISOString();
   const { budgets, problems } = readBudgets(d.cwd);
@@ -1072,16 +1042,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
       if (!d.dryRun) appendResolved(d.dir, it.id, "watchdog", nowIso, `run is ${v.state} now`);
       res.resolved++;
     }
-    let cause = v.cause;
-    if (v.state === "lost" && !d.dryRun) {
-      const used = d.journal.retryCount(record.ticket);
-      if (decideRetry("lost", "unknown", used) === "retry" && !readOpen(d.dir).some((o) => o.run === record.run && o.kind === "lost")) {
-        d.journal.planRetry({ ticket: record.ticket, run: record.run, kind: "lost", cause: v.cause });
-        res.retriesPlanned++;
-        cause = `${v.cause}; retry planned`;
-      }
-    }
-    open({ ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause, since: v.since });
+    open({ ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause: v.cause, since: v.since, retryEligible: decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown" });
     res.lines.push(`${record.run}  ${record.ticket}  ${v.state}  ${v.cause}`);
   }
 
@@ -1091,14 +1052,13 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     const n = await notifyNew({ dir: d.dir, now: d.now, runDg: d.runDg }, pending);
     res.commented = n.sent;
   }
-  res.lines.push(`watch: ${rows.length} runs, ${res.opened} opened, ${res.resolved} resolved, ${res.commented} commented, ${res.retriesPlanned} retries planned${d.dryRun ? " (dry run, nothing written)" : ""}`);
+  res.lines.push(`watch: ${rows.length} runs, ${res.opened} opened, ${res.resolved} resolved, ${res.commented} commented${d.dryRun ? " (dry run, nothing written)" : ""}`);
   return res;
 }
 ```
 
 `rowsWithEvents(rows)` is a small local helper: for each `RunRow` from `listRuns`, read that run's events with `readEvents(runDir)` (see the Task 1 note on where the run directory comes from; wrap each read in try/catch and skip the run on a throw). `listRuns`' `RunRow` has `record` and a `summary` only, so the helper finds the directory with `findRunDir(record.run, d.env)`. Remove the unused `readdirSync`, `readFileSync` and `join` imports if the helper does not need them. Write the helper in `watch.ts` and keep `runWatch` as the only export besides the types.
 
-Dry-run note: in a dry run the retry plan is skipped (the `!d.dryRun` guard above), so a dry run never touches the journal.
 
 - [ ] **Step 5: Run to verify they pass**
 
@@ -1137,7 +1097,7 @@ git commit -m "feat(dgs-583): add the watch pass and the pane lookup"
 
 **Interfaces:**
 - Consumes: DGS-486 `runScan`, `runRelease`, `runBack` as in its plan (read the merged files first; the line numbers below are for the DGS-486 plan, not the code); Tasks 2 to 6.
-- Produces: `ReleaseDeps` gains `journal: JournalPort`; `runRelease` args gain `cause?: string` and return `{ lockCleared, runNow, cause: string | null, retryPlanned: boolean, breakerOpened: boolean, warning: string | null }`; `ScanResult.outcome` gains `"breaker"`; yargs: `dg autonomous watch [--dry-run]`, `dg autonomous attention [--json]`, `dg autonomous attention resolve <id> [--note ..]`, `dg autonomous resume`, `dg autonomous release ... [--cause <code>]`.
+- Produces: `runRelease` args gain `cause?: string` and return `{ lockCleared, runNow, cause: string | null, retryEligible: boolean, breakerOpened: boolean, warning: string | null }`; `ScanResult.outcome` gains `"breaker"`; yargs: `dg autonomous watch [--dry-run]`, `dg autonomous attention [--json]`, `dg autonomous attention resolve <id> [--note ..]`, `dg autonomous resume`, `dg autonomous release ... [--cause <code>]`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1147,11 +1107,11 @@ git commit -m "feat(dgs-583): add the watch pass and the pane lookup"
 - With the breaker closed, existing behaviour is unchanged (the existing tests cover it).
 
 `release.test.ts`:
-- `--result failed --cause test-red` (durable): one `failed` open item (run `-`, ticket the key, cause `test-red`), one comment (the existing release comment), breaker streak 1, no retry planned (`journal.planRetry` not called).
-- `--result failed --cause gateway-5xx` (transient), `retryCount` 0: `planRetry` called once with `{ ticket, run: null, kind: "failed", cause: "gateway-5xx" }`, `retryPlanned: true`, breaker streak **unchanged** (counts false); the same release again with `retryCount` 1: no plan, streak +1.
-- `--cause weird`: recorded as `unknown`, `warning` set, the release still clears the lock and returns normally; no retry.
-- `--result failed` with no cause: `unknown`, no retry.
-- Two failed (non-retry) releases: `breakerOpened` true on the second, one `failed` item with cause `circuit-breaker-open` (ticket the second key, run `-`).
+- `--result failed --cause test-red` (durable): one `refused`-or-`failed` open item per `kindOf` (here `failed`; run `-`, ticket the key, cause `test-red`, `causeClass: "durable"`, `retryEligible: false`), one comment (the existing release comment), breaker streak 1.
+- `--result failed --cause gateway-5xx` (transient): the item has `causeClass: "transient"` and `retryEligible: true`; `retryEligible: true` is returned; the breaker streak still goes up by 1 (every failed release counts); no journal file is created.
+- `--cause weird`: recorded as `unknown`, `warning` set, the release still clears the lock and returns normally; `retryEligible: false`.
+- `--result failed` with no cause: `unknown`, `retryEligible: false`.
+- Two failed releases: `breakerOpened` true on the second, one `failed` item with cause `circuit-breaker-open` (ticket the second key, run `-`).
 - `merged` resets the streak. `stopped` and `awaiting-jack` do not change it and write no attention item.
 - A lock for another ticket still throws and changes nothing (the existing test stays green).
 
@@ -1179,16 +1139,15 @@ if (!d.dryRun && isOpen(d.dir)) {
 ```ts
 const { code, warning } = normalizeCause(a.cause);
 const klass = classOfCause(code);
-const retry = decideRetry("failed", klass, d.journal.retryCount(a.ticket)) === "retry";
-if (retry) d.journal.planRetry({ ticket: a.ticket, run: null, kind: "failed", cause: code });
-appendOpen(attDir, { ticket: a.ticket, run: "-", kind: klass === "durable" ? "refused" : klass === "unknown" ? "unknown" : "failed", cause: `${code}${retry ? "; retry planned" : ""}`, since: now.toISOString(), ts: now.toISOString() });
-const b = recordRelease(d.dir, { ticket: a.ticket, result: "failed", counts: !retry }, now);
+const retryEligible = decideRetry("failed", klass, 0) === "retry";
+appendOpen(attDir, { ticket: a.ticket, run: "-", kind: kindOf(code), cause: code, causeClass: klass, retryEligible, since: now.toISOString(), ts: now.toISOString() });
+const b = recordRelease(d.dir, { ticket: a.ticket, result: "failed" }, now);
 ```
-Do the same `recordRelease` call for the other three results with `counts: true` (merged resets; the others do nothing). When `b.opened`, `appendOpen` a `failed` item `{ ticket: a.ticket, run: "-", cause: "circuit-breaker-open" }` and post one comment on the ticket (`Autonomous Operation stopped scanning: 2 failed tickets in a row (<list>). Run dg autonomous resume when you are back.`). The existing `appendEvent("release", ...)` gets `cause: code` in its fields. A cause class of `durable` maps to kind `refused` only for `merge-refused` and `classifier-block`; for `test-red`, `review-rejected` and `spec-gap` use kind `failed` (write this as a small `kindOf(code)` function next to `normalizeCause` use, and test both). Cause warnings go to the returned `warning`; the command prints them to stderr.
+Call `recordRelease` for the other three results too (merged resets; the others do nothing). Release writes nothing to the journal. When `b.opened`, `appendOpen` a `failed` item `{ ticket: a.ticket, run: "-", cause: "circuit-breaker-open" }` and post one comment on the ticket (`Autonomous Operation stopped scanning: 2 failed tickets in a row (<list>). Run dg autonomous resume when you are back.`). The existing `appendEvent("release", ...)` gets `cause: code` in its fields. `kindOf(code)`: `merge-refused` and `classifier-block` give kind `refused`; `unknown` gives kind `unknown`; every other code gives kind `failed` (write this as a small `kindOf(code)` function next to `normalizeCause` use, and test both). Cause warnings go to the returned `warning`; the command prints them to stderr.
 
 `switch.ts`: in `runBack`, call `closeBreaker(d.dir)` and `appendResolved` on the open `circuit-breaker-open` item (if any, `by: "jack"`), both inside try/catch so `back` never fails because of the breaker.
 
-`index.ts`: add the four commands with the same handler style as the existing ones. `watch` builds `WatchDeps` with `env: process.env`, `dir: autonomousDir()`, `cwd: process.cwd()`, `now: Date.now`, `panes: herdrPaneLookup()`, `journal: defaultJournal()`, and a `runDg` that runs `execFile(process.execPath, [<the dg entry>, ...args])` (the same entry the registry uses; take it from the same helper the DGS-486 index uses for run-now, or from `process.argv[1]`). `watch` exits 0 unless the depot root cannot be read. `attention` prints `formatOpen(readOpen(dir), Date.now())` or `JSON.stringify(items, null, 2)`. `resume` closes the breaker and the item.
+`index.ts`: add the four commands with the same handler style as the existing ones. `watch` builds `WatchDeps` with `env: process.env`, `dir: autonomousDir()`, `cwd: process.cwd()`, `now: Date.now`, `panes: herdrPaneLookup()`, and a `runDg` that runs `execFile(process.execPath, [<the dg entry>, ...args])` (the same entry the registry uses; take it from the same helper the DGS-486 index uses for run-now, or from `process.argv[1]`). `watch` exits 0 unless the depot root cannot be read. `attention` prints `formatOpen(readOpen(dir), Date.now())` or `JSON.stringify(items, null, 2)`. `resume` closes the breaker and the item.
 
 - [ ] **Step 4: Run, then the whole group**
 
@@ -1266,7 +1225,7 @@ git commit -m "feat(dgs-583): schedule the watchdog and show attention in the ca
 
 - [ ] **Step 1: Hand mutation checks (restore each one)**
 
-Do each by hand once, note the failing test in the report, restore: (1) make `classify` check silence before blocked: the "blocked beats silence" test fails; (2) change `SILENCE_MS` to 31 minutes: the 30:00 edge test fails; (3) drop `appendOpen`'s duplicate check: the "one item per (run, kind)" test fails; (4) let `notifyNew` skip the `sent` list: the "not sent twice" test fails; (5) count a retried failure in `recordRelease`: the "does not count" test fails; (6) make `isOpen` return false on a bad file: the fail-closed test fails; (7) let `decideRetry` ignore `retriesUsed`: the second-retry test fails; (8) make the scan check the breaker after the lock read: the zero-tracker-call test fails; (9) auto-resolve `lost` items: the "lost stays open" test fails; (10) add `"send"` as an arg in `buildHerdrCall`: the source test fails.
+Do each by hand once, note the failing test in the report, restore: (1) make `classify` check silence before blocked: the "blocked beats silence" test fails; (2) change `SILENCE_MS` to 31 minutes: the 30:00 edge test fails; (3) drop `appendOpen`'s duplicate check: the "one item per (run, kind)" test fails; (4) let `notifyNew` skip the `sent` list: the "not sent twice" test fails; (5) make `recordRelease` ignore a failed release: the streak test fails; (6) make `isOpen` return false on a bad file: the fail-closed test fails; (7) let `decideRetry` return `retry` for a `blocked` kind: the decideRetry table test fails; (8) make the scan check the breaker after the lock read: the zero-tracker-call test fails; (9) auto-resolve `lost` items: the "lost stays open" test fails; (10) add `"send"` as an arg in `buildHerdrCall`: the source test fails.
 
 - [ ] **Step 2: Whole checks**
 
