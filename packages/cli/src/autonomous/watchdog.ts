@@ -19,20 +19,20 @@ const ms = (iso: string): number => Date.parse(iso);
 export function phaseOf(run: RunRecord, events: EventLine[]): { phase: Phase; since: string } | null {
   let phase: Phase | null = null;
   let since = "";
-  let explicit = false;
   const started = events.find((e) => e.type === "started");
   if (run.role === "builder") { phase = "building"; since = started?.ts ?? run.created_at; }
   else if (run.role === "reviewer") { phase = "review"; since = started?.ts ?? run.created_at; }
-  let afterReadyTool = false;
+  // A builder's review_ready pauses the building clock (it waits for the Reviewer); the next tool restarts it.
+  let waitingForTool = false;
   for (const e of events) {
     if (e.type === "phase" && typeof e.data.phase === "string" && PHASES.includes(e.data.phase)) {
-      phase = e.data.phase as Phase; since = e.ts; explicit = true; afterReadyTool = false;
+      phase = e.data.phase as Phase; since = e.ts; waitingForTool = false;
     } else if (e.type === "merged" && phase === "merge") {
       phase = null;
-    } else if (e.type === "review_ready" && run.role === "builder" && !explicit) {
-      afterReadyTool = true;
-    } else if (e.type === "tool" && afterReadyTool) {
-      phase = "building"; since = e.ts; afterReadyTool = false;
+    } else if (e.type === "review_ready" && run.role === "builder") {
+      phase = null; waitingForTool = true;
+    } else if (e.type === "tool" && waitingForTool) {
+      phase = "building"; since = e.ts; waitingForTool = false;
     }
   }
   return phase ? { phase, since } : null;

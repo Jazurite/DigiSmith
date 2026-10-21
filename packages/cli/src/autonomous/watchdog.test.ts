@@ -74,6 +74,27 @@ describe("classify", () => {
     expect(classify(run(), e, "present", at(99), { ...DEFAULT_BUDGETS }).state).toBe("healthy");
     expect(phaseOf(run(), e)?.since).toBe(min(70));
   });
+  it("a builder waiting for review after review_ready is not stalled", () => {
+    const e = [ev("started", 0), ev("review_ready", 40)];
+    expect(classify(run(), e, "present", at(50), DEFAULT_BUDGETS).state).toBe("healthy");
+    expect(phaseOf(run(), e)).toBeNull();
+  });
+  it("a tool after an earlier phase event still restarts the building clock after review_ready", () => {
+    const e = [ev("started", 0), ev("phase", 1, { phase: "review" }), ev("review_ready", 40), ev("tool", 50)];
+    expect(phaseOf(run(), e)).toEqual({ phase: "building", since: min(50) });
+  });
+  it("a phase event after a review_ready and tool cycle sets the phase and its start", () => {
+    const e = [ev("started", 0), ev("review_ready", 40), ev("tool", 50), ev("phase", 60, { phase: "review" })];
+    expect(phaseOf(run(), e)).toEqual({ phase: "review", since: min(60) });
+  });
+  it("a builder with an earlier phase event is stalled only 45 min after the tool that follows review_ready", () => {
+    const e = [ev("started", 0), ev("phase", 1, { phase: "building" }), ev("review_ready", 40), ev("tool", 50), ev("tool", 70), ev("tool", 90)];
+    expect(classify(run(), e, "present", at(95), DEFAULT_BUDGETS).state).toBe("healthy");
+    const v = classify(run(), e, "present", at(96), DEFAULT_BUDGETS);
+    expect(v.state).toBe("stalled");
+    expect(v.cause).toBe("building-over-45-min");
+    expect(v.since).toBe(min(50));
+  });
   it("a scout and an other run are never stalled", () => {
     for (const r of ["scout", "other"]) {
       expect(classify(run(r), [ev("started", 0), ev("tool", 600)], "present", at(601), DEFAULT_BUDGETS).state).toBe("healthy");
@@ -91,6 +112,18 @@ describe("classify", () => {
 });
 
 describe("decideRetry", () => {
+  it("pins the full retry table (advice only; lost is always retry-eligible on the first attempt)", () => {
+    expect(decideRetry("failed", "transient", 0)).toBe("retry");
+    expect(decideRetry("failed", "transient", 1)).toBe("attention");
+    expect(decideRetry("failed", "durable", 0)).toBe("attention");
+    expect(decideRetry("failed", "unknown", 0)).toBe("attention");
+    for (const c of ["transient", "durable", "unknown"] as const) {
+      expect(decideRetry("blocked", c, 0)).toBe("attention");
+      expect(decideRetry("stalled", c, 0)).toBe("attention");
+      expect(decideRetry("lost", c, 0)).toBe("retry");
+      expect(decideRetry("lost", c, 1)).toBe("attention");
+    }
+  });
   it("retries once for transient or lost, never for durable, unknown, blocked or stalled", () => {
     expect(decideRetry("failed", "transient", 0)).toBe("retry");
     expect(decideRetry("lost", "unknown", 0)).toBe("retry");
