@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendAttention } from "./attention-write.ts";
 import { awayExpired, isAway, readAway } from "./away.ts";
+import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
 import { promptConductor, type Exec } from "./conductor.ts";
 import type { NexusDeps } from "./nexus.ts";
@@ -21,7 +23,7 @@ export interface ScanDeps {
   tick?: () => Promise<TickResult>;
 }
 export interface ScanResult {
-  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed";
+  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker";
   claimed?: string;            // ticket key
   candidates: number;
   skipped: { key: string; reason: string }[];
@@ -109,6 +111,19 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   if (!d.dryRun && !(inNightWindow(now) || isAway(readAway(d.dir), now))) {
     appendEvent(d.dir, now, "off");
     return { outcome: "off", candidates: 0, skipped };
+  }
+  // 1b. An open breaker (two failed releases in a row, or a damaged breaker.json) stops the scan before any claim.
+  if (!d.dryRun) {
+    const b = readBreaker(d.dir);
+    if (b.open) {
+      if (b.problem !== null) {
+        try {
+          appendAttention(d.dir, now, { ticket: null, run: "-", kind: "failed", cause: `breaker-file-unreadable: ${b.problem}` });
+        } catch { /* the scan still stops */ }
+      }
+      appendEvent(d.dir, now, "breaker", { streak: b.streak });
+      return { outcome: "breaker", candidates: 0, skipped };
+    }
   }
   // 2. A held lock.
   if (!d.dryRun) {

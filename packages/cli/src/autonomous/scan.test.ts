@@ -345,3 +345,52 @@ describe("runScan: walk and claim", () => {
     expect(fetchCalls).toEqual([]);
   });
 });
+
+describe("runScan: the breaker", () => {
+  const openBreaker = async () => {
+    const { recordRelease } = await import("./breaker.ts");
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, now);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, now);
+  };
+  it("an open breaker: outcome breaker, no tracker call, no lock, no order, one breaker event", async () => {
+    await openBreaker();
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("breaker");
+    expect(tracker.calls).toEqual([]);
+    expect(readLock(dir)).toBeNull();
+    expect(orders()).toEqual([]);
+    expect(kinds().filter((k) => k === "breaker")).toHaveLength(1);
+  });
+  it("a malformed breaker.json gives breaker and one attention item, once", async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "breaker.json"), "{nope");
+    const { readOpen } = await import("./attention.ts");
+    expect((await runScan(mk())).outcome).toBe("breaker");
+    expect((await runScan(mk())).outcome).toBe("breaker");
+    expect(tracker.calls).toEqual([]);
+    const items = readOpen(dir);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: "failed", run: "-", ticket: null });
+    expect(items[0].cause).toMatch(/^breaker-file-unreadable: .*does not parse/);
+  });
+  it("an open breaker from a real streak writes no attention item", async () => {
+    await openBreaker();
+    const { readOpen } = await import("./attention.ts");
+    await runScan(mk());
+    expect(readOpen(dir)).toEqual([]);
+  });
+  it("daytime and not away: off wins over the breaker", async () => {
+    await openBreaker();
+    now = DAY;
+    expect((await runScan(mk())).outcome).toBe("off");
+  });
+  it("a dry run ignores the breaker and writes nothing", async () => {
+    await openBreaker();
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk({ dryRun: true }));
+    expect(r.outcome).not.toBe("breaker");
+    expect(readLock(dir)).toBeNull();
+    expect(kinds()).not.toContain("breaker");
+  });
+});
