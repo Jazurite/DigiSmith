@@ -56,6 +56,11 @@ function git(cwd: string, ...args: string[]): string | null {
   return r.status === 0 ? r.stdout.trim() || null : null;
 }
 
+function currentBranch(cwd: string): string | null {
+  const b = git(cwd, "rev-parse", "--abbrev-ref", "HEAD");
+  return b === "HEAD" ? null : b;
+}
+
 function parseBudget(raw: string | undefined): Record<string, unknown> | null {
   if (raw === undefined) return null;
   let v: unknown;
@@ -86,7 +91,7 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     model: input.model ?? null,
     plugin_version: pluginVersion(),
     base_sha: input.baseSha ?? (wt ? git(wt, "rev-parse", "HEAD") : null),
-    branch: input.branch ?? (wt ? git(wt, "rev-parse", "--abbrev-ref", "HEAD") : null),
+    branch: input.branch ?? (wt ? currentBranch(wt) : null),
     worktree: input.worktree ?? null,
     herdr: { workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
     budget,
