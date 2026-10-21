@@ -3,7 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
-import { JOBS, MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
+import { slotsOfNight } from './clock.ts'
+import { JOBS,MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
 
 const base = { name: 'night-scan', description: 'd', command: { file: '/bin/echo', args: ['hi'] } }
 const withSchedule = (schedule: object) => defineJob({ ...base, schedule } as never)
@@ -73,11 +74,36 @@ describe('validateJobs', () => {
 })
 
 describe('JOBS', () => {
-  it('registers only a valid selftest with no schedule', () => {
+  it('registers a valid selftest with no schedule and the two autonomous jobs', () => {
     expect(() => validateJobs(JOBS)).not.toThrow()
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
     expect(JOBS[0]?.schedule).toBeUndefined()
     expect(isAbsolute(JOBS[0]!.command.file)).toBe(true)
+  })
+  it('keeps names url-safe and unique, and every command path absolute', () => {
+    const names = JOBS.map((j) => j.name)
+    expect(new Set(names).size).toBe(names.length)
+    for (const name of names) expect(name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+    for (const job of JOBS) {
+      expect(isAbsolute(job.command.file)).toBe(true)
+      for (const arg of job.command.args.filter((a) => a.endsWith('.ts') || a.startsWith('/'))) expect(isAbsolute(arg)).toBe(true)
+    }
+  })
+  it('autonomous-scan has 24 hourly slots for one night key', () => {
+    const scan = JOBS.find((j) => j.name === 'autonomous-scan')!
+    const slots = slotsOfNight('2026-10-19', scan.schedule!)
+    expect(slots.map((s) => s.key)).toEqual(Array.from({ length: 24 }, (_, h) => `2026-10-19@${String(h).padStart(2, '0')}:00`))
+    for (const s of slots) expect(s.atMs).toBeLessThan(s.windowEndMs)
+    expect(scan.catchUp).toBe('skip')
+    expect(scan.manualOutsideWindow).toBe('allowed')
+    expect(scan.command.args).toContain('autonomous')
+    expect(scan.command.args).toContain('scan')
+  })
+  it('autonomous-report has one slot at 06:00', () => {
+    const report = JOBS.find((j) => j.name === 'autonomous-report')!
+    expect(slotsOfNight('2026-10-19', report.schedule!).map((s) => s.key)).toEqual(['2026-10-19@06:00'])
+    expect(report.manualOutsideWindow).toBe('allowed')
+    expect(report.catchUp).toBe('run-once-in-window')
   })
   it('selftest prints one line and exits 0 without SELFTEST_FAIL', async () => {
     const { command } = JOBS[0]!

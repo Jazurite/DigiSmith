@@ -121,7 +121,7 @@ describe('startNexus', () => {
       expect(lines).toEqual([])
       const jobs = await fetch(`${base}/api/${API_VERSION}/jobs`)
       expect(jobs.status).toBe(200)
-      expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['selftest'])
+      expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
       await nexus.stop()
     } finally {
       rmSync(tmp, { recursive: true, force: true })

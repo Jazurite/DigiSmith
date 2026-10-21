@@ -363,7 +363,7 @@ describe('the real entry point on a throwaway server', () => {
   afterEach(() => { if (child && child.exitCode === null) child.kill('SIGKILL'); child = undefined })
 
   it('starts the engine, runs selftest from a separate process with the token file, and stops cleanly', async () => {
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
     const state = path.join(dir, 'state')
     const depot = path.join(dir, 'depot')
     const dgCalls = path.join(dir, 'dg-calls.jsonl')
@@ -389,7 +389,7 @@ describe('the real entry point on a throwaway server', () => {
     expect(JSON.parse(fs.readFileSync(path.join(state, 'state.json'), 'utf8')).cleanStop).toBe(false)
 
     const list = await (await fetch(`${base}/api/${API_VERSION}/jobs`)).json()
-    expect(list.jobs.map((j: { name: string }) => j.name)).toEqual(['selftest'])
+    expect(list.jobs.map((j: { name: string }) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
     expect(list.jobs[0]).toMatchObject({ nextRunAt: null, lastRun: null })
 
     const script = path.join(dir, 'run-now.mjs')

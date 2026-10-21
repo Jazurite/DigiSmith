@@ -1,5 +1,10 @@
-import { isAbsolute } from 'node:path'
+import { homedir } from 'node:os'
+import { isAbsolute, join } from 'node:path'
 import type { JobDef } from './types.ts'
+
+const DEPOT = join(homedir(), '.digismith-depot')
+const DG = ['--experimental-strip-types', join(DEPOT, 'repo', 'packages', 'cli', 'src', 'index.ts')]
+const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 
 export const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
 export const MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000
@@ -51,6 +56,20 @@ export const JOBS: readonly JobDef[] = [
       file: process.execPath,
       args: ['-e', "if (process.env.SELFTEST_FAIL === '1') { process.stderr.write('selftest failed (SELFTEST_FAIL=1)\\n'); process.exit(1) } else process.stdout.write('selftest ok\\n')"],
     },
+  }),
+  defineJob({
+    name: 'autonomous-scan',
+    description: 'Autonomous Operation: at night or while Jack is away, claim one ready to-do ticket and hand it to the conductor',
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 60 },
+    command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },
+    timeoutMs: 5 * 60 * 1000, catchUp: 'skip', order: 50, notify: 'failures', manualOutsideWindow: 'allowed',
+  }),
+  defineJob({
+    name: 'autonomous-report',
+    description: 'Autonomous Operation: write the report for the time since the previous report',
+    schedule: { atUtc7: '06:00', windowEndUtc7: '07:00' },
+    command: { file: process.execPath, args: [...DG, 'autonomous', 'report'] },
+    timeoutMs: 5 * 60 * 1000, catchUp: 'run-once-in-window', order: 60, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
 ]
 
