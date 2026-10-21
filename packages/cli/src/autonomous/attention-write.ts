@@ -17,7 +17,18 @@ function parseLines(raw: string): Line[] {
   return out;
 }
 
-export function appendAttention(dir: string, now: Date, a: { ticket: string; run: string | null; kind: "unknown" | "failed"; cause: string }): "written" | "exists" {
+export type AttentionKind = "blocked" | "stalled" | "lost" | "refused" | "failed" | "unknown";
+export interface AttentionInput {
+  ticket: string | null;
+  run: string | null;
+  kind: AttentionKind;
+  cause: string;
+  since?: string;
+  causeClass?: "transient" | "durable" | "unknown";
+  retryEligible?: boolean;
+}
+
+export function appendAttention(dir: string, now: Date, a: AttentionInput): "written" | "exists" {
   const file = join(dir, "attention.jsonl");
   const run = a.run ?? "-";
   const raw = readRaw(file);
@@ -31,6 +42,23 @@ export function appendAttention(dir: string, now: Date, a: { ticket: string; run
   const ts = now.toISOString();
   // A torn last line (no trailing newline) must not swallow the new line.
   const sep = raw !== "" && !raw.endsWith("\n") ? "\n" : "";
-  appendFileSync(file, `${sep}${JSON.stringify({ schema: SCHEMA, id: `${prefix}${n}`, ts, ticket: a.ticket, run, kind: a.kind, cause: a.cause, since: ts })}\n`);
+  const line: Record<string, unknown> = { schema: SCHEMA, id: `${prefix}${n}`, ts, ticket: a.ticket, run, kind: a.kind, cause: a.cause, since: a.since ?? ts };
+  if (a.causeClass !== undefined) line.causeClass = a.causeClass;
+  if (a.retryEligible !== undefined) line.retryEligible = a.retryEligible;
+  appendFileSync(file, `${sep}${JSON.stringify(line)}\n`);
   return "written";
+}
+
+/** Closes an open item. Returns false (and writes nothing) when the id is not open. */
+export function appendResolved(dir: string, id: string, by: "watchdog" | "jack", ts: string, note = ""): boolean {
+  const file = join(dir, "attention.jsonl");
+  const raw = readRaw(file);
+  const lines = parseLines(raw);
+  const resolved = lines.some((l) => l.resolved === true && l.id === id);
+  const opened = lines.some((l) => l.resolved !== true && l.id === id);
+  if (!opened || resolved) return false;
+  mkdirSync(dir, { recursive: true });
+  const sep = raw !== "" && !raw.endsWith("\n") ? "\n" : "";
+  appendFileSync(file, `${sep}${JSON.stringify({ schema: SCHEMA, id, ts, resolved: true, by, note })}\n`);
+  return true;
 }
