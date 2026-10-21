@@ -184,6 +184,9 @@ describe("act retry", () => {
     const d = tmp(); const dd = deps(d);
     await act(dd, S2({ ticket: "bad key" }), { kind: "retry", item: "i", run: "r" });
     expect(dd.sent).toEqual([]); expect(readJournal(d)).toEqual([]);
+    const lines = readFileSync(join(d, "attention.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ ticket: "bad key", cause: "order-refused-bad-ticket-key" });
   });
 });
 describe("act adopt", () => {
@@ -196,5 +199,10 @@ describe("act adopt", () => {
     expect(readOpen(d)).toEqual([]);
     expect(resultsOf(d)["DGS-1:building:1:adopt-retry"]).toBe("succeeded");
     expect(appendResolved(d, "builder-1.lost.0", "controller", T.toISOString())).toBe(false);
+    const attBefore = readFileSync(join(d, "attention.jsonl"), "utf8");
+    const jBefore = readJournal(d).length;
+    await expect(act(deps(d), state({ phase: "building" }), a)).rejects.toThrow(/already used/);
+    expect(readJournal(d)).toHaveLength(jBefore);
+    expect(readFileSync(join(d, "attention.jsonl"), "utf8")).toBe(attBefore);
   });
 });
