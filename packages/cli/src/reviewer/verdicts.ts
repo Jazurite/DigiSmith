@@ -8,17 +8,30 @@ export function judgementKey(kind: string, id: string, round: number, findingId:
   return `${kind} ${id} r${round} ${findingId}`;
 }
 
-export function parseVerdictLines(ledger: string): Map<string, Judgement> {
-  const out = new Map<string, Judgement>();
+export type VerdictEntry = {
+  line: number; text: string; kind: string; id: string; round: number;
+  finding: string; verdict: Verdict; reason: string;
+};
+
+export function parseVerdictEntries(ledger: string): VerdictEntry[] {
+  const out: VerdictEntry[] = [];
   ledger.split(/\r?\n/).forEach((raw, i) => {
-    const line = raw.trim().replace(/^- /, "");
-    if (!line.startsWith("Review task ") && !line.startsWith("Review ticket ")) return;
-    const m = LINE_RE.exec(line);
-    if (!m) throw new Error(`ledger line ${i + 1}: not a verdict line: ${line}`);
+    const text = raw.trim().replace(/^- /, "");
+    if (!text.startsWith("Review task ") && !text.startsWith("Review ticket ")) return;
+    const m = LINE_RE.exec(text);
+    if (!m) throw new Error(`ledger line ${i + 1}: not a verdict line: ${text}`);
     const verdict = m[5] as Verdict;
     const reason = m[6] ?? "";
     if (verdict !== "fixed" && reason === "") throw new Error(`ledger line ${i + 1}: a reason is required for ${verdict}`);
-    out.set(judgementKey(m[1], m[2], Number(m[3]), m[4]), { verdict, reason });
+    out.push({ line: i + 1, text, kind: m[1], id: m[2], round: Number(m[3]), finding: m[4], verdict, reason });
   });
+  return out;
+}
+
+export function parseVerdictLines(ledger: string): Map<string, Judgement> {
+  const out = new Map<string, Judgement>();
+  for (const e of parseVerdictEntries(ledger)) {
+    out.set(judgementKey(e.kind, e.id, e.round, e.finding), { verdict: e.verdict, reason: e.reason });
+  }
   return out;
 }

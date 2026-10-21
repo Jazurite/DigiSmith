@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseVerdictLines, judgementKey } from "./verdicts.ts";
+import { parseVerdictLines, parseVerdictEntries, judgementKey } from "./verdicts.ts";
 
 describe("parseVerdictLines", () => {
   const ledger = [
@@ -33,5 +33,21 @@ describe("parseVerdictLines", () => {
   it("requires a reason for parked and rejected", () => {
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> parked\n")).toThrow(/reason/);
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> rejected ()\n")).toThrow(/ledger line 1/);
+  });
+});
+
+describe("parseVerdictEntries", () => {
+  it("keeps every verdict line in ledger order with its line number", () => {
+    const e = parseVerdictEntries(
+      "# SDD ledger\nReview task 1 r1: F1 -> parked (wait)\nTask 1: complete\nReview task 1 r2: F1 -> fixed (commit abc1234)\n",
+    );
+    expect(e.map((x) => [x.line, x.kind, x.id, x.round, x.finding, x.verdict, x.reason])).toEqual([
+      [2, "task", "1", 1, "F1", "parked", "wait"],
+      [4, "task", "1", 2, "F1", "fixed", "commit abc1234"],
+    ]);
+    expect(e[1].text).toBe("Review task 1 r2: F1 -> fixed (commit abc1234)");
+  });
+  it("fails like parseVerdictLines on a bad Review line", () => {
+    expect(() => parseVerdictEntries("Review task 1 r1: F1 -> maybe (x)\n")).toThrow(/ledger line 1/);
   });
 });
