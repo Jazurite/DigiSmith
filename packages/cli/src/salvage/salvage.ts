@@ -38,10 +38,14 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     const committedHits: SecretHit[] = [];
     const seenHit = new Set<string>();
     for (const sha of d.git(wt, ["rev-list", `main..${branch}`]).split("\n").filter(Boolean)) {
-      const paths = d.git(wt, ["diff-tree", "--root", "-r", "-c", "--no-commit-id", "--name-only", "-z", sha]).split("\0").filter(Boolean);
+      // added, copied, modified, renamed only: deletes never reach cat-file
+      const toks = d.git(wt, ["diff-tree", "--root", "-r", "-c", "--no-commit-id", "--name-status", "--diff-filter=ACMR", "-z", sha]).split("\0").filter(Boolean);
+      const paths: string[] = [];
+      for (let i = 0; i + 1 < toks.length; i += 2) paths.push(toks[i + 1]);
       for (const p of paths) {
         let size: number;
-        try { size = Number(d.git(wt, ["cat-file", "-s", `${sha}:${p}`]).trim()); } catch { continue; } // deleted in this commit
+        try { size = Number(d.git(wt, ["cat-file", "-s", `${sha}:${p}`]).trim()); } catch { return fail(`not salvaged: cannot check ${p}`); }
+        if (!Number.isFinite(size)) return fail(`not salvaged: cannot check ${p}`);
         for (const h of secretHits([{ path: p, size }])) {
           if (!seenHit.has(h.path)) { seenHit.add(h.path); committedHits.push(h); }
         }

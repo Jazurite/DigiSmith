@@ -131,6 +131,20 @@ describe("salvage", () => {
     expect(salvage(mk(), { ticket: "DGS-9" }).ok).toBe(true);
     expect(rescue()).toContain("rescue/DGS-9");
   });
+  it("a committed file that git cannot size stops everything (fails closed)", () => {
+    writeFileSync(join(wt, "n.ts"), "x\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "n");
+    const pushes: string[][] = [];
+    const git: typeof realGit = (cwd, args) => {
+      if (args[0] === "cat-file") throw new Error("fatal: boom");
+      if (args[0] === "push") pushes.push(args);
+      return realGit(cwd, args);
+    };
+    const r = salvage(mk({ git }), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: cannot check n.ts");
+    expect(pushes).toEqual([]);
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
   it("a file over 5 MB stops everything", () => {
     writeFileSync(join(wt, "big.bin"), Buffer.alloc(5 * 1024 * 1024 + 1));
     const r = salvage(mk(), { ticket: "DGS-9" });
