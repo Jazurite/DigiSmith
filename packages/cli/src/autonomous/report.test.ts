@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { buildReport, runReport } from "./report.ts";
-import { appendEvent, readLastReport, writeLastReport } from "./state.ts";
+import { appendEvent, readEvents, readLastReport, writeLastReport } from "./state.ts";
 
 const at = (iso: string) => new Date(iso);
 const FROM = at("2026-10-20T10:00:00.000Z");
@@ -31,10 +31,7 @@ const seed = () => {
   appendEvent(dir, at("2026-10-20T15:00:00Z"), "away-off");
 };
 const lockAt = (iso: string) => ({ ticket: "DGS-3", taskId: "t3", claimedAt: iso, claimedAtUtc7: "x", order: "o.md", scanId: "s" });
-const read = (from: Date, to: Date) => {
-  // helper: events from the temp dir
-  return import("./state.ts").then((s) => s.readEvents(dir, from.getTime(), to.getTime()));
-};
+const read = async (from: Date, to: Date) => readEvents(dir, from.getTime(), to.getTime());
 
 describe("buildReport", () => {
   it("renders every section with the right keys", async () => {
@@ -55,8 +52,8 @@ describe("buildReport", () => {
   it("counts off events and does not list them", async () => {
     seed();
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    expect(text).toMatch(/2 off/);
-    expect(text.match(/\boff\b/g)?.length).toBe(1);
+    expect(text.split("\n").find((l) => l.startsWith("Scans:"))).toBe("Scans: 2, 2 off, 0 busy");
+    expect(text).not.toMatch(/14:10|21:10/);
   });
 
   it("renders an empty period as Scans: 0 and none sections", () => {
@@ -115,10 +112,44 @@ describe("runReport", () => {
 
   it("keeps the file and updates last-report.json when the comment fails", async () => {
     tracker.comment = async () => { throw new Error("boom"); };
-    const r = await runReport({ tracker, dir, now: () => TO });
+    const lines: string[] = [];
+    const orig = process.stderr.write;
+    process.stderr.write = ((c: string | Uint8Array) => { lines.push(String(c)); return true; }) as typeof process.stderr.write;
+    let r;
+    try {
+      r = await runReport({ tracker, dir, now: () => TO });
+    } finally {
+      process.stderr.write = orig;
+    }
+    expect(lines.join("")).toContain("autonomous report: comment failed: boom");
     expect(r.commented).toBe(false);
     expect(existsSync(r.file)).toBe(true);
     expect(readdirSync(join(dir, "reports")).every((f) => f.endsWith(".md"))).toBe(true);
     expect(readLastReport(dir)?.toISOString()).toBe(TO.toISOString());
+  });
+
+  it("never overwrites: a second report in the same minute gets a -2 suffix", async () => {
+    appendEvent(dir, at("2026-10-20T12:00:00Z"), "release", { ticket: "DGS-A", result: "merged", commit: "a", minutes: 1 });
+    const r1 = await runReport({ tracker, dir, now: () => TO });
+    appendEvent(dir, at("2026-10-20T20:00:00.500Z"), "release", { ticket: "DGS-B", result: "merged", commit: "b", minutes: 1 });
+    const r2 = await runReport({ tracker, dir, now: () => new Date(TO.getTime() + 1000) });
+    const r3 = await runReport({ tracker, dir, now: () => new Date(TO.getTime() + 2000) });
+    expect(r2.file).toBe(r1.file.replace(/\.md$/, "-2.md"));
+    expect(r3.file).toBe(r1.file.replace(/\.md$/, "-3.md"));
+    expect(readFileSync(r1.file, "utf-8")).toContain("DGS-A");
+    expect(readFileSync(r2.file, "utf-8")).toContain("DGS-B");
+  });
+
+  it("shows an away that began before the period", async () => {
+    appendEvent(dir, at("2026-10-19T10:00:00Z"), "away-on");
+    writeLastReport(dir, FROM);
+    const open = await runReport({ tracker, dir, now: () => TO });
+    expect(readFileSync(open.file, "utf-8")).toContain("away since 2026-10-19 17:00:00, still away");
+    appendEvent(dir, at("2026-10-20T15:00:00Z"), "away-off");
+    writeLastReport(dir, FROM);
+    const closed = await runReport({ tracker, dir, now: () => new Date(TO.getTime() + 3600_000) });
+    const text = readFileSync(closed.file, "utf-8");
+    expect(text).toContain("away ended 2026-10-20 22:00:00");
+    expect(text).not.toContain("still away");
   });
 });

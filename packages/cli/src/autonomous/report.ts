@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7, stampOf } from "./clock.ts";
 import { atomicWrite, readEvents, readLastReport, readLock, writeLastReport } from "./state.ts";
@@ -6,26 +6,36 @@ import type { Event, Lock, Tracker } from "./types.ts";
 
 export interface ReportDeps { tracker: Tracker; dir: string; now: () => Date }
 
+const AWAY_LOOKBACK_MS = 30 * 24 * 3600_000;
 const STALE_LOCK_MS = 8 * 3600_000;
 const str = (v: unknown): string => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
 const list = (lines: string[]): string => (lines.length ? lines.map((l) => `- ${l}`).join("\n") : "none");
 
-function awayLines(events: Event[]): string[] {
+function awayLines(events: Event[], from: Date): string[] {
   const out: string[] = [];
   let open: Event | null = null;
   for (const e of events) {
     if (e.kind === "away-on") {
       if (!open) open = e;
-    } else if ((e.kind === "away-off" || e.kind === "away-expired") && open) {
-      out.push(`${open.tsUtc7} to ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}`);
-      open = null;
+    } else if (e.kind === "away-off" || e.kind === "away-expired") {
+      if (!open) {
+        if (Date.parse(e.ts) >= from.getTime()) out.push(`away ended ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}`);
+      } else if (Date.parse(open.ts) < from.getTime()) {
+        out.push(`away ended ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}, since ${open.tsUtc7}`);
+        open = null;
+      } else {
+        out.push(`${open.tsUtc7} to ${e.tsUtc7}${e.kind === "away-expired" ? " (expired)" : ""}`);
+        open = null;
+      }
     }
   }
-  if (open) out.push(`${open.tsUtc7} to still away`);
+  if (open) out.push(Date.parse(open.ts) < from.getTime() ? `away since ${open.tsUtc7}, still away` : `${open.tsUtc7} to still away`);
   return out;
 }
 
-export function buildReport(from: Date, to: Date, events: Event[], lock: Lock | null): string {
+export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock | null): string {
+  // away events from before `from` are context only; every other section counts the period
+  const events = allEvents.filter((e) => Date.parse(e.ts) >= from.getTime());
   const of = (kind: Event["kind"]) => events.filter((e) => e.kind === kind);
   const releases = of("release");
   const built = releases.filter((e) => e.result === "merged")
@@ -56,7 +66,7 @@ export function buildReport(from: Date, to: Date, events: Event[], lock: Lock | 
   return [
     `# Autonomous Operation report, ${fmtUtc7(from)} to ${fmtUtc7(to)} UTC+7`,
     "",
-    "Away:", list(awayLines(events)), "",
+    "Away:", list(awayLines(allEvents, from)), "",
     `Scans: ${of("scan").length}, ${of("off").length} off, ${of("busy").length} busy`, "",
     "Built", list(built), "",
     "Failed or stopped", list(failed), "",
@@ -89,17 +99,19 @@ function firstEventTime(dir: string): Date | null {
 export async function runReport(d: ReportDeps): Promise<{ file: string; commented: boolean }> {
   const to = d.now();
   const from = readLastReport(d.dir) ?? firstEventTime(d.dir) ?? to;
-  const events = readEvents(d.dir, from.getTime(), to.getTime());
+  const events = readEvents(d.dir, from.getTime() - AWAY_LOOKBACK_MS, to.getTime());
   const text = buildReport(from, to, events, readLock(d.dir));
-  const name = `${stampOf(to)}.md`;
-  atomicWrite(join(d.dir, "reports"), name, text);
-  const file = join(d.dir, "reports", name);
+  const reports = join(d.dir, "reports");
+  let name = `${stampOf(to)}.md`;
+  for (let n = 2; existsSync(join(reports, name)); n++) name = `${stampOf(to)}-${n}.md`;
+  atomicWrite(reports, name, text);
+  const file = join(reports, name);
   let commented = true;
   try {
     await d.tracker.comment("DGS-548", text);
   } catch (e) {
     commented = false;
-    console.error(`autonomous report: comment failed: ${e instanceof Error ? e.message : String(e)}`);
+    process.stderr.write(`autonomous report: comment failed: ${e instanceof Error ? e.message : String(e)}\n`);
   }
   writeLastReport(d.dir, to);
   return { file, commented };
