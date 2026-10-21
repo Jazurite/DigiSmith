@@ -1,7 +1,9 @@
 import { z } from 'zod'
 
-const iso = z.string()
+const iso = z.iso.datetime()
 const count = z.number().int().min(0)
+
+export const RUN_PHASES = ['building', 'review', 'merge'] as const
 
 export const HEALTH = ['healthy', 'blocked', 'stalled', 'lost', 'ended'] as const
 export const ROLES = ['builder', 'reviewer', 'scout', 'other'] as const
@@ -14,7 +16,7 @@ export const runRowSchema = z.strictObject({
   run: z.string(), ticket: z.string(), role: z.enum(ROLES),
   seat: z.string().nullable(), model: z.string().nullable(),
   trigger: z.enum(TRIGGERS), state: z.enum(HEALTH),
-  phase: z.enum(['building', 'review', 'merge']).nullable(),
+  phase: z.enum(RUN_PHASES).nullable(),
   startedAt: iso, endedAt: iso.nullable(), elapsedSec: count, events: count,
   merged: z.boolean(), pushed: z.boolean(),
 })
@@ -70,7 +72,7 @@ export const runDetailSchema = z.strictObject({
   readAt: iso,
   row: runRowSchema,
   pipeline: z.array(pipelineStepSchema),
-  budget: z.strictObject({ phase: z.enum(['building', 'review', 'merge']).nullable(), limitMin: count.nullable(), elapsedMin: count.nullable(), building: count, review: count, merge: count }),
+  budget: z.strictObject({ phase: z.enum(RUN_PHASES).nullable(), limitMin: count.nullable(), elapsedMin: count.nullable(), building: count, review: count, merge: count }),
   record: z.record(z.string(), z.unknown()),
   order: z.strictObject({ available: z.boolean(), text: z.string() }),
 })

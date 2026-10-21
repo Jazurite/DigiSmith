@@ -8,6 +8,10 @@ describe('nightwatch schemas', () => {
     expect(runRowSchema.safeParse(row).success).toBe(true)
     expect(runRowSchema.safeParse({ ...row, prompt: 'x' }).success).toBe(false)
   })
+  it('refuses a timestamp that is not ISO UTC', () => {
+    expect(runRowSchema.safeParse({ ...row, startedAt: 'yesterday' }).success).toBe(false)
+    expect(runRowSchema.safeParse({ ...row, startedAt: '2026-10-22 01:00:00' }).success).toBe(false)
+  })
   it('refuses a bad state, role or trigger', () => {
     expect(runRowSchema.safeParse({ ...row, state: 'sleeping' }).success).toBe(false)
     expect(runRowSchema.safeParse({ ...row, role: 'boss' }).success).toBe(false)
