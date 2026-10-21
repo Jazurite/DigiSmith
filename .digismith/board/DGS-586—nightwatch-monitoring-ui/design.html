@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch monitoring UI</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; margin-top:2.4rem; } h3 { font-size:1.05rem; color:var(--accent); margin-top:1.6rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; margin:1rem 0; } th,td { border:1px solid var(--border); padding:.4rem .6rem; text-align:left; vertical-align:top; } th { background:var(--card-bg); }
+  .note { background:var(--card-bg); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:6px; padding:.7rem 1rem; margin:1rem 0; }
+  footer { margin-top:3rem; color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Nightwatch monitoring UI</h1>
+  <p class="meta"><span>Ticket: DGS-586 (J.5, Nightwatch DGS-580)</span><span>Date: 2026-10-22 (UTC+7)</span><span>Status: spec, waiting for checkpoint 1</span></p>
+  <p class="meta">Layout mock for Jack: <a href="mock.html">mock.html</a> (static, fake data).</p>
+</header>
+
+<h2 id="goal">1. Goal</h2>
+<p>A read-only Nightwatch dashboard in the Nexus web app. Jack opens one site and sees every run, what waits for him, and how each run is going. It reads the files that DGS-581, 582, 583 and 486 write. It writes nothing.</p>
+<p>Out of scope (later tickets): buttons to resolve an attention item or send a steer; a websocket; seat-window and token-burn numbers (see section 7).</p>
+
+<h2 id="read-path">2. How the API reads the data (decision 1)</h2>
+<p><strong>Problem.</strong> The Nexus API runs from the depot copy (<code>~/.digismith-depot/nexus-api/src/server.ts</code>). That copy has no <code>packages/</code> folder. DGS-587 showed the same limit for jobs: the depot clone has no <code>node_modules</code>, so the jobs run the built CLI.</p>
+<p><strong>Decision.</strong> The API does not import the readers. It runs the built CLI, the same way the job registry does. One new read-only command group is added to <code>packages/cli</code>:</p>
+<pre><code>node &lt;MAIN_CHECKOUT&gt;/packages/cli/dist/index.js nightwatch view &lt;name&gt; [--run ID] [--ticket KEY] [--since SEQ] --json</code></pre>
+<p>The names are <code>overview</code>, <code>attention</code>, <code>runs</code>, <code>run</code>, <code>events</code>, <code>plan</code>. Each prints one JSON document and exits 0. The command calls the existing readers: <code>listRuns</code>, <code>showRun</code>, <code>tailEvents</code>, <code>classify</code>, <code>phaseOf</code> (run), <code>readOpen</code> (attention), <code>readJournal</code>, <code>readLock</code>, <code>readAway</code>, <code>readBreaker</code>, <code>readEvents</code> (scan day files), <code>findWorkspace</code> and <code>parseVerdictEntries</code> (plan). There is no second parser.</p>
+<ul>
+<li><strong>Why not copy the readers into the depot.</strong> A copy drifts from the writers. The built CLI is the build the global <code>dg</code> already uses, and DGS-587 made the jobs use it.</li>
+<li><strong>Source rules.</strong> The new files in <code>packages/cli/src/nightwatch/</code> run under <code>node --experimental-strip-types</code> (the DGS-587 smoke test strips every file): no parameter properties, no enums, no namespaces. Double quotes and semicolons, like the rest of <code>packages/cli</code>.</li>
+<li><strong>Safety.</strong> The API spawns with an argument array (no shell). Run ids and ticket keys must match <code>^[A-Za-z0-9][A-Za-z0-9._-]*$</code> (the <code>isSafe</code> rule of the run record) before they reach the command line. The command opens files read-only and never creates a folder.</li>
+<li><strong>Cost control.</strong> One in-flight call per view name (single flight) and a 5 s cache per view and argument set. Ten browser tabs polling every 10 s then cost at most one spawn per view per 5 s. Timeout 8 s per call.</li>
+<li><strong>Missing build.</strong> No <code>dist/index.js</code>: the route answers <code>503 {"error":"reader_unavailable"}</code> and the page shows its error state. The fix is <code>pnpm --filter @digismith/cli build</code>, which the finish hooks already run.</li>
+<li><strong>Contract.</strong> The shapes live in <code>scripts/nexus-shared/nightwatch.ts</code> (zod, like <code>life-calendar.ts</code>). The CLI prints them, the API checks them before it answers, the web app parses them. Same file, three users. That file must not import from <code>packages/cli</code>.</li>
+</ul>
+
+<h2 id="routes">3. API routes (read-only, GET only)</h2>
+<p>All under <code>/api/v1/nightwatch/</code>, in a new <code>nightwatch-route.ts</code> wired in <code>app.ts</code> the way the jobs routes are (<code>deps.nightwatch</code>). Same helpers: <code>sendJson</code>, <code>Cache-Control: no-store</code>, 405 for other methods, 400 for a bad query (no input echoed), error codes only, never a message.</p>
+<table>
+<tr><th>Route</th><th>Query</th><th>Serves</th></tr>
+<tr><td><code>/overview</code></td><td>-</td><td>Top bar, Operations (phase table, active workers, last events)</td></tr>
+<tr><td><code>/attention</code></td><td>-</td><td>Attention page</td></tr>
+<tr><td><code>/runs</code></td><td><code>state</code>, <code>role</code>, <code>ticket</code>, <code>trigger</code>, <code>limit</code> (default 100, max 500)</td><td>Runs page</td></tr>
+<tr><td><code>/runs/:id</code></td><td>-</td><td>Run detail: record, pipeline, budget, order text</td></tr>
+<tr><td><code>/runs/:id/events</code></td><td><code>since</code> (line count already seen), <code>kind</code> = all | agent | system | errors</td><td>Event stream and tail</td></tr>
+<tr><td><code>/plan/:ticket</code></td><td>-</td><td>Plan page</td></tr>
+</table>
+<p>Event cursor: the run record says order is file position and <code>seq</code> can repeat. So <code>since</code> is a line count, not a <code>seq</code>. The answer holds <code>total</code> (lines now) and the new lines. A follower sends <code>since=total</code> from the last answer.</p>
+<p><strong>What an event row shows.</strong> Only <code>ts</code>, <code>seq</code>, <code>type</code> and the small <code>data</code> fields the hooks write (<code>tool</code>, <code>ok</code>, <code>kind</code>, <code>reason</code>, <code>source</code>, <code>phase</code>). The hooks never store prompts or tool output, so the stream cannot show them. Kind groups: Agent = <code>tool</code>, <code>turn_end</code>; System = <code>started</code>, <code>ended</code>, <code>phase</code>, <code>review_ready</code>, <code>merged</code>, <code>pushed</code>, <code>lost</code>; Errors = <code>blocked</code>, <code>lost</code>, <code>tool</code> with <code>ok=false</code>.</p>
+<p><strong>Trigger</strong> of a run (manual / night scan / away): the run record has no trigger field. The reader derives it: a run whose ticket matches a scan <code>claim</code> event and whose order path sits in the autonomous orders folder is <code>night scan</code> (or <code>away</code> when <code>away.json</code> was on at the claim time); any other is <code>manual</code>. If this cannot be told, the value is <code>unknown</code>, shown as "-". The plan checks the rule with fixtures.</p>
+
+<h2 id="listen">4. Listening and login (decision 4)</h2>
+<ul>
+<li>The API already binds <code>127.0.0.1:4300</code> and Caddy proxies <code>/api/*</code> to it. The new routes sit under that prefix. No Caddy change, no new port.</li>
+<li>The web pages are static files. <code>nuxt generate</code> writes one folder per page, and Caddy's <code>file_server</code> serves <code>/nightwatch/runs/</code> from <code>runs/index.html</code>. A run or plan id travels in the query string (<code>/nightwatch/run/?id=...</code>), because a static host cannot serve an unknown path. No Caddy rewrite is needed.</li>
+<li><strong>Open point for the Maestro: there is no login today.</strong> <code>scripts/caddy/Caddyfile</code> says "No login for now (tailnet only, read-only; login design: DGS-458)", and <code>test-config.mjs</code> checks that no <code>basic_auth</code> exists. The brief says "the existing front door with its login". I found no login to reach. The dashboard is read-only and reaches the site through the same tailnet-only door as the Life Calendar. It shows ticket keys, run ids, branch names and phase times, but no prompts and no secrets. <strong>Proposal:</strong> ship without a login, as the Life Calendar does, and let DGS-458 add one for the whole site. A login for this dashboard alone needs a Caddy change, which needs your order.</li>
+</ul>
+
+<h2 id="screens">5. Screens</h2>
+<p>Pages are in <code>scripts/nexus-web/app/pages/nightwatch/</code>. This adds the Nuxt router; the Life Calendar page stays at <code>/</code>. A shell component holds the top bar and the nav (Operations, Attention, Runs, Plan). Every page polls its route every 10 s (section 6). Mobile: the nav collapses to a row, tables become row cards (Warren's own pattern).</p>
+<p>Shared states. <strong>Loading:</strong> a skeleton of the final layout, no spinner text. <strong>Error:</strong> the existing <code>StatePanel</code> with the error code and a Retry button; the last good data stays on screen, dimmed, with "last update failed at HH:MM (UTC+7)". <strong>Empty:</strong> one line that says what is empty and why that is fine.</p>
+
+<h3>Top bar (all pages) - <code>/overview</code></h3>
+<table>
+<tr><th>Item</th><th>Data</th><th>Empty / error</th></tr>
+<tr><td>Nexus health</td><td>Dot and text. Green "nexus healthy" when the API answers and the jobs <code>autonomous-scan</code> and <code>nightwatch-watchdog</code> last ended OK. Amber when one failed or the watchdog has not run for 15 min. Red when the breaker is open. Source: the in-process jobs engine snapshot and <code>breaker.json</code>.</td><td>API down: red "nexus unreachable" (from the failed fetch)</td></tr>
+<tr><td>Active workers</td><td>Count of runs that are not <code>ended</code> and not <code>lost</code></td><td>0 shown as "0"</td></tr>
+<tr><td>To do waiting</td><td>Tickets in ClickUp <code>to do</code>. The reader does not call ClickUp. It reads the last scan's <code>scan</code> event (<code>candidates</code>) from the day files and shows the age ("as of 03:10")</td><td>No scan yet: "-"</td></tr>
+<tr><td>Away / night mode</td><td>Chip from <code>away.json</code> and the night window</td><td>Missing file = off</td></tr>
+<tr><td>Token burn per hour, seat windows</td><td>Out of scope (section 7). The slots show "-" with a "not measured" tooltip.</td><td>-</td></tr>
+</table>
+
+<h3>Operations - <code>/overview</code></h3>
+<ul>
+<li><strong>Tickets per phase.</strong> Table: phase (claimed, building, review, merge-ready, merged, released, lost), count, oldest (age of the oldest <code>phaseStartedAt</code>). The scan is single flight, so the lock holds one ticket at a time. So: claimed to merge-ready come from <code>lock.json</code> (one ticket at most). Merged and released count the <code>release</code> events of the last 7 days. Lost counts open attention items of kind <code>lost</code>. The page says "window: 7 days" in the table footer.</li>
+<li><strong>Active workers.</strong> One row per open run: key, role, seat, phase (from <code>phaseOf</code>), health (<code>classify</code>: healthy / blocked / stalled / lost), elapsed since <code>started</code>. Tokens column: "-" in v1 (section 7). Row link: run detail.</li>
+<li><strong>Last events.</strong> The newest 20 events of all open runs, merged by time, plus scan events (<code>claim</code>, <code>release</code>, <code>breaker</code>). Link: run detail.</li>
+<li><strong>Empty:</strong> "No worker is running. The next scan starts at 00:00 (UTC+7)" (read from the registry window). <strong>Error:</strong> shared panel.</li>
+</ul>
+
+<h3>Attention (new) - <code>/attention</code></h3>
+<ul>
+<li>Open items from <code>attention.jsonl</code> (<code>readOpen</code>), oldest first: age, ticket, kind (stalled, blocked prompt, refused merge, lost, failed, unknown), cause, cause class (transient / durable / unknown), retry-eligible mark, link to the run. Title: "Waiting on Jack". A count badge sits in the nav.</li>
+<li>Below: the last 20 resolved items (who resolved, when, note).</li>
+<li>Read-only: no resolve button (later ticket). Each row shows the CLI command Jack would run, as copy text (for example <code>dg autonomous attention resolve ID</code>, only if that command exists; the plan checks and drops the line if not).</li>
+<li><strong>Empty:</strong> "Nothing waits for you." <strong>Error:</strong> shared panel.</li>
+</ul>
+
+<h3>Runs - <code>/runs</code></h3>
+<ul>
+<li>Table, newest first: state (running / blocked / stalled / lost / ended), key, role, seat + model, trigger, started (UTC+7), duration, tokens ("-" in v1), delivery (commits, merged, pushed; commits from the <code>base_sha</code> to the branch head are NOT read in v1: the cell shows merged and pushed from events only).</li>
+<li>Filters: state, role, ticket key (text), trigger. They run in the API (query) so the 500-row cap applies after the filter. Filter values go in the URL query so a view can be shared.</li>
+<li><strong>Empty:</strong> "No run matches" (with the filter) or "No run yet" (no filter). <strong>Error:</strong> shared panel. A run whose files cannot be read is skipped by <code>listRuns</code>, so it never shows.</li>
+</ul>
+
+<h3>Run detail - <code>/runs/:id</code>, <code>/runs/:id/events</code></h3>
+<ul>
+<li><strong>Header:</strong> run id, state, role, ticket, branch, seat, model.</li>
+<li><strong>Phase pipeline:</strong> Claimed, Worktree ready, Building, Review, Merged, Pushed. Each step has a time or "-". Sources: Claimed = the journal <code>claim</code> line of the ticket; Worktree ready = <code>created_at</code>; Building = first <code>started</code> or <code>phase building</code>; Review = first <code>phase review</code> or <code>review_ready</code>; Merged and Pushed = the <code>merged</code> and <code>pushed</code> events. A <code>lost</code> event turns the current step red. A manual run with no claim shows Claimed as "-".</li>
+<li><strong>Event stream:</strong> filters All / Agent / System / Errors, and "Tail: on/off". Tail on = poll <code>events?since=total</code> every 10 s and append; the view sticks to the bottom until the user scrolls up. First load: the last 200 lines, with "show earlier" (loads 200 more by line count). Event count badge.</li>
+<li><strong>Budget card:</strong> the run's watchdog budgets (building / review / merge minutes, from <code>nightwatch.budgets</code>) with the elapsed time of the current phase and a bar. Not money. Token totals are out of scope in v1.</li>
+<li><strong>Run record card:</strong> the frozen <code>run.json</code>, shown field by field and as raw JSON (collapsed).</li>
+<li><strong>Order:</strong> the text of the order file (<code>run.json.order</code>). The reader reads only a path inside <code>~/.digismith-depot/sessions/</code> or the autonomous orders folder, up to 64 KB, after <code>realpath</code>. A path outside these folders or a missing file gives "order not available" (not an error).</li>
+<li><strong>Empty events:</strong> "No events yet." <strong>Unknown run id:</strong> 404 <code>not_found</code>, page says "This run does not exist."</li>
+</ul>
+
+<h3>Plan - <code>/plan/:ticket</code></h3>
+<ul>
+<li>The reader finds the builder run of the ticket (newest <code>builder</code> run), takes its <code>worktree</code>, and calls <code>findWorkspace</code>. It reads <code>progress.md</code> (the SDD ledger) and the plan file named on its first line.</li>
+<li>Shows: "Task n of m". m = count of <code>### Task N:</code> headings in the plan. n = tasks with a <code>Task N: complete</code> line. A list of tasks with state (done / fix round R / waiting). Under it the Reviewer verdicts from <code>parseVerdictEntries</code>: scope, round, finding id, verdict (fixed / parked / rejected), reason.</li>
+<li>A ledger line that does not parse: the verdict list shows "ledger unreadable" and the task list still shows.</li>
+<li><strong>Empty:</strong> "No plan yet for this ticket" (no builder run, no worktree, or no ledger). The Plan nav item opens the page for the ticket under lock; with no lock it shows a ticket picker built from the runs list.</li>
+</ul>
+
+<h2 id="polling">6. Live updates (decision 3)</h2>
+<ul>
+<li>A composable <code>useNightwatchPoll(route, intervalMs = 10000)</code>: fetch, then wait 10 s after the answer arrives (no overlap). It stops when the tab is hidden (<code>visibilitychange</code>) and fetches at once when the tab shows again. A failed fetch keeps the last data and backs off to 30 s; it returns to 10 s after one success.</li>
+<li>The page announces changes in an <code>aria-live="polite"</code> region only for new attention items (so a screen reader is not flooded).</li>
+<li>The API and the scheduler never push. No websocket in v1.</li>
+</ul>
+
+<h2 id="tokens">7. Token burn per hour and seat windows</h2>
+<p><strong>Marked out of scope for v1.</strong> The token counter (DGS-214, <code>dg tokens</code>) counts one ticket by reading whole Claude transcripts. That is too slow for a 10 s poll and has no per-hour series. Seat 5h and weekly usage come from the Claude status line <code>rate_limits</code> probe that runs in a seat's own session; no file or API exposes it to Nexus. The UI keeps the slots ("burn -/h", seat windows, tokens columns) so the layout does not change later. A follow-up ticket should add (a) a small job that writes a per-run token snapshot and (b) a depot file with the last probe of each seat. I will propose that ticket text to the Maestro after the build; I do not create it.</p>
+
+<h2 id="design">8. Visual design and gates</h2>
+<ul>
+<li><strong>Look:</strong> Warren's operator console (see the layout mock): a left nav, a top status strip, dense tables, mono for ids and times, section labels in small caps, green for action and health. The mock shows all five screens.</li>
+<li><strong>Tokens:</strong> a new <code>app/assets/nightwatch-tokens.scss</code> with Warren's <code>tokens.css</code> values (colors, radii, fonts) under a <code>.nw</code> scope on the Nightwatch shell. The Life Calendar keeps its own tokens. The file starts with the MIT notice: <code>Copyright (c) 2026 Jaymin West</code> and the permission text, and a line naming <code>github.com/jayminwest/warren docs/ui-revamp/tokens.css</code>. No Warren component code is copied; the layout is rebuilt from the screenshots, so only the tokens carry the notice. Fonts: Inter and JetBrains Mono are NOT loaded from a CDN (the page requests nothing at load except the API). The stacks fall back to <code>system-ui</code> and <code>ui-monospace</code>.</li>
+<li><strong>Dark and light:</strong> dark default like Warren, light by <code>prefers-color-scheme</code>, same switch as the Life Calendar (<code>data-theme</code>). The a11y gate runs both. The plan checks contrast of every token pair with the existing <code>contrast.test.ts</code> pattern (WCAG AA, 4.5:1 text, 3:1 UI).</li>
+<li><strong>Gates, same as Life Calendar:</strong> (1) Storybook stories for each new component and each state (loading, empty, error, loaded) in light and dark; (2) visual baselines in <code>tests/visual</code> from those stories; (3) Playwright e2e in <code>tests/e2e</code> against the stub API server (fixtures, no real API); (4) axe in <code>tests/a11y</code> for each page, and the Storybook axe run; (5) Vitest unit tests for composables, utils and the story list test; (6) the built-page and built-storybook tests; Lighthouse config unchanged. New <code>nuxt generate</code> pages are added to the built-page test.</li>
+</ul>
+
+<h2 id="tests">9. What the plan tests without Jack</h2>
+<p>Everything runs on fakes. No real ClickUp, no herdr, no live depot, no live API (4300), no token read.</p>
+<table>
+<tr><th>Layer</th><th>Fake</th><th>Checks</th></tr>
+<tr><td><code>nightwatch view</code> command (vitest)</td><td>A temp depot folder (<code>DIGISMITH_DEPOT_DIR</code>, <code>AUTONOMOUS_DIR</code>) with run, event, journal, attention, lock, away, breaker and scan-day files from fixtures (reuse the DGS-581/582/583 fixtures and builders)</td><td>Every view's JSON against the shared zod schema; torn and bad lines skipped; missing folders give empty data; unsafe ids refused; order path outside the allowed folders refused; trigger rule; phase table counts; event kind groups; line-count cursor with a repeated <code>seq</code></td></tr>
+<tr><td>Strip-types (vitest)</td><td>-</td><td>The DGS-587 smoke test covers the new files; one added case runs <code>nightwatch view overview --json</code> on the empty temp depot</td></tr>
+<tr><td>API routes (vitest, Hono)</td><td>A fake reader function injected as <code>deps.nightwatch</code> (no spawn); one test with a fake script as the spawned file</td><td>200 shapes, 400 bad query, 404 unknown run, 405 other methods, 503 <code>reader_unavailable</code> when the file is missing, timeout, single flight, 5 s cache, no input echoed, no error text in logs (the existing no-secret and no-console tests extend to the new files)</td></tr>
+<tr><td>Web composables and components (vitest, happy-dom)</td><td>Fake fetch</td><td>10 s poll with fake timers, hidden tab pause, backoff, tail append, filters in the URL, every state</td></tr>
+<tr><td>Storybook, visual, a11y, e2e</td><td>The stub API server in <code>tests/e2e</code> with fixture JSON</td><td>The gates in section 8</td></tr>
+</table>
+<p><strong>Left to Jack (acceptance):</strong> the look of the five screens against the real data after the first use.</p>
+
+<h2 id="first-use">10. First use</h2>
+<ol>
+<li>After the merge the conductor builds the CLI (<code>pnpm --filter @digismith/cli build</code>, a finish hook), runs <code>scripts/nexus-api/install.sh</code> (copies the new API files to the depot and restarts the API; the Builder does not run it) and <code>scripts/nexus-web/build-www.sh</code> (static files to <code>DIGISMITH_WWW</code>).</li>
+<li>Jack opens <code>https://pazurite.com/nightwatch/</code>. With no run yet, every screen shows its empty state; that proves the read path and the error-free empty case.</li>
+<li>The next night scan, or a manual <code>dg run start</code> run, fills Operations and Runs. The first real review is Jack's: he checks the five screens against that data. The ticket is done when he says yes.</li>
+</ol>
+
+<h2 id="files">11. Files (for the plan)</h2>
+<ul>
+<li><code>packages/cli/src/nightwatch/</code>: <code>index.ts</code> (yargs group), <code>views.ts</code> (pure builders), <code>derive.ts</code> (trigger, phase table, pipeline), tests, fixtures. Registered in <code>packages/cli/src/index.ts</code>.</li>
+<li><code>scripts/nexus-shared/nightwatch.ts</code> (zod schemas) and a test.</li>
+<li><code>scripts/nexus-api/src/nightwatch-route.ts</code>, <code>nightwatch-reader.ts</code> (spawn, single flight, cache), tests; <code>app.ts</code>, <code>server.ts</code> wiring; <code>install.sh</code> copies <code>nexus-shared</code> (it already does for the life calendar; the plan checks).</li>
+<li><code>scripts/nexus-web/app/pages/nightwatch/*</code>, components, composables, <code>nightwatch-tokens.scss</code>, stories, tests; <code>nuxt.config.ts</code> alias <code>#nightwatch-schema</code>.</li>
+<li><code>packages/cli/src/run/README.md</code> or a new <code>nightwatch/README.md</code> line for the new command; the runbook block only if the Maestro asks.</li>
+</ul>
+
+<h2 id="open">12. Decisions the Maestro should confirm</h2>
+<ol>
+<li>No login exists (section 4). Ship without one, as the Life Calendar does?</li>
+<li>Tokens, token burn and seat windows are out of scope in v1 (section 7).</li>
+<li>Ticket phases are limited by the single-ticket lock (section 5, Operations). The table says so on screen.</li>
+</ol>
+
+<footer>DigiSmith · .digismith/board/DGS-586—nightwatch-monitoring-ui/design.html. Warren (MIT, Copyright (c) 2026 Jaymin West) is the design source; only its tokens are reused.</footer>
+</body>
+</html>

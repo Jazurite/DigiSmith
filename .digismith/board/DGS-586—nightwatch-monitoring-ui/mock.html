@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Nightwatch UI (mock, fake data)</title>
+<style>
+/*
+ * Colour tokens from Warren docs/ui-revamp/tokens.css (github.com/jayminwest/warren), MIT License.
+ * Copyright (c) 2026 Jaymin West
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions
+ * of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+ * (Full text: https://github.com/jayminwest/warren/blob/main/LICENSE)
+ */
+:root {
+  --bg: oklch(14% 0.008 264); --sidebar: oklch(12.8% 0.008 264); --surface: oklch(16.5% 0.010 264);
+  --raised: oklch(19% 0.011 264); --hover: oklch(21% 0.012 264); --thead: oklch(15.5% 0.009 264);
+  --text: oklch(96% 0.005 264); --text2: oklch(72% 0.012 264); --text3: oklch(60% 0.014 264);
+  --border: oklch(24% 0.012 264); --strong: oklch(31% 0.013 264);
+  --primary: oklch(72% 0.110 152); --ok: oklch(72% 0.130 150); --warn: oklch(80% 0.150 75);
+  --bad: oklch(68% 0.210 27); --info: oklch(72% 0.140 240); --neutral: oklch(70% 0.020 264);
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: oklch(96.8% 0.004 264); --sidebar: oklch(98.6% 0.002 264); --surface: oklch(100% 0 0);
+    --raised: oklch(97.6% 0.004 264); --hover: oklch(95.2% 0.006 264); --thead: oklch(98% 0.003 264);
+    --text: oklch(22% 0.015 264); --text2: oklch(45% 0.015 264); --text3: oklch(50% 0.014 264);
+    --border: oklch(90% 0.006 264); --strong: oklch(82.5% 0.010 264);
+    --primary: oklch(54% 0.125 152); --ok: oklch(54% 0.125 150); --warn: oklch(52% 0.130 75);
+    --bad: oklch(54% 0.190 27); --info: oklch(52% 0.125 240); --neutral: oklch(48% 0.018 264); color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: oklch(96.8% 0.004 264); --sidebar: oklch(98.6% 0.002 264); --surface: oklch(100% 0 0);
+  --raised: oklch(97.6% 0.004 264); --hover: oklch(95.2% 0.006 264); --thead: oklch(98% 0.003 264);
+  --text: oklch(22% 0.015 264); --text2: oklch(45% 0.015 264); --text3: oklch(50% 0.014 264);
+  --border: oklch(90% 0.006 264); --strong: oklch(82.5% 0.010 264);
+  --primary: oklch(54% 0.125 152); --ok: oklch(54% 0.125 150); --warn: oklch(52% 0.130 75);
+  --bad: oklch(54% 0.190 27); --info: oklch(52% 0.125 240); --neutral: oklch(48% 0.018 264); color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 12px/16px var(--sans); }
+a { color: var(--primary); }
+.mono { font-family: var(--mono); }
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+nav.side { background: var(--sidebar); border-right: 1px solid var(--border); padding: 16px 10px; }
+nav.side .brand { font-weight: 600; font-size: 14px; padding: 0 8px 16px; }
+nav.side h2 { font: 600 10px/12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin: 16px 8px 6px; }
+nav.side button { display: flex; justify-content: space-between; width: 100%; background: none; border: 0; color: var(--text2); font: inherit; padding: 8px; border-radius: 3px; cursor: pointer; text-align: left; }
+nav.side button:hover { background: var(--hover); }
+nav.side button[aria-current="page"] { background: var(--raised); color: var(--text); }
+nav.side .badge { font-family: var(--mono); color: var(--bad); }
+.main { min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 10px 24px; border-bottom: 1px solid var(--border); font: 11px/14px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--text2); }
+.bar b { color: var(--text); font-weight: 600; } .bar .sp { flex: 1; }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--neutral); margin-right: 6px; }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.info { background: var(--info); }
+.page { padding: 20px 24px 48px; display: none; } .page.on { display: block; }
+h1 { font-size: 20px; line-height: 24px; letter-spacing: -.025em; margin: 0 0 4px; }
+.sub { color: var(--text2); margin: 0 0 18px; }
+.grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; } .grid.wide { grid-template-columns: 2fr 1fr; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px; min-width: 0; }
+.card > h3 { margin: 0; padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+.card > h3 small { font: 10px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text3); font-weight: 400; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; background: var(--thead); font: 600 10px/12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text3); padding: 8px 14px; }
+td { padding: 9px 14px; border-top: 1px solid var(--border); }
+td.num, th.num { text-align: right; font-family: var(--mono); }
+.st { font-family: var(--mono); } .st.ok { color: var(--ok); } .st.warn { color: var(--warn); } .st.bad { color: var(--bad); } .st.info { color: var(--info); } .st.nn { color: var(--text3); }
+.muted { color: var(--text3); }
+.empty { padding: 22px 14px; color: var(--text2); }
+.pipe { display: grid; grid-template-columns: repeat(6, 1fr); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px; }
+.pipe div { padding: 10px 14px; border-right: 1px solid var(--border); } .pipe div:last-child { border: 0; }
+.pipe small { display: block; font: 11px var(--mono); color: var(--text3); margin-top: 2px; }
+.ev { font: 11px/16px var(--mono); } .ev td { padding: 5px 14px; } .ev .k-bad { color: var(--bad); } .ev .k-info { color: var(--info); } .ev .k-ok { color: var(--ok); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 3px; }
+.seg button { background: none; border: 0; color: var(--text2); padding: 4px 10px; font: 11px var(--sans); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 10px; padding: 12px 14px; font-family: var(--mono); font-size: 11px; } .kv span:nth-child(odd) { color: var(--text3); font-family: var(--sans); }
+.bar2 { height: 6px; background: var(--raised); border-radius: 2px; margin: 4px 0 10px; overflow: hidden; } .bar2 i { display: block; height: 100%; background: var(--primary); }
+.filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; } .filters select, .filters input { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; font: inherit; }
+.tag { font: 10px var(--mono); border: 1px solid var(--strong); border-radius: 2px; padding: 1px 5px; color: var(--text2); }
+.banner { background: var(--raised); border: 1px solid var(--border); border-left: 3px solid var(--warn); padding: 8px 12px; margin-bottom: 16px; color: var(--text2); }
+.state-demo { display: flex; gap: 12px; flex-wrap: wrap; } .state-demo .card { flex: 1; min-width: 220px; }
+@media (max-width: 760px) { .shell { grid-template-columns: 1fr; } nav.side { display: flex; overflow-x: auto; padding: 6px; border: 0; border-bottom: 1px solid var(--border); } nav.side .brand, nav.side h2 { display: none; } nav.side button { width: auto; white-space: nowrap; gap: 8px; } .grid, .grid.wide { grid-template-columns: 1fr; } .pipe { grid-template-columns: repeat(2, 1fr); } .page { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="Nightwatch">
+    <div class="brand">nightwatch</div>
+    <h2>Watch</h2>
+    <button data-go="ops" aria-current="page">Operations <span class="mono muted">2</span></button>
+    <button data-go="att">Attention <span class="badge">2</span></button>
+    <button data-go="runs">Runs <span class="mono muted">7</span></button>
+    <button data-go="run">Run detail</button>
+    <button data-go="plan">Plan</button>
+    <h2>Mock</h2>
+    <button data-go="states">States</button>
+    <button id="theme">Theme: system</button>
+  </nav>
+  <div class="main">
+    <div class="bar" role="status" aria-label="Nexus status">
+      <span><i class="dot ok"></i><b>Nexus healthy</b></span>
+      <span>Workers <b>2</b></span>
+      <span>To do waiting <b>5</b> <span class="muted">as of 03:10</span></span>
+      <span>Mode <b>away</b></span>
+      <span title="Out of scope in v1: not measured">Burn <b>-</b>/h</span>
+      <span title="Out of scope in v1: not measured">Seat 5h / week <b>- / -</b></span>
+      <span class="sp"></span><span class="muted">updated 03:42:10 (UTC+7)</span>
+    </div>
+
+    <!-- Operations -->
+    <section class="page on" id="ops">
+      <h1>Operations</h1><p class="sub">Tickets per phase, active workers and the latest events.</p>
+      <div class="grid wide">
+        <div class="card"><h3>Tickets per phase <small>window 7 days</small></h3>
+          <table><thead><tr><th>Phase</th><th class="num">Count</th><th class="num">Oldest</th></tr></thead><tbody>
+            <tr><td><i class="dot warn"></i><span class="st warn">claimed</span></td><td class="num">0</td><td class="num muted">-</td></tr>
+            <tr><td><i class="dot info"></i><span class="st info">building</span></td><td class="num">1</td><td class="num">0:41:07</td></tr>
+            <tr><td><i class="dot info"></i><span class="st info">review</span></td><td class="num">0</td><td class="num muted">-</td></tr>
+            <tr><td><i class="dot warn"></i><span class="st warn">merge-ready</span></td><td class="num">0</td><td class="num muted">-</td></tr>
+            <tr><td><i class="dot ok"></i><span class="st ok">merged</span></td><td class="num">4</td><td class="num muted">-</td></tr>
+            <tr><td><i class="dot ok"></i><span class="st ok">released</span></td><td class="num">1</td><td class="num muted">-</td></tr>
+            <tr><td><i class="dot bad"></i><span class="st bad">lost</span></td><td class="num">1</td><td class="num">2:10:00</td></tr>
+          </tbody></table></div>
+        <div class="card"><h3>Scan <small>night window</small></h3>
+          <div class="kv"><span>Last scan</span><span>03:10 (UTC+7) claim</span><span>Locked ticket</span><span>DGS-590</span><span>Breaker</span><span>closed (streak 0)</span><span>Watchdog</span><span>ran 03:40, OK</span></div></div>
+      </div>
+      <div class="card"><h3>Active workers <small>2 running</small></h3>
+        <table><thead><tr><th>Health</th><th>Key</th><th>Role</th><th>Seat</th><th>Phase</th><th class="num">Elapsed</th><th class="num">Tokens</th></tr></thead><tbody>
+          <tr><td><i class="dot ok"></i><span class="st ok">healthy</span></td><td class="mono"><a href="#" data-go="run">DGS-590</a></td><td>builder</td><td class="mono">dev0</td><td class="mono">building</td><td class="num">0:41:07</td><td class="num muted">-</td></tr>
+          <tr><td><i class="dot warn"></i><span class="st warn">stalled</span></td><td class="mono"><a href="#" data-go="run">DGS-588</a></td><td>reviewer</td><td class="mono">jack</td><td class="mono">review</td><td class="num">1:12:30</td><td class="num muted">-</td></tr>
+        </tbody></table></div>
+      <div class="card"><h3>Last events <small>all open runs</small></h3>
+        <table class="ev"><tbody>
+          <tr><td class="muted">03:41:58</td><td>DGS-590</td><td>agent</td><td>tool Edit ok</td></tr>
+          <tr><td class="muted">03:41:30</td><td>DGS-590</td><td>agent</td><td>turn_end</td></tr>
+          <tr><td class="muted">03:40:02</td><td>watchdog</td><td class="k-bad">attention</td><td>DGS-588 stalled review-over-60-min</td></tr>
+          <tr><td class="muted">03:10:44</td><td>scan</td><td class="k-info">claim</td><td>DGS-590</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <!-- Attention -->
+    <section class="page" id="att">
+      <h1>Attention</h1><p class="sub">Waiting on Jack. Read-only: no buttons yet.</p>
+      <div class="card"><h3>Open <small>2 items, oldest first</small></h3>
+        <table><thead><tr><th>Age</th><th>Ticket</th><th>Kind</th><th>Cause</th><th>Class</th><th>Run</th></tr></thead><tbody>
+          <tr><td class="mono">2h10m</td><td class="mono">DGS-588</td><td><span class="st bad">lost</span></td><td>silent-30-min</td><td><span class="tag">transient</span> <span class="tag">retry</span></td><td class="mono"><a href="#" data-go="run">reviewer-20261022T…</a></td></tr>
+          <tr><td class="mono">32m</td><td class="mono">DGS-588</td><td><span class="st warn">stalled</span></td><td>review-over-60-min</td><td><span class="tag">unknown</span></td><td class="mono"><a href="#" data-go="run">reviewer-20261022T…</a></td></tr>
+        </tbody></table></div>
+      <div class="card"><h3>Resolved <small>last 20</small></h3>
+        <table><tbody><tr><td class="mono">yesterday 23:05</td><td class="mono">DGS-586</td><td>blocked</td><td class="muted">resolved by watchdog: tool seen</td></tr></tbody></table></div>
+    </section>
+
+    <!-- Runs -->
+    <section class="page" id="runs">
+      <h1>Runs</h1><p class="sub">Every run, newest first.</p>
+      <div class="filters">
+        <select aria-label="State"><option>State: all</option></select><select aria-label="Role"><option>Role: all</option></select>
+        <select aria-label="Trigger"><option>Trigger: all</option></select><input aria-label="Ticket" placeholder="Ticket key">
+      </div>
+      <div class="card"><table><thead><tr><th>State</th><th>Key</th><th>Role</th><th>Seat / model</th><th>Trigger</th><th>Started</th><th class="num">Duration</th><th class="num">Tokens</th><th>Delivery</th></tr></thead><tbody>
+        <tr><td><i class="dot info"></i><span class="st info">running</span></td><td class="mono"><a href="#" data-go="run">DGS-590</a></td><td>builder</td><td class="mono">dev0 · sonnet-5-5</td><td>night scan</td><td class="mono">03:10</td><td class="num">0:41</td><td class="num muted">-</td><td class="muted">-</td></tr>
+        <tr><td><i class="dot warn"></i><span class="st warn">stalled</span></td><td class="mono"><a href="#" data-go="run">DGS-588</a></td><td>reviewer</td><td class="mono">jack · opus-5-5</td><td>night scan</td><td class="mono">02:30</td><td class="num">1:12</td><td class="num muted">-</td><td class="muted">-</td></tr>
+        <tr><td><i class="dot ok"></i><span class="st ok">ended</span></td><td class="mono"><a href="#" data-go="run">DGS-586</a></td><td>builder</td><td class="mono">dev0 · sonnet-5-5</td><td>manual</td><td class="mono">yesterday 21:40</td><td class="num">2:05</td><td class="num muted">-</td><td>merged · pushed</td></tr>
+        <tr><td><i class="dot bad"></i><span class="st bad">lost</span></td><td class="mono"><a href="#" data-go="run">DGS-585</a></td><td>builder</td><td class="mono">jack · sonnet-5-5</td><td>away</td><td class="mono">yesterday 18:02</td><td class="num">0:55</td><td class="num muted">-</td><td class="muted">-</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <!-- Run detail -->
+    <section class="page" id="run">
+      <p class="muted mono">RUNS / builder-20261022T201000-a1b2c3</p>
+      <h1 class="mono">builder-20261022T201000-a1b2c3 <span class="st info" style="font-size:12px"><i class="dot info"></i>running</span></h1>
+      <p class="sub mono">DGS-590 · builder · dev0 · sonnet-5-5 · DGS-590__example-branch</p>
+      <div class="pipe">
+        <div><i class="dot ok"></i>Claimed<small>03:10:44</small></div><div><i class="dot ok"></i>Worktree ready<small>03:11:02</small></div>
+        <div><i class="dot info"></i>Building<small>03:11:20</small></div><div><i class="dot"></i>Review<small>-</small></div>
+        <div><i class="dot"></i>Merged<small>-</small></div><div><i class="dot"></i>Pushed<small>-</small></div>
+      </div>
+      <div class="grid wide">
+        <div class="card"><h3>Event stream <small>382 events</small>
+          <span><span class="seg" role="group" aria-label="Filter"><button aria-pressed="true">All</button><button aria-pressed="false">Agent</button><button aria-pressed="false">System</button><button aria-pressed="false">Errors</button></span> <span class="seg"><button aria-pressed="true">Tail: on</button></span></span></h3>
+          <table class="ev"><tbody>
+            <tr><td class="muted">000380</td><td class="muted">03:41:58</td><td class="k-info">tool</td><td>Edit ok=true</td></tr>
+            <tr><td class="muted">000381</td><td class="muted">03:41:59</td><td class="k-ok">turn_end</td><td></td></tr>
+            <tr><td class="muted">000379</td><td class="muted">03:41:12</td><td class="k-bad">blocked</td><td>kind=permission_prompt</td></tr>
+            <tr><td class="muted">000378</td><td class="muted">03:40:50</td><td>phase</td><td>phase=building</td></tr>
+            <tr><td class="muted">000001</td><td class="muted">03:11:20</td><td>started</td><td>source=startup</td></tr>
+          </tbody></table>
+          <div class="empty muted" style="padding:8px 14px"><a href="#">Show 200 earlier lines</a></div></div>
+        <div>
+          <div class="card"><h3>Budget <small>watchdog</small></h3><div style="padding:12px 14px">
+            <div class="mono">building 0:41 of 45 min</div><div class="bar2"><i style="width:91%"></i></div>
+            <div class="mono muted">review 60 min · merge 20 min</div></div></div>
+          <div class="card"><h3>Run record <small>run.json</small></h3><div class="kv"><span>ticket</span><span>DGS-590</span><span>seat</span><span>dev0</span><span>model</span><span>sonnet-5-5</span><span>base</span><span>7d32000</span><span>pane</span><span>w2 / 5 / 2</span><span>created</span><span>03:11:02</span></div></div>
+          <div class="card"><h3>Order <small>read-only</small></h3><div class="empty mono" style="font-size:11px">Order: DGS-590 spec and plan are on main. Build it…</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Plan -->
+    <section class="page" id="plan">
+      <h1>Plan</h1><p class="sub mono">DGS-590 · task 3 of 7</p>
+      <div class="grid">
+        <div class="card"><h3>Tasks</h3><table><tbody>
+          <tr><td class="mono">1</td><td>Schema and fixtures</td><td class="st ok">done</td></tr>
+          <tr><td class="mono">2</td><td>Reader</td><td class="st ok">done</td></tr>
+          <tr><td class="mono">3</td><td>Route</td><td class="st warn">fix round 1</td></tr>
+          <tr><td class="mono">4</td><td>Composable</td><td class="st nn">waiting</td></tr>
+        </tbody></table></div>
+        <div class="card"><h3>Reviewer verdicts</h3><table><thead><tr><th>Scope</th><th>Round</th><th>Finding</th><th>Verdict</th></tr></thead><tbody>
+          <tr><td>task 2</td><td class="mono">r1</td><td class="mono">F1</td><td class="st ok">fixed</td></tr>
+          <tr><td>task 3</td><td class="mono">r1</td><td class="mono">F1</td><td class="st warn">parked</td></tr>
+        </tbody></table></div>
+      </div>
+    </section>
+
+    <!-- States -->
+    <section class="page" id="states">
+      <h1>States</h1><p class="sub">Loading, empty and error look the same on every page.</p>
+      <div class="state-demo">
+        <div class="card"><h3>Loading</h3><div class="empty"><div class="bar2"><i style="width:40%;opacity:.5"></i></div><div class="bar2"><i style="width:70%;opacity:.5"></i></div><div class="bar2"><i style="width:55%;opacity:.5"></i></div></div></div>
+        <div class="card"><h3>Empty</h3><div class="empty">Nothing waits for you.</div></div>
+        <div class="card"><h3>Error</h3><div class="empty"><div class="banner">reader_unavailable. Last good data below, last update failed at 03:42 (UTC+7).</div><button class="seg" style="padding:4px 10px;background:var(--raised);color:var(--text);border:1px solid var(--border)">Retry</button></div></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+(function () {
+  var pages = document.querySelectorAll('.page'), btns = document.querySelectorAll('[data-go]');
+  function go(id) {
+    pages.forEach(function (p) { p.classList.toggle('on', p.id === id); });
+    document.querySelectorAll('nav.side [data-go]').forEach(function (b) { if (b.dataset.go === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  }
+  btns.forEach(function (b) { b.addEventListener('click', function (e) { e.preventDefault(); go(b.dataset.go); }); });
+  var h = location.hash.slice(1); if (h && document.getElementById(h)) go(h);
+  var modes = ['system', 'dark', 'light'], i = 0, t = document.getElementById('theme');
+  t.addEventListener('click', function () { i = (i + 1) % 3; var m = modes[i]; if (m === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', m); t.textContent = 'Theme: ' + m; });
+})();
+</script>
+</body>
+</html>
