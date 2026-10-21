@@ -106,7 +106,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const dir = process.env.NEXUS_STATE_DIR ? stateDir() : join(depot, 'nexus', 'scheduler')
   // A LaunchAgent has a short PATH, so node and dg are absolute.
   const dg = { file: process.execPath, args: ['--experimental-strip-types', join(depot, 'repo', 'packages', 'cli', 'src', 'index.ts')] }
-  const nexus = await startNexus({ getReading: createDefaultReader(), logger, loadProfile, stateDir: dir, dg })
+  // test-only switch: a module exporting JOBS replaces the real registry; unset in production
+  const jobs = process.env.NEXUS_JOBS_MODULE ? ((await import(pathToFileURL(process.env.NEXUS_JOBS_MODULE).href)) as { JOBS: readonly JobDef[] }).JOBS : undefined
+  const nexus = await startNexus({ getReading: createDefaultReader(), logger, loadProfile, stateDir: dir, dg, ...(jobs ? { jobs } : {}) })
   const server = nexus.server
   const shutdown = createShutdown({
     stop: () => nexus.stop(),

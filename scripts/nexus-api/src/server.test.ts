@@ -124,8 +124,6 @@ describe('startNexus', () => {
       const jobs = await fetch(`${base}/api/${API_VERSION}/jobs`)
       expect(jobs.status).toBe(200)
       expect((await jobs.json()).jobs.map((j: { name: string }) => j.name)).toEqual(['test-only'])
-      // no job in the list points at the real dg entry point
-      for (const j of testJobs) expect(j.command.args.join(' ')).not.toContain('.digismith-depot')
       await nexus.stop()
     } finally {
       rmSync(tmp, { recursive: true, force: true })

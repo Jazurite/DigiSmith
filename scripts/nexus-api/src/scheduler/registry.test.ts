@@ -4,7 +4,7 @@ import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import { slotsOfNight } from './clock.ts'
-import { JOBS,MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
+import { JOBS, MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
 
 const base = { name: 'night-scan', description: 'd', command: { file: '/bin/echo', args: ['hi'] } }
 const withSchedule = (schedule: object) => defineJob({ ...base, schedule } as never)

@@ -374,8 +374,14 @@ describe('the real entry point on a throwaway server', () => {
     expect(port).not.toBe(4300)
     const base = `http://127.0.0.1:${port}`
 
+    // a test registry: the child never defines a real job, so no hour of the day can start one
+    const jobsModule = path.join(dir, 'test-jobs.ts')
+    fs.writeFileSync(jobsModule, [
+      `import { defineJob } from ${JSON.stringify(fileURLToPath(new URL('./registry.ts', import.meta.url)))}`,
+      "export const JOBS = [defineJob({ name: 'selftest', description: 'test', command: { file: process.execPath, args: ['-e', \"process.stdout.write('selftest ok\\\\n')\"] } })]",
+    ].join('\n'))
     child = spawn(process.execPath, ['--experimental-strip-types', serverTs], {
-      env: { PATH: process.env.PATH, HOME: dir, PORT: String(port), NEXUS_STATE_DIR: state, DIGISMITH_DEPOT: depot },
+      env: { PATH: process.env.PATH, HOME: dir, PORT: String(port), NEXUS_STATE_DIR: state, DIGISMITH_DEPOT: depot, NEXUS_JOBS_MODULE: jobsModule },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     let out = ''
@@ -389,7 +395,7 @@ describe('the real entry point on a throwaway server', () => {
     expect(JSON.parse(fs.readFileSync(path.join(state, 'state.json'), 'utf8')).cleanStop).toBe(false)
 
     const list = await (await fetch(`${base}/api/${API_VERSION}/jobs`)).json()
-    expect(list.jobs.map((j: { name: string }) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
+    expect(list.jobs.map((j: { name: string }) => j.name)).toEqual(['selftest'])
     expect(list.jobs[0]).toMatchObject({ nextRunAt: null, lastRun: null })
 
     const script = path.join(dir, 'run-now.mjs')
