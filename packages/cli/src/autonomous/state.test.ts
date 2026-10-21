@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  acquireLock, appendEvent, autonomousDir, clearLock, readEvents, readLastReport, readLock, readNotes,
+  acquireLock, appendEvent, autonomousDir, clearLock, newestEvent, readEvents, readLastReport, readLock, readNotes,
   writeLastReport, writeNotes,
 } from "./state.ts";
 import type { Lock } from "./types.ts";
@@ -124,5 +124,31 @@ describe("autonomousDir", () => {
   it("honours the overrides", () => {
     expect(autonomousDir({ AUTONOMOUS_DIR: "/x" })).toBe("/x");
     expect(autonomousDir({ DIGISMITH_DEPOT_DIR: "/d" })).toBe("/d/autonomous");
+  });
+});
+
+describe("newestEvent", () => {
+  it("an empty or missing dir gives null", () => {
+    expect(newestEvent(dir, ["scan"])).toBeNull();
+    expect(newestEvent(join(dir, "missing"), ["scan"])).toBeNull();
+  });
+  it("finds the match in an older day file past newer files with other kinds", () => {
+    appendEvent(dir, new Date("2026-10-18T05:00:00.000Z"), "scan", { n: 1 });
+    appendEvent(dir, new Date("2026-10-18T06:00:00.000Z"), "off", { n: 2 });
+    appendEvent(dir, new Date("2026-10-18T07:00:00.000Z"), "skip", { n: 3 });
+    appendEvent(dir, new Date("2026-10-19T05:00:00.000Z"), "claim");
+    appendEvent(dir, new Date("2026-10-20T05:00:00.000Z"), "skip");
+    expect(newestEvent(dir, ["scan", "off", "busy"])).toMatchObject({ kind: "off", n: 2 });
+  });
+  it("skips a garbage line and picks the newest match in the newest file with one", () => {
+    appendEvent(dir, new Date("2026-10-18T05:00:00.000Z"), "busy", { n: 1 });
+    appendEvent(dir, new Date("2026-10-20T05:00:00.000Z"), "scan", { n: 2 });
+    writeFileSync(join(dir, "events-2026-10-20.jsonl"), "not json\n", { flag: "a" });
+    appendEvent(dir, new Date("2026-10-20T06:00:00.000Z"), "scan", { n: 3 });
+    expect(newestEvent(dir, ["scan", "busy"])).toMatchObject({ kind: "scan", n: 3 });
+  });
+  it("gives null when no event has a wanted kind", () => {
+    appendEvent(dir, new Date("2026-10-18T05:00:00.000Z"), "skip");
+    expect(newestEvent(dir, ["scan"])).toBeNull();
   });
 });

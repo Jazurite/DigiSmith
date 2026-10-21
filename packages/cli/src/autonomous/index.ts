@@ -5,16 +5,16 @@ import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { readAway, isAway } from "./away.ts";
-import { fmtUtc7 } from "./clock.ts";
+import { fmtUtc7, parseHhmm } from "./clock.ts";
 import { realExec, type Exec } from "./conductor.ts";
 import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
-import { autonomousDir, readLock } from "./state.ts";
+import { autonomousDir, newestEvent, readLock } from "./state.ts";
 import { runAway, runBack } from "./switch.ts";
 import { ClickUpLoTracker } from "./tracker-clickup.ts";
-import type { Event, Tracker } from "./types.ts";
+import type { EventKind, Tracker } from "./types.ts";
 
 export interface AutonomousDeps {
   tracker: () => Tracker;
@@ -29,8 +29,7 @@ export interface AutonomousDeps {
 }
 
 const RESULTS: ReleaseResult[] = ["merged", "failed", "stopped", "awaiting-jack"];
-const SCAN_KINDS = new Set(["scan", "off", "busy"]);
-const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const SCAN_KINDS: readonly EventKind[] = ["scan", "off", "busy"];
 
 /** The real dependencies. Built only when a handler runs, never at import time. */
 export function defaultDeps(): AutonomousDeps {
@@ -71,35 +70,6 @@ const utc7 = (iso: string): string => {
   return Number.isFinite(ms) ? fmtUtc7(new Date(ms)) : iso;
 };
 
-function newestScanEvent(dir: string): Event | null {
-  let files: string[];
-  try {
-    files = readdirSync(dir).filter((f) => /^events-.*\.jsonl$/.test(f)).sort().reverse();
-  } catch {
-    return null;
-  }
-  for (const f of files) {
-    let text: string;
-    try {
-      text = readFileSync(join(dir, f), "utf-8");
-    } catch {
-      continue;
-    }
-    let best: Event | null = null;
-    for (const line of text.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        const ev = JSON.parse(line) as Event;
-        if (SCAN_KINDS.has(ev.kind) && Number.isFinite(Date.parse(ev.ts)) && (best === null || Date.parse(ev.ts) >= Date.parse(best.ts))) best = ev;
-      } catch {
-        // skip a bad line
-      }
-    }
-    if (best) return best;
-  }
-  return null;
-}
-
 function newestReport(dir: string): string | null {
   const reports = join(dir, "reports");
   let names: string[];
@@ -129,7 +99,7 @@ function statusLines(d: AutonomousDeps): string[] {
   else lines.push("away: off");
   const lock = readLock(d.dir);
   lines.push(lock ? `lock: ${lock.ticket} since ${lock.claimedAtUtc7 || utc7(lock.claimedAt)}` : "lock: none");
-  const ev = newestScanEvent(d.dir);
+  const ev = newestEvent(d.dir, SCAN_KINDS);
   lines.push(ev ? `last scan: ${utc7(ev.ts)} ${ev.kind}` : "last scan: none");
   const report = newestReport(d.dir);
   if (report) {
@@ -182,7 +152,9 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const until = argv.until as string | undefined;
-              if (until !== undefined && !HHMM.test(until)) throw new UsageError(`--until "${until}" is not HH:MM (24 h, UTC+7)`);
+              if (until !== undefined) {
+                try { parseHhmm(until); } catch (e) { throw new UsageError(`--until: ${(e as Error).message}`); }
+              }
               const r = await runAway({ dir: d.dir, now: d.now, nexus: d.nexus }, { until });
               return [r.until ? `away: on until ${utc7(r.until)}` : "away: on (no end time)", runNowLine(r.runNow)];
             }),

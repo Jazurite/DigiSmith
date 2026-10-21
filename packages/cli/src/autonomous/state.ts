@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
-import { appendFileSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { dayOf, fmtUtc7 } from "./clock.ts";
 import type { Event, EventKind, Lock } from "./types.ts";
 
 const DAY_MS = 24 * 3600_000;
+const EVENT_FILE = /^events-\d{4}-\d{2}-\d{2}\.jsonl$/;
+const eventFile = (day: string): string => `events-${day}.jsonl`;
 
 export function autonomousDir(env: NodeJS.ProcessEnv = process.env): string {
   if (env.AUTONOMOUS_DIR) return env.AUTONOMOUS_DIR;
@@ -68,7 +70,7 @@ export function writeNotes(dir: string, notes: Record<string, string>): void {
 export function appendEvent(dir: string, now: Date, kind: EventKind, fields: Record<string, unknown> = {}): void {
   mkdirSync(dir, { recursive: true });
   const ev: Event = { ...fields, ts: now.toISOString(), tsUtc7: fmtUtc7(now), kind };
-  appendFileSync(join(dir, `events-${dayOf(now)}.jsonl`), `${JSON.stringify(ev)}\n`);
+  appendFileSync(join(dir, eventFile(dayOf(now))), `${JSON.stringify(ev)}\n`);
 }
 
 export function readEvents(dir: string, fromMs: number, toMs: number): Event[] {
@@ -81,7 +83,7 @@ export function readEvents(dir: string, fromMs: number, toMs: number): Event[] {
     if (day > last) break;
     let text = "";
     try {
-      text = readFileSync(join(dir, `events-${day}.jsonl`), "utf-8");
+      text = readFileSync(join(dir, eventFile(day)), "utf-8");
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code === "ENOENT") continue;
       throw e;
@@ -113,4 +115,36 @@ export function readLastReport(dir: string): Date | null {
 
 export function writeLastReport(dir: string, at: Date): void {
   atomicWrite(dir, "last-report.json", `${JSON.stringify({ at: at.toISOString() })}\n`);
+}
+
+/** The newest event whose kind is in `kinds`: day files newest first, stops at the first file with a match; no window limit. */
+export function newestEvent(dir: string, kinds: readonly EventKind[]): Event | null {
+  let files: string[];
+  try {
+    files = readdirSync(dir).filter((f) => EVENT_FILE.test(f)).sort().reverse();
+  } catch {
+    return null;
+  }
+  const want = new Set<string>(kinds);
+  for (const f of files) {
+    let text: string;
+    try {
+      text = readFileSync(join(dir, f), "utf-8");
+    } catch {
+      continue;
+    }
+    let best: Event | null = null;
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const ev = JSON.parse(line) as Event;
+        const ms = Date.parse(ev.ts);
+        if (want.has(ev.kind) && Number.isFinite(ms) && (best === null || ms >= Date.parse(best.ts))) best = ev;
+      } catch {
+        // skip a bad line
+      }
+    }
+    if (best) return best;
+  }
+  return null;
 }

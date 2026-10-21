@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { inNightWindow, dayOf, stampOf, fmtUtc7, nextClock } from "./clock.ts";
+import { inNightWindow, dayOf, stampOf, fmtUtc7, nextClock, parseHhmm } from "./clock.ts";
 
 describe("inNightWindow", () => {
   it("is true from 23:00 UTC+7 and false one millisecond before", () => {
@@ -54,5 +54,15 @@ describe("nextClock", () => {
   it("throws on a bad HH:MM", () => {
     expect(() => nextClock(now, "25:00")).toThrow();
     expect(() => nextClock(now, "9:5")).toThrow();
+  });
+});
+
+describe("parseHhmm", () => {
+  it("returns hours and minutes for a 24 h HH:MM", () => {
+    expect(parseHhmm("18:05")).toEqual({ h: 18, m: 5 });
+    expect(parseHhmm("00:00")).toEqual({ h: 0, m: 0 });
+  });
+  it("throws a message naming HH:MM on a bad value", () => {
+    for (const bad of ["7pm", "24:00", "9:5", "18:60", ""]) expect(() => parseHhmm(bad)).toThrow(/HH:MM/);
   });
 });
