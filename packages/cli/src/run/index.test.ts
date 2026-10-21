@@ -1,57 +1,96 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
+import yargs from "yargs";
+import runCommand from "./index.ts";
+import { buildCli } from "../index.ts";
 
-const ENTRY = path.join(import.meta.dirname, "..", "index.ts");
 let tmp: string;
-let env: NodeJS.ProcessEnv;
+let savedDepot: string | undefined;
+let savedRunId: string | undefined;
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nw-dg-"));
-  env = { ...process.env, DIGISMITH_DEPOT_DIR: tmp };
-  delete env.DIGISMITH_RUN_ID;
+  savedDepot = process.env.DIGISMITH_DEPOT_DIR;
+  savedRunId = process.env.DIGISMITH_RUN_ID;
+  process.env.DIGISMITH_DEPOT_DIR = tmp;
+  delete process.env.DIGISMITH_RUN_ID;
+  process.exitCode = undefined;
 });
-afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+afterEach(() => {
+  vi.restoreAllMocks();
+  if (savedDepot === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = savedDepot;
+  if (savedRunId === undefined) delete process.env.DIGISMITH_RUN_ID; else process.env.DIGISMITH_RUN_ID = savedRunId;
+  process.exitCode = undefined;
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
 
-const dg = (...args: string[]) => spawnSync(process.execPath, ["--experimental-strip-types", ENTRY, "run", ...args], { env, encoding: "utf8" });
+// Runs `dg run <args>` in process. Async: later tests must `await dg(...)`.
+async function capture(parse: (args: string[]) => Promise<unknown>, args: string[]): Promise<{ status: number; stdout: string; stderr: string }> {
+  const out: string[] = [];
+  const err: string[] = [];
+  vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => { out.push(a.join(" ")); });
+  vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => { err.push(a.join(" ")); });
+  process.exitCode = undefined;
+  try {
+    await parse(args);
+  } catch (e) {
+    err.push(e instanceof Error ? e.message : String(e));
+    process.exitCode = 1;
+  }
+  const status = Number(process.exitCode ?? 0);
+  process.exitCode = undefined;
+  vi.restoreAllMocks();
+  return { status, stdout: out.join("\n"), stderr: err.join("\n") };
+}
 
-describe("dg run", () => {
-  it("start prints the run id alone; event, list, show and tail read it back", () => {
-    const s = dg("start", "--ticket", "DGS-581", "--role", "builder", "--order", "/o.md", "--seat", "dev0");
+const dg = (...args: string[]) =>
+  capture(
+    (a) => yargs(a).scriptName("dg").command(runCommand).demandCommand(1, "").strict().exitProcess(false).fail((msg, e) => { throw e ?? new Error(msg); }).parseAsync(a),
+    ["run", ...args],
+  );
+
+describe("dg run", async () => {
+  it("start prints the run id alone; event, list, show and tail read it back", async () => {
+    const s = await dg("start", "--ticket", "DGS-581", "--role", "builder", "--order", "/o.md", "--seat", "dev0");
     expect(s.status).toBe(0);
     const id = s.stdout.trim();
     expect(id).toMatch(/^builder-\d{8}T\d{6}-[0-9a-f]{6}$/);
 
-    expect(dg("event", id, "review_ready", "--data", '{"pack":"p1"}').status).toBe(0);
-    expect(dg("event", id, "merged").status).toBe(0);
+    expect((await dg("event", id, "review_ready", "--data", '{"pack":"p1"}')).status).toBe(0);
+    expect((await dg("event", id, "merged")).status).toBe(0);
 
-    const list = JSON.parse(dg("list", "--json").stdout);
+    const list = JSON.parse((await dg("list", "--json")).stdout);
     expect(list).toHaveLength(1);
     expect(list[0].record.run).toBe(id);
     expect(list[0].summary.events).toBe(2);
-    expect(dg("list", "--ticket", "DGS-9", "--json").stdout.trim()).toBe("[]");
-    expect(dg("list").stdout).toContain(id);
+    expect((await dg("list", "--ticket", "DGS-9", "--json")).stdout.trim()).toBe("[]");
+    expect((await dg("list")).stdout).toContain(id);
 
-    const show = JSON.parse(dg("show", id, "--json").stdout);
+    const show = JSON.parse((await dg("show", id, "--json")).stdout);
     expect(show.record.seat).toBe("dev0");
     expect(show.summary.last_type).toBe("merged");
-    expect(dg("show", id).stdout).toContain("DGS-581");
+    expect((await dg("show", id)).stdout).toContain("DGS-581");
 
-    const all = dg("tail", id).stdout.trim().split("\n").map((l) => JSON.parse(l));
+    const all = (await dg("tail", id)).stdout.trim().split("\n").map((l) => JSON.parse(l));
     expect(all.map((e) => [e.seq, e.type])).toEqual([[1, "review_ready"], [2, "merged"]]);
     expect(all[0].data).toEqual({ pack: "p1" });
-    expect(dg("tail", id, "--since", "1").stdout.trim().split("\n").map((l) => JSON.parse(l).seq)).toEqual([2]);
-  }, 60000);
-  it("exits 1 with a message for an unknown run, an unknown type, a bad --data and a bad role", () => {
-    const id = dg("start", "--ticket", "DGS-581", "--role", "scout").stdout.trim();
-    expect(dg("event", "builder-x-000000", "merged").status).toBe(1);
-    expect(dg("event", id, "started").status).toBe(1); // a hook type, not a conductor type
-    expect(dg("event", id, "merged", "--data", "[1]").status).toBe(1);
-    expect(dg("show", "builder-x-000000").status).toBe(1);
-    expect(dg("tail", "builder-x-000000").status).toBe(1);
-    const bad = dg("start", "--ticket", "DGS-581", "--role", "boss");
+    expect((await dg("tail", id, "--since", "1")).stdout.trim().split("\n").map((l) => JSON.parse(l).seq)).toEqual([2]);
+  });
+  it("exits 1 with a message for an unknown run, an unknown type, a bad --data and a bad role", async () => {
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    expect((await dg("event", "builder-x-000000", "merged")).status).toBe(1);
+    expect((await dg("event", id, "started")).status).toBe(1); // a hook type, not a conductor type
+    expect((await dg("event", id, "merged", "--data", "[1]")).status).toBe(1);
+    expect((await dg("show", "builder-x-000000")).status).toBe(1);
+    expect((await dg("tail", "builder-x-000000")).status).toBe(1);
+    const bad = await dg("start", "--ticket", "DGS-581", "--role", "boss");
     expect(bad.status).toBe(1);
     expect(bad.stderr).toMatch(/role/);
-  }, 60000);
+  });
+  it("the root CLI registers run", async () => {
+    const r = await capture((a) => buildCli(a).exitProcess(false).parseAsync(a), ["run", "list", "--json"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim()).toBe("[]");
+  });
 });
