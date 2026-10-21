@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch watchdog, attention list and circuit breaker</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Nightwatch watchdog, attention list and circuit breaker</h1>
+  <div class="meta">
+    <span>Date: 2026-10-21</span>
+    <span>Ticket: DGS-583</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal</a></li>
+    <li><a href="#classify">The classifier</a></li>
+    <li><a href="#watch">The watch command and its schedule</a></li>
+    <li><a href="#attention">The attention list</a></li>
+    <li><a href="#notify">Notify</a></li>
+    <li><a href="#breaker">Circuit breaker</a></li>
+    <li><a href="#causes">Failure causes and one retry</a></li>
+    <li><a href="#never">What the watchdog never does</a></li>
+    <li><a href="#tests">Tests and first use</a></li>
+    <li><a href="#deps">Dependencies and open points</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>Goal</h2>
+<p>On 2026-10-19 a night merge stood still from 04:21 to about 07:50 UTC+7 (a classifier block, DGS-572) and nobody knew. This ticket adds a plain-code watchdog that reads the run record of DGS-581 and puts a stuck run on an attention list within minutes. It also adds the circuit breaker and the failure causes with one bounded retry. It uses no model tokens and no new service. The ten decisions come from the Maestro and are settled. Warren (MIT) gave ideas only; no code is copied.</p>
+<p>Out of scope: the night mandate hook (DGS-584), merge and cleanup safety (DGS-585), the UI (DGS-586), push and email (DGS-448).</p>
+</section>
+
+<section id="classify">
+<h2>The classifier</h2>
+<p><code>packages/cli/src/autonomous/watchdog.ts</code> exports a pure function. It does no I/O and reads no clock of its own.</p>
+<pre><code>classify(run, events, pane, now, budgets) -&gt; { state, cause, since }
+state: 'healthy' | 'blocked' | 'stalled' | 'lost' | 'ended'
+pane:  'present' | 'gone' | 'unknown'   // the command looks it up; 'unknown' when herdr does not answer</code></pre>
+<p><code>run</code> is the frozen <code>run.json</code>, <code>events</code> the parsed <code>events.jsonl</code> lines (a line that does not parse is skipped), <code>now</code> a number, <code>budgets</code> the resolved minutes.</p>
+<div class="table-wrap"><table>
+<tr><th>State</th><th>Rule</th></tr>
+<tr><td><code>ended</code></td><td>An <code>ended</code> event exists. Nothing else is checked.</td></tr>
+<tr><td><code>lost</code></td><td>No <code>ended</code>, and the pane is <code>gone</code>, or the newest event is older than 30 minutes (silence). The run has no events at all: silence counts from <code>created_at</code>.</td></tr>
+<tr><td><code>blocked</code></td><td>The last <code>blocked</code> event has no later <code>tool</code> or <code>turn_end</code>. <code>since</code> is that event's time.</td></tr>
+<tr><td><code>stalled</code></td><td>The phase clock is older than the phase budget (next section).</td></tr>
+<tr><td><code>healthy</code></td><td>None of the above.</td></tr>
+</table></div>
+<p><b>Order of the checks:</b> ended, then pane gone (lost), then blocked, then silence (lost), then stalled. A blocked run waits for a human and sends no events, so the 30 minute silence rule must not turn it into <code>lost</code>. A gone pane still wins over blocked, because nobody can answer a pane that does not exist. <code>pane: 'unknown'</code> never makes a run lost by itself; only silence can.</p>
+<h3>Phases and budgets</h3>
+<p>Budgets come from <code>.digismith/config.yml</code> under <code>nightwatch.budgets</code>, in minutes, defaults <code>building: 45</code>, <code>review: 60</code>, <code>merge: 20</code>. A value that is not a positive whole number, or a block that does not parse, gives one attention item (kind <code>failed</code>, cause <code>bad-budget-config</code>, run <code>-</code>) and the defaults are used for that value. It never turns the watchdog off.</p>
+<p>The phase and its start come from <code>phaseOf(run, events)</code>, also pure:</p>
+<ul>
+<li>The latest event whose <code>data.phase</code> is <code>building</code>, <code>review</code> or <code>merge</code> sets the phase; its time is the start. A phase ends at the event <code>merged</code> (merge), or at <code>ended</code>.</li>
+<li>No such event: a <code>builder</code> run is <code>building</code> and a <code>reviewer</code> run is <code>review</code>, both from the <code>started</code> event (from <code>created_at</code> when there is none). A <code>scout</code> or <code>other</code> run has no phase and is never <code>stalled</code>.</li>
+<li>A builder's <code>review_ready</code> event starts a new <code>building</code> clock when the next <code>tool</code> event comes, so the 45 minutes count per task, not per run.</li>
+</ul>
+<p class="callout">The DGS-581 event set is closed, so the merge phase has no event of its own. This spec uses the optional <code>data.phase</code> field on a conductor event (<code>dg run event &lt;id&gt; review_ready --data '{"phase":"merge"}'</code>, the conductor's merge step). That needs one line in the conductor runbook; the report names it for the conductor to apply. Without the marker a merge is never <code>stalled</code>; <code>blocked</code> and <code>lost</code> still work. This is open point 2.</p>
+</section>
+
+<section id="watch">
+<h2>The watch command and its schedule</h2>
+<p><code>dg autonomous watch [--dry-run]</code> does the I/O around <code>classify</code>: it lists <code>&lt;depot&gt;/runs/*/*/run.json</code> (root from <code>$DIGISMITH_DEPOT_DIR</code>, else <code>~/.digismith-depot</code>), reads the events, asks herdr whether the pane still exists (a read-only look-up through <code>herdr-ws</code>), calls <code>classify</code>, and applies the result to the attention list. It watches <b>every open run</b>, not only autonomous ones. A run is open when it has no <code>ended</code> event and is not already past the retention rule below.</p>
+<ul>
+<li><b>Closed runs are not re-read forever.</b> Only runs created in the last 7 days are looked at; an older run without <code>ended</code> is skipped and not reported. (Retention keeps the 5 minute pass short.)</li>
+<li><b>Single pass, never throws.</b> A broken run directory is skipped with one line on stderr. Exit 0 unless the depot root cannot be read at all.</li>
+<li><b>Output:</b> one line per run whose state is not <code>healthy</code> or <code>ended</code>, then a summary line. <code>--dry-run</code> prints the same and writes nothing and sends nothing.</li>
+</ul>
+<h3>Registry entry</h3>
+<p>One <code>defineJob</code> entry in <code>scripts/nexus-api/src/scheduler/registry.ts</code>, in the style of the DGS-486 entries (<code>file: process.execPath</code>, absolute <code>dg</code> path): name <code>nightwatch-watchdog</code>, <code>atUtc7: '00:00'</code>, <code>windowEndUtc7: '23:59'</code>, <code>everyMinutes: 5</code> (the registry minimum), so it runs all day, not only in the night window. <code>catchUp: 'skip'</code>, <code>manualOutsideWindow: 'allowed'</code>, <code>timeoutMs</code> 2 minutes, <code>notify: 'failures'</code>, <code>order: 40</code>. No new service.</p>
+</section>
+
+<section id="attention">
+<h2>The attention list</h2>
+<p><code>~/.digismith-depot/autonomous/attention.jsonl</code> (the folder honors <code>AUTONOMOUS_DIR</code>, as DGS-486 does). Append only: no line is ever rewritten. DGS-582 names the same file and line shape; if its spec differs, DGS-582 follows this one (open point 1).</p>
+<pre><code>open:     {"schema":"nightwatch-attention/v1","id":"&lt;run&gt;.&lt;kind&gt;.&lt;n&gt;","ts":"&lt;ISO UTC&gt;","ticket":"DGS-583","run":"&lt;run-id&gt;",
+           "kind":"blocked|stalled|lost|refused|failed|unknown","cause":"&lt;code or short text&gt;","since":"&lt;ISO UTC&gt;"}
+resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;ISO UTC&gt;","resolved":true,"by":"watchdog|jack","note":"..."}</code></pre>
+<ul>
+<li><b>One open item per (run, kind).</b> <code>n</code> counts the earlier resolved items of that pair, so a reopened problem gets a new id. The open state is derived: an id with no later <code>resolved</code> line.</li>
+<li><b>Auto-resolve:</b> the watchdog resolves <code>blocked</code> and <code>stalled</code> items when the run is <code>healthy</code> or <code>ended</code> again. <code>lost</code>, <code>refused</code>, <code>failed</code> and <code>unknown</code> stay open until Jack (or a command) resolves them, because the cause needs a human look.</li>
+<li><b>Writers:</b> the watchdog, and <code>dg autonomous release</code> (kinds <code>failed</code>, <code>refused</code>, <code>unknown</code>). Each line is one <code>appendFileSync</code> of a short line; readers skip a line that does not parse.</li>
+<li><code>dg autonomous attention [--json]</code> lists open items (id, ticket, run, kind, cause, since in UTC+7, age). <code>dg autonomous attention resolve &lt;id&gt; [--note ..]</code> appends the resolved line (<code>by: jack</code>); an unknown or already resolved id exits 1 and writes nothing.</li>
+<li>The catch-up (<code>scripts/conductor/</code> consult) and <code>autonomous-report</code> (DGS-486) each add an <code>Attention:</code> block with the open items, <code>none</code> when empty. Both read the file through one shared reader in <code>packages/cli/src/autonomous/attention.ts</code>.</li>
+</ul>
+</section>
+
+<section id="notify">
+<h2>Notify</h2>
+<p>A new open item posts one ClickUp comment on its ticket through <code>dg clickup add-comment --task &lt;ticket&gt; --text .. --yes</code>, the same call shape as <code>notify.ts</code>. The watchdog is a short process every 5 minutes, so the in-memory map of <code>notify.ts</code> does not work. The limit lives in <code>~/.digismith-depot/autonomous/notify-state.json</code> (atomic temp file and rename): at most one comment per ticket and kind per hour, and at most 10 comments in one pass. An item whose comment failed or was limited stays marked unsent and is tried again at the next pass. A failing comment never stops the pass or the item. The text is: <code>Nightwatch &lt;kind&gt;: run &lt;id&gt;, &lt;cause&gt;, since &lt;UTC+7&gt; (UTC+7). Needs Jack.</code> Items with no ticket (the budget config item) get no comment. Push and email stay with DGS-448.</p>
+</section>
+
+<section id="breaker">
+<h2>Circuit breaker</h2>
+<p>State file <code>~/.digismith-depot/autonomous/breaker.json</code>: <code>{ "open": boolean, "streak": number, "failed": ["DGS-1", ..], "openedAt": ISO | null }</code>, written with a temp file and rename.</p>
+<ul>
+<li><code>dg autonomous release --result failed</code> adds one to <code>streak</code> and records the ticket. <code>--result merged</code> sets <code>streak</code> to 0. <code>stopped</code> and <code>awaiting-jack</code> change nothing: Jack's wait is not a failure. A <code>failed</code> release whose cause class is transient and that gets its one retry (next section) does not count yet; the retry's own result counts.</li>
+<li><code>streak</code> reaching 2 sets <code>open: true</code>, writes an attention item (kind <code>failed</code>, run <code>-</code>, cause <code>circuit-breaker-open</code>) and one comment on the second ticket.</li>
+<li><code>autonomous-scan</code> reads the file first. When open it exits with the outcome <code>breaker</code> and claims nothing, makes no ClickUp call and writes one event. An unreadable or malformed file counts as open (fail closed).</li>
+<li><code>dg autonomous back</code> and the new <code>dg autonomous resume</code> set <code>open: false</code> and <code>streak: 0</code> and resolve the breaker item. <code>resume</code> only closes the breaker; it does not touch the away switch. Nothing else closes it, not even a day passing.</li>
+</ul>
+</section>
+
+<section id="causes">
+<h2>Failure causes and one retry</h2>
+<p><code>dg autonomous release --ticket K --result failed --cause &lt;code&gt;</code>. The list is a constant in <code>causes.ts</code>, each code in one class. A code outside the list is recorded as <code>unknown</code> with a warning (the release itself never fails, or the lock would stay held at night).</p>
+<div class="table-wrap"><table>
+<tr><th>Class</th><th>Codes</th><th>Retry</th></tr>
+<tr><td>transient</td><td><code>gateway-5xx</code>, <code>gateway-timeout</code>, <code>rate-limited</code>, <code>pane-died</code>, <code>tab-lost</code></td><td>one automatic retry</td></tr>
+<tr><td>durable</td><td><code>classifier-block</code>, <code>merge-refused</code>, <code>test-red</code>, <code>review-rejected</code>, <code>spec-gap</code></td><td>none; goes to Jack</td></tr>
+<tr><td>unknown</td><td><code>unknown</code> (also no <code>--cause</code>, or any other text)</td><td>none (fails closed)</td></tr>
+</table></div>
+<p>A classifier block is durable by rule: it can only be fixed by Jack.</p>
+<ul>
+<li><b>Pure decision:</b> <code>decideRetry(kind, causeClass, retriesUsed) -&gt; 'retry' | 'attention'</code>. Retry only when the class is transient, or the kind is <code>lost</code>, and <code>retriesUsed</code> is 0. A <code>lost</code> run is re-dispatched once; <code>blocked</code> and <code>stalled</code> never retry (a human looks).</li>
+<li><b>The retry count lives in the DGS-582 journal.</b> The decision reads it through <code>journal.retryCount(ticket)</code> and records a retry as a <code>planned</code> entry before anything runs, so a restart of the watchdog, the controller or Nexus never gives a second retry. The retry itself is a controller action (<code>planned</code>, then <code>settled</code>); the watchdog and <code>release</code> only <b>plan</b> it. They never start a worker.</li>
+<li>When the decision is <code>attention</code>, the open item is the result, and Jack sees it in the catch-up.</li>
+</ul>
+</section>
+
+<section id="never">
+<h2>What the watchdog never does</h2>
+<p>It never answers a prompt, never sends keys to a pane, never kills a process, never deletes or rewrites a file (the attention list and the run files are append only; the two state files are replaced by rename, which is not a delete of data anyone reads). Its herdr access is one read-only "does this pane exist" call. A test reads the source of <code>watchdog.ts</code> and the watch command and fails on any herdr verb other than that call, on <code>kill</code>, <code>unlink</code>, <code>rm</code> and on <code>send</code>.</p>
+</section>
+
+<section id="tests">
+<h2>Tests and first use</h2>
+<p>Tested without Jack, with vitest, a fake clock (<code>now</code> is a number or an injected function), fake <code>run.json</code> and <code>events.jsonl</code> in a temp depot (<code>DIGISMITH_DEPOT_DIR</code> and <code>AUTONOMOUS_DIR</code> point there), a fake pane look-up and a fake <code>dg</code> that records comments. No real depot, no herdr, no ClickUp, no Nexus.</p>
+<ul>
+<li><b>classify:</b> each state, the check order (blocked plus silence is blocked; blocked plus gone pane is lost), the 30 minute edge (29:59 and 30:00), <code>pane: 'unknown'</code>, no events, a blocked event followed by <code>tool</code>, by <code>turn_end</code> and by nothing, each phase budget at the edge, a builder per-task reset, a scout never stalled, an unparsable line skipped.</li>
+<li><b>budgets:</b> defaults, an override, a negative, a string and a broken block (one item, defaults used, the watchdog still runs).</li>
+<li><b>attention:</b> open, one open per (run, kind) on two passes, auto-resolve of blocked, a reopened item gets <code>n+1</code>, <code>lost</code> stays open, <code>resolve</code> of an unknown id exits 1, an unparsable line in the file.</li>
+<li><b>notify:</b> one comment per new item, none on the second pass, the per-hour limit, the 10 per pass cap, a failing <code>dg</code> keeps the item unsent and retries, no comment for a ticket-less item.</li>
+<li><b>breaker:</b> two failed releases open it; a merged release between them resets; <code>stopped</code> does not count; a transient retry does not count; the scan exits <code>breaker</code> with zero ClickUp calls; a malformed file is open; <code>back</code> and <code>resume</code> close it.</li>
+<li><b>causes and retry:</b> every code in exactly one class; an unknown code becomes <code>unknown</code>; <code>decideRetry</code> table; a second pass after a restart does not plan a second retry (journal count 1); the watchdog plans but never starts a worker.</li>
+<li><b>watch command:</b> a depot with a healthy, a blocked, a stalled, a lost and an ended run gives four items and one comment each, then a second pass adds nothing; <code>--dry-run</code> writes nothing; the 7 day skip; a broken run directory is skipped; the "never" source test.</li>
+<li><b>registry:</b> the new entry passes <code>validateJobs</code>, runs every 5 minutes and sits in the window all day.</li>
+<li><b>readers:</b> the catch-up and <code>autonomous-report</code> show the open items and <code>none</code>.</li>
+</ul>
+<p><b>First use</b> (after DGS-582 and this ticket are merged, installed, and the Nexus API restarted once): the conductor runs <code>dg autonomous watch --dry-run</code> against the real depot and sees only real runs and no change on disk. Then it starts a throwaway worker through the runbook (<code>dg run start</code>, then the worker), triggers one permission prompt and leaves it unanswered. Within 5 to 10 minutes <code>dg autonomous attention</code> shows one <code>blocked</code> item and the ticket has one comment. The conductor answers the prompt; the item resolves itself at the next pass. Then it closes the tab; the run, with no <code>ended</code> event, becomes <code>lost</code> after the pane is gone. Jack's own check is the morning catch-up: it shows <code>Attention:</code> and <code>none</code> on a quiet night.</p>
+</section>
+
+<section id="deps">
+<h2>Dependencies and open points</h2>
+<ul>
+<li><b>Needs DGS-581</b> (run record, merged or in review) and <b>DGS-582</b> (controller and journal). No build starts before the Maestro orders it, after DGS-582 is merged. The plan sets the interfaces it needs from DGS-582 (<code>journal.retryCount</code>, <code>journal.plan</code>) as a small file the build checks first.</li>
+<li><b>Needs DGS-486</b> (<code>autonomous-scan</code>, <code>release</code>, <code>back</code>, <code>report</code>). At the time of this spec the code is in a worktree, not on main, and <code>packages/cli/src/autonomous/</code> does not exist on main. If DGS-486 is not merged when the build starts, the Builder stops and tells the conductor.</li>
+<li><b>Open point 1 (shape):</b> DGS-582 has no spec yet. The attention file shape above is this ticket's; DGS-582 follows it, or the two specs are aligned at its checkpoint.</li>
+<li><b>Open point 2 (merge phase marker):</b> <code>data.phase</code> on a conductor event, one runbook line (see "The classifier"). The Maestro may instead add a <code>merge_started</code> event type to DGS-581.</li>
+<li><b>Open point 3 (blocked beats silence):</b> the brief lists silence as lost without exception. This spec lets <code>blocked</code> win over silence, so a run that waits for a prompt is reported as blocked (the useful word for Jack), and only a gone pane makes it lost.</li>
+<li><b>Open point 4 (retention):</b> runs older than 7 days with no <code>ended</code> event are skipped. The window is a constant and can change.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-583—nightwatch-watchdog/design.html</footer>
+
+</body>
+</html>
