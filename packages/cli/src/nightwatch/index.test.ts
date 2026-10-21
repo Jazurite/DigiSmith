@@ -35,6 +35,17 @@ describe("runNightwatch", () => {
     expect(JSON.parse(runNightwatch(["view", "runs", "--role", "reviewer"], d.env, NOW).out).total).toBe(0);
     expect(JSON.parse(runNightwatch(["view", "runs", "--role", "builder"], d.env, NOW).out).total).toBe(1);
   });
+  it("refuses an unknown flag or a flag without a value, and accepts --key=value", () => {
+    const typo = runNightwatch(["view", "runs", "--rol", "builder"], d.env, NOW);
+    expect(typo).toMatchObject({ code: 1, out: "" });
+    expect(typo.err).not.toContain("builder");
+    expect(runNightwatch(["view", "runs", "--role"], d.env, NOW)).toMatchObject({ code: 1, out: "" });
+    expect(runNightwatch(["view", "runs", "--json"], d.env, NOW).code).toBe(0);
+    d.writeRun({ ticket: "DGS-590", run: "builder-1", role: "builder", created_at: "2026-10-22T02:20:00.000Z", order: "/x/order-nw.md" });
+    expect(JSON.parse(runNightwatch(["view", "runs", "--role=reviewer"], d.env, NOW).out).total).toBe(0);
+    expect(JSON.parse(runNightwatch(["view", "runs", "--role=builder"], d.env, NOW).out).total).toBe(1);
+    expect(runNightwatch(["view", "runs", "--limit=x"], d.env, NOW).code).toBe(1);
+  });
   it("creates nothing in an empty depot", () => {
     runNightwatch(["view", "overview"], d.env, NOW);
     expect(readdirSync(d.dir).sort()).toEqual(["autonomous"]);
@@ -46,5 +57,12 @@ describe("the real entry", () => {
     const entry = new URL("../index.ts", import.meta.url).pathname;
     const { stdout } = await exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "overview"], { env: { ...process.env, ...d.env } });
     expect(JSON.parse(stdout).tickets.windowDays).toBe(7);
+  }, 30_000);
+  it("passes flags through yargs", async () => {
+    const entry = new URL("../index.ts", import.meta.url).pathname;
+    d.writeRun({ ticket: "DGS-590", run: "builder-1", role: "builder", created_at: "2026-10-22T02:20:00.000Z", order: "/x/order-nw.md" });
+    const { stdout } = await exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "runs", "--role", "builder", "--limit", "2"], { env: { ...process.env, ...d.env } });
+    expect(JSON.parse(stdout).total).toBe(1);
+    await expect(exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "runs", "--rol", "builder"], { env: { ...process.env, ...d.env } })).rejects.toMatchObject({ code: 1 });
   }, 30_000);
 });

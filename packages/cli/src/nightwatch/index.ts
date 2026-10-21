@@ -6,13 +6,25 @@ export interface Result { code: number; out: string; err: string }
 const ok = (v: unknown): Result => ({ code: 0, out: `${JSON.stringify(v)}\n`, err: "" });
 const fail = (err: string): Result => ({ code: 1, out: "", err: `${err}\n` });
 
-function flags(argv: string[]): Record<string, string> {
+const VALUE_FLAGS = ["run", "ticket", "since", "before", "tail", "group", "state", "role", "trigger", "limit"];
+
+/** Parses --key value and --key=value. Returns null on an unknown flag or a missing value. */
+function flags(argv: string[]): Record<string, string> | null {
   const out: Record<string, string> = {};
-  for (let i = 0; i < argv.length; i++) if (argv[i].startsWith("--") && i + 1 < argv.length) out[argv[i].slice(2)] = argv[i + 1];
+  for (let i = 0; i < argv.length; i++) {
+    if (!argv[i].startsWith("--")) continue;
+    const eq = argv[i].indexOf("=");
+    const key = eq === -1 ? argv[i].slice(2) : argv[i].slice(2, eq);
+    if (key === "json" && eq === -1) continue;
+    if (!VALUE_FLAGS.includes(key)) return null;
+    if (eq !== -1) out[key] = argv[i].slice(eq + 1);
+    else if (i + 1 < argv.length) out[key] = argv[++i];
+    else return null;
+  }
   return out;
 }
-function num(argv: string[], flag: string): number | undefined {
-  const v = flags(argv)[flag];
+function num(f: Record<string, string>, flag: string): number | undefined {
+  const v = f[flag];
   if (v === undefined) return undefined;
   return /^\d+$/.test(v) ? Number(v) : Number.NaN;
 }
@@ -22,9 +34,10 @@ export function runNightwatch(argv: string[], env: NodeJS.ProcessEnv, now: Date)
   if (argv[0] !== "view") return fail("usage: nightwatch view <name>");
   const name = argv[1];
   const f = flags(argv.slice(2));
+  if (f === null) return fail("unknown flag or missing value");
   if (!(VIEW_NAMES as readonly string[]).includes(name)) return fail(`unknown view (${VIEW_NAMES.join(", ")})`);
   for (const k of ["run", "ticket"]) if (f[k] !== undefined && !isSafe(f[k])) return fail("bad id");
-  const since = num(argv.slice(2), "since"), before = num(argv.slice(2), "before"), tail = num(argv.slice(2), "tail"), limit = num(argv.slice(2), "limit");
+  const since = num(f, "since"), before = num(f, "before"), tail = num(f, "tail"), limit = num(f, "limit");
   if ([since, before, tail, limit].some((n) => Number.isNaN(n))) return fail("bad number");
   switch (name) {
     case "overview": return ok(overviewView(env, now));
