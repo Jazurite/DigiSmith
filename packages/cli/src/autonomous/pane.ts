@@ -27,7 +27,8 @@ export function herdrPaneLookup(exec: Exec = realExec): PaneLookup {
       const j = JSON.parse(r.stdout) as { result?: { panes?: { pane_id?: unknown }[] } };
       const panes = j.result?.panes;
       if (!Array.isArray(panes)) return null;
-      return new Set(panes.map((p) => String(p.pane_id)));
+      const ids = panes.map((p) => p?.pane_id).filter((id): id is string => typeof id === "string");
+      return new Set(ids);
     } catch {
       return null;
     }

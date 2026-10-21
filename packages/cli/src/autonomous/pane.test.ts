@@ -14,6 +14,10 @@ describe("herdrPaneLookup", () => {
     expect(await herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{}}' }))("w2")).toBeNull();
     expect(await herdrPaneLookup(async () => { throw new Error("boom"); })("w2")).toBeNull();
   });
+  it("skips a pane entry without a string pane_id", async () => {
+    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1"},{},{"pane_id":null},{"pane_id":7}]}}' }));
+    expect(await lookup("w2")).toEqual(new Set(["w2:p1"]));
+  });
   it("passes the workspace to the exec", async () => {
     const seen: string[] = [];
     await herdrPaneLookup(async (w) => { seen.push(w); return { code: 0, stdout: '{"result":{"panes":[]}}' }; })("w3");
