@@ -202,3 +202,72 @@ describe("runRelease", () => {
     expect(readJournal(dir)).toEqual(before);
   });
 });
+
+describe("runRelease: causes and the breaker", () => {
+  const items = async () => (await import("./attention.ts")).readOpen(dir);
+  const breaker = async () => (await import("./breaker.ts")).readBreaker(dir);
+
+  it("failed with a durable cause: a failed item, not retry eligible, streak 1", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
+    expect(r).toMatchObject({ cause: "test-red", retryEligible: false, breakerOpened: false, warning: null });
+    expect(await items()).toMatchObject([{ run: "-", ticket: "DGS-1", kind: "failed", cause: "test-red", causeClass: "durable", retryEligible: false }]);
+    expect(tracker.comments).toHaveLength(1);
+    expect((await breaker()).streak).toBe(1);
+    expect(events().find((e) => e.kind === "release")).toMatchObject({ cause: "test-red" });
+  });
+  it("failed with a transient cause: retry eligible, streak still goes up, no journal", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "gateway-5xx" });
+    expect(r.retryEligible).toBe(true);
+    expect(await items()).toMatchObject([{ causeClass: "transient", retryEligible: true }]);
+    expect((await breaker()).streak).toBe(1);
+    expect(readJournal(dir).filter((l) => l.key.includes("retry"))).toEqual([]);
+  });
+  it("an unknown cause word is recorded as unknown with a warning", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "weird" });
+    expect(r.cause).toBe("unknown");
+    expect(r.warning).toMatch(/weird/);
+    expect(r.lockCleared).toBe(true);
+    expect(r.retryEligible).toBe(false);
+    expect(await items()).toMatchObject([{ kind: "unknown", cause: "unknown" }]);
+  });
+  it("failed with no cause is unknown and not retry eligible", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed" });
+    expect(r.cause).toBe("unknown");
+    expect(r.retryEligible).toBe(false);
+  });
+  it("kindOf: merge-refused and classifier-block refused, unknown unknown, the rest failed", async () => {
+    const { kindOf } = await import("./release.ts");
+    expect(kindOf("merge-refused")).toBe("refused");
+    expect(kindOf("classifier-block")).toBe("refused");
+    expect(kindOf("unknown")).toBe("unknown");
+    for (const c of ["mandate-deny", "test-red", "review-rejected", "spec-gap", "gateway-5xx", "pane-died"]) expect(kindOf(c)).toBe("failed");
+  });
+  it("two failed releases open the breaker: one circuit-breaker-open item and a comment", async () => {
+    acquireLock(dir, lock("DGS-1"));
+    await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
+    acquireLock(dir, lock("DGS-2"));
+    const r = await runRelease(mk(), { ticket: "DGS-2", result: "failed", cause: "test-red" });
+    expect(r.breakerOpened).toBe(true);
+    const cb = (await items()).filter((i) => i.cause === "circuit-breaker-open");
+    expect(cb).toHaveLength(1);
+    expect(cb[0]).toMatchObject({ kind: "failed", run: "breaker", ticket: "DGS-2" });
+    expect(tracker.comments.some((c) => c.text.includes("2 failed tickets in a row (DGS-1, DGS-2)") && c.text.includes("dg autonomous resume"))).toBe(true);
+  });
+  it("merged resets the streak; stopped and awaiting-jack change nothing and write no item", async () => {
+    acquireLock(dir, lock("DGS-1"));
+    await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
+    acquireLock(dir, lock("DGS-2"));
+    await runRelease(mk(), { ticket: "DGS-2", result: "stopped" });
+    acquireLock(dir, lock("DGS-3"));
+    await runRelease(mk(), { ticket: "DGS-3", result: "awaiting-jack" });
+    expect((await breaker()).streak).toBe(1);
+    expect(await items()).toHaveLength(1);
+    acquireLock(dir, lock("DGS-4"));
+    await runRelease(mk(), { ticket: "DGS-4", result: "merged" });
+    expect((await breaker()).streak).toBe(0);
+  });
+});
