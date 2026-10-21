@@ -105,6 +105,32 @@ describe("salvage", () => {
     const r = salvage(mk(), { ticket: "DGS-9" });
     expect(!r.ok && r.message).toBe("not salvaged: my.pem (matches *.pem); Jack decides");
   });
+  it("a .env added in one commit and deleted in the next still stops everything", () => {
+    writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", "-f", "."); sh(wt, "commit", "-qm", "add");
+    sh(wt, "rm", "-q", ".env"); sh(wt, "commit", "-qm", "remove");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: .env (matches .env*); Jack decides");
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
+  it("a 6 MB file added then deleted still stops everything", () => {
+    writeFileSync(join(wt, "big.bin"), Buffer.alloc(6 * 1024 * 1024)); sh(wt, "add", "."); sh(wt, "commit", "-qm", "add");
+    sh(wt, "rm", "-q", "big.bin"); sh(wt, "commit", "-qm", "remove");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: big.bin (matches over 5 MB); Jack decides");
+    expect(rescue()).toBe("");
+  });
+  it("a file renamed to a secret name stops everything", () => {
+    sh(wt, "mv", "a.txt", "api-token.json"); sh(wt, "commit", "-qm", "rename");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: api-token.json (matches *token*); Jack decides");
+  });
+  it("a normal committed branch with a deleted file passes", () => {
+    writeFileSync(join(wt, "x.ts"), "x\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "x");
+    sh(wt, "rm", "-q", "x.ts"); sh(wt, "commit", "-qm", "rm x");
+    expect(salvage(mk(), { ticket: "DGS-9" }).ok).toBe(true);
+    expect(rescue()).toContain("rescue/DGS-9");
+  });
   it("a file over 5 MB stops everything", () => {
     writeFileSync(join(wt, "big.bin"), Buffer.alloc(5 * 1024 * 1024 + 1));
     const r = salvage(mk(), { ticket: "DGS-9" });
@@ -146,5 +172,18 @@ describe("resolveRepo", () => {
     mkdirSync(sep);
     execFileSync("git", ["init", "-q", "-b", "main", "--separate-git-dir", gd, sep]);
     expect(real(resolveRepo(realGit, sep))).toBe(real(sep));
+  });
+  it("a linked worktree of a separate-git-dir repo gives the git dir (git keeps no pointer to the main checkout)", () => {
+    const sep = join(root, "sep"), gd = join(root, "sep-gitdir"), lw = join(root, "sep-wt");
+    mkdirSync(sep);
+    execFileSync("git", ["init", "-q", "-b", "main", "--separate-git-dir", gd, sep]);
+    for (const [k, v] of [["user.email", "t@t"], ["user.name", "t"]]) sh(sep, "config", k, v);
+    writeFileSync(join(sep, "f"), "f\n"); sh(sep, "add", "."); sh(sep, "commit", "-qm", "i");
+    sh(sep, "worktree", "add", "-q", "-b", "b", lw, "main");
+    expect(real(resolveRepo(realGit, lw))).toBe(real(gd));
+    expect(sh(resolveRepo(realGit, lw), "worktree", "list", "--porcelain")).toContain(real(lw));
+  });
+  it("a bare repo is a clear error", () => {
+    expect(() => resolveRepo(realGit, origin)).toThrow("dg salvage needs a main checkout, not a bare repo; pass --repo");
   });
 });

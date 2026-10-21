@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Git } from "../autonomous/gitx.ts";
-import { notSalvagedMessage, secretHits } from "./secrets.ts";
+import { notSalvagedMessage, secretHits, type SecretHit } from "./secrets.ts";
 
 export interface SalvageDeps { git: Git; repo: string; depotDir: string; now: () => Date; statSize: (path: string) => number }
 export type SalvageResult = { ok: true; steps: string[]; bundle: string | null } | { ok: false; steps: string[]; message: string };
@@ -34,19 +34,19 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     const merged = d.git(d.repo, ["branch", "--merged", "main", "--format=%(refname:short)"]).split("\n").includes(branch);
     if (!dirty && merged) return { ok: true, steps: ["nothing to salvage"], bundle: null };
 
-    // 3a. the push sends every commit on the branch: check the files those commits add or change
-    const toks = d.git(wt, ["diff", "--name-status", "--diff-filter=ACMR", "-z", `main...${branch}`]).split("\0").filter(Boolean);
-    const committed: string[] = [];
-    for (let i = 0; i < toks.length;) {
-      const copyOrRename = /^[RC]/.test(toks[i]);
-      committed.push(toks[i + (copyOrRename ? 2 : 1)]);
-      i += copyOrRename ? 3 : 2;
+    // 3a. the push sends every commit in main..branch: check each commit, not the net diff
+    const committedHits: SecretHit[] = [];
+    const seenHit = new Set<string>();
+    for (const sha of d.git(wt, ["rev-list", `main..${branch}`]).split("\n").filter(Boolean)) {
+      const paths = d.git(wt, ["diff-tree", "--root", "-r", "-c", "--no-commit-id", "--name-only", "-z", sha]).split("\0").filter(Boolean);
+      for (const p of paths) {
+        let size: number;
+        try { size = Number(d.git(wt, ["cat-file", "-s", `${sha}:${p}`]).trim()); } catch { continue; } // deleted in this commit
+        for (const h of secretHits([{ path: p, size }])) {
+          if (!seenHit.has(h.path)) { seenHit.add(h.path); committedHits.push(h); }
+        }
+      }
     }
-    const sizeOf = (p: string): number => {
-      const f = join(wt, p);
-      return existsSync(f) ? d.statSize(f) : Number(d.git(wt, ["cat-file", "-s", `${branch}:${p}`]).trim());
-    };
-    const committedHits = secretHits([...new Set(committed)].map((p) => ({ path: p, size: sizeOf(p) })));
     if (committedHits.length > 0) return fail(notSalvagedMessage(committedHits));
 
     // 3b. secret check before any commit
@@ -82,9 +82,17 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
   }
 }
 
-/** The main checkout: the parent of a `.git` common dir; for a separate git dir or a bare repo, the top level. */
+/**
+ * The main checkout: the parent of a `.git` common dir. A bare repo is an error. For a separate git dir there is no pointer
+ * back to the main checkout: from the main checkout itself use its top level; from a linked worktree use the git dir,
+ * which is what git lists as the main worktree and where the worktree and branch commands work.
+ */
 export function resolveRepo(git: Git, cwd: string): string {
   const common = git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim();
   if (basename(common) === ".git") return dirname(common);
-  return git(cwd, ["rev-parse", "--show-toplevel"]).trim();
+  const bare = git(common, ["rev-parse", "--is-bare-repository"]).trim() === "true";
+  if (bare) throw new Error("dg salvage needs a main checkout, not a bare repo; pass --repo");
+  const gitDir = git(cwd, ["rev-parse", "--path-format=absolute", "--git-dir"]).trim();
+  if (gitDir === common) return git(cwd, ["rev-parse", "--show-toplevel"]).trim();
+  return common;
 }
