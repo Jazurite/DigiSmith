@@ -119,7 +119,7 @@
   "phase": "claimed|building|review|merge-ready|merged|released",
   "phaseStartedAt": "&lt;ISO UTC&gt;",
   "attempt": 1,                          // grows by 1 when a review sends the work back
-  "runs": { "builder": "&lt;run id&gt;|null", "reviewer": "&lt;run id&gt;|null" } }</code></pre>
+  "runs": { "builder": "&lt;run id&gt;|null" } }</code></pre>
 <p>The scan creates the lock with <code>wx</code> as before, now with <code>phase: "claimed"</code>. Later changes rewrite the file atomically (temp file and rename); only <code>tick</code> does this. <code>released</code> is not stored: <code>dg autonomous release</code> removes the lock and writes one settled journal line with phase <code>released</code>. A corrupt lock keeps DGS-486's rule (ticket <code>?</code>, the scan stays busy) and the tick writes an attention note and no action.</p>
 </section>
 
@@ -129,8 +129,9 @@
 <div class="table-wrap"><table>
 <tr><th>Observation</th><th>Source</th><th>Value</th></tr>
 <tr><td><code>runs</code></td><td>DGS-581 run package (the reader code behind <code>dg run list/show/tail</code>, imported, no subprocess)</td><td>runs of this ticket created after the claim: id, role, <code>started</code> seen, <code>ended</code> seen, <code>review_ready</code> events (with <code>data.scope</code>), <code>merged</code> and <code>pushed</code> events, newest <code>phase</code> event</td></tr>
-<tr><td><code>verdicts</code></td><td><code>dg reviewer table --json</code></td><td>rows for this ticket: scope (task or ticket), result (clean or findings), the commit sha the verdict covers</td></tr>
-<tr><td><code>git</code></td><td>git in the ticket worktree and the main checkout</td><td>branch head sha, base sha (from <code>run.json</code>), head is an ancestor of <code>origin/main</code>, <code>origin/&lt;branch&gt;</code> equals head</td></tr>
+<tr><td><code>verdicts</code></td><td>the reviewer package's own readers (<code>packages/cli/src/reviewer/</code>: <code>readReviews</code> and the verdict-line parser behind <code>dg reviewer table</code>, imported, no subprocess; today the table command has no <code>--json</code> flag, so plan task 1 pins what is importable)</td><td>rows for this ticket: scope (task or ticket), result (clean or findings), the commit sha the verdict covers</td></tr>
+<tr><td><code>packs</code></td><td>the SDD workspace folder <code>reviews/ticket-final-r&lt;N&gt;/pack.md</code> (written by <code>buildPack</code> in <code>reviewer/pack.ts</code>)</td><td>ticket-scope packs: the <code>head:</code> and <code>base:</code> lines of each manifest. Checked on 2026-10-21: <code>pack.md</code> records <code>ticket:</code>, <code>type:</code>, <code>id:</code>, <code>round:</code>, <code>base:</code> and <code>head:</code>.</td></tr>
+<tr><td><code>git</code></td><td>git in the ticket worktree and the main checkout; the observer runs <code>git fetch origin main</code> first (the only network call; it changes no branch)</td><td>branch head sha, base sha (from <code>run.json</code>), head is an ancestor of <code>origin/main</code>, <code>origin/&lt;branch&gt;</code> equals head</td></tr>
 <tr><td><code>tracker</code></td><td>the DGS-486 tracker, one <code>getStatus</code></td><td>the ClickUp status string, nothing else</td></tr>
 <tr><td><code>herdr</code></td><td><code>herdr-ws</code> only: <code>agent list</code>, one pane read with <code>--format ansi</code></td><td>conductor present, its status, input box class; builder pane present and status</td></tr>
 </table></div>
@@ -143,7 +144,7 @@
 <div class="table-wrap"><table>
 <tr><th>From</th><th>To</th><th>Proof</th></tr>
 <tr><td>claimed</td><td>building</td><td>a builder run of this ticket, created after the claim, has a <code>started</code> event. Its id goes into <code>runs.builder</code>.</td></tr>
-<tr><td>building</td><td>review</td><td>that run has a <code>review_ready</code> event with <code>data.scope = "ticket"</code>, and the branch head differs from <code>base_sha</code> (a commit exists). A <code>review_ready</code> without <code>scope</code> counts as a task-level one and moves nothing.</td></tr>
+<tr><td>building</td><td>review</td><td><strong>Primary:</strong> a ticket-scope review pack, written by the SDD skill, exists for the <em>current</em> branch head sha (an artefact on disk), and the head differs from <code>base_sha</code>. A pack for an older head moves nothing. <strong>Fallback</strong> (only when plan task 1 finds that the pack does not record the head sha, so it cannot be matched to a head): the builder run has a <code>review_ready</code> event with <code>data.scope = "ticket"</code>, and the head differs from <code>base_sha</code>. A <code>review_ready</code> without <code>scope</code> counts as task-level and moves nothing.</td></tr>
 <tr><td>review</td><td>merge-ready</td><td>a verdict row with scope ticket, result clean, covering the <em>current</em> head sha. A new commit voids older verdicts.</td></tr>
 <tr><td>review</td><td>building (attempt + 1)</td><td>a ticket-scope row with result findings covering the current head. At attempt 3 it stops instead: attention <code>failed</code>, cause <code>attempts-exhausted</code>, no action. The cap is a constant, not a budget (budgets are DGS-583).</td></tr>
 <tr><td>merge-ready</td><td>merged</td><td>git shows the head as an ancestor of <code>origin/main</code>. A <code>merged</code> or <code>pushed</code> event alone is not enough; if the event exists and git says no (or git is unreadable) the tick writes attention <code>unknown</code>, cause <code>proof-disagree</code>, and moves nothing.</td></tr>
@@ -162,10 +163,8 @@
 
 <section id="s6">
 <h2>6. Actions and the conductor</h2>
-<p>The controller prompts only the conductor (found through <code>~/.digismith-depot/conductors.json</code>, DGS-486 section 6), only through <code>herdr-ws</code>, one bounded order per action. The text comes from fixed templates and holds only the validated key (<code>^[A-Z]+-\d+$</code>) and the order name:</p>
+<p>The build order is the DGS-486 claim prompt; the controller adds no second one (per-task orders are later). The review is dispatched by the conductor itself once the ticket pack exists, so there is no review order either: the review phase waits for the verdict. The controller prompts only the conductor (found through <code>~/.digismith-depot/conductors.json</code>, DGS-486 section 6), only through <code>herdr-ws</code>, one bounded order per action. The text comes from fixed templates and holds only the validated key (<code>^[A-Z]+-\d+$</code>) and the order name:</p>
 <ul>
-<li><code>DGS-123: build per the runbook</code> (v1: the whole ticket; per-task orders are later)</li>
-<li><code>DGS-123: run the ticket Reviewer on the branch head</code></li>
 <li><code>DGS-123: fix the review findings, attempt 2</code></li>
 <li><code>DGS-123: merge per hooks 01-03, then release merged</code></li>
 <li><code>DGS-123: restart the builder, its pane is gone</code> (when the builder pane is gone and the run has no <code>ended</code> event)</li>
@@ -180,7 +179,7 @@
  "ticket":"DGS-123","phase":"review","attempt":1,"action":"order-review","try":1}
 {"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:review:1:order-review","status":"settled",
  "result":"succeeded|uncertain|retryable|permanent","note":"&lt;short, no ticket text&gt;"}</code></pre>
-<p>Key: <code>&lt;KEY&gt;:&lt;phase&gt;:&lt;attempt&gt;:&lt;action&gt;</code>. Actions: <code>claim</code> (written by the DGS-486 scan), <code>move-to-&lt;phase&gt;</code>, <code>status-write</code>, <code>order-build</code>, <code>order-review</code>, <code>order-fix</code>, <code>order-merge</code>, <code>order-restart</code>, <code>phase-marker</code>, <code>released</code>.</p>
+<p>Key: <code>&lt;KEY&gt;:&lt;phase&gt;:&lt;attempt&gt;:&lt;action&gt;</code>. Actions: <code>claim</code> (written by the DGS-486 scan), <code>move-to-&lt;phase&gt;</code>, <code>status-write</code>, <code>order-fix</code>, <code>order-merge</code>, <code>order-restart</code>, <code>phase-marker</code>, <code>released</code>.</p>
 <p><strong>Rules.</strong></p>
 <ul>
 <li>A <code>planned</code> line is written <em>before</em> the side effect; a <code>settled</code> line right after it.</li>
@@ -193,14 +192,14 @@
 
 <section id="s8">
 <h2>8. Reconcile (step 0)</h2>
-<p>Every tick starts here, before any new observation drives a decision. It reads the open lines (<code>planned</code> with no <code>settled</code>, and <code>uncertain</code> ones) and checks each against the real world:</p>
+<p>Every tick starts here, before the controller decides anything. It uses the same read-only observations as the rest of the tick (collected first, used for step 0 before <code>advanceTicket</code> runs). It reads the open lines (<code>planned</code> with no <code>settled</code>, and <code>uncertain</code> ones) and checks each against the real world:</p>
 <div class="table-wrap"><table>
 <tr><th>Open action</th><th>Check</th><th>Result</th></tr>
 <tr><td><code>claim</code></td><td>the lock names this ticket; ClickUp reads <code>in progress</code></td><td>both: <code>succeeded</code>. No lock: <code>permanent</code> (the scan already cleaned up).</td></tr>
 <tr><td><code>move-to-X</code></td><td>the lock's phase is X</td><td>yes: <code>succeeded</code>. No, and the proof still holds: <code>retryable</code> (the move is a local file write, safe to run twice).</td></tr>
 <tr><td><code>status-write</code></td><td>ClickUp reads the target status</td><td>yes: <code>succeeded</code>; no: <code>retryable</code> (a status write is idempotent).</td></tr>
 <tr><td><code>order-merge</code></td><td>git: head is an ancestor of <code>origin/main</code></td><td>yes: <code>succeeded</code>. No: <code>uncertain</code>, attention <code>unknown</code> cause <code>merge-unconfirmed</code>. <strong>Never sent again.</strong></td></tr>
-<tr><td><code>order-build / review / fix</code></td><td>the proof of the next phase exists (run event, verdict row)</td><td>yes: <code>succeeded</code>. No: <code>uncertain</code>, attention <code>unknown</code>. The send is not repeated; pane text is no proof that it arrived.</td></tr>
+<tr><td><code>order-fix</code></td><td>git: the head differs from the head recorded when the order was planned</td><td>yes: <code>succeeded</code>. No: <code>uncertain</code>, attention <code>unknown</code>. The send is not repeated; pane text is no proof that it arrived.</td></tr>
 <tr><td><code>order-restart</code></td><td>herdr lists the builder pane again</td><td>yes: <code>succeeded</code>; no: <code>uncertain</code>.</td></tr>
 <tr><td><code>phase-marker</code></td><td>the newest <code>phase</code> event of the run equals the target</td><td>yes: <code>succeeded</code>; no: <code>retryable</code> (the event is append only, a second one with the same value is harmless).</td></tr>
 </table></div>
@@ -242,6 +241,7 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <li><strong>Journal</strong> (fake journal folder): planned-then-settled order; append only (file bytes only grow); a bad line is skipped; a key that is open or <code>uncertain</code> is never planned again; <code>retryable</code> allows try 2 and 3, then <code>permanent</code>; two writers in child processes keep every line whole.</li>
 <li><strong>Reconcile</strong>, one test per row of section 8 with fake git, ClickUp and herdr.</li>
 <li><strong>Kill during a merge</strong>: a child process runs a tick, writes the <code>order-merge</code> planned line and is killed before the settled line. A new tick with fake git showing the head on <code>origin/main</code> settles <code>succeeded</code> and sends no second prompt (the recording herdr stub counts one prompt in all). With git not showing it, the line settles <code>uncertain</code>, an attention note appears, and the stub still counts one prompt.</li>
+<li><strong>Review pack proof</strong>: a pack for the current head moves building to review; a pack for an old head does not; the fallback event path is tested only if task 1 pins that the pack has no sha.</li>
 <li><strong>Input box</strong>: <code>classifyInputBox</code> on fixtures (empty, grey suggestion, typed text, garbage); a tick with <code>typed</code> or a working conductor sends nothing and writes no note; <code>unknown</code> sends nothing and writes one note.</li>
 <li><strong>One action per tick</strong> per phase, and a fake clock for the timestamps (<code>now()</code> injected; the controller has no timers of its own).</li>
 <li><strong>Whole run</strong>: a scripted ticket through claimed, building, review (one findings round), merge-ready, merged, released with stub observations, checking the journal, the lock file, the phase events written and the order texts.</li>
@@ -262,10 +262,11 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <li><strong>Build starts only on the Maestro's order, after DGS-581 and DGS-486 are merged.</strong> DGS-572 (reviewer table reads r2+ lines) is not required: until it is merged the review phase waits with a note, which is the designed unknown behaviour.</li>
 <li>DGS-581: the <code>phase</code> event type, plus run package reader and writer functions that can be imported. Plan task 1 checks the exports and records them. If a function is missing, the plan task calls the CLI through an injected runner instead (still no proof from text).</li>
 <li>DGS-583: the attention line shape (followed here). Plan task 1 uses its shared module if it is on main.</li>
-<li><strong>Open point 1:</strong> proof for "building to review" needs <code>data.scope</code> on <code>review_ready</code>. The conductor runbook text (a block in report.md for the Maestro to apply, as DGS-581 does) must say: <code>dg run event &lt;run&gt; review_ready --data '{"scope":"ticket"}'</code> for the whole-ticket review and no scope for a task review. Without it the building phase never ends, and DGS-583 reports it as stalled.</li>
-<li><strong>Open point 2:</strong> the exact JSON of <code>dg reviewer table --json</code> (columns for scope, result and sha). Plan task 1 probes it read only and pins the fields; the spec does not guess.</li>
+<li><strong>Open point 1 (settled at checkpoint 1):</strong> the primary proof for "building to review" is the ticket-scope review pack for the current head. The code on main shows that <code>pack.md</code> records <code>head:</code> (<code>buildPack</code>), so the fallback should not be needed. Plan task 1 confirms it against a real pack and pins where the SDD workspace folder sits for a ticket. If the pack does not match, the fallback applies and the conductor runbook text (a block in report.md for the Maestro to apply) must say: <code>dg run event &lt;run&gt; review_ready --data '{"scope":"ticket"}'</code> for the whole-ticket review.</li>
+<li><strong>Open point 2:</strong> the exact JSON of <code>dg reviewer table --json</code> (columns for scope, result and sha) and the pack folder layout. Plan task 1 probes them read only and pins the fields; the spec does not guess.</li>
+<li><strong>Open point 4:</strong> lock read order and the <code>review_ready</code> scope: plan task 1 probes the registry and the scan code (read only) to confirm that reading <code>lock.json</code> before the work rule breaks no DGS-486 test, and that DGS-581's <code>dg run event</code> accepts <code>data.scope</code> on <code>review_ready</code>.</li>
 <li><strong>Open point 3:</strong> the input-box fixtures come from a read-only probe of real panes in plan task 1; the classifier is written against them.</li>
-<li><strong>Decision for the Maestro to confirm (technical, made here):</strong> <code>autonomous-scan</code> runs every 5 minutes instead of 60 (section 2). It touches DGS-486's registry entry and its test.</li>
+<li><strong>Settled at checkpoint 1:</strong> <code>autonomous-scan</code> runs every 5 minutes instead of 60 (section 2). It touches DGS-486's registry entry and its test.</li>
 </ul>
 </section>
 
