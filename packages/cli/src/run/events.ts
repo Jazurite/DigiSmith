@@ -109,15 +109,27 @@ function tryBreak(lockDir: string): void {
   }
 }
 
+// Removes the directory at lockDir only when it is still the one we made (same dev and ino).
+function removeIfSame(lockDir: string, ours: fs.Stats | null): void {
+  try {
+    const now = fs.statSync(lockDir);
+    if (ours !== null && now.dev === ours.dev && now.ino === ours.ino) fs.rmSync(lockDir, { recursive: true, force: true });
+  } catch {
+    /* gone already */
+  }
+}
+
 // Returns the owner content ("<pid>:<token>") on success, null on timeout.
 function acquire(lockDir: string, waitMs: number): string | null {
   const deadline = Date.now() + waitMs;
   sweep(lockDir);
   for (;;) {
     let made = false;
+    let ours: fs.Stats | null = null;
     try {
       fs.mkdirSync(lockDir);
       made = true;
+      ours = fs.statSync(lockDir);
       const owner = `${process.pid}:${randomBytes(8).toString("hex")}`;
       _testHooks.beforeOwnerWrite?.();
       fs.writeFileSync(path.join(lockDir, "owner"), owner);
@@ -125,7 +137,7 @@ function acquire(lockDir: string, waitMs: number): string | null {
     } catch (e) {
       const code = (e as NodeJS.ErrnoException).code;
       if (made && code !== "ENOENT") {
-        fs.rmSync(lockDir, { recursive: true, force: true });
+        removeIfSame(lockDir, ours);
         throw e;
       }
       // ENOENT on the owner write: a breaker moved our fresh lock aside; it puts it back or drops it. Loop again.

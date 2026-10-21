@@ -179,6 +179,18 @@ describe("stale lock breaking", () => {
     expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/ENOSPC/);
     expect(fs.existsSync(path.join(dir, "lock"))).toBe(false);
   });
+  it("leaves another waiter's lock alone when its own owner write fails", () => {
+    const lock = path.join(dir, "lock");
+    _testHooks.beforeOwnerWrite = () => {
+      // a breaker moved our lock aside and a second waiter made a new one
+      fs.renameSync(lock, path.join(dir, "elsewhere"));
+      fs.mkdirSync(lock);
+      fs.writeFileSync(path.join(lock, "owner"), `${process.pid}:other`);
+      throw new Error("ENOSPC");
+    };
+    expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/ENOSPC/);
+    expect(fs.readFileSync(path.join(lock, "owner"), "utf8")).toBe(`${process.pid}:other`);
+  });
   it("aborts with lock lost, writing nothing, when the owner token changed before the write", () => {
     _testHooks.beforeOwnerCheck = () => fs.writeFileSync(path.join(dir, "lock", "owner"), "someone-else");
     expect(() => appendEvent(dir, "r1", "tool", {}, 300)).toThrow(/lock lost/);
