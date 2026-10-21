@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autonomous jobs run the built CLI — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Autonomous jobs run the built CLI — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-22</span>
+    <span>Ticket: <strong>DGS-587</strong></span>
+    <span>Commit range: <code>7e32833..90d76de</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The Nexus jobs autonomous-scan and autonomous-report now run the built CLI of the main checkout, and the CLI source runs under type stripping. The registry points <code>DG</code> at <code>&lt;MAIN_CHECKOUT&gt;/packages/cli/dist/index.js</code> with no strip-types flag. Parameter properties became plain fields. A smoke test strips every source file under <code>packages/cli/src</code> and runs <code>--help</code> and <code>autonomous --help</code> under strip-types. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (3 tasks, 2 dispatched to fresh implementer subagents, the third a verification-only task) → a final whole-branch review, plus 1 fix wave before merge. If <code>dist</code> is missing, the job fails at once with node's <code>Error: Cannot find module '&lt;MAIN_CHECKOUT&gt;/packages/cli/dist/index.js'</code>.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Registry runs the built CLI</h4><p><code>DG</code> is the main checkout <code>dist/index.js</code>; the two autonomous jobs keep their names and args.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Plain fields instead of parameter properties, with a smoke test</h4><p><code>ClickUpLoTracker</code> and <code>FakeTracker</code> keep their constructor signatures; the smoke test fails when a source file cannot be type-stripped.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Check the built CLI and the whole suite</h4><p>Build exits 0, built <code>autonomous --help</code> exits 0, a missing dist prints <code>Cannot find module</code>, full suite passes.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code> in role mode: fresh implementer subagent per task. A Reviewer started by the conductor reviewed the whole ticket (task packs skipped for this 3-task fix).</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Registry runs the built CLI</td><td>Registry test first, then <code>registry.ts</code> change</td><td>Approved, clean (ticket review)</td><td>—</td></tr>
+    <tr><td>Task 2: Plain fields instead of parameter properties, with a smoke test</td><td>Smoke test first, then plain fields</td><td>Approved after 1 fix round (final-review F1)</td><td>—</td></tr>
+    <tr><td>Task 3: Check the built CLI and the whole suite</td><td>Verification only, no commit</td><td>Approved, clean (ticket review)</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes — 0 Critical/Important, 1 Minor, fixed in one wave; the scoped re-review was clean. Full table: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>F1: the smoke test loads only the import graph of <code>index.ts</code>, so test and test-util files could bring back syntax that type stripping refuses.</td><td>Fixed (<code>90d76de</code>): the smoke test runs <code>stripTypeScriptTypes</code> on every <code>.ts</code> file under <code>packages/cli/src</code>. <code>erasableSyntaxOnly</code> was not used: <code>tsconfig.build.json</code> excludes test files.</td></tr>
+  </table>
+  </div>
+  <div class="callout"><strong>Follow-up (parked, head unchanged):</strong> the smoke test builds the entry path with <code>new URL(...).pathname</code>; <code>fileURLToPath</code> is safer for paths with spaces or encoded characters.</div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">84fa0cb</span> fix(nexus): run the built CLI of the main checkout in the autonomous jobs</li>
+    <li><span class="sha">cdee1f0</span> fix(cli): use plain fields so the source runs under type stripping</li>
+    <li><span class="sha">90d76de</span> test(cli): strip every source file in the type-stripping smoke test</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-587—autonomous-jobs-dist/report.html</footer>
+
+</body>
+</html>
