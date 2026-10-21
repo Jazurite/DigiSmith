@@ -18,7 +18,7 @@ interface Field { name?: string; value?: unknown; type_config?: { options?: Fiel
 
 function isDone(t: ClickUpTask): boolean {
   const name = t.status?.status?.toLowerCase();
-  return name === "done" || name === "closed" || t.status?.type === "closed";
+  return name === "done" || name === "closed";
 }
 
 function signOff(t: ClickUpTask): "Auto" | "Jack" | null {
@@ -31,20 +31,24 @@ function signOff(t: ClickUpTask): "Auto" | "Jack" | null {
 /** Tracker over the ClickUp API for one space. Reads only, except setStatus and comment. */
 export class ClickUpLoTracker implements Tracker {
   private milestones: Promise<Map<string, string>> | null = null;
+  private statuses: Promise<Set<string>> | null = null;
 
   constructor(private readonly client: ClickUpClient, private readonly spaceId: string) {}
 
-  /** True when any list in the space has the status (the status is not in every list). */
+  /** True when any list in the space has the status (the status is not in every list). Lists are read once per tracker. */
   async hasStatus(name: string): Promise<boolean> {
-    const want = name.toLowerCase();
+    this.statuses ??= this.loadStatuses().catch((err) => { this.statuses = null; throw err; });
+    return (await this.statuses).has(name.toLowerCase());
+  }
+
+  private async loadStatuses(): Promise<Set<string>> {
     const folders = await this.client.getSpaceFolders(this.spaceId);
     const folderless = await this.client.getFolderlessLists(this.spaceId);
-    const ids = [...folders.flatMap((f) => f.lists ?? []), ...folderless].map((l) => l.id);
-    for (const id of ids) {
-      const statuses = await this.client.getListStatuses(id);
-      if (statuses.some((s) => s.toLowerCase() === want)) return true;
+    const all = new Set<string>();
+    for (const l of [...folders.flatMap((f) => f.lists ?? []), ...folderless]) {
+      for (const s of await this.client.getListStatuses(l.id)) all.add(s.toLowerCase());
     }
-    return false;
+    return all;
   }
 
   async listToDo(): Promise<LoTask[]> {
@@ -78,7 +82,7 @@ export class ClickUpLoTracker implements Tracker {
   private loadMilestones(): Promise<Map<string, string>> {
     this.milestones ??= this.client.getAllListTasks(IMPERIUM_LIST_ID).then((tasks) => new Map(
       tasks.filter((t) => t.custom_item_id === TYPE_MILESTONE || t.custom_id === V11_KEY).map((t) => [t.id, t.name]),
-    ));
+    )).catch((err) => { this.milestones = null; throw err; });
     return this.milestones;
   }
 
@@ -95,7 +99,14 @@ export class ClickUpLoTracker implements Tracker {
     const out: LoTask["blockers"] = [];
     for (const dep of (t.dependencies ?? []) as Dependency[]) {
       if (dep.task_id !== t.id || !dep.depends_on) continue;
-      const b = known.get(dep.depends_on) ?? await this.client.getTaskByRef(dep.depends_on);
+      let b = known.get(dep.depends_on);
+      if (!b) {
+        try { b = await this.client.getTaskByRef(dep.depends_on); } catch {
+          // A deleted or hidden blocker: keep the ticket blocked instead of failing the scan.
+          out.push({ key: `${dep.depends_on} (unreadable)`, done: false });
+          continue;
+        }
+      }
       out.push({ key: b.custom_id ?? b.id, done: isDone(b) });
     }
     return out;

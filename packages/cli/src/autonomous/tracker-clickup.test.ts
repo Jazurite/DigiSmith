@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ClickUpClient } from "@digismith/clickup-client";
+import { ClickUpClient } from "@digismith/clickup-client";
 import { ClickUpLoTracker, IMPERIUM_LIST_ID } from "./tracker-clickup.ts";
 
 // Fixtures shaped like probe.md (made-up ids, no secrets).
@@ -163,6 +163,62 @@ describe("ClickUpLoTracker.listToDo", () => {
     const out = await new ClickUpLoTracker(client, SPACE).listToDo();
     expect(out.map((t) => t.id)).toEqual(["p230"]);
   });
+
+  it("finds a to do ticket on page 3 through the real client's paging (100 per page, page cap)", async () => {
+    const search = Array.from({ length: 250 }, (_, i) =>
+      task({ id: `p${i}`, status: { status: i === 230 ? "to do" : "backlog", type: "custom" } }));
+    const pages: number[] = [];
+    // The real ClickUpClient with only its HTTP layer replaced: searchTeamTasks runs unchanged.
+    class OfflineClient extends ClickUpClient {
+      override async get<R>(path: string, opts?: { params?: Record<string, unknown> }): Promise<R> {
+        if (path.startsWith("/team/")) {
+          const page = Number(opts?.params?.page);
+          pages.push(page);
+          return { tasks: search.slice(page * 100, page * 100 + 100) } as R;
+        }
+        if (path.startsWith("/task/")) return { ...search.find((t) => `/task/${t.id}` === path), attachments: [] } as R;
+        if (path.startsWith("/list/")) return { tasks: [] } as R;
+        throw new Error(`unexpected GET ${path}`);
+      }
+    }
+    const client = new OfflineClient({ CLICKUP_TEAM_ID: "team-1", CLICKUP_API_TOKEN: "not-a-token" });
+    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
+    expect(out.map((t) => t.id)).toEqual(["p230"]);
+    expect(pages).toEqual([0, 1, 2]);
+  });
+
+  it("does not keep a failed milestone read cached", async () => {
+    const { client, calls } = fakeClient({ search: [task({ id: "a" })] });
+    const real = client.getAllListTasks.bind(client);
+    let fail = true;
+    (client as unknown as { getAllListTasks: typeof real }).getAllListTasks = async (id: string) => {
+      if (fail) { fail = false; throw new Error("network down"); }
+      return real(id);
+    };
+    const tr = new ClickUpLoTracker(client, SPACE);
+    await expect(tr.listToDo()).rejects.toThrow("network down");
+    const out = await tr.listToDo();
+    expect(out.map((t) => t.id)).toEqual(["a"]);
+    expect(calls.filter((c) => c.startsWith("getAllListTasks"))).toHaveLength(1);
+  });
+
+  it("keeps a discarded blocker blocking (done only for status name done or closed)", async () => {
+    const t = task({ id: "t5", dependencies: [{ task_id: "t5", depends_on: "b-disc" }] });
+    const { client } = fakeClient({ search: [t], full: {
+      "b-disc": task({ id: "b-disc", custom_id: "DGS-605", status: { status: "discarded", type: "closed" } }),
+    } });
+    const [out] = await new ClickUpLoTracker(client, SPACE).listToDo();
+    expect(out.blockers).toEqual([{ key: "DGS-605", done: false }]);
+  });
+
+  it("maps an unreadable blocker to an open blocker and still returns the other tickets", async () => {
+    const bad = task({ id: "t6", dependencies: [{ task_id: "t6", depends_on: "gone" }] });
+    const good = task({ id: "t7" });
+    const { client } = fakeClient({ search: [bad, good] });
+    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
+    expect(out.map((t) => t.id)).toEqual(["t6", "t7"]);
+    expect(out[0].blockers).toEqual([{ key: "gone (unreadable)", done: false }]);
+  });
 });
 
 describe("ClickUpLoTracker writes and reads", () => {
@@ -172,6 +228,17 @@ describe("ClickUpLoTracker writes and reads", () => {
     const tr = new ClickUpLoTracker(client, SPACE);
     expect(await tr.hasStatus("to do")).toBe(true);
     expect(await tr.hasStatus("In Progress")).toBe(true);
+  });
+
+  it("hasStatus reads the lists once per tracker", async () => {
+    const { client, calls } = fakeClient({ search: [], folderLists: ["l1"], folderless: ["l3"],
+      lists: { l1: ["backlog"], l3: ["done"] } });
+    const tr = new ClickUpLoTracker(client, SPACE);
+    expect(await tr.hasStatus("to do")).toBe(false);
+    const after = calls.length;
+    expect(await tr.hasStatus("To Do")).toBe(false);
+    expect(await tr.hasStatus("done")).toBe(true);
+    expect(calls.length).toBe(after);
   });
 
   it("hasStatus is false when no list in the space has it", async () => {
