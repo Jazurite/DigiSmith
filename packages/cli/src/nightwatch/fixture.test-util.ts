@@ -21,7 +21,7 @@ export function makeDepot(): Depot {
   const autonomous = join(dir, "autonomous");
   mkdirSync(autonomous, { recursive: true });
   const env = { DIGISMITH_DEPOT_DIR: dir, AUTONOMOUS_DIR: autonomous } as NodeJS.ProcessEnv;
-  const jsonl = (file: string, lines: object[]): void => writeFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  const jsonl = (file: string, lines: object[]): void => writeFileSync(file, lines.map((l) => `${JSON.stringify(l)}\n`).join(""));
   return {
     dir, env, autonomous,
     writeRun(r) {
@@ -37,6 +37,7 @@ export function makeDepot(): Depot {
     },
     writeEvents(ticket, run, lines) {
       const d = join(dir, "runs", ticket, run);
+      mkdirSync(d, { recursive: true });
       jsonl(join(d, "events.jsonl"), lines.map((l, i) => ({ schema: "nightwatch-event/v1", seq: i + 1, ts: l.ts, run, type: l.type, data: l.data ?? {} })));
     },
     writeJournal: (lines) => jsonl(join(autonomous, "journal.jsonl"), lines),

@@ -80,10 +80,33 @@ describe("pipelineOf", () => {
   });
 });
 
+describe("pipelineOf more states", () => {
+  const started = ev(1, "started", "2026-10-22T01:01:00.000Z");
+  it("blocked and stalled keep the furthest step current", () => {
+    for (const st of ["blocked", "stalled"] as const) {
+      const p = pipelineOf(run(), [started], null, st);
+      expect(p.find((s) => s.state === "current")?.step).toBe("building");
+    }
+  });
+  it("review reached makes building done and review current", () => {
+    const p = pipelineOf(run(), [started, ev(2, "review_ready", "2026-10-22T01:10:00.000Z")], null, "healthy");
+    expect(p.map((s) => s.state)).toEqual(["waiting", "done", "done", "current", "waiting", "waiting"]);
+  });
+  it("merged without pushed leaves pushed waiting", () => {
+    const p = pipelineOf(run(), [started, ev(2, "merged", "2026-10-22T01:30:00.000Z")], null, "healthy");
+    expect(p.find((s) => s.step === "merged")?.state).toBe("current");
+    expect(p.find((s) => s.step === "pushed")?.state).toBe("waiting");
+  });
+});
+
 describe("plan parsing", () => {
   const plan = "# P\n### Task 1: Schema\ntext\n### Task 2: Reader\n### Task 3: Route\n";
   it("reads the task headings", () => {
     expect(parsePlanTasks(plan)).toEqual([{ n: 1, title: "Schema" }, { n: 2, title: "Reader" }, { n: 3, title: "Route" }]);
+  });
+  it("reads ledger lines with a '- ' prefix", () => {
+    const t = parsePlanTasks(plan);
+    expect(ledgerTasks("- Task 1: complete\n- Task 2: fix round 1/5\n", t).map((x) => x.state)).toEqual(["done", "fix-round", "waiting"]);
   });
   it("reads the ledger: complete, fix round, waiting", () => {
     const ledger = "# SDD ledger — plan: x\nReview mode: hand\nTask 1: complete\nTask 2: fix round 1/5\nTask 2: fix round 2/5\n";
@@ -111,5 +134,17 @@ describe("phaseTable", () => {
     expect(by.released.count).toBe(3);
     expect(by.lost).toEqual({ phase: "lost", count: 1, oldestSince: "2026-10-22T00:00:00.000Z" });
     expect(by.claimed.count).toBe(0);
+  });
+});
+
+describe("phaseTable window", () => {
+  it("ignores a release older than 7 days", () => {
+    const releases = [
+      { ts: "2026-10-10T01:00:00.000Z", tsUtc7: "", kind: "release" as const, ticket: "A-1", result: "merged" },
+      { ts: "2026-10-21T01:00:00.000Z", tsUtc7: "", kind: "release" as const, ticket: "A-2", result: "merged" },
+    ];
+    const rows = phaseTable({ lock: null, releases, lostOpen: [], nowMs: T0 });
+    expect(rows.find((r) => r.phase === "released")?.count).toBe(1);
+    expect(rows.find((r) => r.phase === "merged")?.count).toBe(1);
   });
 });

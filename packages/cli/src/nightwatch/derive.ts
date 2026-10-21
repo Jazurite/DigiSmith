@@ -93,9 +93,10 @@ export function ledgerTasks(ledger: string, tasks: { n: number; title: string }[
   const done = new Set<number>();
   const rounds = new Map<number, number>();
   for (const line of ledger.split(/\r?\n/)) {
-    const c = /^Task (\d+): complete\b/.exec(line.trim().replace(/^- /, ""));
+    const text = line.trim().replace(/^- /, "");
+    const c = /^Task (\d+): complete\b/.exec(text);
     if (c) done.add(Number(c[1]));
-    const f = /^Task (\d+): fix round (\d+)\/\d+/.exec(line.trim().replace(/^- /, ""));
+    const f = /^Task (\d+): fix round (\d+)\/\d+/.exec(text);
     if (f) rounds.set(Number(f[1]), Math.max(rounds.get(Number(f[1])) ?? 0, Number(f[2])));
   }
   return tasks.map((t) => {
@@ -109,8 +110,17 @@ const WINDOW_MS = 7 * 24 * 3600_000;
 const LOCK_PHASES: TicketPhase[] = ["claimed", "building", "review", "merge-ready"];
 
 export function phaseTable(a: { lock: Lock | null; releases: Event[]; lostOpen: { since: string }[]; nowMs: number }): PhaseRow[] {
-  const rows: PhaseRow[] = (["claimed", "building", "review", "merge-ready", "merged", "released", "lost"] as TicketPhase[]).map((phase) => ({ phase, count: 0, oldestSince: null }));
-  const row = (p: TicketPhase): PhaseRow => rows.find((r) => r.phase === p) as PhaseRow;
+  const by: Record<TicketPhase, PhaseRow> = {
+    claimed: { phase: "claimed", count: 0, oldestSince: null },
+    building: { phase: "building", count: 0, oldestSince: null },
+    review: { phase: "review", count: 0, oldestSince: null },
+    "merge-ready": { phase: "merge-ready", count: 0, oldestSince: null },
+    merged: { phase: "merged", count: 0, oldestSince: null },
+    released: { phase: "released", count: 0, oldestSince: null },
+    lost: { phase: "lost", count: 0, oldestSince: null },
+  };
+  const rows: PhaseRow[] = Object.values(by);
+  const row = (p: TicketPhase): PhaseRow => by[p];
   // The scan lock holds one ticket at a time, so these four phases hold at most one ticket.
   const lp = a.lock?.phase;
   if (a.lock !== null && lp !== undefined && (LOCK_PHASES as string[]).includes(lp)) {
