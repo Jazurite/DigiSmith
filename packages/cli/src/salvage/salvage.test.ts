@@ -59,6 +59,33 @@ describe("salvage", () => {
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
   });
+  it("a staged new .env stops everything", () => {
+    writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", ".env");
+    const before = sh(wt, "rev-parse", "HEAD");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: .env");
+    expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
+  it("a modified tracked file with a secret name stops everything", () => {
+    writeFileSync(join(repo, "api-token.json"), "{}\n"); sh(repo, "add", "."); sh(repo, "commit", "-qm", "add token file");
+    sh(wt, "merge", "-q", "main");
+    writeFileSync(join(wt, "api-token.json"), "{\"a\":1}\n");
+    const before = sh(wt, "rev-parse", "HEAD");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: api-token.json");
+    expect(sh(wt, "rev-parse", "HEAD")).toBe(before);
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
+  it("a modified ordinary tracked file does not stop and lands in the WIP commit", () => {
+    writeFileSync(join(wt, "a.txt"), "changed\n");
+    expect(salvage(mk(), { ticket: "DGS-9" }).ok).toBe(true);
+    expect(sh(wt, "log", "-1", "--format=%s")).toBe("wip(dgs-9): salvage before teardown");
+    expect(sh(wt, "show", "HEAD:a.txt")).toBe("changed");
+    expect(rescue()).toContain("rescue/DGS-9");
+  });
   it("a file over 5 MB stops everything", () => {
     writeFileSync(join(wt, "big.bin"), Buffer.alloc(5 * 1024 * 1024 + 1));
     const r = salvage(mk(), { ticket: "DGS-9" });
