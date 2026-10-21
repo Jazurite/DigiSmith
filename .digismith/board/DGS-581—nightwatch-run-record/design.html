@@ -117,7 +117,7 @@
 <p>One JSON object per line: <code>{"schema":"nightwatch-event/v1","seq":1,"ts":"&lt;ISO UTC&gt;","run":"&lt;run-id&gt;","type":"started","data":{}}</code>.</p>
 <ul>
   <li><strong>Types:</strong> <code>started</code>, <code>blocked</code>, <code>tool</code>, <code>turn_end</code>, <code>ended</code> (hooks); <code>review_ready</code>, <code>merged</code>, <code>pushed</code>, <code>lost</code> (<code>dg run event</code>). The set is closed; an unknown type is refused by the CLI. <code>dispatched</code> is not an event: <code>created_at</code> in run.json is the dispatch time.</li>
-  <li><strong>seq:</strong> starts at 1, grows by 1, no gaps in the file. A writer takes a lock by <code>mkdir &lt;run-dir&gt;/lock</code> (atomic on one machine), reads the <code>seq</code> counter file, writes the next number, appends the line with one <code>appendFileSync</code>, then removes the lock. A lock older than 2 s is treated as stale and broken. The hook waits at most 150 ms for the lock and then drops its event and logs (a missing event is better than a slow session). <code>dg run event</code> waits up to 2 s and then exits non-zero.</li>
+  <li><strong>seq:</strong> starts at 1, grows by 1, no gaps in the file. A writer takes a lock by <code>mkdir &lt;run-dir&gt;/lock</code> (atomic on one machine), reads the <code>seq</code> counter file, writes the next number, appends the line with one <code>appendFileSync</code>, then removes the lock. A lock older than 1 s is treated as stale and broken (a holder keeps it for a few milliseconds). Wait limits: the <code>PostToolUse</code> hook (<code>tool</code>, the most frequent event) waits at most 150 ms, then drops its event and logs it, because a missing <code>tool</code> event is better than a slow session. Every other writer waits up to 2 s: the <code>SessionStart</code>, <code>Notification</code>, <code>Stop</code> and <code>SessionEnd</code> hooks and <code>dg run event</code>. So <code>blocked</code>, <code>started</code>, <code>turn_end</code> and <code>ended</code> are not dropped under normal contention. If even the 2 s wait fails, a hook logs the error and exits 0; <code>dg run event</code> exits non-zero.</li>
   <li>If the counter file is missing or unreadable, the writer counts the lines of <code>events.jsonl</code> instead.</li>
   <li>Append only. No code in this ticket rewrites or truncates either file.</li>
 </ul>
@@ -126,6 +126,9 @@
 <section id="hooks">
 <h2>Hooks</h2>
 <p>New entries in <code>hooks/hooks.json</code> call one script, <code>scripts/run-events/hook-cli.ts &lt;kind&gt;</code>. It imports only the small event writer (<code>node:fs</code> and <code>node:path</code> only, no yargs), so it starts fast. The existing hooks stay as they are; the new commands are added next to them.</p>
+<p>Each new command tests the variable in the shell before node starts, so a session without <code>DIGISMITH_RUN_ID</code> starts no node process at all:</p>
+<pre><code>[ -z "$DIGISMITH_RUN_ID" ] || node --experimental-strip-types "${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts" tool</code></pre>
+<p>The shell test returns 0 when the variable is empty or unset, so the command still exits 0. The script keeps its own check as a second guard.</p>
 <div class="table-wrap"><table>
 <tr><th>Hook</th><th>Type</th><th>data (ids, names, counts only)</th></tr>
 <tr><td>SessionStart</td><td><code>started</code></td><td><code>{source}</code> (startup, resume, clear), <code>session_id</code></td></tr>
@@ -136,7 +139,7 @@
 </table></div>
 <p>Rules (decision 6):</p>
 <ul>
-  <li>No <code>DIGISMITH_RUN_ID</code> in the environment: return at once, write nothing. Also nothing when the run directory has no <code>run.json</code> (a wrong id never creates a directory).</li>
+  <li>No <code>DIGISMITH_RUN_ID</code> in the environment: the shell test in the command stops first; if the script is started anyway, it returns at once and writes nothing. Also nothing when the run directory has no <code>run.json</code> (a wrong id never creates a directory).</li>
   <li>The whole body is in one <code>try/catch</code>; exit code is always 0; no output on stdout; stdin that is not JSON still writes the event with empty data. Hooks never block a tool call (PostToolUse and Stop are observation only).</li>
   <li>An error goes to <code>&lt;root&gt;/runs/hook-errors.log</code> as one line (time, hook, error message, no payload), and that log stops growing at 256 KB.</li>
   <li>Never written: message text, prompts, tool inputs, tool outputs. Fields not listed in the table are dropped, not copied. A test feeds a payload full of secrets and checks that none of it appears.</li>
@@ -168,9 +171,11 @@
   <li>Events: seq 1..n in order; <strong>two parallel writers</strong> (child processes, 40 events each) give seq 1..80 with no gap and no duplicate and 80 valid lines; stale lock is broken; missing counter file falls back to line count.</li>
   <li>Hooks, with fake stdin payloads piped to the real script: each of the five kinds writes the right type and data; no <code>DIGISMITH_RUN_ID</code> writes nothing (no directory, no log); wrong id writes nothing; bad JSON and a missing run directory exit 0; secrets in the payload never reach the file; time of one call recorded.</li>
   <li><code>hooks.json</code>: the five new entries exist, the existing three keep their commands, and the existing hook tests stay green.</li>
+  <li><strong>The hooks.json commands themselves:</strong> a test runs each new command string through <code>sh -c</code> (with <code>CLAUDE_PLUGIN_ROOT</code> set to the repo and a fake depot). With <code>DIGISMITH_RUN_ID</code> unset or empty: exit 0, no node process (a <code>node</code> shim first in <code>PATH</code> that records each call stays unused), nothing written. With a valid run id and a payload on stdin: exit 0 and the event is written.</li>
+  <li>Lock waits: with the lock held by the test, a <code>tool</code> hook gives up near 150 ms and writes nothing; a <code>blocked</code> hook started at the same time writes its event once the lock is released within 2 s.</li>
   <li>Readers: list (with and without <code>--ticket</code>, <code>--json</code>), show, tail with <code>--since</code>, on a fake depot.</li>
 </ul>
-<p><strong>Jack's first use</strong> (the real check, after merge and plugin update): start a throwaway worker through the runbook with <code>dg run start</code>, let it run one tool call and one turn, trigger one permission prompt, then close it. Then <code>dg run show &lt;id&gt;</code> must show <code>started</code>, <code>tool</code>, <code>blocked</code>, <code>turn_end</code>, <code>ended</code> in seq order, and a plain Claude session without <code>DIGISMITH_RUN_ID</code> must leave <code>runs/</code> unchanged.</p>
+<p><strong>First use is the conductor's, not Jack's</strong> (the real check, after merge and plugin update): the conductor starts a throwaway worker through the updated runbook (<code>dg run start</code>, then the worker with <code>DIGISMITH_RUN_ID</code>), triggers one prompt so the worker runs a tool call and a turn, triggers one permission prompt, then closes the tab. The conductor then runs <code>dg run show &lt;id&gt;</code>, which must show <code>started</code>, <code>tool</code>, <code>blocked</code>, <code>turn_end</code>, <code>ended</code> in seq order. A plain Claude session without <code>DIGISMITH_RUN_ID</code> must leave <code>runs/</code> unchanged. The runbook text block from <code>report.md</code> is applied by the conductor as part of the merge, before this check.</p>
 </section>
 
 <section id="out">
