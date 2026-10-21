@@ -17,7 +17,7 @@ Spec: `.digismith/board/DGS-581—nightwatch-run-record/design.html`. Read it fi
 - Run id: `<role>-<UTC yyyymmddThhmmss>-<6 hex>`. New per attempt, never reused. Key and id match `^[A-Za-z0-9][A-Za-z0-9._-]*$` before they join a path.
 - run.json: schema `nightwatch-run/v1`, written once with the `wx` flag, never edited. Unknown facts are `null`.
 - Event line: `{schema:"nightwatch-event/v1", seq, ts, run, type, data}`. seq starts at 1, +1 each, append only.
-- Event types: hooks `started`, `blocked`, `tool`, `turn_end`, `ended`; `dg run event` `review_ready`, `merged`, `pushed`, `lost`. The set is closed.
+- Event types: hooks `started`, `blocked`, `tool`, `turn_end`, `ended`; `dg run event` `review_ready`, `merged`, `pushed`, `lost`, and (added by Task 7) `phase`, whose `data.phase` must be exactly `building`, `review` or `merge`. The set is closed.
 - Lock: `mkdir <run-dir>/lock`; a lock older than 1 s is stale and broken. The `PostToolUse` hook (`tool`) waits at most 150 ms and then drops its event and logs. Every other writer (the `started`, `blocked`, `turn_end`, `ended` hooks and `dg run event`) waits up to 2 s.
 - Hooks: no `DIGISMITH_RUN_ID` writes nothing; exit 0 always; no stdout; never write message text, prompts, tool inputs or outputs; errors go to `<root>/runs/hook-errors.log` (message only, capped at 256 KB); target under 100 ms.
 - Each new hooks.json command starts with `[ -z "$DIGISMITH_RUN_ID" ] || node ...`.
@@ -1457,4 +1457,102 @@ Expected: PASS, no failure outside this ticket's files (if one exists on `main` 
 ```bash
 git add packages/cli/src/run/README.md scripts/run-events/end-to-end.test.ts ".digismith/board/DGS-581—nightwatch-run-record/runbook-block.md"
 git commit -m "docs(run): add the nightwatch readme and runbook block"
+```
+
+---
+
+### Task 7: The `phase` conductor event
+
+Added after checkpoint 2 on the Maestro's order. **Run it after Task 5 and before Task 6** (the order is 1, 2, 3, 4, 5, 7, 6), so the Task 6 README and end-to-end check already include it. The numbers stay as they are.
+
+**Files:**
+- Modify: `packages/cli/src/run/events.ts` (add `"phase"` to `CONDUCTOR_TYPES`; add and export `PHASES` and `validEventData`)
+- Modify: `packages/cli/src/run/index.ts` (the `event` handler calls `validEventData`)
+- Test: `packages/cli/src/run/events.test.ts` (add the `validEventData` tests)
+- Test: `packages/cli/src/run/index.test.ts` (add the `dg run event ... phase` cases)
+
+**Interfaces:**
+- Consumes (Tasks 2 and 5): `CONDUCTOR_TYPES`, the `event` command handler.
+- Produces (`events.ts`):
+  - `PHASES = ["building", "review", "merge"] as const`
+  - `validEventData(type: string, data: Record<string, unknown>): string | null` (null when valid, else a plain message; only `phase` has a rule)
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `packages/cli/src/run/events.test.ts` (and add `validEventData, CONDUCTOR_TYPES` to its import from `./events.ts`):
+
+```ts
+describe("validEventData", () => {
+  it("accepts phase with building, review or merge", () => {
+    for (const p of ["building", "review", "merge"]) expect(validEventData("phase", { phase: p })).toBeNull();
+  });
+  it("refuses any other phase value or a missing one", () => {
+    for (const data of [{ phase: "done" }, { phase: "Building" }, { phase: 1 }, { phase: null }, {}, { other: "building" }]) {
+      expect(validEventData("phase", data)).toMatch(/phase/);
+    }
+  });
+  it("has no rule for the other conductor types, and phase is in the closed set", () => {
+    expect(validEventData("merged", {})).toBeNull();
+    expect(CONDUCTOR_TYPES).toContain("phase");
+  });
+});
+```
+
+Add to the `dg run` describe in `packages/cli/src/run/index.test.ts`:
+
+```ts
+  it("event phase takes building, review and merge and refuses anything else", () => {
+    const id = dg("start", "--ticket", "DGS-581", "--role", "builder").stdout.trim();
+    for (const p of ["building", "review", "merge"]) expect(dg("event", id, "phase", "--data", JSON.stringify({ phase: p })).status).toBe(0);
+    for (const args of [["--data", '{"phase":"done"}'], ["--data", "{}"], []]) {
+      const r = dg("event", id, "phase", ...args);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/phase/);
+    }
+    const tail = dg("tail", id).stdout.trim().split("\n").map((l) => JSON.parse(l));
+    expect(tail.map((e) => [e.seq, e.type, e.data.phase])).toEqual([[1, "phase", "building"], [2, "phase", "review"], [3, "phase", "merge"]]);
+  });
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pnpm vitest run packages/cli/src/run/events.test.ts packages/cli/src/run/index.test.ts`
+Expected: FAIL (`validEventData` is not exported; `phase` is refused as an unknown type).
+
+- [ ] **Step 3: Write minimal implementation**
+
+In `events.ts` change the conductor tuple and add the check:
+
+```ts
+export const CONDUCTOR_TYPES = ["review_ready", "merged", "pushed", "lost", "phase"] as const;
+export const PHASES = ["building", "review", "merge"] as const;
+
+// null when the data is valid for the type, else a plain message. Only phase has a rule.
+export function validEventData(type: string, data: Record<string, unknown>): string | null {
+  if (type === "phase" && !(PHASES as readonly string[]).includes(data.phase as string)) {
+    return `data.phase must be one of ${PHASES.join(", ")}`;
+  }
+  return null;
+}
+```
+
+In the `event` handler of `index.ts`, right after `data` is parsed and before `findRunDir`, add:
+
+```ts
+    const bad = validEventData(type, data);
+    if (bad) return fail(bad);
+```
+
+and import `validEventData` from `./events.ts`. The command's `describe` text already builds from `CONDUCTOR_TYPES`, so it lists `phase` without another change. `read.ts` is not touched.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pnpm vitest run packages/cli/src/run`
+Expected: PASS (every earlier run test still green).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/cli/src/run/events.ts packages/cli/src/run/index.ts packages/cli/src/run/events.test.ts packages/cli/src/run/index.test.ts
+git commit -m "feat(run): add the phase conductor event"
 ```
