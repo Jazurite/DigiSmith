@@ -1,5 +1,6 @@
 import type { EventLine } from "../run/events.ts";
 import type { RunRecord } from "../run/record.ts";
+import { summarize } from "../run/read.ts";
 
 export type Pane = "present" | "gone" | "unknown";
 export type State = "healthy" | "blocked" | "stalled" | "lost" | "ended";
@@ -39,13 +40,15 @@ export function phaseOf(run: RunRecord, events: EventLine[]): { phase: Phase; si
 }
 
 export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: number, budgets: Budgets): Verdict {
-  if (events.some((e) => e.type === "ended")) return { state: "ended", cause: "", since: "" };
+  // /clear writes ended then started: the run is over only when no started follows the last ended.
+  if (summarize(events).ended) return { state: "ended", cause: "", since: "" };
   const last = events.length ? events[events.length - 1] : null;
   const lastTs = last ? ms(last.ts) : ms(run.created_at);
   if (pane === "gone") return { state: "lost", cause: "pane-gone", since: last?.ts ?? run.created_at };
 
   let lastBlocked = -1;
-  for (let i = events.length - 1; i >= 0; i--) if (events[i].type === "blocked") { lastBlocked = i; break; }
+  // Only a permission prompt waits for an answer; idle_prompt and the other kinds fall to the silence and phase rules.
+  for (let i = events.length - 1; i >= 0; i--) if (events[i].type === "blocked" && events[i].data.kind === "permission_prompt") { lastBlocked = i; break; }
   if (lastBlocked >= 0 && !events.slice(lastBlocked + 1).some((e) => e.type === "tool" || e.type === "turn_end")) {
     return { state: "blocked", cause: "waiting-for-answer", since: events[lastBlocked].ts };
   }

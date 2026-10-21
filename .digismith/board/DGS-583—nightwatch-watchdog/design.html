@@ -107,6 +107,8 @@ pane:  'present' | 'gone' | 'unknown'   // the command looks it up; 'unknown' wh
 <tr><td><code>stalled</code></td><td>The phase clock is older than the phase budget (next section).</td></tr>
 <tr><td><code>healthy</code></td><td>None of the above.</td></tr>
 </table></div>
+<p><b>Ended after a clear:</b> a <code>/clear</code> writes <code>ended</code> and then <code>started</code> on the same run, so a run is <code>ended</code> only when no <code>started</code> event comes after its last <code>ended</code> event.</p>
+<p><b>Which blocked events count:</b> only a <code>blocked</code> event with <code>data.kind</code> equal to <code>permission_prompt</code> counts as blocked; <code>idle_prompt</code>, <code>elicitation_dialog</code> and every other kind do not, and the silence and phase rules handle those runs.</p>
 <p><b>Order of the checks:</b> ended, then pane gone (lost), then blocked, then silence (lost), then stalled. A blocked run waits for a human and sends no events, so the 30 minute silence rule must not turn it into <code>lost</code>. A gone pane still wins over blocked, because nobody can answer a pane that does not exist. <code>pane: 'unknown'</code> never makes a run lost by itself; only silence can.</p>
 <h3>Phases and budgets</h3>
 <p>Budgets come from <code>.digismith/config.yml</code> under <code>nightwatch.budgets</code>, in minutes, defaults <code>building: 45</code>, <code>review: 60</code>, <code>merge: 20</code>. A value that is not a positive whole number, or a block that does not parse, gives one attention item (kind <code>failed</code>, cause <code>bad-budget-config</code>, run <code>-</code>) and the defaults are used for that value. It never turns the watchdog off.</p>

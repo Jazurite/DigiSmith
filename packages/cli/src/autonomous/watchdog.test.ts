@@ -9,13 +9,30 @@ const run = (role = "builder") => ({
   herdr: { workspace: "w2", tab: null, pane: "w2:p1" }, budget: null, created_at: min(0),
 }) as never;
 let seq = 0;
-const ev = (type: string, m: number, data: Record<string, unknown> = {}) =>
+const ev = (type: string, m: number, data: Record<string, unknown> = type === "blocked" ? { kind: "permission_prompt" } : {}) =>
   ({ schema: "nightwatch-event/v1", seq: ++seq, ts: min(m), run: "builder-x", type, data }) as never;
 const at = (m: number) => T0 + m * 60_000;
 
 describe("classify", () => {
   it("ended wins over everything", () => {
     expect(classify(run(), [ev("started", 0), ev("ended", 5)], "gone", at(500), DEFAULT_BUDGETS).state).toBe("ended");
+  });
+  it("F1: ended, then started (/clear), then blocked is blocked, not ended", () => {
+    const v = classify(run(), [ev("started", 0), ev("ended", 5), ev("started", 6), ev("blocked", 7)], "present", at(8), DEFAULT_BUDGETS);
+    expect(v.state).toBe("blocked");
+  });
+  it("F1: ended after the last started is ended", () => {
+    expect(classify(run(), [ev("started", 0), ev("ended", 5), ev("started", 6), ev("ended", 7)], "present", at(8), DEFAULT_BUDGETS).state).toBe("ended");
+  });
+  it("F2: a permission_prompt is blocked", () => {
+    expect(classify(run(), [ev("started", 0), ev("blocked", 1, { kind: "permission_prompt" })], "present", at(2), DEFAULT_BUDGETS).state).toBe("blocked");
+  });
+  it("F2: idle_prompt after turn_end is healthy", () => {
+    expect(classify(run(), [ev("started", 0), ev("turn_end", 1), ev("blocked", 2, { kind: "idle_prompt" })], "present", at(3), DEFAULT_BUDGETS).state).toBe("healthy");
+  });
+  it("F2: elicitation_dialog and a missing kind are not blocked", () => {
+    expect(classify(run(), [ev("started", 0), ev("blocked", 1, { kind: "elicitation_dialog" })], "present", at(2), DEFAULT_BUDGETS).state).toBe("healthy");
+    expect(classify(run(), [ev("started", 0), ev("blocked", 1, {})], "present", at(2), DEFAULT_BUDGETS).state).toBe("healthy");
   });
   it("a gone pane is lost, even when blocked", () => {
     const v = classify(run(), [ev("started", 0), ev("blocked", 1)], "gone", at(2), DEFAULT_BUDGETS);
