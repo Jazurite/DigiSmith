@@ -108,7 +108,7 @@ describe("reconcile", () => {
     expect(readJournal(d).length).toBe(before);
     expect(resultsOf(d)[k]).toBe("uncertain");
   });
-  it("a key listed twice in the journal is settled only once", () => {
+  it("a re-planned key is settled once per open period: its retryable line plus one succeeded line", () => {
     const d = tmp(); const k = open(d, "status-write");
     settle(d, T, k, "retryable", "first try");
     open(d, "status-write");
@@ -118,6 +118,40 @@ describe("reconcile", () => {
     expect(settled).toHaveLength(2);
     expect(settled.at(-1)?.result).toBe("succeeded");
     expect(resultsOf(d)[k]).toBe("succeeded");
+  });
+  it("move-to with an unknown phase is uncertain, never succeeded", () => {
+    const d = tmp(); const k = open(d, "move-to-bogus", "building");
+    const notes = reconcile({ dir: d, now: T, state: state("merge-ready"), obs: O() });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+    expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-move-to-bogus" }]);
+  });
+  it("order-fix with no detail.head is uncertain, never succeeded", () => {
+    const d = tmp(); const k = open(d, "order-fix", "building");
+    const notes = reconcile({ dir: d, now: T, state: state("building"), obs: O() });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+    expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-order-fix" }]);
+  });
+  it("phase-marker with no detail.phase is uncertain, never succeeded", () => {
+    const d = tmp(); const k = open(d, "phase-marker", "merge-ready");
+    const notes = reconcile({ dir: d, now: T, state: state(), obs: O() });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+    expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-phase-marker" }]);
+  });
+  it("phase-marker with no detail.phase and no run phaseEvent is uncertain, never succeeded", () => {
+    const d = tmp(); const k = open(d, "phase-marker", "merge-ready");
+    const obs = O({ runs: ok([{ id: "builder-1", role: "builder", createdAt: "x", started: true, ended: false, merged: false, pushed: false, phaseEvent: null }]) });
+    reconcile({ dir: d, now: T, state: state(), obs });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+  });
+  it("an uncertain claim with no lock is settled permanent once, then no note on the next call", () => {
+    const d = tmp(); const k = open(d, "claim", "claimed"); settle(d, T, k, "uncertain");
+    const first = reconcile({ dir: d, now: T, state: null, obs: O() });
+    expect(first).toEqual([]);
+    expect(resultsOf(d)[k]).toBe("permanent");
+    const before = readJournal(d).length;
+    const second = reconcile({ dir: d, now: T, state: null, obs: O() });
+    expect(second).toEqual([]);
+    expect(readJournal(d).length).toBe(before);
   });
   it("a tracker-failed observation leaves a status-write line open, with no note", () => {
     const d = tmp(); const k = open(d, "status-write");

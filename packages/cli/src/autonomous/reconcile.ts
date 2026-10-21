@@ -8,10 +8,12 @@ type Verdict = { result: SettleResult; note: string } | "unknown";
 const r = (result: SettleResult, note: string): Verdict => ({ result, note });
 const rank = (p: string) => PHASES.indexOf(p as Phase);
 
+// succeeded is only ever settled with proof: a missing detail field or an unknown phase is uncertain.
 function check(action: string, line: JournalLine, state: TicketState | null, obs: Observations): Verdict {
   if (action === "claim") return state !== null ? r("succeeded", "lock held") : r("permanent", "no lock");
   if (action.startsWith("move-to-")) {
     const to = action.slice("move-to-".length);
+    if (rank(to) < 0) return r("uncertain", `unknown phase ${to}`);
     return state !== null && rank(state.phase) >= rank(to) ? r("succeeded", `lock at ${state.phase}`) : r("retryable", "lock not moved");
   }
   if (action === "status-write") {
@@ -24,7 +26,9 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
   }
   if (action === "order-fix") {
     if (!obs.git.ok) return "unknown";
-    return obs.git.value.head !== null && obs.git.value.head !== line.detail?.head ? r("succeeded", "head moved") : r("uncertain", "no new commit");
+    const before = line.detail?.head;
+    if (before === undefined) return r("uncertain", "no head recorded in the order");
+    return obs.git.value.head !== null && obs.git.value.head !== before ? r("succeeded", "head moved") : r("uncertain", "no new commit");
   }
   if (action === "order-restart") {
     if (!obs.herdr.ok) return "unknown";
@@ -32,13 +36,17 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
   }
   if (action === "phase-marker") {
     if (state === null) return r("permanent", "no lock");
+    const want = line.detail?.phase;
+    if (want === undefined) return r("uncertain", "no phase recorded in the marker");
     if (!obs.runs.ok) return "unknown";
     const run = obs.runs.value.find((x) => x.id === state.runs.builder);
-    return run !== undefined && run.phaseEvent === line.detail?.phase ? r("succeeded", "phase event seen") : r("retryable", "phase event missing");
+    return run !== undefined && run.phaseEvent === want ? r("succeeded", "phase event seen") : r("retryable", "phase event missing");
   }
   return r("uncertain", "no check for this action");
 }
 
+// Only succeeded and permanent settle a key that is already uncertain. A retryable check
+// leaves it uncertain: the order may have run, so it must not be freed to run again.
 export function reconcile(d: { dir: string; now: Date; state: TicketState | null; obs: Observations }): ReconcileNote[] {
   const notes: ReconcileNote[] = [];
   for (const l of openLines(d.dir)) {
@@ -46,9 +54,9 @@ export function reconcile(d: { dir: string; now: Date; state: TicketState | null
     const v = check(action, l.planned, d.state, d.obs);
     if (v === "unknown") continue;
     if (l.state === "open") settle(d.dir, d.now, l.key, v.result, v.note);
-    else if (v.result === "succeeded") settle(d.dir, d.now, l.key, "succeeded", `reconciled: ${v.note}`);
+    else if (v.result === "succeeded" || v.result === "permanent") settle(d.dir, d.now, l.key, v.result, `reconciled: ${v.note}`);
     // A key still uncertain after this pass gets a note on every call; no new line is written for it.
-    const stillUncertain = l.state === "open" ? v.result === "uncertain" : v.result !== "succeeded";
+    const stillUncertain = l.state === "open" ? v.result === "uncertain" : v.result === "uncertain" || v.result === "retryable";
     if (stillUncertain) notes.push({ ticket: l.planned.ticket ?? "-", cause: `journal-uncertain-${action}` });
   }
   return notes;
