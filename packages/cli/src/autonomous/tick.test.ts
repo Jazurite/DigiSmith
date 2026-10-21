@@ -198,7 +198,8 @@ describe("controller retry through the tick", () => {
   it("a controller restart between plan and settle sends no second order", async () => {
     const d = tmp(); const w = makeWorld(); lostWorld(d, w);
     plan(d, T, { ticket: "DGS-1", phase: "building", attempt: 1, action: "retry", detail: { item: "builder-1.lost.0", run: "builder-1" } });
-    for (let i = 0; i < 3; i++) await runTick(deps(d, w, { now: () => at(i * 0) }));
+    // the clock stays at T on purpose: the planned line is not older than the proof wait
+    for (let i = 0; i < 3; i++) await runTick(deps(d, w));
     expect(w.prompts).toEqual([]);
     expect(readJournal(d).filter((l) => l.status === "planned")).toHaveLength(1);
     newRun(w);
@@ -237,6 +238,6 @@ describe("controller retry through the tick", () => {
     const d = tmp(); const w = makeWorld(); lostWorld(d, w); w.herdr.builderPane = "present"; w.fail.attention = "boom";
     const r = await runTick(deps(d, w));
     expect(w.prompts).toEqual([]);
-    expect(JSON.stringify(r)).toContain("obs-attention-failed");
+    expect(r.action).toMatchObject({ kind: "attention", cause: "obs-attention-failed" });
   });
 });
