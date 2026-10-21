@@ -24,9 +24,10 @@ describe("notifyNew", () => {
     expect(calls[0].join(" ")).toContain("17:00");
   });
   it("the same item is not sent twice", async () => {
-    const { d, calls } = setup();
+    const { d, calls, t } = setup();
     await notifyNew(d, [item(1)]);
-    await notifyNew(d, [item(1)]);
+    t.now += 2 * 3600_000;
+    expect(await notifyNew(d, [item(1)])).toEqual({ sent: 0, pending: 0 });
     expect(calls).toHaveLength(1);
   });
   it("one per ticket and kind per hour; a limited item stays pending and goes out after the hour", async () => {

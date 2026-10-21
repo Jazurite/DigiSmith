@@ -76,7 +76,7 @@ describe("runWatch", () => {
     await runWatch(deps());
     const blocked = readOpen(dir).find((i) => i.kind === "blocked")!;
     addEvent(blocked.run, 0, "tool", 3);
-    present.add("w2:DGS-4");
+    present?.add("w2:DGS-4");
     const r = await runWatch(deps());
     expect(r.opened).toBe(0);
     expect(r.resolved).toBe(1);
