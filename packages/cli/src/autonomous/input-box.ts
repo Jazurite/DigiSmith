@@ -91,6 +91,7 @@ function readBox(lines: string[], p: number): InputBox {
 export function classifyInputBox(ansi: string): InputBox {
   const lines = ansi.split("\n");
   // only the lowest prompt line counts: the input box sits at the bottom of the pane
+  // known gap (F5, parked): a typed continuation line starting with the prompt glyph reads unknown, which is safe because unknown means wait
   for (let p = lines.length - 1; p >= 0; p--) {
     if (promptAt(cellsOf(lines[p])) !== -1) return readBox(lines, p);
   }
