@@ -166,6 +166,8 @@ export interface ClickUpTask {
   custom_fields: ClickUpCustomField[];
   dependencies: unknown[];
   linked_tasks: unknown[];
+  /** Only GET /task/{id} returns this; search and list results leave it out. */
+  attachments?: { id: string; title: string; extension?: string; mimetype?: string }[];
   locations: unknown[];
   team_id: string;
   url: string;
