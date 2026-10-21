@@ -88,7 +88,7 @@
 
 <section id="goal">
 <h2>Goal</h2>
-<p>On 2026-10-19 a night merge stood still from 04:21 to about 07:50 UTC+7 (a classifier block, DGS-572) and nobody knew. This ticket adds a plain-code watchdog that reads the run record of DGS-581 and puts a stuck run on an attention list within minutes. It also adds the circuit breaker and the failure causes with one bounded retry. It uses no model tokens and no new service. The ten decisions come from the Maestro and are settled. Warren (MIT) gave ideas only; no code is copied.</p>
+<p>On 2026-10-19 a night merge stood still from 04:21 to about 07:50 UTC+7 (a classifier block, DGS-572) and nobody knew. This ticket adds a plain-code watchdog that reads the run record of DGS-581 and puts a stuck run on an attention list within minutes. It also adds the circuit breaker and the failure causes with one bounded retry. It uses no model tokens and no new service. The ten decisions and the four open points come from the Maestro and are settled (checkpoint 1, 2026-10-21). Warren (MIT) gave ideas only; no code is copied.</p>
 <p>Out of scope: the night mandate hook (DGS-584), merge and cleanup safety (DGS-585), the UI (DGS-586), push and email (DGS-448).</p>
 </section>
 
@@ -112,11 +112,11 @@ pane:  'present' | 'gone' | 'unknown'   // the command looks it up; 'unknown' wh
 <p>Budgets come from <code>.digismith/config.yml</code> under <code>nightwatch.budgets</code>, in minutes, defaults <code>building: 45</code>, <code>review: 60</code>, <code>merge: 20</code>. A value that is not a positive whole number, or a block that does not parse, gives one attention item (kind <code>failed</code>, cause <code>bad-budget-config</code>, run <code>-</code>) and the defaults are used for that value. It never turns the watchdog off.</p>
 <p>The phase and its start come from <code>phaseOf(run, events)</code>, also pure:</p>
 <ul>
-<li>The latest event whose <code>data.phase</code> is <code>building</code>, <code>review</code> or <code>merge</code> sets the phase; its time is the start. A phase ends at the event <code>merged</code> (merge), or at <code>ended</code>.</li>
-<li>No such event: a <code>builder</code> run is <code>building</code> and a <code>reviewer</code> run is <code>review</code>, both from the <code>started</code> event (from <code>created_at</code> when there is none). A <code>scout</code> or <code>other</code> run has no phase and is never <code>stalled</code>.</li>
+<li>The latest <code>phase</code> event (<code>data.phase</code> is <code>building</code>, <code>review</code> or <code>merge</code>) sets the phase; its time is the start. A phase ends at the event <code>merged</code> (merge), or at <code>ended</code>.</li>
+<li>No <code>phase</code> event: a <code>builder</code> run is <code>building</code> and a <code>reviewer</code> run is <code>review</code>, both from the <code>started</code> event (from <code>created_at</code> when there is none). A <code>scout</code> or <code>other</code> run has no phase and is never <code>stalled</code>.</li>
 <li>A builder's <code>review_ready</code> event starts a new <code>building</code> clock when the next <code>tool</code> event comes, so the 45 minutes count per task, not per run.</li>
 </ul>
-<p class="callout">The DGS-581 event set is closed, so the merge phase has no event of its own. This spec uses the optional <code>data.phase</code> field on a conductor event (<code>dg run event &lt;id&gt; review_ready --data '{"phase":"merge"}'</code>, the conductor's merge step). That needs one line in the conductor runbook; the report names it for the conductor to apply. Without the marker a merge is never <code>stalled</code>; <code>blocked</code> and <code>lost</code> still work. This is open point 2.</p>
+<p class="callout">Settled by the Maestro (checkpoint 1): DGS-581 adds one event type <code>phase</code> (<code>data.phase</code>: <code>building|review|merge</code>) to its closed set and to <code>dg run event</code>. The DGS-582 controller writes it on each phase change; the conductor runbook line covers manual runs. This ticket only reads <code>phase</code> events and adds no <code>data.phase</code> to other events. A run with no <code>phase</code> event uses the role default above, so a merge without the marker is never <code>stalled</code>; <code>blocked</code> and <code>lost</code> still work.</p>
 </section>
 
 <section id="watch">
@@ -206,10 +206,10 @@ resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;I
 <ul>
 <li><b>Needs DGS-581</b> (run record, merged or in review) and <b>DGS-582</b> (controller and journal). No build starts before the Maestro orders it, after DGS-582 is merged. The plan sets the interfaces it needs from DGS-582 (<code>journal.retryCount</code>, <code>journal.plan</code>) as a small file the build checks first.</li>
 <li><b>Needs DGS-486</b> (<code>autonomous-scan</code>, <code>release</code>, <code>back</code>, <code>report</code>). At the time of this spec the code is in a worktree, not on main, and <code>packages/cli/src/autonomous/</code> does not exist on main. If DGS-486 is not merged when the build starts, the Builder stops and tells the conductor.</li>
-<li><b>Open point 1 (shape):</b> DGS-582 has no spec yet. The attention file shape above is this ticket's; DGS-582 follows it, or the two specs are aligned at its checkpoint.</li>
-<li><b>Open point 2 (merge phase marker):</b> <code>data.phase</code> on a conductor event, one runbook line (see "The classifier"). The Maestro may instead add a <code>merge_started</code> event type to DGS-581.</li>
-<li><b>Open point 3 (blocked beats silence):</b> the brief lists silence as lost without exception. This spec lets <code>blocked</code> win over silence, so a run that waits for a prompt is reported as blocked (the useful word for Jack), and only a gone pane makes it lost.</li>
-<li><b>Open point 4 (retention):</b> runs older than 7 days with no <code>ended</code> event are skipped. The window is a constant and can change.</li>
+<li><b>Settled, attention file shape:</b> the shape in this spec is DGS-583's; DGS-582 follows it (the conductor tells dgs-582).</li>
+<li><b>Settled, merge phase marker:</b> the <code>phase</code> event type in DGS-581 (see "The classifier"). The build needs DGS-581 to have it on main first; the plan's first task checks that.</li>
+<li><b>Settled, blocked beats silence:</b> a run waiting for a prompt is <code>blocked</code>, and only a gone pane makes it <code>lost</code>.</li>
+<li><b>Settled, 7 day retention:</b> runs older than 7 days with no <code>ended</code> event are skipped. The window is a constant.</li>
 </ul>
 </section>
 
