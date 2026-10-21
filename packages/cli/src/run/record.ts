@@ -84,7 +84,7 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
   if (!(ROLES as readonly string[]).includes(input.role)) throw new Error(`role must be one of ${ROLES.join(", ")}`);
   const budget = parseBudget(input.budget);
   const wt = input.worktree && fs.existsSync(input.worktree) ? input.worktree : null;
-  const base = { schema: RUN_SCHEMA, ticket: input.ticket, role: input.role as Role };
+  const base: Pick<RunRecord, "schema" | "ticket" | "role"> = { schema: RUN_SCHEMA, ticket: input.ticket, role: input.role as Role };
   const rest = {
     order: input.order ?? null,
     seat: input.seat ?? null,
