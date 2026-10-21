@@ -82,12 +82,15 @@ describe("review", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(1) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(2) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
   });
-  it("F9: round 3 with open findings is review-rounds-exhausted, no move", () => {
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(3) }), J)).toEqual({ kind: "attention", cause: "review-rounds-exhausted", attKind: "failed" });
+  it("F9: round 3 with open findings still waits", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(3) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
+  });
+  it("F9: round 4 with open findings is review-rounds-exhausted, no move", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(4) }), J)).toEqual({ kind: "attention", cause: "review-rounds-exhausted", attKind: "failed" });
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: ok([]) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
   });
-  it("F9: a clean round 3 still moves to merge-ready", () => {
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean"), packs: packR(3) }), J)).toMatchObject({ kind: "move", to: "merge-ready" });
+  it("F9: a clean round 4 still moves to merge-ready", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean"), packs: packR(4) }), J)).toMatchObject({ kind: "move", to: "merge-ready" });
   });
   it("F9: a failed packs view gives a note when findings are open", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: bad() }), J)).toEqual({ kind: "attention", cause: "obs-packs-failed", attKind: "unknown" });

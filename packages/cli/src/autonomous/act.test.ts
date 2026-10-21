@@ -131,6 +131,15 @@ describe("act", () => {
     expect(x.sent[0]).not.toContain(head);
     expect(x.sent[0]).not.toContain("rm -rf");
   });
+  it("F16: an unknown order has its own refusal cause", async () => {
+    const d = tmp(); const x = deps(d);
+    const r = await act(x, state(), { kind: "order", order: "fix" as never, head: "a" });
+    expect(r.result).toBeNull();
+    expect(x.sent).toEqual([]);
+    const att = readFileSync(join(d, "attention.jsonl"), "utf8");
+    expect(att).toContain("order-refused-unknown-order");
+    expect(att).not.toContain("bad-ticket-key");
+  });
   it("an order with an invalid ticket key is refused before the journal, with no prompt", async () => {
     const d = tmp(); const x = deps(d);
     const r = await act(x, state({ ticket: "DGS-1; rm -rf /" }), { kind: "order", order: "merge", head: "a" });

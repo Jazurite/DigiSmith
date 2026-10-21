@@ -81,8 +81,9 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
       let text: string;
       try {
         text = orderText(a.order, state.ticket, state.attempt);
-      } catch {
-        appendAttention(d.dir, d.now(), { ticket: state.ticket, run: state.runs.builder, kind: "failed", cause: "order-refused-bad-ticket-key" });
+      } catch (e) {
+        const unknown = e instanceof Error && e.message.startsWith("unknown order");
+        appendAttention(d.dir, d.now(), { ticket: state.ticket, run: state.runs.builder, kind: "failed", cause: unknown ? "order-refused-unknown-order" : "order-refused-bad-ticket-key" });
         return { result: null };
       }
       return run(`order-${a.order}`, { head: a.head }, () => d.prompt(text),

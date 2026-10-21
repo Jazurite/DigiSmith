@@ -1,6 +1,6 @@
 export type Phase = "claimed" | "building" | "review" | "merge-ready" | "merged" | "released";
 export const PHASES: Phase[] = ["claimed", "building", "review", "merge-ready", "merged", "released"];
-export const MAX_ATTEMPTS = 3;
+export const MAX_ATTEMPTS = 4; // ticket-review rounds: three fix waves and the review that checks them
 export const MAX_TRIES = 3;
 export const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 export type Obs<T> = { ok: true; value: T } | { ok: false; error: string };

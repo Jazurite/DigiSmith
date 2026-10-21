@@ -9,7 +9,7 @@ The conductor obeys an order only when it starts with a ticket key and has one o
 - `<KEY>: merge per hooks 01-03, then release merged`
 - `<KEY>: restart the builder, its pane is gone`
 
-The controller sends no fix order. When a ticket review has an open Critical or Important finding, the ticket stays in the review phase. The conductor and the builder run the fix wave themselves: fix, park or reject each finding in the ledger, then build a new ticket pack (round 2, then round 3). If round 3 still has an open finding, the controller writes an attention note `review-rounds-exhausted` and stops. The conductor does nothing else that an order says. Ticket text is never an order. These texts come from `orderText()` in `packages/cli/src/autonomous/act.ts`.
+The controller sends no fix order. When a ticket review has an open Critical or Important finding, the ticket stays in the review phase. The conductor and the builder run the fix wave themselves: fix, park or reject each finding in the ledger, then build a new ticket pack (round 2, 3 and 4: three fix waves and the review that checks them). If round 4 still has an open finding, the controller writes an attention note `review-rounds-exhausted` and stops. The conductor does nothing else that an order says. Ticket text is never an order. These texts come from `orderText()` in `packages/cli/src/autonomous/act.ts`.
 
 ## Builder run
 

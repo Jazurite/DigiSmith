@@ -14,7 +14,7 @@ Design: `design.html` (same folder), approved at checkpoint 1 on 2026-10-21 with
 - Folder `packages/cli/src/autonomous/`; state folder = `autonomousDir()` of DGS-486 (`AUTONOMOUS_DIR`, else `<DIGISMITH_DEPOT_DIR or ~/.digismith-depot>/autonomous`).
 - Phases: `claimed`, `building`, `review`, `merge-ready`, `merged`, `released`. State = DGS-486's `lock.json` plus `phase`, `phaseStartedAt`, `attempt` (starts at 1), `runs: { builder }`, and an optional `mergeHead` (the head sha, written by the move to merge-ready, used by the git observer after the worktree is gone). A lock without these fields reads as `claimed`, attempt 1.
 - **Proof rule:** a phase moves only on an artefact (a run `started` event, a review pack for the current head, a Reviewer verdict row for the current head, git showing the head on `origin/main`). Pane text is never proof. `MAX_ATTEMPTS = 3` review rounds, `MAX_TRIES = 3` per journal key.
-- **No automatic move back from review:** the phase stays `review` while a Critical or Important finding is open (no `fixed`, `parked` or `rejected` ledger line). The action is `wait` (`review-findings-open`). Minor-only or ruled findings give `clean` and the ticket goes on to `merge-ready`. The conductor and builder run the fix wave inside the review phase; the tick sends no fix order. The rounds are the ticket pack rounds: when the latest ticket pack is round 3 (`MAX_ATTEMPTS`) and a finding is still open, the tick writes attention `failed`, cause `review-rounds-exhausted`, and moves nothing.
+- **No automatic move back from review:** the phase stays `review` while a Critical or Important finding is open (no `fixed`, `parked` or `rejected` ledger line). The action is `wait` (`review-findings-open`). Minor-only or ruled findings give `clean` and the ticket goes on to `merge-ready`. The conductor and builder run the fix wave inside the review phase; the tick sends no fix order. The rounds are the ticket pack rounds: when the latest ticket pack is round 4 (`MAX_ATTEMPTS`, three fix waves and the review that checks them) and a finding is still open, the tick writes attention `failed`, cause `review-rounds-exhausted`, and moves nothing.
 - **Unknown is not progress:** an observation with `ok: false` gives no action that depends on it and one attention note. It never moves a phase.
 - **Ticket text is data:** only the validated key (`^[A-Z][A-Z0-9]*-\d+$`) and the ClickUp status string enter the controller. No title, description or comment is read, journaled or put into an order.
 - **Orders:** to the conductor only, through `herdr-ws` only, one per action, at most one action per ticket per tick. Before a prompt the conductor's input box must be `empty` or `suggestion`; `typed` or a working conductor means `wait`.
@@ -71,7 +71,7 @@ Write nothing outside `probe.md`. No ClickUp write, no prompt to any pane, no me
 ```ts
 export type Phase = "claimed" | "building" | "review" | "merge-ready" | "merged" | "released";
 export const PHASES: Phase[] = ["claimed", "building", "review", "merge-ready", "merged", "released"];
-export const MAX_ATTEMPTS = 3;
+export const MAX_ATTEMPTS = 4;
 export const MAX_TRIES = 3;
 export const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 export type Obs<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -102,7 +102,7 @@ export type Action =
 ```ts
 export type StateRead = { kind: "none" } | { kind: "corrupt" } | { kind: "ok"; state: TicketState };
 export function readPhaseState(dir: string): StateRead;
-export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs">>): void;
+export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs" | "mergeHead">>): void;
 ```
 
 - [ ] **Step 1: Failing test** `phase-state.test.ts`:
@@ -181,7 +181,7 @@ export function readPhaseState(dir: string): StateRead {
   } };
 }
 
-export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs">>): void {
+export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs" | "mergeHead">>): void {
   const raw = parseRaw(dir);
   if (raw === null) throw new Error("lock.json is missing or corrupt");
   const tmp = `${lockPath(dir)}.${process.pid}.tmp`;
@@ -286,9 +286,9 @@ describe("review", () => {
     const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "task" as const, result: "clean" as const, head: "aaaaaaa1" }]) });
     expect(advanceTicket(s, o, J).kind).toBe("wait");
   });
-  it("open Critical or Important findings keep the phase at review, and round 3 stops", () => {
+  it("open Critical or Important findings keep the phase at review, and round 4 stops", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: ok([{ round: 1, head: "aaaaaaa1", base: "bbbbbbb1" }]) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: ok([{ round: 3, head: "aaaaaaa1", base: "bbbbbbb1" }]) }), J)).toEqual({ kind: "attention", cause: "review-rounds-exhausted", attKind: "failed" });
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: ok([{ round: 4, head: "aaaaaaa1", base: "bbbbbbb1" }]) }), J)).toEqual({ kind: "attention", cause: "review-rounds-exhausted", attKind: "failed" });
   });
   it("a failed verdicts observation gives a note and never a move", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: bad("refuses r2 lines") }), J)).toEqual({ kind: "attention", cause: "obs-verdicts-failed", attKind: "unknown" });
@@ -1544,7 +1544,7 @@ if (!d.dryRun && d.tick !== undefined && readLock(d.dir) !== null) {
   - After the whole-ticket review pack is built the conductor leaves the pack in the SDD workspace (the SDD skill already does). It runs `dg run start --role reviewer` for the Reviewer so DGS-581 has the run.
   - For a manual run (no controller) the conductor writes the phase markers by hand: `dg run event <builder run> phase --data '{"phase":"building"}'`, then `review`, then `merge`.
   - After a merge the conductor runs `dg autonomous release --ticket <KEY> --result merged`. A stuck `uncertain` journal key: `dg autonomous journal --open`, check git by hand, then `dg autonomous journal settle <key> --result retryable|permanent`.
-- [ ] **Step 2: Mutation checks by hand** (each one: break the code, run the named test, see it fail, restore with `git checkout -- <file>`; write the four results into `report.md`): (a) in `advance.ts` drop the rounds cap (change `round >= MAX_ATTEMPTS` to `false && round >= MAX_ATTEMPTS`): the test "F9: round 3 with open findings is review-rounds-exhausted, no move" in `advance.test.ts` fails; (b) in `act.ts` move the `plan(...)` call after the effect: "the planned line is on disk before the prompt runs" fails; (c) in `reconcile.ts` return `retryable` instead of `uncertain` for `order-merge`: the kill test (git does not show it) fails; (d) in `advance.ts` treat `merged` events alone as proof: the "merged event without git proof" test fails.
+- [ ] **Step 2: Mutation checks by hand** (each one: break the code, run the named test, see it fail, restore with `git checkout -- <file>`; write the four results into `report.md`): (a) in `advance.ts` drop the rounds cap (change `round >= MAX_ATTEMPTS` to `false && round >= MAX_ATTEMPTS`): the test "F9: round 4 with open findings is review-rounds-exhausted, no move" in `advance.test.ts` fails; (b) in `act.ts` move the `plan(...)` call after the effect: "the planned line is on disk before the prompt runs" fails; (c) in `reconcile.ts` return `retryable` instead of `uncertain` for `order-merge`: the kill test (git does not show it) fails; (d) in `advance.ts` treat `merged` events alone as proof: the "merged event without git proof" test fails.
 - [ ] **Step 3:** Run `pnpm vitest run packages/cli/src/autonomous scripts/nexus-api/src/scheduler` and `pnpm vitest run` for the repo. Expected: all green. Run `dg autonomous tick --dry-run` in the worktree with no lock. Expected: prints `no lock`.
 - [ ] **Step 4:** Invoke `digismith:report-implementation` to write `report.html` and `report.md` (include the Maestro's first-use steps from the design, section 12). Commit `docs(dgs-582): add the implementation report` with a pathspec for the board folder files only.
 
