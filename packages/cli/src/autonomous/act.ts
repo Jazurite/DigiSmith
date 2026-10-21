@@ -1,4 +1,4 @@
-import { appendAttention } from "./attention-write.ts";
+import { appendAttention, appendResolved } from "./attention-write.ts";
 import { plan, settle } from "./journal.ts";
 import { writePhaseState } from "./phase-state.ts";
 import { TICKET_RE } from "./phase-types.ts";
@@ -43,7 +43,7 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
 
   // Only the effect sits in the try; settle runs once, after it, so a failed settle cannot
   // settle the same key a second time.
-  const run = async (action: string, detail: Record<string, string> | undefined, effect: () => Promise<void>, onError: (e: unknown) => SettleResult) => {
+  const run = async (action: string, detail: Record<string, string> | undefined, effect: () => Promise<void>, onError: (e: unknown) => SettleResult, okResult: SettleResult = "succeeded") => {
     const key = planned(action, detail);
     let outcome: { ok: true } | { ok: false; result: SettleResult; note: string };
     try {
@@ -52,10 +52,26 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
     } catch (e) {
       outcome = { ok: false, result: onError(e), note: e instanceof Error ? e.message : String(e) };
     }
-    const r = outcome.ok ? settle(d.dir, d.now(), key, "succeeded", "done") : settle(d.dir, d.now(), key, outcome.result, outcome.note);
+    const r = outcome.ok
+      ? settle(d.dir, d.now(), key, okResult, okResult === "succeeded" ? "done" : "order delivered, waiting for a new run")
+      : settle(d.dir, d.now(), key, outcome.result, outcome.note);
+    // A normal wait for the proof is not an attention item.
+    if (outcome.ok && okResult !== "succeeded") return { result: r };
     return noteIfBad(action, r);
   };
   const retry = (): SettleResult => "retryable";
+
+  // Build the text before any journal line: a bad key sends nothing, so it is refused, not uncertain.
+  const textFor = (order: "merge" | "restart"): string | null => {
+    try {
+      return orderText(order, state.ticket, state.attempt);
+    } catch (e) {
+      const unknown = e instanceof Error && e.message.startsWith("unknown order");
+      appendAttention(d.dir, d.now(), { ticket: state.ticket, run: state.runs.builder, kind: "failed", cause: unknown ? "order-refused-unknown-order" : "order-refused-bad-ticket-key" });
+      return null;
+    }
+  };
+  const delivery = (e: unknown): SettleResult => (e instanceof PromptError && e.delivered === "no" ? "retryable" : "uncertain");
 
   switch (a.kind) {
     case "wait":
@@ -77,17 +93,19 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
     case "status":
       return run("status-write", undefined, () => d.setStatus(a.status), retry);
     case "order": {
-      // Build the text before any journal line: a bad key sends nothing, so it is refused, not uncertain.
-      let text: string;
-      try {
-        text = orderText(a.order, state.ticket, state.attempt);
-      } catch (e) {
-        const unknown = e instanceof Error && e.message.startsWith("unknown order");
-        appendAttention(d.dir, d.now(), { ticket: state.ticket, run: state.runs.builder, kind: "failed", cause: unknown ? "order-refused-unknown-order" : "order-refused-bad-ticket-key" });
-        return { result: null };
-      }
-      return run(`order-${a.order}`, { head: a.head }, () => d.prompt(text),
-        (e) => (e instanceof PromptError && e.delivered === "no" ? "retryable" : "uncertain"));
+      const text = textFor(a.order);
+      if (text === null) return { result: null };
+      return run(`order-${a.order}`, { head: a.head }, () => d.prompt(text), delivery);
     }
+    case "retry": {
+      const text = textFor("restart");
+      if (text === null) return { result: null };
+      return run("retry", { item: a.item, run: a.run }, () => d.prompt(text), delivery, "uncertain");
+    }
+    case "adopt":
+      return run("adopt-retry", { run: a.run }, async () => {
+        writePhaseState(d.dir, { runs: { builder: a.run } });
+        for (const id of a.items) appendResolved(d.dir, id, "controller", d.now().toISOString(), `new run ${a.run} started`);
+      }, retry);
   }
 }

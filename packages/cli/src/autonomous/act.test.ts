@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { act, orderText, ORDER_TEXTS, PromptError, type ActDeps } from "./act.ts";
 import { readPhaseState } from "./phase-state.ts";
 import { resultsOf, readJournal } from "./journal.ts";
+import { appendAttention } from "./attention-write.ts";
+import { appendResolved, readOpen } from "./attention.ts";
 import { writeLock } from "./fakes.test-util.ts";
 import type { TicketState } from "./phase-types.ts";
 
@@ -153,5 +155,46 @@ describe("act", () => {
     await act(deps(d), state(), { kind: "order", order: "merge", head: "abc1234" });
     const planned = readJournal(d).find((l) => l.status === "planned");
     expect(planned?.detail).toEqual({ head: "abc1234" });
+  });
+});
+
+describe("act retry", () => {
+  const S2 = (o: Partial<TicketState> = {}) => state({ phase: "building", ...o });
+  it("sends the restart text once and settles uncertain, with no attention note", async () => {
+    const d = tmp(); const dd = deps(d);
+    const r = await act(dd, S2(), { kind: "retry", item: "builder-1.lost.0", run: "builder-1" });
+    expect(dd.sent).toEqual(["DGS-1: restart the builder, its pane is gone"]);
+    expect(r.result).toBe("uncertain");
+    expect(resultsOf(d)["DGS-1:building:1:retry"]).toBe("uncertain");
+    expect(readJournal(d).find((l) => l.status === "planned")?.detail).toEqual({ item: "builder-1.lost.0", run: "builder-1" });
+    expect(existsSync(join(d, "attention.jsonl"))).toBe(false);
+  });
+  it("a prompt that was not delivered settles retryable", async () => {
+    const d = tmp();
+    const dd = deps(d, { prompt: async () => { throw new PromptError("no pane", "no"); } });
+    expect((await act(dd, S2(), { kind: "retry", item: "i", run: "builder-1" })).result).toBe("retryable");
+  });
+  it("an unknown delivery settles uncertain and a second act call is refused by the journal", async () => {
+    const d = tmp();
+    const dd = deps(d, { prompt: async () => { throw new PromptError("timeout", "maybe"); } });
+    expect((await act(dd, S2(), { kind: "retry", item: "i", run: "builder-1" })).result).toBe("uncertain");
+    await expect(act(deps(d), S2(), { kind: "retry", item: "i", run: "builder-1" })).rejects.toThrow(/already used/);
+  });
+  it("a bad ticket key sends nothing and writes no journal line", async () => {
+    const d = tmp(); const dd = deps(d);
+    await act(dd, S2({ ticket: "bad key" }), { kind: "retry", item: "i", run: "r" });
+    expect(dd.sent).toEqual([]); expect(readJournal(d)).toEqual([]);
+  });
+});
+describe("act adopt", () => {
+  it("writes the new builder into the lock and resolves the items; a repeat writes nothing more", async () => {
+    const d = tmp(); writeLock(d, { phase: "building", runs: { builder: "builder-1" } });
+    appendAttention(d, T, { ticket: "DGS-1", run: "builder-1", kind: "lost", cause: "pane-gone", retryEligible: true });
+    const a = { kind: "adopt" as const, run: "builder-2", items: ["builder-1.lost.0"] };
+    await act(deps(d), state({ phase: "building" }), a);
+    const r = readPhaseState(d); expect(r.kind === "ok" && r.state.runs.builder).toBe("builder-2");
+    expect(readOpen(d)).toEqual([]);
+    expect(resultsOf(d)["DGS-1:building:1:adopt-retry"]).toBe("succeeded");
+    expect(appendResolved(d, "builder-1.lost.0", "controller", T.toISOString())).toBe(false);
   });
 });
