@@ -1546,3 +1546,12 @@ if (!d.dryRun && d.tick !== undefined && readLock(d.dir) !== null) {
 - [ ] **Step 2: Mutation checks by hand** (each one: break the code, run the named test, see it fail, restore with `git checkout -- <file>`; write the four results into `report.md`): (a) in `advance.ts` drop the `p.round >= s.attempt` check: the attempt 2 test fails; (b) in `act.ts` move the `plan(...)` call after the effect: "the planned line is on disk before the prompt runs" fails; (c) in `reconcile.ts` return `retryable` instead of `uncertain` for `order-merge`: the kill test (git does not show it) fails; (d) in `advance.ts` treat `merged` events alone as proof: the "merged event without git proof" test fails.
 - [ ] **Step 3:** Run `pnpm vitest run packages/cli/src/autonomous scripts/nexus-api/src/scheduler` and `pnpm vitest run` for the repo. Expected: all green. Run `dg autonomous tick --dry-run` in the worktree with no lock. Expected: prints `no lock`.
 - [ ] **Step 4:** Invoke `digismith:report-implementation` to write `report.html` and `report.md` (include the Maestro's first-use steps from the design, section 12). Commit `docs(dgs-582): add the implementation report` with a pathspec for the board folder files only.
+
+## Corrections after the Task 1 probe (see `probe.md`)
+Small changes. No design change. Tasks 11 and 12 only.
+- `parseAgentList` reads `{"result":{"agents":[{"name","agent_status","pane_id",...}]}}`, not a bare array. `status` = `agent_status` (`idle`, `done`, `working`). Add `pane` = `pane_id` to its return type; the input box is read from the conductor's `pane_id`.
+- `herdr-ws` refuses without `HERDR_WS`. `makeObservers` and `makeWriters` run it with `env: { ...process.env, HERDR_WS: herdrWs }`, so the plan's `Exec` takes `opts.env`.
+- The `Exec` of `observers-real.ts` (with `stdout`) is a second type. The DGS-486 `Exec` in `conductor.ts` has no stdout. Name the new one `ExecOut`; the prompt may keep using `promptConductor` with the DGS-486 `Exec`.
+- Run and review data are imported, not called through `dg`: `listRuns`, `readEvents`, `findRunDir` (run/), `readReviews`, `pack.md` `head:` (reviewer/). A verdict `head` is the `head:` of the `pack.md` in the same `reviews/ticket-final-r<N>/` folder; clean = the review has no findings.
+- Task 12 (a): the busy test in `scan.test.ts` (line 153) must still see exactly one `busy` event and no tracker call when no `tick` is injected.
+- Task 5 rule for the box is in `probe.md` Step 4. The `typed` fixture is hand-made.
