@@ -1,5 +1,5 @@
 import { openLines, settle } from "./journal.ts";
-import { PHASES } from "./phase-types.ts";
+import { PHASES, RETRY_PROOF_WAIT_MS } from "./phase-types.ts";
 import type { Observations, Phase, SettleResult, TicketState } from "./phase-types.ts";
 import type { JournalLine } from "./journal.ts";
 
@@ -9,7 +9,7 @@ const r = (result: SettleResult, note: string): Verdict => ({ result, note });
 const rank = (p: string) => PHASES.indexOf(p as Phase);
 
 // succeeded is only ever settled with proof: a missing detail field or an unknown phase is uncertain.
-function check(action: string, line: JournalLine, state: TicketState | null, obs: Observations): Verdict {
+function check(action: string, line: JournalLine, state: TicketState | null, obs: Observations, now: Date): Verdict {
   if (action === "claim") {
     if (state === null) return r("permanent", "no lock");
     if (state.ticket !== line.ticket) return r("uncertain", "lock names another ticket");
@@ -46,6 +46,20 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
     const run = obs.runs.value.find((x) => x.id === state.runs.builder);
     return run !== undefined && run.phaseEvent === want ? r("succeeded", "phase event seen") : r("retryable", "phase event missing");
   }
+  if (action === "retry") {
+    // proof is an artefact: a new started builder run of the ticket that began after the planned line
+    if (!obs.runs.ok) return "unknown";
+    const t = Date.parse(line.ts);
+    const fresh = obs.runs.value.some((x) => x.role === "builder" && x.started && x.id !== line.detail?.run && Date.parse(x.createdAt) > t);
+    if (fresh) return r("succeeded", "new run started");
+    // the worker needs time to start: no note until the wait is over; never retryable, the order may have been delivered
+    if (now.getTime() - t < RETRY_PROOF_WAIT_MS) return "unknown";
+    return r("uncertain", "no new run after the retry order");
+  }
+  if (action === "adopt-retry") {
+    if (state === null) return r("permanent", "no lock");
+    return state.runs.builder === line.detail?.run ? r("succeeded", "lock names the new run") : r("retryable", "lock not updated");
+  }
   return r("uncertain", "no check for this action");
 }
 
@@ -57,7 +71,7 @@ export function reconcile(d: { dir: string; now: Date; state: TicketState | null
   const mine = openLines(d.dir).filter((l) => (d.state !== null ? l.planned.ticket === d.state.ticket : l.planned.action === "claim"));
   for (const l of mine) {
     const action = l.key.split(":").slice(3).join(":");
-    const v = check(action, l.planned, d.state, d.obs);
+    const v = check(action, l.planned, d.state, d.obs, d.now);
     if (v === "unknown") continue;
     if (l.state === "open") settle(d.dir, d.now, l.key, v.result, v.note);
     else if (v.result === "succeeded" || v.result === "permanent") settle(d.dir, d.now, l.key, v.result, `reconciled: ${v.note}`);

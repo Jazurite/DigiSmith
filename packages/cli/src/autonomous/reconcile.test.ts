@@ -13,7 +13,7 @@ const state = (phase: TicketState["phase"] = "merge-ready"): TicketState => ({ t
 const O = (o: Partial<Observations> = {}): Observations => ({
   runs: ok([{ id: "builder-1", role: "builder", createdAt: "x", started: true, ended: false, merged: false, pushed: false, phaseEvent: "merge" as const }]),
   packs: ok([]), verdicts: ok([]), git: ok({ head: "aaaaaaa1", base: "bbbbbbb1", onOriginMain: false }),
-  tracker: ok({ status: "in progress" }),
+  tracker: ok({ status: "in progress" }), attention: ok([]),
   herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "present" }), ...o });
 const open = (d: string, action: string, phase = "merge-ready", detail?: Record<string, string>) =>
   plan(d, T, { ticket: "DGS-1", phase, attempt: 1, action, detail });
@@ -193,5 +193,59 @@ describe("reconcile", () => {
     const notes = reconcile({ dir: d, now: T, state: state(), obs: O({ tracker: { ok: false, error: "down" } }) });
     expect(resultsOf(d)[k]).toBe("open");
     expect(notes).toEqual([]);
+  });
+});
+
+describe("reconcile retry", () => {
+  const plannedAt = T;
+  const mk = (id: string, createdAt: string, o = {}) => ({ id, role: "builder", createdAt, started: true, ended: false, merged: false, pushed: false, phaseEvent: null, ...o });
+  const old = mk("builder-1", "2026-10-21T00:01:00.000Z");
+  const at = (min: number) => new Date(plannedAt.getTime() + min * 60_000);
+  const setup = () => { const d = tmp(); const k = open(d, "retry", "building", { item: "builder-1.lost.0", run: "builder-1" }); settle(d, plannedAt, k, "uncertain", "delivered"); return { d, k }; };
+  it("a new started builder run after the line gives succeeded", () => {
+    const { d, k } = setup();
+    reconcile({ dir: d, now: at(2), state: state("building"), obs: O({ runs: ok([old, mk("builder-2", at(1).toISOString())]) }) });
+    expect(resultsOf(d)[k]).toBe("succeeded");
+  });
+  it("the old run, or a run created before the line, is no proof", () => {
+    const { d, k } = setup();
+    reconcile({ dir: d, now: at(2), state: state("building"), obs: O({ runs: ok([old, mk("builder-0", at(-5).toISOString())]) }) });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+  });
+  it("an unstarted new run is no proof", () => {
+    const { d, k } = setup();
+    reconcile({ dir: d, now: at(2), state: state("building"), obs: O({ runs: ok([old, mk("builder-2", at(1).toISOString(), { started: false })]) }) });
+    expect(resultsOf(d)[k]).toBe("uncertain");
+  });
+  it("a failed runs read leaves the line as it is, with no note", () => {
+    const { d, k } = setup();
+    const notes = reconcile({ dir: d, now: at(30), state: state("building"), obs: O({ runs: { ok: false, error: "x" } }) });
+    expect(resultsOf(d)[k]).toBe("uncertain"); expect(notes).toEqual([]);
+  });
+  it("no new run: no note at 14:59, one note at 15:00; never retryable", () => {
+    const { d, k } = setup();
+    expect(reconcile({ dir: d, now: new Date(plannedAt.getTime() + 14 * 60_000 + 59_000), state: state("building"), obs: O({ runs: ok([old]) }) })).toEqual([]);
+    expect(reconcile({ dir: d, now: at(15), state: state("building"), obs: O({ runs: ok([old]) }) })).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-retry" }]);
+    expect(resultsOf(d)[k]).toBe("uncertain");
+  });
+  it("an open line (crash before settle) younger than 15 minutes stays open and is not planned again", () => {
+    const d = tmp(); const k = open(d, "retry", "building", { item: "i", run: "builder-1" });
+    reconcile({ dir: d, now: at(5), state: state("building"), obs: O({ runs: ok([old]) }) });
+    expect(resultsOf(d)[k]).toBe("open");
+  });
+  it("an open line settles succeeded when the new run is there", () => {
+    const d = tmp(); const k = open(d, "retry", "building", { item: "i", run: "builder-1" });
+    reconcile({ dir: d, now: at(5), state: state("building"), obs: O({ runs: ok([old, mk("builder-2", at(1).toISOString())]) }) });
+    expect(resultsOf(d)[k]).toBe("succeeded");
+  });
+});
+describe("reconcile adopt-retry", () => {
+  it("lock builder equals the new run gives succeeded; otherwise retryable", () => {
+    const d = tmp(); const k = open(d, "adopt-retry", "building", { run: "builder-2" });
+    reconcile({ dir: d, now: T, state: { ...state("building"), runs: { builder: "builder-1" } }, obs: O() });
+    expect(resultsOf(d)[k]).toBe("retryable");
+    const k2 = open(d, "adopt-retry", "review", { run: "builder-1" });
+    reconcile({ dir: d, now: T, state: { ...state("building"), runs: { builder: "builder-1" } }, obs: O() });
+    expect(resultsOf(d)[k2]).toBe("succeeded");
   });
 });
