@@ -1,3 +1,5 @@
+import { appendResolved, readOpen } from "./attention.ts";
+import { closeBreaker, readBreaker } from "./breaker.ts";
 import { nextClock } from "./clock.ts";
 import { readAway, writeAway } from "./away.ts";
 import { runNow, type NexusDeps, type RunNowResult } from "./nexus.ts";
@@ -9,6 +11,14 @@ async function kick(d: SwitchDeps, job: string): Promise<RunNowResult> {
   const r = await runNow(d.nexus, job);
   appendEvent(d.dir, d.now(), "run-now", { job, ok: r.ok, status: r.ok ? 202 : r.status });
   return r;
+}
+
+/** Closes the breaker and resolves the open circuit-breaker-open items as jack. Returns whether the breaker was open. */
+export function closeBreakerAsJack(dir: string, now: Date, note: string): boolean {
+  const wasOpen = readBreaker(dir).open;
+  if (wasOpen) closeBreaker(dir);
+  for (const it of readOpen(dir).filter((o) => o.cause === "circuit-breaker-open")) appendResolved(dir, it.id, "jack", now.toISOString(), note);
+  return wasOpen;
 }
 
 export async function runAway(d: SwitchDeps, a: { until?: string }): Promise<{ until: string | null; runNow: RunNowResult }> {
@@ -24,5 +34,7 @@ export async function runBack(d: SwitchDeps, kind: "away-off" | "away-expired" =
   const cur = readAway(d.dir);
   writeAway(d.dir, { away: false, since: cur?.since || now.toISOString(), until: cur?.until ?? null, endedAt: now.toISOString() });
   appendEvent(d.dir, now, kind);
+  // back never fails because of the breaker
+  try { closeBreakerAsJack(d.dir, now, "back"); } catch { /* go on */ }
   return { runNow: await kick(d, "autonomous-report") };
 }

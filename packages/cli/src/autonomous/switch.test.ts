@@ -90,3 +90,18 @@ describe("runBack", () => {
     expect(readAway(dir)?.away).toBe(false);
   });
 });
+
+describe("runBack and the breaker", () => {
+  it("closes an open breaker, resolves the circuit-breaker-open item as jack, still calls run-now", async () => {
+    const { recordRelease, readBreaker } = await import("./breaker.ts");
+    const { appendOpen, readOpen } = await import("./attention.ts");
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, NOW);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, NOW);
+    appendOpen(dir, { ticket: "DGS-2", run: "-", kind: "failed", cause: "circuit-breaker-open", since: NOW.toISOString(), ts: NOW.toISOString() });
+    await runBack(mk());
+    expect(readBreaker(dir).open).toBe(false);
+    expect(readOpen(dir)).toEqual([]);
+    expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain('"by":"jack"');
+    expect(calls).toHaveLength(1);
+  });
+});
