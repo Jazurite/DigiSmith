@@ -23,7 +23,7 @@ const call = (kind: string, input: string, e: NodeJS.ProcessEnv) =>
 
 describe("hook-cli", () => {
   it("writes one event, prints nothing and exits 0", () => {
-    const run = createRun({ ticket: "DGS-581", role: "builder" }, env).run;
+    const run = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md" }, env).run;
     const r = call("tool", JSON.stringify({ tool_name: "Bash", tool_input: { command: "SECRET" }, tool_response: { stdout: "SECRET" } }), { ...env, DIGISMITH_RUN_ID: run });
     expect(r.status).toBe(0);
     expect(r.stdout).toBe("");
@@ -37,7 +37,7 @@ describe("hook-cli", () => {
     expect(call("bogus", "{}", env).status).toBe(0);
   });
   it("finishes fast (one call, recorded)", () => {
-    const run = createRun({ ticket: "DGS-581", role: "builder" }, env).run;
+    const run = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md" }, env).run;
     call("started", "{}", { ...env, DIGISMITH_RUN_ID: run }); // warm the file cache
     const t0 = performance.now();
     call("tool", "{}", { ...env, DIGISMITH_RUN_ID: run });

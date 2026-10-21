@@ -21,8 +21,8 @@ function add(run: string, ...types: string[]) {
 
 describe("readers", () => {
   it("lists runs newest first, filtered by ticket", () => {
-    const a = createRun({ ticket: "DGS-1", role: "builder" }, env, new Date("2026-10-21T01:00:00Z"));
-    const b = createRun({ ticket: "DGS-2", role: "reviewer" }, env, new Date("2026-10-21T02:00:00Z"));
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, env, new Date("2026-10-21T01:00:00Z"));
+    const b = createRun({ ticket: "DGS-2", role: "reviewer", order: "/o.md" }, env, new Date("2026-10-21T02:00:00Z"));
     add(a.run, "started", "ended");
     expect(listRuns(env).map((r) => r.record.run)).toEqual([b.run, a.run]);
     expect(listRuns(env, "DGS-1").map((r) => r.record.run)).toEqual([a.run]);
@@ -35,7 +35,7 @@ describe("readers", () => {
     expect(listRuns(env)).toEqual([]);
   });
   it("shows a run with its summary, and null for an unknown id", () => {
-    const a = createRun({ ticket: "DGS-1", role: "builder" }, env);
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, env);
     add(a.run, "started", "tool");
     const s = showRun(a.run, env)!;
     expect(s.record.run).toBe(a.run);
@@ -44,7 +44,7 @@ describe("readers", () => {
     expect(showRun("builder-x-000000", env)).toBeNull();
   });
   it("tails events after a seq", () => {
-    const a = createRun({ ticket: "DGS-1", role: "builder" }, env);
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, env);
     add(a.run, "started", "tool", "turn_end");
     expect(tailEvents(a.run, 0, env)!.map((e) => e.seq)).toEqual([1, 2, 3]);
     expect(tailEvents(a.run, 2, env)!.map((e) => e.seq)).toEqual([3]);
@@ -52,7 +52,7 @@ describe("readers", () => {
     expect(tailEvents("builder-x-000000", 0, env)).toBeNull();
   });
   it("keeps file order and tolerates two lines that share a seq", () => {
-    const a = createRun({ ticket: "DGS-1", role: "builder" }, env);
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, env);
     const dir = findRunDir(a.run, env)!;
     const line = (seq: number, type: string, ts: string) => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts, run: a.run, type, data: {} });
     // a hand-written file: seq 2 appears twice (the accepted residual of the stale-lock race)
@@ -65,6 +65,14 @@ describe("readers", () => {
     const shown = showRun(a.run, env)!;
     expect(shown.summary).toMatchObject({ events: 4, last_type: "turn_end", first_ts: "2026-10-21T01:00:00Z", last_ts: "2026-10-21T01:00:03Z", ended: false });
     expect(listRuns(env)[0].summary.events).toBe(4);
+  });
+  it("ended is true only when an ended comes after the last started", () => {
+    const ev = (...types: string[]) => types.map((type, i) => ({ schema: "nightwatch-event/v1", seq: i + 1, ts: `2026-10-21T01:00:0${i}Z`, run: "r", type, data: {} }) as never);
+    expect(summarize(ev("started", "tool", "ended", "started")).ended).toBe(false); // /clear
+    expect(summarize(ev("started", "ended", "started", "ended")).ended).toBe(true);
+    expect(summarize(ev("started", "tool", "ended")).ended).toBe(true);
+    expect(summarize(ev("ended")).ended).toBe(true);
+    expect(summarize(ev("started", "tool")).ended).toBe(false);
   });
   it("summarize of no events is empty", () => {
     expect(summarize([])).toEqual({ events: 0, first_ts: null, last_ts: null, last_type: null, ended: false });

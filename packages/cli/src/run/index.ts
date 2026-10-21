@@ -16,7 +16,7 @@ const startCommand: CommandModule = {
     y
       .option("ticket", { type: "string", demandOption: true, describe: "ticket key, e.g. DGS-581" })
       .option("role", { type: "string", demandOption: true, describe: "builder, reviewer, scout or other" })
-      .option("order", { type: "string", describe: "path of the order" })
+      .option("order", { type: "string", demandOption: true, describe: "path of the order (a Scout without an order file passes the path of its brief)" })
       .option("seat", { type: "string" })
       .option("model", { type: "string" })
       .option("worktree", { type: "string", describe: "worktree path (branch and base sha are read from git)" })
@@ -31,7 +31,7 @@ const startCommand: CommandModule = {
       const r = createRun({
         ticket: a.ticket as string,
         role: a.role as string,
-        order: a.order as string | undefined,
+        order: a.order as string,
         seat: a.seat as string | undefined,
         model: a.model as string | undefined,
         worktree: a.worktree as string | undefined,

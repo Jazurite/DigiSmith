@@ -64,7 +64,7 @@ describe("hooks.json", () => {
   });
   it("writes the event for each command when the run id is set", () => {
     const env = { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") };
-    const run = createRun({ ticket: "DGS-581", role: "builder" }, env).run;
+    const run = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md" }, env).run;
     const payloads: Record<string, object> = {
       SessionStart: { source: "startup", session_id: "s1" },
       Notification: { notification_type: "permission_prompt" },

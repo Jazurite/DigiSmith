@@ -9,12 +9,15 @@ export type RunRow = { record: RunRecord; summary: RunSummary };
 
 export function summarize(events: EventLine[]): RunSummary {
   const last = events[events.length - 1];
+  // /clear fires an ended and then a started, so the run is over only if an ended comes after the last started (file order).
+  const lastStarted = events.map((e) => e.type).lastIndexOf("started");
+  const lastEnded = events.map((e) => e.type).lastIndexOf("ended");
   return {
     events: events.length,
     first_ts: events[0]?.ts ?? null,
     last_ts: last?.ts ?? null,
     last_type: last?.type ?? null,
-    ended: events.some((e) => e.type === "ended"),
+    ended: lastEnded > lastStarted,
   };
 }
 

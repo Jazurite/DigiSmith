@@ -79,22 +79,29 @@ describe("dg run", () => {
     expect((await dg("tail", id, "--since", "1")).stdout.trim().split("\n").map((l) => JSON.parse(l).seq)).toEqual([2]);
   });
   it("exits 1 with a message for an unknown run, an unknown type, a bad --data and a bad role", async () => {
-    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout", "--order", "/o.md")).stdout.trim();
     expect((await dg("event", "builder-x-000000", "merged")).status).toBe(1);
     expect((await dg("event", id, "started")).status).toBe(1); // a hook type, not a conductor type
     expect((await dg("event", id, "merged", "--data", "[1]")).status).toBe(1);
     expect((await dg("show", "builder-x-000000")).status).toBe(1);
     expect((await dg("tail", "builder-x-000000")).status).toBe(1);
-    const bad = await dg("start", "--ticket", "DGS-581", "--role", "boss");
+    const bad = await dg("start", "--ticket", "DGS-581", "--role", "boss", "--order", "/o.md");
     expect(bad.status).toBe(1);
     expect(bad.stderr).toMatch(/role/);
+  });
+  it("start without --order exits 1, names order and writes nothing", async () => {
+    const r = await dg("start", "--ticket", "DGS-1", "--role", "scout");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/order/);
+    expect(r.stdout).toBe("");
+    expect(fs.existsSync(path.join(tmp, "runs"))).toBe(false);
   });
   it("tail --help says the file position is the authority", async () => {
     const r = await dg("tail", "--help");
     expect((r.stdout + r.stderr).replace(/\s+/g, " ")).toContain("file position is the authority");
   });
   it("refuses a bad --since with exit 1 and prints nothing", async () => {
-    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout", "--order", "/o.md")).stdout.trim();
     await dg("event", id, "merged");
     for (const v of ["abc", "-1"]) {
       const r = await dg("tail", id, `--since=${v}`);
@@ -104,14 +111,14 @@ describe("dg run", () => {
     }
   });
   it("a --data that is not JSON exits 1, names --data and appends nothing", async () => {
-    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout", "--order", "/o.md")).stdout.trim();
     const r = await dg("event", id, "merged", "--data", "not json");
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/--data/);
     expect((await dg("tail", id)).stdout).toBe("");
   });
   it("event phase takes building, review and merge and refuses anything else", async () => {
-    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder")).stdout.trim();
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder", "--order", "/o.md")).stdout.trim();
     for (const p of ["building", "review", "merge"]) expect((await dg("event", id, "phase", "--data", JSON.stringify({ phase: p }))).status).toBe(0);
     for (const args of [["--data", '{"phase":"done"}'], ["--data", "{}"], []]) {
       const r = await dg("event", id, "phase", ...args);
@@ -122,7 +129,7 @@ describe("dg run", () => {
     expect(tail.map((e) => [e.seq, e.type, e.data.phase])).toEqual([[1, "phase", "building"], [2, "phase", "review"], [3, "phase", "merge"]]);
   });
   it("keeps file order and tolerates two lines that share a seq", async () => {
-    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder")).stdout.trim();
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder", "--order", "/o.md")).stdout.trim();
     const dir = findRunDir(id)!;
     const line = (seq: number, type: string, ts: string) => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts, run: id, type, data: {} });
     fs.writeFileSync(

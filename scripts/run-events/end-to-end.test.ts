@@ -45,7 +45,7 @@ describe("a worker run, start to end", () => {
     const lines = tailEvents(id, 0, e0)!;
     expect(lines.map((e) => [e.seq, e.type])).toEqual([[1, "started"], [2, "tool"], [3, "phase"], [4, "blocked"], [5, "turn_end"], [6, "ended"]]);
     expect(lines[2].data).toEqual({ phase: "review" });
-    expect(lines[3].data).toEqual({ kind: "permission_prompt" });
+    expect(lines[3].data).toEqual({ kind: "permission_prompt", session_id: null });
   });
 
   it("a session without DIGISMITH_RUN_ID writes nothing", () => {

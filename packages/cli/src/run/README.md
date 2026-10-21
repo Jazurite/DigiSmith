@@ -34,6 +34,7 @@ Order rule: the line order of the file is the authority. `seq` is a strong hint,
 A very small race in the stale-lock break can give two lines the same `seq`.
 Readers order by file position and tolerate a duplicate `seq`.
 `show` takes the last event from the last line and counts lines, not distinct `seq` values.
+The summary field `ended` is true only when an `ended` event comes after the last `started` event in file order (a `/clear` writes `ended`, then `started`, so that run is not over). An `ended` with no `started` at all counts as ended.
 If the counter file is missing, the writer counts the lines of `events.jsonl` instead.
 
 ## Hooks
@@ -43,10 +44,12 @@ If the counter file is missing, the writer counts the lines of `events.jsonl` in
 | Hook | Type | Data |
 | --- | --- | --- |
 | SessionStart | `started` | `source`, `session_id` |
-| Notification | `blocked` | `kind` (from `notification_type`) |
-| PostToolUse | `tool` | `tool`, `ok` |
-| Stop | `turn_end` | none |
-| SessionEnd | `ended` | `reason` |
+| Notification | `blocked` | `kind` (from `notification_type`), `session_id` |
+| PostToolUse | `tool` | `tool`, `ok`, `session_id` |
+| Stop | `turn_end` | `session_id` |
+| SessionEnd | `ended` | `reason`, `session_id` |
+
+Every hook event carries the `session_id` of the session that fired it (an id or null), so an `ended` from a child `claude -p` session that inherits `DIGISMITH_RUN_ID` can be told apart.
 
 Each command tests `DIGISMITH_RUN_ID` in the shell first. With no id, no node process starts.
 The script also writes nothing when the run directory has no `run.json`.
@@ -56,7 +59,7 @@ The `tool` hook waits at most 150 ms for the lock, then drops its event and logs
 
 ## Commands
 
-- `dg run start --ticket KEY --role R --order PATH [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]` writes `run.json` and prints the run id alone.
+- `dg run start --ticket KEY --role R --order PATH (required; a Scout without an order file passes the path of its brief) [--seat S] [--model M] [--worktree DIR] [--branch B] [--base-sha SHA] [--workspace W] [--tab T] [--pane P] [--budget JSON]` writes `run.json` and prints the run id alone.
 - `dg run event <run-id> <type> [--data JSON]` appends one conductor event. Exit 1 on an unknown run or type. `--data` must be a JSON object.
 - `dg run list [--ticket KEY] [--json]` prints one row per run, newest first.
 - `dg run show <run-id>` prints the main fields (run, ticket, role, seat, model, branch, worktree, herdr, created) and a summary. `dg run show <run-id> --json` prints the full `run.json` and the summary.

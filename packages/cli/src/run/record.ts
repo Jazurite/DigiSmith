@@ -28,7 +28,7 @@ export type RunRecord = {
 export type StartInput = {
   ticket: string;
   role: string;
-  order?: string;
+  order: string;
   seat?: string;
   model?: string;
   worktree?: string;
@@ -86,7 +86,7 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
   const wt = input.worktree && fs.existsSync(input.worktree) ? input.worktree : null;
   const base: Pick<RunRecord, "schema" | "ticket" | "role"> = { schema: RUN_SCHEMA, ticket: input.ticket, role: input.role as Role };
   const rest = {
-    order: input.order ?? null,
+    order: input.order,
     seat: input.seat ?? null,
     model: input.model ?? null,
     plugin_version: pluginVersion(),

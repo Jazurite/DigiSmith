@@ -28,17 +28,18 @@ function toolOk(response: unknown): boolean {
 
 export function buildData(kind: HookKind, payload: unknown): Record<string, unknown> {
   const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+  const session_id = name(p.session_id);
   switch (kind) {
     case "started":
-      return { source: name(p.source), session_id: name(p.session_id) };
+      return { source: name(p.source), session_id };
     case "blocked":
-      return { kind: name(p.notification_type) };
+      return { kind: name(p.notification_type), session_id };
     case "tool":
-      return { tool: name(p.tool_name), ok: toolOk(p.tool_response) };
+      return { tool: name(p.tool_name), ok: toolOk(p.tool_response), session_id };
     case "ended":
-      return { reason: name(p.reason) };
+      return { reason: name(p.reason), session_id };
     case "turn_end":
-      return {};
+      return { session_id };
   }
 }
 

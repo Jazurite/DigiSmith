@@ -2,6 +2,7 @@
 Worker start, new step before the worker is started (DGS-581):
   RUN_ID=$(dg run start --ticket <KEY> --role <builder|reviewer|scout> --order <order path> \
            --seat <seat> --model <model> --worktree <worktree dir> --workspace <w> --tab "<tab label>" --pane <pane>)
+--order is required: a Scout without an order file passes the path of its brief.
 Start the worker with DIGISMITH_RUN_ID=$RUN_ID in its environment (with DIGISMITH_REVIEW_MODE=role for a Builder).
 A retry, a new Reviewer or a new Scout runs dg run start again and gets a new id. Never reuse an id.
 After the start, check: dg run show $RUN_ID. Events appear as the worker works: started, tool, blocked, turn_end, ended.

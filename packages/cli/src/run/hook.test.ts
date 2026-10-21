@@ -14,7 +14,7 @@ let run: string;
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "nw-hook-"));
   env = { DIGISMITH_DEPOT_DIR: tmp };
-  run = createRun({ ticket: "DGS-581", role: "builder" }, env).run;
+  run = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md" }, env).run;
   env.DIGISMITH_RUN_ID = run;
 });
 afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -24,17 +24,25 @@ const events = () => readEvents(findRunDir(run, env)!);
 describe("buildData", () => {
   it("keeps only the listed fields", () => {
     expect(buildData("started", { source: "startup", session_id: "abc-123", prompt: "secret" })).toEqual({ source: "startup", session_id: "abc-123" });
-    expect(buildData("blocked", { notification_type: "permission_prompt", message: "Claude needs your permission to run rm -rf" })).toEqual({ kind: "permission_prompt" });
-    expect(buildData("tool", { tool_name: "Bash", tool_input: { command: "echo secret" }, tool_response: { stdout: "secret" } })).toEqual({ tool: "Bash", ok: true });
-    expect(buildData("tool", { tool_name: "Edit", tool_response: { is_error: true } })).toEqual({ tool: "Edit", ok: false });
-    expect(buildData("tool", { tool_name: "Read", tool_response: { error: "nope" } })).toEqual({ tool: "Read", ok: false });
-    expect(buildData("turn_end", { last_assistant_message: "secret" })).toEqual({});
-    expect(buildData("ended", { reason: "logout", transcript_path: "/x" })).toEqual({ reason: "logout" });
+    expect(buildData("blocked", { notification_type: "permission_prompt", message: "Claude needs your permission to run rm -rf" })).toEqual({ kind: "permission_prompt", session_id: null });
+    expect(buildData("tool", { tool_name: "Bash", tool_input: { command: "echo secret" }, tool_response: { stdout: "secret" } })).toEqual({ tool: "Bash", ok: true, session_id: null });
+    expect(buildData("tool", { tool_name: "Edit", tool_response: { is_error: true } })).toEqual({ tool: "Edit", ok: false, session_id: null });
+    expect(buildData("tool", { tool_name: "Read", tool_response: { error: "nope" } })).toEqual({ tool: "Read", ok: false, session_id: null });
+    expect(buildData("turn_end", { last_assistant_message: "secret" })).toEqual({ session_id: null });
+    expect(buildData("ended", { reason: "logout", transcript_path: "/x" })).toEqual({ reason: "logout", session_id: null });
+  });
+  it("puts the session_id of the firing session into every kind", () => {
+    const p = { session_id: "child-9", source: "clear", notification_type: "idle_prompt", tool_name: "Bash", reason: "other", prompt: "secret" };
+    expect(buildData("started", p)).toEqual({ source: "clear", session_id: "child-9" });
+    expect(buildData("blocked", p)).toEqual({ kind: "idle_prompt", session_id: "child-9" });
+    expect(buildData("tool", p)).toEqual({ tool: "Bash", ok: true, session_id: "child-9" });
+    expect(buildData("turn_end", p)).toEqual({ session_id: "child-9" });
+    expect(buildData("ended", p)).toEqual({ reason: "other", session_id: "child-9" });
   });
   it("turns a value that is not a plain name into null", () => {
-    expect(buildData("tool", { tool_name: "has a space and text", tool_response: {} })).toEqual({ tool: null, ok: true });
-    expect(buildData("blocked", {})).toEqual({ kind: null });
-    expect(buildData("ended", "not an object")).toEqual({ reason: null });
+    expect(buildData("tool", { tool_name: "has a space and text", tool_response: {} })).toEqual({ tool: null, ok: true, session_id: null });
+    expect(buildData("blocked", {})).toEqual({ kind: null, session_id: null });
+    expect(buildData("ended", "not an object")).toEqual({ reason: null, session_id: null });
   });
 });
 
@@ -46,6 +54,13 @@ describe("runHook", () => {
     runHook("turn_end", "{}", env);
     runHook("ended", JSON.stringify({ reason: "other" }), env);
     expect(events().map((e) => [e.seq, e.type])).toEqual([[1, "started"], [2, "tool"], [3, "blocked"], [4, "turn_end"], [5, "ended"]]);
+  });
+  it("records the session_id of a child session that inherits the run id", () => {
+    runHook("started", JSON.stringify({ source: "startup", session_id: "parent" }), env);
+    runHook("ended", JSON.stringify({ reason: "other", session_id: "child-claude-p" }), env);
+    const ev = events();
+    expect(ev[0].data).toMatchObject({ session_id: "parent" });
+    expect(ev[1].data).toEqual({ reason: "other", session_id: "child-claude-p" });
   });
   it("writes nothing without DIGISMITH_RUN_ID", () => {
     const before = fs.readdirSync(path.join(runsDir(env), "DGS-581", run));

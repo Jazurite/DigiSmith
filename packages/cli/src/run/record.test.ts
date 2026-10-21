@@ -34,7 +34,7 @@ describe("createRun", () => {
     expect(onDisk.created_at).toBe("2026-10-21T13:30:05.000Z");
   });
   it("reads plugin_version from the plugin manifest", () => {
-    const r = createRun({ ticket: "DGS-581", role: "scout" }, env);
+    const r = createRun({ ticket: "DGS-581", role: "scout", order: "/o.md" }, env);
     expect(r.plugin_version).toMatch(/^\d+\.\d+\.\d+/);
   });
   function tempRepo(): { dir: string; sha: string } {
@@ -47,7 +47,7 @@ describe("createRun", () => {
   }
   it("takes branch, base sha and worktree from git when a worktree is given", () => {
     const { dir, sha } = tempRepo();
-    const r = createRun({ ticket: "DGS-581", role: "builder", worktree: dir }, env);
+    const r = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: dir }, env);
     expect(r.worktree).toBe(dir);
     expect(r.base_sha).toBe(sha);
     expect(r.base_sha).toMatch(/^[0-9a-f]{40}$/);
@@ -56,26 +56,26 @@ describe("createRun", () => {
   it("stores a null branch on a detached head", () => {
     const { dir, sha } = tempRepo();
     execFileSync("git", ["checkout", "--detach"], { cwd: dir, stdio: "ignore" });
-    const r = createRun({ ticket: "DGS-581", role: "builder", worktree: dir }, env);
+    const r = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: dir }, env);
     expect(r.branch).toBeNull();
     expect(r.base_sha).toBe(sha);
   });
   it("flags win over git, and budget must be a JSON object", () => {
-    const r = createRun({ ticket: "DGS-581", role: "reviewer", branch: "b", baseSha: "abc", budget: '{"turns":50}', workspace: "w2", tab: "T", pane: "p1" }, env);
+    const r = createRun({ ticket: "DGS-581", role: "reviewer", order: "/o.md", branch: "b", baseSha: "abc", budget: '{"turns":50}', workspace: "w2", tab: "T", pane: "p1" }, env);
     expect(r.branch).toBe("b");
     expect(r.base_sha).toBe("abc");
     expect(r.budget).toEqual({ turns: 50 });
     expect(r.herdr).toEqual({ workspace: "w2", tab: "T", pane: "p1" });
-    expect(() => createRun({ ticket: "DGS-581", role: "builder", budget: "[1]" }, env)).toThrow(/budget/);
+    expect(() => createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", budget: "[1]" }, env)).toThrow(/budget/);
   });
   it("gives a new id for every start, even in the same second", () => {
     const now = new Date("2026-10-21T13:30:05Z");
-    const ids = new Set(Array.from({ length: 20 }, () => createRun({ ticket: "DGS-581", role: "builder" }, env, now).run));
+    const ids = new Set(Array.from({ length: 20 }, () => createRun({ ticket: "DGS-581", role: "builder", order: "/o.md" }, env, now).run));
     expect(ids.size).toBe(20);
   });
   it("refuses a bad key or role", () => {
-    expect(() => createRun({ ticket: "../x", role: "builder" }, env)).toThrow(/ticket/);
-    expect(() => createRun({ ticket: "DGS-1", role: "boss" }, env)).toThrow(/role/);
+    expect(() => createRun({ ticket: "../x", role: "builder", order: "/o.md" }, env)).toThrow(/ticket/);
+    expect(() => createRun({ ticket: "DGS-1", role: "boss", order: "/o.md" }, env)).toThrow(/role/);
     expect(fs.existsSync(runsDir(env))).toBe(false);
   });
 });
