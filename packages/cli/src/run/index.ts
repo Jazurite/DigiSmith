@@ -107,7 +107,9 @@ const tailCommand: CommandModule = {
   describe: "print the events of a run, one JSON line each (no follow)",
   builder: (y) => y.positional("run-id", { type: "string", demandOption: true }).option("since", { type: "number", default: 0, describe: "only events with a greater seq" }),
   handler: (a) => {
-    const events = tailEvents(a["run-id"] as string, a.since as number, process.env);
+    const since = a.since as number;
+    if (!Number.isFinite(since) || since < 0) return fail("--since must be a number of 0 or more");
+    const events = tailEvents(a["run-id"] as string, since, process.env);
     if (!events) return fail(`no run ${a["run-id"]}`);
     for (const e of events) console.log(JSON.stringify(e));
   },

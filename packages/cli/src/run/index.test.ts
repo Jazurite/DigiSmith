@@ -50,7 +50,7 @@ const dg = (...args: string[]) =>
     ["run", ...args],
   );
 
-describe("dg run", async () => {
+describe("dg run", () => {
   it("start prints the run id alone; event, list, show and tail read it back", async () => {
     const s = await dg("start", "--ticket", "DGS-581", "--role", "builder", "--order", "/o.md", "--seat", "dev0");
     expect(s.status).toBe(0);
@@ -87,6 +87,23 @@ describe("dg run", async () => {
     const bad = await dg("start", "--ticket", "DGS-581", "--role", "boss");
     expect(bad.status).toBe(1);
     expect(bad.stderr).toMatch(/role/);
+  });
+  it("refuses a bad --since with exit 1 and prints nothing", async () => {
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    await dg("event", id, "merged");
+    for (const v of ["abc", "-1"]) {
+      const r = await dg("tail", id, `--since=${v}`);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/--since/);
+      expect(r.stdout).toBe("");
+    }
+  });
+  it("a --data that is not JSON exits 1, names --data and appends nothing", async () => {
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
+    const r = await dg("event", id, "merged", "--data", "not json");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/--data/);
+    expect((await dg("tail", id)).stdout).toBe("");
   });
   it("the root CLI registers run", async () => {
     const r = await capture((a) => buildCli(a).exitProcess(false).parseAsync(a), ["run", "list", "--json"]);
