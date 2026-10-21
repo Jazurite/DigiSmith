@@ -32,13 +32,13 @@ export function renderOrder(i: OrderInput): string {
     "3. Write report.html and commit plan.md with it.",
     "",
     "## Mandate (works at night and while away)",
-    `Allowed: merge, push, restart an already-installed service. Never: \`sudo\`, a new background service or LaunchAgent, any delete, a Caddy or Tailscale change. When the ticket needs one of these, stop that ticket: call \`release --result stopped --reason "<what is needed>"\` (the last step below, for ticket ${i.key}). The ticket then waits for Jack: leave a comment on the ticket and clear the lock.`,
+    `Allowed: merge, push, restart an already-installed service. Never: \`sudo\`, a new background service or LaunchAgent, any delete, a Caddy or Tailscale change. When the ticket needs one of these, stop that ticket: call \`dg autonomous release --ticket ${i.key} --result stopped --reason "<what is needed>"\`. The ticket then waits for Jack. Leave a comment on the ticket; release clears the lock, so never remove lock.json by hand.`,
     "",
   ];
   if (i.signOff === "Jack") {
     lines.push(
       "## Sign-off: Jack",
-      `This ticket has Sign-off: Jack. Run it to the acceptance point, then call \`release --result awaiting-jack\` (the last step below, for ticket ${i.key}). Jack accepts when he is back.`,
+      `This ticket has Sign-off: Jack. Run it to the acceptance point, then call \`dg autonomous release --ticket ${i.key} --result awaiting-jack\`. The release call clears the lock (release clears the lock), so never remove lock.json by hand. Jack accepts when he is back.`,
       "",
     );
   }

@@ -23,14 +23,22 @@ describe("renderOrder", () => {
     expect(t).toContain("Spec and plan:");
     expect(t).toContain("spec.md and plan.md on the ticket");
     for (const w of ["sudo", "LaunchAgent", "delete", "Caddy", "Tailscale", "hooks 01-03", "report.html", "plan.md"]) expect(t).toContain(w);
-    expect(t).toContain('release --result stopped --reason "<what is needed>"');
     expect(t).toContain("dg autonomous release --ticket DGS-9 --result <merged|failed|stopped|awaiting-jack> [--reason \"...\"]");
     expect(t).not.toContain("Sign-off: Jack");
   });
   it("adds the awaiting-jack rule for Jack tickets", () => {
     const t = renderOrder({ ...base, signOff: "Jack" });
     expect(t).toContain("Sign-off: Jack");
-    expect(t).toContain("release --result awaiting-jack");
+    expect(t).toContain("--result awaiting-jack");
     expect(t).toContain("acceptance point");
+  });
+  it("states the full release command and who clears the lock", () => {
+    for (const so of ["Auto", "Jack"] as const) {
+      const t = renderOrder({ ...base, signOff: so });
+      expect(t).toContain('dg autonomous release --ticket DGS-9 --result stopped --reason "<what is needed>"');
+      expect(t).toContain("release clears the lock");
+      expect(t).toContain("never remove lock.json by hand");
+    }
+    expect(renderOrder({ ...base, signOff: "Jack" })).toContain("dg autonomous release --ticket DGS-9 --result awaiting-jack");
   });
 });

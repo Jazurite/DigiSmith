@@ -17,7 +17,12 @@ export const realExec: Exec = (file, args) =>
   });
 
 export async function promptConductor(exec: Exec, conductorsJson: string, message: string): Promise<void> {
-  const data = JSON.parse(readFileSync(conductorsJson, "utf8")) as Record<string, unknown>;
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(readFileSync(conductorsJson, "utf8")) as Record<string, unknown>;
+  } catch (e) {
+    throw new Error(`cannot read ${conductorsJson}: ${(e as Error).message}`);
+  }
   if (!data || typeof data !== "object" || !Object.prototype.hasOwnProperty.call(data, CONDUCTOR_KEY)) {
     throw new Error(`no ${CONDUCTOR_KEY} entry in ${conductorsJson}`);
   }
