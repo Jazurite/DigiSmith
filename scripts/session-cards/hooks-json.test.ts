@@ -18,7 +18,9 @@ describe("hooks/hooks.json", () => {
     expect(c[0]).toContain("session-cards/hook-cli.ts\" prompt");
   });
   it("SessionEnd closes the card", () => {
-    expect(commands("SessionEnd")).toEqual([expect.stringContaining("session-cards/hook-cli.ts\" end")]);
+    const c = commands("SessionEnd").filter((x) => x.includes("session-cards/hook-cli.ts"));
+    expect(c).toHaveLength(1);
+    expect(c[0]).toContain("session-cards/hook-cli.ts\" end");
   });
   it("every command resolves under CLAUDE_PLUGIN_ROOT", () => {
     for (const e of ["SessionStart", "UserPromptSubmit", "SessionEnd"]) {
