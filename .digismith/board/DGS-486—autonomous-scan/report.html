@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autonomous Operation scan — Implementation Report</title>
+<style>` block byte-for-byte — it's the same one every DigiSmith
+spec/report already uses:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{FEATURE_TITLE}} — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Autonomous Operation scan — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-21</span>
+    <span>Ticket: <strong>DGS-486</strong></span>
+    <span>Commit range: <code>df78a81..f0e386a</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p><code>dg autonomous scan | away | back | release | report | status</code> plus two Nexus scheduler jobs. At night or while Jack is away, an hourly scan claims one ready <code>to do</code> ticket, hands it to the digismith-conductor, and reports when Jack is back. The code is plain TypeScript in <code>packages/cli/src/autonomous/</code>, one unit per file; every outside effect (ClickUp, herdr, Nexus, clock, depot folder) is passed in, so tests use fakes. The scan never starts a worker; it writes an order and prompts the conductor. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (16 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 4 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.md">design spec</a> and the
+  <a href="plan.md">implementation plan</a>. Review findings: <a href="findings.md">findings.md</a>. Mutation checks: <a href="report.md">report.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Probe the real ticket shape</h4><p>Read-only probe of the milestone link, dependencies, attachments, type ids and Sign-off field.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Types, clock, rank</h4><p>Shared types, the UTC+7 clock and the ticket ranking.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>State (lock, notes, events, last report)</h4><p>Lock file with exclusive create, notes, day event files and last-report state.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The away file</h4><p>Away record read and write, and the away and expired checks.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Definition of Ready</h4><p>Ready check: spec and plan, Sign-off, milestone, blockers; task and bug type ids.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>Order file and conductor prompt</h4><p>Order text with mandate and stop rule, and the herdr prompt to the conductor.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>Nexus run-now and the away switch</h4><p>Run-now call with timeout, and the away and back switch.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>Fake tracker and the scan</h4><p>The scan: work rule, lock, claim, read-back, order and prompt, with a fake tracker.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Release</h4><p>Release of the lock with comment, run-now and the late-release line.</p></div>
+    <div class="card"><span class="tag">Task 10</span><h4>Report</h4><p>Report for a period, never overwritten, with away periods and the 30-day look-back.</p></div>
+    <div class="card"><span class="tag">Task 11</span><h4>The real tracker</h4><p>ClickUp tracker: to-do list, milestone by link, Sign-off by name, blockers.</p></div>
+    <div class="card"><span class="tag">Task 12</span><h4>The <code>dg autonomous</code> command group</h4><p>Subcommands scan, away, back, release, report and status.</p></div>
+    <div class="card"><span class="tag">Task 13</span><h4>Catch-up section</h4><p>Last report shown in the conductor catch-up output.</p></div>
+    <div class="card"><span class="tag">Task 14</span><h4>Register the two jobs</h4><p>Scheduler entries autonomous-scan and autonomous-report; scheduler tests kept off real jobs.</p></div>
+    <div class="card"><span class="tag">Task 15</span><h4>Conductor runbook text</h4><p>Runbook section text for an Autonomous order.</p></div>
+    <div class="card"><span class="tag">Task 16</span><h4>Mutation checks and report</h4><p>Ten mutations applied by hand; all caught by tests.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Probe the real ticket shape</td><td>Read-only probe of the milestone link, dependencies, attachments, type ids and Sign-off field.</td><td>Approved, 2 minors fixed</td><td>—</td></tr>
+    <tr><td>2. Types, clock, rank</td><td>Shared types, the UTC+7 clock and the ticket ranking.</td><td>Approved, 2 minors fixed</td><td>—</td></tr>
+    <tr><td>3. State (lock, notes, events, last report)</td><td>Lock file with exclusive create, notes, day event files and last-report state.</td><td>Approved, 4 minors fixed</td><td>—</td></tr>
+    <tr><td>4. The away file</td><td>Away record read and write, and the away and expired checks.</td><td>Approved after 1 fix round (1 Important, 4 minors fixed)</td><td>—</td></tr>
+    <tr><td>5. Definition of Ready</td><td>Ready check: spec and plan, Sign-off, milestone, blockers; task and bug type ids.</td><td>Approved, 1 minor fixed</td><td>—</td></tr>
+    <tr><td>6. Order file and conductor prompt</td><td>Order text with mandate and stop rule, and the herdr prompt to the conductor.</td><td>Approved, 3 minors fixed</td><td>—</td></tr>
+    <tr><td>7. Nexus run-now and the away switch</td><td>Run-now call with timeout, and the away and back switch.</td><td>Approved, 4 minors fixed</td><td>—</td></tr>
+    <tr><td>8. Fake tracker and the scan</td><td>The scan: work rule, lock, claim, read-back, order and prompt, with a fake tracker.</td><td>Approved, 4 minors fixed</td><td>—</td></tr>
+    <tr><td>9. Release</td><td>Release of the lock with comment, run-now and the late-release line.</td><td>Approved, 5 minors fixed</td><td>—</td></tr>
+    <tr><td>10. Report</td><td>Report for a period, never overwritten, with away periods and the 30-day look-back.</td><td>Approved after 2 fix rounds (2 Important, 5 minors fixed)</td><td>—</td></tr>
+    <tr><td>11. The real tracker</td><td>ClickUp tracker: to-do list, milestone by link, Sign-off by name, blockers.</td><td>Approved, 5 minors fixed</td><td>—</td></tr>
+    <tr><td>12. The <code>dg autonomous</code> command group</td><td>Subcommands scan, away, back, release, report and status.</td><td>Approved, 2 minors fixed</td><td>report.ts <code>firstEventTime</code> keeps its own events-file filter (could use a state.ts helper)</td></tr>
+    <tr><td>13. Catch-up section</td><td>Last report shown in the conductor catch-up output.</td><td>Approved, 2 minors fixed</td><td>—</td></tr>
+    <tr><td>14. Register the two jobs</td><td>Scheduler entries autonomous-scan and autonomous-report; scheduler tests kept off real jobs.</td><td>Approved after 1 fix round (1 Important, 2 minors fixed)</td><td>—</td></tr>
+    <tr><td>15. Conductor runbook text</td><td>Runbook section text for an Autonomous order.</td><td>Approved, clean</td><td>—</td></tr>
+    <tr><td>16. Mutation checks and report</td><td>Ten mutations applied by hand; all caught by tests.</td><td>No task review; covered by the final review</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Important and 6 Minor findings, all fixed in one fix wave; 1 new Minor (F8) parked.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>A late failed, stopped or awaiting-jack release posted no ticket comment when a newer report existed.</td><td>Fixed: the comment is always posted; the late line is still added to the report (812fb13).</td></tr>
+    <tr><td>Minor</td><td>The scan handler built the tracker (read credentials) before the work rule.</td><td>Fixed: the tracker is built on its first call (9964497).</td></tr>
+    <tr><td>Minor</td><td><code>hasStatus</code> did not stop at the first list with the status.</td><td>Fixed (5219bb8).</td></tr>
+    <tr><td>Minor</td><td>A corrupt lock could not be released.</td><td>Fixed: <code>--ticket '?'</code> clears it; runbook text updated (812fb13).</td></tr>
+    <tr><td>Minor</td><td><code>stopped</code> was missing under Waiting for Jack in the report.</td><td>Fixed (f0e386a).</td></tr>
+    <tr><td>Minor</td><td>The older dependency form of milestones was not documented.</td><td>Fixed: code comment (5219bb8).</td></tr>
+    <tr><td>Minor</td><td>The report had its own events-file filter.</td><td>Fixed in part (f0e386a): <code>readEvents</code> still throws on an unreadable file inside its read window (existing behaviour).</td></tr>
+    <tr><td>Minor</td><td>F8: a corrupt-lock release shows as <code>?</code> in the report sections.</td><td>Parked — ruling: cosmetic, one fix wave done; follow-up.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">7b7f55a</span> docs(dgs-486): add the Lights-Out scan spec</li>
+    <li><span class="sha">05a8ca6</span> docs(dgs-486): add the Lights-Out scan plan</li>
+    <li><span class="sha">e58c5f8</span> docs(dgs-486): tidy two plan comments</li>
+    <li><span class="sha">21ba66f</span> docs(dgs-486): rename to Autonomous Operation and add the away switch</li>
+    <li><span class="sha">d7e164b</span> docs(dgs-486): fix a task reference in the plan</li>
+    <li><span class="sha">3f5ed74</span> docs(dgs-486): record the ticket shape probe</li>
+    <li><span class="sha">02d694a</span> docs(dgs-486): tidy the probe milestone row</li>
+    <li><span class="sha">f057ad3</span> feat(dgs-486): add the autonomous types, clock and rank</li>
+    <li><span class="sha">9627896</span> test(dgs-486): add two autonomous clock and rank cases</li>
+    <li><span class="sha">51c9ab0</span> feat(dgs-486): add the autonomous state files</li>
+    <li><span class="sha">49aeb11</span> fix(dgs-486): harden the autonomous state files</li>
+    <li><span class="sha">1fa3bd4</span> feat(dgs-486): add the away file</li>
+    <li><span class="sha">72d0530</span> fix(dgs-486): harden the away file</li>
+    <li><span class="sha">75eeb61</span> fix(dgs-486): default missing away fields</li>
+    <li><span class="sha">dd927e6</span> feat(dgs-486): add the Definition of Ready check</li>
+    <li><span class="sha">d00cbc0</span> fix(dgs-486): check every board link in the ready check</li>
+    <li><span class="sha">7e158b4</span> feat(dgs-486): add the Autonomous order and conductor prompt</li>
+    <li><span class="sha">cf3ce52</span> fix(dgs-486): tighten the order text and conductor errors</li>
+    <li><span class="sha">8b9ab03</span> feat(dgs-486): add the Nexus run-now call and the away switch</li>
+    <li><span class="sha">e94a0c4</span> fix(dgs-486): harden the Nexus call and the back switch</li>
+    <li><span class="sha">a38b6a3</span> feat(dgs-486): add the autonomous scan</li>
+    <li><span class="sha">32c18eb</span> fix(dgs-486): tighten the scan failure paths</li>
+    <li><span class="sha">5f40698</span> feat(dgs-486): add release for autonomous builds</li>
+    <li><span class="sha">b31dacd</span> fix(dgs-486): harden the release paths</li>
+    <li><span class="sha">84a47f8</span> feat(dgs-486): add the autonomous report</li>
+    <li><span class="sha">99be800</span> fix(dgs-486): keep every autonomous report</li>
+    <li><span class="sha">b91c09b</span> docs(dgs-486): note the report file suffix</li>
+    <li><span class="sha">913f7be</span> fix(dgs-486): hide away periods that ended before the report</li>
+    <li><span class="sha">9878262</span> feat(dgs-486): add the ClickUp tracker for Autonomous</li>
+    <li><span class="sha">8aaef72</span> fix(dgs-486): harden the ClickUp tracker</li>
+    <li><span class="sha">9806eb3</span> feat(dgs-486): add the dg autonomous command group</li>
+    <li><span class="sha">1489b10</span> refactor(dgs-486): share the clock check and the newest-event reader</li>
+    <li><span class="sha">d534d5b</span> feat(dgs-486): show the autonomous report in the catch-up</li>
+    <li><span class="sha">b9b4027</span> fix(dgs-486): pick only report files for the catch-up</li>
+    <li><span class="sha">3e0d6d4</span> feat(dgs-486): register the autonomous jobs</li>
+    <li><span class="sha">80890d2</span> fix(dgs-486): keep scheduler tests off the real jobs</li>
+    <li><span class="sha">d911b1a</span> fix(dgs-486): make the scheduler child test hour independent</li>
+    <li><span class="sha">7e4f9d5</span> docs(dgs-486): add the conductor runbook text</li>
+    <li><span class="sha">6fb0e1f</span> docs(dgs-486): add the mutation check results</li>
+    <li><span class="sha">812fb13</span> fix(dgs-486): post the ticket comment on every late release and clear a corrupt lock</li>
+    <li><span class="sha">9964497</span> fix(dgs-486): build the scan tracker on its first call</li>
+    <li><span class="sha">5219bb8</span> fix(dgs-486): stop the status check at the first matching list</li>
+    <li><span class="sha">f0e386a</span> fix(dgs-486): list stopped under waiting for jack and reuse the events helpers</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-486—autonomous-scan/report.html</footer>
+
+</body>
+</html>
