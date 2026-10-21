@@ -32,8 +32,13 @@ function marker(s: TicketState, obs: Observations, j: JournalResults): Action | 
   return { kind: "marker", phase: want, run: r.id };
 }
 
-function order(o: "fix" | "merge" | "restart", s: TicketState, obs: Observations, j: JournalResults, head: string): Action {
-  if (used(j, keyOf(s, `order-${o}`))) return wait(`order-${o}-sent`);
+// the journal decides first: open or succeeded holds, uncertain and permanent are notes, retryable or unseen may send
+function order(o: "fix" | "merge" | "restart", s: TicketState, obs: Observations, j: JournalResults, head: string | null): Action {
+  const st = j[keyOf(s, `order-${o}`)];
+  if (st === "uncertain") return note(`order-${o}-uncertain`);
+  if (st === "permanent") return note(`order-${o}-permanent`, "failed");
+  if (st === "open" || st === "succeeded") return wait(`order-${o}-sent`);
+  if (head === null || head === "") return note("no-head");
   return gate(obs) ?? { kind: "order", order: o, head };
 }
 
@@ -52,11 +57,14 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   const g = obs.git.value;
   if (g.head !== null && g.head !== g.base && obs.packs.value.some((p) => p.round >= s.attempt && p.head === g.head))
     return { kind: "move", to: "review", proof: `pack for ${sha7(g.head)}` };
-  if (s.attempt > 1 && !used(j, keyOf(s, "order-fix"))) return order("fix", s, obs, j, g.head ?? "");
-  if (obs.herdr.ok && obs.runs.ok && !obs.herdr.value.builderPanePresent) {
-    const r = obs.runs.value.find((x) => x.id === s.runs.builder);
-    if (r !== undefined && !r.ended) return order("restart", s, obs, j, g.head ?? "");
-  }
+  // a fix already sent (open or succeeded) falls through to the restart check, as the plan does
+  const fix = j[keyOf(s, "order-fix")];
+  if (s.attempt > 1 && fix !== "open" && fix !== "succeeded") return order("fix", s, obs, j, g.head);
+  if (!obs.herdr.ok) return note("obs-herdr-failed");
+  if (!obs.runs.ok) return note("obs-runs-failed");
+  const r = obs.runs.value.find((x) => x.id === s.runs.builder);
+  // one restart per attempt: the order-restart key carries the attempt, and order() holds it once sent
+  if (!obs.herdr.value.builderPanePresent && r !== undefined && !r.ended) return order("restart", s, obs, j, g.head);
   return wait("building");
 }
 
@@ -66,7 +74,9 @@ function review(s: TicketState, obs: Observations, j: JournalResults): Action {
   if (!obs.git.ok) return note("obs-git-failed");
   if (!obs.verdicts.ok) return note("obs-verdicts-failed");
   const head = obs.git.value.head;
-  const row = obs.verdicts.value.find((v) => v.scope === "ticket" && head !== null && v.head === head);
+  // the latest ticket row for this head wins
+  const rows = obs.verdicts.value.filter((v) => v.scope === "ticket" && head !== null && v.head === head);
+  const row = rows[rows.length - 1];
   if (row === undefined || head === null) return wait("review-running");
   if (row.result === "clean") return { kind: "move", to: "merge-ready", proof: `clean verdict for ${sha7(head)}` };
   if (s.attempt >= MAX_ATTEMPTS) return note("attempts-exhausted", "failed");
@@ -80,11 +90,11 @@ function mergeReady(s: TicketState, obs: Observations, j: JournalResults): Actio
   const g = obs.git.value;
   if (g.head !== null && g.onOriginMain) return { kind: "move", to: "merged", proof: `${sha7(g.head)} on origin/main` };
   if (obs.runs.ok && obs.runs.value.some((r) => r.id === s.runs.builder && (r.merged || r.pushed))) return note("proof-disagree");
-  return order("merge", s, obs, j, g.head ?? "");
+  return order("merge", s, obs, j, g.head);
 }
 
 export function advanceTicket(s: TicketState, obs: Observations, j: JournalResults): Action {
-  if (obs.tracker.ok && obs.tracker.value.status === "to do" && s.phase !== "merged" && !used(j, keyOf(s, "status-write")))
+  if (obs.tracker.ok && obs.tracker.value.status === "to do" && s.phase !== "merged" && s.phase !== "released" && !used(j, keyOf(s, "status-write")))
     return { kind: "status", status: "in progress" };
   let a: Action;
   switch (s.phase) {
