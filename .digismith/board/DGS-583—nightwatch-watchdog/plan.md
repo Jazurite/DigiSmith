@@ -15,6 +15,7 @@ Spec: `.digismith/board/DGS-583—nightwatch-watchdog/design.html`. Read it firs
 - Classifier: `classify(run, events, pane, now, budgets) -> { state, cause, since }`, state `healthy | blocked | stalled | lost | ended`, no I/O, no clock of its own. `pane` is `present | gone | unknown`.
 - Check order: `ended`, pane `gone` (lost), `blocked`, silence of 30 minutes (lost), `stalled`, else `healthy`. `pane: 'unknown'` alone never makes a run lost.
 - `blocked` = the last `blocked` event has no later `tool` or `turn_end`.
+- Review clock: it restarts at each new ticket-scope review pack (Maestro, 2026-10-22). The DGS-582 controller writes a new `phase` event (`data.phase: review`) per pack, and the latest one is the start, so a fix wave is not a stall. The watchdog does not detect packs itself.
 - Phase: the latest `phase` event (`data.phase` is `building|review|merge`) sets phase and start; without one a `builder` run is `building` and a `reviewer` run is `review` from `started` (else `created_at`); `scout` and `other` have no phase and are never `stalled`. A builder's `review_ready` starts a new `building` clock at the next `tool` event. `merged` ends the merge phase.
 - Budgets in `.digismith/config.yml` under `nightwatch.budgets` (minutes): defaults `building: 45`, `review: 60`, `merge: 20`. A bad value gives one attention item (kind `failed`, cause `bad-budget-config`, run `-`) and the default for that value. The watchdog is never turned off by it.
 - Watch: every open run in `<depot>/runs/*/*/` (root `$DIGISMITH_DEPOT_DIR`, else `~/.digismith-depot`), not only autonomous ones; runs created more than 7 days ago with no `ended` are skipped. A broken run directory is skipped. Exit 0 unless the depot root cannot be read.
@@ -193,6 +194,12 @@ describe("classify", () => {
     for (const r of ["scout", "other"]) {
       expect(classify(run(r), [ev("started", 0), ev("tool", 600)], "present", at(601), DEFAULT_BUDGETS).state).toBe("healthy");
     }
+  });
+  it("a new review phase event restarts the review clock (fix wave is not a stall)", () => {
+    const e = [ev("started", 0), ev("phase", 1, { phase: "review" }), ev("tool", 59), ev("phase", 70, { phase: "review", scope: "ticket" }), ev("tool", 125)];
+    expect(classify(run(), e, "present", at(126), DEFAULT_BUDGETS).state).toBe("healthy");   // 56 min after the second pack
+    expect(classify(run(), e, "present", at(131), DEFAULT_BUDGETS).state).toBe("stalled");   // 61 min after it
+    expect(phaseOf(run(), e)?.since).toBe(min(70));
   });
   it("a custom budget is used", () => {
     expect(classify(run(), [ev("started", 0), ev("tool", 5)], "present", at(6), { building: 5, review: 60, merge: 20 }).state).toBe("stalled");
