@@ -106,8 +106,8 @@ const showCommand: CommandModule = {
 
 const tailCommand: CommandModule = {
   command: "tail <run-id>",
-  describe: "print the events of a run, one JSON line each (no follow)",
-  builder: (y) => y.positional("run-id", { type: "string", demandOption: true }).option("since", { type: "number", default: 0, describe: "only events with a greater seq" }),
+  describe: "print the events of a run, one JSON line each (no follow); the file position is the authority, a seq cursor can skip a duplicate",
+  builder: (y) => y.positional("run-id", { type: "string", demandOption: true }).option("since", { type: "number", default: 0, describe: "only lines whose seq is greater than N; a follower using --since may miss a line that repeats a seq it already passed, the file position is the authority" }),
   handler: (a) => {
     const since = a.since as number;
     if (!Number.isFinite(since) || since < 0) return fail("--since must be a number of 0 or more");

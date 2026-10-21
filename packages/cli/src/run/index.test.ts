@@ -89,6 +89,10 @@ describe("dg run", () => {
     expect(bad.status).toBe(1);
     expect(bad.stderr).toMatch(/role/);
   });
+  it("tail --help says the file position is the authority", async () => {
+    const r = await dg("tail", "--help");
+    expect((r.stdout + r.stderr).replace(/\s+/g, " ")).toContain("file position is the authority");
+  });
   it("refuses a bad --since with exit 1 and prints nothing", async () => {
     const id = (await dg("start", "--ticket", "DGS-581", "--role", "scout")).stdout.trim();
     await dg("event", id, "merged");

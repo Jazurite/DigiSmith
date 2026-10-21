@@ -185,6 +185,8 @@ function lastSeq(runDir: string): number {
 // events.jsonl is the authority. seq is a strong hint, not a unique key: a race in the stale-lock break
 // (a writer paused between two adjacent syscalls, only after a crashed writer held the lock for more than
 // 2 s) can give two lines the same seq. Readers order by file position and tolerate a duplicate seq.
+// A follower that uses `--since` as a seq cursor may miss a line that repeats a seq it already passed;
+// the file position is the authority.
 // Appends one event under the run's lock and returns the line. Throws Error("lock timeout") when the lock stays taken.
 export function appendEvent(runDir: string, run: string, type: string, data: Record<string, unknown>, waitMs: number): EventLine {
   const lockDir = path.join(runDir, "lock");
