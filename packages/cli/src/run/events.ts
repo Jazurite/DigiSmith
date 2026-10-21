@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -15,25 +16,50 @@ function sleep(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function acquire(lockDir: string, waitMs: number): boolean {
+// Returns the owner token on success, null on timeout.
+function acquire(lockDir: string, waitMs: number): string | null {
   const deadline = Date.now() + waitMs;
   for (;;) {
     try {
       fs.mkdirSync(lockDir);
-      return true;
+      const token = randomBytes(8).toString("hex");
+      fs.writeFileSync(path.join(lockDir, "owner"), token);
+      return token;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
     }
     try {
       if (Date.now() - fs.statSync(lockDir).mtimeMs > STALE_MS) {
-        fs.rmdirSync(lockDir);
+        // Only one waiter wins the rename; the others throw and loop again.
+        const aside = `${lockDir}.stale-${process.pid}-${randomBytes(4).toString("hex")}`;
+        fs.renameSync(lockDir, aside);
+        if (Date.now() - fs.statSync(aside).mtimeMs > STALE_MS) {
+          fs.rmSync(aside, { recursive: true, force: true });
+        } else {
+          // Another waiter broke the stale lock and took a fresh one between our stat and our rename: put it back.
+          try {
+            fs.renameSync(aside, lockDir);
+          } catch {
+            /* the name is taken again: the moved lock is dead, drop it */
+            fs.rmSync(aside, { recursive: true, force: true });
+          }
+        }
         continue;
       }
     } catch {
-      /* the holder released it between the two calls: try again */
+      /* the holder released it, or another waiter broke it first: try again */
     }
-    if (Date.now() >= deadline) return false;
+    if (Date.now() >= deadline) return null;
     sleep(5);
+  }
+}
+
+// Removes the lock only when it still carries our token.
+function release(lockDir: string, token: string): void {
+  try {
+    if (fs.readFileSync(path.join(lockDir, "owner"), "utf8") === token) fs.rmSync(lockDir, { recursive: true, force: true });
+  } catch {
+    /* already gone, or now owned by someone else */
   }
 }
 
@@ -54,18 +80,16 @@ function lastSeq(runDir: string): number {
 // Appends one event under the run's lock and returns the line. Throws Error("lock timeout") when the lock stays taken.
 export function appendEvent(runDir: string, run: string, type: string, data: Record<string, unknown>, waitMs: number): EventLine {
   const lockDir = path.join(runDir, "lock");
-  if (!acquire(lockDir, waitMs)) throw new Error("lock timeout");
+  const token = acquire(lockDir, waitMs);
+  if (token === null) throw new Error("lock timeout");
   try {
     const line: EventLine = { schema: EVENT_SCHEMA, seq: lastSeq(runDir) + 1, ts: new Date().toISOString(), run, type, data };
-    fs.appendFileSync(path.join(runDir, "events.jsonl"), JSON.stringify(line) + "\n");
+    // Reserve the number first: a crash between the two writes leaves a gap, never a duplicate.
     fs.writeFileSync(path.join(runDir, "seq"), String(line.seq));
+    fs.appendFileSync(path.join(runDir, "events.jsonl"), JSON.stringify(line) + "\n");
     return line;
   } finally {
-    try {
-      fs.rmdirSync(lockDir);
-    } catch {
-      /* already gone */
-    }
+    release(lockDir, token);
   }
 }
 

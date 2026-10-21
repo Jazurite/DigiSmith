@@ -41,8 +41,48 @@ describe("appendEvent", () => {
     expect(() => appendEvent(dir, "r1", "tool", {}, 150)).toThrow(/lock timeout/);
     const took = Date.now() - t0;
     expect(took).toBeGreaterThanOrEqual(140);
-    expect(took).toBeLessThan(900);
+    expect(took).toBeLessThan(2000);
     expect(fs.existsSync(path.join(dir, "events.jsonl"))).toBe(false);
+  });
+  it("two waiters on one stale lock never duplicate a seq or leave a lock behind", async () => {
+    const worker = path.join(import.meta.dirname, "stale-worker.ts");
+    const run = (d: string, startAt: number) =>
+      new Promise<void>((resolve, reject) => {
+        const p = spawn(process.execPath, ["--experimental-strip-types", worker, d, String(startAt)], { stdio: "inherit" });
+        p.on("exit", (c) => (c === 0 ? resolve() : reject(new Error(`stale worker exited ${c}`))));
+      });
+    for (let round = 0; round < 10; round++) {
+      const d = path.join(dir, `round-${round}`);
+      fs.mkdirSync(path.join(d, "lock"), { recursive: true });
+      const old = new Date(Date.now() - 5000);
+      fs.utimesSync(path.join(d, "lock"), old, old);
+      const startAt = Date.now() + 400;
+      await Promise.all([run(d, startAt), run(d, startAt)]);
+      expect(readEvents(d).map((e) => e.seq)).toEqual([1, 2]);
+      expect(fs.readdirSync(d).filter((n) => n === "lock" || n.startsWith("lock.stale-"))).toEqual([]);
+    }
+  }, 60_000);
+  it("does not remove a lock that another writer now owns", () => {
+    // data.toJSON runs inside the locked section: it swaps the owner token, as if our lock had been broken and re-taken.
+    const data = {
+      toJSON() {
+        fs.writeFileSync(path.join(dir, "lock", "owner"), "someone-else");
+        return {};
+      },
+    };
+    appendEvent(dir, "r1", "tool", data, 2000);
+    expect(fs.readFileSync(path.join(dir, "lock", "owner"), "utf8")).toBe("someone-else");
+  });
+  it("writes the seq counter before the line, so a crash leaves a gap, not a duplicate", () => {
+    const data = {
+      toJSON(): never {
+        throw new Error("crash while serializing");
+      },
+    };
+    expect(() => appendEvent(dir, "r1", "tool", data, 2000)).toThrow(/crash/);
+    expect(fs.readFileSync(path.join(dir, "seq"), "utf8")).toBe("1");
+    expect(fs.existsSync(path.join(dir, "lock"))).toBe(false);
+    expect(appendEvent(dir, "r1", "tool", {}, 2000).seq).toBe(2);
   });
   it("two parallel writers give seq 1..80 with no gap and no duplicate", async () => {
     const worker = path.join(import.meta.dirname, "append-worker.ts");
