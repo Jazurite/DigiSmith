@@ -18,7 +18,7 @@ function fail(e: unknown): void {
 
 const tableCommand: CommandModule<object, TableArgs> = {
   command: "table",
-  describe: "build findings.md from the reviews and verdict lines of an SDD workspace",
+  describe: "build findings.md (or the findings as JSON, schema 1, with --json) from the reviews and verdict lines of an SDD workspace",
   builder: (y) =>
     y
       .option("workspace", { type: "string", demandOption: true, describe: "the SDD workspace folder (skills/subagent-driven-development/scripts/sdd-workspace PLAN prints it)" })

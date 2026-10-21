@@ -565,7 +565,8 @@ of its pack folder), or the round of a re-review that rules on it again. Write
 the ruling of a re-review the same way, naming the finding id the earlier pack
 raised: `Review task 4 r2: F1 -> fixed (commit abc1234)`. `dg reviewer table`
 shows the latest ruling per finding. A line that names a finding no pack
-raised makes it fail. Never delete or edit an earlier verdict line; add a new one.
+raised, or whose round is lower than the round that raised
+the finding also makes it fail. Never delete or edit an earlier verdict line; add a new one.
 
 **Final review lines.** `digismith:report-implementation` reads the same
 whole-branch lines in every mode, so write them here yourself; never add them by

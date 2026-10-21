@@ -68,6 +68,7 @@ describe("SDD has the role-mode path (new)", () => {
     expect(sdd).toContain("Review task 4 r2: F1 -> fixed (commit abc1234)");
     expect(parseVerdictEntries("Review task 4 r2: F1 -> fixed (commit abc1234)\n")).toHaveLength(1);
     expect(sdd).not.toMatch(/rejects a line whose key names no finding/);
+    expect(sdd).toMatch(/round is lower than the round that raised\s+the finding also makes it fail/);
   });
   it("tells the Builder to write the Final review lines report-implementation reads (DGS-570)", () => {
     const start = sdd.indexOf("## Role Mode (a herdr Builder)");

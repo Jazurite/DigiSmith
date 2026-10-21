@@ -68,6 +68,15 @@ describe("buildRows", () => {
 });
 
 describe("buildJson", () => {
+  it("gives the empty model for no reviews (DGS-572)", () => {
+    expect(buildJson([], [])).toEqual({ schema: 1, findings: [], approvedReviews: [] });
+  });
+  it("lists the findings of one review in the same order as buildRows (DGS-572)", () => {
+    const reviews = [review("task", "1", 1, [f("F10", { path: "ten.ts" }), f("F2", { path: "two.ts" })])];
+    const e = parseVerdictEntries("Review task 1 r1: F2 -> fixed (commit abc1234)\nReview task 1 r1: F10 -> fixed (commit abc1234)\n");
+    expect(buildJson(reviews, e).findings.map((x) => x.id)).toEqual(["task 1 r1 F2", "task 1 r1 F10"]);
+    expect(buildRows(reviews, e).map((x) => x.where)).toEqual(["two.ts:42", "ten.ts:42"]);
+  });
   it("gives schema 1 with id, severity, rounds, latest ruling and history", () => {
     const reviews = [review("task", "4", 1, [f("F1")]), review("task", "4", 2, []), review("task", "7", 1, [])];
     const e = parseVerdictEntries("Review task 4 r1: F1 -> parked (wait)\nReview task 4 r2: F1 -> fixed (commit abc1234)\n");

@@ -67,6 +67,9 @@ function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resol
 }
 
 const judgementKeyOf = (r: Resolved): string => `${r.review.kind} ${r.review.id} r${r.review.round} ${r.finding.id}`;
+const sortedFindings = (r: Review): Finding[] =>
+  [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+
 const latest = (r: Resolved): Ruling => r.history[r.history.length - 1];
 
 export function buildRows(reviews: Review[], entries: VerdictEntry[]): Row[] {
@@ -77,7 +80,7 @@ export function buildRows(reviews: Review[], entries: VerdictEntry[]): Row[] {
       rows.push({ type: typeLabel(r), round: r.round, where: "-", severity: "-", what: "approved, no findings", scenario: "-", verdict: "-" });
       continue;
     }
-    for (const f of [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))) {
+    for (const f of sortedFindings(r)) {
       const l = latest(resolved.get(f) as Resolved);
       const text = l.reason === "" ? l.verdict : `${l.verdict} (${l.reason})`;
       rows.push({
@@ -104,7 +107,7 @@ export function buildJson(reviews: Review[], entries: VerdictEntry[]): TableJson
   const approvedReviews: TableJson["approvedReviews"] = [];
   for (const r of sortReviews(reviews)) {
     if (r.findings.length === 0) { approvedReviews.push({ kind: r.kind, id: r.id, round: r.round }); continue; }
-    for (const f of [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))) {
+    for (const f of sortedFindings(r)) {
       const res = resolved.get(f) as Resolved;
       const l = latest(res);
       findings.push({
@@ -142,7 +145,7 @@ export function runTable(opts: { workspace: string; ledger?: string; out?: strin
   const reviews = readReviews(opts.workspace);
   if (reviews.length === 0) {
     if (!opts.json) return { written: false, message: "no reviews found" };
-    const empty = `${JSON.stringify({ schema: 1, findings: [], approvedReviews: [] }, null, 2)}\n`;
+    const empty = `${JSON.stringify(buildJson([], []), null, 2)}\n`;
     if (!opts.out) return { written: false, message: "no reviews found", json: empty };
     fs.mkdirSync(path.dirname(path.resolve(opts.out)), { recursive: true });
     fs.writeFileSync(opts.out, empty);
