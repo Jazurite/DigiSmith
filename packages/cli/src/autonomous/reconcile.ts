@@ -1,0 +1,55 @@
+import { openLines, settle } from "./journal.ts";
+import { PHASES } from "./phase-types.ts";
+import type { Observations, Phase, SettleResult, TicketState } from "./phase-types.ts";
+import type { JournalLine } from "./journal.ts";
+
+export interface ReconcileNote { ticket: string; cause: string }
+type Verdict = { result: SettleResult; note: string } | "unknown";
+const r = (result: SettleResult, note: string): Verdict => ({ result, note });
+const rank = (p: string) => PHASES.indexOf(p as Phase);
+
+function check(action: string, line: JournalLine, state: TicketState | null, obs: Observations): Verdict {
+  if (action === "claim") return state !== null ? r("succeeded", "lock held") : r("permanent", "no lock");
+  if (action.startsWith("move-to-")) {
+    const to = action.slice("move-to-".length);
+    return state !== null && rank(state.phase) >= rank(to) ? r("succeeded", `lock at ${state.phase}`) : r("retryable", "lock not moved");
+  }
+  if (action === "status-write") {
+    if (!obs.tracker.ok) return "unknown";
+    return obs.tracker.value.status === "in progress" ? r("succeeded", "status read back") : r("retryable", "status not set");
+  }
+  if (action === "order-merge") {
+    if (!obs.git.ok) return "unknown";
+    return obs.git.value.onOriginMain ? r("succeeded", "head on origin/main") : r("uncertain", "merge not seen on origin/main");
+  }
+  if (action === "order-fix") {
+    if (!obs.git.ok) return "unknown";
+    return obs.git.value.head !== null && obs.git.value.head !== line.detail?.head ? r("succeeded", "head moved") : r("uncertain", "no new commit");
+  }
+  if (action === "order-restart") {
+    if (!obs.herdr.ok) return "unknown";
+    return obs.herdr.value.builderPanePresent ? r("succeeded", "builder pane present") : r("uncertain", "builder pane still gone");
+  }
+  if (action === "phase-marker") {
+    if (state === null) return r("permanent", "no lock");
+    if (!obs.runs.ok) return "unknown";
+    const run = obs.runs.value.find((x) => x.id === state.runs.builder);
+    return run !== undefined && run.phaseEvent === line.detail?.phase ? r("succeeded", "phase event seen") : r("retryable", "phase event missing");
+  }
+  return r("uncertain", "no check for this action");
+}
+
+export function reconcile(d: { dir: string; now: Date; state: TicketState | null; obs: Observations }): ReconcileNote[] {
+  const notes: ReconcileNote[] = [];
+  for (const l of openLines(d.dir)) {
+    const action = l.key.split(":").slice(3).join(":");
+    const v = check(action, l.planned, d.state, d.obs);
+    if (v === "unknown") continue;
+    if (l.state === "open") settle(d.dir, d.now, l.key, v.result, v.note);
+    else if (v.result === "succeeded") settle(d.dir, d.now, l.key, "succeeded", `reconciled: ${v.note}`);
+    // A key still uncertain after this pass gets a note on every call; no new line is written for it.
+    const stillUncertain = l.state === "open" ? v.result === "uncertain" : v.result !== "succeeded";
+    if (stillUncertain) notes.push({ ticket: l.planned.ticket ?? "-", cause: `journal-uncertain-${action}` });
+  }
+  return notes;
+}
