@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch watchdog — Implementation Report</title>
+<style>` block byte-for-byte — it's the same one every DigiSmith
+spec/report already uses:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{FEATURE_TITLE}} — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nightwatch watchdog — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-22</span>
+    <span>Ticket: <strong>DGS-583</strong></span>
+    <span>Commit range: <code>32d3c21..697e590</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#followups">Follow-ups</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A plain-code watchdog reads the DGS-581 run record every 5 minutes, puts blocked, stalled and lost runs on an attention list, comments once on the ticket, and adds the circuit breaker and the failure causes. The Maestro dropped the automatic retry during the build (option C): the attention item records retryEligible and causeClass, and the retry is the follow-up DGS-588. Code in packages/cli/src/autonomous/ gets a pure watchdog.ts and small I/O modules around it; dg autonomous watch, attention, resume and release --cause wrap them; one new job runs watch every 5 minutes in the existing Nexus scheduler. No new service, no model tokens. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (9 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 8 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Preflight</h4><p>Probe of the merged DGS-581, DGS-486 and DGS-582 code; it found that the retry has no consumer, and the Maestro chose to drop the retry.</p></div>
+<div class="card"><span class="tag">Task 2</span><h4>The pure classifier</h4><p>classify, phaseOf and decideRetry in watchdog.ts: five states, the check order, the phase clocks and the review-clock restart; no I/O.</p></div>
+<div class="card"><span class="tag">Task 3</span><h4>Budgets from the config file</h4><p>readBudgets reads nightwatch.budgets from .digismith/config.yml with defaults 45, 60 and 20 minutes; a bad value gives one problem and the default.</p></div>
+<div class="card"><span class="tag">Task 4</span><h4>Attention list and notify</h4><p>The one attention writer is widened to six kinds and a resolved line; attention.ts reads and formats it; notifyNew posts one ticket comment per new item with limits.</p></div>
+<div class="card"><span class="tag">Task 5</span><h4>Failure causes and the breaker</h4><p>The twelve-code cause list with three classes, and breaker.json that opens at two failed releases and fails closed.</p></div>
+<div class="card"><span class="tag">Task 6</span><h4>The watch pass</h4><p>pane.ts (one read-only herdr pane list per workspace) and runWatch, which classifies every open run and opens, resolves and comments.</p></div>
+<div class="card"><span class="tag">Task 7</span><h4>Commands, release with cause, breaker in the scan</h4><p>dg autonomous watch, attention, attention resolve and resume; release --cause; the scan stops while the breaker is open; back closes it.</p></div>
+<div class="card"><span class="tag">Task 8</span><h4>Registry entry, catch-up block, report block</h4><p>The nightwatch-watchdog job every 5 minutes in the Nexus scheduler, a Needs Jack, Nightwatch block in the catch-up, and an Attention block in the report.</p></div>
+<div class="card"><span class="tag">Task 9</span><h4>Whole-ticket check, runbook text and docs</h4><p>Ten hand mutation checks all caught, the runbook text for the conductor, and WATCHDOG.md.</p></div>
+
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code> in role mode: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each, started by the conductor.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Preflight</td><td>Probe of the merged DGS-581, DGS-486 and DGS-582 code; it found that the retry has no consumer, and the Maestro chose to drop the retry.</td><td>Probe only, no review</td><td>none</td></tr>
+<tr><td>Task 2: The pure classifier</td><td>classify, phaseOf and decideRetry in watchdog.ts: five states, the check order, the phase clocks and the review-clock restart; no I/O.</td><td>Approved after 1 fix round</td><td>none</td></tr>
+<tr><td>Task 3: Budgets from the config file</td><td>readBudgets reads nightwatch.budgets from .digismith/config.yml with defaults 45, 60 and 20 minutes; a bad value gives one problem and the default.</td><td>Approved after 1 fix round</td><td>Inline <code>budgets: {}</code> flow style and tab indentation are ignored without a problem message</td></tr>
+<tr><td>Task 4: Attention list and notify</td><td>The one attention writer is widened to six kinds and a resolved line; attention.ts reads and formats it; notifyNew posts one ticket comment per new item with limits.</td><td>Approved after 1 fix round</td><td>none</td></tr>
+<tr><td>Task 5: Failure causes and the breaker</td><td>The twelve-code cause list with three classes, and breaker.json that opens at two failed releases and fails closed.</td><td>Approved after 1 fix round</td><td>none</td></tr>
+<tr><td>Task 6: The watch pass</td><td>pane.ts (one read-only herdr pane list per workspace) and runWatch, which classifies every open run and opens, resolves and comments.</td><td>Approved after 1 fix round</td><td>none</td></tr>
+<tr><td>Task 7: Commands, release with cause, breaker in the scan</td><td>dg autonomous watch, attention, attention resolve and resume; release --cause; the scan stops while the breaker is open; back closes it.</td><td>Approved after 1 fix round</td><td>none</td></tr>
+<tr><td>Task 8: Registry entry, catch-up block, report block</td><td>The nightwatch-watchdog job every 5 minutes in the Nexus scheduler, a Needs Jack, Nightwatch block in the catch-up, and an Attention block in the report.</td><td>Approved, clean</td><td>none</td></tr>
+<tr><td>Task 9: Whole-ticket check, runbook text and docs</td><td>Ten hand mutation checks all caught, the runbook text for the conductor, and WATCHDOG.md.</td><td>Covered by the ticket review</td><td>none</td></tr>
+
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: ticket review round 1 With fixes (3 Important, 6 Minor), all fixed in one wave; the scoped re-review found F10 Important and F11 Minor, fixed in a second wave; round 3 clean.</p>
+  <p>All review findings, task and ticket, are in <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1: a run read as ended after a /clear (ended then started)</td><td>Fixed: ended only when no started follows the last ended</td></tr>
+<tr><td>Important</td><td>F2: every Notification counted as blocked, including idle_prompt</td><td>Fixed: only permission_prompt is blocked</td></tr>
+<tr><td>Important</td><td>F3: a lost item that Jack resolved was reopened at the next pass</td><td>Fixed: a resolved item stays closed until the run is seen healthy</td></tr>
+<tr><td>Minor</td><td>F4: runs read twice and old runs read before the age filter</td><td>Fixed: each run read once, filtered on created_at</td></tr>
+<tr><td>Minor</td><td>F5: no stderr line for a broken run, exit 0 for an unreadable root</td><td>Fixed: one stderr line; unreadable root exits non-zero</td></tr>
+<tr><td>Minor</td><td>F6: one breaker failure produced several ticket comments</td><td>Fixed: the breaker item has no ticket</td></tr>
+<tr><td>Minor</td><td>F7: notify state never pruned; three file reads per item</td><td>Fixed: sent pruned to open ids; the writer returns the id</td></tr>
+<tr><td>Minor</td><td>F8: herdr path ignored DIGISMITH_DEPOT_DIR</td><td>Fixed</td></tr>
+<tr><td>Minor</td><td>F9: a corrupt-lock failure hidden by the bad-budget-config item</td><td>Fixed: its own run key corrupt-lock</td></tr>
+<tr><td>Important</td><td>F10 (scoped re-review): the F3 guard hid a new blocked episode on a run Jack had resolved</td><td>Fixed: the guard keys on run, kind and the verdict since</td></tr>
+<tr><td>Minor</td><td>F11 (scoped re-review): old ended runs no longer closed their open items</td><td>Fixed: old ended runs are classified when they still hold an open blocked or stalled item</td></tr>
+
+  </table>
+  </div>
+</section>
+
+<section id="followups">
+  <h2>Follow-ups</h2>
+  <ul>
+    <li>The automatic retry is the follow-up DGS-588 (J.5, waits on DGS-583). DGS-583 records <code>retryEligible</code> and <code>causeClass</code> on each attention item and writes nothing to the DGS-582 journal.</li>
+    <li>Task 3: an inline <code>budgets: {}</code> flow style and tab indentation in <code>.digismith/config.yml</code> are ignored without a problem message.</li>
+    <li>One-time reopen at upgrade: an already-resolved item can reopen once, because an older <code>watch-state.json</code> has no <code>since</code>.</li>
+    <li>Second prompt on the same run: a new blocked episode (a later <code>since</code>) opens item n+1 even after Jack resolved the earlier one; the same <code>since</code> stays closed.</li>
+    <li>An old lost item is not closed automatically; only blocked and stalled items close by themselves. Jack closes a lost item with <code>dg autonomous attention resolve</code>.</li>
+    <li>Runs older than 7 days are skipped unless they have ended and still hold an open blocked or stalled item (F4, F11). Each run is read once per pass.</li>
+    <li>Older type errors in <code>tracker-clickup.ts</code> and some older test files remain; none are in files this ticket added.</li>
+  </ul>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">193f1e3</span> docs(dgs-583): add the nightwatch watchdog spec</li>
+<li><span class="sha">cca9ed3</span> docs(dgs-583): settle the open points in the spec</li>
+<li><span class="sha">dfc7b05</span> docs(dgs-583): add the implementation plan</li>
+<li><span class="sha">282f053</span> docs(dgs-583): restart the review clock at each new review pack</li>
+<li><span class="sha">002d873</span> docs(dgs-583): record the probe findings and the retry gap</li>
+<li><span class="sha">790e86c</span> feat(dgs-583): add the pure watchdog classifier</li>
+<li><span class="sha">f1b3a94</span> docs(dgs-583): drop the automatic retry and record retry eligibility</li>
+<li><span class="sha">11d54e1</span> docs(dgs-583): fix the retry sentence in the spec intro</li>
+<li><span class="sha">11a171c</span> fix(dgs-583): pause the building clock at review_ready and drop the explicit-phase guard</li>
+<li><span class="sha">271ea62</span> docs(dgs-583): say decideRetry only records eligibility</li>
+<li><span class="sha">7c1c07d</span> feat(dgs-583): read the phase budgets from the config</li>
+<li><span class="sha">5f6acc7</span> fix(dgs-583): harden the budgets reader against read errors and layout</li>
+<li><span class="sha">d306034</span> feat(dgs-583): widen the attention writer and add appendResolved</li>
+<li><span class="sha">2aa83f0</span> feat(dgs-583): add the attention list over the single writer</li>
+<li><span class="sha">ae3c6b0</span> feat(dgs-583): add the ticket notify</li>
+<li><span class="sha">d6926d0</span> fix(dgs-583): notify survives a bad since and saves state after each send</li>
+<li><span class="sha">fcf4e83</span> test(dgs-583): cover the writer kinds, null ticket and appendResolved</li>
+<li><span class="sha">fa39809</span> test(dgs-583): assert the n + 1 id after a resolve</li>
+<li><span class="sha">84dafc5</span> feat(dgs-583): add failure causes and the breaker</li>
+<li><span class="sha">d7d7f60</span> fix(dgs-583): breaker reads damaged files as open with a problem</li>
+<li><span class="sha">14809ff</span> feat(dgs-583): add the herdr pane lookup</li>
+<li><span class="sha">71276f2</span> feat(dgs-583): add the watch pass</li>
+<li><span class="sha">d4cfca5</span> fix(dgs-583): skip pane entries without an id</li>
+<li><span class="sha">7ebe771</span> fix(dgs-583): read attention once per pass and word the dry run summary</li>
+<li><span class="sha">5fb7a1a</span> feat(dgs-583): stop the scan while the breaker is open</li>
+<li><span class="sha">7ff31c0</span> feat(dgs-583): record the cause and feed the breaker on release</li>
+<li><span class="sha">30ae59e</span> feat(dgs-583): back closes the breaker</li>
+<li><span class="sha">66236db</span> feat(dgs-583): add the watch, attention and resume commands and release --cause</li>
+<li><span class="sha">96dd79e</span> fix(dgs-583): keep the breaker open on away expiry and give each failed ticket its own item</li>
+<li><span class="sha">96d86b5</span> docs(dgs-583): use the breaker run key in the plan and spec</li>
+<li><span class="sha">86cd6d3</span> feat(dgs-583): schedule the watchdog and show attention in the catch-up</li>
+<li><span class="sha">9b4d411</span> docs(dgs-583): add the runbook text and the watchdog notes</li>
+<li><span class="sha">423554b</span> test(dgs-583): isolate the sent list in the notify test and narrow present in the watch test</li>
+<li><span class="sha">f9b14b7</span> fix(dgs-583): count ended only after the last started and only permission prompts as blocked</li>
+<li><span class="sha">1ffd09c</span> fix(dgs-583): keep a resolved item closed until the run is healthy and read each run once</li>
+<li><span class="sha">2a60cf1</span> fix(dgs-583): prune the sent list, return the id from the writer and honor the depot dir for herdr</li>
+<li><span class="sha">a452f1a</span> fix(dgs-583): keep the breaker item from commenting twice and give the corrupt lock its own key</li>
+<li><span class="sha">5a8e0d4</span> fix(dgs-583): key the resolved guard on the episode since and close the items of old ended runs</li>
+<li><span class="sha">697e590</span> test(dgs-583): build the breaker item fixtures like the real item</li>
+
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-583—nightwatch-watchdog/report.html</footer>
+
+</body>
+</html>
