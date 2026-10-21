@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch controller retry</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:820px; margin:0 auto; padding:2rem 1rem 5rem; }
+  h1 { font-size:1.6rem; margin:0 0 .3rem; } .meta { color:var(--muted); font-size:.9rem; }
+  h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; margin-top:2.2rem; }
+  code { background:var(--code-bg); padding:.1rem .3rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.92rem; } th,td { border:1px solid var(--border); padding:.4rem .6rem; text-align:left; vertical-align:top; }
+</style>
+</head>
+<body>
+<h1>Nightwatch controller retry</h1>
+<p class="meta">DGS-588, J.5 Nightwatch. Maestro decisions of 2026-10-22 (UTC+7). Spec only: no build before the Maestro orders it.</p>
+
+<h2>1. Goal</h2>
+<p>DGS-583 (watchdog) records on an attention item <code>retryEligible</code> and <code>causeClass</code> and sends nothing. DGS-582 (controller) has no retry. This ticket adds the one automatic retry: the existing restart order, sent once per ticket, journaled, and proved by a new run.</p>
+<p>Out of scope: the watchdog (<code>watchdog.ts</code>, <code>watch.ts</code>, <code>causes.ts</code> do not change), a second retry, a retry of a durable or unknown cause, a retry of <code>blocked</code> or <code>stalled</code> (a person looks).</p>
+
+<h2>2. Decisions</h2>
+<ol>
+  <li><b>The retry is the restart order.</b> It uses the text <code>ORDER_TEXTS.restart</code> and the same gate (the conductor input box is empty or a suggestion). It is journaled: a <code>planned</code> line, then a <code>settled</code> line. At most one per ticket. The count is read from the journal, so a controller restart never gives a second retry.</li>
+  <li><b>Trigger.</b> An open attention item of this ticket with <code>retryEligible: true</code> and kind <code>lost</code> or <code>failed</code>, and 0 restarts in the journal for the ticket. The next tick plans and sends the order once. It resolves the attention item when a new run starts (a new builder run id with a <code>started</code> event).</li>
+  <li><b>Files.</b> <code>advance.ts</code>, <code>act.ts</code>, <code>journal.ts</code>, <code>reconcile.ts</code>. Small edits are also needed in <code>phase-types.ts</code> (types), <code>observe.ts</code> and <code>observers-real.ts</code> (one new observation) and <code>attention-write.ts</code> (the resolver name <code>controller</code>).</li>
+  <li><b>Tests use fakes only.</b> See section 7.</li>
+  <li><b>The watchdog stays as merged.</b> The tick reads the attention item shape of DGS-583 (<code>OpenItem</code>: <code>id, ticket, run, kind, cause, retryEligible, causeClass</code>) and writes only a <code>resolved</code> line.</li>
+</ol>
+
+<h2>3. Design</h2>
+<h3>3.1 Observation</h3>
+<p>A new observation <code>attention: Obs&lt;AttentionView[]&gt;</code> in <code>Observations</code>. <code>AttentionView = { id, ticket, kind, retryEligible }</code>. The real observer calls <code>readOpen(dir)</code> and keeps the items of the lock's ticket. A failed read gives <code>ok: false</code>: no retry, one <code>obs-attention-failed</code> note. Unknown is not progress.</p>
+
+<h3>3.2 Journal count</h3>
+<p><code>journal.ts</code> gains <code>restartsOf(results, ticket)</code>. It counts the keys of the ticket whose action is <code>retry</code> or <code>order-restart</code> (the pane-gone restart of the building phase) and whose state is not <code>retryable</code>. A <code>retryable</code> key means the prompt was never delivered, so it is not a restart. The count is ticket wide: a phase move cannot reset it. Lines are never deleted; <code>closeOpen</code> at release only settles.</p>
+
+<h3>3.3 Advance (pure)</h3>
+<p>New action <code>{ kind: "retry", item: string, head: string, run: string }</code>. <code>advanceTicket</code> checks it after the status rule and before the phase function, in the phases <code>claimed</code>, <code>building</code>, <code>review</code>, <code>merge-ready</code>:</p>
+<ol>
+  <li>Take the open items with <code>retryEligible === true</code> and kind <code>lost</code> or <code>failed</code>. None: go on as before.</li>
+  <li><code>restartsOf &gt; 0</code>: go on as before. The item stays open and Jack sees it (attention only).</li>
+  <li>Otherwise send the retry through <code>gate(obs)</code> (same wait or note as every order). Journal key <code>&lt;KEY&gt;:&lt;phase&gt;:&lt;attempt&gt;:retry</code>, detail <code>{ item, run }</code> where <code>run</code> is the lock's builder run (the old run).</li>
+</ol>
+<p>The pane-gone restart in <code>building</code> stays, but it now also waits (<code>wait: restart-used</code>) when <code>restartsOf &gt; 0</code>. So a ticket gets one restart order in total, whichever rule fires first.</p>
+<p>After the retry, when the retry key is <code>succeeded</code> and a builder run exists that is not the lock's builder, has <code>started</code> and a later <code>createdAt</code>: return <code>{ kind: "adopt", run, item }</code>. A <code>merged</code> or <code>released</code> ticket never retries.</p>
+
+<h3>3.4 Act</h3>
+<p><code>retry</code>: <code>run("retry", {item, run}, prompt(orderText("restart", ...)))</code>. A delivered prompt is not proof that the builder restarted, so on success the line is settled <code>uncertain</code> with note "order delivered, waiting for a new run" (not <code>succeeded</code>). A <code>PromptError</code> with <code>delivered: "no"</code> settles <code>retryable</code> (one more try, capped by <code>MAX_TRIES</code>); anything else <code>uncertain</code>. An uncertain key is never planned again.</p>
+<p><code>adopt</code>: journaled as <code>adopt-retry</code>. It writes <code>runs.builder = &lt;new run&gt;</code> to the lock, then writes the <code>resolved</code> line for the attention item (<code>by: "controller"</code>, note "new run &lt;id&gt; started"). <code>appendResolved</code> returns false when the item is already closed, so the step can repeat safely.</p>
+
+<h3>3.5 Reconcile (proof)</h3>
+<p>New check for the action <code>retry</code>, following the DGS-582 rules: unknown is not progress, proof is an artefact.</p>
+<table>
+<tr><th>Observation</th><th>Result</th></tr>
+<tr><td>runs not observed</td><td>unknown: the line is left as it is</td></tr>
+<tr><td>a builder run of the ticket, id not equal to <code>detail.run</code>, <code>started</code>, <code>createdAt</code> later than the planned line</td><td><code>succeeded</code> ("new run started")</td></tr>
+<tr><td>no such run, the planned line is younger than 15 minutes (<code>RETRY_PROOF_WAIT_MS</code>)</td><td>unknown: no note, the new worker is starting</td></tr>
+<tr><td>no such run after 15 minutes</td><td><code>uncertain</code>: one <code>journal-uncertain-retry</code> note (the item stays open)</td></tr>
+</table>
+<p>The check never returns <code>retryable</code>: the order may have been delivered, so the key must not be freed. A new check for <code>adopt-retry</code>: lock builder equals <code>detail.run</code> gives <code>succeeded</code>, otherwise <code>retryable</code> (a lock write is safe to repeat).</p>
+<p>Crash cases: (a) crash after <code>planned</code>, before the prompt: the key is <code>open</code>, <code>openLines</code> lists it, <code>order</code>-style handling holds it (<code>wait</code>), reconcile settles it only on proof; the order is never sent twice, at the price that a lost prompt needs a person (the 15 minute note). (b) crash after the prompt, before <code>settled</code>: same. (c) crash after <code>settled uncertain</code>: the key is used, no second order.</p>
+
+<h2>4. Known limit</h2>
+<p><code>dg autonomous release --result failed</code> clears the lock and the scan ticks only while a lock is held. So the retry covers a ticket whose lock is still held, which is the <code>lost</code> run case and any <code>failed</code> or retry-eligible item written while the lock is held. A transient <code>failed</code> release (lock already cleared) keeps its attention item for Jack; there is no builder or phase left to restart. A re-claim after a transient release is a possible follow-up ticket, not part of this one.</p>
+
+<h2>5. Code rules</h2>
+<p>Code in <code>packages/cli/src/</code> runs under <code>node --experimental-strip-types</code> (the DGS-587 smoke test strips every file): no parameter properties, no enums, no namespaces. Nexus jobs run the built <code>dist/index.js</code>, so a new import must be a relative <code>.ts</code> path the build resolves like the existing ones. Ticket text is never read or journaled; only the validated key, the attention <code>id</code> and run ids enter the order and the journal.</p>
+
+<h2>6. Files and changes</h2>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>phase-types.ts</code></td><td><code>AttentionView</code>, <code>Observations.attention</code>, actions <code>retry</code> and <code>adopt</code>, <code>RETRY_PROOF_WAIT_MS</code></td></tr>
+<tr><td><code>journal.ts</code></td><td><code>restartsOf</code></td></tr>
+<tr><td><code>advance.ts</code></td><td>retry and adopt decisions; building restart waits when a restart is used</td></tr>
+<tr><td><code>act.ts</code></td><td><code>retry</code> (settles uncertain), <code>adopt</code></td></tr>
+<tr><td><code>reconcile.ts</code></td><td>checks for <code>retry</code> and <code>adopt-retry</code>; takes <code>now</code> (already given)</td></tr>
+<tr><td><code>observe.ts</code>, <code>observers-real.ts</code></td><td>the <code>attention</code> observer (<code>readOpen</code>)</td></tr>
+<tr><td><code>attention-write.ts</code>, <code>attention.ts</code></td><td>resolver <code>controller</code> beside <code>watchdog</code> and <code>jack</code></td></tr>
+<tr><td><code>fakes.test-util.ts</code></td><td>fake attention observation</td></tr>
+</table>
+
+<h2>7. Tests without Jack, and first use</h2>
+<p>Vitest from the repo root, <code>pnpm vitest run packages/cli/src/autonomous</code>. Fakes only: <code>mkdtempSync</code> state folder, fake observers, fake <code>prompt</code>, fake clock. No real ClickUp, herdr, depot, Nexus (4300) or live API.</p>
+<ul>
+  <li>advance: a transient <code>failed</code> item or a <code>lost</code> item with 0 restarts gives one <code>retry</code>; <code>retryEligible: false</code>, kind <code>blocked</code>, <code>stalled</code> or no item gives none; a used or open retry key gives <code>wait</code>; the gate (conductor working, input typed) gives wait; <code>merged</code> and <code>released</code> never retry.</li>
+  <li>a second failure (new item after a retry) gives attention only: no second order.</li>
+  <li>a durable or unknown cause (<code>retryEligible: false</code>) never retries, through the tick, and writes no journal line.</li>
+  <li>a pane-gone restart already sent blocks the retry, and the retry blocks the pane-gone restart.</li>
+  <li>a controller restart between plan and settle (journal has <code>planned</code> only; a new tick) sends no second order, and reconcile settles the line on proof only.</li>
+  <li>act: a delivered prompt settles <code>uncertain</code>; <code>PromptError</code> <code>no</code> settles <code>retryable</code>; the order text is the restart text with a valid key only.</li>
+  <li>reconcile: each row of 3.5, including the 15 minute edge (14:59 and 15:00) and a failed runs read.</li>
+  <li>adopt: after a new started run, the lock builder is the new run, the item has a <code>resolved</code> line, and a repeat writes nothing.</li>
+  <li>tick end to end with fakes: lost run, one order, new run appears, item resolved, a later failure gives attention only.</li>
+  <li>source test: the changed files contain no <code>enum</code>, <code>namespace</code> or parameter property (the same check as DGS-587).</li>
+</ul>
+<p><b>First use</b> (after merge and install, the Nexus API restarted once, both by the Maestro): a throwaway ticket, with a live lock, runs a builder whose pane is closed. The watchdog marks the run <code>lost</code> (retry eligible). The next tick sends one restart order to the conductor, <code>dg autonomous journal</code> shows the <code>retry</code> line, the conductor restarts the builder, the new run starts, the item resolves. Closing the new pane again gives an open item and no second order. The conductor reports the three journal lines.</p>
+</body>
+</html>
