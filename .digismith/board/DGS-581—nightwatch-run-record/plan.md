@@ -16,7 +16,7 @@ Spec: `.digismith/board/DGS-581—nightwatch-run-record/design.html`. Read it fi
 - Run directory: `<root>/runs/<KEY>/<run-id>/` with `run.json`, `events.jsonl`, `seq` (counter), `lock/` (lock directory).
 - Run id: `<role>-<UTC yyyymmddThhmmss>-<6 hex>`. New per attempt, never reused. Key and id match `^[A-Za-z0-9][A-Za-z0-9._-]*$` before they join a path.
 - run.json: schema `nightwatch-run/v1`, written once with the `wx` flag, never edited. Unknown facts are `null`.
-- Event line: `{schema:"nightwatch-event/v1", seq, ts, run, type, data}`. seq starts at 1, +1 each, append only.
+- Event line: `{schema:"nightwatch-event/v1", seq, ts, run, type, data}`. seq starts at 1, +1 each, append only. **File line order is the authority; seq is a strong hint, not a unique key** (Maestro ruling; Task 2 F1/F4 parked). Readers order by file position and tolerate a duplicate seq (Task 8).
 - Event types: hooks `started`, `blocked`, `tool`, `turn_end`, `ended`; `dg run event` `review_ready`, `merged`, `pushed`, `lost`, and (added by Task 7) `phase`, whose `data.phase` must be exactly `building`, `review` or `merge`. The set is closed.
 - Lock: `mkdir <run-dir>/lock`; a lock older than 1 s is stale and broken. The `PostToolUse` hook (`tool`) waits at most 150 ms and then drops its event and logs. Every other writer (the `started`, `blocked`, `turn_end`, `ended` hooks and `dg run event`) waits up to 2 s.
 - Hooks: no `DIGISMITH_RUN_ID` writes nothing; exit 0 always; no stdout; never write message text, prompts, tool inputs or outputs; errors go to `<root>/runs/hook-errors.log` (message only, capped at 256 KB); target under 100 ms.
@@ -1555,4 +1555,73 @@ Expected: PASS (every earlier run test still green).
 ```bash
 git add packages/cli/src/run/events.ts packages/cli/src/run/index.ts packages/cli/src/run/events.test.ts packages/cli/src/run/index.test.ts
 git commit -m "feat(run): add the phase conductor event"
+```
+
+
+---
+
+### Task 8: File order is the authority (duplicate seq)
+
+Added after checkpoint 2 on the Maestro's ruling (Task 2 findings F1 and F4, the stale-lock race, are parked as an accepted residual). **Run it after Task 7 and before Task 6** (the order is 1, 2, 3, 4, 5, 7, 8, 6).
+
+**Files:**
+- Modify: `packages/cli/src/run/events.ts` (a comment only, see Step 3)
+- Modify: `packages/cli/src/run/read.ts` only if the test shows a reader that does not follow the rule
+- Test: `packages/cli/src/run/read.test.ts` (one new test with a hand-written fixture)
+- Test: `packages/cli/src/run/index.test.ts` (one new `dg run` case on the same kind of fixture)
+
+**Interfaces:**
+- Consumes (Tasks 1, 2, 5): `readEvents`, `listRuns`, `showRun`, `tailEvents`, the `dg run` commands.
+- Produces: no new function. It fixes the rule in a comment and a test.
+
+- [ ] **Step 1: Write the failing test**
+
+Add to `packages/cli/src/run/read.test.ts` (this test may pass at once; if it does, that is fine, the test still locks the rule):
+
+```ts
+  it("keeps file order and tolerates two lines that share a seq", () => {
+    const a = createRun({ ticket: "DGS-1", role: "builder" }, env);
+    const dir = findRunDir(a.run, env)!;
+    const line = (seq: number, type: string, ts: string) => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts, run: a.run, type, data: {} });
+    // a hand-written file: seq 2 appears twice (the accepted residual of the stale-lock race)
+    fs.writeFileSync(
+      path.join(dir, "events.jsonl"),
+      [line(1, "started", "2026-10-21T01:00:00Z"), line(2, "tool", "2026-10-21T01:00:01Z"), line(2, "blocked", "2026-10-21T01:00:02Z"), line(3, "turn_end", "2026-10-21T01:00:03Z")].join("\n") + "\n",
+    );
+    expect(tailEvents(a.run, 0, env)!.map((e) => e.type)).toEqual(["started", "tool", "blocked", "turn_end"]);
+    expect(tailEvents(a.run, 2, env)!.map((e) => e.type)).toEqual(["turn_end"]);
+    const shown = showRun(a.run, env)!;
+    expect(shown.summary).toMatchObject({ events: 4, last_type: "turn_end", first_ts: "2026-10-21T01:00:00Z", last_ts: "2026-10-21T01:00:03Z", ended: false });
+    expect(listRuns(env)[0].summary.events).toBe(4);
+  });
+```
+
+Add to `packages/cli/src/run/index.test.ts` one case: write the same kind of fixture file into the run directory (find it under `<tmp>/runs/DGS-581/<id>/`), then check that `dg run tail <id>` prints four lines in file order, that `dg run show <id> --json` has `summary.events` 4, and that `dg run list --json` has one row. Exit code 0 for all three.
+
+- [ ] **Step 2: Run the tests**
+
+Run: `pnpm vitest run packages/cli/src/run/read.test.ts packages/cli/src/run/index.test.ts`
+Expected: PASS if the readers already follow the rule (they should: `readEvents` keeps file order and nothing de-duplicates). If a test fails, fix the reader in `read.ts` or `events.ts` until the rule holds: order by file position, never sort or dedupe by seq, never throw on a duplicate.
+
+- [ ] **Step 3: Write the rule as a code comment**
+
+Above `appendEvent` in `events.ts` add this comment (and nothing else changes in that file):
+
+```ts
+// Order rule (Maestro ruling, DGS-581): each event line is one O_APPEND write, so the line order in
+// events.jsonl is the authority. seq is a strong hint, not a unique key: a race in the stale-lock break
+// (a writer paused between two adjacent syscalls, only after a crashed writer held the lock for more than
+// 2 s) can give two lines the same seq. Readers order by file position and tolerate a duplicate seq.
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pnpm vitest run packages/cli/src/run`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add packages/cli/src/run/events.ts packages/cli/src/run/read.test.ts packages/cli/src/run/index.test.ts
+git commit -m "test(run): lock file order as the authority for events"
 ```
