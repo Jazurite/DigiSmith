@@ -118,7 +118,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     if (b.open) {
       if (b.problem !== null) {
         try {
-          appendAttention(d.dir, now, { ticket: null, run: "-", kind: "failed", cause: `breaker-file-unreadable: ${b.problem}` });
+          appendAttention(d.dir, now, { ticket: null, run: "breaker", kind: "unknown", cause: `breaker-file-unreadable: ${b.problem}` });
         } catch { /* the scan still stops */ }
       }
       appendEvent(d.dir, now, "breaker", { streak: b.streak });

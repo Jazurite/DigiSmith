@@ -304,6 +304,12 @@ describe("dg autonomous: attention, resume, watch", () => {
     const arr = JSON.parse(out());
     expect(arr.map((i: { id: string }) => i.id)).toEqual(["r1.stalled.0", "r2.stalled.0"]);
   });
+  it("attention ages use the injected clock", async () => {
+    const { appendOpen } = await import("./attention.ts");
+    appendOpen(dir, { ticket: "DGS-1", run: "r1", kind: "stalled", cause: "x", since: new Date(DAY.getTime() - 90 * 60_000).toISOString(), ts: DAY.toISOString() });
+    await parse(["autonomous", "attention"]);
+    expect(out()).toContain("1h30m");
+  });
   it("attention resolve appends a resolved line by jack", async () => {
     await seed(1);
     await parse(["autonomous", "attention", "resolve", "r1.stalled.0", "--note", "seen"]);
@@ -340,7 +346,7 @@ describe("dg autonomous: attention, resume, watch", () => {
     const h = (await viaBuildCli(["autonomous", "--help"])).output;
     for (const w of ["watch", "attention", "resume"]) expect(h).toContain(w);
   });
-  it("watch --dry-run prints the summary line and writes nothing", async () => {
+  it("watch --dry-run prints the summary line and writes nothing, no journal", async () => {
     const old = process.env.DIGISMITH_DEPOT_DIR;
     process.env.DIGISMITH_DEPOT_DIR = root;
     try {
@@ -351,5 +357,6 @@ describe("dg autonomous: attention, resume, watch", () => {
     expect(process.exitCode ?? 0).toBe(0);
     expect(out()).toContain("watch (dry run, nothing written)");
     expect(existsSync(join(dir, "attention.jsonl"))).toBe(false);
+    expect(existsSync(join(dir, "journal.jsonl"))).toBe(false);
   });
 });

@@ -317,7 +317,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const items = readOpen(d.dir);
-              return [argv.json ? JSON.stringify(items, null, 2) : formatOpen(items, Date.now())];
+              return [argv.json ? JSON.stringify(items, null, 2) : formatOpen(items, d.now().getTime())];
             }),
         })
         .command({

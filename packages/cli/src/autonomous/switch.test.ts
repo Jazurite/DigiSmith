@@ -92,6 +92,24 @@ describe("runBack", () => {
 });
 
 describe("runBack and the breaker", () => {
+  it("away-expired leaves the breaker and its item open", async () => {
+    const { recordRelease, readBreaker } = await import("./breaker.ts");
+    const { appendOpen, readOpen } = await import("./attention.ts");
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, NOW);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, NOW);
+    appendOpen(dir, { ticket: "DGS-2", run: "breaker", kind: "failed", cause: "circuit-breaker-open", since: NOW.toISOString(), ts: NOW.toISOString() });
+    await runBack(mk(), "away-expired");
+    expect(readBreaker(dir).open).toBe(true);
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it("closeBreakerAsJack also resolves the breaker-file-unreadable item", async () => {
+    const { closeBreakerAsJack } = await import("./switch.ts");
+    const { appendOpen, readOpen } = await import("./attention.ts");
+    writeFileSync(join(dir, "breaker.json"), "{nope");
+    appendOpen(dir, { ticket: null, run: "breaker", kind: "unknown", cause: "breaker-file-unreadable: breaker.json does not parse", since: NOW.toISOString(), ts: NOW.toISOString() });
+    expect(closeBreakerAsJack(dir, NOW, "resume")).toBe(true);
+    expect(readOpen(dir)).toEqual([]);
+  });
   it("closes an open breaker, resolves the circuit-breaker-open item as jack, still calls run-now", async () => {
     const { recordRelease, readBreaker } = await import("./breaker.ts");
     const { appendOpen, readOpen } = await import("./attention.ts");

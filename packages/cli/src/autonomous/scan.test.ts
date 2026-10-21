@@ -371,7 +371,7 @@ describe("runScan: the breaker", () => {
     expect(tracker.calls).toEqual([]);
     const items = readOpen(dir);
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ kind: "failed", run: "-", ticket: null });
+    expect(items[0]).toMatchObject({ kind: "unknown", run: "breaker", ticket: null });
     expect(items[0].cause).toMatch(/^breaker-file-unreadable: .*does not parse/);
   });
   it("an open breaker from a real streak writes no attention item", async () => {
@@ -384,6 +384,18 @@ describe("runScan: the breaker", () => {
     await openBreaker();
     now = DAY;
     expect((await runScan(mk())).outcome).toBe("off");
+  });
+  it("an expired away window does not close the breaker: next scan still breaker, claims nothing", async () => {
+    await openBreaker();
+    const { readBreaker } = await import("./breaker.ts");
+    writeAway(dir, { away: true, since: new Date(NIGHT.getTime() - 7200_000).toISOString(), until: new Date(NIGHT.getTime() - 3600_000).toISOString(), endedAt: null });
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("breaker");
+    expect(readBreaker(dir).open).toBe(true);
+    expect(tracker.calls).toEqual([]);
+    expect(readLock(dir)).toBeNull();
+    expect(kinds()).toContain("away-expired");
   });
   it("a dry run ignores the breaker and writes nothing", async () => {
     await openBreaker();

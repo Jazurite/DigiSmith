@@ -211,7 +211,7 @@ describe("runRelease: causes and the breaker", () => {
     acquireLock(dir, lock());
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
     expect(r).toMatchObject({ cause: "test-red", retryEligible: false, breakerOpened: false, warning: null });
-    expect(await items()).toMatchObject([{ run: "-", ticket: "DGS-1", kind: "failed", cause: "test-red", causeClass: "durable", retryEligible: false }]);
+    expect(await items()).toMatchObject([{ run: "DGS-1", ticket: "DGS-1", kind: "failed", cause: "test-red", causeClass: "durable", retryEligible: false }]);
     expect(tracker.comments).toHaveLength(1);
     expect((await breaker()).streak).toBe(1);
     expect(events().find((e) => e.kind === "release")).toMatchObject({ cause: "test-red" });
@@ -222,7 +222,10 @@ describe("runRelease: causes and the breaker", () => {
     expect(r.retryEligible).toBe(true);
     expect(await items()).toMatchObject([{ causeClass: "transient", retryEligible: true }]);
     expect((await breaker()).streak).toBe(1);
-    expect(readJournal(dir).filter((l) => l.key.includes("retry"))).toEqual([]);
+    // DGS-486 release journals its own "released" step; a transient cause adds nothing else (no retry line)
+    const keys = readJournal(dir).map((l) => l.key);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.every((k) => k.endsWith(":released"))).toBe(true);
   });
   it("an unknown cause word is recorded as unknown with a warning", async () => {
     acquireLock(dir, lock());
@@ -256,6 +259,16 @@ describe("runRelease: causes and the breaker", () => {
     expect(cb).toHaveLength(1);
     expect(cb[0]).toMatchObject({ kind: "failed", run: "breaker", ticket: "DGS-2" });
     expect(tracker.comments.some((c) => c.text.includes("2 failed tickets in a row (DGS-1, DGS-2)") && c.text.includes("dg autonomous resume"))).toBe(true);
+  });
+  it("two failed tickets both get an item; the breaker item coexists with the file-problem item", async () => {
+    const { appendAttention } = await import("./attention-write.ts");
+    acquireLock(dir, lock("DGS-1"));
+    await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
+    acquireLock(dir, lock("DGS-2"));
+    await runRelease(mk(), { ticket: "DGS-2", result: "failed", cause: "spec-gap" });
+    appendAttention(dir, NOW, { ticket: null, run: "breaker", kind: "unknown", cause: "breaker-file-unreadable: x" });
+    const all = await items();
+    expect(all.map((i) => i.id).sort()).toEqual(["DGS-1.failed.0", "DGS-2.failed.0", "breaker.failed.0", "breaker.unknown.0"]);
   });
   it("merged resets the streak; stopped and awaiting-jack change nothing and write no item", async () => {
     acquireLock(dir, lock("DGS-1"));
