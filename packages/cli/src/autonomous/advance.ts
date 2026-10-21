@@ -1,4 +1,4 @@
-import { restartsOf, retrySucceeded } from "./journal.ts";
+import { adoptUsed, restartsOf, retrySucceeded } from "./journal.ts";
 import { MAX_ATTEMPTS } from "./phase-types.ts";
 import type { Action, JournalResults, MarkerPhase, Observations, Phase, TicketState } from "./phase-types.ts";
 
@@ -52,7 +52,7 @@ function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action
   // adopt resolves the attention items, so it waits for a good attention read; the obs-attention-failed note covers the wait
   if (s.phase === "merged" || s.phase === "released" || !obs.attention.ok) return null;
   const items = eligible(s, obs);
-  if (retrySucceeded(j, s.ticket) && !used(j, keyOf(s, "adopt-retry")) && obs.runs.ok) {
+  if (retrySucceeded(j, s.ticket) && !adoptUsed(j, s.ticket) && obs.runs.ok) {
     const cur = obs.runs.value.find((x) => x.id === s.runs.builder);
     const later = obs.runs.value
       .filter((x) => x.role === "builder" && x.started && x.id !== s.runs.builder && (cur === undefined || Date.parse(x.createdAt) > Date.parse(cur.createdAt)))
@@ -81,7 +81,7 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   if (!obs.herdr.ok) return note("obs-herdr-failed");
   if (!obs.runs.ok) return note("obs-runs-failed");
   const r = obs.runs.value.find((x) => x.id === s.runs.builder);
-  // one restart per attempt: the order-restart key carries the attempt, and order() holds it once sent
+  // one restart per ticket: restartsOf counts every retry and order-restart key, and order() holds the key once sent
   if (obs.herdr.value.builderPane === "gone" && r !== undefined && !r.ended) {
     const own = j[keyOf(s, "order-restart")];
     if ((own === undefined || own === "retryable") && restartsOf(j, s.ticket) > 0) return wait("restart-used");

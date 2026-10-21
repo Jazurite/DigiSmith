@@ -122,6 +122,18 @@ export function restartsOf(results: JournalResults, ticket: string): number {
   }).length;
 }
 
+// The attention item named by the ticket's latest retry line (detail.item), or null when there is none.
+export function retryItemOf(dir: string, ticket: string): string | null {
+  const l = [...readJournal(dir)].reverse().find((x) => x.status === "planned" && x.ticket === ticket && x.action === "retry");
+  const id = l?.detail?.item;
+  return typeof id === "string" && id !== "" ? id : null;
+}
+
+// True when any adopt-retry key of the ticket is used (not retryable), in any phase.
+export function adoptUsed(results: JournalResults, ticket: string): boolean {
+  return Object.entries(results).some(([k, st]) => k.split(":")[0] === ticket && actionOfKey(k) === "adopt-retry" && st !== "retryable");
+}
+
 export function retrySucceeded(results: JournalResults, ticket: string): boolean {
   return Object.entries(results).some(([k, st]) => k.split(":")[0] === ticket && actionOfKey(k) === "retry" && st === "succeeded");
 }

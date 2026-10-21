@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, appendFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { planIfFree, plan, settle, resultsOf, openLines, closeOpen, readJournal, journalPath } from "./journal.ts";
+import { planIfFree, plan, settle, resultsOf, openLines, closeOpen, readJournal, journalPath, restartsOf, retrySucceeded, adoptUsed } from "./journal.ts";
 
 const tmp = () => mkdtempSync(join(tmpdir(), "nw-journal-"));
 const T0 = new Date("2026-10-21T01:00:00.000Z");
@@ -126,8 +126,6 @@ describe("planIfFree", () => {
   });
 });
 
-import { restartsOf, retrySucceeded } from "./journal.ts";
-
 describe("restartsOf", () => {
   const J = (o: Record<string, string>) => o as never;
   it("counts retry and order-restart keys of the ticket in any phase", () => {
@@ -141,6 +139,23 @@ describe("restartsOf", () => {
   });
   it("counts open, uncertain, succeeded and permanent", () => {
     for (const st of ["open", "uncertain", "succeeded", "permanent"]) expect(restartsOf(J({ "DGS-1:building:1:retry": st }), "DGS-1")).toBe(1);
+  });
+});
+describe("ticket prefix match", () => {
+  it("DGS-1 does not match DGS-10 keys", () => {
+    const r = { "DGS-10:building:1:retry": "succeeded", "DGS-10:building:1:adopt-retry": "succeeded" } as never;
+    expect(restartsOf(r, "DGS-1")).toBe(0);
+    expect(retrySucceeded(r, "DGS-1")).toBe(false);
+    expect(adoptUsed(r, "DGS-1")).toBe(false);
+    expect(restartsOf(r, "DGS-10")).toBe(1);
+  });
+});
+describe("adoptUsed", () => {
+  it("is true for a used adopt-retry key of the ticket in any phase, not for retryable or other tickets", () => {
+    expect(adoptUsed({ "DGS-1:building:1:adopt-retry": "succeeded" } as never, "DGS-1")).toBe(true);
+    expect(adoptUsed({ "DGS-1:review:2:adopt-retry": "open" } as never, "DGS-1")).toBe(true);
+    expect(adoptUsed({ "DGS-1:building:1:adopt-retry": "retryable" } as never, "DGS-1")).toBe(false);
+    expect(adoptUsed({ "DGS-2:building:1:adopt-retry": "succeeded" } as never, "DGS-1")).toBe(false);
   });
 });
 describe("retrySucceeded", () => {

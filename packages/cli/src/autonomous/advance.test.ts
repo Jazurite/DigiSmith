@@ -298,4 +298,11 @@ describe("adopt", () => {
     expect(advanceTicket(s, O({ runs: ok([old, { ...fresh, started: false }]) }), j).kind).not.toBe("adopt");
     expect(advanceTicket(s, O({ runs: ok([old, fresh]) }), { ...j, "DGS-1:building:1:adopt-retry": "succeeded" }).kind).not.toBe("adopt");
   });
+  it("no adopt in a later phase once adopt-retry was used in an earlier one", () => {
+    const sr = S({ phase: "review", attempt: 1 });
+    const jr: JournalResults = { "DGS-1:building:1:retry": "succeeded", "DGS-1:building:1:adopt-retry": "succeeded" };
+    const builder = run({ phaseEvent: "review" });
+    const newer = run({ id: "builder-3", createdAt: "2026-10-21T03:00:00.000Z", phaseEvent: null });
+    expect(advanceTicket(sr, O({ runs: ok([builder, newer]), attention: ok([item()]) }), jr).kind).not.toBe("adopt");
+  });
 });

@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync, appendFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { appendOpen, appendResolved, attentionFile, formatOpen, readOpen } from "./attention.ts";
+import { appendOpen, appendResolved, attentionFile, attentionViews, formatOpen, readOpen } from "./attention.ts";
 
 const dir = () => mkdtempSync(join(tmpdir(), "nw-att-"));
 const base = { ticket: "DGS-1", run: "builder-a", kind: "blocked" as const, cause: "waiting-for-answer", since: "2026-10-21T10:00:00.000Z", ts: "2026-10-21T10:05:00.000Z" };
@@ -66,5 +66,16 @@ describe("attention", () => {
     const first = readFileSync(attentionFile(d), "utf-8");
     appendOpen(d, { ...base, run: "builder-z" });
     expect(readFileSync(attentionFile(d), "utf-8").startsWith(first)).toBe(true);
+  });
+});
+
+describe("attentionViews", () => {
+  const item = (o = {}) => ({ id: "a.lost.0", ts: base.ts, ticket: "DGS-1", run: "a", kind: "lost" as const, cause: "c", since: base.since, ...o });
+  it("drops another ticket's item", () => {
+    expect(attentionViews([item(), item({ id: "b.lost.0", ticket: "DGS-2", retryEligible: true })], "DGS-1").map((v) => v.id)).toEqual(["a.lost.0"]);
+  });
+  it("maps a missing retryEligible field to false and keeps true", () => {
+    expect(attentionViews([item()], "DGS-1")).toEqual([{ id: "a.lost.0", ticket: "DGS-1", kind: "lost", retryEligible: false }]);
+    expect(attentionViews([item({ retryEligible: true })], "DGS-1")[0].retryEligible).toBe(true);
   });
 });

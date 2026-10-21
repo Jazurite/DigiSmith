@@ -1,5 +1,5 @@
 import { appendAttention, appendResolved } from "./attention-write.ts";
-import { plan, settle } from "./journal.ts";
+import { plan, retryItemOf, settle } from "./journal.ts";
 import { writePhaseState } from "./phase-state.ts";
 import { TICKET_RE } from "./phase-types.ts";
 import type { Action, MarkerPhase, SettleResult, TicketState } from "./phase-types.ts";
@@ -105,7 +105,9 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
     case "adopt":
       return run("adopt-retry", { run: a.run }, async () => {
         writePhaseState(d.dir, { runs: { builder: a.run } });
-        for (const id of a.items) appendResolved(d.dir, id, "controller", d.now().toISOString(), `new run ${a.run} started`);
+        // only the item the retry line names; any other open item stays for Jack
+        const id = retryItemOf(d.dir, state.ticket);
+        if (id !== null) appendResolved(d.dir, id, "controller", d.now().toISOString(), `new run ${a.run} started`);
       }, retry);
   }
 }

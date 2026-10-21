@@ -5,7 +5,8 @@ Text for the Maestro to apply to the conductor runbook.
 ### Restart order from the controller
 
 - The conductor may get one order from the controller: `<KEY>: restart the builder, its pane is gone`.
-- The order means the watchdog marked the builder run lost, and the cause may be transient.
+- The order is sent when the watchdog marked the builder run lost, or when a retry-eligible failed item is open. The cause may be transient.
+- A failed release keeps its item for Jack. The controller sends no order for it.
 - The conductor restarts the builder as `dg run start` does today.
 - The new run id must have a `started` event. If it has none, the controller raises `journal-uncertain-retry` after 15 minutes.
 - There is never a second automatic order for the ticket.

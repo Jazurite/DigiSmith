@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
-import { appendResolved, formatOpen, readOpen } from "./attention.ts";
+import { appendResolved, attentionViews, formatOpen, readOpen } from "./attention.ts";
 import { herdrPaneLookup } from "./pane.ts";
 import { runWatch } from "./watch.ts";
 import { readAway, isAway } from "./away.ts";
@@ -100,9 +100,7 @@ function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Prom
         return r.kind === "ok" ? (r.state.mergeHead ?? null) : null;
       }, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
       tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
-      attention: async () => readOpen(d.dir)
-        .filter((i) => i.ticket === state?.ticket)
-        .map((i) => ({ id: i.id, ticket: i.ticket, kind: i.kind, retryEligible: i.retryEligible === true })),
+      attention: async () => attentionViews(readOpen(d.dir), state?.ticket),
     });
     const writers = makeWriters({
       exec, herdrBin, herdrWs, conductorName: CONDUCTOR,

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { act, orderText, ORDER_TEXTS, PromptError, type ActDeps } from "./act.ts";
 import { readPhaseState } from "./phase-state.ts";
-import { resultsOf, readJournal } from "./journal.ts";
+import { plan, resultsOf, readJournal } from "./journal.ts";
 import { appendAttention } from "./attention-write.ts";
 import { appendResolved, readOpen } from "./attention.ts";
 import { writeLock } from "./fakes.test-util.ts";
@@ -193,6 +193,7 @@ describe("act adopt", () => {
   it("writes the new builder into the lock and resolves the items; a repeat writes nothing more", async () => {
     const d = tmp(); writeLock(d, { phase: "building", runs: { builder: "builder-1" } });
     appendAttention(d, T, { ticket: "DGS-1", run: "builder-1", kind: "lost", cause: "pane-gone", retryEligible: true });
+    plan(d, T, { ticket: "DGS-1", phase: "building", attempt: 1, action: "retry", detail: { item: "builder-1.lost.0", run: "builder-1" } });
     const a = { kind: "adopt" as const, run: "builder-2", items: ["builder-1.lost.0"] };
     await act(deps(d), state({ phase: "building" }), a);
     const r = readPhaseState(d); expect(r.kind === "ok" && r.state.runs.builder).toBe("builder-2");
@@ -204,5 +205,26 @@ describe("act adopt", () => {
     await expect(act(deps(d), state({ phase: "building" }), a)).rejects.toThrow(/already used/);
     expect(readJournal(d)).toHaveLength(jBefore);
     expect(readFileSync(join(d, "attention.jsonl"), "utf8")).toBe(attBefore);
+  });
+  it("resolves only the item the retry line names, even if advance passes more ids", async () => {
+    const d = tmp(); writeLock(d, { phase: "review", runs: { builder: "builder-1" } });
+    appendAttention(d, T, { ticket: "DGS-1", run: "builder-1", kind: "lost", cause: "pane-gone", retryEligible: true });
+    appendAttention(d, T, { ticket: "DGS-1", run: "builder-2", kind: "lost", cause: "pane-gone", retryEligible: true });
+    plan(d, T, { ticket: "DGS-1", phase: "building", attempt: 1, action: "retry", detail: { item: "builder-1.lost.0", run: "builder-1" } });
+    await act(deps(d), state({ phase: "review" }), { kind: "adopt", run: "builder-3", items: ["builder-1.lost.0", "builder-2.lost.0"] });
+    expect(readOpen(d).map((i) => i.id)).toEqual(["builder-2.lost.0"]);
+  });
+  it("a second-failure item stays open after adopt in a later phase", async () => {
+    const d = tmp(); writeLock(d, { phase: "review", runs: { builder: "builder-2" } });
+    appendAttention(d, T, { ticket: "DGS-1", run: "builder-2", kind: "lost", cause: "pane-gone", retryEligible: true });
+    plan(d, T, { ticket: "DGS-1", phase: "building", attempt: 1, action: "retry", detail: { item: "builder-1.lost.0", run: "builder-1" } });
+    await act(deps(d), state({ phase: "review" }), { kind: "adopt", run: "builder-3", items: ["builder-2.lost.0"] });
+    expect(readOpen(d).map((i) => i.id)).toEqual(["builder-2.lost.0"]);
+  });
+  it("with no retry line, adopt resolves nothing", async () => {
+    const d = tmp(); writeLock(d, { phase: "building", runs: { builder: "builder-1" } });
+    appendAttention(d, T, { ticket: "DGS-1", run: "builder-1", kind: "lost", cause: "pane-gone", retryEligible: true });
+    await act(deps(d), state({ phase: "building" }), { kind: "adopt", run: "builder-2", items: ["builder-1.lost.0"] });
+    expect(readOpen(d)).toHaveLength(1);
   });
 });

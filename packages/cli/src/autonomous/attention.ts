@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAttentionId, appendResolved as writeResolved } from "./attention-write.ts";
 import type { AttentionKind } from "./attention-write.ts";
+import type { AttentionView } from "./phase-types.ts";
 
 export type { AttentionKind } from "./attention-write.ts";
 export interface OpenItem {
@@ -77,4 +78,11 @@ export function formatOpen(items: OpenItem[], now: number): string {
       return `${i.id}  ${i.ticket ?? "-"}  ${i.kind}  ${i.cause}  since ${utc7(Date.parse(i.since))} (UTC+7)  ${ageText}`;
     })
     .join("\n");
+}
+
+/** The open items of one ticket as the tick sees them; a missing retryEligible field maps to false. */
+export function attentionViews(items: OpenItem[], ticket: string | undefined): AttentionView[] {
+  return items
+    .filter((i) => i.ticket === ticket)
+    .map((i) => ({ id: i.id, ticket: i.ticket, kind: i.kind, retryEligible: i.retryEligible === true }));
 }
