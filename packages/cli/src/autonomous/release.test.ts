@@ -77,14 +77,33 @@ describe("runRelease", () => {
     acquireLock(dir, lock());
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
     expect(r.runNow).toMatchObject({ ok: false, status: 409 });
+    expect(events().find((e) => e.kind === "run-now")).toMatchObject({ ok: false, status: 409 });
   });
 
   it("a failing comment still clears the lock", async () => {
     acquireLock(dir, lock());
-    tracker.comment = async () => { throw new Error("boom"); };
+    tracker.comment = async (ref: string) => { tracker.calls.push(`comment ${ref}`); throw new Error("boom"); };
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "awaiting-jack", reason: "needs Jack" });
     expect(r.lockCleared).toBe(true);
     expect(readLock(dir)).toBeNull();
+    expect(tracker.calls).toContain("comment t1");
+    expect(events().filter((e) => e.kind === "comment-failed")).toHaveLength(1);
+    expect(events().filter((e) => e.kind === "release")).toHaveLength(1);
+  });
+
+  it("a comment without a reason has no trailing colon", async () => {
+    acquireLock(dir, lock());
+    await runRelease(mk(), { ticket: "DGS-1", result: "stopped" });
+    expect(tracker.comments[0].text).toBe("Autonomous Operation stopped (2026-10-21 00:30:00)");
+  });
+
+  it("an unwritable report does not skip run-now", async () => {
+    acquireLock(dir, lock());
+    mkdirSync(join(dir, "reports", "dir.md"), { recursive: true });
+    utimesSync(join(dir, "reports", "dir.md"), new Date(CLAIMED.getTime() + 600_000), new Date(CLAIMED.getTime() + 600_000));
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "failed", reason: "x" });
+    expect(r.lockCleared).toBe(true);
+    expect(fetchCalls).toHaveLength(1);
   });
 
   it("a report newer than the claim gets the late release line and no comment", async () => {

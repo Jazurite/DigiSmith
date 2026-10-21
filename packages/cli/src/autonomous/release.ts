@@ -46,16 +46,22 @@ export async function runRelease(
     const lateReport = Number.isFinite(claimedMs) ? newestReportAfter(d.dir, claimedMs) : null;
     if (a.result !== "merged" && lateReport === null) {
       try {
-        await d.tracker.comment(lock.taskId, `Autonomous Operation ${a.result} (${fmtUtc7(now)}): ${a.reason ?? ""}`);
+        await d.tracker.comment(lock.taskId, `Autonomous Operation ${a.result} (${fmtUtc7(now)})${a.reason ? `: ${a.reason}` : ""}`);
       } catch (e) {
-        appendEvent(d.dir, now, "release", { ticket: a.ticket, note: "comment-failed", error: e instanceof Error ? e.message : String(e) });
+        appendEvent(d.dir, now, "comment-failed", { ticket: a.ticket, error: e instanceof Error ? e.message : String(e) });
       }
     }
     clearLock(d.dir);
     lockCleared = true;
     const minutes = Number.isFinite(claimedMs) ? Math.round((now.getTime() - claimedMs) / 60_000) : null;
     appendEvent(d.dir, now, "release", { ticket: a.ticket, result: a.result, reason: a.reason, commit: a.commit, minutes });
-    if (lateReport !== null) appendFileSync(lateReport, `late release: ${a.ticket} ${a.result}\n`);
+    if (lateReport !== null) {
+      try {
+        appendFileSync(lateReport, `late release: ${a.ticket} ${a.result}\n`);
+      } catch (e) {
+        console.error(`release: cannot append the late release line: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
   }
   const rn = await runNow(d.nexus, JOB);
   appendEvent(d.dir, now, "run-now", { job: JOB, ok: rn.ok, status: rn.ok ? 202 : rn.status });
