@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
@@ -87,6 +88,15 @@ describe('JOBS', () => {
     for (const job of JOBS) {
       expect(isAbsolute(job.command.file)).toBe(true)
       for (const arg of job.command.args.filter((a) => a.endsWith('.ts') || a.startsWith('/'))) expect(isAbsolute(arg)).toBe(true)
+    }
+  })
+  it('autonomous jobs run the built CLI of the main checkout, not strip-types source', () => {
+    const dist = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith', 'packages', 'cli', 'dist', 'index.js')
+    for (const name of ['autonomous-scan', 'autonomous-report']) {
+      const { command } = JOBS.find((j) => j.name === name)!
+      expect(command.file).toBe(process.execPath)
+      expect(command.args[0]).toBe(dist)
+      expect(command.args).not.toContain('--experimental-strip-types')
     }
   })
   it('autonomous-scan has 24 hourly slots for one night key', () => {

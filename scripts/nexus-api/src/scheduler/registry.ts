@@ -2,9 +2,9 @@ import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import type { JobDef } from './types.ts'
 
-const DEPOT = join(homedir(), '.digismith-depot')
-const DG = ['--experimental-strip-types', join(DEPOT, 'repo', 'packages', 'cli', 'src', 'index.ts')]
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
+// The built CLI of the main checkout: the same build the global `dg` runs. A missing dist fails the job with node's "Cannot find module".
+const DG = [join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')]
 
 export const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
 export const MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000
