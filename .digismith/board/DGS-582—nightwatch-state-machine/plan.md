@@ -20,7 +20,7 @@ Design: `design.html` (same folder), approved at checkpoint 1 on 2026-10-21 with
 - **Orders:** to the conductor only, through `herdr-ws` only, one per action, at most one action per ticket per tick. Before a prompt the conductor's input box must be `empty` or `suggestion`; `typed` or a working conductor means `wait`.
 - **Journal:** `<state folder>/journal.jsonl`, append only (`appendFileSync`, one line each), schema `nightwatch-journal/v1`, key `<KEY>:<phase>:<attempt>:<action>`, a `planned` line before every side effect and a `settled` line (`succeeded | uncertain | retryable | permanent`) after it. An `open` or `uncertain` key is never planned again; only `dg autonomous journal settle` can free it.
 - **Attention:** `<state folder>/attention.jsonl`, the DGS-583 line shape (`nightwatch-attention/v1`: `id` = `<run>.<kind>.<n>`, `ts`, `ticket`, `run`, `kind`, `cause`, `since`; a later `{id, resolved: true, ...}` line closes it). This ticket writes kinds `unknown` and `failed` and never resolves one.
-- **Phase marker:** event type `phase` (DGS-581), `data.phase` one of `building | review | merge`, written on the builder run when the lock enters `building` (also after findings), `review`, `merge-ready`; never on another event type, never for `claimed`, `merged`.
+- **Phase marker:** event type `phase` (DGS-581), `data.phase` one of `building | review | merge`, written on the builder run when the lock enters `building`, `review`, `merge-ready`; never on another event type, never for `claimed`, `merged`.
 - Never run a merge or a push from the controller: the merge is the conductor's, after the `order-merge` prompt.
 - No test touches the real ClickUp, depot, Nexus (4300), herdr or a conductor. Tests use `mkdtempSync` folders and fakes. herdr only through `~/.digismith-depot/bin/herdr-ws`.
 - Commits: title-only, conventional, no AI attribution, by named paths. Run tests with `pnpm vitest run packages/cli/src/autonomous`.
@@ -93,9 +93,9 @@ export type JournalResults = Record<string, JournalState>;
 export type Action =
   | { kind: "wait"; reason: string }
   | { kind: "attention"; cause: string; attKind: "unknown" | "failed" }
-  | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string }
+  | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string; head?: string }
   | { kind: "marker"; phase: MarkerPhase; run: string }
-  | { kind: "order"; order: "fix" | "merge" | "restart"; head: string }
+  | { kind: "order"; order: "merge" | "restart"; head: string }
   | { kind: "status"; status: string };
 ```
 - Produces (`phase-state.ts`):
@@ -1544,7 +1544,7 @@ if (!d.dryRun && d.tick !== undefined && readLock(d.dir) !== null) {
   - After the whole-ticket review pack is built the conductor leaves the pack in the SDD workspace (the SDD skill already does). It runs `dg run start --role reviewer` for the Reviewer so DGS-581 has the run.
   - For a manual run (no controller) the conductor writes the phase markers by hand: `dg run event <builder run> phase --data '{"phase":"building"}'`, then `review`, then `merge`.
   - After a merge the conductor runs `dg autonomous release --ticket <KEY> --result merged`. A stuck `uncertain` journal key: `dg autonomous journal --open`, check git by hand, then `dg autonomous journal settle <key> --result retryable|permanent`.
-- [ ] **Step 2: Mutation checks by hand** (each one: break the code, run the named test, see it fail, restore with `git checkout -- <file>`; write the four results into `report.md`): (a) in `advance.ts` drop the `p.round >= s.attempt` check: the attempt 2 test fails; (b) in `act.ts` move the `plan(...)` call after the effect: "the planned line is on disk before the prompt runs" fails; (c) in `reconcile.ts` return `retryable` instead of `uncertain` for `order-merge`: the kill test (git does not show it) fails; (d) in `advance.ts` treat `merged` events alone as proof: the "merged event without git proof" test fails.
+- [ ] **Step 2: Mutation checks by hand** (each one: break the code, run the named test, see it fail, restore with `git checkout -- <file>`; write the four results into `report.md`): (a) in `advance.ts` drop the rounds cap (change `round >= MAX_ATTEMPTS` to `false && round >= MAX_ATTEMPTS`): the test "F9: round 3 with open findings is review-rounds-exhausted, no move" in `advance.test.ts` fails; (b) in `act.ts` move the `plan(...)` call after the effect: "the planned line is on disk before the prompt runs" fails; (c) in `reconcile.ts` return `retryable` instead of `uncertain` for `order-merge`: the kill test (git does not show it) fails; (d) in `advance.ts` treat `merged` events alone as proof: the "merged event without git proof" test fails.
 - [ ] **Step 3:** Run `pnpm vitest run packages/cli/src/autonomous scripts/nexus-api/src/scheduler` and `pnpm vitest run` for the repo. Expected: all green. Run `dg autonomous tick --dry-run` in the worktree with no lock. Expected: prints `no lock`.
 - [ ] **Step 4:** Invoke `digismith:report-implementation` to write `report.html` and `report.md` (include the Maestro's first-use steps from the design, section 12). Commit `docs(dgs-582): add the implementation report` with a pathspec for the board folder files only.
 

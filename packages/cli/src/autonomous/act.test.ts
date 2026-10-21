@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { act, orderText, PromptError, type ActDeps } from "./act.ts";
+import { act, orderText, ORDER_TEXTS, PromptError, type ActDeps } from "./act.ts";
 import { readPhaseState } from "./phase-state.ts";
 import { resultsOf, readJournal } from "./journal.ts";
 import { writeLock } from "./fakes.test-util.ts";
@@ -19,8 +19,12 @@ const deps = (dir: string, o: Partial<ActDeps> = {}): ActDeps & { sent: string[]
 describe("orderText", () => {
   it("is a fixed template with the key and nothing else", () => {
     expect(orderText("merge", "DGS-1", 1)).toBe("DGS-1: merge per hooks 01-03, then release merged");
-    expect(orderText("fix", "DGS-1", 2)).toBe("DGS-1: fix the review findings, attempt 2");
     expect(orderText("restart", "DGS-1", 1)).toBe("DGS-1: restart the builder, its pane is gone");
+  });
+  it("F12: has exactly the merge and restart forms; fix is refused", () => {
+    expect(Object.keys(ORDER_TEXTS).sort()).toEqual(["merge", "restart"]);
+    // @ts-expect-error "fix" is not an order any more
+    expect(() => orderText("fix", "DGS-1", 2)).toThrow(/unknown order/);
   });
   it("refuses a key that is not a ticket key", () => {
     expect(() => orderText("merge", "DGS-1; rm -rf /", 1)).toThrow(/ticket key/);
@@ -64,12 +68,6 @@ describe("act", () => {
     const r = readPhaseState(d);
     expect(r.kind === "ok" && [r.state.phase, r.state.runs.builder, r.state.phaseStartedAt]).toEqual(["building", "builder-7", T.toISOString()]);
     expect(resultsOf(d)["DGS-1:claimed:1:move-to-building"]).toBe("succeeded");
-  });
-  it("a move back after findings sets the attempt", async () => {
-    const d = tmp(); writeLock(d, { phase: "review" });
-    await act(deps(d), state({ phase: "review" }), { kind: "move", to: "building", proof: "p", attempt: 2 });
-    const r = readPhaseState(d);
-    expect(r.kind === "ok" && [r.state.phase, r.state.attempt]).toEqual(["building", 2]);
   });
   it("a marker calls writeMarker with the run and phase", async () => {
     const d = tmp(); const calls: [string, string][] = [];
@@ -129,7 +127,7 @@ describe("act", () => {
   it("the order text never contains the head", async () => {
     const d = tmp(); const x = deps(d);
     const head = "a\"b\\c\n$(rm -rf /)`x`";
-    await act(x, state(), { kind: "order", order: "fix", head });
+    await act(x, state(), { kind: "order", order: "merge", head });
     expect(x.sent[0]).not.toContain(head);
     expect(x.sent[0]).not.toContain("rm -rf");
   });

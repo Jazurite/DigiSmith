@@ -102,10 +102,7 @@ describe("reconcile", () => {
     reconcile({ dir: d2, now: T, state: state(), obs: O() });
     expect(resultsOf(d2)[k2]).toBe("retryable");
   });
-  it("order-fix: the head moved means succeeded; order-restart: the pane is back", () => {
-    const d = tmp(); const k = open(d, "order-fix", "building", { head: "old" });
-    reconcile({ dir: d, now: T, state: state("building"), obs: O() });
-    expect(resultsOf(d)[k]).toBe("succeeded");
+  it("order-restart: the pane is back", () => {
     const d2 = tmp(); const k2 = open(d2, "order-restart", "building");
     reconcile({ dir: d2, now: T, state: state("building"), obs: O() });
     expect(resultsOf(d2)[k2]).toBe("succeeded");
@@ -164,11 +161,10 @@ describe("reconcile", () => {
     expect(resultsOf(d)[k]).toBe("uncertain");
     expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-move-to-bogus" }]);
   });
-  it("order-fix with no detail.head is uncertain, never succeeded", () => {
-    const d = tmp(); const k = open(d, "order-fix", "building");
-    const notes = reconcile({ dir: d, now: T, state: state("building"), obs: O() });
+  it("F12: an order-fix line is an unknown action: uncertain, never succeeded", () => {
+    const d = tmp(); const k = open(d, "order-fix", "building", { head: "old" });
+    reconcile({ dir: d, now: T, state: state("building"), obs: O() });
     expect(resultsOf(d)[k]).toBe("uncertain");
-    expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-order-fix" }]);
   });
   it("phase-marker with no detail.phase is uncertain, never succeeded", () => {
     const d = tmp(); const k = open(d, "phase-marker", "merge-ready");

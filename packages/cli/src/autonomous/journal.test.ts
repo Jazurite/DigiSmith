@@ -58,7 +58,7 @@ describe("journal", () => {
   it("openLines lists open and uncertain keys; closeOpen settles them permanent", () => {
     const d = tmp();
     const a = plan(d, T0, e);
-    const b = plan(d, T0, { ...e, action: "order-fix", phase: "building" });
+    const b = plan(d, T0, { ...e, action: "order-restart", phase: "building" });
     settle(d, T0, b, "uncertain");
     plan(d, T0, { ticket: "DGS-2", phase: "building", attempt: 1, action: "phase-marker" });
     expect(openLines(d).map((l) => [l.key, l.state])).toEqual([[a, "open"], [b, "uncertain"], ["DGS-2:building:1:phase-marker", "open"]]);
@@ -70,7 +70,7 @@ describe("journal", () => {
     const d = tmp();
     const k1 = plan(d, T0, e);
     appendFileSync(journalPath(d), "{\"schema\":\"nightwatch-journal/v1\",\"key\":\"torn");
-    const k2 = plan(d, T0, { ...e, action: "order-fix" });
+    const k2 = plan(d, T0, { ...e, action: "order-restart" });
     expect(readJournal(d).map((l) => l.key)).toEqual([k1, k2]);
     expect(readJournal(d).some((l) => l.key.includes("torn"))).toBe(false);
     settle(d, T0, k2, "succeeded");

@@ -24,5 +24,5 @@ export type Action =
   | { kind: "attention"; cause: string; attKind: "unknown" | "failed" }
   | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string; head?: string }
   | { kind: "marker"; phase: MarkerPhase; run: string }
-  | { kind: "order"; order: "fix" | "merge" | "restart"; head: string }
+  | { kind: "order"; order: "merge" | "restart"; head: string }
   | { kind: "status"; status: string };

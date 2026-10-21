@@ -33,12 +33,6 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
     if (!obs.git.ok) return "unknown";
     return obs.git.value.onOriginMain ? r("succeeded", "head on origin/main") : r("uncertain", "merge not seen on origin/main");
   }
-  if (action === "order-fix") {
-    if (!obs.git.ok) return "unknown";
-    const before = line.detail?.head;
-    if (before === undefined) return r("uncertain", "no head recorded in the order");
-    return obs.git.value.head !== null && obs.git.value.head !== before ? r("succeeded", "head moved") : r("uncertain", "no new commit");
-  }
   if (action === "order-restart") {
     if (!obs.herdr.ok) return "unknown";
     if (obs.herdr.value.builderPane === "unknown") return "unknown";

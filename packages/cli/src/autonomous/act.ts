@@ -12,15 +12,16 @@ export class PromptError extends Error {
   }
 }
 
-const TEXT = {
-  fix: (t: string, n: number) => `${t}: fix the review findings, attempt ${n}`,
+export const ORDER_TEXTS = {
   merge: (t: string) => `${t}: merge per hooks 01-03, then release merged`,
   restart: (t: string) => `${t}: restart the builder, its pane is gone`,
 };
 
-export function orderText(order: "fix" | "merge" | "restart", ticket: string, attempt: number): string {
+export function orderText(order: "merge" | "restart", ticket: string, _attempt: number): string {
   if (!TICKET_RE.test(ticket)) throw new Error(`not a ticket key: ${ticket}`);
-  return TEXT[order](ticket, attempt);
+  const text = Object.hasOwn(ORDER_TEXTS, order) ? ORDER_TEXTS[order] : undefined;
+  if (text === undefined) throw new Error(`unknown order: ${String(order)}`);
+  return text(ticket);
 }
 
 export interface ActDeps {

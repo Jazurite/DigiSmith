@@ -33,7 +33,7 @@ function marker(s: TicketState, obs: Observations, j: JournalResults): Action | 
 }
 
 // the journal decides first: open or succeeded holds, uncertain and permanent are notes, retryable or unseen may send
-function order(o: "fix" | "merge" | "restart", s: TicketState, obs: Observations, j: JournalResults, head: string | null): Action {
+function order(o: "merge" | "restart", s: TicketState, obs: Observations, j: JournalResults, head: string | null): Action {
   const st = j[keyOf(s, `order-${o}`)];
   if (st === "uncertain") return note(`order-${o}-uncertain`);
   if (st === "permanent") return note(`order-${o}-permanent`, "failed");
@@ -67,6 +67,7 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   return wait("building");
 }
 
+// F11 parked: a lost builder run in review is covered by the DGS-583 watchdog (lost -> attention), not here
 function review(s: TicketState, obs: Observations, j: JournalResults): Action {
   const m = marker(s, obs, j);
   if (m !== null) return m;
