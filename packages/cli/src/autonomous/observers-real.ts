@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { appendEvent, readEvents } from "../run/events.ts";
 import { findRunDir } from "../run/paths.ts";
@@ -11,7 +12,7 @@ import type { Observers } from "./observe.ts";
 import type { GitView, HerdrView, InputBox, MarkerPhase, PackView, RunView, VerdictView } from "./phase-types.ts";
 
 /** Runs a file and returns its stdout. Rejects with an Error whose numeric `code` is the exit code on a non-zero exit. */
-export type ExecOut = (file: string, args: string[], opts?: { cwd?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv }) => Promise<{ stdout: string }>;
+export type ExecOut = (file: string, args: string[], opts?: { cwd?: string; timeoutMs?: number; env?: NodeJS.ProcessEnv; maxBuffer?: number }) => Promise<{ stdout: string }>;
 export interface RunRecord {
   id: string; role: string; created_at: string; worktree: string | null; base_sha: string | null;
   herdrPane?: string | null;
@@ -22,13 +23,18 @@ export interface AgentEntry { name: string; status: string; pane: string }
 
 export const realExecOut: ExecOut = (file, args, opts) =>
   new Promise((resolve, reject) => {
-    execFile(file, args, { cwd: opts?.cwd, timeout: opts?.timeoutMs, env: opts?.env, maxBuffer: 16 * 1024 * 1024 }, (err, stdout) => {
+    let timedOut = false;
+    const child = execFile(file, args, { cwd: opts?.cwd, env: opts?.env, maxBuffer: opts?.maxBuffer ?? 16 * 1024 * 1024 }, (err, stdout) => {
+      if (timer !== undefined) clearTimeout(timer);
       if (!err) return resolve({ stdout: String(stdout) });
-      const e = err as Error & { code?: unknown; killed?: boolean };
-      // a killed child (timeout) has no numeric exit code
-      if (e.killed) e.code = "ETIMEDOUT";
+      const e = err as Error & { code?: unknown; signal?: string | null };
+      // name the real cause: our timer, a buffer overflow (code kept), a signal from outside, else the exit code
+      if (timedOut) e.code = "ETIMEDOUT";
+      else if (e.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") { /* keep */ }
+      else if (typeof e.code !== "number" && e.signal) e.code = `SIGNAL:${e.signal}`;
       reject(e);
     });
+    const timer = opts?.timeoutMs === undefined ? undefined : setTimeout(() => { timedOut = true; child.kill("SIGKILL"); }, opts.timeoutMs);
   });
 
 /** `herdr-ws agent list` prints {"result":{"agents":[{name,agent_status,pane_id,...}]}} (probe.md Step 4). */
@@ -69,6 +75,9 @@ function runView(r: RunRecord): RunView {
   return { id: r.id, role: r.role, createdAt: r.created_at, started: has("started"), ended: has("ended"), merged: has("merged"), pushed: has("pushed"), phaseEvent };
 }
 
+/** The main checkout. Same value as MAIN_CHECKOUT in scripts/nexus-api/src/scheduler/registry.ts. */
+export const MAIN_CHECKOUT = join(homedir(), "Workspace", "Jazurite", "DigiSmith");
+
 export interface ObserverDeps {
   exec: ExecOut; mainRepo: string; ticket: string; claimedAt: string;
   builderRunId: () => string | null; conductorName: string; runs: RunStore;
@@ -79,7 +88,9 @@ export interface ObserverDeps {
 
 export function makeObservers(d: ObserverDeps): Observers {
   const env = () => ({ ...process.env, HERDR_WS: d.herdrWs });
-  const records = () => d.runs.runsOf(d.ticket, d.claimedAt);
+  // read once per makeObservers call (the caller builds the observers once per tick), shared by runs, git and herdr
+  let cached: Promise<RunRecord[]> | null = null;
+  const records = () => (cached ??= d.runs.runsOf(d.ticket, d.claimedAt));
   return {
     runs: async () => (await records()).map(runView),
     packs: () => d.reviewerData.packs(),
@@ -126,7 +137,7 @@ export function makeWriters(d: WriterDeps): Pick<ActDeps, "prompt" | "writeMarke
         const code = (e as { code?: unknown }).code;
         const msg = `herdr-ws agent prompt failed: ${e instanceof Error ? e.message : String(e)}`;
         // a plain exit code or a missing binary: nothing was delivered. A timeout or anything else: it may have been.
-        throw new PromptError(msg, typeof code === "number" || code === "ENOENT" ? "no" : "maybe");
+        throw new PromptError(msg, (typeof code === "number" && code !== 0) || code === "ENOENT" ? "no" : "maybe");
       }
     },
     writeMarker: (run, phase) => d.runEvent(run, "phase", { phase }),

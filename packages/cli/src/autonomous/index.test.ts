@@ -6,6 +6,7 @@ import yargs from "yargs";
 import { buildCli } from "../index.ts";
 import { readAway } from "./away.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
+import { MAIN_CHECKOUT } from "./observers-real.ts";
 import { createAutonomousCommand, type AutonomousDeps } from "./index.ts";
 import { appendEvent } from "./state.ts";
 import { plan, readJournal, resultsOf, settle } from "./journal.ts";
@@ -210,6 +211,26 @@ describe("dg autonomous tick, journal and the Phase line", () => {
     await parseT(["autonomous", "tick"]);
     expect(process.exitCode ?? 0).toBe(0);
     expect(out()).toContain("no lock");
+  });
+  it("tick without --repo fetches in the main checkout, with --repo in that repo", async () => {
+    lock({ phase: "merge-ready", runs: { builder: "b-1" } });
+    const calls: string[][] = [];
+    const d = (): AutonomousDeps => ({ ...deps(), execOut: async (f, a) => { calls.push([f, ...a]); throw new Error("stop"); } });
+    // the run folder of b-1 does not exist, so git is not reached; use a fake run store through DIGISMITH_DEPOT_DIR
+    const depot = join(root, "depot");
+    const rd = join(depot, "runs", "DGS-1", "b-1");
+    mkdirSync(rd, { recursive: true });
+    writeFileSync(join(rd, "run.json"), JSON.stringify({ schema: "nightwatch-run/v1", run: "b-1", ticket: "DGS-1", role: "builder", base_sha: null, worktree: "/wt", herdr: { pane: null }, created_at: "2026-10-21T00:01:00.000Z" }));
+    const old = process.env.DIGISMITH_DEPOT_DIR;
+    process.env.DIGISMITH_DEPOT_DIR = depot;
+    try {
+      await yargs(["autonomous", "tick"]).exitProcess(false).command(createAutonomousCommand(d)).strict().parseAsync();
+      await yargs(["autonomous", "tick", "--repo", "/some/repo"]).exitProcess(false).command(createAutonomousCommand(d)).strict().parseAsync();
+    } finally {
+      if (old === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = old;
+    }
+    const fetches = calls.filter((c) => c[0] === "git" && c.includes("fetch")).map((c) => c[2]);
+    expect(fetches).toEqual([MAIN_CHECKOUT, "/some/repo"]);
   });
   it("tick --dry-run says nothing is written", async () => {
     await parseT(["autonomous", "tick", "--dry-run"]);

@@ -8,7 +8,7 @@ import { readAway, isAway } from "./away.ts";
 import { fmtUtc7, parseHhmm } from "./clock.ts";
 import { realExec, type Exec } from "./conductor.ts";
 import { openLines, readJournal, resultsOf, settle } from "./journal.ts";
-import { makeObservers, makeWriters, realExecOut, realRunEvent, realStores, type ExecOut } from "./observers-real.ts";
+import { MAIN_CHECKOUT, makeObservers, makeWriters, realExecOut, realRunEvent, realStores, type ExecOut } from "./observers-real.ts";
 import { readPhaseState } from "./phase-state.ts";
 import { runTick } from "./tick.ts";
 import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
@@ -32,7 +32,7 @@ export interface AutonomousDeps {
   nexus: NexusDeps;
   /** runs git and herdr-ws for `tick`; the real one by default */
   execOut?: ExecOut;
-  /** the checkout `git fetch origin main` runs in (default: the current folder) */
+  /** the checkout `git fetch origin main` runs in (default: the main checkout) */
   mainRepo?: string;
 }
 
@@ -51,6 +51,7 @@ export function defaultDeps(): AutonomousDeps {
     now: () => new Date(),
     scanId: () => randomUUID(),
     exec: realExec,
+    mainRepo: MAIN_CHECKOUT,
     fileExists: existsSync,
     nexus: { ...defaultNexus(), fetch: globalThis.fetch },
   };
@@ -73,7 +74,7 @@ function lazyTracker(make: () => Tracker): Tracker {
 
 const CONDUCTOR = "digismith-conductor";
 
-async function tickLines(d: AutonomousDeps, dryRun: boolean): Promise<string[]> {
+async function tickLines(d: AutonomousDeps, dryRun: boolean, repo?: string): Promise<string[]> {
   const lines: string[] = [];
   if (dryRun) lines.push("dry run, nothing written");
   const read = readPhaseState(d.dir);
@@ -87,7 +88,7 @@ async function tickLines(d: AutonomousDeps, dryRun: boolean): Promise<string[]> 
   const taskId = lock?.taskId ?? "";
   const stores = realStores({ env: process.env, ticket: state?.ticket ?? "", builderRunId });
   const observers = makeObservers({
-    exec, mainRepo: d.mainRepo ?? process.cwd(), ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
+    exec, mainRepo: repo ?? d.mainRepo ?? MAIN_CHECKOUT, ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
     builderRunId, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
     tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
   });
@@ -272,8 +273,11 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
         .command({
           command: "tick",
           describe: "advance the locked ticket one step (read the world, decide, act)",
-          builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "observe and decide, write nothing" }),
-          handler: (argv) => guarded(depsFactory, (d) => tickLines(d, argv.dryRun as boolean)),
+          builder: (e) =>
+            e
+              .option("dry-run", { type: "boolean", default: false, describe: "observe and decide, write nothing" })
+              .option("repo", { type: "string", requiresArg: true, describe: "the main checkout git fetch runs in (default ~/Workspace/Jazurite/DigiSmith)" }),
+          handler: (argv) => guarded(depsFactory, (d) => tickLines(d, argv.dryRun as boolean, argv.repo as string | undefined)),
         })
         .command({
           command: "journal",

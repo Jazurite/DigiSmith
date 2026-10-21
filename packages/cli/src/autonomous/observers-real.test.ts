@@ -2,10 +2,11 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { observeAll } from "./observe.ts";
 import { PromptError } from "./act.ts";
 import { writeLock } from "./fakes.test-util.ts";
 import {
-  makeObservers, makeWriters, parseAgentList, realStores, realRunEvent,
+  makeObservers, makeWriters, parseAgentList, realExecOut, realStores, realRunEvent,
   type ExecOut, type ObserverDeps, type RunRecord,
 } from "./observers-real.ts";
 import { runTick } from "./tick.ts";
@@ -228,5 +229,44 @@ describe("realStores", () => {
     const lines = readFileSync(join(root, "depot", "runs", "DGS-1", "builder-1", "events.jsonl"), "utf8").trim().split("\n");
     expect(JSON.parse(lines[lines.length - 1])).toMatchObject({ type: "phase", data: { phase: "merge" } });
     await expect(realRunEvent(env())("nope", "phase", { phase: "merge" })).rejects.toThrow();
+  });
+});
+
+describe("run store is read once per tick", () => {
+  it("one observeAll reads the run store once; a new makeObservers reads again", async () => {
+    let n = 0;
+    const f = fakeExec((_f, a) => (a.includes("rev-parse") ? "abc\n" : a[1] === "list" ? AGENTS : a[0] === "pane" ? here("input-box-empty.ansi") : ""));
+    const d = deps(f.exec, [run()], { runs: { runsOf: async () => { n++; return [run()]; } } });
+    await observeAll(makeObservers(d));
+    expect(n).toBe(1);
+    await observeAll(makeObservers(d));
+    expect(n).toBe(2);
+  });
+});
+
+describe("realExecOut names the cause", () => {
+  const node = process.execPath;
+  const code = (p: Promise<unknown>) => p.then(() => null, (e) => (e as { code?: unknown }).code);
+  it("our timeout is ETIMEDOUT", async () => {
+    expect(await code(realExecOut(node, ["-e", "setTimeout(()=>{},5000)"], { timeoutMs: 100 }))).toBe("ETIMEDOUT");
+  });
+  it("a buffer overflow keeps its code", async () => {
+    expect(await code(realExecOut(node, ["-e", "process.stdout.write('x'.repeat(5000))"], { maxBuffer: 100 }))).toBe("ERR_CHILD_PROCESS_STDIO_MAXBUFFER");
+  });
+  it("an outside signal is SIGNAL:<name>", async () => {
+    expect(await code(realExecOut(node, ["-e", "process.kill(process.pid,'SIGKILL')"]))).toBe("SIGNAL:SIGKILL");
+  });
+  it("a non-zero exit keeps the number", async () => {
+    expect(await code(realExecOut(node, ["-e", "process.exit(3)"]))).toBe(3);
+  });
+});
+
+describe("prompt delivery by cause", () => {
+  const delivered = async (c: number | string) => {
+    const w = makeWriters({ exec: fakeExec(() => codeErr(c)).exec, herdrBin: BIN, herdrWs: "w2", conductorName: "c", tracker: { setStatus: async () => {} }, runEvent: async () => {} });
+    return ((await w.prompt("x").catch((e) => e)) as PromptError).delivered;
+  };
+  it.each([["ETIMEDOUT", "maybe"], ["SIGNAL:SIGKILL", "maybe"], ["ERR_CHILD_PROCESS_STDIO_MAXBUFFER", "maybe"], ["ENOENT", "no"], [2, "no"]] as const)("%s -> %s", async (c, want) => {
+    expect(await delivered(c)).toBe(want);
   });
 });
