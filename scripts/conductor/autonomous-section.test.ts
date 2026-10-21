@@ -55,10 +55,23 @@ describe("autonomousSection", () => {
     fs.mkdirSync(path.join(dir, "reports"));
     fs.writeFileSync(path.join(dir, "reports", "a.md"), "x");
     fs.utimesSync(path.join(dir, "reports", "a.md"), new Date(NOW.getTime() - 3 * HOUR), new Date(NOW.getTime() - 3 * HOUR));
-    fs.mkdirSync(path.join(dir, "reports", "b.md")); // a directory read as a file
-    fs.utimesSync(path.join(dir, "reports", "b.md"), new Date(NOW.getTime() - HOUR), new Date(NOW.getTime() - HOUR));
-    expect(autonomousSection(dir, NOW)).toBe("");
+    fs.chmodSync(path.join(dir, "reports", "a.md"), 0o000); // unreadable report
+    try {
+      expect(autonomousSection(dir, NOW)).toBe("");
+    } finally {
+      fs.chmodSync(path.join(dir, "reports", "a.md"), 0o600);
+    }
     fs.writeFileSync(path.join(dir, "notadir"), "x");
     expect(autonomousSection(path.join(dir, "notadir"), NOW)).toBe("");
+  });
+  it("ignores a newer .DS_Store and a newer subfolder", () => {
+    report("a.md", "- REAL\n", 5 * HOUR);
+    const r = path.join(dir, "reports");
+    const t = new Date(NOW.getTime() - HOUR);
+    fs.writeFileSync(path.join(r, ".DS_Store"), "junk");
+    fs.mkdirSync(path.join(r, "sub.md"));
+    fs.mkdirSync(path.join(r, "sub"));
+    for (const n of [".DS_Store", "sub.md", "sub"]) fs.utimesSync(path.join(r, n), t, t);
+    expect(autonomousSection(dir, NOW)).toContain("- REAL");
   });
 });
