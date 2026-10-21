@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch run record and event log — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nightwatch run record and event log — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-21</span>
+    <span>Ticket: <strong>DGS-581</strong></span>
+    <span>Commit range: <code>df78a81..6993cc7</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Every worker run gets a frozen <code>run.json</code> at dispatch and an append-only <code>events.jsonl</code> written by plugin hooks and by <code>dg run event</code>, with <code>dg run list</code>, <code>show</code> and <code>tail</code> to read them. A small library under <code>packages/cli/src/run/</code> (node:fs and node:path only in the hook path) holds the paths, the run record, the locked event writer, the hook handler and the readers; <code>scripts/run-events/hook-cli.ts</code> is a thin script for the hooks; <code>hooks/hooks.json</code> gets five new commands that test <code>DIGISMITH_RUN_ID</code> in the shell before node starts. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 8 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>. The rules for the conductor, the file-order rule and the hook speed note are in <a href="report.md">report.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Paths and the frozen run record</h4><p>Paths helpers and <code>createRun</code>/<code>readRun</code>: run.json written once, <code>null</code> for unknown facts, a new run id every start.</p></div>
+<div class="card"><span class="tag">Task 2</span><h4>The locked event writer</h4><p><code>appendEvent</code> and <code>readEvents</code>: append-only <code>events.jsonl</code>, per-run lock directory with an owner file, seq counter written first.</p></div>
+<div class="card"><span class="tag">Task 3</span><h4>The hook handler and script</h4><p><code>runHook</code> and <code>scripts/run-events/hook-cli.ts</code>: five hook kinds, ids and names only, never throws, exit 0.</p></div>
+<div class="card"><span class="tag">Task 4</span><h4>hooks.json commands and their test</h4><p>Five Nightwatch commands in <code>hooks/hooks.json</code>, each testing <code>DIGISMITH_RUN_ID</code> in the shell before node starts.</p></div>
+<div class="card"><span class="tag">Task 5</span><h4>Readers and the dg run commands</h4><p><code>dg run start|event|list|show|tail</code>, readers in file order, registered in the root cli.</p></div>
+<div class="card"><span class="tag">Task 7</span><h4>The phase conductor event</h4><p><code>phase</code> joins the closed set of conductor types; <code>data.phase</code> must be building, review or merge.</p></div>
+<div class="card"><span class="tag">Task 8</span><h4>File order is the authority (duplicate seq)</h4><p>One reader test and one dg run test on a hand-written file where two lines share a seq; the rule as a comment and in the tail help.</p></div>
+<div class="card"><span class="tag">Task 6</span><h4>Whole-ticket check, runbook block and docs</h4><p>End-to-end check (in process plus the hooks.json commands), README, runbook block for the conductor.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Notes</th></tr>
+    <tr><td>1. Paths and the frozen run record</td><td>Paths helpers and <code>createRun</code>/<code>readRun</code>: run.json written once, <code>null</code> for unknown facts, a new run id every start.</td><td>Approved after 1 fix round (2 minors fixed: detached HEAD gives a null branch, a self-contained git test).</td><td>A type error in <code>record.ts</code> (widened <code>schema</code>) passed vitest and was found by the cli build in Task 4; fixed there.</td></tr>
+<tr><td>2. The locked event writer</td><td><code>appendEvent</code> and <code>readEvents</code>: append-only <code>events.jsonl</code>, per-run lock directory with an owner file, seq counter written first.</td><td>Approved after 3 fix rounds, 2 parked (the stale-lock race F1 and F4: accepted residual, Maestro ruling).</td><td>Round 3 fixed F6 and F5; F1 and F4 parked, file order is the authority.</td></tr>
+<tr><td>3. The hook handler and script</td><td><code>runHook</code> and <code>scripts/run-events/hook-cli.ts</code>: five hook kinds, ids and names only, never throws, exit 0.</td><td>Approved after 1 fix round (2 minors fixed: a measured wait test, an accurate header).</td><td>One hook call takes about 131 ms warm here (bare node start about 79 ms).</td></tr>
+<tr><td>4. hooks.json commands and their test</td><td>Five Nightwatch commands in <code>hooks/hooks.json</code>, each testing <code>DIGISMITH_RUN_ID</code> in the shell before node starts.</td><td>Approved, clean.</td><td>Also fixed the Task 1 type error and the old SessionEnd test that counted one command.</td></tr>
+<tr><td>5. Readers and the dg run commands</td><td><code>dg run start|event|list|show|tail</code>, readers in file order, registered in the root cli.</td><td>Approved after 2 fix rounds (the in-process test fix, then 3 minors fixed).</td><td>The first test run spawned the root cli and raced the cli e2e build; moved in process.</td></tr>
+<tr><td>7. The phase conductor event</td><td><code>phase</code> joins the closed set of conductor types; <code>data.phase</code> must be building, review or merge.</td><td>Approved, clean.</td><td>Added on the Maestro's order after checkpoint 2; also widened the hook timing ceiling.</td></tr>
+<tr><td>8. File order is the authority (duplicate seq)</td><td>One reader test and one dg run test on a hand-written file where two lines share a seq; the rule as a comment and in the tail help.</td><td>Approved after 1 fix round (1 minor fixed: a --since cursor can skip a duplicate).</td><td>Added on the Maestro's ruling parking the stale-lock race.</td></tr>
+<tr><td>6. Whole-ticket check, runbook block and docs</td><td>End-to-end check (in process plus the hooks.json commands), README, runbook block for the conductor.</td><td>Approved after 1 fix round, 1 parked (F2: the end-to-end test calls the library on purpose).</td><td>Run last on purpose, after Tasks 7 and 8.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p><a href="findings.md">Findings table</a> (22 rows). Ready to merge: Yes. 0 Critical, 0 Important, 3 Minor; one fix wave, scoped re-review clean.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>Hook events other than <code>started</code> carry no session_id, so an <code>ended</code> from a child claude session that inherits <code>DIGISMITH_RUN_ID</code> cannot be told apart.</td><td>Fixed: session_id in the data of every hook event (6993cc7).</td></tr>
+<tr><td>Minor</td><td><code>summary.ended</code> is true as soon as any <code>ended</code> event exists, including the SessionEnd with reason clear from a /clear.</td><td>Fixed: true only when an <code>ended</code> comes after the last <code>started</code>.</td></tr>
+<tr><td>Minor</td><td><code>--order</code> is optional although the spec makes it required.</td><td>Fixed: <code>--order</code> is required; a Scout without an order file passes the path of its brief.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">825a3eb</span> docs(dgs-581): add the nightwatch run record spec</li>
+<li><span class="sha">7993022</span> docs(dgs-581): update the spec after checkpoint 1</li>
+<li><span class="sha">8398364</span> docs(dgs-581): add the implementation plan</li>
+<li><span class="sha">7bbe875</span> feat(run): add the frozen run record</li>
+<li><span class="sha">9c0ab10</span> docs(dgs-581): add the phase event to the spec and plan</li>
+<li><span class="sha">dc3d85e</span> fix(run): store a null branch on a detached head</li>
+<li><span class="sha">ea09ded</span> feat(run): add the locked event writer</li>
+<li><span class="sha">a31b570</span> fix(run): break a stale lock by rename and write seq first</li>
+<li><span class="sha">6b7616e</span> fix(run): break a stale lock only when its holder is gone</li>
+<li><span class="sha">601c4f2</span> fix(run): remove only our own lock after a failed owner write</li>
+<li><span class="sha">02340a4</span> feat(run): add the nightwatch hook handler</li>
+<li><span class="sha">71439d0</span> fix(run): measure the tool hook wait and fix the hook header</li>
+<li><span class="sha">e2a48fb</span> feat(run): add the nightwatch hook commands</li>
+<li><span class="sha">8de6d1d</span> fix(run): type the run record schema so the cli builds</li>
+<li><span class="sha">e79bafc</span> test(session-cards): count only the session-cards command on SessionEnd</li>
+<li><span class="sha">d64deb3</span> docs(dgs-581): add the file order rule to the spec and plan</li>
+<li><span class="sha">004f3cd</span> feat(run): add dg run start, event, list, show and tail</li>
+<li><span class="sha">3ab8757</span> test(run): run the dg run tests in process</li>
+<li><span class="sha">4e46abe</span> fix(run): refuse a bad --since and cover a bad --data</li>
+<li><span class="sha">cbdc626</span> feat(run): add the phase conductor event</li>
+<li><span class="sha">ed088d5</span> test(run): widen the hook timing ceiling</li>
+<li><span class="sha">0e5a7ad</span> test(run): lock file order as the authority for events</li>
+<li><span class="sha">0c397b3</span> docs(dgs-581): note that a seq cursor can skip a duplicate</li>
+<li><span class="sha">ec34d12</span> docs(run): say a seq cursor can skip a duplicate</li>
+<li><span class="sha">b6c6977</span> test(run): add the nightwatch end-to-end check</li>
+<li><span class="sha">049eac5</span> docs(run): add the nightwatch readme and runbook block</li>
+<li><span class="sha">eed302a</span> docs(dgs-581): say what dg run show prints</li>
+<li><span class="sha">ff9e553</span> docs(run): say what dg run show prints</li>
+<li><span class="sha">e8bfa45</span> docs(dgs-581): add the ticket text</li>
+<li><span class="sha">1ccd231</span> docs(dgs-581): say what the ticket review changed in the spec</li>
+<li><span class="sha">6993cc7</span> fix(run): add session id to every hook event, end only after the last start, require order</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-581—nightwatch-run-record/report.html</footer>
+
+</body>
+</html>
