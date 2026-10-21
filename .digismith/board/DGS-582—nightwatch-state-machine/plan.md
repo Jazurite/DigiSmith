@@ -12,7 +12,7 @@
 Design: `design.html` (same folder), approved at checkpoint 1 on 2026-10-21 with the three updates in the Maestro's reply.
 - **No build before the Maestro's order**, which comes after DGS-581 and DGS-486 are merged. This plan was written against the design of both, not their code. Task 1 reads their merged code and pins every name this plan consumes. If a name differs, change only the adapter code that touches it (Tasks 11 and 12); never the pure units.
 - Folder `packages/cli/src/autonomous/`; state folder = `autonomousDir()` of DGS-486 (`AUTONOMOUS_DIR`, else `<DIGISMITH_DEPOT_DIR or ~/.digismith-depot>/autonomous`).
-- Phases: `claimed`, `building`, `review`, `merge-ready`, `merged`, `released`. State = DGS-486's `lock.json` plus `phase`, `phaseStartedAt`, `attempt` (starts at 1), `runs: { builder }`. A lock without these fields reads as `claimed`, attempt 1.
+- Phases: `claimed`, `building`, `review`, `merge-ready`, `merged`, `released`. State = DGS-486's `lock.json` plus `phase`, `phaseStartedAt`, `attempt` (starts at 1), `runs: { builder }`, and an optional `mergeHead` (the head sha, written by the move to merge-ready, used by the git observer after the worktree is gone). A lock without these fields reads as `claimed`, attempt 1.
 - **Proof rule:** a phase moves only on an artefact (a run `started` event, a review pack for the current head, a Reviewer verdict row for the current head, git showing the head on `origin/main`). Pane text is never proof. `MAX_ATTEMPTS = 3` review rounds, `MAX_TRIES = 3` per journal key.
 - **No automatic move back from review:** the phase stays `review` while a Critical or Important finding is open (no `fixed`, `parked` or `rejected` ledger line). The action is `wait` (`review-findings-open`). Minor-only or ruled findings give `clean` and the ticket goes on to `merge-ready`. The conductor and builder run the fix wave inside the review phase; the tick sends no fix order. The rounds are the ticket pack rounds: when the latest ticket pack is round 3 (`MAX_ATTEMPTS`) and a finding is still open, the tick writes attention `failed`, cause `review-rounds-exhausted`, and moves nothing.
 - **Unknown is not progress:** an observation with `ok: false` gives no action that depends on it and one attention note. It never moves a phase.
@@ -77,7 +77,7 @@ export const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 export type Obs<T> = { ok: true; value: T } | { ok: false; error: string };
 export type MarkerPhase = "building" | "review" | "merge";
 export type InputBox = "empty" | "suggestion" | "typed" | "unknown";
-export interface TicketState { ticket: string; claimedAt: string; phase: Phase; phaseStartedAt: string; attempt: number; runs: { builder: string | null } }
+export interface TicketState { ticket: string; claimedAt: string; phase: Phase; phaseStartedAt: string; attempt: number; runs: { builder: string | null }; mergeHead?: string }
 export interface RunView { id: string; role: string; createdAt: string; started: boolean; ended: boolean; merged: boolean; pushed: boolean; phaseEvent: MarkerPhase | null }
 export interface PackView { round: number; head: string; base: string }
 export interface VerdictView { scope: "task" | "ticket"; result: "clean" | "findings"; head: string }
@@ -277,7 +277,7 @@ describe("review", () => {
   const s = S({ phase: "review" });
   const v = (result: "clean" | "findings", head = "aaaaaaa1") => ok([{ scope: "ticket" as const, result, head }]);
   it("a clean verdict for the current head moves to merge-ready", () => {
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean") }), J)).toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa" });
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean") }), J)).toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa", head: "aaaaaaa1" });
   });
   it("a verdict for an old head is void", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean", "ccccccc1") }), J)).toEqual({ kind: "wait", reason: "review-running" });
