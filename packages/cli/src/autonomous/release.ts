@@ -9,6 +9,7 @@ export type ReleaseResult = "merged" | "failed" | "stopped" | "awaiting-jack";
 export interface ReleaseDeps { tracker: Tracker; dir: string; now: () => Date; nexus: NexusDeps }
 
 const JOB = "autonomous-scan";
+const CORRUPT = "?";
 
 function newestReportAfter(dir: string, sinceMs: number): string | null {
   const reports = join(dir, "reports");
@@ -41,10 +42,13 @@ export async function runRelease(
   if (lock === null) {
     appendEvent(d.dir, now, "release", { ticket: a.ticket, result: a.result, note: "no-lock" });
   } else {
+    // A corrupt lock reads as ticket "?" (readLock): `--ticket "?"` clears it, with no ticket to comment on.
     if (lock.ticket !== a.ticket) throw new Error(`the lock belongs to ${lock.ticket}`);
+    const corrupt = lock.ticket === CORRUPT;
     const claimedMs = Date.parse(lock.claimedAt);
     const lateReport = Number.isFinite(claimedMs) ? newestReportAfter(d.dir, claimedMs) : null;
-    if (a.result !== "merged" && lateReport === null) {
+    // failed, stopped and awaiting-jack always comment on the ticket, a late release too (design sections 1 and 9).
+    if (a.result !== "merged" && !corrupt) {
       try {
         await d.tracker.comment(lock.taskId, `Autonomous Operation ${a.result} (${fmtUtc7(now)})${a.reason ? `: ${a.reason}` : ""}`);
       } catch (e) {

@@ -18,6 +18,6 @@ Add this section to the conductor runbook. The runbook is untracked, so the Maes
 
 5. **Sign-off: Jack.** A ticket with `Sign-off: Jack` runs to the acceptance point and stops there. Call `dg autonomous release --ticket <KEY> --result awaiting-jack`. Release clears the lock, so never remove lock.json by hand. Jack accepts when he is back. Do not mark the ticket done.
 
-6. **Never clear state by hand.** Nobody clears `lock.json` or `away.json` by hand. `release` clears the lock. `dg autonomous back` turns the away switch off.
+6. **Never clear state by hand.** Nobody clears `lock.json` or `away.json` by hand. `release` clears the lock. When `status` shows `lock: ?`, the lock file is corrupt: clear it with `dg autonomous release --ticket "?" --result stopped`. `dg autonomous back` turns the away switch off.
 
 7. **Look at the state.** `dg autonomous status` shows the away switch, the lock and the last scan.

@@ -106,7 +106,7 @@ describe("runRelease", () => {
     expect(fetchCalls).toHaveLength(1);
   });
 
-  it("a report newer than the claim gets the late release line and no comment", async () => {
+  it("a late failed release posts the ticket comment and appends the late line to the newest report", async () => {
     acquireLock(dir, lock());
     mkdirSync(join(dir, "reports"), { recursive: true });
     const old = join(dir, "reports", "a.md");
@@ -118,7 +118,52 @@ describe("runRelease", () => {
     await runRelease(mk(), { ticket: "DGS-1", result: "failed", reason: "late" });
     expect(readFileSync(fresh, "utf-8")).toContain("late release: DGS-1 failed");
     expect(readFileSync(old, "utf-8")).not.toContain("late release");
+    expect(tracker.comments).toEqual([{ ref: "t1", text: "Autonomous Operation failed (2026-10-21 00:30:00): late" }]);
+  });
+
+  it("a late stopped release posts the ticket comment and appends the late line", async () => {
+    acquireLock(dir, lock());
+    mkdirSync(join(dir, "reports"), { recursive: true });
+    const fresh = join(dir, "reports", "b.md");
+    writeFileSync(fresh, "fresh\n");
+    utimesSync(fresh, new Date(CLAIMED.getTime() + 600_000), new Date(CLAIMED.getTime() + 600_000));
+    await runRelease(mk(), { ticket: "DGS-1", result: "stopped", reason: "needs sudo" });
+    expect(tracker.comments).toEqual([{ ref: "t1", text: "Autonomous Operation stopped (2026-10-21 00:30:00): needs sudo" }]);
+    expect(readFileSync(fresh, "utf-8")).toContain("late release: DGS-1 stopped");
+    expect(readLock(dir)).toBeNull();
+  });
+
+  it("a late merged release appends the late line and posts no comment", async () => {
+    acquireLock(dir, lock());
+    mkdirSync(join(dir, "reports"), { recursive: true });
+    const fresh = join(dir, "reports", "b.md");
+    writeFileSync(fresh, "fresh\n");
+    utimesSync(fresh, new Date(CLAIMED.getTime() + 600_000), new Date(CLAIMED.getTime() + 600_000));
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc" });
     expect(tracker.comments).toHaveLength(0);
+    expect(readFileSync(fresh, "utf-8")).toContain("late release: DGS-1 merged");
+  });
+
+  it("a corrupt lock is cleared with --ticket ? and posts no comment", async () => {
+    writeFileSync(join(dir, "lock.json"), "{not json");
+    const r = await runRelease(mk(), { ticket: "?", result: "stopped", reason: "corrupt lock" });
+    expect(r.lockCleared).toBe(true);
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.comments).toHaveLength(0);
+    expect(events().find((e) => e.kind === "release")).toMatchObject({ ticket: "?", result: "stopped" });
+    expect(fetchCalls).toHaveLength(1);
+  });
+
+  it("a corrupt lock still refuses a real ticket key", async () => {
+    writeFileSync(join(dir, "lock.json"), "{not json");
+    await expect(runRelease(mk(), { ticket: "DGS-1", result: "stopped" })).rejects.toThrow("the lock belongs to ?");
+    expect(readLock(dir)?.ticket).toBe("?");
+  });
+
+  it("--ticket ? does not clear a normal lock", async () => {
+    acquireLock(dir, lock("DGS-2"));
+    await expect(runRelease(mk(), { ticket: "?", result: "stopped" })).rejects.toThrow("the lock belongs to DGS-2");
+    expect(readLock(dir)?.ticket).toBe("DGS-2");
   });
 
   it("release by day while not away still clears the lock and calls run-now", async () => {
