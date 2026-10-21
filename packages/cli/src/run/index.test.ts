@@ -105,6 +105,17 @@ describe("dg run", () => {
     expect(r.stderr).toMatch(/--data/);
     expect((await dg("tail", id)).stdout).toBe("");
   });
+  it("event phase takes building, review and merge and refuses anything else", async () => {
+    const id = (await dg("start", "--ticket", "DGS-581", "--role", "builder")).stdout.trim();
+    for (const p of ["building", "review", "merge"]) expect((await dg("event", id, "phase", "--data", JSON.stringify({ phase: p }))).status).toBe(0);
+    for (const args of [["--data", '{"phase":"done"}'], ["--data", "{}"], []]) {
+      const r = await dg("event", id, "phase", ...args);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/phase/);
+    }
+    const tail = (await dg("tail", id)).stdout.trim().split("\n").map((l) => JSON.parse(l));
+    expect(tail.map((e) => [e.seq, e.type, e.data.phase])).toEqual([[1, "phase", "building"], [2, "phase", "review"], [3, "phase", "merge"]]);
+  });
   it("the root CLI registers run", async () => {
     const r = await capture((a) => buildCli(a).exitProcess(false).parseAsync(a), ["run", "list", "--json"]);
     expect(r.status).toBe(0);

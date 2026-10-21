@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import { appendEvent, readEvents, _testHooks } from "./events.ts";
+import { appendEvent, readEvents, _testHooks, validEventData, CONDUCTOR_TYPES } from "./events.ts";
 
 let dir: string;
 beforeEach(() => {
@@ -216,5 +216,20 @@ describe("readEvents", () => {
     appendEvent(dir, "r1", "started", {}, 2000);
     fs.appendFileSync(path.join(dir, "events.jsonl"), "{broken\n");
     expect(readEvents(dir)).toHaveLength(1);
+  });
+});
+
+describe("validEventData", () => {
+  it("accepts phase with building, review or merge", () => {
+    for (const p of ["building", "review", "merge"]) expect(validEventData("phase", { phase: p })).toBeNull();
+  });
+  it("refuses any other phase value or a missing one", () => {
+    for (const data of [{ phase: "done" }, { phase: "Building" }, { phase: 1 }, { phase: null }, {}, { other: "building" }]) {
+      expect(validEventData("phase", data)).toMatch(/phase/);
+    }
+  });
+  it("has no rule for the other conductor types, and phase is in the closed set", () => {
+    expect(validEventData("merged", {})).toBeNull();
+    expect(CONDUCTOR_TYPES).toContain("phase");
   });
 });

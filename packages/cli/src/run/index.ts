@@ -1,5 +1,5 @@
 import type { CommandModule } from "yargs";
-import { appendEvent, CONDUCTOR_TYPES } from "./events.ts";
+import { appendEvent, CONDUCTOR_TYPES, validEventData } from "./events.ts";
 import { findRunDir } from "./paths.ts";
 import { createRun } from "./record.ts";
 import { formatList, formatShow, listRuns, showRun, tailEvents } from "./read.ts";
@@ -71,6 +71,8 @@ const eventCommand: CommandModule = {
         return fail("--data must be a JSON object");
       }
     }
+    const bad = validEventData(type, data);
+    if (bad) return fail(bad);
     const dir = findRunDir(runId, process.env);
     if (!dir) return fail(`no run ${runId}`);
     try {

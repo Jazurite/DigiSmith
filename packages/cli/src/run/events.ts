@@ -4,7 +4,16 @@ import * as path from "node:path";
 
 export const EVENT_SCHEMA = "nightwatch-event/v1";
 export const HOOK_TYPES = ["started", "blocked", "tool", "turn_end", "ended"] as const;
-export const CONDUCTOR_TYPES = ["review_ready", "merged", "pushed", "lost"] as const;
+export const CONDUCTOR_TYPES = ["review_ready", "merged", "pushed", "lost", "phase"] as const;
+export const PHASES = ["building", "review", "merge"] as const;
+
+// null when the data is valid for the type, else a plain message. Only phase has a rule.
+export function validEventData(type: string, data: Record<string, unknown>): string | null {
+  if (type === "phase" && !(PHASES as readonly string[]).includes(data.phase as string)) {
+    return `data.phase must be one of ${PHASES.join(", ")}`;
+  }
+  return null;
+}
 export type EventType = (typeof HOOK_TYPES)[number] | (typeof CONDUCTOR_TYPES)[number];
 
 export type EventLine = { schema: string; seq: number; ts: string; run: string; type: string; data: Record<string, unknown> };
