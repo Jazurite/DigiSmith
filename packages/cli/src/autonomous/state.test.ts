@@ -1,6 +1,8 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   acquireLock, appendEvent, autonomousDir, clearLock, readEvents, readLastReport, readLock, readNotes,
@@ -18,7 +20,25 @@ describe("lock", () => {
     expect(acquireLock(dir, lock)).toBe("acquired");
     expect(acquireLock(dir, lock)).toBe("busy");
   });
-  it("gives exactly one acquired out of ten concurrent calls", async () => {
+  it("gives exactly one acquired across separate processes", async () => {
+    const stateTs = join(dirname(fileURLToPath(import.meta.url)), "state.ts");
+    const code = `import { acquireLock } from ${JSON.stringify(stateTs)}; console.log(acquireLock(process.argv[2], ${JSON.stringify(lock)}));`;
+    const script = join(dir, "child.mts");
+    writeFileSync(script, code);
+    const work = join(dir, "work");
+    mkdirSync(work);
+    const run = () => new Promise<string>((resolve, reject) => {
+      const c = spawn(process.execPath, ["--experimental-strip-types", script, work]);
+      let out = "";
+      c.stdout.on("data", (d) => { out += d; });
+      c.on("error", reject);
+      c.on("close", () => resolve(out.trim()));
+    });
+    const r = await Promise.all(Array.from({ length: 6 }, run));
+    expect(r.filter((x) => x === "acquired")).toHaveLength(1);
+    expect(r.filter((x) => x === "busy")).toHaveLength(5);
+  }, 30000);
+  it("gives exactly one acquired out of ten in-process calls", async () => {
     const r = await Promise.all(Array.from({ length: 10 }, async () => acquireLock(dir, lock)));
     expect(r.filter((x) => x === "acquired")).toHaveLength(1);
   });
@@ -39,6 +59,10 @@ describe("lock", () => {
 });
 
 describe("notes", () => {
+  it("uses a random suffix in the temp name", () => {
+    writeNotes(dir, { a: "b" });
+    expect(readdirSync(dir)).toEqual(["notes.json"]);
+  });
   it("round-trips and leaves no tmp file", () => {
     writeNotes(dir, { a: "b" });
     expect(readNotes(dir)).toEqual({ a: "b" });
@@ -69,6 +93,16 @@ describe("events", () => {
     expect(all.map((e) => e.kind)).toEqual(["scan", "busy"]);
     expect(readEvents(dir, a.getTime() + 1, b.getTime() + 1).map((e) => e.kind)).toEqual(["busy"]);
     expect(readEvents(dir, a.getTime(), b.getTime()).map((e) => e.kind)).toEqual(["scan"]);
+  });
+  it("throws on a non-finite or over-long window", () => {
+    expect(() => readEvents(dir, Number.NaN, 1)).toThrow(Error);
+    expect(() => readEvents(dir, 0, Number.POSITIVE_INFINITY)).toThrow(Error);
+    expect(() => readEvents(dir, 0, 401 * 24 * 3600_000)).toThrow(/400/);
+    expect(() => readEvents(dir, 0, 400 * 24 * 3600_000)).not.toThrow();
+  });
+  it("rethrows a read error that is not a missing file", () => {
+    mkdirSync(join(dir, "events-2026-10-19.jsonl"));
+    expect(() => readEvents(dir, Date.parse("2026-10-19T00:00:00Z"), Date.parse("2026-10-20T00:00:00Z"))).toThrow(/EISDIR/);
   });
   it("reads nothing with no files", () => { expect(readEvents(dir, Date.parse("2026-10-19T00:00:00Z"), Date.parse("2026-10-21T00:00:00Z"))).toEqual([]); });
 });

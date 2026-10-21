@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { appendFileSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -14,7 +15,7 @@ export function autonomousDir(env: NodeJS.ProcessEnv = process.env): string {
 function atomicWrite(dir: string, name: string, text: string): void {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, name);
-  const tmp = `${file}.${process.pid}.tmp`;
+  const tmp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
   writeFileSync(tmp, text);
   renameSync(tmp, file);
 }
@@ -71,6 +72,8 @@ export function appendEvent(dir: string, now: Date, kind: EventKind, fields: Rec
 }
 
 export function readEvents(dir: string, fromMs: number, toMs: number): Event[] {
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) throw new Error("readEvents: fromMs and toMs must be finite numbers");
+  if (toMs - fromMs > 400 * DAY_MS) throw new Error("readEvents: the window is longer than 400 days");
   const out: Event[] = [];
   const last = dayOf(new Date(toMs));
   for (let t = fromMs; ; t += DAY_MS) {
@@ -79,8 +82,9 @@ export function readEvents(dir: string, fromMs: number, toMs: number): Event[] {
     let text = "";
     try {
       text = readFileSync(join(dir, `events-${day}.jsonl`), "utf-8");
-    } catch {
-      continue;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw e;
     }
     for (const line of text.split("\n")) {
       if (!line.trim()) continue;
