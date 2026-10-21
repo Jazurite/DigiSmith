@@ -50,6 +50,19 @@ export function defaultDeps(): AutonomousDeps {
 
 class UsageError extends Error {}
 
+/** A tracker built on its first call, so a scan that ends before any tracker call (`off`) never reads the credentials. */
+function lazyTracker(make: () => Tracker): Tracker {
+  let t: Tracker | null = null;
+  const get = (): Tracker => (t ??= make());
+  return {
+    hasStatus: (name) => get().hasStatus(name),
+    listToDo: () => get().listToDo(),
+    setStatus: (id, status) => get().setStatus(id, status),
+    getStatus: (id) => get().getStatus(id),
+    comment: (ref, text) => get().comment(ref, text),
+  };
+}
+
 function guarded(depsFactory: () => AutonomousDeps, body: (deps: AutonomousDeps) => Promise<string[]>): Promise<void> {
   return (async () => {
     try {
@@ -130,7 +143,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const r = await runScan({
-                tracker: d.tracker(), dir: d.dir, ordersDir: (argv.orders as string | undefined) ?? d.ordersDir,
+                tracker: lazyTracker(d.tracker), dir: d.dir, ordersDir: (argv.orders as string | undefined) ?? d.ordersDir,
                 conductorsJson: d.conductorsJson, repo: argv.repo as string, now: d.now, scanId: d.scanId(),
                 exec: d.exec, fileExists: d.fileExists, dryRun: argv.dryRun as boolean, nexus: d.nexus,
               });

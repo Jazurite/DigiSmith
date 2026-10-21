@@ -155,6 +155,14 @@ describe("dg autonomous scan", () => {
     expect(process.exitCode ?? 0).toBe(0);
     expect(out()).toMatch(/scan: off/);
   });
+  it("in the day and not away makes no tracker call and never builds the tracker", async () => {
+    let built = 0;
+    const lazy = (): AutonomousDeps => ({ ...deps(), tracker: () => { built++; throw new Error("createClient called"); } });
+    await yargs(["autonomous", "scan", "--repo", "/repo"]).exitProcess(false).command(createAutonomousCommand(lazy)).strict().parseAsync();
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toMatch(/scan: off/);
+    expect(built).toBe(0);
+  });
   it("an unexpected throw exits 1", async () => {
     tracker.hasStatus = async () => { throw new Error("network down"); };
     await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
