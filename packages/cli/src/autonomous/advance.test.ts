@@ -261,7 +261,7 @@ describe("retry", () => {
   });
   it("a second failure after the retry gives no order and no note from advance", () => {
     const j: JournalResults = { "DGS-1:building:1:retry": "succeeded", "DGS-1:building:1:adopt-retry": "succeeded" };
-    expect(advanceTicket(s, base({ attention: ok([item({ id: "builder-2.lost.0" })]) }), j).kind).not.toBe("retry");
+    expect(advanceTicket(s, base({ attention: ok([item({ id: "builder-2.lost.0" })]) }), j)).toEqual({ kind: "wait", reason: "building" });
   });
   it("a restart order already sent blocks the retry", () => {
     expect(advanceTicket(s, base(), { "DGS-1:building:1:order-restart": "succeeded" }).kind).not.toBe("retry");
@@ -273,6 +273,10 @@ describe("retry", () => {
   it("a busy conductor, a typed input box or no conductor fall through to the phase rules", () => {
     const o = base({ herdr: ok({ conductorPresent: true, conductorWorking: true, input: "empty", builderPane: "present" }) });
     expect(advanceTicket(s, o, J)).toEqual({ kind: "wait", reason: "building" });
+    const typed = base({ herdr: ok({ conductorPresent: true, conductorWorking: false, input: "typed", builderPane: "present" }) });
+    expect(advanceTicket(s, typed, J)).toEqual({ kind: "wait", reason: "building" });
+    const none = base({ herdr: ok({ conductorPresent: false, conductorWorking: false, input: "empty", builderPane: "present" }) });
+    expect(advanceTicket(s, none, J)).toEqual({ kind: "wait", reason: "building" });
   });
   it("merged and released tickets never retry", () => {
     for (const phase of ["merged", "released"] as const) expect(advanceTicket(S({ phase }), base(), J).kind).toBe("wait");
