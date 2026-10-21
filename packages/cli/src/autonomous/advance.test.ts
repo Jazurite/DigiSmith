@@ -54,14 +54,6 @@ describe("building", () => {
     const o = O({ ...withEvent("building"), git: ok({ head: "bbbbbbb1", base: "bbbbbbb1", onOriginMain: false }), packs: ok([{ round: 1, head: "bbbbbbb1", base: "bbbbbbb1" }]) });
     expect(advanceTicket(s, o, J).kind).toBe("wait");
   });
-  it("attempt 2 needs a round 2 pack; until then it orders the fix once", () => {
-    const s2 = S({ phase: "building", attempt: 2 });
-    const o = O({ ...withEvent("building"), packs: ok([{ round: 1, head: "aaaaaaa1", base: "bbbbbbb1" }]) });
-    expect(advanceTicket(s2, o, J)).toEqual({ kind: "order", order: "fix", head: "aaaaaaa1" });
-    expect(advanceTicket(s2, o, { "DGS-1:building:2:order-fix": "succeeded" }).kind).toBe("wait");
-    const o2 = O({ ...withEvent("building"), packs: ok([{ round: 2, head: "aaaaaaa1", base: "bbbbbbb1" }]) });
-    expect(advanceTicket(s2, o2, J).kind).toBe("move");
-  });
   it("orders a restart when the builder pane is gone and the run has not ended", () => {
     const o = O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty", builderPane: "gone" }) });
     expect(advanceTicket(s, o, J)).toEqual({ kind: "order", order: "restart", head: "aaaaaaa1" });
@@ -85,9 +77,20 @@ describe("review", () => {
     const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "task" as const, result: "clean" as const, head: "aaaaaaa1" }]) });
     expect(advanceTicket(s, o, J).kind).toBe("wait");
   });
-  it("findings send the work back with attempt + 1, and stop at the cap", () => {
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings") }), J)).toEqual({ kind: "move", to: "building", proof: "findings for aaaaaaa", attempt: 2 });
-    expect(advanceTicket(S({ phase: "review", attempt: 3 }), O({ ...withEvent("review"), verdicts: v("findings") }), J)).toEqual({ kind: "attention", cause: "attempts-exhausted", attKind: "failed" });
+  const packR = (round: number, head = "aaaaaaa1") => ok([{ round, head, base: "bbbbbbb1" }]);
+  it("F9: open findings keep the phase at review: wait, no move, no order", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(1) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(2) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
+  });
+  it("F9: round 3 with open findings is review-rounds-exhausted, no move", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: packR(3) }), J)).toEqual({ kind: "attention", cause: "review-rounds-exhausted", attKind: "failed" });
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: ok([]) }), J)).toEqual({ kind: "wait", reason: "review-findings-open" });
+  });
+  it("F9: a clean round 3 still moves to merge-ready", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean"), packs: packR(3) }), J)).toMatchObject({ kind: "move", to: "merge-ready" });
+  });
+  it("F9: a failed packs view gives a note when findings are open", () => {
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("findings"), packs: bad() }), J)).toEqual({ kind: "attention", cause: "obs-packs-failed", attKind: "unknown" });
   });
   it("a failed verdicts observation gives a note and never a move", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: bad("refuses r2 lines") }), J)).toEqual({ kind: "attention", cause: "obs-verdicts-failed", attKind: "unknown" });
@@ -161,7 +164,7 @@ describe("review fixes: markers, notes, verdict order, restart once", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: ok([row("findings"), row("clean")]) }), J))
       .toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa", head: "aaaaaaa1" });
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: ok([row("clean"), row("findings")]) }), J))
-      .toEqual({ kind: "move", to: "building", proof: "findings for aaaaaaa", attempt: 2 });
+      .toEqual({ kind: "wait", reason: "review-findings-open" });
   });
 
   it("writes the review marker and the merge marker", () => {
@@ -195,28 +198,14 @@ describe("review fixes: markers, notes, verdict order, restart once", () => {
   it("no order is sent without a head", () => {
     expect(advanceTicket(S({ phase: "merge-ready" }), O({ ...withEvent("merge"), git: nohead }), J)).toEqual({ kind: "attention", cause: "no-head", attKind: "unknown" });
     expect(advanceTicket(S({ phase: "merge-ready" }), O({ ...withEvent("merge"), git: ok({ head: "", base: "bbbbbbb1", onOriginMain: false }) }), J)).toEqual({ kind: "attention", cause: "no-head", attKind: "unknown" });
-    expect(advanceTicket(S({ phase: "building", attempt: 2 }), O({ ...withEvent("building"), git: nohead, ...fixPack }), J)).toEqual({ kind: "attention", cause: "no-head", attKind: "unknown" });
     expect(advanceTicket(S({ phase: "building" }), O({ ...withEvent("building"), git: nohead, herdr: ok(pane(false)) }), J)).toEqual({ kind: "attention", cause: "no-head", attKind: "unknown" });
   });
 
-  it("uncertain and permanent fix orders give notes, retryable sends again", () => {
-    const s2 = S({ phase: "building", attempt: 2 });
-    const o = O({ ...withEvent("building"), ...fixPack });
-    expect(advanceTicket(s2, o, { "DGS-1:building:2:order-fix": "uncertain" })).toEqual({ kind: "attention", cause: "order-fix-uncertain", attKind: "unknown" });
-    expect(advanceTicket(s2, o, { "DGS-1:building:2:order-fix": "permanent" })).toEqual({ kind: "attention", cause: "order-fix-permanent", attKind: "failed" });
-    expect(advanceTicket(s2, o, { "DGS-1:building:2:order-fix": "retryable" })).toEqual({ kind: "order", order: "fix", head: "aaaaaaa1" });
-  });
-
-  describe("the gate on the fix and restart orders", () => {
+  describe("the gate on the restart order", () => {
     const gateObs = (over: { conductorPresent?: boolean; conductorWorking?: boolean; input?: "empty" | "typed" | "unknown"; builderPane?: "present" | "gone" | "unknown" }, extra: Partial<Observations> = {}) =>
       O({ ...withEvent("building"), herdr: ok({ conductorPresent: true, conductorWorking: false, input: "empty" as const, builderPane: "present", ...over }), ...extra });
-    const fixS = S({ phase: "building", attempt: 2 });
     const restartS = S({ phase: "building" });
 
-    it("fix: a working conductor waits", () => expect(advanceTicket(fixS, gateObs({ conductorWorking: true }, fixPack), J)).toEqual({ kind: "wait", reason: "conductor-working" }));
-    it("fix: typed text waits", () => expect(advanceTicket(fixS, gateObs({ input: "typed" }, fixPack), J)).toEqual({ kind: "wait", reason: "conductor-input-typed" }));
-    it("fix: an unparsed input box gives a note", () => expect(advanceTicket(fixS, gateObs({ input: "unknown" }, fixPack), J)).toEqual({ kind: "attention", cause: "obs-input-unknown", attKind: "unknown" }));
-    it("fix: no conductor gives a note", () => expect(advanceTicket(fixS, gateObs({ conductorPresent: false }, fixPack), J)).toEqual({ kind: "attention", cause: "conductor-missing", attKind: "unknown" }));
 
     it("restart: a working conductor waits", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", conductorWorking: true }), J)).toEqual({ kind: "wait", reason: "conductor-working" }));
     it("restart: typed text waits", () => expect(advanceTicket(restartS, gateObs({ builderPane: "gone", input: "typed" }), J)).toEqual({ kind: "wait", reason: "conductor-input-typed" }));
@@ -239,8 +228,8 @@ describe("final fix wave", () => {
   });
   it("F6: a move key that is already used gives a note, not a repeated move", () => {
     const s = S({ phase: "review" });
-    const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "ticket" as const, result: "findings" as const, head: "aaaaaaa1" }]) });
-    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-building": "succeeded" })).toEqual({ kind: "attention", cause: "move-key-used", attKind: "unknown" });
-    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-building": "retryable" })).toMatchObject({ kind: "move", to: "building" });
+    const o = O({ ...withEvent("review"), verdicts: ok([{ scope: "ticket" as const, result: "clean" as const, head: "aaaaaaa1" }]) });
+    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-merge-ready": "succeeded" })).toEqual({ kind: "attention", cause: "move-key-used", attKind: "unknown" });
+    expect(advanceTicket(s, o, { "DGS-1:review:1:move-to-merge-ready": "retryable" })).toMatchObject({ kind: "move", to: "merge-ready" });
   });
 });

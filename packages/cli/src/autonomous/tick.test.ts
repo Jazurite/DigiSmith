@@ -38,7 +38,7 @@ describe("runTick", () => {
     expect(phase(d)).toBe("claimed");
     expect(existsSync(join(d, "journal.jsonl"))).toBe(false);
   });
-  it("one action per tick, through the whole ticket with a findings round", async () => {
+  it("one action per tick, through the whole ticket, with the findings round inside review", async () => {
     const d = tmp(); const w = makeWorld(); writeLock(d);
     const head = (h: string) => { w.git = { ...w.git, head: h }; };
     const steps: [() => void, string, string][] = [
@@ -48,11 +48,9 @@ describe("runTick", () => {
       [() => { w.packs = [{ round: 1, head: "aaaaaaa1", base: "bbbbbbb1" }]; }, "move", "review"],
       [() => {}, "marker", "review"],
       [() => {}, "wait", "review"],
-      [() => { w.verdicts = [{ scope: "ticket", result: "findings", head: "aaaaaaa1" }]; }, "move", "building"],
-      [() => {}, "marker", "building"],
-      [() => {}, "order", "building"],
-      [() => { head("ccccccc1"); w.packs.push({ round: 2, head: "ccccccc1", base: "bbbbbbb1" }); }, "move", "review"],
-      [() => {}, "marker", "review"],
+      [() => { w.verdicts = [{ scope: "ticket", result: "findings", head: "aaaaaaa1" }]; }, "wait", "review"],
+      [() => {}, "wait", "review"],
+      [() => { head("ccccccc1"); w.packs.push({ round: 2, head: "ccccccc1", base: "bbbbbbb1" }); }, "wait", "review"],
       [() => { w.verdicts.push({ scope: "ticket", result: "clean", head: "ccccccc1" }); }, "move", "merge-ready"],
       [() => {}, "marker", "merge-ready"],
       [() => {}, "order", "merge-ready"],
@@ -66,8 +64,8 @@ describe("runTick", () => {
       expect(r.action?.kind).toBe(kind);
       expect(phase(d)).toBe(expectedPhase);
     }
-    expect(w.prompts).toEqual(["DGS-1: fix the review findings, attempt 2", "DGS-1: merge per hooks 01-03, then release merged"]);
-    expect(w.markers.map((m) => m[1])).toEqual(["building", "review", "building", "review", "merge"]);
+    expect(w.prompts).toEqual(["DGS-1: merge per hooks 01-03, then release merged"]);
+    expect(w.markers.map((m) => m[1])).toEqual(["building", "review", "merge"]);
     expect(Object.values(resultsOf(d)).every((s) => s === "succeeded")).toBe(true);
   });
   it("a typed conductor input box: no prompt, no note", async () => {

@@ -57,9 +57,6 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
   const g = obs.git.value;
   if (g.head !== null && g.head !== g.base && obs.packs.value.some((p) => p.round >= s.attempt && p.head === g.head))
     return { kind: "move", to: "review", proof: `pack for ${sha7(g.head)}` };
-  // a fix already sent (open or succeeded) falls through to the restart check, as the plan does
-  const fix = j[keyOf(s, "order-fix")];
-  if (s.attempt > 1 && fix !== "open" && fix !== "succeeded") return order("fix", s, obs, j, g.head);
   if (!obs.herdr.ok) return note("obs-herdr-failed");
   if (!obs.runs.ok) return note("obs-runs-failed");
   const r = obs.runs.value.find((x) => x.id === s.runs.builder);
@@ -81,8 +78,13 @@ function review(s: TicketState, obs: Observations, j: JournalResults): Action {
   const row = rows[rows.length - 1];
   if (row === undefined || head === null) return wait("review-running");
   if (row.result === "clean") return { kind: "move", to: "merge-ready", proof: `clean verdict for ${sha7(head)}`, head };
-  if (s.attempt >= MAX_ATTEMPTS) return note("attempts-exhausted", "failed");
-  return { kind: "move", to: "building", proof: `findings for ${sha7(head)}`, attempt: s.attempt + 1 };
+  // Open findings: the phase stays review. The conductor and builder run the fix wave; the tick sends no order.
+  // The round is the latest ticket pack for this head (the highest round if none matches).
+  if (!obs.packs.ok) return note("obs-packs-failed");
+  const forHead = obs.packs.value.filter((p) => p.head === head);
+  const round = Math.max(0, ...(forHead.length > 0 ? forHead : obs.packs.value).map((p) => p.round));
+  if (round >= MAX_ATTEMPTS) return note("review-rounds-exhausted", "failed");
+  return wait("review-findings-open");
 }
 
 function mergeReady(s: TicketState, obs: Observations, j: JournalResults): Action {
