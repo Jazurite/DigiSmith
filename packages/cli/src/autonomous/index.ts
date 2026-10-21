@@ -1,9 +1,13 @@
+import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
+import { appendResolved, formatOpen, readOpen } from "./attention.ts";
+import { herdrPaneLookup } from "./pane.ts";
+import { runWatch } from "./watch.ts";
 import { readAway, isAway } from "./away.ts";
 import { fmtUtc7, parseHhmm } from "./clock.ts";
 import { realExec, type Exec } from "./conductor.ts";
@@ -16,7 +20,7 @@ import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
-import { runAway, runBack } from "./switch.ts";
+import { closeBreakerAsJack, runAway, runBack } from "./switch.ts";
 import { ClickUpLoTracker } from "./tracker-clickup.ts";
 import type { EventKind, Tracker } from "./types.ts";
 
@@ -261,15 +265,66 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
               .option("ticket", { type: "string", requiresArg: true, demandOption: true, describe: "ticket key, e.g. DGS-549" })
               .option("result", { type: "string", choices: RESULTS, demandOption: true })
               .option("reason", { type: "string", requiresArg: true })
-              .option("commit", { type: "string", requiresArg: true }),
+              .option("commit", { type: "string", requiresArg: true })
+              .option("cause", { type: "string", requiresArg: true, describe: "why a failed ticket failed: a code from the cause list (unknown when absent or not in it)" }),
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const r = await runRelease(
                 { tracker: d.tracker(), dir: d.dir, now: d.now, nexus: d.nexus },
-                { ticket: argv.ticket as string, result: argv.result as ReleaseResult, reason: argv.reason as string | undefined, commit: argv.commit as string | undefined },
+                { ticket: argv.ticket as string, result: argv.result as ReleaseResult, reason: argv.reason as string | undefined, commit: argv.commit as string | undefined, cause: argv.cause as string | undefined },
               );
-              return [`release: ${argv.ticket as string} ${argv.result as string}, lock cleared: ${r.lockCleared ? "yes" : "no"}`, runNowLine(r.runNow)];
+              if (r.warning) console.error(`release: ${r.warning}`);
+              const lines = [`release: ${argv.ticket as string} ${argv.result as string}, lock cleared: ${r.lockCleared ? "yes" : "no"}`];
+              if (r.cause) lines.push(`cause: ${r.cause}${r.retryEligible ? " (retry eligible)" : ""}`);
+              if (r.breakerOpened) lines.push("breaker: open, scans stop until dg autonomous resume");
+              lines.push(runNowLine(r.runNow));
+              return lines;
             }),
+        })
+        .command({
+          command: "watch",
+          describe: "check the open runs for blocked, stalled and lost ones and write the attention list",
+          builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "print what would change, write nothing" }),
+          handler: (argv) =>
+            guarded(depsFactory, async (d) => {
+              const entry = process.argv[1];
+              const r = await runWatch({
+                env: process.env, dir: d.dir, cwd: process.cwd(), now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
+                runDg: (args) => new Promise((resolve) => {
+                  execFile(process.execPath, [entry, ...args], { timeout: 60_000 }, (err) => resolve({ ok: !err }));
+                }),
+              });
+              return r.lines;
+            }),
+        })
+        .command({
+          command: "attention",
+          describe: "list the open attention items, or resolve one",
+          builder: (e) =>
+            e
+              .option("json", { type: "boolean", default: false, describe: "print the open items as JSON" })
+              .command({
+                command: "resolve <id>",
+                describe: "close an open item by hand (recorded as jack)",
+                builder: (s) => s.positional("id", { type: "string", demandOption: true }).option("note", { type: "string", requiresArg: true }),
+                handler: (argv) =>
+                  guarded(depsFactory, async (d) => {
+                    const id = argv.id as string;
+                    if (!appendResolved(d.dir, id, "jack", d.now().toISOString(), (argv.note as string | undefined) ?? "")) throw new Error(`${id}: not an open item`);
+                    return [`resolved ${id}`];
+                  }),
+              }),
+          handler: (argv) =>
+            guarded(depsFactory, async (d) => {
+              const items = readOpen(d.dir);
+              return [argv.json ? JSON.stringify(items, null, 2) : formatOpen(items, Date.now())];
+            }),
+        })
+        .command({
+          command: "resume",
+          describe: "close the circuit breaker so scans can claim again",
+          handler: () =>
+            guarded(depsFactory, async (d) => [closeBreakerAsJack(d.dir, d.now(), "resume") ? "breaker closed" : "breaker was not open"]),
         })
         .command({
           command: "report",

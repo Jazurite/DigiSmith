@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -281,5 +281,75 @@ describe("dg autonomous tick, journal and the Phase line", () => {
   it("status has no Phase line without a lock", async () => {
     await parseT(["autonomous", "status"]);
     expect(out()).not.toContain("Phase:");
+  });
+});
+
+describe("dg autonomous: attention, resume, watch", () => {
+  const seed = async (n = 2) => {
+    const { appendOpen } = await import("./attention.ts");
+    for (let i = 1; i <= n; i++) appendOpen(dir, { ticket: `DGS-${i}`, run: `r${i}`, kind: "stalled", cause: "build-over-45-min", since: DAY.toISOString(), ts: DAY.toISOString() });
+  };
+  it("attention on an empty dir prints none", async () => {
+    await parse(["autonomous", "attention"]);
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toBe("none");
+  });
+  it("attention lists both items; --json prints the array", async () => {
+    await seed();
+    await parse(["autonomous", "attention"]);
+    expect(out()).toContain("r1.stalled.0");
+    expect(out()).toContain("r2.stalled.0");
+    log.mockClear();
+    await parse(["autonomous", "attention", "--json"]);
+    const arr = JSON.parse(out());
+    expect(arr.map((i: { id: string }) => i.id)).toEqual(["r1.stalled.0", "r2.stalled.0"]);
+  });
+  it("attention resolve appends a resolved line by jack", async () => {
+    await seed(1);
+    await parse(["autonomous", "attention", "resolve", "r1.stalled.0", "--note", "seen"]);
+    expect(out()).toContain("resolved r1.stalled.0");
+    const text = readFileSync(join(dir, "attention.jsonl"), "utf-8");
+    expect(text).toContain('"resolved":true');
+    expect(text).toContain('"by":"jack"');
+  });
+  it("attention resolve with an unknown id exits 1 and writes nothing", async () => {
+    await seed(1);
+    const before = readFileSync(join(dir, "attention.jsonl"), "utf-8");
+    await parse(["autonomous", "attention", "resolve", "nope.0"]);
+    expect(process.exitCode).toBe(1);
+    expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toBe(before);
+  });
+  it("resume closes an open breaker and its item; on a closed one says so", async () => {
+    const { recordRelease, readBreaker } = await import("./breaker.ts");
+    const { appendOpen, readOpen } = await import("./attention.ts");
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, DAY);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, DAY);
+    appendOpen(dir, { ticket: "DGS-2", run: "-", kind: "failed", cause: "circuit-breaker-open", since: DAY.toISOString(), ts: DAY.toISOString() });
+    await parse(["autonomous", "resume"]);
+    expect(out()).toContain("breaker closed");
+    expect(readBreaker(dir).open).toBe(false);
+    expect(readFileSync(join(dir, "breaker.json"), "utf-8")).toContain('"open": false');
+    expect(readOpen(dir)).toEqual([]);
+    log.mockClear();
+    await parse(["autonomous", "resume"]);
+    expect(out()).toContain("breaker was not open");
+    expect(process.exitCode ?? 0).toBe(0);
+  });
+  it("release --help lists --cause; autonomous --help lists watch, attention, resume", async () => {
+    expect((await viaBuildCli(["autonomous", "release", "--help"])).output).toContain("--cause");
+    const h = (await viaBuildCli(["autonomous", "--help"])).output;
+    for (const w of ["watch", "attention", "resume"]) expect(h).toContain(w);
+  });
+  it("watch --dry-run prints the summary line and writes nothing", async () => {
+    const old = process.env.DIGISMITH_DEPOT_DIR;
+    process.env.DIGISMITH_DEPOT_DIR = root;
+    try {
+      await parse(["autonomous", "watch", "--dry-run"]);
+    } finally {
+      if (old === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = old;
+    }
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out()).toContain("watch (dry run, nothing written)");
+    expect(existsSync(join(dir, "attention.jsonl"))).toBe(false);
   });
 });
