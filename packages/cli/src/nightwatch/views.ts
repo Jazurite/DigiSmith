@@ -1,5 +1,5 @@
 // packages/cli/src/nightwatch/views.ts
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { readOpen } from "../autonomous/attention.ts";
 import { readAway } from "../autonomous/away.ts";
@@ -35,9 +35,21 @@ function loadAll(env: NodeJS.ProcessEnv, ticket?: string): Loaded[] {
   return out;
 }
 
-function claimFor(adir: string, run: RunRecord): Event | null {
+// One read of the scan events for all runs; the per-run window is applied in memory.
+function claimsOf(adir: string, loaded: Loaded[]): Event[] {
+  const times = loaded.map((l) => Date.parse(l.record.created_at)).filter((t) => Number.isFinite(t));
+  if (times.length === 0) return [];
+  const to = Math.max(...times) + DAY_MS;
+  const from = Math.max(Math.min(...times) - 2 * DAY_MS, to - 390 * DAY_MS);
+  return readScanEvents(adir, from, to).filter((e) => e.kind === "claim");
+}
+
+function claimFor(claims: Event[], run: RunRecord): Event | null {
   const created = Date.parse(run.created_at);
-  const found = readScanEvents(adir, created - 2 * DAY_MS, created + DAY_MS).filter((e) => e.kind === "claim" && e.ticket === run.ticket && (e.order === run.order || run.order === null));
+  const found = claims.filter((e) => {
+    const t = Date.parse(e.ts);
+    return t >= created - 2 * DAY_MS && t <= created + DAY_MS && e.ticket === run.ticket && (e.order === run.order || run.order === null);
+  });
   return found.length === 0 ? null : found[found.length - 1];
 }
 
@@ -45,7 +57,8 @@ function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView
   const adir = autonomousDir(env);
   const away = readAway(adir);
   const budgets = readBudgets(depotCwd(env)).budgets;
-  return loaded.map((l) => runRowOf(l.record, l.events, triggerOf(l.record, claimFor(adir, l.record), away), budgets, now.getTime()));
+  const claims = claimsOf(adir, loaded);
+  return loaded.map((l) => runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()));
 }
 
 // config.yml is read from the main checkout's .digismith, like the watchdog; the depot is not a checkout, so a missing file means defaults.
@@ -53,7 +66,8 @@ const depotCwd = (env: NodeJS.ProcessEnv): string => env.NIGHTWATCH_CONFIG_CWD ?
 
 export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
   const adir = autonomousDir(env);
-  const rows = rowsOf(env, now, loadAll(env));
+  const loadedAll = loadAll(env);
+  const rows = rowsOf(env, now, loadedAll);
   const workers = rows.filter((r) => r.state === "healthy" || r.state === "blocked" || r.state === "stalled");
   const open = readOpen(adir);
   const releases = readScanEvents(adir, now.getTime() - 8 * DAY_MS, now.getTime() + DAY_MS).filter((e) => e.kind === "release");
@@ -63,7 +77,7 @@ export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
   const breaker = readBreaker(adir);
   const scanFacts = readScanEvents(adir, now.getTime() - DAY_MS, now.getTime() + DAY_MS).filter((e) => e.kind === "claim" || e.kind === "release" || e.kind === "breaker").map((e) => ({ ts: e.ts, source: "scan", kind: e.kind, text: `${e.kind} ${String(e.ticket ?? "")}`.trim() }));
   const runFacts = workers.flatMap((w) => {
-    const l = loadAll(env, w.ticket).find((x) => x.record.run === w.run);
+    const l = loadedAll.find((x) => x.record.run === w.run);
     return (l?.events ?? []).slice(-20).map((e) => ({ ts: e.ts, source: w.ticket, kind: e.type, text: eventText(e) }));
   });
   const lastEvents = [...scanFacts, ...runFacts].sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)).slice(0, 20);
@@ -172,9 +186,12 @@ export function eventsView(env: NodeJS.ProcessEnv, a: { run: string; since?: num
   const group = a.group === "agent" || a.group === "system" || a.group === "errors" ? a.group : "all";
   let lines: EventRowView[] = all.map((e, i) => ({ n: i + 1, seq: e.seq, ts: e.ts, type: e.type, groups: groupsOf(e), data: scalarData(e.data) }));
   if (group !== "all") lines = lines.filter((l) => l.groups.includes(group));
-  const since = a.since ?? 0;
-  lines = lines.filter((l) => l.n > since && (a.before === undefined || l.n < a.before));
-  if (a.tail !== undefined) lines = lines.slice(-a.tail);
+  const okInt = (v: number | undefined): boolean => v === undefined || (Number.isInteger(v) && v >= 0);
+  const since = okInt(a.since) ? (a.since ?? 0) : 0;
+  const before = okInt(a.before) ? a.before : undefined;
+  const tail = okInt(a.tail) ? a.tail : undefined;
+  lines = lines.filter((l) => l.n > since && (before === undefined || l.n < before));
+  if (tail !== undefined) lines = tail === 0 ? [] : lines.slice(-tail);
   return { run: a.run, total: all.length, from: since, lines };
 }
 
@@ -196,11 +213,13 @@ export function planView(env: NodeJS.ProcessEnv, a: { ticket: string }) {
   const out = { ...empty, found: true };
   const first = /^# SDD ledger — plan: (.+)$/m.exec(ledger);
   if (first) {
-    const file = resolve(wt, first[1].trim());
-    if (inside(resolve(wt), file) && existsSync(file)) {
-      out.planFile = file;
-      try { out.tasks = ledgerTasks(ledger, parsePlanTasks(readFileSync(file, "utf8"))); } catch { /* unreadable plan: no tasks */ }
-    }
+    try {
+      const real = realpathSync(resolve(wt, first[1].trim()));
+      if (inside(realpathSync(wt), real) && statSync(real).isFile()) {
+        out.planFile = real;
+        out.tasks = ledgerTasks(ledger, parsePlanTasks(readFileSync(real, "utf8")));
+      }
+    } catch { /* missing or unreadable plan: no tasks */ }
   }
   out.tasksTotal = out.tasks.length;
   out.tasksDone = out.tasks.filter((t) => t.state === "done").length;

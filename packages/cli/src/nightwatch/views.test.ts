@@ -1,5 +1,5 @@
 // packages/cli/src/nightwatch/views.test.ts
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
@@ -112,7 +112,7 @@ describe("run and events", () => {
     expect(runView(d.env, NOW, { run: "builder-2" })?.order).toEqual({ available: true, text: "Build it." });
     expect(runView(d.env, NOW, { run: "builder-3" })?.order.available).toBe(false);
   });
-  it("events: line-count cursor, tail, before and groups; a repeated seq is tolerated", () => {
+  it("events: line-count cursor, tail, before and groups", () => {
     seedRun();
     const run = "builder-1";
     const lines = Array.from({ length: 10 }, (_, i) => ({ type: i === 5 ? "blocked" : "tool", ts: `2026-10-22T02:${String(30 + i).padStart(2, "0")}:00.000Z`, data: { tool: "Edit", ok: true } }));
@@ -125,6 +125,34 @@ describe("run and events", () => {
     expect(eventsView(d.env, { run, tail: 3, before: 8 })?.lines.map((l) => l.n)).toEqual([5, 6, 7]);
     expect(eventsView(d.env, { run, group: "errors" })?.lines.map((l) => l.n)).toEqual([6]);
     expect(eventsView(d.env, { run, group: "agent" })?.lines).toHaveLength(9);
+  });
+  it("events: tolerates a repeated seq (file order wins) and validates the cursors", () => {
+    seedRun();
+    const f = join(d.dir, "runs", "DGS-590", "builder-1", "events.jsonl");
+    const ln = (seq: number, i: number): string => JSON.stringify({ schema: "nightwatch-event/v1", seq, ts: `2026-10-22T02:3${i}:00.000Z`, run: "builder-1", type: "tool", data: {} }) + "\n";
+    writeFileSync(f, ln(1, 0) + ln(2, 1) + ln(2, 2) + ln(3, 3));
+    const e = eventsView(d.env, { run: "builder-1" });
+    expect(e?.total).toBe(4);
+    expect(e?.lines.map((l) => l.n)).toEqual([1, 2, 3, 4]);
+    expect(eventsView(d.env, { run: "builder-1", tail: 0 })?.lines).toEqual([]);
+    expect(eventsView(d.env, { run: "builder-1", tail: -2 })?.lines).toHaveLength(4);
+    expect(eventsView(d.env, { run: "builder-1", since: -5 })?.lines).toHaveLength(4);
+    expect(eventsView(d.env, { run: "builder-1", since: 1.5, before: Number.NaN })?.lines).toHaveLength(4);
+  });
+  it("refuses an unsafe run name", () => {
+    seedRun();
+    expect(runView(d.env, NOW, { run: "../builder-1" })).toBeNull();
+    expect(eventsView(d.env, { run: "../builder-1" })).toBeNull();
+    expect(planView(d.env, { ticket: "../DGS-590" })).toMatchObject({ found: false });
+  });
+  it("budget elapsedMin counts from the newest phase event", () => {
+    seedRun();
+    d.writeEvents("DGS-590", "builder-1", [
+      { type: "started", ts: "2026-10-22T02:20:00.000Z" },
+      { type: "phase", ts: "2026-10-22T02:30:00.000Z", data: { phase: "building" } },
+      { type: "tool", ts: "2026-10-22T02:59:00.000Z", data: { tool: "Edit", ok: true } },
+    ]);
+    expect(runView(d.env, NOW, { run: "builder-1" })?.budget).toMatchObject({ phase: "building", elapsedMin: 30 });
   });
   it("events show no prompt or session id", () => {
     seedRun();
@@ -161,6 +189,18 @@ describe("plan", () => {
     const p = planView(d.env, { ticket: "DGS-591" });
     expect(p).toMatchObject({ found: true, ledgerError: true, verdicts: [] });
     expect(p.tasks[0].state).toBe("done");
+  });
+  it("refuses a plan file reached through a symlink that points outside the worktree", () => {
+    const wt = join(d.dir, "wt4");
+    const board = join(wt, ".digismith", "board", "DGS-593—x");
+    const ws = join(board, ".sdd-workspace");
+    mkdirSync(ws, { recursive: true });
+    const outside = join(d.dir, "outside-plan.md");
+    writeFileSync(outside, "### Task 1: Secret\n");
+    symlinkSync(outside, join(board, "plan.md"));
+    writeFileSync(join(ws, "progress.md"), `# SDD ledger — plan: ${join(board, "plan.md")}\n`);
+    d.writeRun({ ticket: "DGS-593", run: "builder-7", role: "builder", created_at: "2026-10-22T02:20:00.000Z", worktree: wt });
+    expect(planView(d.env, { ticket: "DGS-593" })).toMatchObject({ found: true, planFile: null, tasks: [] });
   });
   it("refuses a plan file outside the worktree", () => {
     const wt = join(d.dir, "wt3");
