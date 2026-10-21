@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch ticket state machine and action journal</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Nightwatch ticket state machine and action journal</h1>
+  <div class="meta">
+    <span>Date: 2026-10-21</span>
+    <span>Ticket: DGS-582</span>
+  </div>
+</header>
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#s1">Goal</a></li>
+    <li><a href="#s2">Where the code lives</a></li>
+    <li><a href="#s3">State</a></li>
+    <li><a href="#s4">Observations</a></li>
+    <li><a href="#s5">Phases and proof</a></li>
+    <li><a href="#s6">Actions and the conductor</a></li>
+    <li><a href="#s7">The action journal</a></li>
+    <li><a href="#s8">Reconcile (step 0)</a></li>
+    <li><a href="#s9">Unknown is not progress</a></li>
+    <li><a href="#s10">Attention notes</a></li>
+    <li><a href="#s11">Phase marker</a></li>
+    <li><a href="#s12">Tests and first use</a></li>
+    <li><a href="#s13">Dependencies and open points</a></li>
+  </ol>
+</nav>
+<section id="s1">
+<h2>1. Goal</h2>
+<p>Today an LLM conductor decides, turn by turn, what happens next to an unattended ticket. A grey suggested prompt or a pane that looks finished can skip a review gate. This ticket moves that control into plain code in Nexus. The code holds the ticket's state. A step moves on only when a file, a commit or a ref proves it. The conductor gets short bounded orders and nothing else. The ten decisions below come from the Maestro and are settled. Warren (MIT) gave ideas only; no code is copied.</p>
+<p>Out of scope: the watchdog, phase time budgets and the attention list itself (DGS-583), the night mandate hook (DGS-584), the UI (DGS-586), merge and cleanup safety (DGS-585), per-task orders such as "build task 3" (needs plan parsing; the v1 order is "build the ticket").</p>
+</section>
+
+<section id="s2">
+<h2>2. Where the code lives</h2>
+<p>All in <code>packages/cli/src/autonomous/</code>, next to the DGS-486 scan. One unit per file.</p>
+<div class="table-wrap"><table>
+<tr><th>File</th><th>Job</th></tr>
+<tr><td><code>advance.ts</code></td><td>Pure <code>advanceTicket(state, obs, journal) -&gt; Action</code>. No I/O, no clock, no random.</td></tr>
+<tr><td><code>journal.ts</code></td><td>Append-only action journal: <code>plan()</code>, <code>settle()</code>, <code>openLines()</code>, <code>resultOf(key)</code>.</td></tr>
+<tr><td><code>phase-state.ts</code></td><td>Reads and writes the phase fields in <code>lock.json</code> (temp file and rename).</td></tr>
+<tr><td><code>observe.ts</code></td><td>The read-only observers (run, reviewer, git, ClickUp, herdr). Each returns <code>{ok:true,value}</code> or <code>{ok:false,error}</code>. Every outside call is injected.</td></tr>
+<tr><td><code>input-box.ts</code></td><td>Pure <code>classifyInputBox(ansi) -&gt; empty | suggestion | typed | unknown</code>.</td></tr>
+<tr><td><code>reconcile.ts</code></td><td>Step 0: settles open journal lines against git, ClickUp and herdr.</td></tr>
+<tr><td><code>act.ts</code></td><td>Runs one action: plan line, side effect, settle line. Orders come from fixed templates.</td></tr>
+<tr><td><code>tick.ts</code></td><td><code>runTick(deps)</code>: reconcile, observe, advance, act. Also behind <code>dg autonomous tick [--dry-run]</code>.</td></tr>
+<tr><td><code>attention-write.ts</code></td><td>Appends attention lines in the DGS-583 shape (section 10).</td></tr>
+</table></div>
+<p>The Nexus job <code>autonomous-scan</code> runs it. <code>runScan</code> reads <code>lock.json</code> first. A lock exists: it calls <code>runTick</code> at any hour (a claimed ticket is finished even after <code>back</code>, as DGS-486 section 2 says) and reports <code>busy</code> plus the action taken. No lock: the work rule and the claim run as in DGS-486. This changes one DGS-486 rule: "off before any lock read" becomes "off before any tracker call". Reading a local file is free.</p>
+<p><strong>Tick rate.</strong> The registry entry <code>autonomous-scan</code> changes from every 60 minutes to <code>everyMinutes: 5</code> (the registry minimum). A tick takes one step per ticket per run, so 60 minutes would make a ticket crawl. Idle cost is small: outside work time with no lock it exits <code>off</code> without a tracker call. In work time with no lock it lists <code>to do</code> once per tick; the DGS-486 comment dedupe stops repeat comments. Each observer has a 20 second limit, a tick has a 2 minute limit, and the job <code>timeoutMs</code> stays 5 minutes, so one tick cannot overlap the next.</p>
+</section>
+
+<section id="s3">
+<h2>3. State</h2>
+<p>One record per claimed ticket: DGS-486's <code>lock.json</code> gains fields. A lock without them (written by the DGS-486 scan before this ships) reads as phase <code>claimed</code>, attempt 1.</p>
+<pre><code>{ ticket, taskId, claimedAt, claimedAtUtc7, order, scanId,        // DGS-486, unchanged
+  "phase": "claimed|building|review|merge-ready|merged|released",
+  "phaseStartedAt": "&lt;ISO UTC&gt;",
+  "attempt": 1,                          // grows by 1 when a review sends the work back
+  "runs": { "builder": "&lt;run id&gt;|null", "reviewer": "&lt;run id&gt;|null" } }</code></pre>
+<p>The scan creates the lock with <code>wx</code> as before, now with <code>phase: "claimed"</code>. Later changes rewrite the file atomically (temp file and rename); only <code>tick</code> does this. <code>released</code> is not stored: <code>dg autonomous release</code> removes the lock and writes one settled journal line with phase <code>released</code>. A corrupt lock keeps DGS-486's rule (ticket <code>?</code>, the scan stays busy) and the tick writes an attention note and no action.</p>
+</section>
+
+<section id="s4">
+<h2>4. Observations</h2>
+<p>Read only. Collected once per tick, each as <code>Obs&lt;T&gt; = {ok:true,value:T} | {ok:false,error:string}</code>.</p>
+<div class="table-wrap"><table>
+<tr><th>Observation</th><th>Source</th><th>Value</th></tr>
+<tr><td><code>runs</code></td><td>DGS-581 run package (the reader code behind <code>dg run list/show/tail</code>, imported, no subprocess)</td><td>runs of this ticket created after the claim: id, role, <code>started</code> seen, <code>ended</code> seen, <code>review_ready</code> events (with <code>data.scope</code>), <code>merged</code> and <code>pushed</code> events, newest <code>phase</code> event</td></tr>
+<tr><td><code>verdicts</code></td><td><code>dg reviewer table --json</code></td><td>rows for this ticket: scope (task or ticket), result (clean or findings), the commit sha the verdict covers</td></tr>
+<tr><td><code>git</code></td><td>git in the ticket worktree and the main checkout</td><td>branch head sha, base sha (from <code>run.json</code>), head is an ancestor of <code>origin/main</code>, <code>origin/&lt;branch&gt;</code> equals head</td></tr>
+<tr><td><code>tracker</code></td><td>the DGS-486 tracker, one <code>getStatus</code></td><td>the ClickUp status string, nothing else</td></tr>
+<tr><td><code>herdr</code></td><td><code>herdr-ws</code> only: <code>agent list</code>, one pane read with <code>--format ansi</code></td><td>conductor present, its status, input box class; builder pane present and status</td></tr>
+</table></div>
+<p>The ticket's title, description and comments are never read. Only the key and the status string enter the controller. That is decision 9 (ticket text is data, never a command), kept by construction.</p>
+</section>
+
+<section id="s5">
+<h2>5. Phases and proof</h2>
+<p>A phase moves on only when the artefact in the "Proof" column exists. Pane text and conductor chat are never proof.</p>
+<div class="table-wrap"><table>
+<tr><th>From</th><th>To</th><th>Proof</th></tr>
+<tr><td>claimed</td><td>building</td><td>a builder run of this ticket, created after the claim, has a <code>started</code> event. Its id goes into <code>runs.builder</code>.</td></tr>
+<tr><td>building</td><td>review</td><td>that run has a <code>review_ready</code> event with <code>data.scope = "ticket"</code>, and the branch head differs from <code>base_sha</code> (a commit exists). A <code>review_ready</code> without <code>scope</code> counts as a task-level one and moves nothing.</td></tr>
+<tr><td>review</td><td>merge-ready</td><td>a verdict row with scope ticket, result clean, covering the <em>current</em> head sha. A new commit voids older verdicts.</td></tr>
+<tr><td>review</td><td>building (attempt + 1)</td><td>a ticket-scope row with result findings covering the current head. At attempt 3 it stops instead: attention <code>failed</code>, cause <code>attempts-exhausted</code>, no action. The cap is a constant, not a budget (budgets are DGS-583).</td></tr>
+<tr><td>merge-ready</td><td>merged</td><td>git shows the head as an ancestor of <code>origin/main</code>. A <code>merged</code> or <code>pushed</code> event alone is not enough; if the event exists and git says no (or git is unreadable) the tick writes attention <code>unknown</code>, cause <code>proof-disagree</code>, and moves nothing.</td></tr>
+<tr><td>merged</td><td>released</td><td><code>dg autonomous release --result merged</code> ran (the lock is gone and the <code>released</code> line is in the journal).</td></tr>
+</table></div>
+<p><code>advanceTicket</code> checks the proofs in the table order for the current phase, so it is a plain <code>switch (state.phase)</code> with one small function per phase. It returns exactly one <code>Action</code>:</p>
+<pre><code>type Action =
+  | { kind: 'wait'; reason: string }                                  // nothing to do, no note
+  | { kind: 'attention'; cause: string; attKind: 'unknown'|'failed' } // note only, no phase move
+  | { kind: 'move'; to: Phase; proof: string; attempt?: number }      // rewrite the lock
+  | { kind: 'order'; order: 'build'|'review'|'fix'|'merge'|'restart' } // prompt the conductor
+  | { kind: 'status'; status: string }                                // ClickUp status write</code></pre>
+<p>Not in phase order: after a <code>move</code> the next tick sends the order for the new phase (build after claimed, review after building, fix after findings, merge after merge-ready). That is one action per ticket per tick, as decision 5 asks.</p>
+<p>The ClickUp status is observed only. The one write the controller owns is <code>in progress</code> to keep the lock and the board in step: if the tracker reads <code>to do</code> while the lock is held (someone moved it back), the action is <code>status: in progress</code>, journaled, read back next tick. All other status work stays with the conductor and <code>release</code>, as DGS-486 and the done-after-merge rule say.</p>
+</section>
+
+<section id="s6">
+<h2>6. Actions and the conductor</h2>
+<p>The controller prompts only the conductor (found through <code>~/.digismith-depot/conductors.json</code>, DGS-486 section 6), only through <code>herdr-ws</code>, one bounded order per action. The text comes from fixed templates and holds only the validated key (<code>^[A-Z]+-\d+$</code>) and the order name:</p>
+<ul>
+<li><code>DGS-123: build per the runbook</code> (v1: the whole ticket; per-task orders are later)</li>
+<li><code>DGS-123: run the ticket Reviewer on the branch head</code></li>
+<li><code>DGS-123: fix the review findings, attempt 2</code></li>
+<li><code>DGS-123: merge per hooks 01-03, then release merged</code></li>
+<li><code>DGS-123: restart the builder, its pane is gone</code> (when the builder pane is gone and the run has no <code>ended</code> event)</li>
+</ul>
+<p><strong>Input box rule.</strong> Before every prompt the tick reads the conductor pane with <code>--format ansi</code> and classifies the input box. Only <code>empty</code> or <code>suggestion</code> (a grey suggestion) allows the prompt. <code>typed</code> or a conductor with status working: <code>wait</code>, no note, next tick. <code>unknown</code> (the pane did not parse): no action and one attention note (section 9). The fixtures for the classifier are captured by a read-only probe in plan task 1.</p>
+</section>
+
+<section id="s7">
+<h2>7. The action journal</h2>
+<p><code>~/.digismith-depot/autonomous/journal.jsonl</code>. The folder follows DGS-486 (<code>AUTONOMOUS_DIR</code>, else <code>DIGISMITH_DEPOT_DIR</code>, else <code>~/.digismith-depot</code>). Append only: one <code>appendFileSync</code> of one short line, never a rewrite. Readers skip a line that does not parse.</p>
+<pre><code>{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:review:1:order-review","status":"planned",
+ "ticket":"DGS-123","phase":"review","attempt":1,"action":"order-review","try":1}
+{"schema":"nightwatch-journal/v1","ts":"&lt;ISO UTC&gt;","key":"DGS-123:review:1:order-review","status":"settled",
+ "result":"succeeded|uncertain|retryable|permanent","note":"&lt;short, no ticket text&gt;"}</code></pre>
+<p>Key: <code>&lt;KEY&gt;:&lt;phase&gt;:&lt;attempt&gt;:&lt;action&gt;</code>. Actions: <code>claim</code> (written by the DGS-486 scan), <code>move-to-&lt;phase&gt;</code>, <code>status-write</code>, <code>order-build</code>, <code>order-review</code>, <code>order-fix</code>, <code>order-merge</code>, <code>order-restart</code>, <code>phase-marker</code>, <code>released</code>.</p>
+<p><strong>Rules.</strong></p>
+<ul>
+<li>A <code>planned</code> line is written <em>before</em> the side effect; a <code>settled</code> line right after it.</li>
+<li>A key whose latest result is <code>succeeded</code>, <code>uncertain</code>, <code>permanent</code>, or that has a <code>planned</code> line with no <code>settled</code> line, is never planned again. <code>advanceTicket</code> receives these results and returns <code>wait</code> for them.</li>
+<li><code>retryable</code> may be planned again with <code>try + 1</code>. At <code>try 3</code> the settle is forced to <code>permanent</code> and an attention <code>failed</code> note is written.</li>
+<li>The journal is the controller's memory of what it did; it never holds ticket text, only keys, phases, attempts, action names and short codes.</li>
+<li><code>dg autonomous journal [--open]</code> lists the lines; <code>dg autonomous journal settle &lt;key&gt; --result retryable|permanent [--note ..]</code> lets Jack or the Maestro close an <code>uncertain</code> key by hand (appends a settled line, <code>by: jack</code>). It is the only way an <code>uncertain</code> order is sent again.</li>
+</ul>
+</section>
+
+<section id="s8">
+<h2>8. Reconcile (step 0)</h2>
+<p>Every tick starts here, before any new observation drives a decision. It reads the open lines (<code>planned</code> with no <code>settled</code>, and <code>uncertain</code> ones) and checks each against the real world:</p>
+<div class="table-wrap"><table>
+<tr><th>Open action</th><th>Check</th><th>Result</th></tr>
+<tr><td><code>claim</code></td><td>the lock names this ticket; ClickUp reads <code>in progress</code></td><td>both: <code>succeeded</code>. No lock: <code>permanent</code> (the scan already cleaned up).</td></tr>
+<tr><td><code>move-to-X</code></td><td>the lock's phase is X</td><td>yes: <code>succeeded</code>. No, and the proof still holds: <code>retryable</code> (the move is a local file write, safe to run twice).</td></tr>
+<tr><td><code>status-write</code></td><td>ClickUp reads the target status</td><td>yes: <code>succeeded</code>; no: <code>retryable</code> (a status write is idempotent).</td></tr>
+<tr><td><code>order-merge</code></td><td>git: head is an ancestor of <code>origin/main</code></td><td>yes: <code>succeeded</code>. No: <code>uncertain</code>, attention <code>unknown</code> cause <code>merge-unconfirmed</code>. <strong>Never sent again.</strong></td></tr>
+<tr><td><code>order-build / review / fix</code></td><td>the proof of the next phase exists (run event, verdict row)</td><td>yes: <code>succeeded</code>. No: <code>uncertain</code>, attention <code>unknown</code>. The send is not repeated; pane text is no proof that it arrived.</td></tr>
+<tr><td><code>order-restart</code></td><td>herdr lists the builder pane again</td><td>yes: <code>succeeded</code>; no: <code>uncertain</code>.</td></tr>
+<tr><td><code>phase-marker</code></td><td>the newest <code>phase</code> event of the run equals the target</td><td>yes: <code>succeeded</code>; no: <code>retryable</code> (the event is append only, a second one with the same value is harmless).</td></tr>
+</table></div>
+<p>A check whose observation fails leaves the line as it is and writes an attention note. A merge or a push is never run again from a journal line, and the controller does not run merges itself: the merge is the conductor's, after the <code>order-merge</code> prompt. The journal makes sure that prompt is sent once.</p>
+</section>
+
+<section id="s9">
+<h2>9. Unknown is not progress</h2>
+<p>An observation with <code>ok: false</code> (the command failed, the output did not parse, a timeout) gives no action that depends on it and one attention note (<code>unknown</code>, cause <code>obs-&lt;name&gt;-failed</code>). Example: <code>dg reviewer table</code> refuses r2 lines until DGS-572 is merged. In the review phase that gives <code>wait</code> plus the note, never a move. <code>advanceTicket</code> only reads the observations its phase needs, so a broken herdr read does not block a phase that needs only git. Inconsistent artefacts (an event says merged, git says no) are treated the same way: note, no move.</p>
+</section>
+
+<section id="s10">
+<h2>10. Attention notes</h2>
+<p>The file is <code>~/.digismith-depot/autonomous/attention.jsonl</code> (<code>AUTONOMOUS_DIR</code> honored). The line shape is DGS-583's (its spec is approved; DGS-582 follows it):</p>
+<pre><code>open:     {"schema":"nightwatch-attention/v1","id":"&lt;run&gt;.&lt;kind&gt;.&lt;n&gt;","ts":"&lt;ISO UTC&gt;","ticket":"DGS-123","run":"&lt;run id&gt;|-",
+           "kind":"unknown|failed","cause":"&lt;code&gt;","since":"&lt;ISO UTC&gt;"}
+resolved: {"schema":"nightwatch-attention/v1","id":"&lt;same id&gt;","ts":"&lt;ISO UTC&gt;","resolved":true,"by":"jack","note":".."}</code></pre>
+<p>Kinds used here: <code>unknown</code> (failed or unparsable observation, uncertain journal line, proof disagreement) and <code>failed</code> (attempts exhausted, a line forced to <code>permanent</code>). <code>run</code> is the newest builder run id, or <code>-</code> before one exists. One open item per (run, kind): the writer reads the file first and skips a new line when an open item of the same pair exists; <code>n</code> counts the earlier resolved items of that pair. This controller never resolves a note (DGS-583: <code>unknown</code> and <code>failed</code> stay open until Jack). The writer is <code>attention-write.ts</code>. When DGS-583 has merged its shared module <code>attention.ts</code>, the plan's first task points the writer at it instead (one import); the line shape does not change. Cause codes are a constant list in <code>attention-write.ts</code>.</p>
+</section>
+
+<section id="s11">
+<h2>11. Phase marker</h2>
+<p>DGS-581 adds one event type <code>phase</code> (<code>data.phase</code>: <code>building</code>, <code>review</code> or <code>merge</code>) to its closed set and to <code>dg run event</code>. DGS-582's controller writes it on each phase change, on the builder run in <code>runs.builder</code>, and on no other event type. The table:</p>
+<div class="table-wrap"><table>
+<tr><th>Lock phase entered</th><th><code>data.phase</code></th></tr>
+<tr><td>building (also after findings)</td><td><code>building</code></td></tr>
+<tr><td>review</td><td><code>review</code></td></tr>
+<tr><td>merge-ready</td><td><code>merge</code></td></tr>
+<tr><td>claimed, merged, released</td><td>none</td></tr>
+</table></div>
+<p>The tick calls the run package's event writer (the code behind <code>dg run event</code>) as a journaled <code>phase-marker</code> action, in the tick after the <code>move</code>. DGS-583 reads these events for its phase clocks. A run with no marker falls back to DGS-583's role default, so a missed marker never causes a false stall.</p>
+</section>
+
+<section id="s12">
+<h2>12. Tests and first use</h2>
+<p><strong>Tested without Jack</strong> (vitest from the repo root, everything injected, a temp folder for <code>AUTONOMOUS_DIR</code>; no ClickUp, herdr, Nexus or real conductor):</p>
+<ul>
+<li><strong>advanceTicket</strong>, table driven, through every phase with stub observations: each proof moves its phase; each missing proof gives <code>wait</code>; findings go back to building with attempt + 1; attempt 3 gives <code>attention</code>; a task-level <code>review_ready</code> moves nothing; a verdict for an old head sha is ignored; an event-only merge gives <code>attention</code> and no move; every <code>{ok:false}</code> observation gives no move and a note; ticket text planted in a stub tracker status or key-like field never reaches an order.</li>
+<li><strong>Journal</strong> (fake journal folder): planned-then-settled order; append only (file bytes only grow); a bad line is skipped; a key that is open or <code>uncertain</code> is never planned again; <code>retryable</code> allows try 2 and 3, then <code>permanent</code>; two writers in child processes keep every line whole.</li>
+<li><strong>Reconcile</strong>, one test per row of section 8 with fake git, ClickUp and herdr.</li>
+<li><strong>Kill during a merge</strong>: a child process runs a tick, writes the <code>order-merge</code> planned line and is killed before the settled line. A new tick with fake git showing the head on <code>origin/main</code> settles <code>succeeded</code> and sends no second prompt (the recording herdr stub counts one prompt in all). With git not showing it, the line settles <code>uncertain</code>, an attention note appears, and the stub still counts one prompt.</li>
+<li><strong>Input box</strong>: <code>classifyInputBox</code> on fixtures (empty, grey suggestion, typed text, garbage); a tick with <code>typed</code> or a working conductor sends nothing and writes no note; <code>unknown</code> sends nothing and writes one note.</li>
+<li><strong>One action per tick</strong> per phase, and a fake clock for the timestamps (<code>now()</code> injected; the controller has no timers of its own).</li>
+<li><strong>Whole run</strong>: a scripted ticket through claimed, building, review (one findings round), merge-ready, merged, released with stub observations, checking the journal, the lock file, the phase events written and the order texts.</li>
+<li><strong>Scan wiring</strong>: with a lock the scan calls the tick at any hour; with no lock the DGS-486 off and claim tests stay green.</li>
+<li><strong>Mutation checks by hand</strong>: remove the proof check of one phase (a test fails); drop the planned line before an order (a test fails); let <code>uncertain</code> be retried (the kill test fails).</li>
+</ul>
+<p><strong>First use</strong> (after DGS-581, DGS-583 and DGS-486 are merged and installed; it belongs to the Maestro, then Jack):</p>
+<ol>
+<li><code>dg autonomous tick --dry-run</code> with no lock: prints "no lock", writes nothing.</li>
+<li>Rehearsal on a throwaway ticket: the Maestro hand-writes a lock with phase <code>building</code> and runs <code>tick --dry-run</code> at each stage, reading the printed action. No prompt, no write.</li>
+<li>One real Autonomous ticket (a small <code>Sign-off: Auto</code> one) in the DGS-486 first use. Watch <code>dg autonomous status</code> and <code>dg autonomous journal</code> show the phases and the lines. Kill and restart the Nexus API once while the phase is <code>merge-ready</code> and check there is one merge order in the journal.</li>
+</ol>
+</section>
+
+<section id="s13">
+<h2>13. Dependencies and open points</h2>
+<ul>
+<li><strong>Build starts only on the Maestro's order, after DGS-581 and DGS-486 are merged.</strong> DGS-572 (reviewer table reads r2+ lines) is not required: until it is merged the review phase waits with a note, which is the designed unknown behaviour.</li>
+<li>DGS-581: the <code>phase</code> event type, plus run package reader and writer functions that can be imported. Plan task 1 checks the exports and records them. If a function is missing, the plan task calls the CLI through an injected runner instead (still no proof from text).</li>
+<li>DGS-583: the attention line shape (followed here). Plan task 1 uses its shared module if it is on main.</li>
+<li><strong>Open point 1:</strong> proof for "building to review" needs <code>data.scope</code> on <code>review_ready</code>. The conductor runbook text (a block in report.md for the Maestro to apply, as DGS-581 does) must say: <code>dg run event &lt;run&gt; review_ready --data '{"scope":"ticket"}'</code> for the whole-ticket review and no scope for a task review. Without it the building phase never ends, and DGS-583 reports it as stalled.</li>
+<li><strong>Open point 2:</strong> the exact JSON of <code>dg reviewer table --json</code> (columns for scope, result and sha). Plan task 1 probes it read only and pins the fields; the spec does not guess.</li>
+<li><strong>Open point 3:</strong> the input-box fixtures come from a read-only probe of real panes in plan task 1; the classifier is written against them.</li>
+<li><strong>Decision for the Maestro to confirm (technical, made here):</strong> <code>autonomous-scan</code> runs every 5 minutes instead of 60 (section 2). It touches DGS-486's registry entry and its test.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-582—nightwatch-state-machine/design.html</footer>
+
+</body>
+</html>
