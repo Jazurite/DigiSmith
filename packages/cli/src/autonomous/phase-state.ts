@@ -25,6 +25,7 @@ export function readPhaseState(dir: string): StateRead {
   if (raw.runs !== undefined && (raw.runs === null || typeof raw.runs !== "object" || Array.isArray(raw.runs))) return { kind: "corrupt" };
   const runs = (raw.runs ?? {}) as { builder?: unknown };
   if (runs.builder !== undefined && runs.builder !== null && typeof runs.builder !== "string") return { kind: "corrupt" };
+  if (raw.mergeHead !== undefined && !(typeof raw.mergeHead === "string" && raw.mergeHead !== "")) return { kind: "corrupt" };
   return { kind: "ok", state: {
     ticket: raw.ticket,
     claimedAt: raw.claimedAt,
@@ -32,10 +33,11 @@ export function readPhaseState(dir: string): StateRead {
     phaseStartedAt: raw.phaseStartedAt === undefined ? raw.claimedAt : (raw.phaseStartedAt as string),
     attempt: raw.attempt === undefined ? 1 : (raw.attempt as number),
     runs: { builder: typeof runs.builder === "string" ? runs.builder : null },
+    ...(typeof raw.mergeHead === "string" ? { mergeHead: raw.mergeHead } : {}),
   } };
 }
 
-export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs">>): void {
+export function writePhaseState(dir: string, patch: Partial<Pick<TicketState, "phase" | "phaseStartedAt" | "attempt" | "runs" | "mergeHead">>): void {
   const raw = parseRaw(dir);
   if (raw === null) throw new Error("lock.json is missing or corrupt");
   const tmp = `${lockPath(dir)}.${process.pid}.tmp`;

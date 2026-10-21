@@ -82,7 +82,9 @@ describe("reconcile", () => {
     reconcile({ dir: d, now: T, state: state("claimed"), obs: O({ tracker: ok({ status: "to do" }) }) });
     expect(resultsOf(d)[k]).toBe("uncertain");
     reconcile({ dir: d, now: T, state: state("claimed"), obs: O({ tracker: { ok: false, error: "x" } }) });
-    expect(resultsOf(d)[k]).toBe("succeeded"); // tracker not observed: the lock alone counts
+    expect(resultsOf(d)[k]).toBe("uncertain"); // tracker not observed: unknown is not progress
+    const notes = reconcile({ dir: d, now: T, state: state("claimed"), obs: O({ tracker: { ok: false, error: "x" } }) });
+    expect(notes).toEqual([{ ticket: "DGS-1", cause: "journal-uncertain-claim" }]);
     const d2 = tmp(); const k2 = open(d2, "claim", "claimed");
     reconcile({ dir: d2, now: T, state: state("claimed"), obs: O() });
     expect(resultsOf(d2)[k2]).toBe("succeeded");

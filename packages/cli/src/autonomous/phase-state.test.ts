@@ -26,6 +26,18 @@ vi.mock("node:fs", async (importOriginal) => {
 const tmp = () => mkdtempSync(join(tmpdir(), "nw-state-"));
 const base = { ticket: "DGS-1", taskId: "t1", claimedAt: "2026-10-21T00:00:00.000Z", order: "o.md", scanId: "s1" };
 
+describe("phase state mergeHead", () => {
+  it("F7: reads mergeHead; absent is fine; a non-string is corrupt", () => {
+    const d = tmp();
+    writeFileSync(join(d, "lock.json"), JSON.stringify({ ...base, mergeHead: "abc1234" }));
+    expect(readPhaseState(d)).toMatchObject({ kind: "ok", state: { mergeHead: "abc1234" } });
+    writeFileSync(join(d, "lock.json"), JSON.stringify(base));
+    expect(readPhaseState(d)).toMatchObject({ kind: "ok" });
+    writeFileSync(join(d, "lock.json"), JSON.stringify({ ...base, mergeHead: 5 }));
+    expect(readPhaseState(d)).toEqual({ kind: "corrupt" });
+  });
+});
+
 describe("phase state", () => {
   it("no lock file reads as none", () => {
     expect(readPhaseState(tmp())).toEqual({ kind: "none" });

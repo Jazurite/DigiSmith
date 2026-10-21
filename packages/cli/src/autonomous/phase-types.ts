@@ -6,7 +6,7 @@ export const TICKET_RE = /^[A-Z][A-Z0-9]*-\d+$/;
 export type Obs<T> = { ok: true; value: T } | { ok: false; error: string };
 export type MarkerPhase = "building" | "review" | "merge";
 export type InputBox = "empty" | "suggestion" | "typed" | "unknown";
-export interface TicketState { ticket: string; claimedAt: string; phase: Phase; phaseStartedAt: string; attempt: number; runs: { builder: string | null } }
+export interface TicketState { ticket: string; claimedAt: string; phase: Phase; phaseStartedAt: string; attempt: number; runs: { builder: string | null }; mergeHead?: string }
 export interface RunView { id: string; role: string; createdAt: string; started: boolean; ended: boolean; merged: boolean; pushed: boolean; phaseEvent: MarkerPhase | null }
 export interface PackView { round: number; head: string; base: string }
 export interface VerdictView { scope: "task" | "ticket"; result: "clean" | "findings"; head: string }
@@ -22,7 +22,7 @@ export type JournalResults = Record<string, JournalState>;
 export type Action =
   | { kind: "wait"; reason: string }
   | { kind: "attention"; cause: string; attKind: "unknown" | "failed" }
-  | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string }
+  | { kind: "move"; to: Phase; proof: string; attempt?: number; builder?: string; head?: string }
   | { kind: "marker"; phase: MarkerPhase; run: string }
   | { kind: "order"; order: "fix" | "merge" | "restart"; head: string }
   | { kind: "status"; status: string };

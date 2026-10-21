@@ -91,7 +91,10 @@ function makeTick(d: AutonomousDeps, dryRun: boolean, repo?: string): () => Prom
     const stores = realStores({ env: process.env, ticket: state?.ticket ?? "", builderRunId });
     const observers = makeObservers({
       exec, mainRepo: repo ?? d.mainRepo ?? MAIN_CHECKOUT, ticket: state?.ticket ?? "", claimedAt: state?.claimedAt ?? "",
-      builderRunId, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
+      builderRunId, mergeHead: () => {
+        const r = readPhaseState(d.dir);
+        return r.kind === "ok" ? (r.state.mergeHead ?? null) : null;
+      }, conductorName: CONDUCTOR, runs: stores.runs, reviewerData: stores.reviewerData,
       tracker: { getStatus: () => tracker.getStatus(taskId) }, herdrBin, herdrWs,
     });
     const writers = makeWriters({

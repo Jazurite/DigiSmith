@@ -48,11 +48,12 @@ export function parseAgentList(stdout: string): AgentEntry[] {
     .map((a) => ({ name: a.name as string, status: String(a.agent_status ?? ""), pane: typeof a.pane_id === "string" ? a.pane_id : "" }));
 }
 
-async function gitView(exec: ExecOut, mainRepo: string, run: RunRecord | undefined): Promise<GitView> {
+async function gitView(exec: ExecOut, mainRepo: string, run: RunRecord | undefined, mergeHead: string | null): Promise<GitView> {
   if (run === undefined || run.worktree === null) throw new Error("no worktree");
   await exec("git", ["-C", mainRepo, "fetch", "origin", "main"], { timeoutMs: 15000 });
   let head: string;
   if (existsSync(run.worktree)) head = (await exec("git", ["-C", run.worktree, "rev-parse", "HEAD"])).stdout.trim();
+  else if (mergeHead !== null) head = mergeHead; // worktree and branch removed after the merge: the head recorded at merge-ready
   else if (run.branch) head = (await exec("git", ["-C", mainRepo, "rev-parse", run.branch])).stdout.trim(); // worktree removed after the merge: the branch sha, from the main checkout
   else throw new Error("worktree is gone and the run has no branch");
   let onOriginMain = false;
@@ -84,7 +85,7 @@ export const MAIN_CHECKOUT = join(homedir(), "Workspace", "Jazurite", "DigiSmith
 
 export interface ObserverDeps {
   exec: ExecOut; mainRepo: string; ticket: string; claimedAt: string;
-  builderRunId: () => string | null; conductorName: string; runs: RunStore;
+  builderRunId: () => string | null; mergeHead?: () => string | null; conductorName: string; runs: RunStore;
   reviewerData: { packs(): Promise<PackView[]>; verdicts(): Promise<VerdictView[]> };
   tracker: { getStatus(): Promise<string> };
   herdrBin: string; herdrWs: string;
@@ -102,7 +103,7 @@ export function makeObservers(d: ObserverDeps): Observers {
     git: async () => {
       const id = d.builderRunId();
       const run = id === null ? undefined : (await records()).find((r) => r.id === id);
-      return gitView(d.exec, d.mainRepo, run);
+      return gitView(d.exec, d.mainRepo, run, d.mergeHead?.() ?? null);
     },
     tracker: async () => ({ status: await d.tracker.getStatus() }),
     herdr: async (): Promise<HerdrView> => {

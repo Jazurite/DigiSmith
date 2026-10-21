@@ -13,7 +13,9 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
   if (action === "claim") {
     if (state === null) return r("permanent", "no lock");
     if (state.ticket !== line.ticket) return r("uncertain", "lock names another ticket");
-    if (obs.tracker.ok && obs.tracker.value.status !== "in progress") return r("uncertain", "tracker is not in progress");
+    // unknown is not progress: an unreadable tracker keeps the claim uncertain
+    if (!obs.tracker.ok) return r("uncertain", "tracker not observed");
+    if (obs.tracker.value.status !== "in progress") return r("uncertain", "tracker is not in progress");
     return r("succeeded", "lock held");
   }
   if (action.startsWith("move-to-")) {

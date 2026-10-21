@@ -27,6 +27,14 @@ describe("orderText", () => {
   });
 });
 
+describe("act move to merge-ready", () => {
+  it("F7: records mergeHead in lock.json", async () => {
+    const d = tmp(); writeLock(d, { phase: "review", runs: { builder: "builder-1" } });
+    await act(deps(d), state({ phase: "review" }), { kind: "move", to: "merge-ready", proof: "p", head: "aaaaaaa1" });
+    expect(JSON.parse(readFileSync(join(d, "lock.json"), "utf8"))).toMatchObject({ phase: "merge-ready", mergeHead: "aaaaaaa1" });
+  });
+});
+
 describe("act", () => {
   it("an order: planned, sent once, settled succeeded", async () => {
     const d = tmp(); const x = deps(d);

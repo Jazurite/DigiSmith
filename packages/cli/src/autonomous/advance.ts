@@ -80,7 +80,7 @@ function review(s: TicketState, obs: Observations, j: JournalResults): Action {
   const rows = obs.verdicts.value.filter((v) => v.scope === "ticket" && head !== null && v.head === head);
   const row = rows[rows.length - 1];
   if (row === undefined || head === null) return wait("review-running");
-  if (row.result === "clean") return { kind: "move", to: "merge-ready", proof: `clean verdict for ${sha7(head)}` };
+  if (row.result === "clean") return { kind: "move", to: "merge-ready", proof: `clean verdict for ${sha7(head)}`, head };
   if (s.attempt >= MAX_ATTEMPTS) return note("attempts-exhausted", "failed");
   return { kind: "move", to: "building", proof: `findings for ${sha7(head)}`, attempt: s.attempt + 1 };
 }

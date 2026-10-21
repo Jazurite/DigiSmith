@@ -86,6 +86,22 @@ describe("git observer", () => {
     expect(g.head).toBe("abc123");
     expect(g.onOriginMain).toBe(true);
   });
+  describe("F7: branch deleted and worktree gone", () => {
+    const gone = { worktree: "/nonexistent/wt-gone", branch: "DGS-1__deleted" };
+    const handler = (mb: string | Error) => (_f: string, a: string[]) => (a.includes("rev-parse") ? new Error("must not rev-parse") : a.includes("merge-base") ? (mb as string) : "");
+    const obsWith = (mb: string | Error) => { const f = fakeExec(handler(mb)); return { f, o: makeObservers(deps(f.exec, [run(gone)], { mergeHead: () => "mmmmmmm1" })) }; };
+    it("uses mergeHead against origin/main, no rev-parse", async () => {
+      const { f, o } = obsWith("");
+      const g = await o.git();
+      expect(f.argv()).toEqual([
+        ["git", "-C", "/main", "fetch", "origin", "main"],
+        ["git", "-C", "/main", "merge-base", "--is-ancestor", "mmmmmmm1", "origin/main"],
+      ]);
+      expect(g).toEqual({ head: "mmmmmmm1", base: "bbbbbbb1", onOriginMain: true });
+    });
+    it("exit 1 is false", async () => { expect((await obsWith(codeErr(1)).o.git()).onOriginMain).toBe(false); });
+    it("exit 128 throws", async () => { await expect(obsWith(codeErr(128)).o.git()).rejects.toThrow(); });
+  });
   it("no worktree throws", async () => {
     await expect(makeObservers(deps(fakeExec().exec, [run({ worktree: null })])).git()).rejects.toThrow("no worktree");
   });

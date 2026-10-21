@@ -76,7 +76,7 @@ describe("review", () => {
   const s = S({ phase: "review" });
   const v = (result: "clean" | "findings", head = "aaaaaaa1") => ok([{ scope: "ticket" as const, result, head }]);
   it("a clean verdict for the current head moves to merge-ready", () => {
-    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean") }), J)).toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa" });
+    expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean") }), J)).toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa", head: "aaaaaaa1" });
   });
   it("a verdict for an old head is void", () => {
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: v("clean", "ccccccc1") }), J)).toEqual({ kind: "wait", reason: "review-running" });
@@ -159,7 +159,7 @@ describe("review fixes: markers, notes, verdict order, restart once", () => {
     const s = S({ phase: "review" });
     const row = (result: "clean" | "findings") => ({ scope: "ticket" as const, result, head: "aaaaaaa1" });
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: ok([row("findings"), row("clean")]) }), J))
-      .toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa" });
+      .toEqual({ kind: "move", to: "merge-ready", proof: "clean verdict for aaaaaaa", head: "aaaaaaa1" });
     expect(advanceTicket(s, O({ ...withEvent("review"), verdicts: ok([row("clean"), row("findings")]) }), J))
       .toEqual({ kind: "move", to: "building", proof: "findings for aaaaaaa", attempt: 2 });
   });

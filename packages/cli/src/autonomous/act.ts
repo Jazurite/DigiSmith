@@ -67,6 +67,7 @@ export async function act(d: ActDeps, state: TicketState, a: Action): Promise<{ 
         writePhaseState(d.dir, {
           phase: a.to, phaseStartedAt: d.now().toISOString(),
           ...(a.attempt !== undefined ? { attempt: a.attempt } : {}),
+          ...(a.to === "merge-ready" && a.head !== undefined ? { mergeHead: a.head } : {}),
           ...(a.builder !== undefined ? { runs: { builder: a.builder } } : {}),
         });
       }, retry);
