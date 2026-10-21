@@ -22,7 +22,7 @@ export async function runAway(d: SwitchDeps, a: { until?: string }): Promise<{ u
 export async function runBack(d: SwitchDeps, kind: "away-off" | "away-expired" = "away-off"): Promise<{ runNow: RunNowResult }> {
   const now = d.now();
   const cur = readAway(d.dir);
-  writeAway(d.dir, { away: false, since: cur?.since ?? "", until: cur?.until ?? null, endedAt: now.toISOString() });
+  writeAway(d.dir, { away: false, since: cur?.since || now.toISOString(), until: cur?.until ?? null, endedAt: now.toISOString() });
   appendEvent(d.dir, now, kind);
   return { runNow: await kick(d, "autonomous-report") };
 }

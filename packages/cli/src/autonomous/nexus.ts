@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export interface NexusDeps { baseUrl: string; tokenFile: string; fetch: typeof fetch }
+export interface NexusDeps { baseUrl: string; tokenFile: string; fetch: typeof fetch; timeoutMs?: number }
 export type RunNowResult = { ok: true } | { ok: false; status: number | null; error: string };
 
 export function defaultNexus(env: NodeJS.ProcessEnv = process.env): { baseUrl: string; tokenFile: string } {
@@ -18,11 +18,13 @@ export async function runNow(d: NexusDeps, job: string): Promise<RunNowResult> {
   } catch {
     return { ok: false, status: null, error: "cannot read the Nexus token file" };
   }
+  if (token === "") return { ok: false, status: null, error: "the Nexus token file is empty" };
   try {
     const res = await d.fetch(`${d.baseUrl.replace(/\/+$/, "")}/api/v1/jobs/${encodeURIComponent(job)}/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Nexus-Token": token },
       body: JSON.stringify({ confirm: job }),
+      signal: AbortSignal.timeout(d.timeoutMs ?? 10_000),
     });
     if (res.status === 202) return { ok: true };
     const why = res.status === 409 ? "already running" : res.status === 403 ? "forbidden" : "unexpected answer";

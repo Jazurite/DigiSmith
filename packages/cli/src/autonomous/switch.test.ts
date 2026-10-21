@@ -79,4 +79,14 @@ describe("runBack", () => {
     expect(readAway(dir)?.away).toBe(false);
     expect(kinds()).toContain("away-expired");
   });
+  it("sets since to now when no file exists", async () => {
+    await runBack(mk());
+    expect(readAway(dir)?.since).toBe(NOW.toISOString());
+  });
+  it("returns the 409 without throwing and still writes the file", async () => {
+    respond = 409;
+    const r = await runBack(mk());
+    expect(r.runNow).toMatchObject({ ok: false, status: 409 });
+    expect(readAway(dir)?.away).toBe(false);
+  });
 });

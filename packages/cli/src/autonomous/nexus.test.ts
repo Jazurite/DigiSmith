@@ -72,6 +72,23 @@ describe("runNow", () => {
   });
 });
 
+describe("runNow hardening", () => {
+  it("times out on a hung server", async () => {
+    await new Promise<void>((r) => server.close(() => r()));
+    server = createServer(() => { /* never answers */ });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const r = await runNow({ baseUrl: base(), tokenFile, fetch, timeoutMs: 200 }, "autonomous-scan");
+    expect(r).toMatchObject({ ok: false, status: null });
+    server.closeAllConnections();
+  });
+  it("fails on an empty token file without a request", async () => {
+    writeFileSync(tokenFile, "  \n");
+    const r = await runNow({ baseUrl: base(), tokenFile, fetch }, "autonomous-scan");
+    expect(r.ok).toBe(false);
+    expect(seen).toBeNull();
+  });
+});
+
 describe("defaultNexus", () => {
   it("uses the defaults and the env overrides", () => {
     const d = defaultNexus({});
