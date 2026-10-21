@@ -71,6 +71,14 @@ describe("buildReport", () => {
     expect(text.match(/none/g)?.length).toBeGreaterThanOrEqual(6);
   });
 
+  it("renders Attention: with each open item or none", () => {
+    const item = { id: "a1", ts: "2026-10-20T10:00:00Z", ticket: "DGS-7", run: "r1", kind: "blocked" as const, cause: "needs sudo", since: "2026-10-20T10:00:00Z" };
+    const text = buildReport(FROM, TO, [], null, [item]);
+    expect(text).toMatch(/Attention:[\s\S]*a1[^\n]*DGS-7[^\n]*needs sudo/);
+    expect(text.indexOf("Still building")).toBeLessThan(text.indexOf("Attention:"));
+    expect(buildReport(FROM, TO, [], null)).toContain("Attention:\nnone");
+  });
+
   it("warns when the lock is older than 8 h", () => {
     const text = buildReport(FROM, TO, [], lockAt("2026-10-20T11:00:00Z"));
     expect(text).toContain("lock older than 8 h: release it with dg autonomous release --ticket DGS-3 --result stopped");

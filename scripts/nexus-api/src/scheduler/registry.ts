@@ -71,6 +71,13 @@ export const JOBS: readonly JobDef[] = [
     command: { file: process.execPath, args: [...DG, 'autonomous', 'report'] },
     timeoutMs: 5 * 60 * 1000, catchUp: 'run-once-in-window', order: 60, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
+  defineJob({
+    name: 'nightwatch-watchdog',
+    description: 'Watches every open run for blocked, stalled and lost; writes the attention list. No model tokens.',
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
+    command: { file: process.execPath, args: [...DG, 'autonomous', 'watch'] },
+    timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 40, notify: 'failures', manualOutsideWindow: 'allowed',
+  }),
 ]
 
 validateJobs(JOBS)

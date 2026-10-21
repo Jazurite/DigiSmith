@@ -153,3 +153,22 @@ describe("cli consult autonomous section", () => {
     expect(await consultOut({ ...base, AUTONOMOUS_DIR: path.join(tmp, "none") })).toBe(plain);
   });
 });
+
+describe("cli consult attention section", () => {
+  it("ends with the attention block when an item is open", async () => {
+    withNote();
+    const base = io().env;
+    const run = async (env: NodeJS.ProcessEnv) => {
+      const i = io();
+      await main(["consult", "--note", note, "--repo", tmp], { ...i, env, runner });
+      return i.out;
+    };
+    const plain = await run({ ...base, AUTONOMOUS_DIR: path.join(tmp, "none2") });
+    const adir = path.join(tmp, "auto2");
+    fs.mkdirSync(adir, { recursive: true });
+    fs.writeFileSync(path.join(adir, "attention.jsonl"), JSON.stringify({ id: "x1", ts: "2026-10-21T01:00:00Z", ticket: "DGS-5", run: "r", kind: "blocked", cause: "stuck", since: "2026-10-21T01:00:00Z" }) + "\n");
+    const out = await run({ ...base, AUTONOMOUS_DIR: adir });
+    expect(out.startsWith(plain)).toBe(true);
+    expect(out.slice(plain.length)).toMatch(/^\n## Needs Jack, Nightwatch\nx1 /);
+  });
+});

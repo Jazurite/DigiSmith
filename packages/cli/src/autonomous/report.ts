@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { formatOpen, readOpen } from "./attention.ts";
+import type { OpenItem } from "./attention.ts";
 import { fmtUtc7, stampOf } from "./clock.ts";
 import { atomicWrite, firstEvent, readEvents, readLastReport, readLock, writeLastReport } from "./state.ts";
 import type { Event, Lock, Tracker } from "./types.ts";
@@ -34,7 +36,7 @@ function awayLines(events: Event[], from: Date): string[] {
   return out;
 }
 
-export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock | null): string {
+export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock | null, attention: OpenItem[] = [], now: number = to.getTime()): string {
   // away events from before `from` are context only; every other section counts the period
   const events = allEvents.filter((e) => Date.parse(e.ts) >= from.getTime());
   const of = (kind: Event["kind"]) => events.filter((e) => e.kind === kind);
@@ -74,6 +76,7 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
     "Waiting for Jack", list(waiting), "",
     "Skipped", list(skipped), "",
     "Still building", list(building), "",
+    "Attention:", formatOpen(attention, now), "",
   ].join("\n");
 }
 
@@ -86,7 +89,7 @@ export async function runReport(d: ReportDeps): Promise<{ file: string; commente
   const to = d.now();
   const from = readLastReport(d.dir) ?? firstEventDate(d.dir) ?? to;
   const events = readEvents(d.dir, from.getTime() - AWAY_LOOKBACK_MS, to.getTime());
-  const text = buildReport(from, to, events, readLock(d.dir));
+  const text = buildReport(from, to, events, readLock(d.dir), readOpen(d.dir));
   const reports = join(d.dir, "reports");
   let name = `${stampOf(to)}.md`;
   for (let n = 2; existsSync(join(reports, name)); n++) name = `${stampOf(to)}-${n}.md`;

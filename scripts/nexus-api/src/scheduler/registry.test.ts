@@ -4,7 +4,7 @@ import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
-import { slotsOfNight } from './clock.ts'
+import { currentSlot, slotsOfNight } from './clock.ts'
 import { JOBS, MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
 
 const base = { name: 'night-scan', description: 'd', command: { file: '/bin/echo', args: ['hi'] } }
@@ -77,7 +77,7 @@ describe('validateJobs', () => {
 describe('JOBS', () => {
   it('registers a valid selftest with no schedule and the two autonomous jobs', () => {
     expect(() => validateJobs(JOBS)).not.toThrow()
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog'])
     expect(JOBS[0]?.schedule).toBeUndefined()
     expect(isAbsolute(JOBS[0]!.command.file)).toBe(true)
   })
@@ -117,6 +117,20 @@ describe('JOBS', () => {
     expect(slotsOfNight('2026-10-19', report.schedule!).map((s) => s.key)).toEqual(['2026-10-19@06:00'])
     expect(report.manualOutsideWindow).toBe('allowed')
     expect(report.catchUp).toBe('run-once-in-window')
+  })
+  it('nightwatch-watchdog runs all day every five minutes and calls autonomous watch', () => {
+    const job = JOBS.find((j) => j.name === 'nightwatch-watchdog')!
+    expect(job.schedule).toEqual({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 })
+    expect(job.catchUp).toBe('skip')
+    expect(job.timeoutMs).toBe(120000)
+    expect(job.order).toBe(40)
+    expect(job.command.file).toBe(process.execPath)
+    expect(job.command.args.slice(-2)).toEqual(['autonomous', 'watch'])
+    for (const hhmm of ['10:00', '23:55']) {
+      const ms = Date.parse(`2026-10-19T${hhmm}:00+07:00`)
+      expect(currentSlot(ms, job.schedule!)).not.toBeNull()
+    }
+    expect(slotsOfNight('2026-10-19', job.schedule!).map((s) => s.key)).toContain('2026-10-19@10:00')
   })
   it('selftest prints one line and exits 0 without SELFTEST_FAIL', async () => {
     const { command } = JOBS[0]!
