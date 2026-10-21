@@ -34,7 +34,13 @@ export class ClickUpLoTracker implements Tracker {
   private lists: Promise<string[]> | null = null;
   private readonly listStatuses = new Map<string, Promise<string[]>>();
 
-  constructor(private readonly client: ClickUpClient, private readonly spaceId: string) {}
+  private readonly client: ClickUpClient;
+  private readonly spaceId: string;
+
+  constructor(client: ClickUpClient, spaceId: string) {
+    this.client = client;
+    this.spaceId = spaceId;
+  }
 
   /**
    * True when any list in the space has the status (the status is not in every list).

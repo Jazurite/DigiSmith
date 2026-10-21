@@ -18,7 +18,11 @@ export class FakeTracker implements Tracker {
   candidates: Candidate[] = [];
   created: NewTicket[] = [];
 
-  constructor(public ticket: TicketSnapshot) {}
+  ticket: TicketSnapshot;
+
+  constructor(ticket: TicketSnapshot) {
+    this.ticket = ticket;
+  }
 
   private write(name: string): void {
     this.calls.push(name);
