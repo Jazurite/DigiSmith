@@ -49,6 +49,7 @@ const eligible = (s: TicketState, obs: Observations) =>
 
 // null = no retry business this tick
 function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action | null {
+  // adopt resolves the attention items, so it waits for a good attention read; the obs-attention-failed note covers the wait
   if (s.phase === "merged" || s.phase === "released" || !obs.attention.ok) return null;
   const items = eligible(s, obs);
   if (retrySucceeded(j, s.ticket) && !used(j, keyOf(s, "adopt-retry")) && obs.runs.ok) {
