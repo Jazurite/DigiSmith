@@ -559,9 +559,13 @@ implementer's fix report. For the ticket re-review `--report` is
 `Review ticket final r<R>: F<n> -> <verdict> (<reason>)`. A ruling that comes
 from the Maestro reaches you in your parent's message; append it as written.
 `parked` and `rejected` need a reason. Never leave a finding without a line:
-`dg reviewer table` fails on it. In a verdict line `r<R>` is the round of the
-review pack that raised the finding (the `-r<R>` of its pack folder), not the
-fix round. `dg reviewer table` rejects a line whose key names no finding.
+`dg reviewer table` fails on it. In a verdict line `r<R>` is the raising round or a
+later round: the round of the review pack that raised the finding (the `-r<R>`
+of its pack folder), or the round of a re-review that rules on it again. Write
+the ruling of a re-review the same way, naming the finding id the earlier pack
+raised: `Review task 4 r2: F1 -> fixed (commit abc1234)`. `dg reviewer table`
+shows the latest ruling per finding. A line that names a finding no pack
+raised makes it fail. Never delete or edit an earlier verdict line; add a new one.
 
 **Final review lines.** `digismith:report-implementation` reads the same
 whole-branch lines in every mode, so write them here yourself; never add them by

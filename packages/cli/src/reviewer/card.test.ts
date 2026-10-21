@@ -50,6 +50,10 @@ describe("skills/reviewer/SKILL.md", () => {
       expect(card).toContain(s);
     }
   });
+  it("shows the r2 re-ruling verdict line with one example (DGS-572)", () => {
+    expect(card).toContain("Review task 4 r2: F1 -> fixed (commit abc1234)");
+    expect(card).toMatch(/later round/);
+  });
   it("takes the ticket key from the ticket line of pack.md, not from a path", () => {
     expect(card).toContain("`ticket:` line");
     expect(card).toContain("ticket: none");

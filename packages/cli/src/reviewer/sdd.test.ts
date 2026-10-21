@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseVerdictEntries } from "./verdicts.ts";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const sdd = fs.readFileSync(path.join(ROOT, "skills/subagent-driven-development/SKILL.md"), "utf8");
@@ -62,8 +63,11 @@ describe("SDD has the role-mode path (new)", () => {
   it("treats a ledger without a Review mode line as hand (F4)", () => {
     expect(sdd).toMatch(/without a `Review mode:` (second )?line is treated as `hand`/);
   });
-  it("explains r<R> in a verdict line is the pack round (F5)", () => {
-    expect(sdd).toMatch(/round of the\s+review pack that raised the finding/);
+  it("shows the r2 re-ruling verdict line with one example that parses (DGS-572)", () => {
+    expect(sdd).toMatch(/the raising round or a\s+later round/);
+    expect(sdd).toContain("Review task 4 r2: F1 -> fixed (commit abc1234)");
+    expect(parseVerdictEntries("Review task 4 r2: F1 -> fixed (commit abc1234)\n")).toHaveLength(1);
+    expect(sdd).not.toMatch(/rejects a line whose key names no finding/);
   });
   it("tells the Builder to write the Final review lines report-implementation reads (DGS-570)", () => {
     const start = sdd.indexOf("## Role Mode (a herdr Builder)");
