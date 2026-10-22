@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch controller retry — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nightwatch controller retry — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-22</span>
+    <span>Ticket: <strong>DGS-588</strong></span>
+    <span>Commit range: <code>7d32000..855f9fe</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The controller (DGS-582) sends the existing restart order once per ticket when an open attention item of the ticket is retry-eligible. The order is journaled, proved by a new started builder run, and the item is resolved when that run starts. The change is a set of small edits to the pure <code>advanceTicket</code>, <code>act</code>, <code>journal</code> and <code>reconcile</code> of <code>packages/cli/src/autonomous/</code>, plus one new observation (<code>attention</code>) that reads the open items. There is no new service and no watchdog change. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><h4>Task 1: Types, journal count, constant</h4><p><code>AttentionView</code>, the <code>retry</code> and <code>adopt</code> actions, <code>RETRY_PROOF_WAIT_MS</code>, and <code>restartsOf</code> and <code>retrySucceeded</code> in the journal.</p></div>
+    <div class="card"><h4>Task 2: The <code>controller</code> resolver</h4><p>The attention writer lets the controller resolve an item (<code>by: "controller"</code>).</p></div>
+    <div class="card"><h4>Task 3: The attention observation</h4><p><code>Observers.attention</code> reads the open items of the ticket in <code>observeAll</code>, the real observers and the fakes.</p></div>
+    <div class="card"><h4>Task 4: Advance decides the retry and the adopt</h4><p>One retry per ticket for a lost or failed item, the adopt of a new started run, the building restart guard and the attention note.</p></div>
+    <div class="card"><h4>Task 5: Act sends the retry and adopts the new run</h4><p>The retry sends the restart text and settles <code>uncertain</code>; adopt writes the new builder into the lock and resolves the item.</p></div>
+    <div class="card"><h4>Task 6: Reconcile proves the retry</h4><p>A new started builder run after the planned line settles the retry <code>succeeded</code>; no run after 15 minutes gives one note.</p></div>
+    <div class="card"><h4>Task 7: Tick tests with fakes</h4><p>Seven tick tests cover the one restart order, a second failure, a crash between plan and settle, and the end-to-end adopt.</p></div>
+    <div class="card"><h4>Task 8: Runbook line</h4><p><code>runbook-text.md</code> holds the text the Maestro applies to the conductor runbook, with the first-use steps.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1</td><td>Types, journal count, constant</td><td>Approved, 2 parked</td><td>split import in <code>journal.test.ts</code> (F1); no DGS-1 vs DGS-10 test (F2). Both fixed in the final wave.</td></tr>
+    <tr><td>2</td><td>The <code>controller</code> resolver</td><td>Approved, clean</td><td>none</td></tr>
+    <tr><td>3</td><td>The attention observation</td><td>Approved, 1 parked</td><td>no test for the ticket filter and the <code>retryEligible</code> default in <code>index.ts</code> (F1). Fixed in the final wave.</td></tr>
+    <tr><td>4</td><td>Advance decides the retry and the adopt</td><td>Approved after 1 fix round, 1 parked</td><td>none</td></tr>
+    <tr><td>5</td><td>Act sends the retry and adopts the new run</td><td>Approved after 1 fix round</td><td>none</td></tr>
+    <tr><td>6</td><td>Reconcile proves the retry</td><td>Approved after 1 fix round, 1 parked</td><td>adopt-retry <code>state === null</code> branch untested and unreachable (F2)</td></tr>
+    <tr><td>7</td><td>Tick tests with fakes</td><td>Approved after 1 fix round</td><td>none</td></tr>
+    <tr><td>8</td><td>Runbook line</td><td>Approved, clean</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: Yes. Round 1 found 5 Minor findings, all fixed in one wave; the scoped round 2 was clean and raised one new Minor, parked with a comment. All findings of all reviews: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td>F1: adopt is keyed per phase while <code>retrySucceeded</code> is ticket wide, so adopt can fire again in a later phase and resolve a second-failure item.</td><td>Fixed (f50c3a3). Maestro rule: adopt resolves only the item named in its own retry journal line, once per ticket.</td></tr>
+    <tr><td>Minor</td><td>F2: a comment says one restart per attempt; it is one per ticket.</td><td>Fixed (f50c3a3).</td></tr>
+    <tr><td>Minor</td><td>F3: the runbook text misses the retry-eligible failed item and the failed release.</td><td>Fixed (f50c3a3).</td></tr>
+    <tr><td>Minor</td><td>F4: the attention mapper in <code>index.ts</code> has no test.</td><td>Fixed (f50c3a3): extracted into a small function with tests.</td></tr>
+    <tr><td>Minor</td><td>F5: no DGS-1 vs DGS-10 pin test for <code>restartsOf</code> and <code>retrySucceeded</code>.</td><td>Fixed (f50c3a3).</td></tr>
+    <tr><td>Minor</td><td>F6: the adopt action still carries <code>items</code> but act ignores it.</td><td>Parked: act resolves only the retry line's item; a comment says so (855f9fe).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">3beef37</span> docs(dgs-588): add the spec for the controller retry</li>
+    <li><span class="sha">87797d7</span> docs(dgs-588): add the implementation plan</li>
+    <li><span class="sha">23d3705</span> feat(dgs-588): add the restart count to the journal</li>
+    <li><span class="sha">724c24a</span> feat(dgs-588): let the controller resolve attention items</li>
+    <li><span class="sha">0308293</span> feat(dgs-588): observe the open attention items of the ticket</li>
+    <li><span class="sha">2c40745</span> feat(dgs-588): decide the one retry and the run adopt in advance</li>
+    <li><span class="sha">f3fb9b7</span> test(dgs-588): pin the exact actions in the retry fall-through tests</li>
+    <li><span class="sha">b053e07</span> docs(dgs-588): say why adopt waits for the attention read</li>
+    <li><span class="sha">536c375</span> feat(dgs-588): send the retry order and adopt the new run in act</li>
+    <li><span class="sha">756ab44</span> test(dgs-588): pin the adopt repeat and the retry refusal note</li>
+    <li><span class="sha">7b7821a</span> feat(dgs-588): prove the retry with a new started run in reconcile</li>
+    <li><span class="sha">75cde79</span> test(dgs-588): pin that an open retry line is not planned again</li>
+    <li><span class="sha">4fede1c</span> test(dgs-588): cover the retry through the tick with fakes</li>
+    <li><span class="sha">ba5a0c5</span> test(dgs-588): tidy the tick retry tests clock and note assertions</li>
+    <li><span class="sha">c84ef80</span> docs(dgs-588): add the runbook text for the retry</li>
+    <li><span class="sha">f50c3a3</span> fix(dgs-588): adopt once per ticket and resolve only the retry line's item</li>
+    <li><span class="sha">855f9fe</span> docs(dgs-588): say that adopt items are informational</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-588—controller-retry/report.html</footer>
+
+</body>
+</html>
