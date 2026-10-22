@@ -34,6 +34,9 @@ const namesKey = (subject: string, want: string): boolean => scopeOf(subject).in
  * A short sha or reason when the key's work is on origin/main, else null.
  * (a) a main commit whose subject scope names the key.
  * (b) a `<KEY>__*` branch that is an ancestor of origin/main AND carries a commit of its own (within 200) whose scope names the key.
+ *     Note: an ancestor branch's log holds only commits already on main, so (b) is in effect subsumed by (a). It stays because it only ever
+ *     turns a claim into a skip (the safe direction) and never claims more than before. A stricter reliable variant needs reflog evidence
+ *     and is out of scope (Maestro to decide).
  *     A branch with no such commit, for example one sitting at the main tip, is never counted: unsure means not merged.
  */
 export function mergedOnMain(git: Git, repo: string, key: string, log?: MainLog): string | null {
