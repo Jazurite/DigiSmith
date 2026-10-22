@@ -3,7 +3,7 @@ import { driftLines, gatherDrift, type DriftFacts } from "./drift.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import type { Git } from "./gitx.ts";
 
-const f = (o: Partial<DriftFacts>): DriftFacts => ({ status: "in progress", mergedSha: null, branchEmpty: false, ...o });
+const f = (o: Partial<DriftFacts>): DriftFacts => ({ status: "in progress", mergedSha: null, branchEmpty: false, gitOk: true, ...o });
 const one = (o: Partial<DriftFacts>) => driftLines([{ ticket: "DGS-1", taskId: "t1" }], new Map([["DGS-1", f(o)]]));
 
 describe("driftLines", () => {
@@ -19,6 +19,11 @@ describe("driftLines", () => {
   it("no drift", () => {
     expect(one({})).toEqual([]);
     expect(one({ status: "complete", mergedSha: "abc1234" })).toEqual([]);
+  });
+  it("git unreadable shows its own line and skips the git rules", () => {
+    expect(one({ gitOk: false })).toEqual(["DGS-1: git facts unreadable"]);
+    expect(one({ gitOk: false, status: "complete" })).toEqual(["DGS-1: git facts unreadable"]);
+    expect(one({ gitOk: false, status: null })).toEqual(["DGS-1: status unreadable", "DGS-1: git facts unreadable"]);
   });
   it("a ticket without facts is skipped", () => expect(driftLines([{ ticket: "DGS-1", taskId: "t1" }], new Map())).toEqual([]));
 });
@@ -42,8 +47,8 @@ describe("gatherDrift", () => {
     tracker.add({ id: "t2" });
     const git = fakeGit("abc1234\tfeat(dgs-2): thing\n");
     const facts = await gatherDrift({ tracker, git, repo: "/r" }, claimed);
-    expect(facts.get("DGS-1")).toEqual({ status: "complete", mergedSha: null, branchEmpty: false });
-    expect(facts.get("DGS-2")).toEqual({ status: "to do", mergedSha: "abc1234", branchEmpty: false });
+    expect(facts.get("DGS-1")).toEqual({ status: "complete", mergedSha: null, branchEmpty: false, gitOk: true });
+    expect(facts.get("DGS-2")).toEqual({ status: "to do", mergedSha: "abc1234", branchEmpty: false, gitOk: true });
     expect(driftLines(claimed, facts)).toEqual(["DGS-1: done in ClickUp, nothing on main", "DGS-2: to do in ClickUp, merged on main (abc1234)"]);
   });
   it("a throwing getStatus gives status null", async () => {
@@ -58,11 +63,16 @@ describe("gatherDrift", () => {
     const facts = await gatherDrift({ tracker, git, repo: "/r" }, [claimed[0]]);
     expect(facts.get("DGS-1")?.branchEmpty).toBe(true);
   });
-  it("a git failure never invents a done-but-not-on-main line", async () => {
+  it("git fails and the status is readable: git facts unreadable", async () => {
     const tracker = new FakeTracker();
     tracker.add({ id: "t1", status: "complete" });
     const git: Git = () => { throw new Error("git down"); };
     const facts = await gatherDrift({ tracker, git, repo: "/r" }, [claimed[0]]);
-    expect(driftLines([claimed[0]], facts)).toEqual([]);
+    expect(driftLines([claimed[0]], facts)).toEqual(["DGS-1: git facts unreadable"]);
+  });
+  it("git fails and the status is unreadable: both lines", async () => {
+    const git: Git = () => { throw new Error("git down"); };
+    const facts = await gatherDrift({ tracker: new FakeTracker(), git, repo: "/r" }, [claimed[0]]);
+    expect(driftLines([claimed[0]], facts)).toEqual(["DGS-1: status unreadable", "DGS-1: git facts unreadable"]);
   });
 });

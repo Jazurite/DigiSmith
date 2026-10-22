@@ -215,7 +215,7 @@ describe("drift section", () => {
     appendEvent(dir, at("2026-10-20T12:30:00Z"), "claim", { ticket: "DGS-2", order: "o", taskId: "nope" });
     tracker.add({ id: "t1", status: "complete" });
     writeLastReport(dir, FROM);
-    const git: Git = (_c, args) => (args[0] === "log" ? "" : "");
+    const git: Git = () => "";
     const r = await runReport({ tracker, dir, now: () => TO, git, repo: "/r" });
     const text = readFileSync(r.file, "utf8");
     expect(text).toContain("- DGS-1: done in ClickUp, nothing on main");
@@ -228,5 +228,14 @@ describe("drift section", () => {
     writeLastReport(dir, FROM);
     const r = await runReport({ tracker, dir, now: () => TO });
     expect(readFileSync(r.file, "utf8")).toContain("Drift\nnone");
+  });
+  it("a throwing git still writes the report and shows the gap", async () => {
+    appendEvent(dir, at("2026-10-20T11:00:00Z"), "claim", { ticket: "DGS-1", order: "o", taskId: "t1" });
+    tracker.add({ id: "t1", status: "complete" });
+    writeLastReport(dir, FROM);
+    const git: Git = () => { throw new Error("git down"); };
+    const r = await runReport({ tracker, dir, now: () => TO, git, repo: "/r" });
+    expect(readFileSync(r.file, "utf8")).toContain("- DGS-1: git facts unreadable");
+    expect(r.commented).toBe(true);
   });
 });

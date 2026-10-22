@@ -103,11 +103,8 @@ export async function runReport(d: ReportDeps): Promise<{ file: string; commente
       seen.add(e.ticket);
       claimed.push({ ticket: e.ticket, taskId: e.taskId });
     }
-    try {
-      drift = driftLines(claimed, await gatherDrift({ tracker: d.tracker, git: d.git, repo: d.repo }, claimed));
-    } catch (e) {
-      process.stderr.write(`autonomous report: drift check failed: ${e instanceof Error ? e.message : String(e)}\n`);
-    }
+    // gatherDrift never throws: an unreadable status or git shows as a drift line.
+    drift = driftLines(claimed, await gatherDrift({ tracker: d.tracker, git: d.git, repo: d.repo }, claimed));
   }
   const text = buildReport(from, to, events, readLock(d.dir), readOpen(d.dir), to.getTime(), drift);
   const reports = join(d.dir, "reports");
