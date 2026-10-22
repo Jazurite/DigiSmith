@@ -64,6 +64,7 @@ The `tool` hook waits at most 150 ms for the lock, then drops its event and logs
 - `dg run list [--ticket KEY] [--json]` prints one row per run, newest first.
 - `dg run show <run-id>` prints the main fields (run, ticket, role, seat, model, branch, worktree, herdr, created) and a summary. `dg run show <run-id> --json` prints the full `run.json` and the summary.
 - `dg run tail <run-id> [--since seq]` prints the lines in file order, once, and exits. It keeps the lines whose `seq` is greater than the value (default 0). It skips a line that does not parse.
+- `dg nightwatch view <overview|attention|runs|run|events|plan> [flags]` prints one read-only JSON view of the run record for the Nexus API. See `../nightwatch/README.md`.
 
 Cursor caveat: a follower that uses `--since` as a cursor may miss a line that repeats a `seq` it already passed.
 A follower that must not miss a line re-reads the file and counts lines.
