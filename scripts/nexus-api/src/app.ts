@@ -10,11 +10,12 @@ import { computeCalendar, readAtUtc7, todayUtc7 } from './life-calendar.ts'
 import { emptyQuery, errorCodeOf } from './life-calendar-route.ts'
 import type { Profile } from './profile-crypto.ts'
 import { createJobsRoutes, type JobsDeps } from './scheduler/routes.ts'
+import { createNightwatchRoutes, type NightwatchDeps } from './nightwatch-route.ts'
 
 export const POWER_PATH = `/api/${API_VERSION}/power-metrics` as const
 export const LIFE_PATH = `/api/${API_VERSION}/life-calendar` as const
 
-export interface AppDeps { logger?: Logger; loadProfile?: () => Promise<Profile>; now?: () => number; jobs?: JobsDeps }
+export interface AppDeps { logger?: Logger; loadProfile?: () => Promise<Profile>; now?: () => number; jobs?: JobsDeps; nightwatch?: NightwatchDeps }
 
 // c.json() would drop the charset and re-order nothing, but c.body(JSON.stringify(...)) keeps the old bytes and headers exactly.
 export type Env = { Variables: { errorCode?: string } }
@@ -46,6 +47,7 @@ export function buildApp(getReading: () => Promise<PowerMetrics | null>, deps: A
     return sendJson(c, 200, reading)
   })
   if (deps.jobs) app.route('/', createJobsRoutes(deps.jobs))
+  if (deps.nightwatch) app.route('/', createNightwatchRoutes(deps.nightwatch))
   app.notFound(c => sendJson(c, 404, { error: 'not_found' }))
   app.onError((_err, c) => sendJson(c, 503, { error: 'internal_invalid' }))   // never prints the error: its message could hold data
 
