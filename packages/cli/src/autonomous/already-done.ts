@@ -6,9 +6,9 @@ export const scopeOf = (subject: string): string[] => {
   return m ? m[1].split(/[,/]/).map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
 };
 
-/** Local `<KEY>__*`, `origin/<KEY>__*` and `origin/rescue/<KEY>` branches. */
+/** Local `<KEY>__*`, `origin/<KEY>__*`, and rescue branches `rescue/<KEY>` and `rescue/<KEY>-*` (dated), local and origin. */
 function branchesFor(git: Git, repo: string, key: string): string[] {
-  const out = git(repo, ["branch", "-a", "--list", `${key}__*`, `origin/${key}__*`, `origin/rescue/${key}`, "--format=%(refname:short)"]);
+  const out = git(repo, ["branch", "-a", "--list", `${key}__*`, `origin/${key}__*`, `origin/rescue/${key}`, `origin/rescue/${key}-*`, `rescue/${key}`, `rescue/${key}-*`, "--format=%(refname:short)"]);
   return out.split("\n").map((s) => s.trim()).filter(Boolean);
 }
 
@@ -57,6 +57,8 @@ export function mergedOnMain(git: Git, repo: string, key: string, log?: MainLog)
 export function blockerProblem(git: Git, repo: string, blockerKey: string, log?: MainLog): string | null {
   const branches = branchesFor(git, repo, blockerKey);
   if (branches.length === 0) return null;
-  if (branches.some((b) => !b.includes("rescue/") && isAncestor(git, repo, b))) return null;
+  // The rescue rule wins: a rescue branch that is not on main means salvaged, not merged.
+  if (branches.some((b) => b.includes("rescue/") && !isAncestor(git, repo, b))) return `blocker-not-on-main: ${blockerKey}`;
+  if (branches.some((b) => isAncestor(git, repo, b))) return null;
   return mergedOnMain(git, repo, blockerKey, log) === null ? `blocker-not-on-main: ${blockerKey}` : null;
 }

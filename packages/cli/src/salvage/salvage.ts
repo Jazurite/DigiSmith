@@ -16,6 +16,7 @@ const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e))
 
 export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; dryRun?: boolean }): SalvageResult {
   const steps: string[] = [];
+  const stamp = utcStamp(d.now()); // one stamp for the bundle and a dated rescue name
   const fail = (message: string): SalvageResult => ({ ok: false, steps, message });
   const act = (label: string, run: () => void): void => {
     steps.push(a.dryRun ? `would ${label}` : label);
@@ -79,7 +80,7 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
 
     // 5. bundle, then verify
     const dir = join(d.depotDir, "salvage");
-    const bundle = join(dir, `${a.ticket}-${utcStamp(d.now())}.bundle`);
+    const bundle = join(dir, `${a.ticket}-${stamp}.bundle`);
     act(`write ${bundle}`, () => {
       mkdirSync(dir, { recursive: true });
       d.git(wt, ["bundle", "create", bundle, branch]);
@@ -95,7 +96,7 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
       } catch (e) {
         const text = e instanceof Error ? e.message : String(e);
         if (!/! \[rejected\]/.test(text)) throw e;
-        const dated = `rescue/${a.ticket}-${utcStamp(d.now())}`;
+        const dated = `rescue/${a.ticket}-${stamp}`;
         steps.push(`${pushed} exists and has diverged; push ${branch} to ${dated} instead`);
         pushed = dated;
         d.git(wt, ["push", "origin", `${branch}:refs/heads/${pushed}`]);

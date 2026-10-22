@@ -155,6 +155,38 @@ describe("blockerProblem", () => {
     pushMain();
     expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
   });
+  it("an unmerged origin/rescue/KEY blocks even when a stale KEY__ branch is an ancestor", () => {
+    g(repo, "branch", "DGS-7__a");
+    g(repo, "checkout", "-q", "-b", "tmp");
+    commit("wip stuff");
+    g(repo, "push", "-q", "origin", "tmp:refs/heads/rescue/DGS-7");
+    g(repo, "checkout", "-q", "main");
+    g(repo, "branch", "-q", "-D", "tmp");
+    g(repo, "fetch", "-q", "origin");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+  });
+  it("a dated rescue branch alone blocks, local or origin", () => {
+    g(repo, "checkout", "-q", "-b", "tmp");
+    commit("wip stuff");
+    g(repo, "push", "-q", "origin", "tmp:refs/heads/rescue/DGS-7-20261022T030405Z");
+    g(repo, "checkout", "-q", "main");
+    g(repo, "branch", "-q", "-D", "tmp");
+    g(repo, "fetch", "-q", "origin");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+    g(repo, "branch", "rescue/DGS-8-20261022T030405Z", "origin/rescue/DGS-7-20261022T030405Z");
+    expect(blockerProblem(realGit, repo, "DGS-8")).toBe("blocker-not-on-main: DGS-8");
+  });
+  it("a rescue branch that is an ancestor of origin/main does not block by itself", () => {
+    g(repo, "branch", "rescue/DGS-7");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("a rescue branch of DGS-70 does not affect DGS-7", () => {
+    g(repo, "checkout", "-q", "-b", "tmp");
+    commit("wip stuff");
+    g(repo, "branch", "rescue/DGS-70");
+    g(repo, "checkout", "-q", "main");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
+  });
   it("passes with no branch at all", () => {
     expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
   });

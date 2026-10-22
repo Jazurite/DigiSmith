@@ -175,6 +175,18 @@ describe("salvage", () => {
     expect(sh(origin, "rev-parse", "refs/heads/rescue/DGS-9")).toBe(old);
     expect(sh(origin, "rev-parse", "refs/heads/rescue/DGS-9-20261022T030405Z")).toBe(sh(wt, "rev-parse", "HEAD"));
   });
+  it("the dated rescue name shares the bundle's stamp even when the clock moves", () => {
+    sh(repo, "checkout", "-q", "--orphan", "other"); sh(repo, "rm", "-rqf", ".");
+    writeFileSync(join(repo, "o.txt"), "o\n"); sh(repo, "add", "."); sh(repo, "commit", "-qm", "other history");
+    sh(repo, "push", "-q", "origin", "other:refs/heads/rescue/DGS-9");
+    sh(repo, "checkout", "-q", "-f", "main");
+    writeFileSync(join(wt, "n.ts"), "x\n");
+    let t = Date.parse("2026-10-22T03:04:05Z");
+    const r = salvage(mk({ now: () => new Date((t += 60000)) }), { ticket: "DGS-9" });
+    expect(r.ok).toBe(true);
+    const stamp = /DGS-9-(\w+)\.bundle$/.exec(bundles()[0])?.[1];
+    expect(r.ok && r.pushed).toBe(`rescue/DGS-9-${stamp}`);
+  });
   it("a plain push gives pushed = rescue/KEY", () => {
     writeFileSync(join(wt, "n.ts"), "x\n");
     const r = salvage(mk(), { ticket: "DGS-9" });
