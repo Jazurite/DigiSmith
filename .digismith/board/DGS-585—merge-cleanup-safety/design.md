@@ -44,7 +44,7 @@ Exit 0 and the word `go`, or exit 1 and `refused: <reason>`. Checks:
 
 1. Read the policy from `main`, never from the branch: `git show main:.digismith/config.yml`. The config file on the branch is not read. A config that cannot be read or parsed refuses (fail closed), with the error text.
 2. Branch has 0 commits ahead of main (`git rev-list --count main..<branch>`): refuse `no-commits`.
-3. The diff `git diff --name-only main...<branch>` touches a protected path: refuse `protected-path: <path>`. One refusal lists every touched protected path.
+3. The diff `git diff --name-only main...<branch>` touches a protected path: refuse with `refused: protected path: <paths>` (code `protected-path`). One refusal lists every touched protected path.
 4. The branch cannot be found: refuse.
 
 Protected paths come from `nightwatch.protected_paths` (a list in `.digismith/config.yml`, read from main). A path ending in `/` matches the folder, a `*` matches within one path segment, anything else matches exactly. If the key is absent, the built-in list is used: `hooks/`, `hooks/hooks.json`, `.digismith/config.yml`, `skills/finishing-*/`, `skills/reviewer/`, `packages/cli/src/reviewer/`, `packages/cli/src/autonomous/`, `scripts/nexus-api/src/scheduler/`, `.digismith/mandate.yml`, `.digismith/profiles/`. The plan adds the same list to `.digismith/config.yml` so the file is the source. (The ticket names "hooks.json" and "the reviewer primitives"; the two reviewer paths are where those live on main today.)
@@ -119,7 +119,7 @@ Fakes only: no real ClickUp, herdr, depot or live API, and nothing touches port 
 After the merge the Maestro rebuilds the CLI dist and runs `scripts/nexus-api/install.sh` (same as DGS-583). Then:
 
 1. `dg salvage --ticket DGS-585 --dry-run` on a finished ticket's worktree prints the plan and writes nothing.
-2. `dg autonomous merge-gate --ticket <KEY>` on a night branch: `go`. On a throwaway branch that edits `hooks/hooks.json`: `refused: protected-path`, and `dg autonomous attention` lists the `refused` item.
+2. `dg autonomous merge-gate --ticket <KEY>` on a night branch: `go`. On a throwaway branch that edits `hooks/hooks.json`: `refused: protected path: hooks/hooks.json`, and `dg autonomous attention` lists the `refused` item.
 3. Break `nightwatch.budgets.building` on a scratch copy of the config: the next `dg autonomous scan --dry-run` reports `guardrail-config` and claims nothing.
 4. The next morning report has a `Drift` section. The first real night is the real test of the already-done check.
 
