@@ -52,16 +52,29 @@ describe("runNightwatch", () => {
   });
 });
 
+// index.e2e.test.ts rebuilds packages/clickup-client/dist while the files run in parallel,
+// so a spawn of the source entry can hit the missing dist for a moment. Retry on that only.
+async function execEntry(args: string[]) {
+  for (let i = 0; ; i++) {
+    try {
+      return await exec(process.execPath, args, { env: { ...process.env, ...d.env } });
+    } catch (e) {
+      if (i >= 20 || !String((e as { stderr?: string }).stderr).includes("ERR_MODULE_NOT_FOUND")) throw e;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+}
+
 describe("the real entry", () => {
   it("runs under --experimental-strip-types", async () => {
     const entry = new URL("../index.ts", import.meta.url).pathname;
-    const { stdout } = await exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "overview"], { env: { ...process.env, ...d.env } });
+    const { stdout } = await execEntry(["--experimental-strip-types", entry, "nightwatch", "view", "overview"]);
     expect(JSON.parse(stdout).tickets.windowDays).toBe(7);
   }, 30_000);
   it("passes flags through yargs", async () => {
     const entry = new URL("../index.ts", import.meta.url).pathname;
     d.writeRun({ ticket: "DGS-590", run: "builder-1", role: "builder", created_at: "2026-10-22T02:20:00.000Z", order: "/x/order-nw.md" });
-    const { stdout } = await exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "runs", "--role", "builder", "--limit", "2"], { env: { ...process.env, ...d.env } });
+    const { stdout } = await execEntry(["--experimental-strip-types", entry, "nightwatch", "view", "runs", "--role", "builder", "--limit", "2"]);
     expect(JSON.parse(stdout).total).toBe(1);
     await expect(exec(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "runs", "--rol", "builder"], { env: { ...process.env, ...d.env } })).rejects.toMatchObject({ code: 1 });
   }, 30_000);
