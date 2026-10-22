@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{ state: 'healthy' | 'blocked' | 'stalled' | 'lost' | 'ended' | 'running' | 'ok' | 'warn' | 'bad' }>()
+const props = defineProps<{ state: 'healthy' | 'blocked' | 'stalled' | 'lost' | 'ended' | 'running' | 'ok' | 'warn' | 'bad'; label?: string }>()
 const TONE = { healthy: 'ok', ok: 'ok', running: 'info', stalled: 'warn', warn: 'warn', blocked: 'bad', lost: 'bad', bad: 'bad', ended: 'muted' } as const
 const tone = computed(() => TONE[props.state])
 </script>
 
 <template>
-  <span class="st" :class="tone"><i class="dot" aria-hidden="true" />{{ state }}</span>
+  <span class="st" :class="tone"><i class="dot" aria-hidden="true" />{{ label ?? state }}</span>
 </template>
 
 <style scoped lang="scss">

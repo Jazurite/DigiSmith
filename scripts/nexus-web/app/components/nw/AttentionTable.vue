@@ -1,0 +1,41 @@
+<script setup lang="ts">
+import type { Attention } from '#nightwatch-schema'
+import { ageOf, fmtDay } from '../../utils/nw-format'
+
+defineProps<{ open: Attention['open']; resolved: Attention['resolved']; nowMs: number }>()
+const TONE = { lost: 'bad', blocked: 'bad', stalled: 'warn' } as const
+const tone = (kind: string): 'bad' | 'warn' | 'ok' => (kind in TONE ? TONE[kind as keyof typeof TONE] : 'warn')
+</script>
+
+<template>
+  <NwCard title="Waiting on Jack" :note="`${open.length} open, oldest first`">
+    <p v-if="open.length === 0" class="empty">Nothing waits for you.</p>
+    <NwTable v-else caption="Open attention items">
+      <template #head><tr><th scope="col">Age</th><th scope="col">Ticket</th><th scope="col">Kind</th><th scope="col">Cause</th><th scope="col">Class</th><th scope="col">Run</th></tr></template>
+      <tr v-for="a in open" :key="a.id">
+        <td class="mono">{{ ageOf(a.since, nowMs) }}</td>
+        <td class="mono">{{ a.ticket ?? '-' }}</td>
+        <td><NwStatus :state="tone(a.kind)" :label="a.kind" /></td>
+        <td>{{ a.cause }}</td>
+        <td><span v-if="a.causeClass" class="tag">{{ a.causeClass }}</span> <span v-if="a.retryEligible" class="tag">retry</span><span v-if="!a.causeClass && !a.retryEligible" class="muted">-</span></td>
+        <td class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(a.run)}`">{{ a.run }}</NuxtLink></td>
+      </tr>
+    </NwTable>
+    <template v-if="resolved.length">
+      <h3 class="sub-h">Resolved <small>last {{ resolved.length }}, times UTC+7</small></h3>
+      <NwTable caption="Resolved attention items" dense>
+        <tr v-for="r in resolved" :key="r.id">
+          <td class="mono">{{ fmtDay(r.ts) }}</td>
+          <td class="mono">{{ r.ticket ?? '-' }}</td>
+          <td>{{ r.kind }}</td>
+          <td class="muted">resolved by {{ r.by }}<template v-if="r.note">: {{ r.note }}</template></td>
+        </tr>
+      </NwTable>
+    </template>
+  </NwCard>
+</template>
+
+<style lang="scss">
+.nw-card .sub-h { margin: 0; padding: 12px 14px; font-size: 13px; border-top: 1px solid var(--nw-border); border-bottom: 1px solid var(--nw-border); display: flex; justify-content: space-between; align-items: baseline; }
+.nw-card .sub-h small { font: 11px var(--nw-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--nw-text-3); font-weight: 400; }
+</style>
