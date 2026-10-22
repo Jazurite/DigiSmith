@@ -1,0 +1,7 @@
+# Review findings
+
+| Reviewer type | Round | Path:line | Severity | What is wrong | Failing scenario | Verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| ticket | 1 | packages/cli/src/autonomous/observers-real.ts:248 | Minor | The observer only reads ledger entries of the pack's own round, so a fixing line in r3 followed by the final ruling in r4 keeps the r3 pack blocking while the table shows it fixed. | Ledger: 'Review ticket final r3: F7 -> fixing (x)' then 'Review ticket final r4: F7 -> fixed (abc)' for an Important F7 raised in r3: dg reviewer table shows fixed [r4]; reviewerData.verdicts() returns 'findings' for ticket-final-r3. | parked (conductor ruling: own follow-up for the Maestro, listed in report.md; per-round gap predates this ticket) |
+| ticket | 1 | packages/cli/src/reviewer/table.ts:71 | Minor | The unfinished-fix error omits the design's tail ': no final ruling after the fixing line'; the plan and tests follow the shorter text. | A lone 'Review task 1 r1: F1 -> fixing (x)' gives 'ledger line 2: ...: fix not finished for task 1 r1 F1' instead of the design's full message. | parked (conductor ruling: the ticket's needs are met: "fix not finished", the line and the id) |
+| ticket | 1 | packages/cli/src/reviewer/verdicts.ts:2 | Minor | The VERDICTS alias is kept although nothing imports it, against the plan's 'keep it if anything imports it'. | grep for VERDICTS in packages/, scripts/ and skills/ finds only the definition and the git-ignored dist/ build. | parked (conductor ruling: harmless alias, no head change) |
