@@ -121,6 +121,52 @@ describe("runMergeGate", () => {
     expect(gate()).toMatchObject({ go: false, code: "no-branch" });
   });
 
+
+  it("F1 a protected file renamed to an unprotected path is refused with the old path listed", () => {
+    setup("profile: x\n");
+    commit("hooks/hooks.json", "{\"a\":1,\"b\":2,\"c\":3}\n");
+    branch();
+    mkdirSync(join(repo, "src"), { recursive: true });
+    git("mv", "hooks/hooks.json", "src/hooks.json");
+    git("commit", "-q", "-m", "mv");
+    const r = gate();
+    expect(r).toMatchObject({ go: false, code: "protected-path" });
+    expect((r as { reason: string }).reason).toContain("hooks/hooks.json");
+  });
+
+  it("F1 a pure delete of a protected file is refused", () => {
+    setup("profile: x\n");
+    commit("hooks/a", "x\n");
+    branch();
+    git("rm", "-q", "hooks/a");
+    git("commit", "-q", "-m", "rm");
+    expect(gate()).toMatchObject({ go: false, code: "protected-path" });
+  });
+
+  it("F1 a rename between unprotected paths, with spaces in the names, is go", () => {
+    setup("profile: x\n");
+    commit("src/my file.ts", "one\ntwo\nthree\n");
+    branch();
+    git("mv", "src/my file.ts", "src/caf\u00e9 new.ts");
+    git("commit", "-q", "-m", "mv");
+    expect(gate()).toEqual({ go: true });
+  });
+
+  it("F1 a protected path with a space is refused", () => {
+    setup("profile: x\n");
+    branch();
+    commit("hooks/a b.json");
+    expect((gate() as { reason: string }).reason).toContain("hooks/a b.json");
+  });
+
+  it.each(["DGS-*", "DGS 9", "", "../x"])("F2 bad key %j is refused and writes nothing", (k) => {
+    setup("profile: x\n");
+    branch();
+    commit("src/a.ts");
+    expect(gate(k)).toMatchObject({ go: false, code: "bad-key" });
+    expect(existsSync(attentionFile(dir))).toBe(false);
+  });
+
   it.each([
     "packages/cli/src/autonomous/x.ts",
     "scripts/nexus-api/src/scheduler/x.ts",
