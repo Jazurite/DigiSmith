@@ -96,6 +96,8 @@ describe('nightwatch schemas', () => {
       scan: { lastScanAt: null, candidates: null, away: false, nightWindow: false, breakerOpen: false, breakerStreak: 0 },
     }
     expect(overviewSchema.safeParse({ ...view, nexus: { status: 'healthy', reasons: [] } }).success).toBe(true)
+    expect(overviewSchema.safeParse({ ...view, nexus: { status: 'unknown', reasons: ['x never ran'] } }).success).toBe(true)
+    expect(overviewSchema.safeParse({ ...view, nexus: { status: 'bogus', reasons: [] } }).success).toBe(false)
     expect(overviewSchema.safeParse(view).success).toBe(false)
   })
   it('runs, plan and error shapes', () => {
@@ -162,7 +164,7 @@ export const overviewViewSchema = z.strictObject({
   }),
 })
 export const overviewSchema = overviewViewSchema.extend({
-  nexus: z.strictObject({ status: z.enum(['healthy', 'degraded', 'breaker-open']), reasons: z.array(z.string()) }),
+  nexus: z.strictObject({ status: z.enum(['healthy', 'degraded', 'unknown', 'breaker-open']), reasons: z.array(z.string()) }),
 })
 export type Overview = z.infer<typeof overviewSchema>
 
@@ -1378,7 +1380,7 @@ git commit -m "feat(nexus-api): add the Nightwatch reader that runs the built CL
   - `NIGHTWATCH_PATH` = `/api/v1/nightwatch`
   - `interface NightwatchDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }`
   - `createNightwatchRoutes(deps: NightwatchDeps): Hono<Env>`
-  - `nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: 'healthy' | 'degraded' | 'breaker-open'; reasons: string[] }`
+  - `nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: 'healthy' | 'degraded' | 'unknown' | 'breaker-open'; reasons: string[] }`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1429,6 +1431,15 @@ describe('nexusStatus', () => {
     expect(nexusStatus([job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z'), job('nightwatch-watchdog', 'ok', '2026-10-22T02:30:00.000Z')], false, NOW).reasons).toEqual(['nightwatch-watchdog has not run for 15 min'])
     expect(nexusStatus(null, false, NOW)).toEqual({ status: 'degraded', reasons: ['scheduler off'] })
   })
+  it('a missing job is degraded, a job that never ran is unknown', () => {
+    const scan = job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z')
+    const wd = job('nightwatch-watchdog', 'ok', '2026-10-22T02:55:00.000Z')
+    expect(nexusStatus([scan], false, NOW)).toEqual({ status: 'degraded', reasons: ['nightwatch-watchdog not registered'] })
+    expect(nexusStatus([wd], false, NOW)).toEqual({ status: 'degraded', reasons: ['autonomous-scan not registered'] })
+    expect(nexusStatus([scan, { ...wd, lastRun: null }], false, NOW)).toEqual({ status: 'unknown', reasons: ['nightwatch-watchdog never ran'] })
+    expect(nexusStatus([{ ...scan, lastRun: null }, wd], false, NOW)).toEqual({ status: 'unknown', reasons: ['autonomous-scan never ran'] })
+    expect(nexusStatus([{ ...scan, lastRun: null }], false, NOW).status).toBe('degraded')
+  })
   it('an open breaker wins', () => {
     expect(nexusStatus([], true, NOW).status).toBe('breaker-open')
   })
@@ -1470,6 +1481,15 @@ describe('routes', () => {
     const res2 = await app(junk).request('/api/v1/nightwatch/attention')
     expect(res2.status).toBe(503)
     expect(await res2.json()).toEqual({ error: 'internal_invalid' })
+  })
+  it('an unknown nightwatch path is 404 for every method, a known path with a wrong method is 405', async () => {
+    for (const method of ['GET', 'POST', 'DELETE']) {
+      const res = await app(fake).request('/api/v1/nightwatch/nope', { method })
+      expect(res.status, method).toBe(404)
+      expect(await res.json()).toEqual({ error: 'not_found' })
+    }
+    expect((await app(fake).request('/api/v1/nightwatch/runs/builder-1/events', { method: 'POST' })).status).toBe(405)
+    expect((await app(fake).request('/api/v1/nightwatch/plan/DGS-590', { method: 'POST' })).status).toBe(405)
   })
   it('only GET is allowed', async () => {
     for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
@@ -1536,19 +1556,27 @@ export const NIGHTWATCH_PATH = `/api/${API_VERSION}/nightwatch` as const
 export interface NightwatchDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }
 
 const WATCHDOG_STALE_MS = 15 * 60_000
+const KNOWN_PATH = new RegExp(`^${NIGHTWATCH_PATH}/(overview|attention|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
-export function nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: 'healthy' | 'degraded' | 'breaker-open'; reasons: string[] } {
+export type NexusState = 'healthy' | 'degraded' | 'unknown' | 'breaker-open'
+
+export function nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: NexusState; reasons: string[] } {
   if (breakerOpen) return { status: 'breaker-open', reasons: ['circuit breaker open'] }
   if (jobs === null) return { status: 'degraded', reasons: ['scheduler off'] }
   const reasons: string[] = []
+  const unknown: string[] = []
   for (const name of ['autonomous-scan', 'nightwatch-watchdog']) {
-    const last = jobs.find((j) => j.name === name)?.lastRun
-    if (last && last.status !== 'ok' && last.status !== 'skipped') reasons.push(`${name} ${last.status}`)
+    const job = jobs.find((j) => j.name === name)
+    if (!job) { reasons.push(`${name} not registered`); continue }
+    const last = job.lastRun
+    if (!last) { unknown.push(`${name} never ran`); continue }
+    if (last.status !== 'ok' && last.status !== 'skipped') reasons.push(`${name} ${last.status}`)
   }
   const wd = jobs.find((j) => j.name === 'nightwatch-watchdog')?.lastRun
   if (wd?.endedAt && nowMs - Date.parse(wd.endedAt) > WATCHDOG_STALE_MS) reasons.push('nightwatch-watchdog has not run for 15 min')
-  return { status: reasons.length ? 'degraded' : 'healthy', reasons }
+  if (reasons.length) return { status: 'degraded', reasons: [...reasons, ...unknown] }
+  return unknown.length ? { status: 'unknown', reasons: unknown } : { status: 'healthy', reasons: [] }
 }
 
 const int = (max: number) => z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().max(max))
@@ -1575,7 +1603,9 @@ export function createNightwatchRoutes(deps: NightwatchDeps): Hono<Env> {
   }
   const query = (c: Context<Env>) => Object.fromEntries(Object.entries(c.req.query()))
 
+  // 405 only for a known path; any other path under the prefix is 404 whatever the method.
   app.all(`${NIGHTWATCH_PATH}/*`, async (c, next) => {
+    if (!KNOWN_PATH.test(c.req.path)) return fail(c, 404, 'not_found')
     if (c.req.method !== 'GET') return fail(c, 405, 'method_not_allowed', { Allow: 'GET' })
     await next()
   })
@@ -2006,7 +2036,7 @@ git commit -m "feat(nexus-web): add the router, Warren tokens, polling and typed
 - Consumes: Task 7 (`nw-format`, `Overview` type via `#nightwatch-schema`).
 - Produces (props, exact):
   - `NwShell`: slots `default`; props `{ attention: number }`; renders `<nav class="nw-nav" aria-label="Nightwatch">` (`NwNav`), `NwTopBar` slot-fed by the layout, `<main id="main">`.
-  - `NwTopBar`: props `{ overview: Overview | null; stale: boolean; updatedAt: number | null }`. Shows: Nexus health (`healthy` | `degraded` | `breaker-open` | `unreachable` when `overview` is null and `stale`), workers count, to do waiting (`scan.candidates` and `fmtUtc7(scan.lastScanAt)`), mode chip (`away` / `night` / `day`), `burn -/h` and `seat 5h / week - / -` slots each with `title="not measured"`, and `updated HH:MM:SS (UTC+7)`. Wrapped in `role="status"`.
+  - `NwTopBar`: props `{ overview: Overview | null; stale: boolean; updatedAt: number | null }`. Shows: Nexus health (`healthy` | `degraded` | `unknown` | `breaker-open` | `unreachable` when `overview` is null and `stale`), workers count, to do waiting (`scan.candidates` and `fmtUtc7(scan.lastScanAt)`), mode chip (`away` / `night` / `day`), `burn -/h` and `seat 5h / week - / -` slots each with `title="not measured"`, and `updated HH:MM:SS (UTC+7)`. Wrapped in `role="status"`.
   - `NwNav`: props `{ attention: number; current: string }`; links `/nightwatch/` (Operations), `/nightwatch/attention/` (Attention, badge when `attention > 0`), `/nightwatch/runs/` (Runs), `/nightwatch/plan/` (Plan); the current one has `aria-current="page"`.
   - `NwPanel`: props `{ kind: 'loading' | 'empty' | 'error'; title?: string; text?: string; retrying?: boolean }`, emits `retry`. `error` has `role="alert"` and a Retry button; `empty` has `role="status"`; `loading` shows three skeleton bars with `aria-busy="true"`.
   - `NwStatus`: props `{ state: 'healthy' | 'blocked' | 'stalled' | 'lost' | 'ended' | 'running' | 'ok' | 'warn' | 'bad' }`, renders the dot and the word. Colour never carries the meaning alone (the word is always there).

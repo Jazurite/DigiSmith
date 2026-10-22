@@ -46,7 +46,7 @@ export const overviewViewSchema = z.strictObject({
   }),
 })
 export const overviewSchema = overviewViewSchema.extend({
-  nexus: z.strictObject({ status: z.enum(['healthy', 'degraded', 'breaker-open']), reasons: z.array(z.string()) }),
+  nexus: z.strictObject({ status: z.enum(['healthy', 'degraded', 'unknown', 'breaker-open']), reasons: z.array(z.string()) }),
 })
 export type Overview = z.infer<typeof overviewSchema>
 

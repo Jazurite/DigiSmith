@@ -13,19 +13,27 @@ export const NIGHTWATCH_PATH = `/api/${API_VERSION}/nightwatch` as const
 export interface NightwatchDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }
 
 const WATCHDOG_STALE_MS = 15 * 60_000
+const KNOWN_PATH = new RegExp(`^${NIGHTWATCH_PATH}/(overview|attention|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
-export function nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: 'healthy' | 'degraded' | 'breaker-open'; reasons: string[] } {
+export type NexusState = 'healthy' | 'degraded' | 'unknown' | 'breaker-open'
+
+export function nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs: number): { status: NexusState; reasons: string[] } {
   if (breakerOpen) return { status: 'breaker-open', reasons: ['circuit breaker open'] }
   if (jobs === null) return { status: 'degraded', reasons: ['scheduler off'] }
   const reasons: string[] = []
+  const unknown: string[] = []
   for (const name of ['autonomous-scan', 'nightwatch-watchdog']) {
-    const last = jobs.find((j) => j.name === name)?.lastRun
-    if (last && last.status !== 'ok' && last.status !== 'skipped') reasons.push(`${name} ${last.status}`)
+    const job = jobs.find((j) => j.name === name)
+    if (!job) { reasons.push(`${name} not registered`); continue }
+    const last = job.lastRun
+    if (!last) { unknown.push(`${name} never ran`); continue }
+    if (last.status !== 'ok' && last.status !== 'skipped') reasons.push(`${name} ${last.status}`)
   }
   const wd = jobs.find((j) => j.name === 'nightwatch-watchdog')?.lastRun
   if (wd?.endedAt && nowMs - Date.parse(wd.endedAt) > WATCHDOG_STALE_MS) reasons.push('nightwatch-watchdog has not run for 15 min')
-  return { status: reasons.length ? 'degraded' : 'healthy', reasons }
+  if (reasons.length) return { status: 'degraded', reasons: [...reasons, ...unknown] }
+  return unknown.length ? { status: 'unknown', reasons: unknown } : { status: 'healthy', reasons: [] }
 }
 
 const int = (max: number) => z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().max(max))
@@ -52,7 +60,9 @@ export function createNightwatchRoutes(deps: NightwatchDeps): Hono<Env> {
   }
   const query = (c: Context<Env>) => Object.fromEntries(Object.entries(c.req.query()))
 
+  // 405 only for a known path; any other path under the prefix is 404 whatever the method.
   app.all(`${NIGHTWATCH_PATH}/*`, async (c, next) => {
+    if (!KNOWN_PATH.test(c.req.path)) return fail(c, 404, 'not_found')
     if (c.req.method !== 'GET') return fail(c, 405, 'method_not_allowed', { Allow: 'GET' })
     await next()
   })

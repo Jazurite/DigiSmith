@@ -44,6 +44,15 @@ describe('nexusStatus', () => {
     expect(nexusStatus([job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z'), job('nightwatch-watchdog', 'ok', '2026-10-22T02:30:00.000Z')], false, NOW).reasons).toEqual(['nightwatch-watchdog has not run for 15 min'])
     expect(nexusStatus(null, false, NOW)).toEqual({ status: 'degraded', reasons: ['scheduler off'] })
   })
+  it('a missing job is degraded, a job that never ran is unknown', () => {
+    const scan = job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z')
+    const wd = job('nightwatch-watchdog', 'ok', '2026-10-22T02:55:00.000Z')
+    expect(nexusStatus([scan], false, NOW)).toEqual({ status: 'degraded', reasons: ['nightwatch-watchdog not registered'] })
+    expect(nexusStatus([wd], false, NOW)).toEqual({ status: 'degraded', reasons: ['autonomous-scan not registered'] })
+    expect(nexusStatus([scan, { ...wd, lastRun: null }], false, NOW)).toEqual({ status: 'unknown', reasons: ['nightwatch-watchdog never ran'] })
+    expect(nexusStatus([{ ...scan, lastRun: null }, wd], false, NOW)).toEqual({ status: 'unknown', reasons: ['autonomous-scan never ran'] })
+    expect(nexusStatus([{ ...scan, lastRun: null }], false, NOW).status).toBe('degraded')
+  })
   it('an open breaker wins', () => {
     expect(nexusStatus([], true, NOW).status).toBe('breaker-open')
   })
@@ -85,6 +94,15 @@ describe('routes', () => {
     const res2 = await app(junk).request('/api/v1/nightwatch/attention')
     expect(res2.status).toBe(503)
     expect(await res2.json()).toEqual({ error: 'internal_invalid' })
+  })
+  it('an unknown nightwatch path is 404 for every method, a known path with a wrong method is 405', async () => {
+    for (const method of ['GET', 'POST', 'DELETE']) {
+      const res = await app(fake).request('/api/v1/nightwatch/nope', { method })
+      expect(res.status, method).toBe(404)
+      expect(await res.json()).toEqual({ error: 'not_found' })
+    }
+    expect((await app(fake).request('/api/v1/nightwatch/runs/builder-1/events', { method: 'POST' })).status).toBe(405)
+    expect((await app(fake).request('/api/v1/nightwatch/plan/DGS-590', { method: 'POST' })).status).toBe(405)
   })
   it('only GET is allowed', async () => {
     for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {

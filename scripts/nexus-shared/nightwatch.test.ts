@@ -30,6 +30,8 @@ describe('nightwatch schemas', () => {
       scan: { lastScanAt: null, candidates: null, away: false, nightWindow: false, breakerOpen: false, breakerStreak: 0 },
     }
     expect(overviewSchema.safeParse({ ...view, nexus: { status: 'healthy', reasons: [] } }).success).toBe(true)
+    expect(overviewSchema.safeParse({ ...view, nexus: { status: 'unknown', reasons: ['x never ran'] } }).success).toBe(true)
+    expect(overviewSchema.safeParse({ ...view, nexus: { status: 'bogus', reasons: [] } }).success).toBe(false)
     expect(overviewSchema.safeParse(view).success).toBe(false)
   })
   it('runs, plan and error shapes', () => {
