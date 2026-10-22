@@ -11,6 +11,10 @@ describe('nw-format', () => {
   it('formats durations and ages', () => {
     expect(fmtDuration(2467)).toBe('0:41:07')
     expect(fmtDuration(null)).toBe('-')
+    expect(fmtDuration(5.5)).toBe('0:00:05')
+    expect(fmtDuration(-3)).toBe('0:00:00')
+    expect(fmtDuration(Number.NaN)).toBe('0:00:00')
+    expect(fmtDuration(Number.POSITIVE_INFINITY)).toBe('0:00:00')
     const now = Date.parse('2026-10-22T03:00:00.000Z')
     expect(ageOf('2026-10-22T00:50:00.000Z', now)).toBe('2h10m')
     expect(ageOf('2026-10-22T02:28:00.000Z', now)).toBe('32m')

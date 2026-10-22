@@ -15,7 +15,8 @@ export function fmtDay(iso: string | null): string {
 }
 export function fmtDuration(sec: number | null): string {
   if (sec === null) return '-'
-  return `${Math.floor(sec / 3600)}:${pad(Math.floor((sec % 3600) / 60))}:${pad(sec % 60)}`
+  const s = Number.isFinite(sec) ? Math.max(0, Math.floor(sec)) : 0
+  return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
 }
 export function ageOf(iso: string | null, nowMs: number): string {
   if (!iso) return '-'
