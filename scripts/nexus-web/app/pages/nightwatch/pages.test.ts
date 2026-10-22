@@ -2,13 +2,14 @@ import { flushPromises } from '@vue/test-utils'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { reactive, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
+import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
 import { NightwatchApiError } from '../../composables/nightwatch-api'
+import Attention from './attention.vue'
 import Plan from './plan.vue'
 import Run from './run.vue'
 import Runs from './runs.vue'
 
-const api = vi.hoisted(() => ({ loadRuns: vi.fn(), loadRun: vi.fn(), loadEvents: vi.fn(), loadPlan: vi.fn() }))
+const api = vi.hoisted(() => ({ loadAttention: vi.fn(), loadRuns: vi.fn(), loadRun: vi.fn(), loadEvents: vi.fn(), loadPlan: vi.fn() }))
 vi.mock('../../composables/nightwatch-api', async (orig) => ({ ...(await orig<typeof import('../../composables/nightwatch-api')>()), ...api }))
 const holder = vi.hoisted(() => ({ route: null as unknown as { query: Record<string, string> } }))
 const route = reactive({ query: {} as Record<string, string> })
@@ -204,6 +205,24 @@ describe('Plan page', () => {
     await flushPromises()
     expect(api.loadPlan).not.toHaveBeenCalled()
     expect(api.loadRuns).not.toHaveBeenCalled()
+    w.unmount()
+  })
+})
+
+describe('Attention page', () => {
+  it('announces nothing on the first load and "1 new attention item" politely when a poll brings one more', async () => {
+    vi.useFakeTimers()
+    const first = attentionFixture()
+    const more = { ...first, open: [...first.open, { ...first.open[0], id: 'att-3' }] }
+    api.loadAttention.mockResolvedValueOnce(first).mockResolvedValue(more)
+    const w = await mountSuspended(Attention)
+    await vi.advanceTimersByTimeAsync(0)
+    const live = w.find('[aria-live="polite"]')
+    expect(w.findAll('tbody tr').length).toBeGreaterThan(0)
+    expect(live.text()).toBe('')
+    await vi.advanceTimersByTimeAsync(10_000)
+    await flushPromises()
+    expect(live.text()).toBe('1 new attention item')
     w.unmount()
   })
 })

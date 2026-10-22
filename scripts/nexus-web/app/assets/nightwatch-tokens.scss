@@ -20,6 +20,8 @@
  */
 // Scope: .nw only. The Life Calendar keeps its own tokens. Dark is the default; light follows the system or data-theme.
 .nw {
+  // The minifier drops comments, so the notice also rides as a custom property: it ships in the built CSS (the full MIT text is the comment above).
+  --nw-notice: 'Colour, radius and font tokens from Warren (MIT License). Copyright (c) 2026 Jaymin West';
   --nw-bg: oklch(14% 0.008 264); --nw-sidebar: oklch(12.8% 0.008 264); --nw-surface: oklch(16.5% 0.010 264);
   --nw-raised: oklch(19% 0.011 264); --nw-hover: oklch(21% 0.012 264); --nw-thead: oklch(15.5% 0.009 264);
   --nw-text: oklch(96% 0.005 264); --nw-text-2: oklch(72% 0.012 264); --nw-text-3: oklch(60% 0.014 264);
@@ -35,7 +37,7 @@
   --nw-raised: oklch(97.6% 0.004 264); --nw-hover: oklch(95.2% 0.006 264); --nw-thead: oklch(98% 0.003 264);
   --nw-text: oklch(22% 0.015 264); --nw-text-2: oklch(45% 0.015 264); --nw-text-3: oklch(50% 0.014 264);
   --nw-border: oklch(90% 0.006 264); --nw-strong: oklch(82.5% 0.010 264);
-  --nw-primary: oklch(54% 0.125 152); --nw-ok: oklch(54% 0.125 150); --nw-warn: oklch(52% 0.130 75);
+  --nw-primary: oklch(52% 0.125 152); --nw-ok: oklch(52% 0.125 150); --nw-warn: oklch(52% 0.130 75);
   --nw-bad: oklch(54% 0.190 27); --nw-info: oklch(52% 0.125 240); --nw-neutral: oklch(48% 0.018 264);
 }
 @media (prefers-color-scheme: light) { :root:not([data-theme='dark']) .nw { @include nw-light; } }

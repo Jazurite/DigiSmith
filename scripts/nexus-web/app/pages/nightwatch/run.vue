@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, effectScope, onScopeDispose, ref, shallowRef, watch } from 'vue'
+import { computed, effectScope, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import type { EffectScope } from 'vue'
 import { loadRun, NightwatchApiError } from '../../composables/nightwatch-api'
 import { useEventTail } from '../../composables/useEventTail'
@@ -18,6 +18,9 @@ const route = useRoute()
 // the id comes from the query and can change without a new page (a link to another run): everything restarts on a change
 const id = computed(() => { const q = route.query.id; const v = Array.isArray(q) ? q[0] : q; return isSafeId(v) ? v : null })
 const notFound = ref(false)
+// the generated page has no query: until the client has mounted, the id is unknown, so never say "does not exist" yet
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
 const poll = useRestartingPoll(() => (id.value && !notFound.value ? id.value : null), async (k) => {
   try { return await loadRun(k) } catch (e) {
     // a late answer for a run that is no longer shown must not mark the current run as missing
@@ -40,7 +43,14 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
 </script>
 
 <template>
-  <NwPanel v-if="!id || notFound" kind="empty" title="This run does not exist." />
+  <template v-if="!mounted">
+    <h1>Run</h1>
+    <NwPanel kind="loading" />
+  </template>
+  <template v-else-if="!id || notFound">
+    <h1>Run</h1>
+    <NwPanel kind="empty" title="This run does not exist." />
+  </template>
   <template v-else>
     <p class="muted mono crumb"><NuxtLink to="/nightwatch/runs/">Runs</NuxtLink> / {{ id }}</p>
     <h1 class="mono">{{ id }} <NwStatus v-if="run" class="state" :state="run.row.state" /></h1>
