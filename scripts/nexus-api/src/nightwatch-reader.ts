@@ -6,6 +6,9 @@ import { join } from 'node:path'
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 export const DEFAULT_ENTRY = join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')
 
+// The flags `dg nightwatch view` accepts (packages/cli/src/nightwatch/index.ts VALUE_FLAGS).
+const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'limit'])
+
 export type ViewName = 'overview' | 'attention' | 'runs' | 'run' | 'events' | 'plan'
 export type ViewArgs = Record<string, string | number | undefined>
 export type Reader = (view: ViewName, args?: ViewArgs) => Promise<unknown>
@@ -15,7 +18,7 @@ export class ReaderError extends Error {
   constructor(code: 'reader_unavailable' | 'not_found') { super(code); this.code = code }
 }
 
-export interface ReaderOptions { file?: string; entry?: string; ttlMs?: number; timeoutMs?: number; now?: () => number; env?: NodeJS.ProcessEnv }
+export interface ReaderOptions { file?: string; entry?: string; ttlMs?: number; timeoutMs?: number; maxEntries?: number; now?: () => number; env?: NodeJS.ProcessEnv }
 
 // The CLI is the only reader of the run files: no second parser here. Each call is one node process, so the cache
 // and the single flight keep ten polling tabs at one spawn per view per 5 s.
@@ -24,16 +27,22 @@ export function createReader(opts: ReaderOptions = {}): Reader {
   const entry = opts.entry ?? DEFAULT_ENTRY
   const ttl = opts.ttlMs ?? 5_000
   const timeout = opts.timeoutMs ?? 8_000
+  const max = opts.maxEntries ?? 200
   const now = opts.now ?? Date.now
   const cache = new Map<string, { at: number; value: unknown }>()
   const inflight = new Map<string, Promise<unknown>>()
 
   const run = (view: ViewName, args: ViewArgs): Promise<unknown> =>
     new Promise((resolve, reject) => {
+      // API boundary: only known flags, only plain values, one `--key=value` item each. The error never echoes input.
+      for (const [k, v] of Object.entries(args)) {
+        if (v === undefined) continue
+        if (!ALLOWED_KEYS.has(k) || (typeof v !== 'string' && typeof v !== 'number') || String(v).startsWith('-')) return reject(new ReaderError('reader_unavailable'))
+      }
       const argv = [entry, 'nightwatch', 'view', view]
       for (const k of Object.keys(args).sort()) {
         const v = args[k]
-        if (v !== undefined) argv.push(`--${k}`, String(v))
+        if (v !== undefined) argv.push(`--${k}=${String(v)}`)
       }
       execFile(file, argv, { timeout: timeout, killSignal: 'SIGKILL', maxBuffer: 8 * 1024 * 1024, env: opts.env ?? process.env, shell: false }, (err, stdout, stderr) => {
         if (err) {
@@ -44,6 +53,13 @@ export function createReader(opts: ReaderOptions = {}): Reader {
       })
     })
 
+  // Make room for one entry: drop expired entries first, then the oldest (Map keeps insertion order).
+  const evict = (): void => {
+    if (cache.size < max) return
+    for (const [k, e] of cache) if (now() - e.at >= ttl) cache.delete(k)
+    while (cache.size >= max) cache.delete(cache.keys().next().value as string)
+  }
+
   return (view, args = {}) => {
     const key = `${view}|${JSON.stringify(Object.entries(args).filter(([, v]) => v !== undefined).sort())}`
     const hit = cache.get(key)
@@ -51,7 +67,7 @@ export function createReader(opts: ReaderOptions = {}): Reader {
     const flying = inflight.get(key)
     if (flying) return flying
     const p = run(view, args).then(
-      (value) => { if (cache.size > 200) cache.clear(); cache.set(key, { at: now(), value }); inflight.delete(key); return value },
+      (value) => { evict(); cache.set(key, { at: now(), value }); inflight.delete(key); return value },
       (e) => { inflight.delete(key); throw e },
     )
     inflight.set(key, p)
