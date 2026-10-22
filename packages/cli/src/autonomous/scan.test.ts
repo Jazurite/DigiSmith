@@ -11,6 +11,7 @@ import { readJournal, resultsOf, journalPath } from "./journal.ts";
 import type { TickResult } from "./tick.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
 import { readOpen } from "./attention.ts";
+import { appendAttention } from "./attention-write.ts";
 import type { ScanGuard } from "./scan-guard.ts";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
@@ -445,7 +446,13 @@ describe("runScan: the scan guard", () => {
     tracker.add({ id: "t1" });
     const r = await runScan(mk({ guard: guard({ alreadyDone: () => ({ reason: "already-merged: abc", attention: "already-merged-but-open" }) }) }));
     expect(r.outcome).toBe("none");
-    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "T1", kind: "unknown", cause: "already-merged-but-open" }]);
+    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "T1/already-merged", kind: "unknown", cause: "already-merged-but-open" }]);
+  });
+  it("an unrelated open unknown item for the key does not drop the already-merged item", async () => {
+    tracker.add({ id: "t1" });
+    appendAttention(dir, now, { ticket: "T1", run: "T1", kind: "unknown", cause: "other" });
+    await runScan(mk({ guard: guard({ alreadyDone: () => ({ reason: "already-merged: abc", attention: "already-merged-but-open" }) }) }));
+    expect(readOpen(dir).map((i) => i.cause).sort()).toEqual(["already-merged-but-open", "other"]);
   });
   it("dry run lists the reason and the guardrail problem and writes nothing", async () => {
     tracker.add({ id: "t1" });

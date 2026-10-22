@@ -198,7 +198,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
       if (done !== null) {
         reasons.push(done.reason);
         if (done.attention !== undefined && !d.dryRun) {
-          try { appendAttention(d.dir, now, { ticket: key, run: key, kind: "unknown", cause: done.attention }); } catch { /* the skip still stands */ }
+          try { appendAttention(d.dir, now, { ticket: key, run: `${key}/already-merged`, kind: "unknown", cause: done.attention }); } catch { /* the skip still stands */ }
         }
       }
     }

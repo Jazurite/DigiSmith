@@ -1,4 +1,4 @@
-import { blockerProblem, mergedOnMain } from "./already-done.ts";
+import { blockerProblem, mergedOnMain, readMainLog, type MainLog } from "./already-done.ts";
 import type { Git } from "./gitx.ts";
 import { readMainConfig } from "./guardrails.ts";
 import type { LoTask } from "./types.ts";
@@ -16,6 +16,7 @@ export function makeScanGuard(git: Git, repo: string): ScanGuard {
     }
     return fetched;
   };
+  let mainLog: MainLog | undefined; // read once per scan
   return {
     guardrailProblems() {
       const c = readMainConfig(git, repo);
@@ -26,10 +27,11 @@ export function makeScanGuard(git: Git, repo: string): ScanGuard {
       const f = fetchOnce();
       if (f !== null) return { reason: `cannot check origin/main: ${f}` };
       try {
-        const hit = mergedOnMain(git, repo, key);
+        mainLog ??= readMainLog(git, repo);
+        const hit = mergedOnMain(git, repo, key, mainLog);
         if (hit !== null) return { reason: `already-merged: ${hit}`, attention: "already-merged-but-open" };
         for (const b of t.blockers.filter((x) => x.done)) {
-          const p = blockerProblem(git, repo, b.key);
+          const p = blockerProblem(git, repo, b.key, mainLog);
           if (p !== null) return { reason: p };
         }
       } catch (e) {

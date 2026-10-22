@@ -8,14 +8,14 @@ const task = (over: Partial<LoTask> = {}): LoTask => ({
   signOff: "Auto", milestone: null, blockers: [], ...over,
 });
 
-interface Fx { config?: string | Error; fetch?: Error; log?: string; branches?: string; ancestors?: string[] }
+interface Fx { config?: string | Error; fetch?: Error; log?: string; branches?: string; ancestors?: string[]; branchLog?: string }
 function fake(fx: Fx = {}): { git: Git; calls: string[][] } {
   const calls: string[][] = [];
   const git: Git = (_cwd, args) => {
     calls.push(args);
     if (args[0] === "show") { if (fx.config instanceof Error) throw fx.config; return fx.config ?? ""; }
     if (args[0] === "fetch") { if (fx.fetch) throw fx.fetch; return ""; }
-    if (args[0] === "log") return fx.log ?? "";
+    if (args[0] === "log") return args[1] === "origin/main" ? (fx.log ?? "") : (fx.branchLog ?? "");
     if (args[0] === "branch") {
       const pats = args.slice(3, -1);
       const lines = (fx.branches ?? "").split("\n").filter(Boolean);
@@ -61,7 +61,7 @@ describe("alreadyDone", () => {
     expect(makeScanGuard(git, "/r").alreadyDone(task({ blockers: [{ key: "DGS-3", done: true }] }))).toEqual({ reason: "blocker-not-on-main: DGS-3" });
   });
   it("a merged done blocker passes", () => {
-    const { git } = fake({ branches: "DGS-3__a", ancestors: ["DGS-3__a"] });
+    const { git } = fake({ branches: "DGS-3__a", ancestors: ["DGS-3__a"], branchLog: "wip(dgs-3): x" });
     expect(makeScanGuard(git, "/r").alreadyDone(task({ blockers: [{ key: "DGS-3", done: true }] }))).toBeNull();
   });
   it("a blocker that is not done is ignored here", () => {
@@ -77,6 +77,13 @@ describe("alreadyDone", () => {
   it("a git failure while checking is a skip, not a claim", () => {
     const git: Git = (_c, a) => { if (a[0] === "log") throw new Error("boom"); return ""; };
     expect(makeScanGuard(git, "/r").alreadyDone(task())).toEqual({ reason: "cannot check origin/main: boom" });
+  });
+  it("reads the main log once across two tickets and a done blocker", () => {
+    const { git, calls } = fake({ branches: "DGS-3__a", ancestors: ["DGS-3__a"], branchLog: "wip(dgs-3): x" });
+    const g = makeScanGuard(git, "/r");
+    g.alreadyDone(task({ blockers: [{ key: "DGS-3", done: true }] }));
+    g.alreadyDone(task({ id: "t2", key: "DGS-2", blockers: [{ key: "DGS-3", done: true }] }));
+    expect(calls.filter((c) => c[0] === "log" && c[1] === "origin/main")).toHaveLength(1);
   });
   it("fetches once for two calls", () => {
     const { git, calls } = fake();

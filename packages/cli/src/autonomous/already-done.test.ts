@@ -64,22 +64,43 @@ describe("mergedOnMain", () => {
     pushMain();
     expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
   });
-  it("counts a merged <KEY>__* branch with no key in the merge subject", () => {
-    g(repo, "checkout", "-q", "-b", "DGS-7__a");
-    commit("wip stuff");
-    g(repo, "push", "-q", "origin", "DGS-7__a");
+  const keyedBranch = (name: string, subject: string): void => {
+    g(repo, "checkout", "-q", "-b", name);
+    commit(subject);
+    g(repo, "push", "-q", "origin", name);
     g(repo, "checkout", "-q", "main");
+  };
+  it("counts a merged <KEY>__* branch whose commits name the key (merge subject has no key)", () => {
+    keyedBranch("DGS-7__a", "wip(dgs-7): stuff");
     g(repo, "merge", "-q", "--no-ff", "-m", "merge the thing", "DGS-7__a");
     pushMain();
-    expect(mergedOnMain(realGit, repo, "DGS-7")).toMatch(/^branch /);
+    expect(mergedOnMain(realGit, repo, "DGS-7", [])).toMatch(/^branch /);
+  });
+  it("counts a fast-forward-merged branch with key-scoped commits (log without rule a hit)", () => {
+    keyedBranch("DGS-7__ff", "wip(dgs-7): stuff");
+    g(repo, "merge", "-q", "--ff-only", "DGS-7__ff");
+    pushMain();
+    // rule (a) already matches the commit subject; prove rule (b) on its own with a log that has no hit
+    expect(mergedOnMain(realGit, repo, "DGS-7", [])).toBe("branch DGS-7__ff");
   });
   it("counts a merged local-only branch", () => {
     g(repo, "checkout", "-q", "-b", "DGS-7__loc");
-    commit("wip stuff");
+    commit("wip(dgs-7): stuff");
     g(repo, "checkout", "-q", "main");
     g(repo, "merge", "-q", "--no-ff", "-m", "merge the thing", "DGS-7__loc");
     pushMain();
-    expect(mergedOnMain(realGit, repo, "DGS-7")).toBe("branch DGS-7__loc");
+    expect(mergedOnMain(realGit, repo, "DGS-7", [])).toBe("branch DGS-7__loc");
+  });
+  it("does not count a merged branch whose commits do not name the key in scope", () => {
+    keyedBranch("DGS-7__a", "wip stuff for DGS-7");
+    g(repo, "merge", "-q", "--no-ff", "-m", "merge the thing", "DGS-7__a");
+    pushMain();
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("does not count an empty branch at the main tip", () => {
+    g(repo, "branch", "DGS-7__empty");
+    g(repo, "push", "-q", "origin", "DGS-7__empty");
+    expect(mergedOnMain(realGit, repo, "DGS-7")).toBeNull();
   });
   it("does not count an unmerged branch", () => {
     g(repo, "checkout", "-q", "-b", "DGS-7__a");
@@ -114,9 +135,13 @@ describe("blockerProblem", () => {
     g(repo, "fetch", "-q", "origin");
     expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
   });
+  it("blocks on an empty branch at the main tip", () => {
+    g(repo, "branch", "DGS-7__empty");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+  });
   it("passes when the branch is merged", () => {
     g(repo, "checkout", "-q", "-b", "DGS-7__a");
-    commit("wip stuff");
+    commit("wip(dgs-7): stuff");
     g(repo, "checkout", "-q", "main");
     g(repo, "merge", "-q", "--no-ff", "-m", "merge the thing", "DGS-7__a");
     pushMain();
