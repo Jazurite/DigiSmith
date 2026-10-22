@@ -420,8 +420,19 @@ describe("runScan: the scan guard", () => {
     expect(r.outcome).toBe("guardrail-config");
     expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
     expect(readLock(dir)).toBeNull();
-    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "-", kind: "failed", cause: "bad-guardrail-config" }]);
+    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "guardrails", kind: "failed", cause: "bad-guardrail-config" }]);
     expect(kinds()).toContain("guardrail-config");
+  });
+  it("the guardrail item has its own key: an open bad-budget-config item does not hide it, and a clean scan closes only the guardrail one", async () => {
+    tracker.add({ id: "t1" });
+    appendAttention(dir, new Date(), { ticket: null, run: "-", kind: "failed", cause: "bad-budget-config" });
+    let bad = true;
+    const g = guard({ guardrailProblems: () => (bad ? ["bad thing"] : []) });
+    await runScan(mk({ guard: g }));
+    expect(readOpen(dir).map((i) => i.cause).sort()).toEqual(["bad-budget-config", "bad-guardrail-config"]);
+    bad = false;
+    await runScan(mk({ guard: g }));
+    expect(readOpen(dir).map((i) => i.cause)).toEqual(["bad-budget-config"]);
   });
   it("a clean second scan closes the item and claims", async () => {
     tracker.add({ id: "t1" });

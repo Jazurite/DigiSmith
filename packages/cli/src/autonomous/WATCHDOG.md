@@ -98,7 +98,7 @@ Protected paths come from `nightwatch.protected_paths` in `.digismith/config.yml
 
 ### Strict guardrail config
 
-The reader `packages/cli/src/autonomous/guardrails.ts` judges the whole top-level `nightwatch:` block. `scripts/config-parse.ts` skips that block, so the reader is the only judge of it. A problem is a syntax error inside the block, a wrong type, a budget that is not a positive whole number, or an unknown key under `nightwatch.budgets`. Any problem stops `dg autonomous scan`: no claim, an event `guardrail-config`, and an attention item with cause `bad-guardrail-config`. The item closes on the first scan that reads clean. The merge gate refuses on the same problems. The watchdog keeps its own rule: a bad budget keeps the default and opens `bad-budget-config`.
+The reader `packages/cli/src/autonomous/guardrails.ts` judges the whole top-level `nightwatch:` block. `scripts/config-parse.ts` skips that block, so the reader is the only judge of it. A problem is a syntax error inside the block, a wrong type, a budget that is not a positive whole number, or an unknown key under `nightwatch.budgets`. Any problem stops `dg autonomous scan`: no claim, an event `guardrail-config`, and an attention item with cause `bad-guardrail-config` (own run key `guardrails`, so it never shares a slot with `bad-budget-config`). The item closes on the first scan that reads clean. The merge gate refuses on the same problems. The watchdog keeps its own rule: a bad budget keeps the default and opens `bad-budget-config`.
 
 ### Policy comes from local main
 

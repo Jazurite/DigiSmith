@@ -63,7 +63,7 @@ The cli code runs under `node --experimental-strip-types` and is built to `dist/
 
 Effect:
 
-- **Dispatch stops.** `runScan` reads the guardrails (from main, same helper as Part 2) after the breaker check and before the claim. A problem: no claim, an event `guardrail-config` in the run state, an attention item (run `-`, kind `failed`, cause `bad-guardrail-config`), and the scan outcome `guardrail-config`. The item closes itself on the first scan that reads clean.
+- **Dispatch stops.** `runScan` reads the guardrails (from main, same helper as Part 2) after the breaker check and before the claim. A problem: no claim, an event `guardrail-config` in the run state, an attention item (run `guardrails`, kind `failed`, cause `bad-guardrail-config`), and the scan outcome `guardrail-config`. The item closes itself on the first scan that reads clean.
 - **The merge gate refuses** on the same problems (Part 2, check 1).
 - **The watchdog keeps its DGS-583 contract.** A bad budget still keeps the default and opens `bad-budget-config`; `readBudgets` is not changed. The scan stop is the new part.
 

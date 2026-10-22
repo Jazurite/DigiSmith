@@ -142,12 +142,12 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     const problems = d.guard.guardrailProblems();
     if (problems.length > 0) {
       const cause = "bad-guardrail-config";
-      try { appendAttention(d.dir, now, { ticket: null, run: "-", kind: "failed", cause }); } catch { /* the scan still stops */ }
+      try { appendAttention(d.dir, now, { ticket: null, run: "guardrails", kind: "failed", cause }); } catch { /* the scan still stops */ }
       appendEvent(d.dir, now, "guardrail-config", { problems: problems.join("; ").slice(0, 300) });
       return { outcome: "guardrail-config", candidates: 0, skipped };
     }
     try {
-      for (const it of readOpen(d.dir)) if (it.run === "-" && it.cause === "bad-guardrail-config") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "guardrails read clean");
+      for (const it of readOpen(d.dir)) if (it.run === "guardrails" && it.cause === "bad-guardrail-config") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "guardrails read clean");
     } catch { /* the item stays open until a later scan */ }
   }
   const notes = readNotes(d.dir);
