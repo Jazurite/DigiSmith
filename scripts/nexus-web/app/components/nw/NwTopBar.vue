@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Overview } from '#nightwatch-schema'
-import { fmtClock, fmtUtc7 } from '../../utils/nw-format'
+import { ageOf, fmtClock, fmtUtc7 } from '../../utils/nw-format'
 
 const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null }>()
 
@@ -9,6 +9,10 @@ type Tone = 'ok' | 'warn' | 'bad' | 'neutral'
 const health = computed<{ label: string; tone: Tone; hollow: boolean } | null>(() => {
   const o = props.overview
   if (!o) return props.stale ? { label: 'Nexus unreachable', tone: 'bad', hollow: false } : null
+  if (props.stale) {   // the last poll failed: the data is old, so never show its green
+    const age = props.updatedAt === null ? '' : ` ${ageOf(new Date(props.updatedAt).toISOString(), Date.now())}`
+    return { label: `Nexus stale${age}`, tone: 'warn', hollow: false }
+  }
   switch (o.nexus.status) {
     case 'healthy': return { label: 'Nexus healthy', tone: 'ok', hollow: false }
     case 'degraded': return { label: 'Nexus degraded', tone: 'warn', hollow: false }
@@ -21,9 +25,9 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
 </script>
 
 <template>
-  <div class="bar" role="status" aria-label="Nexus status">
-    <span v-if="health"><i class="dot" :class="[health.tone, { hollow: health.hollow }]" aria-hidden="true" /><b>{{ health.label }}</b></span>
-    <span v-else class="muted">Nexus loading</span>
+  <div class="bar" role="group" aria-label="Nexus status">
+    <span v-if="health" role="status"><i class="dot" :class="[health.tone, { hollow: health.hollow }]" aria-hidden="true" /><b>{{ health.label }}</b></span>
+    <span v-else class="muted" role="status">Nexus loading</span>
     <template v-if="overview">
       <span>Workers <b>{{ overview.workers.length }}</b></span>
       <span>To do waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
@@ -32,7 +36,7 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
     <span title="not measured">Burn <b>-</b>/h</span>
     <span title="not measured">Seat 5h / week <b>- / -</b></span>
     <span class="sp" />
-    <span class="muted">updated <time v-if="updatedAt !== null" :datetime="new Date(updatedAt).toISOString()">{{ stamp }}</time><template v-else>{{ stamp }}</template> (UTC+7)</span>
+    <span class="muted" aria-live="off">updated <time v-if="updatedAt !== null" :datetime="new Date(updatedAt).toISOString()">{{ stamp }}</time><template v-else>{{ stamp }}</template> (UTC+7)</span>
   </div>
 </template>
 

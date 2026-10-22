@@ -15,3 +15,4 @@ export const Degraded = { args: { overview: { ...o, nexus: { status: 'degraded',
 export const Unknown = { args: { overview: { ...o, nexus: { status: 'unknown', reasons: [] } }, stale: false, updatedAt: UPDATED } }
 export const BreakerOpen = { args: { overview: { ...o, nexus: { status: 'breaker-open', reasons: [] } }, stale: false, updatedAt: UPDATED } }
 export const Unreachable = { args: { overview: null, stale: true, updatedAt: null } }
+export const Stale = { args: { overview: o, stale: true, updatedAt: Date.parse('2026-10-22T03:40:00Z') } }

@@ -3,7 +3,9 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
 import NwNav from './NwNav.vue'
 import NwPanel from './NwPanel.vue'
+import NwShell from './NwShell.vue'
 import NwStatus from './NwStatus.vue'
+import NwTable from './NwTable.vue'
 import NwTopBar from './NwTopBar.vue'
 import { overviewFixture } from '../../../tests/nightwatch-fixtures'
 
@@ -29,6 +31,21 @@ describe('NwTopBar', () => {
     expect(u.text()).toContain('Nexus unknown')
     expect(u.find('.dot.hollow').exists()).toBe(true)
     expect(u.find('.dot.ok').exists()).toBe(false)
+  })
+  it('shows stale in amber with the age when the last poll failed, never a green healthy', async () => {
+    const w = await mountSuspended(NwTopBar, { props: { overview: overviewFixture(), stale: true, updatedAt: Date.now() - 125_000 } })
+    expect(w.text()).toContain('Nexus stale 2m')
+    expect(w.text()).not.toContain('Nexus healthy')
+    expect(w.find('.dot.warn').exists()).toBe(true)
+    expect(w.find('.dot.ok').exists()).toBe(false)
+  })
+  it('keeps the live region on the health text only, not the per-poll time', async () => {
+    const w = await mountSuspended(NwTopBar, { props: { overview: overviewFixture(), stale: false, updatedAt: Date.parse('2026-10-22T03:42:10Z') } })
+    const live = w.find('[role="status"]')
+    expect(live.text()).toContain('Nexus healthy')
+    expect(live.text()).not.toContain('UTC+7')
+    expect(live.find('time').exists()).toBe(false)
+    expect(w.find('time').exists()).toBe(true)
   })
   it('shows a degraded and a breaker-open status in words', async () => {
     const o = overviewFixture()
@@ -77,5 +94,21 @@ describe('NwStatus', () => {
     for (const s of ['healthy', 'blocked', 'stalled', 'lost', 'ended', 'running'] as const) {
       expect((await mountSuspended(NwStatus, { props: { state: s } })).text()).toBe(s)
     }
+  })
+})
+
+describe('NwShell and NwTable', () => {
+  it('the shell renders the nav, the topbar slot and the main landmark with the slot content', async () => {
+    const w = await mountSuspended(NwShell, { props: { attention: 3 }, slots: { default: '<p id="x">page</p>', topbar: '<div id="tb">bar</div>' } })
+    expect(w.find('nav.nw-nav[aria-label="Nightwatch"]').exists()).toBe(true)
+    expect(w.find('main#main #x').exists()).toBe(true)
+    expect(w.find('#tb').exists()).toBe(true)
+    expect(w.find('.badge').text()).toBe('3')
+  })
+  it('the table renders a caption, a head slot and body rows', async () => {
+    const w = await mountSuspended(NwTable, { props: { caption: 'Workers' }, slots: { head: '<tr><th>Key</th></tr>', default: '<tr><td>DGS-590</td></tr>' } })
+    expect(w.find('caption').text()).toBe('Workers')
+    expect(w.find('thead th').text()).toBe('Key')
+    expect(w.find('tbody td').text()).toBe('DGS-590')
   })
 })

@@ -20,17 +20,17 @@ describe('the story catalogue', () => {
   })
   it('the top bar has a story for every Nexus status', () => {
     const t = nwText('NwTopBar.stories.ts')
-    for (const name of ['Healthy', 'Degraded', 'Unknown', 'BreakerOpen', 'Unreachable']) expect(t, name).toMatch(new RegExp(`export const ${name}\\b`))
+    for (const name of ['Healthy', 'Degraded', 'Unknown', 'BreakerOpen', 'Unreachable', 'Stale']) expect(t, name).toMatch(new RegExp(`export const ${name}\\b`))
   })
   it('the widget has one story per state, named so the ids are stable', () => {
     const t = text('LifeCalendarView.stories.ts')
     for (const name of ['Loaded', 'Loading', 'ApiError', 'KeyUnavailable', 'Empty', 'BeforeBirth', 'PastNinetyYears']) expect(t, name).toMatch(new RegExp(`export const ${name}\\b`))
   })
   it('no story fetches, and the only data source is the fake fixtures', () => {
-    for (const f of [...stories.map(f => [f, text(f)]), ...nwStories.map(f => [f, nwText(f)])] as [string, string][]) {
-      const [f2, t] = f
-      expect(t, f2).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|https?:\/\//)
-      for (const m of t.matchAll(/from '([^']+)'/g)) expect(m[1], `${f2} imports ${m[1]}`).not.toMatch(/nexus-api|profile|\.private/)
+    const all = [...stories.map(file => ({ file, source: text(file) })), ...nwStories.map(file => ({ file, source: nwText(file) }))]
+    for (const { file, source } of all) {
+      expect(source, file).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|https?:\/\//)
+      for (const m of source.matchAll(/from '([^']+)'/g)) expect(m[1], `${file} imports ${m[1]}`).not.toMatch(/nexus-api|profile|\.private/)
     }
   })
 })
