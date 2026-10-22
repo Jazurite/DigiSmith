@@ -44,5 +44,17 @@ describe.skipIf(!existsSync(OUT))('the generated Nightwatch pages', () => {
   it('ships the Warren notice in a built CSS file', () => {
     const css = files(OUT).filter(f => f.endsWith('.css')).map(f => readFileSync(f, 'utf8')).join('\n')
     expect(css).toContain('Copyright (c) 2026 Jaymin West')
+    // the whole MIT notice, not just the copyright line
+    expect(css).toContain('Permission is hereby granted, free of charge, to any person obtaining a copy of this software')
+    expect(css).toContain('The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.')
+    expect(css).toContain('WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED')
+    expect(css).toContain('IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM')
+    expect(css).toContain('github.com/jayminwest/warren/blob/main/docs/ui-revamp/tokens.css')
+  })
+  it('ships the notice as a file too', () => {
+    const txt = readFileSync(join(OUT, 'THIRD-PARTY-NOTICES.txt'), 'utf8')
+    expect(txt).toContain('Copyright (c) 2026 Jaymin West')
+    expect(txt).toContain('Permission is hereby granted')
+    expect(txt).toContain('THE SOFTWARE IS PROVIDED "AS IS"')
   })
 })

@@ -48,11 +48,14 @@ test('Runs filters go in the URL and narrow the rows', async ({ page }) => {
   await page.goto(`${stub.url}/nightwatch/runs/`)
   const rows = page.locator('tbody tr')
   await expect(rows.first()).toBeVisible()
-  const before = await rows.count()
+  const roles = async () => (await rows.locator('td:nth-child(3)').allTextContents()).map((t) => t.trim())
+  expect(new Set(await roles()).size).toBeGreaterThan(1)   // the unfiltered table shows several roles, so the check below is not vacuous
   await page.getByLabel('Role').selectOption('reviewer')
   await expect(page).toHaveURL(/role=reviewer/)
-  await expect(rows).toHaveCount(1)
-  expect(await rows.count()).toBeLessThan(before)
+  await expect.poll(async () => (await roles()).some((r) => r !== 'reviewer')).toBe(false)   // no other role appears
+  const filtered = await roles()
+  expect(filtered.length).toBeGreaterThan(0)
+  expect(filtered.every((r) => r === 'reviewer')).toBe(true)   // every row is a reviewer
 })
 
 test('Run detail: pipeline, event filter, tail and the read-only order', async ({ page }) => {

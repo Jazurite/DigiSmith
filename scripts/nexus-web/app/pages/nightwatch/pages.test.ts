@@ -210,19 +210,47 @@ describe('Plan page', () => {
 })
 
 describe('Attention page', () => {
-  it('announces nothing on the first load and "1 new attention item" politely when a poll brings one more', async () => {
+  const item = (id: string, cause: string, since: string) => ({ ...attentionFixture().open[0], id, cause, since })
+  const poll = async (answers: ReturnType<typeof attentionFixture>[]) => {
     vi.useFakeTimers()
-    const first = attentionFixture()
-    const more = { ...first, open: [...first.open, { ...first.open[0], id: 'att-3' }] }
-    api.loadAttention.mockResolvedValueOnce(first).mockResolvedValue(more)
+    answers.forEach((a, i) => (i === answers.length - 1 ? api.loadAttention.mockResolvedValue(a) : api.loadAttention.mockResolvedValueOnce(a)))
     const w = await mountSuspended(Attention)
     await vi.advanceTimersByTimeAsync(0)
     const live = w.find('[aria-live="polite"]')
+    const next = async () => { await vi.advanceTimersByTimeAsync(10_000); await flushPromises() }
+    return { w, live, next }
+  }
+  const a0 = attentionFixture()
+  const withOpen = (open: ReturnType<typeof item>[]) => ({ ...a0, open })
+  const base = [item('att-1', 'silent-30-min', '2026-10-22T01:32:00.000Z'), item('att-2', 'review-over-60-min', '2026-10-22T03:10:00.000Z')]
+
+  it('announces nothing on the first poll', async () => {
+    const { w, live } = await poll([withOpen(base)])
     expect(w.findAll('tbody tr').length).toBeGreaterThan(0)
     expect(live.text()).toBe('')
-    await vi.advanceTimersByTimeAsync(10_000)
-    await flushPromises()
-    expect(live.text()).toBe('1 new attention item')
+    w.unmount()
+  })
+  it('announces each arrival of two polls, with the count and the newest cause, and the text changes', async () => {
+    const one = [...base, item('att-3', 'first-cause', '2026-10-22T03:20:00.000Z')]
+    const two = [...one, item('att-4', 'second-cause', '2026-10-22T03:30:00.000Z')]
+    const { w, live, next } = await poll([withOpen(base), withOpen(one), withOpen(two)])
+    await next()
+    expect(live.text()).toBe('1 new attention item: first-cause')
+    await next()
+    expect(live.text()).toBe('1 new attention item: second-cause')
+    w.unmount()
+  })
+  it('announces a resolve plus an arrival in one poll (same list length)', async () => {
+    const swapped = [base[1], item('att-9', 'new-cause', '2026-10-22T03:40:00.000Z')]
+    const { w, live, next } = await poll([withOpen(base), withOpen(swapped)])
+    await next()
+    expect(live.text()).toBe('1 new attention item: new-cause')
+    w.unmount()
+  })
+  it('announces nothing when only items resolve', async () => {
+    const { w, live, next } = await poll([withOpen(base), withOpen([base[1]])])
+    await next()
+    expect(live.text()).toBe('')
     w.unmount()
   })
 })

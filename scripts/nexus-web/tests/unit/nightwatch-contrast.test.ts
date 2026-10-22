@@ -21,8 +21,8 @@ function tokens(block: string): Record<string, [number, number, number]> {
 }
 const dark = tokens(scss.slice(scss.indexOf('.nw {'), scss.indexOf('@mixin')))
 const light = tokens(scss.slice(scss.indexOf('@mixin'), scss.indexOf('@media')))
-const TEXT = ['text', 'text-2', 'text-3', 'primary', 'ok', 'warn', 'bad', 'info']
-const GROUNDS = ['bg', 'surface', 'raised']
+const TEXT = ['text', 'text-2', 'text-3', 'primary', 'ok', 'warn', 'bad', 'info', 'neutral']
+const GROUNDS = ['bg', 'surface', 'raised', 'hover', 'thead']   // hover rows and table heads carry text too
 
 describe.each([['dark', { ...dark }], ['light', { ...dark, ...light }]] as const)('%s tokens', (_name, t) => {
   it.each(TEXT.flatMap((f) => GROUNDS.map((g) => [f, g] as const)))('%s on %s is at least 4.5:1', (f, g) => {
