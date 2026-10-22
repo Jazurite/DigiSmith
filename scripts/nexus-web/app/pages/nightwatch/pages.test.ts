@@ -210,7 +210,7 @@ describe('Plan page', () => {
 })
 
 describe('Attention page', () => {
-  const item = (id: string, cause: string, since: string) => ({ ...attentionFixture().open[0], id, cause, since })
+  const item = (id: string, cause: string, since: string) => ({ ...attentionFixture().open[0]!, id, cause, since })
   const poll = async (answers: ReturnType<typeof attentionFixture>[]) => {
     vi.useFakeTimers()
     answers.forEach((a, i) => (i === answers.length - 1 ? api.loadAttention.mockResolvedValue(a) : api.loadAttention.mockResolvedValueOnce(a)))
@@ -241,14 +241,14 @@ describe('Attention page', () => {
     w.unmount()
   })
   it('announces a resolve plus an arrival in one poll (same list length)', async () => {
-    const swapped = [base[1], item('att-9', 'new-cause', '2026-10-22T03:40:00.000Z')]
+    const swapped = [base[1]!, item('att-9', 'new-cause', '2026-10-22T03:40:00.000Z')]
     const { w, live, next } = await poll([withOpen(base), withOpen(swapped)])
     await next()
     expect(live.text()).toBe('1 new attention item: new-cause')
     w.unmount()
   })
   it('announces nothing when only items resolve', async () => {
-    const { w, live, next } = await poll([withOpen(base), withOpen([base[1]])])
+    const { w, live, next } = await poll([withOpen(base), withOpen([base[1]!])])
     await next()
     expect(live.text()).toBe('')
     w.unmount()
