@@ -85,7 +85,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     return "claim-failed";
   }
   close("succeeded");
-  appendEvent(d.dir, now, "claim", { ticket: key, order });
+  appendEvent(d.dir, now, "claim", { ticket: key, order, taskId: t.id });
   return "claimed";
 }
 

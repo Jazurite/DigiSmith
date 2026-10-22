@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { formatOpen, readOpen } from "./attention.ts";
 import type { OpenItem } from "./attention.ts";
 import { fmtUtc7, stampOf } from "./clock.ts";
+import { driftLines, gatherDrift, type Claimed } from "./drift.ts";
+import type { Git } from "./gitx.ts";
 import { atomicWrite, firstEvent, readEvents, readLastReport, readLock, writeLastReport } from "./state.ts";
 import type { Event, Lock, Tracker } from "./types.ts";
 
-export interface ReportDeps { tracker: Tracker; dir: string; now: () => Date }
+export interface ReportDeps { tracker: Tracker; dir: string; now: () => Date; git?: Git; repo?: string }
 
 // Cap on how far back runReport looks for an away that began before the period; an away older than 30 days is not shown.
 const AWAY_LOOKBACK_MS = 30 * 24 * 3600_000;
@@ -36,7 +38,7 @@ function awayLines(events: Event[], from: Date): string[] {
   return out;
 }
 
-export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock | null, attention: OpenItem[] = [], now: number = to.getTime()): string {
+export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock | null, attention: OpenItem[] = [], now: number = to.getTime(), drift: string[] = []): string {
   // away events from before `from` are context only; every other section counts the period
   const events = allEvents.filter((e) => Date.parse(e.ts) >= from.getTime());
   const of = (kind: Event["kind"]) => events.filter((e) => e.kind === kind);
@@ -76,6 +78,7 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
     "Waiting for Jack", list(waiting), "",
     "Skipped", list(skipped), "",
     "Still building", list(building), "",
+    "Drift", list(drift), "",
     "Attention:", formatOpen(attention, now), "",
   ].join("\n");
 }
@@ -89,7 +92,24 @@ export async function runReport(d: ReportDeps): Promise<{ file: string; commente
   const to = d.now();
   const from = readLastReport(d.dir) ?? firstEventDate(d.dir) ?? to;
   const events = readEvents(d.dir, from.getTime() - AWAY_LOOKBACK_MS, to.getTime());
-  const text = buildReport(from, to, events, readLock(d.dir), readOpen(d.dir));
+  let drift: string[] = [];
+  if (d.git && d.repo) {
+    const claimed: Claimed[] = [];
+    const seen = new Set<string>();
+    for (const e of events) {
+      const t = Date.parse(e.ts);
+      if (e.kind !== "claim" || t < from.getTime() || t > to.getTime()) continue;
+      if (typeof e.ticket !== "string" || typeof e.taskId !== "string" || seen.has(e.ticket)) continue;
+      seen.add(e.ticket);
+      claimed.push({ ticket: e.ticket, taskId: e.taskId });
+    }
+    try {
+      drift = driftLines(claimed, await gatherDrift({ tracker: d.tracker, git: d.git, repo: d.repo }, claimed));
+    } catch (e) {
+      process.stderr.write(`autonomous report: drift check failed: ${e instanceof Error ? e.message : String(e)}\n`);
+    }
+  }
+  const text = buildReport(from, to, events, readLock(d.dir), readOpen(d.dir), to.getTime(), drift);
   const reports = join(d.dir, "reports");
   let name = `${stampOf(to)}.md`;
   for (let n = 2; existsSync(join(reports, name)); n++) name = `${stampOf(to)}-${n}.md`;

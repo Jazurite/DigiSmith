@@ -352,7 +352,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           describe: "write the report since the last one and post it on DGS-548",
           handler: () =>
             guarded(depsFactory, async (d) => {
-              const r = await runReport({ tracker: d.tracker(), dir: d.dir, now: d.now });
+              const r = await runReport({ tracker: d.tracker(), dir: d.dir, now: d.now, git: d.git ?? realGit, repo: d.mainRepo ?? MAIN_CHECKOUT });
               return [`report: ${r.file}`, `comment: ${r.commented ? "posted" : "failed"}`];
             }),
         })

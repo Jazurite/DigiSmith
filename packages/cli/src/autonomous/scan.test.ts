@@ -74,6 +74,7 @@ describe("runScan: the work rule", () => {
     tracker.add({ id: "t1" });
     const r = await runScan(mk());
     expect(r).toMatchObject({ outcome: "claimed", claimed: "T1" });
+    expect(events().find((e) => e.kind === "claim")).toMatchObject({ ticket: "T1", taskId: "t1" });
   });
   it("daytime, away until in the future: works", async () => {
     now = DAY;

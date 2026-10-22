@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { buildReport, runReport } from "./report.ts";
+import type { Git } from "./gitx.ts";
 import { appendEvent, readEvents, readLastReport, writeLastReport } from "./state.ts";
 
 const at = (iso: string) => new Date(iso);
@@ -194,5 +195,38 @@ describe("runReport", () => {
     writeLastReport(dir, FROM);
     const r = await runReport({ tracker, dir, now: () => TO });
     expect(readFileSync(r.file, "utf-8")).toMatch(/Away:\nnone/);
+  });
+});
+
+describe("drift section", () => {
+  it("prints none with no drift, after Still building", async () => {
+    const text = buildReport(FROM, TO, [], null);
+    expect(text).toContain("Drift\nnone");
+    expect(text.indexOf("Still building")).toBeLessThan(text.indexOf("Drift"));
+    expect(text.indexOf("Drift")).toBeLessThan(text.indexOf("Attention:"));
+  });
+  it("prints drift lines as bullets", () => {
+    const text = buildReport(FROM, TO, [], null, [], TO.getTime(), ["DGS-1: status unreadable", "DGS-2: branch has no commits"]);
+    expect(text).toContain("Drift\n- DGS-1: status unreadable\n- DGS-2: branch has no commits");
+  });
+  it("runReport gathers drift from claim events and puts it in the comment", async () => {
+    appendEvent(dir, at("2026-10-20T11:00:00Z"), "claim", { ticket: "DGS-1", order: "o", taskId: "t1" });
+    appendEvent(dir, at("2026-10-20T12:00:00Z"), "claim", { ticket: "DGS-1", order: "o", taskId: "t1" });
+    appendEvent(dir, at("2026-10-20T12:30:00Z"), "claim", { ticket: "DGS-2", order: "o", taskId: "nope" });
+    tracker.add({ id: "t1", status: "complete" });
+    writeLastReport(dir, FROM);
+    const git: Git = (_c, args) => (args[0] === "log" ? "" : "");
+    const r = await runReport({ tracker, dir, now: () => TO, git, repo: "/r" });
+    const text = readFileSync(r.file, "utf8");
+    expect(text).toContain("- DGS-1: done in ClickUp, nothing on main");
+    expect(text.match(/DGS-1: done in ClickUp/g)).toHaveLength(1);
+    expect(text).toContain("- DGS-2: status unreadable");
+    expect(tracker.comments[0].text).toBe(text);
+  });
+  it("runReport without git prints none", async () => {
+    appendEvent(dir, at("2026-10-20T11:00:00Z"), "claim", { ticket: "DGS-1", order: "o", taskId: "t1" });
+    writeLastReport(dir, FROM);
+    const r = await runReport({ tracker, dir, now: () => TO });
+    expect(readFileSync(r.file, "utf8")).toContain("Drift\nnone");
   });
 });
