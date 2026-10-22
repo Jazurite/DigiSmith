@@ -242,10 +242,10 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
           if (!existsSync(report)) continue; // the Reviewer has not finished: the phase waits
           const p = packOf(dir);
           if (p === null) throw new Error(`no readable pack.md next to ${report}`);
-          // a finding blocks only when it is Critical or Important and the ledger has no ruling for it
+          // a finding blocks only when it is Critical or Important and its LAST ledger entry is missing or still `fixing`
           const blocking = extractFindings(readFileSync(report, "utf8"), report).filter((f) =>
             (f.severity === "Critical" || f.severity === "Important") &&
-            !entries.some((e) => e.kind === m[1] && e.id === m[2] && e.round === Number(m[3]) && e.finding === f.id));
+            [undefined, "fixing"].includes(entries.filter((e) => e.kind === m[1] && e.id === m[2] && e.round === Number(m[3]) && e.finding === f.id).pop()?.verdict));
           out.push({ scope: m[1] as "task" | "ticket", result: blocking.length === 0 ? "clean" : "findings", head: p.head });
         }
         return out;

@@ -291,6 +291,16 @@ describe("realStores", () => {
     writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> parked (later)\n");
     expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
   });
+  it("F4: a fixing line is not a ruling; only the last entry for a finding counts", async () => {
+    const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" });
+    addReview("ticket-final-r1", "ticket", "aaaaaaa1", report(`[${finding("F1", "Important")}]`));
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> fixing (x)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> fixing (x)\nReview ticket final r1: F1 -> fixed (abc)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("clean");
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> fixed (abc)\nReview ticket final r1: F1 -> fixing (x)\n");
+    expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
+  });
   it("without a builder run there are no packs", async () => {
     const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => null });
     expect(await s.reviewerData.packs()).toEqual([]);
