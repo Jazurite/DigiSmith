@@ -116,6 +116,24 @@ describe('Run page', () => {
     expect(api.loadEvents).toHaveBeenCalled()
     w.unmount()
   })
+  it('a late 404 of the old run after a query-only change does not mark the new run as missing', async () => {
+    vi.useFakeTimers()
+    route.query = { id: 'b-1' }
+    let late: (e: unknown) => void = () => {}
+    api.loadRun.mockImplementation((k: string) => (k === 'b-1' ? new Promise((_, rej) => { late = rej }) : Promise.resolve(runDetailFixture())))
+    api.loadEvents.mockResolvedValue(eventsFixture(5))
+    const w = await mountSuspended(Run)
+    await vi.advanceTimersByTimeAsync(0)
+    route.query = { id: 'b-2' }
+    await vi.advanceTimersByTimeAsync(0)
+    late(new NightwatchApiError(404, 'not_found'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(w.text()).not.toContain('This run does not exist.')
+    api.loadRun.mockClear()
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(api.loadRun).toHaveBeenCalledWith('b-2')
+    w.unmount()
+  })
   it('a 404 shows the missing panel and stops the polling', async () => {
     vi.useFakeTimers()
     route.query = { id: 'b-1' }

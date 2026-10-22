@@ -20,7 +20,8 @@ const id = computed(() => { const q = route.query.id; const v = Array.isArray(q)
 const notFound = ref(false)
 const poll = useRestartingPoll(() => (id.value && !notFound.value ? id.value : null), async (k) => {
   try { return await loadRun(k) } catch (e) {
-    if (e instanceof NightwatchApiError && e.status === 404) notFound.value = true
+    // a late answer for a run that is no longer shown must not mark the current run as missing
+    if (e instanceof NightwatchApiError && e.status === 404 && k === id.value) notFound.value = true
     throw e
   }
 })
