@@ -59,7 +59,7 @@ Guardrail keys are every key under `nightwatch:` (`protected_paths`, `budgets.*`
 
 New `packages/cli/src/autonomous/guardrails.ts`: `readGuardrails(text)` returns `{ protectedPaths, budgets }` or a list of problems. A problem is any of: the file does not parse (`ConfigError` inside the `nightwatch:` block), a wrong type for a guardrail key (`protected_paths` not a list), a budget that is not a positive whole number, an unknown key under `nightwatch.budgets`. A `ConfigError` outside the `nightwatch:` block is not a guardrail problem.
 
-The cli code runs under `node --experimental-strip-types` and is built to `dist/index.js`. It does not import from `scripts/`. The reader is a small strict parser in `guardrails.ts` in the style of `budgets.ts`, with its own tests. A test feeds the same fixtures to it and to `scripts/config-parse.ts` so the two agree on what is a syntax error.
+The cli code runs under `node --experimental-strip-types` and is built to `dist/index.js`. It does not import from `scripts/`. The reader is a small strict parser in `guardrails.ts` in the style of `budgets.ts`, with its own tests. `scripts/config-parse.ts` skips the top-level `nightwatch:` block, so `guardrails.ts` is the only judge of it.
 
 Effect:
 
@@ -89,7 +89,7 @@ Skip reasons join the existing `REASON` list so the skip comment, the event and 
 | any | the claim's branch exists with 0 commits ahead | `<KEY>: branch has no commits` |
 | matches | | no line |
 
-No drift prints `none`. `runReport` reads the statuses with the existing `Tracker.getStatus(taskId)` (no new tracker method; a failed read prints `<KEY>: status unreadable` so a gap is shown, not hidden). `buildReport` stays a pure function: the git facts and statuses come in as an argument, and a fake supplies them in tests. The same drift lines go into the ClickUp comment on DGS-548, because the report text is the comment text.
+No drift prints `none`. `runReport` reads the statuses with the existing `Tracker.getStatus(taskId)` (drift uses `getStatus`, not a new `statusOf`; no new tracker method; a failed read prints `<KEY>: status unreadable` and unreadable git prints `<KEY>: git facts unreadable`, so a gap is shown, not hidden). `buildReport` stays a pure function: the git facts and statuses come in as an argument, and a fake supplies them in tests. The same drift lines go into the ClickUp comment on DGS-548, because the report text is the comment text.
 
 ## Order of work and files
 
@@ -109,7 +109,7 @@ Fakes only: no real ClickUp, herdr, depot or live API, and nothing touches port 
 - Salvage, merge gate and already-done run against temporary git repos built in the test (a bare "origin", a main checkout, a worktree). The depot directory is a temp dir. The push goes to the temp bare repo.
 - Salvage cases: clean merged tree (nothing to salvage), dirty tree (WIP commit, bundle verified, rescue ref on the fake origin), each secret pattern and a file over 5 MB (exit 1 `not salvaged`, no commit, no bundle, no push, cleanup removes nothing), unmerged clean branch, push rejected (exit 1, cleanup stops), bundle verify fails, two worktrees match, cleanup script with a failing salvage removes nothing.
 - Gate cases: 0 commits ahead, each protected pattern, a branch that changes `.digismith/config.yml` to loosen the list (policy still read from main), unreadable config, clean branch (go), refusal writes one `refused` item and writes it once.
-- Guardrails: each problem class, an error outside the `nightwatch:` block is ignored, parity with `scripts/config-parse.ts`, scan stops with the fake tracker and makes no claim, item closes on a clean scan.
+- Guardrails: each problem class, an error outside the `nightwatch:` block is ignored, `config-parse` skips the `nightwatch:` block, scan stops with the fake tracker and makes no claim, item closes on a clean scan.
 - Already-done: merged branch, key in a main commit subject scope (both cases), key only in a body or elsewhere in the subject (does not count), blocker with an unmerged branch (local, origin and rescue/ each), blocker branch on main, blocker with no branch passing on done, a failed fetch.
 - Drift: all rows of the table, an unreadable status, the no-drift case; `buildReport` snapshot with and without drift.
 - The strip-types smoke test and the typecheck cover the new files.
@@ -126,3 +126,10 @@ After the merge the Maestro rebuilds the CLI dist and runs `scripts/nexus-api/in
 ## Open points
 
 - Rescue branches stay on origin until Jack deletes them; nothing here cleans them (deletes need Jack).
+- The gate and the scan read the policy from the local `main` ref. The scan's `git fetch origin main` does not move local `main`, so the Maestro must keep local `main` current. Not changed in code.
+
+## As built (differences from the text above)
+
+- The gate refuses a bad ticket key (code `bad-key`) before any other check. It lists a rename as delete plus add and counts a delete of a protected path.
+- Salvage also checks the files of every commit in `main..branch` before the push (a committed secret or a file over 5 MB stops it). The rule `*token*`/`*secret*` matches any base name. Jack decides.
+- Already-done rule (b) is in effect subsumed by rule (a) and needs a key-scoped commit on the branch. The attention item for an already-merged ticket uses run `<KEY>/already-merged`.

@@ -54,3 +54,71 @@ These are the defaults. A value must be a positive whole number. A bad value kee
 - `dg autonomous resume`: close the breaker (`dg autonomous back` also does it).
 
 The watchdog closes `blocked` and `stalled` items itself when the run moves on. It never closes a `lost` item. Only Jack does that.
+
+## Merge and cleanup safety (DGS-585)
+
+Five checks. Each one fails closed: when a check cannot run, the answer is "stop".
+
+### dg salvage
+
+`dg salvage --ticket <KEY> [--worktree <path>] [--dry-run]` saves a ticket's work before a worktree is removed. It never deletes a file, a branch or a worktree. `--dry-run` prints the plan and writes nothing.
+
+Steps, in order. A failed step stops the command with exit 1:
+
+1. Find the one worktree whose branch starts with `<KEY>__`.
+2. If the tree is clean and the branch is merged into main: print `nothing to salvage`, exit 0.
+3. Check the files of every commit in `main..branch`, because the push sends them all. A file that matches the secret rule stops the command.
+4. If the tree is dirty: check the untracked and changed files the same way. Then make a WIP commit (`--no-verify`).
+5. Write a bundle to `~/.digismith-depot/salvage/<KEY>-<UTC>.bundle` and verify it.
+6. Push the branch to `rescue/<KEY>` on origin. No `--force`.
+
+The secret rule matches a base name of `.env*`, `*.pem`, `*.key`, `*secret*` or `*token*` (any case, any folder), and any file over 5 MB. The check reads names and sizes only. A match prints `not salvaged: <files>; Jack decides`. It makes no commit, no bundle and no push.
+
+The cleanup in `finishing-a-development-branch` runs salvage before it removes anything, and so does the Discard path. A failed salvage stops them. The watchdog does not run salvage. The `lost` comment and the restart order ask the conductor to run it.
+
+Known limit: when salvage commits a dirty tree on a merged branch, `git branch -d` then refuses to delete that branch. The branch stays. Jack decides.
+
+### dg autonomous merge-gate
+
+`dg autonomous merge-gate --ticket <KEY> [--repo <path>]` runs before a night merge. It prints `go` and exits 0, or prints `refused: <reason>` and exits 1.
+
+It refuses when:
+
+- the key is not a ticket key (`bad-key`; nothing is written to attention);
+- the policy cannot be read from main, or has a guardrail problem (`config`);
+- there is not exactly one branch `<KEY>__*` (`no-branch`);
+- the branch has 0 commits ahead of main (`no-commits`);
+- the branch changes a protected path (`protected-path`; one refusal lists every path).
+
+The diff lists a rename as a delete plus an add, so both sides count. A delete of a protected path counts too.
+
+A refusal opens an attention item of kind `refused` (cause `merge-refused: <reason>`). The conductor then releases with `--result failed --cause merge-refused`. The gate does not merge, release or touch the lock. Day merges do not call it.
+
+Protected paths come from `nightwatch.protected_paths` in `.digismith/config.yml`. A path ending in `/` matches the folder, a `*` matches inside one path segment, anything else matches exactly. Without the key, the defaults apply: `hooks/`, `hooks/hooks.json`, `.digismith/config.yml`, `skills/finishing-*/`, `skills/reviewer/`, `packages/cli/src/reviewer/`, `packages/cli/src/autonomous/`, `scripts/nexus-api/src/scheduler/`, `.digismith/mandate.yml`, `.digismith/profiles/`.
+
+### Strict guardrail config
+
+The reader `packages/cli/src/autonomous/guardrails.ts` judges the whole top-level `nightwatch:` block. `scripts/config-parse.ts` skips that block, so the reader is the only judge of it. A problem is a syntax error inside the block, a wrong type, a budget that is not a positive whole number, or an unknown key under `nightwatch.budgets`. Any problem stops `dg autonomous scan`: no claim, an event `guardrail-config`, and an attention item with cause `bad-guardrail-config`. The item closes on the first scan that reads clean. The merge gate refuses on the same problems. The watchdog keeps its own rule: a bad budget keeps the default and opens `bad-budget-config`.
+
+### Policy comes from local main
+
+The gate and the scan read the policy with `git show main:.digismith/config.yml`. That is the local `main` ref, never the branch. The scan runs `git fetch origin main`, but that does not move local `main`. Open point: the Maestro must keep local `main` current, or the gate and the scan judge an old policy.
+
+### Already-done and blocker rules
+
+The scan checks these after `checkReady` and before the claim, on `origin/main` after a `git fetch origin main`. A failed fetch skips the ticket (no claim).
+
+- Already merged: a commit on `origin/main` whose subject scope names the key, such as `feat(dgs-123): ...`. A key anywhere else does not count. Rule (b), a `<KEY>__*` branch that is an ancestor of `origin/main`, needs a commit on that branch whose scope names the key. It is in effect subsumed by rule (a). A hit skips with `already-merged: <sha>` and opens an attention item (run `<KEY>/already-merged`, kind `unknown`, cause `already-merged-but-open`). The scan never changes the ticket status.
+- Blockers: a blocker that is done in ClickUp and has a branch (local, origin or `rescue/<KEY>`) must be on main. If not, skip with `blocker-not-on-main: <key>`. A blocker with no branch passes.
+
+### Drift
+
+The morning report has a `Drift` section after `Still building`. For each ticket claimed in the period it compares the ClickUp status (read with `Tracker.getStatus`) with git:
+
+- `<KEY>: done in ClickUp, nothing on main`
+- `<KEY>: <status> in ClickUp, merged on main (<sha>)`
+- `<KEY>: branch has no commits`
+- `<KEY>: status unreadable` when ClickUp does not answer.
+- `<KEY>: git facts unreadable` when git cannot be read.
+
+No drift prints `none`. The same lines go into the ClickUp comment on DGS-548.
