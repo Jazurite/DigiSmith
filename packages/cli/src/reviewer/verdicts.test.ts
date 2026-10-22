@@ -34,6 +34,11 @@ describe("parseVerdictLines", () => {
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> parked\n")).toThrow(/reason/);
     expect(() => parseVerdictLines("Review task 1 r1: F1 -> rejected ()\n")).toThrow(/ledger line 1/);
   });
+  it("skips fixing lines, so a later fixing does not replace a fixed judgement", () => {
+    const m = parseVerdictLines("Review task 2 r1: F1 -> fixed (6310adc)\nReview task 2 r1: F1 -> fixing (again)\nReview task 2 r1: F2 -> fixing\n");
+    expect(m.size).toBe(1);
+    expect(m.get(judgementKey("task", "2", 1, "F1"))?.verdict).toBe("fixed");
+  });
 });
 
 describe("parseVerdictEntries", () => {
@@ -49,5 +54,15 @@ describe("parseVerdictEntries", () => {
   });
   it("fails like parseVerdictLines on a bad Review line", () => {
     expect(() => parseVerdictEntries("Review task 1 r1: F1 -> maybe (x)\n")).toThrow(/ledger line 1/);
+  });
+});
+
+describe("parseVerdictEntries fixing", () => {
+  it("accepts fixing with and without a reason", () => {
+    const e = parseVerdictEntries("Review task 2 r1: F1 -> fixing (check every commit)\nReview task 2 r1: F3 -> fixing\n");
+    expect(e.map((x) => [x.finding, x.verdict, x.reason])).toEqual([
+      ["F1", "fixing", "check every commit"],
+      ["F3", "fixing", ""],
+    ]);
   });
 });
