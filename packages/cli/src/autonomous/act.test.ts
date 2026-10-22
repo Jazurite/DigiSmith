@@ -163,7 +163,7 @@ describe("act retry", () => {
   it("sends the restart text once and settles uncertain, with no attention note", async () => {
     const d = tmp(); const dd = deps(d);
     const r = await act(dd, S2(), { kind: "retry", item: "builder-1.lost.0", run: "builder-1" });
-    expect(dd.sent).toEqual(["DGS-1: restart the builder, its pane is gone"]);
+    expect(dd.sent).toEqual([orderText("restart", "DGS-1", 1)]);
     expect(r.result).toBe("uncertain");
     expect(resultsOf(d)["DGS-1:building:1:retry"]).toBe("uncertain");
     expect(readJournal(d).find((l) => l.status === "planned")?.detail).toEqual({ item: "builder-1.lost.0", run: "builder-1" });

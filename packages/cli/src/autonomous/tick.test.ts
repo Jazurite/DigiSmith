@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { runTick, type TickDeps } from "./tick.ts";
 import { readPhaseState } from "./phase-state.ts";
+import { orderText } from "./act.ts";
 import { resultsOf, readJournal, plan, restartsOf } from "./journal.ts";
 import { appendAttentionId } from "./attention-write.ts";
 import { readOpen } from "./attention.ts";
@@ -165,7 +166,7 @@ describe("controller retry through the tick", () => {
     w.attention = [lostItem(d, "builder-1")];
   };
   const newRun = (w: World) => { w.runs.push({ id: "builder-2", role: "builder", createdAt: LATER, started: true, ended: false, merged: false, pushed: false, phaseEvent: null }); };
-  const RETRY = "DGS-1: restart the builder, its pane is gone";
+  const RETRY = orderText("restart", "DGS-1", 1);
 
   it("transient gives one restart order", async () => {
     const d = tmp(); const w = makeWorld(); lostWorld(d, w);
