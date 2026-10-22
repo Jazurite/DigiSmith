@@ -2,7 +2,7 @@
 import type { Plan } from '#nightwatch-schema'
 
 defineProps<{ verdicts: Plan['verdicts']; ledgerError: boolean }>()
-const tone = { fixed: 'ok', parked: 'warn', rejected: 'bad' } as const
+const tone = { fixed: 'ok', fixing: 'running', parked: 'warn', rejected: 'bad' } as const
 </script>
 
 <template>

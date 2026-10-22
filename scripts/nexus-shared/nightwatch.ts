@@ -85,7 +85,7 @@ export const planSchema = z.strictObject({
   ticket: z.string(), found: z.boolean(), planFile: z.string().nullable(),
   tasksTotal: count, tasksDone: count,
   tasks: z.array(z.strictObject({ n: count, title: z.string(), state: z.enum(['done', 'fix-round', 'waiting']), round: count.nullable() })),
-  verdicts: z.array(z.strictObject({ scope: z.string(), id: z.string(), round: count, finding: z.string(), verdict: z.enum(['fixed', 'parked', 'rejected']), reason: z.string() })),
+  verdicts: z.array(z.strictObject({ scope: z.string(), id: z.string(), round: count, finding: z.string(), verdict: z.enum(['fixed', 'fixing', 'parked', 'rejected']), reason: z.string() })),
   ledgerError: z.boolean(),
 })
 export type Plan = z.infer<typeof planSchema>

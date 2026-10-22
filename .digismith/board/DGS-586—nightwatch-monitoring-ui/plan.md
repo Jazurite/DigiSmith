@@ -203,7 +203,7 @@ export const planSchema = z.strictObject({
   ticket: z.string(), found: z.boolean(), planFile: z.string().nullable(),
   tasksTotal: count, tasksDone: count,
   tasks: z.array(z.strictObject({ n: count, title: z.string(), state: z.enum(['done', 'fix-round', 'waiting']), round: count.nullable() })),
-  verdicts: z.array(z.strictObject({ scope: z.string(), id: z.string(), round: count, finding: z.string(), verdict: z.enum(['fixed', 'parked', 'rejected']), reason: z.string() })),
+  verdicts: z.array(z.strictObject({ scope: z.string(), id: z.string(), round: count, finding: z.string(), verdict: z.enum(['fixed', 'fixing', 'parked', 'rejected']), reason: z.string() })),
   ledgerError: z.boolean(),
 })
 export type Plan = z.infer<typeof planSchema>
@@ -977,7 +977,7 @@ function inside(root: string, file: string): boolean {
 }
 
 export function planView(env: NodeJS.ProcessEnv, a: { ticket: string }) {
-  const empty = { ticket: a.ticket, found: false, planFile: null as string | null, tasksTotal: 0, tasksDone: 0, tasks: [] as ReturnType<typeof ledgerTasks>, verdicts: [] as { scope: string; id: string; round: number; finding: string; verdict: "fixed" | "parked" | "rejected"; reason: string }[], ledgerError: false };
+  const empty = { ticket: a.ticket, found: false, planFile: null as string | null, tasksTotal: 0, tasksDone: 0, tasks: [] as ReturnType<typeof ledgerTasks>, verdicts: [] as { scope: string; id: string; round: number; finding: string; verdict: "fixed" | "fixing" | "parked" | "rejected"; reason: string }[], ledgerError: false };
   if (!isSafe(a.ticket)) return empty;
   const builder = listRuns(env, a.ticket).find((r) => r.record.role === "builder" && r.record.worktree);
   const wt = builder?.record.worktree;

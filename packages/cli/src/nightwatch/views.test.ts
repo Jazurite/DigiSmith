@@ -168,7 +168,7 @@ describe("plan", () => {
     mkdirSync(ws, { recursive: true });
     const planFile = join(wt, ".digismith", "board", "DGS-590—x", "plan.md");
     writeFileSync(planFile, "### Task 1: Schema\n### Task 2: Reader\n");
-    writeFileSync(join(ws, "progress.md"), `# SDD ledger — plan: ${planFile}\nReview mode: hand\nTask 1: complete\nReview task 1 r1: F1 -> fixed\nReview task 2 r1: F1 -> parked (later ticket)\n`);
+    writeFileSync(join(ws, "progress.md"), `# SDD ledger — plan: ${planFile}\nReview mode: hand\nTask 1: complete\nReview task 1 r1: F1 -> fixed\nReview task 2 r1: F1 -> parked (later ticket)\nReview task 3 r1: F1 -> fixing\n`);
     d.writeRun({ ticket: "DGS-590", run: "builder-1", role: "builder", created_at: "2026-10-22T02:20:00.000Z", worktree: wt });
     const p = planView(d.env, { ticket: "DGS-590" });
     expect(p).toMatchObject({ found: true, tasksTotal: 2, tasksDone: 1, ledgerError: false });
@@ -176,6 +176,7 @@ describe("plan", () => {
     expect(p.verdicts).toEqual([
       { scope: "task", id: "1", round: 1, finding: "F1", verdict: "fixed", reason: "" },
       { scope: "task", id: "2", round: 1, finding: "F1", verdict: "parked", reason: "later ticket" },
+      { scope: "task", id: "3", round: 1, finding: "F1", verdict: "fixing", reason: "" },
     ]);
   });
   it("a ledger line that does not parse sets ledgerError and keeps the tasks", () => {

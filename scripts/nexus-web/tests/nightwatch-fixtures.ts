@@ -110,6 +110,7 @@ export function planFixture(): Plan {
     verdicts: [
       { scope: 'task 2', id: 'F1', round: 1, finding: 'Missing null check', verdict: 'fixed', reason: 'added the check' },
       { scope: 'task 3', id: 'F1', round: 1, finding: 'Slow route', verdict: 'parked', reason: 'later ticket' },
+      { scope: 'task 3', id: 'F2', round: 2, finding: 'Flaky retry', verdict: 'fixing', reason: '' },
     ],
     ledgerError: false,
   }

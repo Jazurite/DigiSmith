@@ -189,10 +189,10 @@ describe('RecordCard, OrderCard, Plan details', () => {
     done.tasksTotal = 4
     expect((await mountSuspended(PlanTasks, { props: { plan: done } })).text()).toContain('Task 4 of 4')
   })
-  it('shows the three verdict kinds and no table while the ledger is unreadable', async () => {
+  it('shows the four verdict kinds and no table while the ledger is unreadable', async () => {
     const v = planFixture().verdicts
     const w = await mountSuspended(VerdictTable, { props: { verdicts: [...v, { scope: 'task 4', id: 'F2', round: 2, finding: 'x', verdict: 'rejected', reason: 'no' }], ledgerError: false } })
-    expect(w.findAll('tbody tr').map((r) => r.findAll('td')[3]!.text())).toEqual(['fixed', 'parked', 'rejected'])
+    expect(w.findAll('tbody tr').map((r) => r.findAll('td')[3]!.text())).toEqual(['fixed', 'parked', 'fixing', 'rejected'])
     expect(w.findAll('thead th').map((h) => h.text())).toEqual(['Scope', 'Round', 'Finding', 'Verdict', 'Reason'])
     const bad = await mountSuspended(VerdictTable, { props: { verdicts: v, ledgerError: true } })
     expect(bad.find('table').exists()).toBe(false)

@@ -37,6 +37,9 @@ describe('nightwatch schemas', () => {
   it('runs, plan and error shapes', () => {
     expect(runsSchema.safeParse({ readAt: '2026-10-22T01:00:00.000Z', total: 1, runs: [row] }).success).toBe(true)
     expect(planSchema.safeParse({ ticket: 'DGS-590', found: false, planFile: null, tasksTotal: 0, tasksDone: 0, tasks: [], verdicts: [], ledgerError: false }).success).toBe(true)
+    const v = (verdict: string) => planSchema.safeParse({ ticket: 'DGS-590', found: true, planFile: null, tasksTotal: 0, tasksDone: 0, tasks: [], verdicts: [{ scope: 'task', id: '1', round: 1, finding: 'F1', verdict, reason: '' }], ledgerError: false }).success
+    expect(v('fixing')).toBe(true)
+    expect(v('open')).toBe(false)
     expect(nightwatchErrorSchema.safeParse({ error: 'reader_unavailable' }).success).toBe(true)
     expect(nightwatchErrorSchema.safeParse({ error: 'boom' }).success).toBe(false)
   })

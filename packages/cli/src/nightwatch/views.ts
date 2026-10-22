@@ -201,7 +201,7 @@ function inside(root: string, file: string): boolean {
 }
 
 export function planView(env: NodeJS.ProcessEnv, a: { ticket: string }) {
-  const empty = { ticket: a.ticket, found: false, planFile: null as string | null, tasksTotal: 0, tasksDone: 0, tasks: [] as ReturnType<typeof ledgerTasks>, verdicts: [] as { scope: string; id: string; round: number; finding: string; verdict: "fixed" | "parked" | "rejected"; reason: string }[], ledgerError: false };
+  const empty = { ticket: a.ticket, found: false, planFile: null as string | null, tasksTotal: 0, tasksDone: 0, tasks: [] as ReturnType<typeof ledgerTasks>, verdicts: [] as { scope: string; id: string; round: number; finding: string; verdict: "fixed" | "fixing" | "parked" | "rejected"; reason: string }[], ledgerError: false };
   if (!isSafe(a.ticket)) return empty;
   const builder = listRuns(env, a.ticket).find((r) => r.record.role === "builder" && r.record.worktree);
   const wt = builder?.record.worktree;
