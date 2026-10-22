@@ -15,7 +15,7 @@ const nowMs = useNow()
   <NwPanel v-else-if="!poll.data.value" kind="error" title="The attention list is not available right now." @retry="poll.refresh()" />
   <template v-else>
     <NwStaleBanner v-if="poll.error.value" />
-    <AttentionTable :open="poll.data.value.open" :resolved="poll.data.value.resolved" :now-ms="nowMs" />
+    <NwAttentionTable :open="poll.data.value.open" :resolved="poll.data.value.resolved" :now-ms="nowMs" />
   </template>
 </template>
 

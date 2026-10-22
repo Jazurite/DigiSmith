@@ -85,25 +85,31 @@ export function runDetailFixture(): RunDetail {
 }
 
 export function eventsFixture(n = 5): Events {
-  const lines: EventRow[] = Array.from({ length: n }, (_, i): EventRow => ({
-    n: i + 1, seq: i + 1, ts: `2026-10-22T03:${String(11 + i).padStart(2, '0')}:00.000Z`,
-    type: i % 2 ? 'turn_end' : 'tool', groups: i % 2 ? ['agent'] : ['agent', 'system'],
-    data: i % 2 ? {} as Record<string, string> : { name: 'Edit', ok: true },
-  }))
+  const lines: EventRow[] = Array.from({ length: n }, (_, i): EventRow => {
+    const blocked = (i + 1) % 7 === 0
+    return {
+      n: i + 1, seq: i + 1, ts: new Date(Date.parse('2026-10-22T03:11:00.000Z') + i * 1000).toISOString(),
+      type: blocked ? 'blocked' : 'tool',
+      groups: blocked ? ['system', 'errors'] : ['agent'],
+      data: blocked ? { kind: 'permission_prompt' } : { name: 'Edit', ok: true },
+    }
+  })
   return { run: 'builder-20261022T021000-a1b2c3', total: n, from: 0, lines }
 }
 
 export function planFixture(): Plan {
   return {
     ticket: 'DGS-590', found: true, planFile: '.digismith/board/DGS-590/plan.md',
-    tasksTotal: 3, tasksDone: 1,
+    tasksTotal: 7, tasksDone: 2,
     tasks: [
-      { n: 1, title: 'Add the schema', state: 'done', round: null },
-      { n: 2, title: 'Add the reader', state: 'fix-round', round: 1 },
-      { n: 3, title: 'Add the page', state: 'waiting', round: null },
+      { n: 1, title: 'Schema and fixtures', state: 'done', round: null },
+      { n: 2, title: 'Reader', state: 'done', round: null },
+      { n: 3, title: 'Route', state: 'fix-round', round: 1 },
+      { n: 4, title: 'Composable', state: 'waiting', round: null },
     ],
     verdicts: [
-      { scope: 'task-1', id: 'F1', round: 1, finding: 'Missing null check', verdict: 'fixed', reason: 'added the check' },
+      { scope: 'task 2', id: 'F1', round: 1, finding: 'Missing null check', verdict: 'fixed', reason: 'added the check' },
+      { scope: 'task 3', id: 'F1', round: 1, finding: 'Slow route', verdict: 'parked', reason: 'later ticket' },
     ],
     ledgerError: false,
   }

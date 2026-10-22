@@ -1,6 +1,6 @@
 // scripts/nexus-web/app/utils/nw-format.test.ts
 import { describe, expect, it } from 'vitest'
-import { ageOf, fmtDay, fmtDuration, fmtUtc7 } from './nw-format'
+import { ageOf, fmtDay, fmtDuration, fmtMinutes, fmtUtc7, isSafeId } from './nw-format'
 
 describe('nw-format', () => {
   it('shows UTC+7 times', () => {
@@ -19,5 +19,12 @@ describe('nw-format', () => {
     expect(ageOf('2026-10-22T00:50:00.000Z', now)).toBe('2h10m')
     expect(ageOf('2026-10-22T02:28:00.000Z', now)).toBe('32m')
     expect(ageOf(null, now)).toBe('-')
+  })
+  it('checks ids with the API rule and formats minutes', () => {
+    for (const ok of ['DGS-1', 'builder-20261022T021000-a1b2c3', 'a.b_c']) expect(isSafeId(ok), ok).toBe(true)
+    for (const bad of ['', '-x', '../x', 'a/b', 'a b', 'a?b', undefined, 3]) expect(isSafeId(bad), String(bad)).toBe(false)
+    expect(fmtMinutes(41)).toBe('0:41')
+    expect(fmtMinutes(135)).toBe('2:15')
+    expect(fmtMinutes(-1)).toBe('0:00')
   })
 })

@@ -27,3 +27,10 @@ export function fmtClock(ms: number): string {
   const d = new Date(ms + OFFSET)
   return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
 }
+// The same rule the API applies to a run id and a ticket key; check it before an id goes into a path or a URL.
+export const isSafeId = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(v)
+// h:mm from minutes, as the budget shows it ("0:41")
+export function fmtMinutes(min: number): string {
+  const m = Number.isFinite(min) ? Math.max(0, Math.floor(min)) : 0
+  return `${Math.floor(m / 60)}:${pad(m % 60)}`
+}

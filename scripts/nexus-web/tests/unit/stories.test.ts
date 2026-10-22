@@ -18,6 +18,9 @@ describe('the story catalogue', () => {
   it('has a story file for every Nightwatch shell component', () => {
     for (const c of ['NwShell', 'NwTopBar', 'NwNav', 'NwPanel', 'NwStatus', 'NwTable']) expect(nwStories, c).toContain(`${c}.stories.ts`)
   })
+  it('has a story file for every Runs, Run detail and Plan component', () => {
+    for (const c of ['RunsTable', 'RunFilters', 'PipelineBar', 'EventStream', 'BudgetCard', 'RecordCard', 'OrderCard', 'PlanTasks', 'VerdictTable']) expect(nwStories, c).toContain(`${c}.stories.ts`)
+  })
   it('the top bar has a story for every Nexus status', () => {
     const t = nwText('NwTopBar.stories.ts')
     for (const name of ['Healthy', 'Degraded', 'Unknown', 'BreakerOpen', 'Unreachable', 'Stale']) expect(t, name).toMatch(new RegExp(`export const ${name}\\b`))

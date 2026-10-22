@@ -18,11 +18,11 @@ const nowMs = useNow()
   <template v-else>
     <NwStaleBanner v-if="nw.stale.value" />
     <div class="grid">
-      <PhaseTable :rows="nw.overview.value.tickets.rows" :lock-ticket="nw.overview.value.tickets.lockTicket" :window-days="nw.overview.value.tickets.windowDays" :now-ms="nowMs" />
-      <ScanCard :scan="nw.overview.value.scan" :lock-ticket="nw.overview.value.tickets.lockTicket" />
+      <NwPhaseTable :rows="nw.overview.value.tickets.rows" :lock-ticket="nw.overview.value.tickets.lockTicket" :window-days="nw.overview.value.tickets.windowDays" :now-ms="nowMs" />
+      <NwScanCard :scan="nw.overview.value.scan" :lock-ticket="nw.overview.value.tickets.lockTicket" />
     </div>
-    <WorkersTable :workers="nw.overview.value.workers" :now-ms="nowMs" />
-    <LastEvents :events="nw.overview.value.lastEvents" />
+    <NwWorkersTable :workers="nw.overview.value.workers" :now-ms="nowMs" />
+    <NwLastEvents :events="nw.overview.value.lastEvents" />
   </template>
 </template>
 
