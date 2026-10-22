@@ -47,8 +47,11 @@ export function useNightwatchPoll<T>(load: () => Promise<T>, opts: PollOptions =
     if (timer) clearTimeout(timer)
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisible)
   }
-  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisible)
   onScopeDispose(stop)
-  void refresh()
+  // Client only: a prerender must not start a load or a timer (a failed server-side load retried every 30 s and kept `nuxt generate` alive).
+  if (import.meta.client) {
+    document.addEventListener('visibilitychange', onVisible)
+    void refresh()
+  }
   return { data, error, loading, updatedAt, failedAt, refresh, stop }
 }
