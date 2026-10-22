@@ -26,7 +26,8 @@ function typeLabel(r: Review): string {
 }
 
 type Ruling = { round: number; verdict: string; reason: string };
-type Resolved = { review: Review; finding: Finding; history: Ruling[] };
+type Logged = Ruling & { line: number; text: string }; // line and text stay out of the JSON
+type Resolved = { review: Review; finding: Finding; history: Logged[] };
 
 const sortReviews = (reviews: Review[]): Review[] =>
   [...reviews].sort((a, b) => {
@@ -56,13 +57,19 @@ function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resol
       const packs = sortReviews(reviews).map(packName).join(", ");
       throw new Error(`ledger line ${e.line}: ${e.text}: no pack raised ${e.kind} ${e.id} ${e.finding}; packs read: ${packs}`);
     }
-    target.history.push({ round: e.round, verdict: e.verdict, reason: e.reason });
+    target.history.push({ round: e.round, verdict: e.verdict, reason: e.reason, line: e.line, text: e.text });
   }
   const unjudged = [...all.values()]
     .filter((r) => r.history.length === 0)
     .map((r) => judgementKeyOf(r));
   if (unjudged.length > 0) throw new Error(`findings with no verdict line: ${unjudged.join(", ")}`);
   for (const r of all.values()) r.history.sort((a, b) => a.round - b.round); // stable: ledger order inside a round
+  const unfinished = [...all.values()]
+    .map((r) => ({ r, last: r.history[r.history.length - 1] }))
+    .filter((u) => u.last.verdict === "fixing")
+    .sort((a, b) => a.last.line - b.last.line)
+    .map((u) => `ledger line ${u.last.line}: ${u.last.text}: fix not finished for ${judgementKeyOf(u.r)}`);
+  if (unfinished.length > 0) throw new Error(unfinished.join("; "));
   return all;
 }
 
@@ -70,7 +77,7 @@ const judgementKeyOf = (r: Resolved): string => `${r.review.kind} ${r.review.id}
 const sortedFindings = (r: Review): Finding[] =>
   [...r.findings].sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
 
-const latest = (r: Resolved): Ruling => r.history[r.history.length - 1];
+const latest = (r: Resolved): Ruling => [...r.history].reverse().find((h) => h.verdict !== "fixing") as Ruling;
 
 export function buildRows(reviews: Review[], entries: VerdictEntry[]): Row[] {
   const resolved = resolve(reviews, entries);

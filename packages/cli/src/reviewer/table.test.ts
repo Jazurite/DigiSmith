@@ -106,6 +106,68 @@ describe("renderMarkdown", () => {
   });
 });
 
+describe("fixing lines", () => {
+  const ledgerOf = (lines: string[]) => parseVerdictEntries(["Review mode: role", ...lines, ""].join("\n"));
+  function realShape() {
+    const reviews: Review[] = [];
+    const lines: string[] = [];
+    for (let t = 1; t <= 7; t++) {
+      reviews.push(review("task", String(t), 1, [f("F1"), f("F2"), f("F3")]));
+      lines.push(
+        `Review task ${t} r1: F1 -> fixing (commit check before the push)`, `Review task ${t} r1: F3 -> fixing`,
+        `Review task ${t} r1: F1 -> fixed (6310adc)`, `Review task ${t} r1: F2 -> fixing`,
+        `Review task ${t} r1: F2 -> parked (Maestro's rule *token*/*secret*, Jack decides, 6310adc)`,
+        `Review task ${t} r1: F3 -> fixed (6310adc)`, `Review task ${t} r1: F2 -> fixed (6310adc)`,
+      );
+    }
+    reviews.push(review("task", "2", 2, [f("F5")]));
+    lines.push("Review task 2 r2: F5 -> fixing (check every commit, add-then-delete)", "Review task 2 r2: F5 -> fixed (cfb1b2f)");
+    reviews.push(review("ticket", "final", 1, [f("F1"), f("F2")]), review("ticket", "final", 2, [f("F4")]),
+      review("ticket", "final", 3, [f("F7")]), review("ticket", "final", 4, [f("F8")]));
+    lines.push(
+      "Review ticket final r1: F1 -> fixing", "Review ticket final r1: F2 -> fixing", "Review ticket final r1: F1 -> fixed (aaaaaaa)",
+      "Review ticket final r1: F2 -> fixed (aaaaaaa)", "Review ticket final r2: F4 -> fixing (x)", "Review ticket final r2: F4 -> fixed (bbbbbbb)",
+      "Review ticket final r3: F7 -> fixing (order: ...)", "Review ticket final r3: F7 -> fixed (8faa0a5)",
+      "Review ticket final r4: F7 -> fixed (8faa0a5)", "Review ticket final r4: F8 -> fixing", "Review ticket final r4: F8 -> fixed (ccccccc)",
+    );
+    return { reviews, lines };
+  }
+  it("builds the real shape: 27 fixing lines never show, verdict cells are the final rulings", () => {
+    const { reviews, lines } = realShape();
+    expect(lines.filter((l) => l.endsWith("-> fixing") || / -> fixing \(/.test(l))).toHaveLength(27);
+    const rows = buildRows(reviews, ledgerOf(lines));
+    expect(JSON.stringify(rows)).not.toContain("fixing");
+    const t1 = rows.filter((r) => r.type === "task 1" && r.round === 1);
+    expect(t1.map((r) => r.verdict)).toEqual(["fixed (6310adc)", "fixed (6310adc)", "fixed (6310adc)"]);
+    expect(rows.find((r) => r.type === "ticket" && r.round === 3)?.verdict).toBe("fixed (8faa0a5) [r4]");
+  });
+  it("keeps fixing in the JSON history while latest is the final ruling", () => {
+    const e = parseVerdictEntries("Review task 1 r1: F1 -> fixing (x)\nReview task 1 r1: F1 -> fixed (abc1234)\n");
+    const j = buildJson([review("task", "1", 1, [f("F1")])], e).findings[0];
+    expect(j.history).toEqual([{ round: 1, verdict: "fixing", reason: "x" }, { round: 1, verdict: "fixed", reason: "abc1234" }]);
+    expect(j.latestRound).toBe(1);
+    expect(j.latestRuling).toEqual({ verdict: "fixed", reason: "abc1234" });
+  });
+  it("fails on a lone fixing line", () => {
+    const e = parseVerdictEntries("# x\nReview task 1 r1: F1 -> fixing (x)\n");
+    expect(() => buildRows([review("task", "1", 1, [f("F1")])], e)).toThrow(
+      "ledger line 2: Review task 1 r1: F1 -> fixing (x): fix not finished for task 1 r1 F1",
+    );
+  });
+  it("fails when fixed is followed by a later fixing", () => {
+    const e = parseVerdictEntries("# x\nReview task 1 r1: F1 -> fixed\nReview task 1 r1: F1 -> fixing\n");
+    expect(() => buildJson([review("task", "1", 1, [f("F1")])], e)).toThrow(
+      "ledger line 3: Review task 1 r1: F1 -> fixing: fix not finished for task 1 r1 F1",
+    );
+  });
+  it("names every unfinished finding in one error", () => {
+    const e = parseVerdictEntries("Review task 1 r1: F2 -> fixing\nReview task 1 r1: F1 -> fixing\n");
+    expect(() => buildRows([review("task", "1", 1, [f("F1"), f("F2")])], e)).toThrow(
+      /line 1: .*fix not finished for task 1 r1 F2; ledger line 2: .*fix not finished for task 1 r1 F1/,
+    );
+  });
+});
+
 describe("runTable", () => {
   let ws: string;
   let out: string;
@@ -158,6 +220,17 @@ describe("runTable", () => {
     const before = fs.readFileSync(ledger);
     expect(runTable({ workspace: ws, out }).written).toBe(true);
     expect(fs.readFileSync(out, "utf8")).toContain("fixed (commit abc1234) [r2]");
+    expect(fs.readFileSync(ledger).equals(before)).toBe(true);
+  });
+  it("writes findings.md from a ledger with fixing lines and leaves the ledger bytes alone", () => {
+    packWithF1();
+    const ledger = path.join(ws, "progress.md");
+    fs.writeFileSync(ledger, "Review mode: role\nReview task 4 r1: F1 -> fixing\nReview task 4 r1: F1 -> fixed (abc1234)\n");
+    const before = fs.readFileSync(ledger);
+    expect(runTable({ workspace: ws, out }).written).toBe(true);
+    const md = fs.readFileSync(out, "utf8");
+    expect(md).toContain("fixed (abc1234)");
+    expect(md).not.toContain("fixing");
     expect(fs.readFileSync(ledger).equals(before)).toBe(true);
   });
   it("prints JSON with --json and no --out, and writes it with --out", () => {
