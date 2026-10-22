@@ -16,12 +16,15 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
   const tail = ref(true)
   const hasEarlier = ref(false)
   const error = ref(false)
+  const earlierError = ref(false)   // a failed loadEarlier must not reset the pages already loaded, so it has its own flag
   let seen = 0
   let generation = 0   // a group change starts a new generation; an answer from an older one is dropped
   let timer: ReturnType<typeof setTimeout> | undefined
   let stopped = false
   const g = (): { group?: string } => (group.value === 'all' ? {} : { group: group.value })
-  const earlier = (rows: EventRow[]): boolean => rows.length > 0 && rows[0]!.n > 1
+  // Line numbers are run-wide. Without a filter, a first line above 1 means earlier lines exist.
+  // With a filter the answer cannot say, so a full page means there may be more; a short page means there is not.
+  const earlier = (rows: EventRow[]): boolean => (group.value === 'all' ? rows.length > 0 && rows[0]!.n > 1 : rows.length >= PAGE)
 
   async function first(): Promise<void> {
     const mine = ++generation
@@ -62,12 +65,13 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
       if (mine !== generation) return
       lines.value = [...r.lines, ...lines.value]
       hasEarlier.value = earlier(r.lines)
-    } catch { error.value = true }
+      earlierError.value = false
+    } catch { earlierError.value = true }
   }
-  async function setGroup(next: Group): Promise<void> { group.value = next; await first() }
+  async function setGroup(next: Group): Promise<void> { group.value = next; earlierError.value = false; await first() }
 
   function stop(): void { stopped = true; if (timer) clearTimeout(timer) }
   if (import.meta.client) void first().then(schedule)
   if (getCurrentScope()) onScopeDispose(stop)
-  return { lines, total, group, tail, hasEarlier, error, loadEarlier, setGroup, stop }
+  return { lines, total, group, tail, hasEarlier, error, earlierError, loadEarlier, setGroup, stop }
 }

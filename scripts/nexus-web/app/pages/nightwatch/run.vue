@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, effectScope, onScopeDispose, ref, shallowRef, watch } from 'vue'
+import type { EffectScope } from 'vue'
 import { loadRun, NightwatchApiError } from '../../composables/nightwatch-api'
 import { useEventTail } from '../../composables/useEventTail'
 import { useRestartingPoll } from '../../composables/useRestartingPoll'
@@ -13,17 +14,25 @@ import NwRecordCard from '../../components/nw/RecordCard.vue'
 definePageMeta({ layout: 'nightwatch' })
 useHead({ title: 'Run · Nightwatch' })
 
-const raw = useRoute().query.id
-const id = isSafeId(raw) ? raw : null
+const route = useRoute()
+// the id comes from the query and can change without a new page (a link to another run): everything restarts on a change
+const id = computed(() => { const q = route.query.id; const v = Array.isArray(q) ? q[0] : q; return isSafeId(v) ? v : null })
 const notFound = ref(false)
-const poll = useRestartingPoll(() => (id && !notFound.value ? id : null), async (k) => {
+const poll = useRestartingPoll(() => (id.value && !notFound.value ? id.value : null), async (k) => {
   try { return await loadRun(k) } catch (e) {
     if (e instanceof NightwatchApiError && e.status === 404) notFound.value = true
     throw e
   }
 })
-const tail = id ? useEventTail(id) : null
-watch(notFound, (v) => { if (v) { poll.stop(); tail?.stop() } })
+const tail = shallowRef<ReturnType<typeof useEventTail> | null>(null)
+let tailScope: EffectScope | undefined
+watch(id, (v) => {
+  tailScope?.stop()
+  notFound.value = false
+  tail.value = v ? (tailScope = effectScope(true)).run(() => useEventTail(v)) ?? null : null
+}, { immediate: true })
+onScopeDispose(() => tailScope?.stop())
+watch(notFound, (v) => { if (v) { poll.stop(); tailScope?.stop() } })
 const run = computed(() => poll.data.value)
 const branch = computed(() => (typeof run.value?.record.branch === 'string' ? run.value.record.branch : null))
 const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.role, run.value.row.seat, run.value.row.model, branch.value].filter(Boolean).join(' · ') : '')
@@ -43,6 +52,7 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
       <div class="cols">
         <div>
           <NwStaleBanner v-if="tail && tail.error.value && tail.lines.value.length" />
+          <p v-if="tail && tail.earlierError.value" class="nw-sub" role="status">Earlier lines could not be loaded. Try again.</p>
           <NwPanel v-if="tail && tail.error.value && !tail.lines.value.length" kind="error" title="The events are not available right now." @retry="tail.setGroup(tail.group.value)" />
           <NwEventStream
             v-else-if="tail"

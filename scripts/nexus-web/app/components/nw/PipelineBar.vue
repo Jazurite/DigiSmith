@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import type { RunDetail } from '#nightwatch-schema'
-import { fmtClock } from '../../utils/nw-format'
+import { fmtUtc7 } from '../../utils/nw-format'
 
 defineProps<{ steps: RunDetail['pipeline'] }>()
 const LABEL = { claimed: 'Claimed', 'worktree-ready': 'Worktree ready', building: 'Building', review: 'Review', merged: 'Merged', pushed: 'Pushed' } as const
-const time = (at: string | null): string => (at ? fmtClock(Date.parse(at)) : '-')
 </script>
 
 <template>
@@ -12,7 +11,7 @@ const time = (at: string | null): string => (at ? fmtClock(Date.parse(at)) : '-'
     <li v-for="s in steps" :key="s.step" :class="s.state">
       <i class="dot" aria-hidden="true" />{{ LABEL[s.step] }}
       <span class="sr"> ({{ s.state }})</span>
-      <small>{{ time(s.at) }}</small>
+      <small>{{ fmtUtc7(s.at) }}</small>
       <b v-if="s.state === 'lost'" class="word">lost</b>
     </li>
   </ol>

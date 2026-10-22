@@ -24,10 +24,12 @@ const poll = useRestartingPoll<Plan>(() => ticket.value, (k) => loadPlan(k))
 // the picker: unique tickets of the latest runs, loaded once and only when no ticket is known
 const choices = ref<string[] | null>(null)
 const pickerFailed = ref(false)
-watch([() => ticket.value === null && settled.value, () => import.meta.client], async ([need, client]) => {
+const pickerTry = ref(0)
+watch([() => ticket.value === null && settled.value, () => import.meta.client, pickerTry], async ([need, client]) => {
   if (!need || !client || choices.value) return
   try { choices.value = [...new Set((await loadRuns({ limit: 100 })).runs.map((r) => r.ticket).filter(isSafeId))] } catch { pickerFailed.value = true }
 }, { immediate: true })
+const retryPicker = (): void => { pickerFailed.value = false; choices.value = null; pickerTry.value++ }
 const pick = (e: Event): void => { const v = (e.target as HTMLSelectElement).value; if (isSafeId(v)) void navigateTo({ query: { ticket: v } }) }
 </script>
 
@@ -53,7 +55,7 @@ const pick = (e: Event): void => { const v = (e.target as HTMLSelectElement).val
         <option v-for="t in choices ?? []" :key="t" :value="t">{{ t }}</option>
       </select>
     </label>
-    <NwPanel v-if="pickerFailed" kind="error" title="The tickets are not available right now." />
+    <NwPanel v-if="pickerFailed" kind="error" title="The tickets are not available right now." @retry="retryPicker" />
     <NwPanel v-else kind="empty" title="Pick a ticket." />
   </template>
 </template>

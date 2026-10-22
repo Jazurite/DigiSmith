@@ -1,6 +1,6 @@
 import { flushPromises } from '@vue/test-utils'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
 import { NightwatchApiError } from '../../composables/nightwatch-api'
@@ -10,8 +10,10 @@ import Runs from './runs.vue'
 
 const api = vi.hoisted(() => ({ loadRuns: vi.fn(), loadRun: vi.fn(), loadEvents: vi.fn(), loadPlan: vi.fn() }))
 vi.mock('../../composables/nightwatch-api', async (orig) => ({ ...(await orig<typeof import('../../composables/nightwatch-api')>()), ...api }))
-const route = vi.hoisted(() => ({ query: {} as Record<string, string> }))
-mockNuxtImport('useRoute', () => () => route)
+const holder = vi.hoisted(() => ({ route: null as unknown as { query: Record<string, string> } }))
+const route = reactive({ query: {} as Record<string, string> })
+holder.route = route
+mockNuxtImport('useRoute', () => () => holder.route)
 const nav = vi.hoisted(() => vi.fn())
 mockNuxtImport('navigateTo', () => nav)
 
@@ -94,6 +96,26 @@ describe('Run page', () => {
     for (const t of ['Event stream', '5 events', 'Budget', 'Run record', 'Order']) expect(w.text(), t).toContain(t)
     w.unmount()
   })
+  it('a query-only change to another run stops the old polling and loads the new run', async () => {
+    vi.useFakeTimers()
+    route.query = { id: 'b-1' }
+    api.loadRun.mockResolvedValue(runDetailFixture())
+    api.loadEvents.mockResolvedValue(eventsFixture(5))
+    const w = await mountSuspended(Run)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.loadRun).toHaveBeenLastCalledWith('b-1')
+    route.query = { id: 'b-2' }
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.loadRun).toHaveBeenLastCalledWith('b-2')
+    expect(api.loadEvents.mock.calls.at(-1)?.[0]).toBe('b-2')
+    api.loadRun.mockClear()
+    api.loadEvents.mockClear()
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(api.loadRun.mock.calls.every((c) => c[0] === 'b-2')).toBe(true)
+    expect(api.loadEvents.mock.calls.every((c) => c[0] === 'b-2')).toBe(true)
+    expect(api.loadEvents).toHaveBeenCalled()
+    w.unmount()
+  })
   it('a 404 shows the missing panel and stops the polling', async () => {
     vi.useFakeTimers()
     route.query = { id: 'b-1' }
@@ -145,6 +167,18 @@ describe('Plan page', () => {
     expect(w.findAll('select option').map((o) => o.text())).toEqual(['Choose a ticket', 'DGS-590', 'DGS-588', 'DGS-586', 'DGS-585'])
     await w.find('select').setValue('DGS-588')
     expect(nav).toHaveBeenCalledWith({ query: { ticket: 'DGS-588' } })
+    w.unmount()
+  })
+  it('a failed picker load shows an error with Retry that loads again', async () => {
+    api.loadRuns.mockRejectedValueOnce(new Error('x')).mockResolvedValue(runsFixture())
+    const w = await mountSuspended(Plan, { global: { provide: provide(overviewFixture({ workers: [] })) } })
+    await flushPromises()
+    expect(w.find('[role="alert"]').text()).toContain('The tickets are not available right now.')
+    await w.find('button.retry').trigger('click')
+    await flushPromises()
+    expect(api.loadRuns).toHaveBeenCalledTimes(2)
+    expect(w.find('[role="alert"]').exists()).toBe(false)
+    expect(w.findAll('select option').length).toBeGreaterThan(1)
     w.unmount()
   })
   it('does not call the plan API while the overview has neither arrived nor failed', async () => {

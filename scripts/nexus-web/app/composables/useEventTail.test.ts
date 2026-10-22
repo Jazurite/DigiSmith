@@ -61,4 +61,43 @@ describe('useEventTail', () => {
     await t.setGroup('errors')
     expect(api.urls.at(-1)).toBe('?group=errors&tail=200')
   })
+  it('under a group filter hasEarlier follows the page size, not the first line number', async () => {
+    const api = fakeApi(50)
+    const t = useEventTail('b-1', { fetch: api.fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(t.hasEarlier.value).toBe(false)   // 50 lines, all loaded, first n is 1
+    const filtered = async (lines: number, first: number) => ({
+      fetch: (async () => new Response(JSON.stringify({ run: 'b-1', total: 900, from: 0, lines: eventsFixture(900).lines.slice(first, first + lines) }), { status: 200 })) as typeof globalThis.fetch,
+    })
+    const few = useEventTail('b-1', { fetch: (await filtered(3, 500)).fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    await few.setGroup('errors')
+    expect(few.lines.value[0]?.n).toBeGreaterThan(1)
+    expect(few.hasEarlier.value).toBe(false)   // a short filtered page: nothing earlier, although n is above 1
+    const full = useEventTail('b-1', { fetch: (await filtered(200, 500)).fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    await full.setGroup('errors')
+    expect(full.hasEarlier.value).toBe(true)   // a full filtered page: maybe more
+  })
+  it('a failed loadEarlier keeps the earlier pages through the next poll and does not set the shared error', async () => {
+    const api = fakeApi(500)
+    let fail = false
+    const flaky = (async (u: string | URL | Request) => (fail && String(u).includes('before=') ? Promise.reject(new TypeError('x')) : api.fetch(u))) as typeof globalThis.fetch
+    const t = useEventTail('b-1', { fetch: flaky, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    await t.loadEarlier()
+    expect(t.lines.value).toHaveLength(400)
+    fail = true
+    await t.loadEarlier()
+    expect(t.earlierError.value).toBe(true)
+    expect(t.error.value).toBe(false)
+    api.state.total = 502
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(api.urls.at(-1)).toBe('?since=500')
+    expect(t.lines.value).toHaveLength(402)
+    fail = false
+    await t.loadEarlier()
+    expect(t.earlierError.value).toBe(false)
+    expect(t.lines.value[0]?.n).toBe(1)
+  })
 })
