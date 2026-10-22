@@ -109,7 +109,7 @@ The gate and the scan read the policy with `git show main:.digismith/config.yml`
 The scan checks these after `checkReady` and before the claim, on `origin/main` after a `git fetch origin main`. A failed fetch skips the ticket (no claim).
 
 - Already merged: a commit on `origin/main` whose subject scope names the key, such as `feat(dgs-123): ...`. A key anywhere else does not count. Rule (b), a `<KEY>__*` branch that is an ancestor of `origin/main`, needs a commit on that branch whose scope names the key. It is in effect subsumed by rule (a). A hit skips with `already-merged: <sha>` and opens an attention item (run `<KEY>/already-merged`, kind `unknown`, cause `already-merged-but-open`). The scan never changes the ticket status.
-- Blockers: a blocker that is done in ClickUp and has a branch (local, origin or `rescue/<KEY>`) must be on main. If not, skip with `blocker-not-on-main: <key>`. A blocker with no branch passes.
+- Blockers: a blocker that is done in ClickUp and has a branch (local, origin or `rescue/<KEY>`) must be on main: a `<KEY>__*` branch passes when it is an ancestor of origin/main (no key-scoped commit needed), or a main commit scope names the key. A rescue branch alone blocks. If not, skip with `blocker-not-on-main: <key>`. A blocker with no branch passes.
 
 ### Drift
 

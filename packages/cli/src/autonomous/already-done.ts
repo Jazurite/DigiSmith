@@ -49,8 +49,14 @@ export function mergedOnMain(git: Git, repo: string, key: string, log?: MainLog)
   return null;
 }
 
-/** null = the blocker passes. A blocker with any branch must be on main; a rescue branch alone blocks. */
+/**
+ * null = the blocker passes. No branch at all: passes (nothing to merge). A `<KEY>__*` branch that is an ancestor of origin/main
+ * passes on pure ancestry, with no key-scoped commit needed. A key-scoped commit on main (rule a) also passes. Otherwise it blocks;
+ * a rescue branch alone blocks (salvaged, not merged).
+ */
 export function blockerProblem(git: Git, repo: string, blockerKey: string, log?: MainLog): string | null {
-  if (branchesFor(git, repo, blockerKey).length === 0) return null;
+  const branches = branchesFor(git, repo, blockerKey);
+  if (branches.length === 0) return null;
+  if (branches.some((b) => !b.includes("rescue/") && isAncestor(git, repo, b))) return null;
   return mergedOnMain(git, repo, blockerKey, log) === null ? `blocker-not-on-main: ${blockerKey}` : null;
 }

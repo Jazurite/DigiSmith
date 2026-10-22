@@ -135,9 +135,17 @@ describe("blockerProblem", () => {
     g(repo, "fetch", "-q", "origin");
     expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
   });
-  it("blocks on an empty branch at the main tip", () => {
+  it("passes on an empty branch at the main tip (pure ancestry)", () => {
     g(repo, "branch", "DGS-7__empty");
-    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("passes when the branch merged with unscoped subjects", () => {
+    g(repo, "checkout", "-q", "-b", "DGS-7__a");
+    commit("wip stuff");
+    g(repo, "checkout", "-q", "main");
+    g(repo, "merge", "-q", "--no-ff", "-m", "merge the thing", "DGS-7__a");
+    pushMain();
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
   });
   it("passes when the branch is merged", () => {
     g(repo, "checkout", "-q", "-b", "DGS-7__a");
