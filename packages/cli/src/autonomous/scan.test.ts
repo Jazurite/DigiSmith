@@ -10,6 +10,8 @@ import { runScan, type ScanDeps } from "./scan.ts";
 import { readJournal, resultsOf, journalPath } from "./journal.ts";
 import type { TickResult } from "./tick.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
+import { readOpen } from "./attention.ts";
+import type { ScanGuard } from "./scan-guard.ts";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
@@ -404,5 +406,55 @@ describe("runScan: the breaker", () => {
     expect(r.outcome).not.toBe("breaker");
     expect(readLock(dir)).toBeNull();
     expect(kinds()).not.toContain("breaker");
+  });
+});
+
+describe("runScan: the scan guard", () => {
+  const guard = (over: Partial<ScanGuard> = {}): ScanGuard => ({ guardrailProblems: () => [], alreadyDone: () => null, ...over });
+
+  it("guardrail problems: guardrail-config, no claim, no setStatus, attention item and event", async () => {
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk({ guard: guard({ guardrailProblems: () => ["bad thing"] }) }));
+    expect(r.outcome).toBe("guardrail-config");
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
+    expect(readLock(dir)).toBeNull();
+    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "-", kind: "failed", cause: "bad-guardrail-config" }]);
+    expect(kinds()).toContain("guardrail-config");
+  });
+  it("a clean second scan closes the item and claims", async () => {
+    tracker.add({ id: "t1" });
+    let bad = true;
+    const g = guard({ guardrailProblems: () => (bad ? ["bad thing"] : []) });
+    await runScan(mk({ guard: g }));
+    expect(readOpen(dir)).toHaveLength(1);
+    bad = false;
+    const r = await runScan(mk({ guard: g }));
+    expect(r.outcome).toBe("claimed");
+    expect(readOpen(dir)).toEqual([]);
+  });
+  it("alreadyDone reason skips that ticket, writes a skip event and claims the next", async () => {
+    tracker.add({ id: "t1", priority: 1 });
+    tracker.add({ id: "t2", priority: 3 });
+    const r = await runScan(mk({ guard: guard({ alreadyDone: (t) => (t.id === "t1" ? { reason: "blocker-not-on-main: DGS-9" } : null) }) }));
+    expect(r.outcome).toBe("claimed");
+    expect(r.claimed).toBe("T2");
+    expect(r.skipped).toEqual([{ key: "T1", reason: "blocker-not-on-main: DGS-9" }]);
+    expect(kinds()).toContain("skip");
+  });
+  it("the attention field opens an already-merged-but-open item", async () => {
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk({ guard: guard({ alreadyDone: () => ({ reason: "already-merged: abc", attention: "already-merged-but-open" }) }) }));
+    expect(r.outcome).toBe("none");
+    expect(readOpen(dir).map((i) => ({ run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ run: "T1", kind: "unknown", cause: "already-merged-but-open" }]);
+  });
+  it("dry run lists the reason and the guardrail problem and writes nothing", async () => {
+    tracker.add({ id: "t1" });
+    const r = await runScan(mk({ dryRun: true, guard: guard({ guardrailProblems: () => ["bad thing"], alreadyDone: () => ({ reason: "already-merged: abc", attention: "already-merged-but-open" }) }) }));
+    expect(r.verdicts).toEqual([{ key: "-", reasons: ["guardrail-config: bad thing"] }, { key: "T1", reasons: ["already-merged: abc"] }]);
+    expect(existsSync(dir)).toBe(false);
+  });
+  it("without a guard the scan behaves as before", async () => {
+    tracker.add({ id: "t1" });
+    expect((await runScan(mk())).outcome).toBe("claimed");
   });
 });

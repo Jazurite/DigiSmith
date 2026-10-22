@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { appendAttention } from "./attention-write.ts";
+import { appendResolved, readOpen } from "./attention.ts";
 import { awayExpired, isAway, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
@@ -8,6 +9,7 @@ import { promptConductor, type Exec } from "./conductor.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
+import type { ScanGuard } from "./scan-guard.ts";
 import { checkReady, TYPE_BUG, TYPE_TASK } from "./ready.ts";
 import { planIfFree, settle } from "./journal.ts";
 import { acquireLock, appendEvent, clearLock, readLock, readNotes, writeNotes } from "./state.ts";
@@ -19,11 +21,13 @@ export interface ScanDeps {
   tracker: Tracker; dir: string; ordersDir: string; conductorsJson: string; repo: string;
   now: () => Date; scanId: string; exec: Exec; fileExists: (p: string) => boolean; dryRun: boolean;
   nexus: NexusDeps;
+  /** the already-done check and the guardrail stop; optional only for older tests, production always passes it */
+  guard?: ScanGuard;
   /** advances the locked ticket one step; absent: a held lock is only reported busy */
   tick?: () => Promise<TickResult>;
 }
 export interface ScanResult {
-  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker";
+  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config";
   claimed?: string;            // ticket key
   candidates: number;
   skipped: { key: string; reason: string }[];
@@ -133,6 +137,19 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
       return { outcome: "busy", candidates: 0, skipped };
     }
   }
+  // 2b. Bad guardrails on main stop the scan before any claim; a clean read closes the item.
+  if (d.guard && !d.dryRun) {
+    const problems = d.guard.guardrailProblems();
+    if (problems.length > 0) {
+      const cause = "bad-guardrail-config";
+      try { appendAttention(d.dir, now, { ticket: null, run: "-", kind: "failed", cause }); } catch { /* the scan still stops */ }
+      appendEvent(d.dir, now, "guardrail-config", { problems: problems.join("; ").slice(0, 300) });
+      return { outcome: "guardrail-config", candidates: 0, skipped };
+    }
+    try {
+      for (const it of readOpen(d.dir)) if (it.run === "-" && it.cause === "bad-guardrail-config") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "guardrails read clean");
+    } catch { /* the item stays open until a later scan */ }
+  }
   const notes = readNotes(d.dir);
   let notesChanged = false;
   const finish = (r: ScanResult): ScanResult => {
@@ -166,11 +183,25 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     else skipped.push({ key: keyOf(t), reason: "type" });
   }
 
+  if (d.guard && d.dryRun) {
+    const problems = d.guard.guardrailProblems();
+    if (problems.length > 0) verdicts.push({ key: "-", reasons: [`guardrail-config: ${problems.join("; ")}`] });
+  }
+
   // 5. Walk in rank order.
   const ctx = { repo: d.repo, fileExists: d.fileExists };
   for (const t of rankTasks(candidates)) {
     const key = keyOf(t);
     const reasons = checkReady(t, ctx);
+    if (reasons.length === 0 && d.guard) {
+      const done = d.guard.alreadyDone(t);
+      if (done !== null) {
+        reasons.push(done.reason);
+        if (done.attention !== undefined && !d.dryRun) {
+          try { appendAttention(d.dir, now, { ticket: key, run: key, kind: "unknown", cause: done.attention }); } catch { /* the skip still stands */ }
+        }
+      }
+    }
     if (d.dryRun) {
       verdicts.push({ key, reasons });
       continue;

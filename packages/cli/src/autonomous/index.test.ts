@@ -30,6 +30,7 @@ const deps = (): AutonomousDeps => ({
   scanId: () => "scan-1",
   exec: async (file, args) => { execCalls.push([file, ...args]); return { code: 0, stderr: "" }; },
   fileExists: () => false,
+  git: (_cwd, args) => "" /* clean config, nothing on main, no branches */,
   nexus: {
     baseUrl: "http://fake",
     tokenFile: join(root, "token"),
@@ -171,6 +172,15 @@ describe("dg autonomous scan", () => {
     await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
     expect(process.exitCode).toBe(1);
     expect(errLog.mock.calls.flat().join("\n")).toMatch(/network down/);
+  });
+  it("a git that cannot read main stops the scan: guardrail-config, no claim", async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
+    tracker.add({ id: "t1", key: "DGS-1" });
+    const broken = (): AutonomousDeps => ({ ...deps(), git: () => { throw new Error("no repo"); } });
+    await yargs(["autonomous", "scan", "--repo", "/repo"]).exitProcess(false).command(createAutonomousCommand(broken)).strict().parseAsync();
+    expect(out()).toMatch(/scan: guardrail-config/);
+    expect(tracker.writeCalls()).toEqual([]);
   });
   it("--orders overrides the orders dir", async () => {
     const other = join(root, "other-orders");

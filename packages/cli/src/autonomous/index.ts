@@ -6,7 +6,7 @@ import { join } from "node:path";
 import type { CommandModule } from "yargs";
 import { createClient, DIGISMITH_SPACE_ID } from "../clickup/lib.ts";
 import { appendResolved, attentionViews, formatOpen, readOpen } from "./attention.ts";
-import { realGit } from "./gitx.ts";
+import { realGit, type Git } from "./gitx.ts";
 import { runMergeGate } from "./merge-gate.ts";
 import { herdrPaneLookup } from "./pane.ts";
 import { runWatch } from "./watch.ts";
@@ -21,6 +21,7 @@ import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
+import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
 import { closeBreakerAsJack, runAway, runBack } from "./switch.ts";
 import { ClickUpLoTracker } from "./tracker-clickup.ts";
@@ -40,6 +41,8 @@ export interface AutonomousDeps {
   execOut?: ExecOut;
   /** the checkout `git fetch origin main` runs in (default: the main checkout) */
   mainRepo?: string;
+  /** git for the scan guard; the real one by default (tests pass a fake) */
+  git?: Git;
 }
 
 const RESULTS: ReleaseResult[] = ["merged", "failed", "stopped", "awaiting-jack"];
@@ -225,6 +228,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 conductorsJson: d.conductorsJson, repo: argv.repo as string, now: d.now, scanId: d.scanId(),
                 exec: d.exec, fileExists: d.fileExists, dryRun: argv.dryRun as boolean, nexus: d.nexus,
                 tick: makeTick(d, false, argv.repo as string),
+                guard: makeScanGuard(d.git ?? realGit, argv.repo as string),
               });
               const lines: string[] = [];
               lines.push(`scan: ${r.outcome}${r.claimed ? ` ${r.claimed}` : ""} (${r.candidates} candidates, ${r.skipped.length} skipped)`);
