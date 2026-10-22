@@ -4,6 +4,7 @@ import { attentionFixture, overviewFixture } from '../../../tests/nightwatch-fix
 import AttentionTable from './AttentionTable.vue'
 import LastEvents from './LastEvents.vue'
 import PhaseTable from './PhaseTable.vue'
+import ScanCard from './ScanCard.vue'
 import WorkersTable from './WorkersTable.vue'
 
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
@@ -27,9 +28,33 @@ describe('WorkersTable', () => {
     expect(w.text()).toContain('stalled')
     expect(w.find('[title="not measured"]').exists()).toBe(true)
   })
+  it('counts elapsed from the start for a running worker and freezes an ended one', async () => {
+    const [run] = overviewFixture().workers
+    const ended = { ...run!, run: 'x-ended', endedAt: '2026-10-22T02:20:00.000Z', elapsedSec: 600 }
+    const w = await mountSuspended(WorkersTable, { props: { workers: [run!, ended], nowMs: NOW } })
+    const rows = w.findAll('tbody tr').map((r) => r.text())
+    expect(rows[0]).toContain('0:50:00')   // 02:10 to 03:00
+    expect(rows[1]).toContain('0:10:00')
+  })
   it('says so when no worker runs', async () => {
     const w = await mountSuspended(WorkersTable, { props: { workers: [], nowMs: NOW } })
     expect(w.text()).toContain('No worker is running.')
+  })
+})
+
+describe('ScanCard', () => {
+  it('shows the last scan, lock and a closed breaker', async () => {
+    const w = await mountSuspended(ScanCard, { props: { scan: overviewFixture().scan, lockTicket: 'DGS-590' } })
+    expect(w.text()).toContain('away')
+    expect(w.text()).toContain('DGS-590')
+    expect(w.text()).toContain('closed (streak 0)')
+  })
+  it('shows an open breaker and no scan yet', async () => {
+    const scan = { ...overviewFixture().scan, away: false, breakerOpen: true, breakerStreak: 3, lastScanAt: null, candidates: null }
+    const w = await mountSuspended(ScanCard, { props: { scan, lockTicket: null } })
+    expect(w.text()).toContain('open (streak 3)')
+    expect(w.text()).toContain('No scan yet')
+    expect(w.text()).toContain('none')
   })
 })
 
@@ -48,6 +73,13 @@ describe('AttentionTable', () => {
     const w = await mountSuspended(AttentionTable, { props: { open: a.open, resolved: a.resolved, nowMs: NOW } })
     expect(w.text()).toContain('Waiting on Jack')
     expect(w.text()).toContain(a.open[0]!.cause)
+    const first = w.findAll('tbody tr')[0]!.text()
+    expect(first).toContain('1h28m')   // age of att-1 at NOW
+    expect(first).toContain('lost')
+    expect(w.text()).toContain('DGS-586')
+    expect(w.text()).toContain('resolved by watchdog: tool seen')
+    const resolvedHeads = w.findAll('table')[1]!.findAll('th').map((h) => h.text())
+    expect(resolvedHeads).toEqual(['Time (UTC+7)', 'Ticket', 'Kind', 'Resolution'])
     expect(w.find('button').exists()).toBe(false)
   })
   it('empty says nothing waits', async () => {

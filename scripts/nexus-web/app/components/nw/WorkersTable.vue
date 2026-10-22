@@ -3,7 +3,8 @@ import type { RunRow } from '#nightwatch-schema'
 import { fmtDuration } from '../../utils/nw-format'
 
 defineProps<{ workers: RunRow[]; nowMs: number }>()
-// the schema's elapsedSec is read at poll time; a live clock would only move between polls, so show the read value
+// a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
+const elapsed = (w: RunRow, nowMs: number): string => fmtDuration(w.endedAt ? w.elapsedSec : Math.max(0, (nowMs - Date.parse(w.startedAt)) / 1000))
 </script>
 
 <template>
@@ -19,7 +20,7 @@ defineProps<{ workers: RunRow[]; nowMs: number }>()
         <td>{{ w.role }}</td>
         <td class="mono">{{ w.seat ?? '-' }}</td>
         <td class="mono">{{ w.phase ?? '-' }}</td>
-        <td class="num">{{ fmtDuration(w.elapsedSec) }}</td>
+        <td class="num">{{ elapsed(w, nowMs) }}</td>
         <td class="num muted" title="not measured">-</td>
       </tr>
     </NwTable>

@@ -24,6 +24,7 @@ const tone = (kind: string): 'bad' | 'warn' | 'ok' => (kind in TONE ? TONE[kind 
     <template v-if="resolved.length">
       <h3 class="sub-h">Resolved <small>last {{ resolved.length }}, times UTC+7</small></h3>
       <NwTable caption="Resolved attention items" dense>
+        <template #head><tr><th scope="col" class="sr">Time (UTC+7)</th><th scope="col" class="sr">Ticket</th><th scope="col" class="sr">Kind</th><th scope="col" class="sr">Resolution</th></tr></template>
         <tr v-for="r in resolved" :key="r.id">
           <td class="mono">{{ fmtDay(r.ts) }}</td>
           <td class="mono">{{ r.ticket ?? '-' }}</td>
