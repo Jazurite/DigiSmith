@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -179,6 +179,36 @@ describe("salvage", () => {
     writeFileSync(join(wt, "n.ts"), "x\n");
     const r = salvage(mk(), { ticket: "DGS-9" });
     expect(r.ok && r.pushed).toBe("rescue/DGS-9");
+  });
+  it("--worktree given as a symlinked path still finds the worktree", () => {
+    const link = join(root, "wt-link");
+    symlinkSync(wt, link);
+    writeFileSync(join(wt, "n.ts"), "x\n");
+    const r = salvage(mk(), { ticket: "DGS-9", worktree: link });
+    expect(r.ok).toBe(true);
+    expect(rescue()).toContain("rescue/DGS-9");
+  });
+  it("a key with a digit in its prefix is accepted, a bad key is refused", () => {
+    expect(salvage(mk(), { ticket: "bad key" })).toMatchObject({ ok: false });
+    sh(repo, "worktree", "add", "-q", "-b", "AB2-5__x", join(root, "wt3"), "main");
+    writeFileSync(join(root, "wt3", "n.ts"), "x\n");
+    expect(salvage(mk(), { ticket: "AB2-5" }).ok).toBe(true);
+  });
+  it("known caches are skipped: not in the WIP commit, not in the dirty check, and a step names them", () => {
+    mkdirSync(join(wt, ".impeccable"));
+    writeFileSync(join(wt, ".impeccable", "c.json"), "{}\n");
+    writeFileSync(join(wt, "n.ts"), "x\n");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(r.ok).toBe(true);
+    expect(r.steps.join("\n")).toMatch(/skip known caches: \.impeccable\//);
+    expect(sh(wt, "show", "--name-only", "--format=", "HEAD")).toBe("n.ts");
+    expect(existsSync(join(wt, ".impeccable", "c.json"))).toBe(true);
+  });
+  it("a tree dirty with caches only and merged: nothing to salvage", () => {
+    mkdirSync(join(wt, ".impeccable"));
+    writeFileSync(join(wt, ".impeccable", "c.json"), "{}\n");
+    expect(salvage(mk(), { ticket: "DGS-9" })).toMatchObject({ ok: true, bundle: null });
+    expect(rescue()).toBe("");
   });
   it("two worktrees for the key: stop", () => {
     sh(repo, "worktree", "add", "-q", "-b", "DGS-9__y", join(root, "wt2"), "main");

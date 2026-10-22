@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 // Untracked paths under these prefixes are tool caches: safe to drop with the worktree.
 export const KNOWN_CACHES = [".impeccable/"];
 
+// Same patterns as packages/cli/src/ticket-key.ts (this script cannot import the cli package): change them together.
+const BRANCH_KEY_PREFIX = /^([A-Z][A-Z0-9]*-\d+)__/;
+
 export interface CleanupOptions {
   repo: string;
   branch: string;
@@ -77,7 +80,8 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
 
   let salvaged = false;
   let bundle: string | undefined;
-  const key = /^([A-Z]+-\d+)__/.exec(branch)?.[1];
+  const key = BRANCH_KEY_PREFIX.exec(branch)?.[1];
+  let pushed = `rescue/${key}`;
   if (existsSync(worktree)) {
     let { tracked, untracked, other } = inspect(worktree);
     if (tracked.length > 0 || other.length > 0) {
@@ -89,7 +93,8 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
         if (!r.ok) return stop(`salvage failed, nothing removed: ${r.message}`);
         steps.push(`salvaged ${worktree} with dg salvage --ticket ${key}`);
         salvaged = true;
-        bundle = /^salvaged: (.+)$/m.exec(r.message)?.[1];
+        bundle = /^salvaged: (\S+)/m.exec(r.message)?.[1];
+        pushed = /\(pushed (\S+)\)/.exec(r.message)?.[1] ?? pushed;
         ({ tracked, untracked, other } = inspect(worktree));
         if (tracked.length > 0 || other.length > 0) {
           return stop(`salvage reported ok but the tree is still dirty; nothing removed (${worktree})`);
@@ -104,7 +109,7 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
     } catch (e) {
       if (!salvaged) throw e;
       const why = (e as { stderr?: string; message: string }).stderr?.trim().split("\n")[0] || (e as Error).message.split("\n")[0];
-      return stop(`worktree removal failed after salvage: ${why}; rescue/${key} holds the work${bundle ? `, bundle ${bundle}` : ""}; nothing more was removed`);
+      return stop(`worktree removal failed after salvage: ${why}; ${pushed} holds the work${bundle ? `, bundle ${bundle}` : ""}; nothing more was removed`);
     }
   } else {
     steps.push(`worktree ${worktree} already gone`);
@@ -115,7 +120,7 @@ export function cleanup({ repo, branch, worktree, base = "main", dryRun = false,
     act(`delete branch ${branch}`, () => git(repo, "branch", "-d", branch));
   } catch (e) {
     if (!salvaged) throw e;
-    return stop(`rescue/${key} holds the work; branch kept: ${(e as { stderr?: string; message: string }).stderr?.trim().split("\n")[0] || (e as Error).message.split("\n")[0]}`);
+    return stop(`${pushed} holds the work; branch kept: ${(e as { stderr?: string; message: string }).stderr?.trim().split("\n")[0] || (e as Error).message.split("\n")[0]}`);
   }
   return { ok: true, steps, message: `${dryRun ? "dry run: " : ""}cleanup done for ${branch}` };
 }

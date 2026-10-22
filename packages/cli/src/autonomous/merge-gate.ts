@@ -2,6 +2,7 @@ import { appendOpen } from "./attention.ts";
 import { classOfCause } from "./causes.ts";
 import type { Git } from "./gitx.ts";
 import { readMainConfig } from "./guardrails.ts";
+import { TICKET_KEY } from "../ticket-key.ts";
 import { DEFAULT_PROTECTED, touchedProtected } from "./protected-paths.ts";
 
 export interface GateDeps { git: Git; repo: string; dir: string; now: () => Date }
@@ -13,7 +14,7 @@ const firstLine = (e: unknown): string => (e instanceof Error ? e.message : Stri
 /** Go, or one refusal. The policy is read from main; any check that cannot run is a refusal. */
 export function runMergeGate(d: GateDeps, ticket: string): GateResult {
   // The key is checked first: a bad key is never written to attention.
-  if (!/^[A-Za-z][A-Za-z0-9]*-\d+$/.test(ticket)) return { go: false, code: "bad-key", reason: `"${ticket}" is not a ticket key` };
+  if (!TICKET_KEY.test(ticket)) return { go: false, code: "bad-key", reason: `"${ticket}" is not a ticket key` };
   const refuse = (code: Code, reason: string): GateResult => {
     const iso = d.now().toISOString();
     appendOpen(d.dir, { ticket, run: ticket, kind: "refused", cause: `merge-refused: ${reason}`, causeClass: classOfCause("merge-refused"), retryEligible: false, since: iso, ts: iso });

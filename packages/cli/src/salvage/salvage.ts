@@ -1,12 +1,17 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Git } from "../autonomous/gitx.ts";
+import { TICKET_KEY } from "../ticket-key.ts";
 import { notSalvagedMessage, secretHits, type SecretHit } from "./secrets.ts";
 
 export interface SalvageDeps { git: Git; repo: string; depotDir: string; now: () => Date; statSize: (path: string) => number }
 export type SalvageResult = { ok: true; steps: string[]; bundle: string | null; pushed: string | null } | { ok: false; steps: string[]; message: string };
 
 const utcStamp = (d: Date): string => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+// Untracked paths under these prefixes are tool caches. Same list as KNOWN_CACHES in skills/finishing-a-development-branch/scripts/post-merge-cleanup.ts (cannot be imported from here).
+const KNOWN_CACHES = [".impeccable/"];
+const skipCaches = KNOWN_CACHES.map((c) => `:(exclude)${c}`);
+const real = (p: string): string => { try { return realpathSync(p); } catch { return p; } };
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e)).split("\n")[0];
 
 export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; dryRun?: boolean }): SalvageResult {
@@ -17,6 +22,7 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     if (!a.dryRun) run();
   };
   try {
+    if (!TICKET_KEY.test(a.ticket)) return fail(`"${a.ticket}" is not a ticket key`);
     // 1. the worktree and the branch
     const listing = d.git(d.repo, ["worktree", "list", "--porcelain"]).split("\n\n").map((b) => {
       const path = /^worktree (.+)$/m.exec(b)?.[1];
@@ -24,15 +30,18 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
       return path && branch ? { path, branch } : null;
     }).filter((x): x is { path: string; branch: string } => x !== null);
     const prefix = `${a.ticket}__`;
-    const found = a.worktree === undefined ? listing.filter((w) => w.branch.startsWith(prefix)) : listing.filter((w) => w.path === a.worktree);
+    const found = a.worktree === undefined ? listing.filter((w) => w.branch.startsWith(prefix)) : listing.filter((w) => real(w.path) === real(a.worktree as string));
     if (found.length !== 1) return fail(`expected one worktree for ${a.ticket}, found ${found.length}`);
     const { path: wt, branch } = found[0];
 
     // 2. is salvage needed
-    const status = d.git(wt, ["status", "--porcelain", "-z", "--untracked-files=all"]);
+    const status = d.git(wt, ["status", "--porcelain", "-z", "--untracked-files=all", "--", ".", ...skipCaches]);
     const dirty = status.split("\0").filter(Boolean).length > 0;
     const merged = d.git(d.repo, ["branch", "--merged", "main", "--format=%(refname:short)"]).split("\n").includes(branch);
     if (!dirty && merged) return { ok: true, steps: ["nothing to salvage"], bundle: null, pushed: null };
+
+    const cacheFiles = d.git(wt, ["ls-files", "--others", "--exclude-standard", "-z", "--", ...KNOWN_CACHES]).split("\0").filter(Boolean);
+    const skippedCaches = KNOWN_CACHES.filter((c) => cacheFiles.some((f) => f.startsWith(c)));
 
     // 3a. the push sends every commit in main..branch: check each commit, not the net diff
     const committedHits: SecretHit[] = [];
@@ -55,14 +64,15 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
 
     // 3b. secret check before any commit
     if (dirty) {
-      const untracked = d.git(wt, ["ls-files", "--others", "--exclude-standard", "-z"]).split("\0").filter(Boolean);
+      const untracked = d.git(wt, ["ls-files", "--others", "--exclude-standard", "-z", "--", ".", ...skipCaches]).split("\0").filter(Boolean);
       const changed = d.git(wt, ["diff", "--name-only", "--diff-filter=ACMR", "-z", "HEAD"]).split("\0").filter(Boolean);
       const names = [...new Set([...untracked, ...changed])];
       const hits = secretHits(names.map((p) => ({ path: p, size: d.statSize(join(wt, p)) })));
       if (hits.length > 0) return fail(notSalvagedMessage(hits));
       // 4. WIP commit
+      if (skippedCaches.length > 0) steps.push(`skip known caches: ${skippedCaches.join(", ")}`);
       act("make the WIP commit", () => {
-        d.git(wt, ["add", "-A"]);
+        d.git(wt, ["add", "-A", "--", ".", ...skipCaches]);
         d.git(wt, ["commit", "--no-verify", "-m", `wip(${a.ticket.toLowerCase()}): salvage before teardown`]);
       });
     }

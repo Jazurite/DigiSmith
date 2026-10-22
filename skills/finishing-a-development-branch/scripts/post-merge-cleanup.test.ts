@@ -213,6 +213,20 @@ describe("cleanup", () => {
     });
   });
 
+  describe("a key with a digit in its prefix", () => {
+    it("is taken from the branch and passed to salvage", () => {
+      setup(true);
+      git(repo, "worktree", "remove", worktree);
+      git(repo, "branch", "-m", BRANCH, "AB2-5__x");
+      git(repo, "worktree", "add", "-q", worktree, "AB2-5__x");
+      writeFileSync(join(worktree, "notes.md"), "mine");
+      let seen = "";
+      const r = cleanup({ repo, branch: "AB2-5__x", worktree, salvage: (x) => { seen = x.ticket; return { ok: false, message: "stop here" }; } });
+      expect(seen).toBe("AB2-5");
+      expect(r.message).toBe("salvage failed, nothing removed: stop here");
+    });
+  });
+
   describe("branch without a ticket key", () => {
     it("stops when the worktree needs salvage", () => {
       setup(true);
