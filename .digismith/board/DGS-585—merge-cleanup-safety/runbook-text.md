@@ -17,7 +17,7 @@ The gate and the scan read the policy from the local `main` ref (`git show main:
 
 Before any teardown of a ticket's worktree, run `dg salvage --ticket <KEY>`. Use `--dry-run` to see the plan first.
 
-- It commits a dirty tree (WIP, no hooks), writes and verifies a bundle in `~/.digismith-depot/salvage/`, and pushes `rescue/<KEY>` to origin.
+- It commits a dirty tree (WIP, no hooks), writes and verifies a bundle in `~/.digismith-depot/salvage/`, and pushes `rescue/<KEY>` to origin (`rescue/<KEY>-<UTC>` if the plain name has diverged).
 - It checks the files of every commit in `main..branch` and of the dirty tree. A secret-like name (`.env*`, `*.pem`, `*.key`, `*secret*`, `*token*`, any folder) or a file over 5 MB stops it with `not salvaged: ...; Jack decides`.
 - It never deletes anything. If it fails, stop and tell Jack.
 - Rescue branches stay on origin until Jack deletes them.

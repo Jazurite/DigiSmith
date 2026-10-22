@@ -4,7 +4,7 @@ import type { Git } from "../autonomous/gitx.ts";
 import { notSalvagedMessage, secretHits, type SecretHit } from "./secrets.ts";
 
 export interface SalvageDeps { git: Git; repo: string; depotDir: string; now: () => Date; statSize: (path: string) => number }
-export type SalvageResult = { ok: true; steps: string[]; bundle: string | null } | { ok: false; steps: string[]; message: string };
+export type SalvageResult = { ok: true; steps: string[]; bundle: string | null; pushed: string | null } | { ok: false; steps: string[]; message: string };
 
 const utcStamp = (d: Date): string => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e)).split("\n")[0];
@@ -32,7 +32,7 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     const status = d.git(wt, ["status", "--porcelain", "-z", "--untracked-files=all"]);
     const dirty = status.split("\0").filter(Boolean).length > 0;
     const merged = d.git(d.repo, ["branch", "--merged", "main", "--format=%(refname:short)"]).split("\n").includes(branch);
-    if (!dirty && merged) return { ok: true, steps: ["nothing to salvage"], bundle: null };
+    if (!dirty && merged) return { ok: true, steps: ["nothing to salvage"], bundle: null, pushed: null };
 
     // 3a. the push sends every commit in main..branch: check each commit, not the net diff
     const committedHits: SecretHit[] = [];
@@ -77,10 +77,21 @@ export function salvage(d: SalvageDeps, a: { ticket: string; worktree?: string; 
     });
 
     // 6. push
-    act(`push ${branch} to rescue/${a.ticket}`, () => {
-      d.git(wt, ["push", "origin", `${branch}:refs/heads/rescue/${a.ticket}`]);
+    // A diverged rescue/<KEY> (git: "! [rejected] ... non-fast-forward") gets a dated name instead. Never --force.
+    let pushed = `rescue/${a.ticket}`;
+    act(`push ${branch} to ${pushed}`, () => {
+      try {
+        d.git(wt, ["push", "origin", `${branch}:refs/heads/${pushed}`]);
+      } catch (e) {
+        const text = e instanceof Error ? e.message : String(e);
+        if (!/! \[rejected\]/.test(text)) throw e;
+        const dated = `rescue/${a.ticket}-${utcStamp(d.now())}`;
+        steps.push(`${pushed} exists and has diverged; push ${branch} to ${dated} instead`);
+        pushed = dated;
+        d.git(wt, ["push", "origin", `${branch}:refs/heads/${pushed}`]);
+      }
     });
-    return { ok: true, steps, bundle };
+    return { ok: true, steps, bundle, pushed: a.dryRun ? null : pushed };
   } catch (e) {
     return fail(`salvage failed (${steps[steps.length - 1] ?? "start"}): ${msg(e)}`);
   }

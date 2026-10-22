@@ -27,7 +27,7 @@ Steps, in this order. Any failed step stops the command with exit 1 and a messag
 3. Secret check, only when the tree is dirty, before any commit. List the untracked files that git does not ignore (`git ls-files --others --exclude-standard`). A file matches when its name matches `.env*`, `*.pem`, `*.key`, `*secret*` or `*token*` (case-insensitive, by base name), or when it is larger than 5 MB. Any match: print `not salvaged: <files>`, exit 1, make no commit, write no bundle, push nothing. The cleanup then stops and Jack decides. The check lists names only and never reads a file.
 4. WIP commit, only when the tree is dirty: `git add -A`, then `git commit --no-verify -m "wip(<key>): salvage before teardown"`. The title is a conventional commit and has no attribution line. `--no-verify` is on purpose: a rescue must not be stopped by a hook.
 5. Bundle: `git bundle create ~/.digismith-depot/salvage/<KEY>-<UTC>.bundle <branch>`, with `<UTC>` as `YYYYMMDDTHHMMSSZ`. Then `git bundle verify` on the file. A bundle that does not verify is a failure.
-6. Push: `git push origin <branch>:refs/heads/rescue/<KEY>`. A rejected push is a failure. No `--force`.
+6. Push: `git push origin <branch>:refs/heads/rescue/<KEY>`. A push rejected as non-fast-forward (a diverged `rescue/<KEY>`) is reported, and the push goes to `rescue/<KEY>-<UTC>` instead; any other rejected push is a failure. No `--force`.
 
 Exit 0 only when the needed steps all passed. The command prints one line per step and the bundle path. It never deletes a file, branch or worktree. Git, the clock and the depot directory are injected so tests can fake them.
 

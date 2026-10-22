@@ -7,7 +7,7 @@ import { resolveRepo, salvage } from "./salvage.ts";
 
 const command: CommandModule = {
   command: "salvage",
-  describe: "before a worktree is removed: WIP commit, bundle to the depot, push rescue/<KEY>; never deletes",
+  describe: "before a worktree is removed: WIP commit, bundle to the depot, push rescue/<KEY> (rescue/<KEY>-<UTC> if that has diverged); never deletes",
   builder: (y) =>
     y
       .option("ticket", { type: "string", demandOption: true, describe: "ticket key, e.g. DGS-585" })
@@ -21,7 +21,7 @@ const command: CommandModule = {
       { ticket: a.ticket as string, worktree: a.worktree as string | undefined, dryRun: a["dry-run"] as boolean },
     );
     for (const s of r.steps) console.log(s);
-    if (r.ok) { console.log(r.bundle ? `salvaged: ${r.bundle}` : "salvage: nothing needed"); process.exitCode = 0; }
+    if (r.ok) { console.log(r.bundle ? `salvaged: ${r.bundle}${r.pushed ? ` (pushed ${r.pushed})` : ""}` : "salvage: nothing needed"); process.exitCode = 0; }
     else { console.error(r.message); process.exitCode = 1; }
   },
 };

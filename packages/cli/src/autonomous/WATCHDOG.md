@@ -70,7 +70,7 @@ Steps, in order. A failed step stops the command with exit 1:
 3. Check the files of every commit in `main..branch`, because the push sends them all. A file that matches the secret rule stops the command.
 4. If the tree is dirty: check the untracked and changed files the same way. Then make a WIP commit (`--no-verify`).
 5. Write a bundle to `~/.digismith-depot/salvage/<KEY>-<UTC>.bundle` and verify it.
-6. Push the branch to `rescue/<KEY>` on origin. No `--force`.
+6. Push the branch to `rescue/<KEY>` on origin. No `--force`. If that push is rejected because `rescue/<KEY>` has diverged, say so and push to `rescue/<KEY>-<UTC>` (the bundle stamp) instead; the output names the branch pushed.
 
 The secret rule matches a base name of `.env*`, `*.pem`, `*.key`, `*secret*` or `*token*` (any case, any folder), and any file over 5 MB. The check reads names and sizes only. A match prints `not salvaged: <files>; Jack decides`. It makes no commit, no bundle and no push.
 

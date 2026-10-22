@@ -160,6 +160,26 @@ describe("salvage", () => {
     expect(!r.ok && r.message).toMatch(/push/);
     expect(rescue()).toBe("");
   });
+  it("a diverged rescue/KEY: say so, push to rescue/KEY-<UTC>, never force, old ref untouched", () => {
+    // a rescue/DGS-9 on origin with a history that is not an ancestor of the branch
+    sh(repo, "checkout", "-q", "--orphan", "other"); sh(repo, "rm", "-rqf", ".");
+    writeFileSync(join(repo, "o.txt"), "o\n"); sh(repo, "add", "."); sh(repo, "commit", "-qm", "other history");
+    const old = sh(repo, "rev-parse", "HEAD");
+    sh(repo, "push", "-q", "origin", "other:refs/heads/rescue/DGS-9");
+    sh(repo, "checkout", "-q", "-f", "main");
+    writeFileSync(join(wt, "n.ts"), "x\n");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.pushed).toBe("rescue/DGS-9-20261022T030405Z");
+    expect(r.steps.join("\n")).toMatch(/rescue\/DGS-9 exists and has diverged/);
+    expect(sh(origin, "rev-parse", "refs/heads/rescue/DGS-9")).toBe(old);
+    expect(sh(origin, "rev-parse", "refs/heads/rescue/DGS-9-20261022T030405Z")).toBe(sh(wt, "rev-parse", "HEAD"));
+  });
+  it("a plain push gives pushed = rescue/KEY", () => {
+    writeFileSync(join(wt, "n.ts"), "x\n");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(r.ok && r.pushed).toBe("rescue/DGS-9");
+  });
   it("two worktrees for the key: stop", () => {
     sh(repo, "worktree", "add", "-q", "-b", "DGS-9__y", join(root, "wt2"), "main");
     const r = salvage(mk(), { ticket: "DGS-9" });
