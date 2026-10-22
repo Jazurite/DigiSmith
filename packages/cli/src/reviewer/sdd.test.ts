@@ -63,6 +63,10 @@ describe("SDD has the role-mode path (new)", () => {
   it("treats a ledger without a Review mode line as hand (F4)", () => {
     expect(sdd).toMatch(/without a `Review mode:` (second )?line is treated as `hand`/);
   });
+  it("documents the interim fixing line (DGS-591)", () => {
+    expect(sdd).toContain("Review task 2 r1: F1 -> fixing (check every commit)");
+    expect(sdd).toContain("fix not finished");
+  });
   it("shows the r2 re-ruling verdict line with one example that parses (DGS-572)", () => {
     expect(sdd).toMatch(/the raising round or a\s+later round/);
     expect(sdd).toContain("Review task 4 r2: F1 -> fixed (commit abc1234)");

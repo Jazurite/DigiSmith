@@ -566,7 +566,11 @@ the ruling of a re-review the same way, naming the finding id the earlier pack
 raised: `Review task 4 r2: F1 -> fixed (commit abc1234)`. `dg reviewer table`
 shows the latest ruling per finding. A line that names a finding no pack
 raised, or whose round is lower than the round that raised
-the finding also makes it fail. Never delete or edit an earlier verdict line; add a new one.
+the finding also makes it fail. When a fix starts, you may append the interim
+line `Review task 2 r1: F1 -> fixing (check every commit)`. A final line (fixed,
+parked or rejected) must follow it, or `dg reviewer table` fails with
+"fix not finished". The table shows the final ruling; `--json` keeps the `fixing`
+line in the history. Never delete or edit an earlier verdict line; add a new one.
 
 **Final review lines.** `digismith:report-implementation` reads the same
 whole-branch lines in every mode, so write them here yourself; never add them by

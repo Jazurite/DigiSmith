@@ -49,7 +49,7 @@ A Critical or Important finding, a confirmed ⚠️ item or a spec ❌ blocks (t
 ## Report and table
 
 - The findings block: a JSON array of `{ id, path, line, severity, what, scenario }`. `[]` when there are none.
-- The Builder appends one ledger verdict line per finding, with the human partner's ruling as written: `Review <task|ticket> <id> r<round>: F<n> -> <fixed|parked|rejected> (<reason>)`. `r<round>` is the raising round or a later round. A re-review ruling on an earlier finding is a new line, for example `Review task 4 r2: F1 -> fixed (commit abc1234)`. `dg reviewer table` shows the latest ruling per finding (`--json` gives the history, schema 1). No line is ever deleted.
+- The Builder appends one ledger verdict line per finding, with the human partner's ruling as written: `Review <task|ticket> <id> r<round>: F<n> -> <fixed|parked|rejected> (<reason>)`. `r<round>` is the raising round or a later round. A re-review ruling on an earlier finding is a new line, for example `Review task 4 r2: F1 -> fixed (commit abc1234)`. `dg reviewer table` shows the latest ruling per finding (`--json` gives the history, schema 1). When a fix starts, the Builder may append the interim line `Review task 2 r1: F1 -> fixing (check every commit)`; a final line (fixed, parked or rejected) must follow it, or `dg reviewer table` fails with "fix not finished". No line is ever deleted.
 - `report-implementation` runs `dg reviewer table --workspace <workspace> --out <ticket folder>/findings.md`. The conductor attaches `findings.md` to the ticket (`dg clickup upload-attachment`).
 
 ## Steward moments

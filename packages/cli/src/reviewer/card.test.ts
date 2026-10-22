@@ -50,6 +50,10 @@ describe("skills/reviewer/SKILL.md", () => {
       expect(card).toContain(s);
     }
   });
+  it("documents the interim fixing line (DGS-591)", () => {
+    expect(card).toContain("Review task 2 r1: F1 -> fixing (check every commit)");
+    expect(card).toContain("fix not finished");
+  });
   it("shows the r2 re-ruling verdict line with one example (DGS-572)", () => {
     expect(card).toContain("Review task 4 r2: F1 -> fixed (commit abc1234)");
     expect(card).toMatch(/later round/);
