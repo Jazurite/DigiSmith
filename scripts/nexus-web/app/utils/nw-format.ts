@@ -23,3 +23,7 @@ export function ageOf(iso: string | null, nowMs: number): string {
   const min = Math.max(0, Math.round((nowMs - Date.parse(iso)) / 60_000))
   return min >= 60 ? `${Math.floor(min / 60)}h${pad(min % 60)}m` : `${min}m`
 }
+export function fmtClock(ms: number): string {
+  const d = new Date(ms + OFFSET)
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
+}

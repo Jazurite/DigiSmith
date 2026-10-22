@@ -1,4 +1,5 @@
 import '../app/assets/main.scss'
+import '../app/assets/nightwatch-tokens.scss'
 
 // @storybook-vue/nuxt 10.0.1 was built for Nuxt 4.4: it stores the app in `unctx`. Nuxt 4.6 reads the browser app from
 // globalThis.__nuxt_app_ctx__ instead, so every story threw NUXT_E1001. Point the two keys the framework uses at the
