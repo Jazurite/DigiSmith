@@ -50,15 +50,18 @@ export function mergedOnMain(git: Git, repo: string, key: string, log?: MainLog)
 }
 
 /**
- * null = the blocker passes. No branch at all: passes (nothing to merge). A `<KEY>__*` branch that is an ancestor of origin/main
- * passes on pure ancestry, with no key-scoped commit needed. A key-scoped commit on main (rule a) also passes. Otherwise it blocks;
- * a rescue branch alone blocks (salvaged, not merged).
+ * null = the blocker passes. Checks in this order:
+ * (1) a key-scoped commit on origin/main (rule a): merged, passes even when a rescue branch exists (merged, then salvaged).
+ * (2) else an unmerged rescue branch (`rescue/<KEY>` or `rescue/<KEY>-<UTC>`, local or origin; not an ancestor of origin/main) blocks.
+ * (3) else a branch of the key that is an ancestor of origin/main passes on pure ancestry.
+ * (4) else no branch at all passes (ClickUp done); a `<KEY>__*` branch not on main blocks.
  */
 export function blockerProblem(git: Git, repo: string, blockerKey: string, log?: MainLog): string | null {
+  const blocked = `blocker-not-on-main: ${blockerKey}`;
+  const want = blockerKey.toLowerCase();
+  if ((log ?? readMainLog(git, repo)).some((row) => namesKey(row.subject, want))) return null;
   const branches = branchesFor(git, repo, blockerKey);
   if (branches.length === 0) return null;
-  // The rescue rule wins: a rescue branch that is not on main means salvaged, not merged.
-  if (branches.some((b) => b.includes("rescue/") && !isAncestor(git, repo, b))) return `blocker-not-on-main: ${blockerKey}`;
-  if (branches.some((b) => isAncestor(git, repo, b))) return null;
-  return mergedOnMain(git, repo, blockerKey, log) === null ? `blocker-not-on-main: ${blockerKey}` : null;
+  if (branches.some((b) => b.includes("rescue/") && !isAncestor(git, repo, b))) return blocked;
+  return branches.some((b) => isAncestor(git, repo, b)) ? null : blocked;
 }

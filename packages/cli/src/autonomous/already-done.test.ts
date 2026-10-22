@@ -187,6 +187,25 @@ describe("blockerProblem", () => {
     g(repo, "checkout", "-q", "main");
     expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
   });
+  it("merged and then salvaged (key-scoped commit on main + rescue one WIP commit ahead) passes", () => {
+    commit("feat(dgs-7): the work");
+    pushMain();
+    g(repo, "checkout", "-q", "-b", "tmp");
+    commit("wip(dgs-7): salvage before teardown");
+    g(repo, "push", "-q", "origin", "tmp:refs/heads/rescue/DGS-7");
+    g(repo, "checkout", "-q", "main");
+    g(repo, "branch", "-q", "-D", "tmp");
+    g(repo, "fetch", "-q", "origin");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
+  });
+  it("a stale empty ancestor branch + an unmerged rescue, no scoped commit, blocks", () => {
+    g(repo, "branch", "DGS-7__empty");
+    g(repo, "checkout", "-q", "-b", "tmp");
+    commit("wip stuff");
+    g(repo, "branch", "rescue/DGS-7");
+    g(repo, "checkout", "-q", "main");
+    expect(blockerProblem(realGit, repo, "DGS-7")).toBe("blocker-not-on-main: DGS-7");
+  });
   it("passes with no branch at all", () => {
     expect(blockerProblem(realGit, repo, "DGS-7")).toBeNull();
   });
