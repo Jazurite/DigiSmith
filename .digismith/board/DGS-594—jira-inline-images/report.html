@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DGS-594 — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}td,th{border:1px solid #ccc;padding:.4rem .6rem}table{border-collapse:collapse}h1,h2{color:#6b3fa0}</style></head><body>
+<header>
+<h1>DGS-594 + DGS-595 Jira inline images — Implementation Report</h1>
+<div class="meta"><span>Tickets: <strong>DGS-594</strong>, <strong>DGS-595</strong></span><span>Date: 2026-10-23</span></div>
+</header>
+<section id="summary">
+<h2>Summary</h2>
+<p><code>markdown-to-adf</code> now turns a whole-line <code>![alt](media:&lt;mediaId&gt;?width=&amp;size=)</code> token into an ADF <code>mediaSingle</code> image and <code>{status:TEXT|color}</code> into a status node. The Jira progress skills upload screenshots with <code>upload-attachment</code> and use those tokens. The full suite passes.</p>
+</section>
+<h2>What changed</h2>
+<p>Package: <code>packages/jira-client/src/markdown-to-adf.ts</code>. Width must be 1-100, size needs two positive numbers, and an unknown or duplicate parameter, other image syntax, a media token inside text, an unknown status color, and a malformed status token all throw.</p>
+<p>Skills: <code>generate-comment</code> collects screenshots, shows the file list, uploads them, and writes one token per line (a <code>[filename](contentUrl)</code> link when there is no mediaId; <code>sips</code> only for sizes). It asks Jack first, unless Jack's own message already orders the upload. <code>jira-progress-write-back</code> passes the ticket key and names leftover attachments (id and filename) on cancel and failure.</p>
+<h2>Tests</h2>
+<table><tr><th>Where</th><th>Result</th></tr>
+<tr><td>jira-client</td><td>66 → 73 pass (markdown-to-adf 32 → 39)</td></tr>
+<tr><td>full repo</td><td>248 files, 3835 tests pass</td></tr></table>
+<h2>First use</h2>
+<p>The next real Jira progress update with screenshots: tell the agent to upload them.</p>
+<h2>Review</h2>
+<p>Claude whole-branch review: no blocking defect. Fixed all verified findings: parser leniencies (extra <code>=</code>, duplicate params, zero size), silent pass-through of malformed media and status tokens, and the cancel and failure exits that did not name uploaded attachments.</p>
+</body></html>
