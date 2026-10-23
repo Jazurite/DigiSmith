@@ -17,8 +17,10 @@ export interface AdfDoc {
   content: AdfNode[];
 }
 
+const STATUS_COLORS = ["neutral", "purple", "blue", "red", "yellow", "green"];
+
 const INLINE_TOKEN =
-  /\*\*(?<bold>[^*]+)\*\*|@\[(?<mentionName>[^\]]+)\]\((?<mentionId>[^)]+)\)|\[(?<linkText>[^\]]+)\]\((?<linkUrl>[^)]+)\)/g;
+  /\*\*(?<bold>[^*]+)\*\*|\{status:(?<statusText>[^|}]+)\|(?<statusColor>[^}]+)\}|@\[(?<mentionName>[^\]]+)\]\((?<mentionId>[^)]+)\)|\[(?<linkText>[^\]]+)\]\((?<linkUrl>[^)]+)\)/g;
 
 function parseInline(text: string): AdfNode[] {
   const nodes: AdfNode[] = [];
@@ -32,6 +34,12 @@ function parseInline(text: string): AdfNode[] {
     const groups = match.groups!;
     if (groups.bold !== undefined) {
       nodes.push({ type: "text", text: groups.bold, marks: [{ type: "strong" }] });
+    } else if (groups.statusText !== undefined) {
+      const color = groups.statusColor.trim().toLowerCase();
+      if (!STATUS_COLORS.includes(color)) {
+        unsupported(`status color ${JSON.stringify(color)} (use one of ${STATUS_COLORS.join(", ")})`, text);
+      }
+      nodes.push({ type: "status", attrs: { text: groups.statusText.trim(), color } });
     } else if (groups.mentionName !== undefined) {
       nodes.push({
         type: "mention",
@@ -56,13 +64,39 @@ function unsupported(construct: string, line: string): never {
   throw new Error(`markdown-to-adf: unsupported construct (${construct}): ${JSON.stringify(line)}`);
 }
 
+const MEDIA_LINE = /^!\[(?<alt>[^\]]*)\]\(media:(?<id>[^)?\s]+)(?:\?(?<params>[^)]*))?\)\s*$/;
+
+function parseMediaLine(line: string): AdfNode | null {
+  const match = MEDIA_LINE.exec(line);
+  if (!match) return null;
+  const { alt, id, params } = match.groups!;
+  const singleAttrs: Record<string, unknown> = { layout: "center" };
+  const mediaAttrs: Record<string, unknown> = { type: "file", id, collection: "" };
+  for (const param of params ? params.split("&") : []) {
+    const [key, value = ""] = param.split("=");
+    if (key === "width" && /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 100) {
+      singleAttrs.width = Number(value);
+    } else if (key === "size" && /^\d+x\d+$/.test(value)) {
+      const [width, height] = value.split("x").map(Number);
+      mediaAttrs.width = width;
+      mediaAttrs.height = height;
+    } else {
+      unsupported(`image parameter ${JSON.stringify(param)} (use width=<1-100> or size=<W>x<H>)`, line);
+    }
+  }
+  if (alt.trim() !== "") mediaAttrs.alt = alt.trim();
+  return { type: "mediaSingle", attrs: singleAttrs, content: [{ type: "media", attrs: mediaAttrs }] };
+}
+
 function checkNotUnsupported(line: string): void {
   if (/^```/.test(line)) unsupported("code block", line);
   if (/^>/.test(line)) unsupported("blockquote", line);
   if (/^\d+\.\s+/.test(line)) unsupported("numbered list", line);
   if (/^\s+[-*]\s+/.test(line)) unsupported("nested list", line);
   if (/^\|/.test(line)) unsupported("table", line);
-  if (/!\[[^\]]*\]\([^)]*\)/.test(line)) unsupported("image", line);
+  if (/!\[[^\]]*\]\([^)]*\)/.test(line)) {
+    unsupported("image (only a whole-line ![alt](media:<mediaId>) token is supported)", line);
+  }
   if (/`[^`]*`/.test(line)) unsupported("inline code span", line);
 }
 
@@ -91,6 +125,13 @@ export function markdownToAdf(markdown: string): AdfDoc {
     const line = lines[i];
 
     if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    const media = parseMediaLine(line);
+    if (media) {
+      content.push(media);
       i++;
       continue;
     }

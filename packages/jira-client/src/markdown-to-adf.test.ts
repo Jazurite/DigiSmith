@@ -136,6 +136,82 @@ describe("markdownToAdf", () => {
     expect(() => markdownToAdf("- first\n- second with `code`")).toThrow(/inline code/);
   });
 
+  it("converts a whole-line media token to an ADF mediaSingle node", () => {
+    const doc = markdownToAdf("![Desktop view](media:3f1c9a2e-0b7d-4c55-9e1a-2d6f8b4a7c10?width=60&size=1280x720)");
+    expect(doc.content).toEqual([
+      {
+        type: "mediaSingle",
+        attrs: { layout: "center", width: 60 },
+        content: [
+          {
+            type: "media",
+            attrs: {
+              type: "file",
+              id: "3f1c9a2e-0b7d-4c55-9e1a-2d6f8b4a7c10",
+              collection: "",
+              width: 1280,
+              height: 720,
+              alt: "Desktop view",
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("converts a media token with no parameters and empty alt text", () => {
+    const doc = markdownToAdf("![](media:abc-123)");
+    expect(doc.content).toEqual([
+      {
+        type: "mediaSingle",
+        attrs: { layout: "center" },
+        content: [{ type: "media", attrs: { type: "file", id: "abc-123", collection: "" } }],
+      },
+    ]);
+  });
+
+  it("converts consecutive media lines into separate mediaSingle nodes between paragraphs", () => {
+    const doc = markdownToAdf("Screens:\n![a](media:one)\n![b](media:two)\nAfter");
+    expect(doc.content.map((node) => node.type)).toEqual(["paragraph", "mediaSingle", "mediaSingle", "paragraph"]);
+    expect(doc.content[1].content![0].attrs!.id).toBe("one");
+    expect(doc.content[2].content![0].attrs!.id).toBe("two");
+  });
+
+  it("throws on a media token with an unknown parameter", () => {
+    expect(() => markdownToAdf("![a](media:one?height=5)")).toThrow(/image parameter/);
+  });
+
+  it("throws on a media token with an out-of-range width", () => {
+    expect(() => markdownToAdf("![a](media:one?width=150)")).toThrow(/image parameter/);
+  });
+
+  it("throws on a media token inside a paragraph line", () => {
+    expect(() => markdownToAdf("see ![a](media:one) here")).toThrow(/image/);
+  });
+
+  it("converts a status token to an ADF status node", () => {
+    const doc = markdownToAdf("Technical Development {status:IN PROGRESS|blue}");
+    expect(doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Technical Development " },
+        { type: "status", attrs: { text: "IN PROGRESS", color: "blue" } },
+      ],
+    });
+  });
+
+  it("converts a status token inside a bullet-list item", () => {
+    const doc = markdownToAdf("- QA {status:DONE|Green}");
+    expect(doc.content[0].content![0].content![0].content).toEqual([
+      { type: "text", text: "QA " },
+      { type: "status", attrs: { text: "DONE", color: "green" } },
+    ]);
+  });
+
+  it("throws on a status token with an unknown color", () => {
+    expect(() => markdownToAdf("{status:DONE|orange}")).toThrow(/status color/);
+  });
+
   it("round-trips the filled progress-update.md content into the expected ADF document", () => {
     const filled = [
       "### 📣 Progress Update – 26/8",
