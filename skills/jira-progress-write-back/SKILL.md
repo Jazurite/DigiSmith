@@ -304,7 +304,7 @@ Progress Update, `generate-comment` uses it to upload screenshots (without askin
 already said to upload them) and
 put whole-line `![alt](media:<mediaId>)` tokens in the comment, which
 Step 11 converts to inline ADF images. Receive back `{markdown, headingPrefix}`
-and the ids of any attachments it uploaded.
+and the id and filename of any attachment it uploaded.
 Hold both in memory — `headingPrefix` feeds Step 10's dedup-search,
 `markdown` feeds Step 11's conversion and Step 12's confirmation.
 
@@ -379,7 +379,7 @@ attachments on the ticket and show where each one appears in the comment.
 Then ask via `AskUserQuestion`: post as drafted, let the user
 revise first, or cancel. **Revise** → incorporate the requested change,
 re-run Step 11's conversion on the revised markdown, and re-present
-before proceeding. **Cancel** → stop here, nothing is written. Only
+before proceeding. **Cancel** → stop here, nothing is written to the description or comment; name any attachments uploaded at Step 9 (id and filename), as in Error Handling. Only
 **post as drafted** continues to Step 13. This applies every time this
 skill runs, not just the first — both writes are team-visible external
 side effects, and JIRA's own edit history is visible to the whole team.
@@ -413,7 +413,8 @@ Confirm what was written: the ticket key, which template was used,
 whether the description's Materials & Links entry was created or updated
 (and the Track line, if touched, or a note that it was skipped and why —
 Progress Update only), and whether the comment was created or updated
-(with a link to the ticket). This skill's job ends here.
+(with a link to the ticket). List any screenshots uploaded at Step 9. This
+skill's job ends here.
 
 ## Error Handling
 
@@ -429,7 +430,8 @@ Progress Update only), and whether the comment was created or updated
   key rather than guessing.
 - **`generate-comment` fails or is cancelled at Step 9** (unrecognized
   template type, missing template file, unresolved mention) → stop here,
-  surface whatever it reported plainly. Don't fabricate a comment.
+  surface whatever it reported plainly, and list any screenshots it already
+  uploaded (id and filename). Don't fabricate a comment.
 - **Track section absent, or present but not in the expected shape**
   (Progress Update only) → skip the Track delta entirely (Step 7),
   report plainly in Step 15. Never scaffold or force an edit against an

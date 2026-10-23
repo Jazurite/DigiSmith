@@ -163,7 +163,7 @@ this paragraph.
    token inside other text fails conversion.
 
 Join the lines with newlines — that is the `screenshots` placeholder value.
-Report the uploaded attachment ids to the caller with the draft.
+Report each uploaded attachment's id and filename to the caller with the draft.
 
 **Stay within the supported Markdown subset** when drafting any of this
 step's bullets, since they get converted to ADF later (Progress Update
