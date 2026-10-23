@@ -1,6 +1,6 @@
 ---
 name: generate-comment
-description: Use when jira-progress-write-back or teams-pr-review-notification need a drafted comment/message — selects a template, gathers its content, and fills it in. Never posts or sends anything itself.
+description: Use when jira-progress-write-back or teams-pr-review-notification need a drafted comment/message — selects a template, gathers its content, and fills it in. Never posts or sends the comment itself (it only uploads confirmed screenshots).
 ---
 
 # Generate Comment
@@ -12,8 +12,9 @@ questions, and filling a Markdown template — the shared mechanism behind
 every reporting comment/message DigiSmith drafts. Returns filled Markdown
 text plus a heading-prefix string for the caller's own dedup-search (only
 meaningful to `jira-progress-write-back`; `teams-pr-review-notification`
-ignores it). Never posts, sends, or connects to anything itself — purely a
-drafting step. See `.digismith/docs/generate-comment/design.html` for the
+ignores it). Never posts or sends the comment itself — purely a drafting
+step. The one write it makes is Step 2's screenshot upload to the ticket,
+and only after Jack confirms it (his own order to upload counts). See `.digismith/docs/generate-comment/design.html` for the
 full design.
 
 ## Invoked By
@@ -119,17 +120,58 @@ this skill's):
 Compose all such bullets as one Markdown bullet-list block — the
 `next-steps` placeholder value.
 
-Set the `screenshots` placeholder to the literal string `N/A`, unconditionally
-— never ask whether screenshots exist. Real image attachment depends on map
-item **I.5** (jira-client attachment upload, not built as of this writing,
-owned separately from Q) — asking now would be a dead end with nothing to
-attach to. Once I.5 ships, this step is the place to revisit.
+Then gather screenshots for the `screenshots` placeholder. The caller
+passes the ticket key (`jira-progress-write-back` already knows it); with
+no key, set `screenshots` to the literal string `N/A` and skip the rest of
+this paragraph.
+
+1. Collect the images. Use screenshots this session already took of the
+   delivered work (for example from `capture-ephemeral-url` or a browser
+   check). Otherwise ask via `AskUserQuestion` whether to take new ones
+   (with the browser tools, of the preview URL), attach file paths, or
+   skip. **Skip, or no images** → set `screenshots` to `N/A` and continue.
+2. Confirm the upload. Uploading is a team-visible write to the ticket,
+   and the client has no delete operation. Always show the list of files
+   in your reply before the upload runs.
+   - **Jack's own message already orders the upload** ("upload them",
+     "upload the screenshots", "post it with the images") → that is the
+     confirmation. Do not ask again. Show the file list and upload.
+   - **His message did not say to upload** → ask via `AskUserQuestion`:
+     upload these to `<Key>`, or skip. **Skip** → `screenshots` = `N/A`.
+3. Upload each file:
+
+   ```bash
+   node ~/.digismith-depot/repo/packages/jira-client/src/cli.ts upload-attachment --key <Key> --file <path>
+   ```
+
+   The command prints `{"id", "filename", "contentUrl", "mediaId"}`.
+   **`mediaId` is missing** → the image cannot go inline. Use a
+   `[<filename>](<contentUrl>)` link for that file instead, and say so to
+   the caller.
+4. Read each image's pixel size (macOS: `sips -g pixelWidth -g pixelHeight <path>`).
+   Size is optional; omit `size=` when you cannot read it.
+5. Compose one token per image, each on its own line:
+
+   ```
+   ![<short alt text>](media:<mediaId>?width=<1-100>&size=<W>x<H>)
+   ```
+
+   `width` is the display width in percent of the comment column (use
+   `100` for a desktop screenshot, about `40` for a mobile one). Both
+   parameters are optional. `markdown-to-adf.ts` converts each token to
+   an ADF `mediaSingle` node. The token must be the whole line; an image
+   token inside other text fails conversion.
+
+Join the lines with newlines — that is the `screenshots` placeholder value.
+Report the uploaded attachment ids to the caller with the draft.
 
 **Stay within the supported Markdown subset** when drafting any of this
 step's bullets, since they get converted to ADF later (Progress Update
 only, not Teams): plain text, `**bold**`, `[text](url)` links,
-`@[Name](accountId)` mentions, and literal Unicode emoji only. No inline
-code spans (backticks), no numbered or nested lists, no images, no code
+`@[Name](accountId)` mentions, `{status:<TEXT>|<color>}` status lozenges
+(color: neutral, purple, blue, red, yellow or green), and literal Unicode
+emoji only. No inline code spans (backticks), no numbered or nested lists,
+no images other than the whole-line `media:` tokens in `screenshots`, no code
 blocks, no blockquotes — any of these will cause the later conversion
 step to fail. If you need to refer to a code identifier or technical
 term, write it as plain text without backticks.
@@ -259,7 +301,7 @@ printed JSON (`{"markdown": "...", "headingPrefix": "..."}`) from stdout.
 
 Report back to the caller: the filled `markdown` text and the
 `headingPrefix` string, exactly as `fill-template.ts` produced them. This
-skill's job ends here — it never posts, sends, or confirms anything
+skill's job ends here — it never posts, sends, or confirms the comment
 itself; that's each caller's own job.
 
 ## Error Handling
@@ -279,7 +321,7 @@ itself; that's each caller's own job.
 |---|---|
 | 1 | Determine template type — from the caller, or ask |
 | 1.5 | Only for `progress-update`/`investigation-update`. Check `technical_voice` (default `on`); when `on`, apply `ste100-writing` + companions (minus the list/paragraph-limit rules, which the ADF Markdown subset already governs) to Steps 2-3's bullets. Step 4's `ask-line` always stays verbatim |
-| 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots placeholder (always `N/A` for now), today's date |
+| 2 | Progress Update content: N's `report.html` or session summary, Next Steps role/mention resolution, screenshots (collect, confirm, `upload-attachment`, `![alt](media:<mediaId>)` tokens; `N/A` when none or no key), today's date |
 | 3 | Investigation Update content: root cause (checked + found, merged), proposed fix, next steps (own actions + needs, role/mention resolution), today's date |
 | 4 | Teams Review Request content: scope, PR info, reviewer names via `digismith:preferences`, ask line |
 | 5 | Fill the template via `fill-template.ts`, parse the returned JSON |

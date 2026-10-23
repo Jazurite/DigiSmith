@@ -299,7 +299,12 @@ to the kebab-case form of `<template>` — `<template>` = Progress Update
 of these kebab-case strings (never `teams-review-request` — that's
 I.4's template type, not this skill's) and hard-stops on anything else,
 so pass the mapped form, not the human-readable `<template>` value used
-elsewhere in this document. Receive back `{markdown, headingPrefix}`.
+elsewhere in this document. Also pass the ticket key (`<Key>`): for a
+Progress Update, `generate-comment` uses it to upload screenshots (without asking again when Jack's own message
+already said to upload them) and
+put whole-line `![alt](media:<mediaId>)` tokens in the comment, which
+Step 11 converts to inline ADF images. Receive back `{markdown, headingPrefix}`
+and the ids of any attachments it uploaded.
 Hold both in memory — `headingPrefix` feeds Step 10's dedup-search,
 `markdown` feeds Step 11's conversion and Step 12's confirmation.
 
@@ -369,7 +374,9 @@ validated by Step 11's conversion). Alongside the comment text, state
 plainly whether this write will **create a new comment** or **replace
 the existing comment Step 10 found** (name its `commentId` when
 replacing), so the user can catch and cancel a wrong match before it
-lands. Then ask via `AskUserQuestion`: post as drafted, let the user
+lands. If Step 9 uploaded screenshots, say that they are already
+attachments on the ticket and show where each one appears in the comment.
+Then ask via `AskUserQuestion`: post as drafted, let the user
 revise first, or cancel. **Revise** → incorporate the requested change,
 re-run Step 11's conversion on the revised markdown, and re-present
 before proceeding. **Cancel** → stop here, nothing is written. Only
@@ -442,7 +449,9 @@ Progress Update only), and whether the comment was created or updated
   capability exists — edit it via `--comment-id` instead of creating a
   corrective second comment.
 - **User cancels at Step 12** → stop, nothing written, no partial write
-  of just the description or just the comment.
+  of just the description or just the comment. Screenshots uploaded at
+  Step 9 stay on the ticket as attachments (no delete capability); name
+  them in the report so Jack can remove them by hand.
 - **The `update-description` or `add-comment` CLI call fails** (HTTP
   error, network error) → report the failure plainly with whatever
   error detail it printed to stderr; don't retry silently or fall back
