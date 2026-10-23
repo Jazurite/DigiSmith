@@ -22,6 +22,13 @@ const STATUS_COLORS = ["neutral", "purple", "blue", "red", "yellow", "green"];
 const INLINE_TOKEN =
   /\*\*(?<bold>[^*]+)\*\*|\{status:(?<statusText>[^|}]+)\|(?<statusColor>[^}]+)\}|@\[(?<mentionName>[^\]]+)\]\((?<mentionId>[^)]+)\)|\[(?<linkText>[^\]]+)\]\((?<linkUrl>[^)]+)\)/g;
 
+function plainText(text: string): AdfNode {
+  if (text.includes("{status:")) {
+    unsupported("status token (use {status:TEXT|color})", text);
+  }
+  return { type: "text", text };
+}
+
 function parseInline(text: string): AdfNode[] {
   const nodes: AdfNode[] = [];
   let lastIndex = 0;
@@ -29,7 +36,7 @@ function parseInline(text: string): AdfNode[] {
   let match: RegExpExecArray | null;
   while ((match = INLINE_TOKEN.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      nodes.push({ type: "text", text: text.slice(lastIndex, match.index) });
+      nodes.push(plainText(text.slice(lastIndex, match.index)));
     }
     const groups = match.groups!;
     if (groups.bold !== undefined) {
@@ -55,7 +62,7 @@ function parseInline(text: string): AdfNode[] {
     lastIndex = INLINE_TOKEN.lastIndex;
   }
   if (lastIndex < text.length) {
-    nodes.push({ type: "text", text: text.slice(lastIndex) });
+    nodes.push(plainText(text.slice(lastIndex)));
   }
   return nodes.length > 0 ? nodes : [{ type: "text", text: "" }];
 }
@@ -72,11 +79,16 @@ function parseMediaLine(line: string): AdfNode | null {
   const { alt, id, params } = match.groups!;
   const singleAttrs: Record<string, unknown> = { layout: "center" };
   const mediaAttrs: Record<string, unknown> = { type: "file", id, collection: "" };
+  const seen = new Set<string>();
   for (const param of params ? params.split("&") : []) {
-    const [key, value = ""] = param.split("=");
+    const eq = param.indexOf("=");
+    const key = eq === -1 ? param : param.slice(0, eq);
+    const value = eq === -1 ? "" : param.slice(eq + 1);
+    if (seen.has(key)) unsupported(`duplicate image parameter ${JSON.stringify(key)}`, line);
+    seen.add(key);
     if (key === "width" && /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 100) {
       singleAttrs.width = Number(value);
-    } else if (key === "size" && /^\d+x\d+$/.test(value)) {
+    } else if (key === "size" && /^\d+x\d+$/.test(value) && value.split("x").every((n) => Number(n) > 0)) {
       const [width, height] = value.split("x").map(Number);
       mediaAttrs.width = width;
       mediaAttrs.height = height;
@@ -94,7 +106,7 @@ function checkNotUnsupported(line: string): void {
   if (/^\d+\.\s+/.test(line)) unsupported("numbered list", line);
   if (/^\s+[-*]\s+/.test(line)) unsupported("nested list", line);
   if (/^\|/.test(line)) unsupported("table", line);
-  if (/!\[[^\]]*\]\([^)]*\)/.test(line)) {
+  if (/!\[[^\]]*\]\([^)]*\)/.test(line) || /^!\[/.test(line) || /\(media:/.test(line)) {
     unsupported("image (only a whole-line ![alt](media:<mediaId>) token is supported)", line);
   }
   if (/`[^`]*`/.test(line)) unsupported("inline code span", line);
@@ -111,6 +123,8 @@ function isSpecialLine(line: string): boolean {
     /^\s+[-*]\s+/.test(line) ||
     /^\|/.test(line) ||
     /!\[[^\]]*\]\([^)]*\)/.test(line) ||
+    /^!\[/.test(line) ||
+    /\(media:/.test(line) ||
     /`[^`]*`/.test(line)
   );
 }

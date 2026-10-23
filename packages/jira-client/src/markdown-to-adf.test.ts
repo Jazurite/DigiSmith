@@ -399,4 +399,17 @@ describe("markdownToAdf", () => {
       ],
     });
   });
+  describe("malformed media and status tokens", () => {
+    it.each([
+      "![a](media:x?width=10=5)",
+      "![a](media:x?size=1x1=zz)",
+      "![a](media:x?width=10&width=20)",
+      "![a](media:x?size=0x0)",
+      "![a[b]](media:x)",
+      "{status:Done|}",
+      "{status:|green}",
+    ])("throws on %s", (md) => {
+      expect(() => markdownToAdf(md)).toThrow(/unsupported construct|unsupported/);
+    });
+  });
 });
