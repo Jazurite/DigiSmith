@@ -30,27 +30,12 @@ Card text, short:
 Placeholders `{{AGENT}}`, `{{KEY}}`, `{{SUBJECT}}` (what to study), `{{NAME}}` (library folder name), `{{FINDINGS}}` (findings path), `{{PLUGIN_ROOT}}`. It repeats the may-not list in the Rules section: no write in the DigiSmith repo, no ClickUp write, no commit, no push.
 
 ### 4. Spawn path from an order
-- `skills/researcher/SKILL.md` section "Start of a researcher (owner: conductor or Maestro)": the order names subject, `{{NAME}}`, findings path and seat. The conductor fills the brief, then follows the runbook "Start of a ticket" S0 to S6 with `dg run start --role researcher` (run record role `researcher`), tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. No worktree: the researcher runs in the Library folder (or `~/Workspace/Library`), `--add-dir` for the depot findings folder.
+- `skills/researcher/SKILL.md` section "Start of a researcher (owner: conductor or Maestro)": the order names subject, `{{NAME}}`, findings path and seat. The conductor fills the brief, then follows the runbook "Start of a ticket" S0 to S6 with `dg run start --role other` (DGS-609 adds the run role `researcher`), tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. No worktree: the researcher runs in the Library folder (or `~/Workspace/Library`), `--add-dir` for the depot findings folder.
 - The Workbox runbook (`.digismith/sessions/workbox.md`) is untracked on purpose, so I do not edit it. The spec adds the one-line pointer the conductor puts there: "Start of a researcher: see `skills/researcher/SKILL.md`." I name it in my report.
-- `dg run start --role researcher` must work. That needs the run record role list below.
+- `dg run start --role other` must work (test in `packages/cli/src/run/start-other.test.ts`).
 
-### 5. Role lists (found by grep; kept equal by a test)
-| List | File | Today | Change |
-|---|---|---|---|
-| Session card roles | `scripts/session-card.ts` | maestro, conductor, worker, scout, reviewer, observer | + researcher |
-| Run roles | `packages/cli/src/run/record.ts` | builder, reviewer, scout, other | + researcher (DGS-598 moves this list to `run/schema.ts`; see below) |
-| Run roles (Nexus copy) | `scripts/nexus-shared/nightwatch.ts` | builder, reviewer, scout, other | + researcher |
-| View role type | `packages/cli/src/nightwatch/types.ts` | `"builder" \| "reviewer" \| "scout" \| "other"` | + researcher |
-| `dg run start --role` text | `packages/cli/src/run/index.ts`, `run/README.md` | builder, reviewer, scout or other | add researcher |
-
-The run roles list is already kept in two files (`record.ts` and `nexus-shared/nightwatch.ts`) with no test. I add a test (`scripts/nexus-shared/roles-equal.test.ts`, or beside the existing nightwatch test) that reads both and asserts they are equal. The card-role list and the run-role list stay different on purpose (card has maestro/conductor/worker/observer; run has builder/other). A second test asserts every run role other than `builder` and `other` is a card role, so `researcher` cannot be a run role without being a card role.
-
-### 6. How researcher fits DGS-598 (read-only look at its spec and plan)
-DGS-598 (`.worktrees/dgs-598`, in progress) adds `packages/cli/src/run/schema.ts` (`ROLES`, `Role`) and `packages/cli/src/run/role.ts` (`roleOf`, THE role rule). `roleOf` names the role from the herdr agent name: `-conductor`, `-rev`, `scout`/`probe`, ticket key. The shared places are `schema.ts` `ROLES` (the list) and `role.ts` `roleOf` (the rule).
-- My branch edits `record.ts` as it is on `main`. I do not touch DGS-598's files.
-- Whichever of the two merges second rebases. After DGS-598 merges, my rebase moves the `researcher` entry into `schema.ts` `ROLES` and adds one rule line to `roleOf`: `if (n.endsWith("-researcher")) return { role: "researcher", role_from: "herdr" };` placed before the scout line (the agent name `<name>-researcher`, an exact suffix, so a scout named `research-scout` is not caught). The test lines go into `role.test.ts`.
-- If DGS-598 merges first, I do that on my branch before my own merge. If I merge first, the DGS-598 Builder gets one note from the conductor to add `researcher` to its `ROLES` and the rule line. Either way the conductor decides; I report which case it is at plan-ready.
-- Watchdog: DGS-598 classifies only builder, reviewer and scout runs. A researcher run is not watched (it has no phase). I add nothing to the watchdog.
+### 5. Run-role lists and DGS-598: moved to DGS-609
+Maestro ruling (Jack), 2026-10-24: the run-role lists (`researcher` in the run `ROLES`, the `roleOf` rule, the Nexus copy, the equality test) are DGS-609 (backlog, after DGS-598). DGS-606 is the general DigiSmith role only: session card, researcher card, brief. Until DGS-609 lands the card starts a researcher with `dg run start --role other`; a test checks that `dg run start --role other` works.
 
 ## Out of scope
 DGS-605 (`digismith:study`; do not touch `.worktrees/dgs-605`), any watchdog change, Oculus view changes, a real herdr start.
@@ -59,14 +44,13 @@ DGS-605 (`digismith:study`; do not touch `.worktrees/dgs-605`), any watchdog cha
 - Card in `skills/researcher/` (same place as the Reviewer card), not in the runbook.
 - Parents conductor and maestro only (as the ticket says). A scout may have a worker parent; a researcher may not.
 - Findings path: `~/.digismith-depot/research/<name>.md`; the order may override it.
-- Agent name suffix `-researcher` is the rule for the run role.
 
 ## First use (after the merge)
 1. Validate a card with `role: researcher`: good mandate and parent passes; no mandate fails; a `worker` parent fails in the sweep check.
-2. Start a researcher from a test order through the conductor, and see `researcher` in `dg run show`.
+2. (Moved to DGS-609: `dg run show` shows `researcher`.) Here: start a researcher from a test order through the conductor.
 
 ## Acceptance (from the ticket)
 - Card with `role: researcher` validates; no mandate or a bad parent fails.
-- A conductor can start a researcher from an order and the run shows its role.
+- A conductor can start a researcher from an order and the run exists (run role `other` until DGS-609).
 - The card and the brief both say it cannot write in the DigiSmith repo.
 - Tests cover role value, parent roles and mandate rule.

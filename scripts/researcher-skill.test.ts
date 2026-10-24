@@ -23,7 +23,7 @@ describe("researcher card and brief", () => {
     const card = read("SKILL.md");
     expect(card).toContain("Start of a researcher");
     expect(card).toContain("dg run start");
-    expect(card).toContain("--role researcher");
+    expect(card).toContain("--role other");
     expect(card).toContain("-researcher");
   });
   it("the card names where the other cards live", () => {

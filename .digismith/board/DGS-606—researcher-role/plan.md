@@ -4,7 +4,7 @@
 
 **Goal:** Add the `researcher` role: a session card role, a role card and brief template, and a run role, so a conductor can start a read-only worker that studies outside material.
 
-**Architecture:** Three tasks. Task 1 changes the session card rules. Task 2 adds the skill card and the brief. Task 3 adds `researcher` to the run-role lists and keeps them equal with a test. Task 3 comes last because DGS-598 (merging first) moves the run-role list into `packages/cli/src/run/schema.ts` and adds `roleOf`; Task 3 starts only after the conductor says DGS-598 has merged and this branch is rebased on `main`.
+**Architecture:** Task 1 changes the session card rules. Task 2 adds the skill card and the brief. Task 2b checks that a researcher can start as run role `other`. The run-role lists are DGS-609, not this ticket.
 
 **Tech Stack:** TypeScript under `node --experimental-strip-types`, vitest, pnpm. Spec: `.digismith/board/DGS-606—researcher-role/spec.md`.
 
@@ -14,7 +14,7 @@
 - A researcher's ONE write: the clone in `~/Workspace/Library/<name>` and its findings file in the depot. No write in the DigiSmith repo, no ClickUp write, no commit, no push. The card and the brief both say so.
 - Legal parent roles of a researcher: conductor, maestro (never worker). A mandate is required.
 - No real ClickUp write, no real herdr prompt in tests; `DIGISMITH_DEPOT_DIR` in a temp folder when a test needs the depot.
-- Do not touch DGS-605's files (`.worktrees/dgs-605`, `digismith:study`) or DGS-598's files. Do not edit `.digismith/sessions/workbox.md` (the conductor adds the runbook pointer).
+- Do not touch DGS-605's files (`.worktrees/dgs-605`, `digismith:study`) or DGS-598's files (run role files are DGS-609). Do not edit `.digismith/sessions/workbox.md` (the conductor adds the runbook pointer).
 - pnpm only. Commits title-only, conventional, no AI attribution.
 
 ---
@@ -205,87 +205,25 @@ git commit -m "feat(dgs-606): add the researcher card and brief"
 
 ---
 
-### Task 3: Researcher in the run-role lists (starts after DGS-598 merges and this branch is rebased on main)
+### Task 3: moved out
+
+The run-role lists (`researcher` in the run `ROLES`, `roleOf`, the Nexus copy, the equality test) are DGS-609 (backlog, after DGS-598). Maestro ruling (Jack), 2026-10-24. Until DGS-609 lands the card starts a researcher with `dg run start --role other`. Task 2b below checks that and adds the test.
+
+### Task 2b: the researcher starts as run role `other`
 
 **Files:**
-- Modify: `packages/cli/src/run/schema.ts` (`ROLES`; this file comes from DGS-598. Before the rebase the list is in `packages/cli/src/run/record.ts` line 8: do not start this task until the rebase.)
-- Modify: `packages/cli/src/run/role.ts` (`roleOf`: one rule line)
-- Modify: `scripts/nexus-shared/nightwatch.ts` (line 9 `ROLES`)
-- Modify: `packages/cli/src/nightwatch/types.ts` (line 10 `RunRowView.role`)
-- Modify: `packages/cli/src/run/index.ts` (the `--role` describe text), `packages/cli/src/run/README.md` (role list in the Fields line)
-- Test: `packages/cli/src/run/role.test.ts`, `packages/cli/src/run/roles-equal.test.ts` (new)
+- Modify: `skills/researcher/SKILL.md` (spawn step 3: `--role other` until DGS-609)
+- Test: `packages/cli/src/run/start-other.test.ts` (new; keeps DGS-598's `index.test.ts` untouched)
 
 **Interfaces:**
-- Consumes: from DGS-598, `ROLES` and `Role` (`run/schema.ts`, re-exported by `run/record.ts`) and `roleOf(i: RoleInput): { role: Role; role_from: RoleFrom }` (`run/role.ts`).
-- Produces: `"researcher"` in the run `ROLES`; `roleOf` returns `{ role: "researcher", role_from: "herdr" }` for an agent name ending `-researcher`; one test that keeps the two run-role lists equal.
+- Consumes: `dg run start` (`packages/cli/src/run/index.ts`), `findRunDir`.
+- Produces: a test that `dg run start --role other --ticket <KEY> --order <path>` exits 0 and prints a run id.
 
-- [ ] **Step 1: Write the failing tests.** Add to `packages/cli/src/run/role.test.ts` (inside `describe("roleOf", ...)`, using the file's `herdr` helper):
-
-```ts
-  it("names a researcher from the -researcher suffix, before the scout rule", () => {
-    expect(herdr("study-tool-researcher")).toEqual({ role: "researcher", role_from: "herdr" });
-    expect(herdr("research-scout")).toEqual({ role: "scout", role_from: "herdr" });
-  });
-```
-
-Create `packages/cli/src/run/roles-equal.test.ts`:
-
-```ts
-import { describe, it, expect } from "vitest";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import { ROLES } from "./record.ts";
-import { ROLES as CARD_ROLES } from "../../../../scripts/session-card.ts";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-
-describe("run roles", () => {
-  it("the Nexus copy of the run roles equals the CLI list", () => {
-    const src = fs.readFileSync(path.join(root, "scripts/nexus-shared/nightwatch.ts"), "utf8");
-    const m = src.match(/export const ROLES = \[([^\]]*)\] as const/);
-    expect(m).not.toBeNull();
-    const nexus = m![1].split(",").map((s) => s.trim().replace(/['"]/g, "")).filter(Boolean);
-    expect(nexus).toEqual([...ROLES]);
-  });
-  it("the nightwatch view role type names every run role", () => {
-    const src = fs.readFileSync(path.join(root, "packages/cli/src/nightwatch/types.ts"), "utf8");
-    for (const r of ROLES) expect(src).toContain(`"${r}"`);
-  });
-  it("every run role except builder, other, maestro and conductor is a session card role", () => {
-    for (const r of ROLES) {
-      if (["builder", "other", "maestro", "conductor"].includes(r)) continue;
-      expect(CARD_ROLES as readonly string[]).toContain(r);
-    }
-  });
-  it("includes researcher", () => {
-    expect(ROLES as readonly string[]).toContain("researcher");
-  });
-});
-```
-
-- [ ] **Step 2: Run to see them fail.** Run: `pnpm vitest run packages/cli/src/run/role.test.ts packages/cli/src/run/roles-equal.test.ts`. Expected: FAIL (no `researcher` in `ROLES`; `roleOf` returns `other`).
-
-- [ ] **Step 3: Implement.**
-  - `run/schema.ts`: add `"researcher"` to `ROLES` after `"scout"`.
-  - `run/role.ts`: before the `scout`/`probe` line add `if (n.endsWith("-researcher")) return { role: "researcher", role_from: "herdr" };`
-  - `scripts/nexus-shared/nightwatch.ts` line 9: same list, same order as `schema.ts`.
-  - `nightwatch/types.ts` line 10: add `| "researcher"` to `role`.
-  - `run/index.ts` describe text and `run/README.md`: add `researcher` to the role list.
-  - Do not touch the watchdog (a researcher run has no phase and is not watched).
-
-- [ ] **Step 4: Run the tests.** Run: `pnpm vitest run packages/cli/src/run scripts/nexus-shared scripts/session-card.test.ts scripts/researcher-skill.test.ts`. Expected: PASS. Then `pnpm vitest run packages/cli/src/nightwatch packages/cli/src/autonomous scripts/nexus-web/app/pages/nightwatch`. Expected: PASS (no new failure).
-
-- [ ] **Step 5: Commit.**
-
-```bash
-git add packages/cli/src scripts/nexus-shared
-git commit -m "feat(dgs-606): add the researcher run role"
-```
+- [ ] Write the test, run it, change the card text, run `pnpm vitest run packages/cli/src/run/start-other.test.ts scripts/researcher-skill.test.ts`, commit.
 
 ---
 
 ## Self-Review
-- Spec section 1 → Task 1. Sections 2, 3, 4 → Task 2. Sections 5 and 6 → Task 3 (last, after the rebase). First use is after the merge (not a task).
+- Spec section 1 → Task 1. Sections 2, 3, 4 → Task 2 and 2b. Sections 5 and 6 → DGS-609. First use is after the merge (not a task).
 - The role names in Task 3 match Task 1 (`researcher`) and the DGS-598 names `ROLES`, `roleOf`.
 - The runbook pointer line is the conductor's.

@@ -30,7 +30,7 @@ The card has `role: researcher`, a `mandate` (the order or brief path) and `unde
 ## Start of a researcher (owner: conductor or Maestro)
 1. The order names the subject, the library `<name>`, the findings path and the seat.
 2. Fill `skills/researcher/brief.md` (`{{AGENT}}` = `<name>-researcher`).
-3. Follow the Workbox runbook "Start of a ticket", S0 to S6, with `dg run start --ticket <KEY> --role researcher --order <order path> --seat <seat> --model <model> --workspace <w> --tab "<tab label>" --pane <pane>`, tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. There is no worktree: start the agent in `~/Workspace/Library`, with `--add-dir` for the depot findings folder (without it the findings write is denied).
+3. Follow the Workbox runbook "Start of a ticket", S0 to S6, with `dg run start --ticket <KEY> --role other --order <order path> --seat <seat> --model <model> --workspace <w> --tab "<tab label>" --pane <pane>`, tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. There is no worktree: start the agent in `~/Workspace/Library`, with `--add-dir` for the depot findings folder (without it the findings write is denied). The run role is `other` until DGS-609 adds `researcher`.
 4. Close the tab when the report is read (runbook "Tab cleanup").
 
 ## Other cards
