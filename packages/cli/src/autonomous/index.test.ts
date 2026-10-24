@@ -408,3 +408,27 @@ describe("dg autonomous merge-gate", () => {
     expect(existsSync(join(dir, "attention.jsonl"))).toBe(true);
   });
 });
+
+describe("schedule-release", () => {
+  it("moves a due ticket and prints one line for it", async () => {
+    tracker.add({ id: "t1", status: "scheduled", scheduledAt: DAY.getTime() - 60_000, mode: "Manual" });
+    await parse(["autonomous", "schedule-release"]);
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(out()).toContain("schedule-release: 1 scheduled, 1 moved");
+    expect(out()).toMatch(/T1\s+2026-10-21 09:59:00\s+Manual\s+moved -> to do/);
+    expect(process.exitCode).toBe(0);
+  });
+  it("--dry-run writes nothing", async () => {
+    tracker.add({ id: "t1", status: "scheduled", scheduledAt: DAY.getTime() - 60_000, mode: "Autonomous" });
+    await parse(["autonomous", "schedule-release", "--dry-run"]);
+    expect(tracker.tasks.get("t1")?.status).toBe("scheduled");
+    expect(out()).toContain("schedule-release (dry run, nothing written): 1 scheduled");
+    expect(out()).toMatch(/T1\s+.*would-move -> ready/);
+  });
+  it("a tracker that cannot list exits 1", async () => {
+    tracker.listByStatus = async () => { throw new Error("401"); };
+    await parse(["autonomous", "schedule-release"]);
+    expect(errLog.mock.calls.flat().join("\n")).toContain("autonomous: 401");
+    expect(process.exitCode).toBe(1);
+  });
+});

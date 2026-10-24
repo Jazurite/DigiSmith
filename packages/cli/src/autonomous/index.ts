@@ -21,6 +21,7 @@ import { defaultNexus, type NexusDeps, type RunNowResult } from "./nexus.ts";
 import { runRelease, type ReleaseResult } from "./release.ts";
 import { runReport } from "./report.ts";
 import { runScan } from "./scan.ts";
+import { runScheduleRelease } from "./schedule-release.ts";
 import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
 import { closeBreakerAsJack, runAway, runBack } from "./switch.ts";
@@ -210,7 +211,7 @@ function statusLines(d: AutonomousDeps): string[] {
 export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defaultDeps): CommandModule {
   return {
     command: "autonomous",
-    describe: "Autonomous Operation: scan ready and claim one ticket, the away switch, release, report, status",
+    describe: "Autonomous Operation: scan ready and claim one ticket, release scheduled tickets, the away switch, release, report, status",
     builder: (y) =>
       y
         .command({
@@ -237,6 +238,22 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 lines.push("dry run, nothing written:");
                 const w = Math.max(6, ...r.verdicts.map((v) => v.key.length));
                 for (const v of r.verdicts) lines.push(`${v.key.padEnd(w)}  ${v.reasons.length ? v.reasons.join("; ") : "ready"}`);
+              }
+              return lines;
+            }),
+        })
+        .command({
+          command: "schedule-release",
+          describe: "move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual); any hour",
+          builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "print the verdict for each scheduled ticket, write nothing" }),
+          handler: (argv) =>
+            guarded(depsFactory, async (d) => {
+              const dryRun = argv.dryRun as boolean;
+              const r = await runScheduleRelease({ tracker: lazyTracker(d.tracker), dir: d.dir, now: d.now, dryRun });
+              const lines = [dryRun ? `schedule-release (dry run, nothing written): ${r.scheduled} scheduled` : `schedule-release: ${r.scheduled} scheduled, ${r.moved} moved`];
+              const w = Math.max(6, ...r.lines.map((l) => l.key.length));
+              for (const l of r.lines) {
+                lines.push(`${l.key.padEnd(w)}  ${(l.scheduledAtUtc7 ?? "-").padEnd(19)}  ${(l.mode ?? "-").padEnd(10)}  ${l.verdict}${l.to ? ` -> ${l.to}` : ""}${l.error ? `: ${l.error}` : ""}`);
               }
               return lines;
             }),
