@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Denied Permission Prompt Unblocks the Run (DGS-589) — Implementation Report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}td,th{border:1px solid #ccc;padding:.4rem .6rem}table{border-collapse:collapse}h1,h2{color:#6b3fa0}</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>A Denied Permission Prompt Unblocks the Run (DGS-589) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: <strong>DGS-589</strong></span>
+    <span>Commit range: <code>b110437..d4d04d1</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A run whose last event is a <code>permission_prompt</code> stops being <code>blocked</code> once herdr shows its pane as <code>idle</code>, <code>done</code> or <code>working</code> (the prompt was answered or denied). <code>classify</code> stays pure and gets a new last parameter; the watch pass already reads <code>herdr-ws pane list</code> once per workspace, and now keeps each pane's <code>agent_status</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (3 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 1 fix round before merge. Task 4 (first use) is not part of this merge: the conductor runs it after 07:00 UTC+7.</p>
+  <p>Reference documents: the <a href="spec.md">design spec</a> and the <a href="plan.md">implementation plan</a>. <a href="findings.md">Review findings table</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>classify takes the herdr status</h4><p><code>classify</code> gets a last parameter <code>agentStatus</code>. <code>idle</code>, <code>done</code> or <code>working</code> with a prompt of 60 s or older counts as answered; anything else stays blocked.</p></div><div class="card"><span class="tag">Task 2</span><h4>The pane lookup keeps each status</h4><p><code>PaneLookup</code> returns a Map of pane id to <code>agent_status</code>; a missing status reads <code>unknown</code>.</p></div><div class="card"><span class="tag">Task 3</span><h4>The watch pass passes the real status</h4><p><code>statusOf</code> reads the cached lookup and the one <code>classify</code> call gets the pane status. <code>WATCHDOG.md</code> documents the rule.</p></div><div class="card"><span class="tag">Fix wave</span><h4>An answered prompt stays closed</h4><p><code>classify</code> returns healthy with cause <code>prompt-answered</code>; the watch pass keeps the run's blocked key, so a later herdr failure does not reopen the item.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: classify takes the herdr status</td><td><code>classify</code> answered-prompt rule</td><td>Approved, clean</td><td>none</td></tr><tr><td>Task 2: pane lookup keeps each status</td><td>Map of pane id to status</td><td>Approved, clean</td><td>none</td></tr><tr><td>Task 3: watch pass passes the status</td><td><code>statusOf</code> and docs</td><td>Approved, clean</td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge after one fix wave: 1 Important finding fixed, 1 Minor finding parked as a follow-up. <a href="findings.md">findings.md</a></p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1: when herdr's status resolved a denied prompt, the healthy branch forgot the blocked episode, so a later herdr failure or unsure status reopened the item with a duplicate ClickUp comment.</td><td>Fixed in <code>d4d04d1c</code>; the scoped re-review was clean.</td></tr>
+    <tr><td>Minor</td><td>F2: an answered prompt that turns lost (30 min silence) loses its blocked key, so a later herdr-down pass reopens it. The old code did the same.</td><td>Parked: out of scope, pre-existing; a follow-up.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">17d96fba</span> feat(watchdog): a herdr status past blocked answers a permission prompt</li><li><span class="sha">d1d788b1</span> feat(watchdog): the pane lookup keeps each pane's agent status</li><li><span class="sha">34d862a9</span> feat(watchdog): the watch pass resolves a blocked item when herdr shows the prompt answered</li><li><span class="sha">d4d04d1c</span> fix(watchdog): an answered prompt stays closed when herdr later reads down or unknown</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-589—denied-prompt-unblocks/report.html</footer>
+
+</body>
+</html>
