@@ -56,13 +56,13 @@ A worker session with no `step_start` and a `step_end finishing` (a build that n
 
 ## Run snapshots (DGS-590)
 
-`dg tokens runs [--run <run-id>] [--dry-run]` is the 5-minute job for the Oculus dashboard. One pass writes three files. `--run` matches the whole run id. `--dry-run` writes nothing. `--run` leaves `burn.json` alone, because one run is not the burn of all runs.
+`dg tokens runs [--run <run-id>] [--dry-run]` is the 5-minute job for the Oculus dashboard. One pass writes three files. `--run` matches the whole run id. `--dry-run` writes nothing and prints `-` for the burn. `--run` leaves `burn.json` alone, because one run is not the burn of all runs, and counts the named run even when it is final.
 
 - `runs/<folder>/<run>/tokens.json` (`oculus-tokens/v1`): per model counts and cost, the total, `unpriced_models`, `sessions`, 5-minute `buckets` and `final`.
-- `runs/.tokens/burn.json` (`oculus-burn/v1`): tokens and cost of the last 60 minutes (12 full 5-minute buckets before now) over all runs, the number of runs with a bucket in it, and `unpriced_models`.
+- `runs/.tokens/burn.json` (`oculus-burn/v1`): tokens and cost of the last 60 minutes (12 full 5-minute buckets before now) over all runs (read from each stored `tokens.json` changed in the last 25 hours, so ended and unchanged runs stay in; a file that does not parse is skipped), the number of runs with a bucket in it, and `unpriced_models`.
 - `usage-probe/seats.json` (`oculus-seats/v1`): the five-hour and weekly window of each seat, from the probe's `out-<seat>.json` files.
 
-Scope: every `runs/<folder>/<run>/` with a `run.json`. Folders and runs that start with `.` are skipped. A run with `final: true` is skipped. A run is kept when `events.jsonl` (else `run.json`) changed in the last 7 days, or when its `tokens.json` is older than `events.jsonl`. An ended run gets one last pass and is then marked `final`.
+Scope: every `runs/<folder>/<run>/` with a `run.json`. Folders and runs that start with `.` are skipped. A run with `final: true` is skipped unless `events.jsonl` is newer than `tokens.json` (the run started again). A run is kept when `events.jsonl` (else `run.json`) changed in the last 7 days, or when its `tokens.json` is older than `events.jsonl`. An ended run gets one last pass and is then marked `final`. A run that started again is counted again and `final` is recomputed.
 
 Sessions: the `session_id` in `run.json` plus the `session_id` of each `started` event. Only responses with `ts >= created_at` count.
 

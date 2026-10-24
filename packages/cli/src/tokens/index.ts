@@ -28,7 +28,7 @@ const tokensCommand: CommandModule<object, Args> = {
     if (args.ticket === "runs") {
       // "runs" is not a ticket key (keys carry a number): it is the 5-min Oculus job (DGS-590).
       const r = runTokensPass({ env: process.env, now: new Date(), projectsDir: claudeProjectsDir(), run: args.run, dryRun: args["dry-run"] });
-      console.log(`tokens runs: updated ${r.updated}, skipped ${r.skipped}, failed ${r.failed}, ${args.run === undefined ? "burn" : "run burn"} ${r.burn.tokens} tokens/h, seats ${r.seats}`);
+      console.log(`tokens runs: updated ${r.updated}, skipped ${r.skipped}, failed ${r.failed}, ${args.run === undefined ? "burn" : "run burn"} ${r.burn === null ? "-" : `${r.burn.tokens} tokens/h`}, seats ${r.seats}`);
       if (r.failed > 0 && r.updated === 0 && r.skipped === 0) process.exitCode = 1;
       return;
     }
