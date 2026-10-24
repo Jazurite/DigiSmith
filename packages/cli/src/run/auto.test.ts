@@ -1,0 +1,81 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { findAuto, startAuto } from "./auto.ts";
+import { appendEvent } from "./events.ts";
+import { readRun } from "./record.ts";
+
+let tmp: string;
+let depot: string;
+let repo: string;
+let env: NodeJS.ProcessEnv;
+beforeEach(() => {
+  tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "nw-auto-")));
+  depot = path.join(tmp, "depot");
+  fs.mkdirSync(depot);
+  repo = path.join(tmp, "DigiSmith");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+  fs.writeFileSync(path.join(repo, ".git", "HEAD"), "ref: refs/heads/main\n");
+  env = { DIGISMITH_DEPOT_DIR: depot, CLAUDE_PID: "4242" };
+});
+afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+const start = (p: Record<string, unknown>, e: NodeJS.ProcessEnv = env) => startAuto({ cwd: repo, ...p }, e, new Date("2026-10-24T05:00:00Z"));
+
+describe("startAuto", () => {
+  it("makes a new run under the project with id s-<session_id>", () => {
+    const a = start({ session_id: "sid-1", source: "startup", model: "claude-opus-5-5" })!;
+    expect(a).toMatchObject({ run: "s-sid-1", created: true, needsLabel: false });
+    expect(a.dir).toBe(path.join(depot, "runs", "DigiSmith", "s-sid-1"));
+    expect(readRun(a.dir)).toMatchObject({
+      schema: "nightwatch-run/v1", run: "s-sid-1", ticket: null, role: "other", role_from: "none", source: "auto",
+      project: "DigiSmith", session_id: "sid-1", order: null, budget: null, base_sha: null, branch: "main",
+      worktree: null, model: "claude-opus-5-5", created_at: "2026-10-24T05:00:00.000Z", herdr: { workspace: null, tab: null, pane: null },
+    });
+    expect(findAuto({ session_id: "sid-1" }, env)).toEqual({ dir: a.dir, run: "s-sid-1" });
+  });
+  it("files a run under the ticket when the branch names one", () => {
+    fs.writeFileSync(path.join(repo, ".git", "HEAD"), "ref: refs/heads/DGS-7__thing\n");
+    const a = start({ session_id: "sid-2", source: "startup" })!;
+    expect(a.dir).toBe(path.join(depot, "runs", "DGS-7", "s-sid-2"));
+    expect(readRun(a.dir).ticket).toBe("DGS-7");
+  });
+  it("gives maestro outside herdr when one identity card names the repo", () => {
+    fs.mkdirSync(path.join(depot, "identities"));
+    fs.writeFileSync(path.join(depot, "identities", "m.yml"), `folder: ${repo}\n`);
+    expect(readRun(start({ session_id: "sid-3", source: "startup" })!.dir)).toMatchObject({ role: "maestro", role_from: "identity" });
+  });
+  it("inside herdr: other, pending, the herdr fields, and needsLabel", () => {
+    const a = start({ session_id: "sid-4", source: "startup" }, { ...env, HERDR_PANE_ID: "w2:p8W", HERDR_TAB_ID: "w2:t8W", HERDR_WORKSPACE_ID: "w2" })!;
+    expect(a.needsLabel).toBe(true);
+    expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "pending", herdr: { workspace: "w2", tab: "w2:t8W", pane: "w2:p8W" } });
+  });
+  it("a resume (same session_id) continues the run", () => {
+    const a = start({ session_id: "sid-5", source: "startup" })!;
+    expect(start({ session_id: "sid-5", source: "resume" })).toEqual({ dir: a.dir, run: "s-sid-5", created: false, needsLabel: false });
+  });
+  it("a /clear in the same claude process continues the run", () => {
+    const a = start({ session_id: "sid-6", source: "startup" })!;
+    appendEvent(a.dir, a.run, "ended", { reason: "clear", session_id: "sid-6" }, 2000);
+    const b = start({ session_id: "sid-6b", source: "clear" })!;
+    expect(b).toEqual({ dir: a.dir, run: "s-sid-6", created: false, needsLabel: false });
+    expect(findAuto({ session_id: "sid-6b" }, env)?.run).toBe("s-sid-6");
+  });
+  it("a /clear after an ended with another reason, or in another process, is a new run", () => {
+    const a = start({ session_id: "sid-7", source: "startup" })!;
+    appendEvent(a.dir, a.run, "ended", { reason: "logout", session_id: "sid-7" }, 2000);
+    expect(start({ session_id: "sid-7b", source: "clear" })!.run).toBe("s-sid-7b");
+    expect(start({ session_id: "sid-7c", source: "clear" }, { ...env, CLAUDE_PID: "9999" })!.run).toBe("s-sid-7c");
+  });
+  it("does nothing without a safe session_id or without a depot folder", () => {
+    expect(start({ source: "startup" })).toBeNull();
+    expect(start({ session_id: "has space" })).toBeNull();
+    expect(start({ session_id: "sid-8" }, { DIGISMITH_DEPOT_DIR: path.join(tmp, "no-depot") })).toBeNull();
+    expect(fs.existsSync(path.join(tmp, "no-depot"))).toBe(false);
+  });
+  it("keeps prompt text and other payload fields out of run.json", () => {
+    const a = start({ session_id: "sid-9", source: "startup", prompt: "SECRET-PROMPT", transcript_path: "/x/SECRET" })!;
+    expect(fs.readFileSync(path.join(a.dir, "run.json"), "utf8")).not.toMatch(/SECRET/);
+  });
+});
