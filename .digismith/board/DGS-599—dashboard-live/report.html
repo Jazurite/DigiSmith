@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-599 Oculus — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-599 Oculus — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: <strong>DGS-599</strong></span>
+    <span>Commit range: <code>c769622..346518a</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Rename the Nightwatch dashboard surface to Oculus, serve it as its own static site for <code>oculus.pazurite.com</code>, and make its index page show every herdr agent on the Workbox (all workspaces) with the attention summary, a disconnected state backed by a depot snapshot, and the side bar clear of the left edge. The CLI stays the only reader of depot files and of herdr: a new read-only view <code>dg oculus view live</code> runs herdr with one fixed argv and joins agents to run records. The Nexus API serves it at <code>/api/v1/oculus/live</code> through the existing 5 s cached, single-flight reader and keeps the last good answer in <code>$DEPOT/nexus/state/</code>. One Nuxt project builds two static sites (<code>NEXUS_SITE=life|oculus</code>, outputs <code>.output/</code> and <code>.output-oculus/</code>); <code>build-www.sh</code> publishes both behind two symlinks. Caddy and DNS changes are repo files only here; the live change is a separate step after the merge. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (9 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Side bar edge fix</h4><p>The side bar text sits at the 24 px gutter at 1440, 1024, 1860 at 110% zoom and 390; Chromium baselines; WebKit dropped by the Maestro.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Rename the back end to Oculus (CLI view, shared schema, API routes)</h4><p><code>dg oculus view</code>, <code>/api/v1/oculus/*</code>, <code>scripts/nexus-shared/oculus.ts</code>; <code>dg nightwatch</code> gone.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Rename the web surface to Oculus (components, tokens, composables, tests, baselines)</h4><p><code>Oc*</code> components, <code>--oc-*</code> tokens, <code>oculus</code> layout, renamed baselines and a name guard test.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The Oculus site at <code>/</code> (two builds, titles, brand, publish)</h4><p>Two builds (<code>life</code>, <code>oculus</code>); Oculus at <code>/</code>; <code>build-www.sh</code> publishes <code>oculus.d/&lt;stamp&gt;</code>.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Caddy repo files for oculus.pazurite.com (no live change)</h4><p><code>oculus.pazurite.com</code> block, <code>(nexus_api)</code> and <code>(static_site)</code> snippets, <code>DIGISMITH_OCULUS_WWW</code> placeholder; repo files only.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4><code>dg oculus view live</code> (herdr, allowlist, role, project, run join)</h4><p><code>dg oculus view live</code>: fixed read-only herdr call, allowlisted capped fields, role, project, run join.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4><code>/api/v1/oculus/live</code> and the last good snapshot</h4><p><code>/api/v1/oculus/live</code> (always 200) and the last good snapshot in <code>$DEPOT/nexus/state</code> (700/600).</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>The Oculus index page (agents, attention summary, top bar, disconnected state)</h4><p>Oculus index: agents table, filters, attention summary, disconnected and stale states, top-bar and nav counts.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Runs page role and project, no health flags for maestro and conductor (after DGS-598)</h4><p>Runs page role and project filters; no health dot for maestro and conductor; shared <code>roleOf</code>; session join.</p></div>
+    
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Side bar edge fix</td><td>The side bar text sits at the 24 px gutter at 1440, 1024, 1860 at 110% zoom and 390; Chromium baselines; WebKit dropped by the Maestro.</td><td>Approved</td><td>-</td></tr>
+    <tr><td>2. Rename the back end to Oculus (CLI view, shared schema, API routes)</td><td><code>dg oculus view</code>, <code>/api/v1/oculus/*</code>, <code>scripts/nexus-shared/oculus.ts</code>; <code>dg nightwatch</code> gone.</td><td>Approved</td><td>-</td></tr>
+    <tr><td>3. Rename the web surface to Oculus (components, tokens, composables, tests, baselines)</td><td><code>Oc*</code> components, <code>--oc-*</code> tokens, <code>oculus</code> layout, renamed baselines and a name guard test.</td><td>Approved after 1 fix round</td><td>-</td></tr>
+    <tr><td>4. The Oculus site at <code>/</code> (two builds, titles, brand, publish)</td><td>Two builds (<code>life</code>, <code>oculus</code>); Oculus at <code>/</code>; <code>build-www.sh</code> publishes <code>oculus.d/&lt;stamp&gt;</code>.</td><td>Approved</td><td>-</td></tr>
+    <tr><td>5. Caddy repo files for oculus.pazurite.com (no live change)</td><td><code>oculus.pazurite.com</code> block, <code>(nexus_api)</code> and <code>(static_site)</code> snippets, <code>DIGISMITH_OCULUS_WWW</code> placeholder; repo files only.</td><td>Approved</td><td>-</td></tr>
+    <tr><td>6. <code>dg oculus view live</code> (herdr, allowlist, role, project, run join)</td><td><code>dg oculus view live</code>: fixed read-only herdr call, allowlisted capped fields, role, project, run join.</td><td>Approved, 1 parked</td><td>F5 realHerdr test (parked)</td></tr>
+    <tr><td>7. <code>/api/v1/oculus/live</code> and the last good snapshot</td><td><code>/api/v1/oculus/live</code> (always 200) and the last good snapshot in <code>$DEPOT/nexus/state</code> (700/600).</td><td>Approved, 1 parked</td><td>F4 snapshot rewrite (parked)</td></tr>
+    <tr><td>8. The Oculus index page (agents, attention summary, top bar, disconnected state)</td><td>Oculus index: agents table, filters, attention summary, disconnected and stale states, top-bar and nav counts.</td><td>Approved after 1 fix round, 2 parked</td><td>F3 unknown URL filter; F4 duplicate empty text (parked)</td></tr>
+    <tr><td>9. Runs page role and project, no health flags for maestro and conductor (after DGS-598)</td><td>Runs page role and project filters; no health dot for maestro and conductor; shared <code>roleOf</code>; session join.</td><td>Approved, 1 parked</td><td>F1 shared unflagged helper (parked)</td></tr>
+    
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: 0 Critical, 0 Important, 1 Minor finding, fixed.</p>
+  <p>Every review finding and its verdict: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Minor</td><td><code>openRuns</code> read every run in the depot on every live poll, with no day window; an old never-ended run on a reused pane id could attach to a new agent.</td><td>Fixed in <code>346518a</code>: the same 7-day <code>LIST_DAYS</code> window as the other views, with a test.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">38497f3</span> docs(dgs-599): add the dashboard live spec</li>
+    <li><span class="sha">8565881</span> docs(dgs-599): rename the spec to Bastion and add the side bar edge fix</li>
+    <li><span class="sha">46e3433</span> docs(dgs-599): rename the spec to Oculus on its own subdomain</li>
+    <li><span class="sha">979aa57</span> docs(dgs-599): record Jack's answers in the Oculus spec</li>
+    <li><span class="sha">920e8cf</span> docs(dgs-599): move the live snapshot out of the web root</li>
+    <li><span class="sha">567a46b</span> docs(dgs-599): add the Oculus implementation plan</li>
+    <li><span class="sha">3d3f058</span> fix(oculus): keep the side bar text at the page gutter</li>
+    <li><span class="sha">53b7fd6</span> test(oculus): shoot the zoom baseline at device scale and check every side bar text</li>
+    <li><span class="sha">380d1a2</span> refactor(oculus): rename the dashboard API, CLI view and schema to Oculus</li>
+    <li><span class="sha">67fe829</span> docs(oculus): point the run README at dg oculus view and fix a test title</li>
+    <li><span class="sha">223a56f</span> refactor(oculus): rename the web components, tokens and tests to Oculus</li>
+    <li><span class="sha">4444153</span> test(oculus): fail the name guard on a git grep error</li>
+    <li><span class="sha">6049807</span> feat(oculus): build Oculus as its own site at the root</li>
+    <li><span class="sha">2cef448</span> test(oculus): cover a failing built Oculus check and note the two link switches</li>
+    <li><span class="sha">aeeb97c</span> feat(oculus): add the oculus.pazurite.com Caddy block and web root</li>
+    <li><span class="sha">16574d5</span> test(caddy): check a plain file at the Oculus web root and note the shared static snippet</li>
+    <li><span class="sha">ce7fda8</span> feat(oculus): add the read-only live view of every herdr agent</li>
+    <li><span class="sha">fe51513</span> fix(oculus): cap the live ids, accept a quoted identity id and sort ids by number</li>
+    <li><span class="sha">0c40283</span> feat(oculus): serve the live agent list with a last good snapshot</li>
+    <li><span class="sha">fd9ea6f</span> fix(oculus): one default depot, a temp depot in the server tests and a safe path segment</li>
+    <li><span class="sha">be8073a</span> test(oculus): refresh the phone runs baseline after the rebase</li>
+    <li><span class="sha">8afe7b7</span> feat(oculus): show every herdr agent on the Oculus index</li>
+    <li><span class="sha">4a0d612</span> test(oculus): add the Oculus index baselines and browser checks</li>
+    <li><span class="sha">7e71a68</span> fix(oculus): mark stale agent data and key agent changes by pane</li>
+    <li><span class="sha">3a73b31</span> feat(oculus): filter runs by role and project, no health flag for maestro and conductor</li>
+    <li><span class="sha">320514d</span> fix(oculus): skip a pane match whose run belongs to another session</li>
+    <li><span class="sha">346518a</span> fix(oculus): read only the last week of runs for the live view</li>
+    
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-599—dashboard-live/report.html</footer>
+
+</body>
+</html>
