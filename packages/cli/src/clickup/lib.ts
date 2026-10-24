@@ -82,7 +82,7 @@ export function withTaskFieldOptions(y: Argv, opts: { parentDescribe: string }):
       type: "string",
       array: true,
       requiresArg: true,
-      describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more. Relationship fields take task keys or ids, comma-separated; a - prefix removes',
+      describe: 'set a custom field: "<field name or id>=<value>" (split at the first =); repeat for more. Relationship fields take task keys or ids, comma-separated; a - prefix removes; a date field takes "YYYY-MM-DD HH:MM" (UTC+7)',
     });
 }
 
