@@ -27,7 +27,8 @@ const worker = (): SessionCard => ({
   domain: "DGS-417", mandate: "brief.md", runs_on: "herdr w2:p5", created_by: "dsm-conductor-01",
   started: "2026-10-13T13:00+07:00", last_seen: "2026-10-13T13:01+07:00", status: "open",
 });
-const errs = (c: unknown): string[] => {
+const researcher = (): SessionCard => ({ ...worker(), name: "study-tool", role: "researcher", id: "study-tool-researcher", under: "dsm-conductor-01", domain: "DGS-605" });
+const errs =(c: unknown): string[] => {
   const r = validateCard(c);
   return r.ok ? [] : r.errors;
 };
@@ -413,5 +414,23 @@ describe("reviewer card fields (DGS-529)", () => {
   });
   it("a reviewer's legal parents are a conductor or a Maestro, never a worker", () => {
     expect([...LEGAL_PARENT_ROLES.reviewer]).toEqual(["conductor", "maestro"]);
+  });
+  it("accepts a researcher card with a mandate and an under", () => {
+    expect(errs(researcher())).toEqual([]);
+  });
+  it("rejects a researcher without a mandate or without under", () => {
+    expect(errs({ ...researcher(), mandate: undefined }).join(" ")).toMatch(/mandate: required for role researcher/);
+    expect(errs({ ...researcher(), under: undefined }).join(" ")).toMatch(/under: required for role researcher/);
+  });
+  it("rejects fields a researcher does not have", () => {
+    expect(errs({ ...researcher(), reviewer_type: "task" }).join(" ")).toMatch(/reviewer_type/);
+    expect(errs({ ...researcher(), machine: "x" }).join(" ")).toMatch(/machine/);
+    expect(errs({ ...researcher(), seat: "dev0" }).join(" ")).toMatch(/seat/);
+  });
+  it("a researcher's legal parents are a conductor or a Maestro, never a worker or a scout", () => {
+    expect([...LEGAL_PARENT_ROLES.researcher]).toEqual(["conductor", "maestro"]);
+  });
+  it("round-trips a researcher card through format and parse", () => {
+    expect(parseCard(formatCard(researcher()))).toEqual(researcher());
   });
 });

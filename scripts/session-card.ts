@@ -5,7 +5,7 @@ import { depotDir } from "./depot-dir.ts";
 
 export { depotDir };
 
-export const ROLES = ["maestro", "conductor", "worker", "scout", "reviewer", "observer"] as const;
+export const ROLES = ["maestro", "conductor", "worker", "scout", "researcher", "reviewer", "observer"] as const;
 export const STATUSES = ["open", "closed", "lost"] as const;
 export type Role = (typeof ROLES)[number];
 export type Status = (typeof STATUSES)[number];
@@ -49,6 +49,7 @@ export const LEGAL_PARENT_ROLES: Record<Role, readonly Role[]> = {
   conductor: ["maestro"],
   worker: ["conductor", "maestro"],
   scout: ["conductor", "maestro", "worker"],
+  researcher: ["conductor", "maestro"],
   reviewer: ["conductor", "maestro"],
   observer: ["conductor", "maestro"],
 };
@@ -166,7 +167,7 @@ export function validateCard(input: unknown): { ok: true; card: SessionCard } | 
     if (role === "maestro") {
       if (!present("machine")) errors.push("machine: required for role maestro");
     } else if (present("machine")) errors.push("machine: only a maestro has a machine");
-    if (["conductor", "worker", "scout", "reviewer"].includes(role) && !present("mandate")) errors.push(`mandate: required for role ${role}`);
+    if (["conductor", "worker", "scout", "researcher", "reviewer"].includes(role) && !present("mandate")) errors.push(`mandate: required for role ${role}`);
     if (["conductor", "maestro"].includes(role) && !present("state")) errors.push(`state: required for role ${role}`);
     if (present("reviewer_type")) {
       if (role !== "reviewer") errors.push("reviewer_type: only a reviewer has a reviewer_type");
