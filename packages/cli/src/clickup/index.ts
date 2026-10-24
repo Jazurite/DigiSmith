@@ -23,6 +23,7 @@ import { addStatusCommand } from "./add-status.ts";
 import { deleteTaskTypeCommand } from "./delete-task-type.ts";
 import { updateFieldCommand } from "./update-field.ts";
 import { createFieldCommand } from "./create-field.ts";
+import { createViewCommand } from "./create-view.ts";
 import { listFieldsCommand } from "./list-fields.ts";
 import { getFieldCommand } from "./get-field.ts";
 import { addDependencyCommand } from "./add-dependency.ts";
@@ -63,6 +64,7 @@ const clickupCommand: CommandModule = {
       .command(deleteTaskTypeCommand)
       .command(updateFieldCommand)
       .command(createFieldCommand)
+      .command(createViewCommand)
       .command(listFieldsCommand)
       .command(getFieldCommand)
       .command(addDependencyCommand)
