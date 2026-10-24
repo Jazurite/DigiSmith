@@ -57,6 +57,7 @@ describe("createRun", () => {
     const { dir } = tempRepo();
     const r = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: path.relative(process.cwd(), dir) }, env);
     expect(r.project).not.toBe("unknown");
+    expect(r.worktree).toBe(path.resolve(dir));
     expect(r.project).toBe(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: dir }, env).project);
   });
   it("stores a null branch on a detached head", () => {

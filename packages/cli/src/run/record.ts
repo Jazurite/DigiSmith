@@ -56,7 +56,8 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
   if (!isSafe(input.ticket)) throw new Error(`ticket "${input.ticket}" is not a safe key`);
   if (!(ROLES as readonly string[]).includes(input.role)) throw new Error(`role must be one of ${ROLES.join(", ")}`);
   const budget = parseBudget(input.budget);
-  const wt = input.worktree && fs.existsSync(input.worktree) ? input.worktree : null;
+  const worktree = input.worktree ? path.resolve(input.worktree) : null;
+  const wt = worktree && fs.existsSync(worktree) ? worktree : null;
   const base: Pick<RunRecord, "schema" | "ticket" | "role"> = { schema: RUN_SCHEMA, ticket: input.ticket, role: input.role as Role };
   const rest = {
     order: input.order,
@@ -65,12 +66,12 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     plugin_version: pluginVersion(),
     base_sha: input.baseSha ?? (wt ? git(wt, "rev-parse", "HEAD") : null),
     branch: input.branch ?? (wt ? currentBranch(wt) : null),
-    worktree: input.worktree ?? null,
+    worktree,
     herdr: { workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
     budget,
     created_at: now.toISOString(),
     source: "start" as const,
-    project: repoInfo(path.resolve(input.worktree ?? process.cwd())).project,
+    project: repoInfo(worktree ?? process.cwd()).project,
     session_id: null,
     role_from: "start" as const,
   };
