@@ -5,11 +5,11 @@ import { fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, phaseTime,
 defineProps<{ runs: RunRow[]; nowMs: number }>()
 // a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
 const totalSec = (r: RunRow, nowMs: number): number => (r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
-const duration = (r: RunRow, nowMs: number): string => fmtDuration(totalSec(r, nowMs))
-// "0:31:07 · building 0:14" on screen; screen readers get words, not the "·" and h:mm
-const spoken = (r: RunRow, nowMs: number): string => {
+// one value per row: "0:31:07 · building 0:14" on screen; screen readers get words, not the "·" and h:mm
+const durationCell = (r: RunRow, nowMs: number): { shown: string; phase: string | null; spoken: string } => {
   const p = phaseTime(r, nowMs)
-  return p ? `${spokenSeconds(totalSec(r, nowMs))}, ${p.phase} for ${spokenMinutes(p.min)}` : spokenSeconds(totalSec(r, nowMs))
+  const sec = totalSec(r, nowMs)
+  return { shown: fmtDuration(sec), phase: p ? `${p.phase} ${fmtMinutes(p.min)}` : null, spoken: p ? `${spokenSeconds(sec)}, ${p.phase} for ${spokenMinutes(p.min)}` : spokenSeconds(sec) }
 }
 // a Maestro or conductor run is never classified (DGS-598): no health flag, a plain "-"
 const unflagged = (r: RunRow): boolean => r.role === 'maestro' || r.role === 'conductor'
@@ -36,8 +36,10 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
         <td data-label="Trigger">{{ r.trigger }}</td>
         <td data-label="Started" class="mono">{{ fmtDay(r.startedAt) }}</td>
         <td data-label="Duration" class="num">
-          <span aria-hidden="true">{{ duration(r, nowMs) }}<template v-if="phaseTime(r, nowMs)"> · <span class="phase">{{ phaseTime(r, nowMs)!.phase }} {{ fmtMinutes(phaseTime(r, nowMs)!.min) }}</span></template></span>
-          <span class="sr">{{ spoken(r, nowMs) }}</span>
+          <template v-for="d in [durationCell(r, nowMs)]" :key="0">
+            <span aria-hidden="true">{{ d.shown }}<template v-if="d.phase"> · <span class="phase">{{ d.phase }}</span></template></span>
+            <span class="sr">{{ d.spoken }}</span>
+          </template>
         </td>
         <td data-label="Tokens" class="num" :class="{ muted: !r.tokens }" :title="r.tokens ? String(r.tokens.total) : missingWhy(r)">{{ r.tokens ? fmtTokens(r.tokens.total) : '-' }}</td>
         <td data-label="Cost" class="num" :class="{ muted: !r.tokens || r.tokens.costUsd === null }" :title="costTitle(r)">{{ r.tokens ? fmtUsd(r.tokens.costUsd) : '-' }}</td>
