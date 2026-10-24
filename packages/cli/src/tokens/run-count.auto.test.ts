@@ -29,5 +29,7 @@ describe("an automatic run (DGS-598)", () => {
     expect(r).toMatchObject({ updated: 1, failed: 0 });
     const t = JSON.parse(readFileSync(join(dir, "tokens.json"), "utf8"));
     expect(t).toMatchObject({ sessions: 2, final: false, total: { responses: 2 } });
+    expect(t.models["claude-opus-5-5"].output).toBe(12); // 5 + 7 across both sessions
+    expect(t.total.tokens).toBe(12);
   });
 });
