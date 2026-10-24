@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-590 Tokens and Cost in Oculus — Implementation Report</title>
+<style>` block byte-for-byte — it's the same one every DigiSmith
+spec/report already uses:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{FEATURE_TITLE}} — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-590 Tokens and Cost in Oculus — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-25</span>
+    <span>Ticket: <strong>DGS-590</strong></span>
+    <span>Commit range: <code>de4f144a..9dee5e6c</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A 5-minute job in the existing Nexus API scheduler counts each run's tokens and list-price cost, then writes a burn file and a seat file. Oculus shows Tokens and Cost per run, a per-model card, burn per hour and the seat windows. The counting lives in <code>packages/cli/src/tokens/</code> and reads each transcript from where it stopped. <code>dg tokens runs</code> writes <code>tokens.json</code> next to each run, <code>runs/.tokens/burn.json</code> and <code>usage-probe/seats.json</code>. The Oculus views only read these files and show "-" when a file is missing or stale. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>The Anthropic price table moves into the CLI, with a version</h4><p><code>packages/cli/src/tokens/prices/</code> holds the one Anthropic table, <code>ANTHROPIC_PRICES_VERSION = "2026-10-18"</code>, <code>costFromPricing</code> and <code>resolveAnthropicPrice</code> (own keys only); <code>scripts/token-counter</code> re-exports them.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Read a transcript from a byte offset</h4><p><code>readUsageFrom</code> reads only full lines after a <code>FileCursor</code>, restarts on a shrunk or replaced file, and skips lines over 1 MB; one shared <code>parseUsageLine</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Count one run (state, cost, buckets, tokens.json)</h4><p><code>countRun</code> writes <code>tokens.json</code> (five classes per model, list-price cost, 5-min buckets) and <code>tokens.state.json</code> (cursors and per-response counts, no text, no folder path).</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The seat file from the probe readings</h4><p><code>writeSeats</code> turns the conductor's <code>out-&lt;seat&gt;.json</code> probe files into <code>usage-probe/seats.json</code>: seat, reading time and the two windows only.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4><code>dg tokens runs</code>, the burn file, the scheduler job, the README</h4><p><code>dg tokens runs</code> updates every run in scope, writes <code>runs/.tokens/burn.json</code> and <code>seats.json</code>; the <code>oculus-tokens</code> job runs it every 5 min in the existing Nexus API scheduler.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>Oculus views and the shared schema</h4><p>The Oculus views read the three files with the 15-min freshness rules: row <code>tokens</code>, run <code>tokens</code>, overview <code>burn</code> and <code>seats</code>; a malformed file gives null, never a view error.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>Oculus web: Tokens and Cost columns, the tokens card, the top bar</h4><p>Tokens and Cost columns in the Runs table, a Tokens and cost card on the run page, burn per hour and seat windows in the top bar, with stories, baselines, e2e and axe.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>A DGS-598-shaped run</h4><p>A test shows an automatic run is counted across both sessions of a <code>/clear</code>; no code change was needed.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: The Anthropic price table moves into the CLI, with a version</td><td><code>packages/cli/src/tokens/prices/</code> holds the one Anthropic table, <code>ANTHROPIC_PRICES_VERSION = "2026-10-18"</code>, <code>costFromPricing</code> and <code>resolveAnthropicPrice</code> (own keys only); <code>scripts/token-counter</code> re-exports them.</td><td><span class="status-ok">Approved, clean (1 Minor fixed in one commit, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 2: Read a transcript from a byte offset</td><td><code>readUsageFrom</code> reads only full lines after a <code>FileCursor</code>, restarts on a shrunk or replaced file, and skips lines over 1 MB; one shared <code>parseUsageLine</code>.</td><td><span class="status-ok">Approved, clean (2 Minor test gaps fixed, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 3: Count one run (state, cost, buckets, tokens.json)</td><td><code>countRun</code> writes <code>tokens.json</code> (five classes per model, list-price cost, 5-min buckets) and <code>tokens.state.json</code> (cursors and per-response counts, no text, no folder path).</td><td><span class="status-ok">Approved, clean (3 Minor fixed, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 4: The seat file from the probe readings</td><td><code>writeSeats</code> turns the conductor's <code>out-&lt;seat&gt;.json</code> probe files into <code>usage-probe/seats.json</code>: seat, reading time and the two windows only.</td><td><span class="status-ok">Approved, clean (2 Minor fixed, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 5: <code>dg tokens runs</code>, the burn file, the scheduler job, the README</td><td><code>dg tokens runs</code> updates every run in scope, writes <code>runs/.tokens/burn.json</code> and <code>seats.json</code>; the <code>oculus-tokens</code> job runs it every 5 min in the existing Nexus API scheduler.</td><td><span class="status-fixed">Approved after 1 fix round (Important: a <code>--run</code> pass replaced the all-runs burn)</span></td><td>none</td></tr>
+    <tr><td>Task 6: Oculus views and the shared schema</td><td>The Oculus views read the three files with the 15-min freshness rules: row <code>tokens</code>, run <code>tokens</code>, overview <code>burn</code> and <code>seats</code>; a malformed file gives null, never a view error.</td><td><span class="status-ok">Approved, clean (4 Minor fixed, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 7: Oculus web: Tokens and Cost columns, the tokens card, the top bar</td><td>Tokens and Cost columns in the Runs table, a Tokens and cost card on the run page, burn per hour and seat windows in the top bar, with stories, baselines, e2e and axe.</td><td><span class="status-ok">Approved, clean (4 Minor fixed, no re-review)</span></td><td>none</td></tr>
+    <tr><td>Task 8: A DGS-598-shaped run</td><td>A test shows an automatic run is counted across both sessions of a <code>/clear</code>; no code change was needed.</td><td><span class="status-ok">Approved, clean (1 Minor fixed, no re-review)</span></td><td>none</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: with fixes. 2 Important and 2 Minor findings, all fixed in one fix wave; the scoped re-review was clean.</p>
+  <p>Every finding of every review, with its ruling: <a href="findings.md">findings table</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>The burn was built only from the snapshots of the current pass, so a run that ended dropped out of the burn.</td><td><span class="status-fixed">Fixed in <code>0506124c</code>: the burn reads the stored <code>tokens.json</code> of every run active in the last 25 h.</span></td></tr>
+    <tr><td>Important</td><td>A final run was never counted again, so a resumed or <code>/clear</code>-continued run kept a stale total.</td><td><span class="status-fixed">Fixed in <code>0506124c</code>: a final run stays in scope when <code>events.jsonl</code> is newer than <code>tokens.json</code>.</span></td></tr>
+    <tr><td>Minor</td><td>A dry run printed a burn of 0.</td><td><span class="status-fixed">Fixed in <code>0506124c</code>: a dry run prints <code>-</code>.</span></td></tr>
+    <tr><td>Minor</td><td><code>--run</code> did not count a final run.</td><td><span class="status-fixed">Fixed in <code>0506124c</code>: <code>--run</code> counts the named run even when final.</span></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">124fd938</span> docs(dgs-590): add the ticket and the design</li>
+    <li><span class="sha">4f58922d</span> docs(dgs-590): mark the design approved and name the probe follow-up</li>
+    <li><span class="sha">909e4d7b</span> docs(dgs-590): add the plan</li>
+    <li><span class="sha">c51026a7</span> refactor(dgs-590): move the Anthropic price table into the CLI with a version</li>
+    <li><span class="sha">f71d7429</span> fix(dgs-590): resolve only own price table keys</li>
+    <li><span class="sha">b6fe5bec</span> feat(dgs-590): read a transcript from a byte offset</li>
+    <li><span class="sha">a8b2626f</span> test(dgs-590): cover inode replace and an oversize line at the end</li>
+    <li><span class="sha">5f5febf2</span> feat(dgs-590): count a run's tokens and cost into tokens.json</li>
+    <li><span class="sha">01ab201f</span> fix(dgs-590): guard the subagents read and refuse a run with no valid start</li>
+    <li><span class="sha">1ff8a090</span> feat(dgs-590): write the seat windows file from the probe readings</li>
+    <li><span class="sha">e99783f3</span> fix(dgs-590): make the seat folder and test the reading edges</li>
+    <li><span class="sha">ed7b538e</span> feat(dgs-590): add dg tokens runs and the oculus-tokens job</li>
+    <li><span class="sha">d44831f0</span> fix(dgs-590): leave the burn file alone on a one-run pass</li>
+    <li><span class="sha">99e561d7</span> fix(dgs-590): label the burn of a one-run pass</li>
+    <li><span class="sha">f4f8651d</span> feat(dgs-590): add tokens, burn and seats to the Oculus views</li>
+    <li><span class="sha">77962223</span> fix(dgs-590): null on a malformed token file and read it once</li>
+    <li><span class="sha">42c3b822</span> feat(dgs-590): show tokens, cost, burn and seat windows in Oculus</li>
+    <li><span class="sha">9ad3a430</span> fix(dgs-590): round tokens before the unit and tidy the totals row</li>
+    <li><span class="sha">29cbeb2e</span> test(dgs-590): count an automatic run across /clear</li>
+    <li><span class="sha">a5a6f3e3</span> test(dgs-590): assert the summed tokens of an automatic run</li>
+    <li><span class="sha">0506124c</span> fix(dgs-590): keep ended runs in the burn and recount a resumed run</li>
+    <li><span class="sha">d8481fea</span> test(dgs-590): drop a dead statement</li>
+    <li><span class="sha">9dee5e6c</span> test(dgs-590): update the side bar baselines for the taller top bar</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-590—tokens-cost/report.html</footer>
+
+</body>
+</html>
