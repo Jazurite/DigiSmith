@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Plan } from '#nightwatch-schema'
+import type { Plan } from '#oculus-schema'
 
 defineProps<{ verdicts: Plan['verdicts']; ledgerError: boolean }>()
 const tone = { fixed: 'ok', fixing: 'running', parked: 'warn', rejected: 'bad' } as const

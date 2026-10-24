@@ -1,19 +1,19 @@
-// scripts/nexus-api/src/nightwatch-route.ts
+// scripts/nexus-api/src/oculus-route.ts
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { z } from 'zod'
-import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema, EVENT_GROUPS, HEALTH, ROLES, TRIGGERS } from '../../nexus-shared/nightwatch.ts'
+import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema, EVENT_GROUPS, HEALTH, ROLES, TRIGGERS } from '../../nexus-shared/oculus.ts'
 import { sendJson, type Env } from './app.ts'
-import { ReaderError, type Reader, type ViewArgs, type ViewName } from './nightwatch-reader.ts'
+import { ReaderError, type Reader, type ViewArgs, type ViewName } from './oculus-reader.ts'
 import type { JobInfo } from './scheduler/types.ts'
 import { API_VERSION } from './version.ts'
 
-export const NIGHTWATCH_PATH = `/api/${API_VERSION}/nightwatch` as const
+export const OCULUS_PATH = `/api/${API_VERSION}/oculus` as const
 
-export interface NightwatchDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }
+export interface OculusDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }
 
 const WATCHDOG_STALE_MS = 15 * 60_000
-const KNOWN_PATH = new RegExp(`^${NIGHTWATCH_PATH}/(overview|attention|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
+const KNOWN_PATH = new RegExp(`^${OCULUS_PATH}/(overview|attention|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 export type NexusState = 'healthy' | 'degraded' | 'unknown' | 'breaker-open'
@@ -42,7 +42,7 @@ const runsQuery = z.strictObject({ state: z.enum(HEALTH).optional(), role: z.enu
 const eventsQuery = z.strictObject({ since: int(1e9).optional(), before: int(1e9).optional(), tail: int(1000).optional(), group: z.enum(EVENT_GROUPS).optional() })
 const none = z.strictObject({})
 
-export function createNightwatchRoutes(deps: NightwatchDeps): Hono<Env> {
+export function createOculusRoutes(deps: OculusDeps): Hono<Env> {
   const now = deps.now ?? Date.now
   const app = new Hono<Env>()
 
@@ -61,37 +61,37 @@ export function createNightwatchRoutes(deps: NightwatchDeps): Hono<Env> {
   const query = (c: Context<Env>) => Object.fromEntries(Object.entries(c.req.query()))
 
   // 405 only for a known path; any other path under the prefix is 404 whatever the method.
-  app.all(`${NIGHTWATCH_PATH}/*`, async (c, next) => {
+  app.all(`${OCULUS_PATH}/*`, async (c, next) => {
     if (!KNOWN_PATH.test(c.req.path)) return fail(c, 404, 'not_found')
     if (c.req.method !== 'GET') return fail(c, 405, 'method_not_allowed', { Allow: 'GET' })
     await next()
   })
 
-  app.get(`${NIGHTWATCH_PATH}/overview`, async (c) => {
+  app.get(`${OCULUS_PATH}/overview`, async (c) => {
     if (!none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
     return serve(c, 'overview', {}, overviewViewSchema, (v) => ({ ...v, nexus: nexusStatus(deps.jobs ? deps.jobs() : null, v.scan.breakerOpen, now()) }))
   })
-  app.get(`${NIGHTWATCH_PATH}/attention`, async (c) => {
+  app.get(`${OCULUS_PATH}/attention`, async (c) => {
     if (!none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
     return serve(c, 'attention', {}, attentionSchema)
   })
-  app.get(`${NIGHTWATCH_PATH}/runs`, async (c) => {
+  app.get(`${OCULUS_PATH}/runs`, async (c) => {
     const q = runsQuery.safeParse(query(c))
     if (!q.success) return fail(c, 400, 'bad_request')
     return serve(c, 'runs', q.data, runsSchema)
   })
-  app.get(`${NIGHTWATCH_PATH}/runs/:id`, async (c) => {
+  app.get(`${OCULUS_PATH}/runs/:id`, async (c) => {
     const run = id.safeParse(c.req.param('id'))
     if (!run.success || !none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
     return serve(c, 'run', { run: run.data }, runDetailSchema)
   })
-  app.get(`${NIGHTWATCH_PATH}/runs/:id/events`, async (c) => {
+  app.get(`${OCULUS_PATH}/runs/:id/events`, async (c) => {
     const run = id.safeParse(c.req.param('id'))
     const q = eventsQuery.safeParse(query(c))
     if (!run.success || !q.success) return fail(c, 400, 'bad_request')
     return serve(c, 'events', { run: run.data, ...q.data }, eventsSchema)
   })
-  app.get(`${NIGHTWATCH_PATH}/plan/:ticket`, async (c) => {
+  app.get(`${OCULUS_PATH}/plan/:ticket`, async (c) => {
     const t = id.safeParse(c.req.param('ticket'))
     if (!t.success || !none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
     return serve(c, 'plan', { ticket: t.data }, planSchema)

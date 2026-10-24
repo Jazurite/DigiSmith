@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/fixture.test-util.ts
+// packages/cli/src/oculus/fixture.test-util.ts
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,7 +17,7 @@ export interface Depot {
 }
 
 export function makeDepot(): Depot {
-  const dir = mkdtempSync(join(tmpdir(), "nw-depot-"));
+  const dir = mkdtempSync(join(tmpdir(), "oc-depot-"));
   const autonomous = join(dir, "autonomous");
   mkdirSync(autonomous, { recursive: true });
   const env = { DIGISMITH_DEPOT_DIR: dir, AUTONOMOUS_DIR: autonomous } as NodeJS.ProcessEnv;

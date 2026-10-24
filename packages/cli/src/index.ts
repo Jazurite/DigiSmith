@@ -16,7 +16,7 @@ import reviewerCommand from "./reviewer/index.ts";
 import autonomousCommand from "./autonomous/index.ts";
 import runCommand from "./run/index.ts";
 import salvageCommand from "./salvage/index.ts";
-import nightwatchCommand from "./nightwatch/index.ts";
+import oculusCommand from "./oculus/index.ts";
 
 const OWN_PACKAGE_JSON = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 
@@ -44,7 +44,7 @@ export function buildCli(argv: string[]): Argv {
     .command(autonomousCommand)
     .command(runCommand)
     .command(salvageCommand)
-    .command(nightwatchCommand)
+    .command(oculusCommand)
     .demandCommand(1, "")
     .strict()
     .version(readVersion());

@@ -107,13 +107,13 @@ test('polling: a new attention item appears after 10 s and is announced politely
   await expect(page.locator('[aria-live="polite"]')).toContainText('1 new attention item')
 })
 
-test('the page makes only GET requests to /api/v1/nightwatch', async ({ page }) => {
+test('the page makes only GET requests to /api/v1/oculus', async ({ page }) => {
   const seen: string[] = []
   page.on('request', (r) => { if (r.url().includes('/api/')) seen.push(`${r.method()} ${new URL(r.url()).pathname}`) })
   await page.goto(`${stub.url}/nightwatch/`)
   await page.waitForLoadState('networkidle')
   expect(seen.length).toBeGreaterThan(0)
-  for (const s of seen) expect(s).toMatch(/^GET \/api\/v1\/nightwatch\//)
+  for (const s of seen) expect(s).toMatch(/^GET \/api\/v1\/oculus\//)
 })
 
 test('no Nightwatch page scrolls sideways at 390 px', async ({ page }) => {

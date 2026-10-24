@@ -29,9 +29,9 @@ function num(f: Record<string, string>, flag: string): number | undefined {
   return /^\d+$/.test(v) ? Number(v) : Number.NaN;
 }
 
-/** Pure entry for the tests: argv after "nightwatch". Reads only; never writes. */
-export function runNightwatch(argv: string[], env: NodeJS.ProcessEnv, now: Date): Result {
-  if (argv[0] !== "view") return fail("usage: nightwatch view <name>");
+/** Pure entry for the tests: argv after "oculus". Reads only; never writes. */
+export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date): Result {
+  if (argv[0] !== "view") return fail("usage: oculus view <name>");
   const name = argv[1];
   const f = flags(argv.slice(2));
   if (f === null) return fail("unknown flag or missing value");
@@ -49,16 +49,16 @@ export function runNightwatch(argv: string[], env: NodeJS.ProcessEnv, now: Date)
   }
 }
 
-const nightwatchCommand: CommandModule = {
-  command: "nightwatch",
-  describe: "read-only views of the Nightwatch run record (for the Nexus API)",
+const oculusCommand: CommandModule = {
+  command: "oculus",
+  describe: "read-only views for Oculus (served by the Nexus API)",
   builder: (y) => y.command({
     command: "view <name>",
     describe: `print one JSON view: ${VIEW_NAMES.join(", ")}`,
     builder: (v) => v.positional("name", { type: "string", demandOption: true }).strict(false),
     handler: () => {
-      const i = process.argv.indexOf("nightwatch");
-      const r = runNightwatch(process.argv.slice(i + 1), process.env, new Date());
+      const i = process.argv.indexOf("oculus");
+      const r = runOculus(process.argv.slice(i + 1), process.env, new Date());
       if (r.out) process.stdout.write(r.out);
       if (r.err) process.stderr.write(r.err);
       process.exitCode = r.code;
@@ -66,4 +66,4 @@ const nightwatchCommand: CommandModule = {
   }).demandCommand(1),
   handler: () => undefined,
 };
-export default nightwatchCommand;
+export default oculusCommand;

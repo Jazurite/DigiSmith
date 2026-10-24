@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Overview } from '#nightwatch-schema'
+import type { Overview } from '#oculus-schema'
 import { fmtDuration } from '../../utils/nw-format'
 
 defineProps<{ rows: Overview['tickets']['rows']; lockTicket: string | null; windowDays: number; nowMs: number }>()

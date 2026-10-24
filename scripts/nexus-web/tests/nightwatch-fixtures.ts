@@ -1,6 +1,6 @@
 // scripts/nexus-web/tests/nightwatch-fixtures.ts
 // Fake, fixed values for web tests, stories and the e2e stub. Each type is the z.infer type of the shared schema, so a shape change breaks the build.
-import type { Attention, Events, EventRow, Overview, Plan, RunDetail, RunRow, Runs } from '#nightwatch-schema'
+import type { Attention, Events, EventRow, Overview, Plan, RunDetail, RunRow, Runs } from '#oculus-schema'
 
 export function runFixture(over: Partial<RunRow> = {}): RunRow {
   return {

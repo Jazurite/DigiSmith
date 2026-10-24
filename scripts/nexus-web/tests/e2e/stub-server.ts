@@ -7,7 +7,7 @@ import { getRequestListener } from '@hono/node-server'
 import { buildApp } from '../../../nexus-api/src/app.ts'
 import type { Profile } from '../../../nexus-api/src/profile-crypto.ts'
 import type { JobInfo, RunRecord } from '../../../nexus-api/src/scheduler/types.ts'
-import { ReaderError, type Reader } from '../../../nexus-api/src/nightwatch-reader.ts'
+import { ReaderError, type Reader } from '../../../nexus-api/src/oculus-reader.ts'
 import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../nightwatch-fixtures.ts'
 
 export type LifeMode = 'ok' | 'before' | 'past' | 'locked' | 'empty' | 'down'
@@ -86,7 +86,7 @@ export async function startStub(opts: { dir: string; port?: number }) {
   let mode: Mode = 'ok'
   const read = nwRead(() => mode)
   const life = (): LifeMode => (isNw(mode) ? 'ok' : mode)
-  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, nightwatch: { read: (v, a) => read(v, a), jobs: () => nwJobs(mode), now: () => NW_NOW } })
+  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, oculus: { read: (v, a) => read(v, a), jobs: () => nwJobs(mode), now: () => NW_NOW } })
   const api = getRequestListener(app.fetch)
   const server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0]

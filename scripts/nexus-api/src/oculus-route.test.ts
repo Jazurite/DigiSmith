@@ -1,9 +1,9 @@
-// scripts/nexus-api/src/nightwatch-route.test.ts
+// scripts/nexus-api/src/oculus-route.test.ts
 import { describe, expect, it } from 'vitest'
 import { Hono } from 'hono'
 import type { JobInfo } from './scheduler/types.ts'
-import { createNightwatchRoutes, nexusStatus } from './nightwatch-route.ts'
-import { ReaderError, type Reader } from './nightwatch-reader.ts'
+import { createOculusRoutes, nexusStatus } from './oculus-route.ts'
+import { ReaderError, type Reader } from './oculus-reader.ts'
 import type { Env } from './app.ts'
 
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
@@ -21,7 +21,7 @@ const job = (name: string, status: 'ok' | 'failed', endedAt: string): JobInfo =>
 
 function app(read: Reader, jobs?: () => JobInfo[]) {
   const a = new Hono<Env>()
-  a.route('/', createNightwatchRoutes({ read, jobs, now: () => NOW }))
+  a.route('/', createOculusRoutes({ read, jobs, now: () => NOW }))
   return a
 }
 const calls: { view: string; args: unknown }[] = []
@@ -60,31 +60,31 @@ describe('nexusStatus', () => {
 
 describe('routes', () => {
   it('overview adds the nexus block and sets no-store', async () => {
-    const res = await app(fake, () => [job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z'), job('nightwatch-watchdog', 'ok', '2026-10-22T02:58:00.000Z')]).request('/api/v1/nightwatch/overview')
+    const res = await app(fake, () => [job('autonomous-scan', 'ok', '2026-10-22T02:00:00.000Z'), job('nightwatch-watchdog', 'ok', '2026-10-22T02:58:00.000Z')]).request('/api/v1/oculus/overview')
     expect(res.status).toBe(200)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
     expect((await res.json()).nexus).toEqual({ status: 'healthy', reasons: [] })
   })
   it('passes only known, validated query values to the reader', async () => {
     calls.length = 0
-    const res = await app(fake).request('/api/v1/nightwatch/runs?state=stalled&role=builder&ticket=DGS-590&trigger=manual&limit=20')
+    const res = await app(fake).request('/api/v1/oculus/runs?state=stalled&role=builder&ticket=DGS-590&trigger=manual&limit=20')
     expect(res.status).toBe(200)
     expect(calls[0]).toEqual({ view: 'runs', args: { state: 'stalled', role: 'builder', ticket: 'DGS-590', trigger: 'manual', limit: 20 } })
   })
   it('passes the project filter and accepts the new roles', async () => {
     calls.length = 0
-    expect((await app(fake).request('/api/v1/nightwatch/runs?project=DigiSmith')).status).toBe(200)
+    expect((await app(fake).request('/api/v1/oculus/runs?project=DigiSmith')).status).toBe(200)
     expect(calls[0]).toEqual({ view: 'runs', args: { project: 'DigiSmith' } })
-    expect((await app(fake).request('/api/v1/nightwatch/runs?project=..%2Fx')).status).toBe(400)
-    expect((await app(fake).request('/api/v1/nightwatch/runs?role=maestro')).status).toBe(200)
+    expect((await app(fake).request('/api/v1/oculus/runs?project=..%2Fx')).status).toBe(400)
+    expect((await app(fake).request('/api/v1/oculus/runs?role=maestro')).status).toBe(200)
   })
   it('accepts an automatic run row with a null ticket and project', async () => {
     const auto = { ...row, ticket: null, project: null, source: 'auto', role: 'conductor' }
     const read: Reader = async () => ({ readAt: overviewView.readAt, total: 1, runs: [auto] })
-    expect((await app(read).request('/api/v1/nightwatch/runs')).status).toBe(200)
+    expect((await app(read).request('/api/v1/oculus/runs')).status).toBe(200)
   })
   it('refuses an unknown key, a bad value or a bad id without echoing it', async () => {
-    for (const url of ['/api/v1/nightwatch/runs?evil=1', '/api/v1/nightwatch/runs?state=bogus', '/api/v1/nightwatch/runs?limit=9999', '/api/v1/nightwatch/runs/..%2Fx', '/api/v1/nightwatch/plan/a%20b', '/api/v1/nightwatch/runs/builder-1/events?group=bogus', '/api/v1/nightwatch/runs/builder-1/events?since=-1']) {
+    for (const url of ['/api/v1/oculus/runs?evil=1', '/api/v1/oculus/runs?state=bogus', '/api/v1/oculus/runs?limit=9999', '/api/v1/oculus/runs/..%2Fx', '/api/v1/oculus/plan/a%20b', '/api/v1/oculus/runs/builder-1/events?group=bogus', '/api/v1/oculus/runs/builder-1/events?since=-1']) {
       const res = await app(fake).request(url)
       expect(res.status, url).toBe(400)
       const text = await res.text()
@@ -93,34 +93,42 @@ describe('routes', () => {
   })
   it('events pass the cursor, tail, before and group', async () => {
     calls.length = 0
-    await app(fake).request('/api/v1/nightwatch/runs/builder-1/events?since=5&tail=200&group=errors&before=9')
+    await app(fake).request('/api/v1/oculus/runs/builder-1/events?since=5&tail=200&group=errors&before=9')
     expect(calls[0]).toEqual({ view: 'events', args: { run: 'builder-1', since: 5, tail: 200, group: 'errors', before: 9 } })
   })
   it('maps reader errors: not_found 404, others 503, and a bad answer 503 internal_invalid', async () => {
-    expect((await app(fake).request('/api/v1/nightwatch/runs/nope-1')).status).toBe(404)
+    expect((await app(fake).request('/api/v1/oculus/runs/nope-1')).status).toBe(404)
     const down: Reader = async () => { throw new ReaderError('reader_unavailable') }
-    const res = await app(down).request('/api/v1/nightwatch/attention')
+    const res = await app(down).request('/api/v1/oculus/attention')
     expect(res.status).toBe(503)
     expect(await res.json()).toEqual({ error: 'reader_unavailable' })
     const junk: Reader = async () => ({ nonsense: true })
-    const res2 = await app(junk).request('/api/v1/nightwatch/attention')
+    const res2 = await app(junk).request('/api/v1/oculus/attention')
     expect(res2.status).toBe(503)
     expect(await res2.json()).toEqual({ error: 'internal_invalid' })
   })
-  it('an unknown nightwatch path is 404 for every method, a known path with a wrong method is 405', async () => {
+  it('an unknown oculus path is 404 for every method, a known path with a wrong method is 405', async () => {
     for (const method of ['GET', 'POST', 'DELETE']) {
-      const res = await app(fake).request('/api/v1/nightwatch/nope', { method })
+      const res = await app(fake).request('/api/v1/oculus/nope', { method })
       expect(res.status, method).toBe(404)
       expect(await res.json()).toEqual({ error: 'not_found' })
     }
-    expect((await app(fake).request('/api/v1/nightwatch/runs/builder-1/events', { method: 'POST' })).status).toBe(405)
-    expect((await app(fake).request('/api/v1/nightwatch/plan/DGS-590', { method: 'POST' })).status).toBe(405)
+    expect((await app(fake).request('/api/v1/oculus/runs/builder-1/events', { method: 'POST' })).status).toBe(405)
+    expect((await app(fake).request('/api/v1/oculus/plan/DGS-590', { method: 'POST' })).status).toBe(405)
   })
   it('only GET is allowed', async () => {
     for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
-      const res = await app(fake).request('/api/v1/nightwatch/overview', { method })
+      const res = await app(fake).request('/api/v1/oculus/overview', { method })
       expect(res.status).toBe(405)
       expect(res.headers.get('Allow')).toBe('GET')
     }
+  })
+})
+
+describe('Oculus prefix (DGS-599)', () => {
+  it('serves /api/v1/oculus/overview and answers 404 on the old /api/v1/oculus/ prefix', async () => {
+    const a = app(async () => overviewView)
+    expect((await a.request('/api/v1/oculus/overview')).status).toBe(200)
+    expect((await a.request('/api/v1/nightwatch/overview')).status).toBe(404)
   })
 })

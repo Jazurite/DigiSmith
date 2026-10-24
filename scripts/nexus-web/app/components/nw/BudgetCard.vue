@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { RunDetail } from '#nightwatch-schema'
+import type { RunDetail } from '#oculus-schema'
 import { fmtMinutes } from '../../utils/nw-format'
 
 const props = defineProps<{ budget: RunDetail['budget'] }>()

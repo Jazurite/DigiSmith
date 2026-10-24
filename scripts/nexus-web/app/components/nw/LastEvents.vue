@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Overview } from '#nightwatch-schema'
+import type { Overview } from '#oculus-schema'
 import { fmtUtc7 } from '../../utils/nw-format'
 
 defineProps<{ events: Overview['lastEvents'] }>()

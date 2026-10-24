@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import type { Overview } from '#nightwatch-schema'
+import type { Overview } from '#oculus-schema'
 import { useNow } from '../../utils/use-now'
 
 definePageMeta({ layout: 'nightwatch' })

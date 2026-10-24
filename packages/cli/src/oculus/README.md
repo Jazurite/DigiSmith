@@ -1,6 +1,6 @@
-# nightwatch
+# oculus
 
-`dg nightwatch view <name>` prints one JSON line (the run record seen through one view) to stdout and exits 0. Errors go to stderr with exit 1; stdout stays empty.
+`dg oculus view <name>` prints one JSON line (the run record seen through one view) to stdout and exits 0. Errors go to stderr with exit 1; stdout stays empty.
 
 Views: `overview`, `attention`, `runs`, `run`, `events`, `plan`.
 
@@ -10,4 +10,4 @@ Flags: `--run ID`, `--ticket KEY`, `--since N`, `--before N`, `--tail N`, `--gro
 - `overview` and `runs` show runs with an event in the last 7 days.
 - Ids must be safe names (no path parts).
 - Read-only: the command never writes to the depot.
-- The Nexus API calls this command to serve the Nightwatch UI.
+- The Nexus API calls this command to serve the Oculus UI.

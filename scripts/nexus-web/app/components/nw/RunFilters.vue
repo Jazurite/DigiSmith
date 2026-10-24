@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HEALTH, ROLES, TRIGGERS } from '#nightwatch-schema'
+import { HEALTH, ROLES, TRIGGERS } from '#oculus-schema'
 
 type Filters = { state: string; role: string; trigger: string; project: string; ticket: string }
 const props = defineProps<{ modelValue: Filters; projects: string[] }>()

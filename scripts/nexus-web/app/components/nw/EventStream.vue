@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EventRow } from '#nightwatch-schema'
+import type { EventRow } from '#oculus-schema'
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { fmtClock } from '../../utils/nw-format'
 

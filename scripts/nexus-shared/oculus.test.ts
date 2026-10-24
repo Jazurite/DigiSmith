@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { eventRowSchema, nightwatchErrorSchema, overviewSchema, planSchema, runRowSchema, runsSchema } from './nightwatch.ts'
+import { eventRowSchema, oculusErrorSchema, overviewSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
 
 const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false }
 
-describe('nightwatch schemas', () => {
+describe('oculus schemas', () => {
   it('accepts a run row and refuses an unknown key', () => {
     expect(runRowSchema.safeParse(row).success).toBe(true)
     expect(runRowSchema.safeParse({ ...row, prompt: 'x' }).success).toBe(false)
@@ -40,7 +40,7 @@ describe('nightwatch schemas', () => {
     const v = (verdict: string) => planSchema.safeParse({ ticket: 'DGS-590', found: true, planFile: null, tasksTotal: 0, tasksDone: 0, tasks: [], verdicts: [{ scope: 'task', id: '1', round: 1, finding: 'F1', verdict, reason: '' }], ledgerError: false }).success
     expect(v('fixing')).toBe(true)
     expect(v('open')).toBe(false)
-    expect(nightwatchErrorSchema.safeParse({ error: 'reader_unavailable' }).success).toBe(true)
-    expect(nightwatchErrorSchema.safeParse({ error: 'boom' }).success).toBe(false)
+    expect(oculusErrorSchema.safeParse({ error: 'reader_unavailable' }).success).toBe(true)
+    expect(oculusErrorSchema.safeParse({ error: 'boom' }).success).toBe(false)
   })
 })

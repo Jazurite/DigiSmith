@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/derive.ts
+// packages/cli/src/oculus/derive.ts
 import { basename } from "node:path";
 import type { Away, Event, Lock } from "../autonomous/types.ts";
 import { classify, phaseOf } from "../autonomous/watchdog.ts";

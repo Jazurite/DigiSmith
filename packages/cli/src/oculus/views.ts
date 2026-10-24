@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/views.ts
+// packages/cli/src/oculus/views.ts
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { readOpen } from "../autonomous/attention.ts";

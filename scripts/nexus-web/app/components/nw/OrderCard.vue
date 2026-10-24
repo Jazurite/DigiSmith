@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RunDetail } from '#nightwatch-schema'
+import type { RunDetail } from '#oculus-schema'
 
 defineProps<{ order: RunDetail['order'] }>()
 </script>

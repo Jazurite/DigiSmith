@@ -16,7 +16,7 @@ import { ensureToken } from './scheduler/guard.ts'
 import { createClickupNotifier } from './scheduler/notify.ts'
 import { JOBS } from './scheduler/registry.ts'
 import type { JobDef } from './scheduler/types.ts'
-import { createReader } from './nightwatch-reader.ts'
+import { createReader } from './oculus-reader.ts'
 import { stateDir } from './scheduler/runlog.ts'
 
 export const HOST = '127.0.0.1'
@@ -89,8 +89,8 @@ export async function startNexus(opts: NexusOptions): Promise<{ server: Server; 
     engine = null
   }
   const eng = engine
-  const nightwatch = { read: createReader(), ...(eng ? { jobs: () => eng.snapshot() } : {}) }
-  const server = createApiServer(opts.getReading, { logger, ...(opts.loadProfile ? { loadProfile: opts.loadProfile } : {}), ...(jobs ? { jobs } : {}), nightwatch })
+  const oculus = { read: createReader(), ...(eng ? { jobs: () => eng.snapshot() } : {}) }
+  const server = createApiServer(opts.getReading, { logger, ...(opts.loadProfile ? { loadProfile: opts.loadProfile } : {}), ...(jobs ? { jobs } : {}), oculus })
   const running = engine
   return { server, scheduler: running !== null, stop: () => (running ? running.stop() : Promise.resolve()) }
 }

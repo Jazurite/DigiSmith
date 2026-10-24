@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RunRow } from '#nightwatch-schema'
+import type { RunRow } from '#oculus-schema'
 import { fmtDuration } from '../../utils/nw-format'
 
 defineProps<{ workers: RunRow[]; nowMs: number }>()

@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/types.ts
+// packages/cli/src/oculus/types.ts
 import type { Role } from "../run/schema.ts";
 export type Health = "healthy" | "blocked" | "stalled" | "lost" | "ended";
 export type Trigger = "manual" | "night-scan" | "away" | "unknown";

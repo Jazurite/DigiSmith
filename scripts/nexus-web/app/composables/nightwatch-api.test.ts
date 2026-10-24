@@ -10,7 +10,7 @@ describe('nightwatch-api', () => {
     let url = ''
     const fetch = async (u: string | URL | Request) => { url = String(u); return json(200, { readAt: '2026-10-22T01:00:00.000Z', total: 1, runs: [row] })() }
     const out = await loadRuns({ role: 'builder', limit: 20 }, { base: 'http://h', fetch: fetch as typeof globalThis.fetch })
-    expect(url).toBe('http://h/api/v1/nightwatch/runs?role=builder&limit=20')
+    expect(url).toBe('http://h/api/v1/oculus/runs?role=builder&limit=20')
     expect(out.total).toBe(1)
   })
   it('throws NightwatchApiError with the code on an error body', async () => {
@@ -23,6 +23,6 @@ describe('nightwatch-api', () => {
     let url = ''
     const fetch = async (u: string | URL | Request) => { url = String(u); return json(200, { run: 'b-1', total: 0, from: 5, lines: [] })() }
     await loadEvents('b-1', { since: 5, group: 'errors', tail: 200 }, { base: 'http://h', fetch: fetch as typeof globalThis.fetch })
-    expect(url).toBe('http://h/api/v1/nightwatch/runs/b-1/events?since=5&group=errors&tail=200')
+    expect(url).toBe('http://h/api/v1/oculus/runs/b-1/events?since=5&group=errors&tail=200')
   })
 })

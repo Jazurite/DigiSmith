@@ -11,7 +11,7 @@ export default defineNuxtConfig({
     // type-only import of the API app (never bundled), the shared schema and the shared day helpers
     '#api-type': fileURLToPath(new URL('../nexus-api/src/app.ts', import.meta.url)),
     '#life-schema': fileURLToPath(new URL('../nexus-shared/life-calendar.ts', import.meta.url)),
-    '#nightwatch-schema': fileURLToPath(new URL('../nexus-shared/nightwatch.ts', import.meta.url)),
+    '#oculus-schema': fileURLToPath(new URL('../nexus-shared/oculus.ts', import.meta.url)),
     '#days': fileURLToPath(new URL('../nexus-shared/days.ts', import.meta.url)),
   },
   app: {

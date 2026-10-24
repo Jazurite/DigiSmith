@@ -1,9 +1,9 @@
-// scripts/nexus-api/src/nightwatch-reader.test.ts
+// scripts/nexus-api/src/oculus-reader.test.ts
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createReader, DEFAULT_ENTRY, ReaderError } from './nightwatch-reader.ts'
+import { createReader, DEFAULT_ENTRY, ReaderError } from './oculus-reader.ts'
 
 // A fake "CLI": a node script that records its argv in a counter file and prints JSON.
 function fakeCli(body: string): string {
@@ -24,16 +24,16 @@ process.stdout.write(JSON.stringify({ argv: process.argv.slice(2) }) + '\\n')
 describe('createReader', () => {
   it('runs the built CLI with an argument array and parses the JSON', async () => {
     const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
-    expect(await read('runs', { role: 'builder', limit: 5 })).toEqual({ argv: ['nightwatch', 'view', 'runs', '--limit=5', '--role=builder'] })
+    expect(await read('runs', { role: 'builder', limit: 5 })).toEqual({ argv: ['oculus', 'view', 'runs', '--limit=5', '--role=builder'] })
   })
   it('passes the project filter as a flag', async () => {
     const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
-    expect(await read('runs', { project: 'DigiSmith' })).toEqual({ argv: ['nightwatch', 'view', 'runs', '--project=DigiSmith'] })
+    expect(await read('runs', { project: 'DigiSmith' })).toEqual({ argv: ['oculus', 'view', 'runs', '--project=DigiSmith'] })
   })
   it('sorts the flags, skips undefined ones, and never lets a value become a flag or a shell word', async () => {
     const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
     const out = (await read('plan', { ticket: 'DGS-590; rm -rf /', group: undefined })) as { argv: string[] }
-    expect(out.argv).toEqual(['nightwatch', 'view', 'plan', '--ticket=DGS-590; rm -rf /'])
+    expect(out.argv).toEqual(['oculus', 'view', 'plan', '--ticket=DGS-590; rm -rf /'])
   })
   it('one spawn serves concurrent calls and the cache serves the next 5 s', async () => {
     const countFile = join(mkdtempSync(join(tmpdir(), 'nw-count-')), 'n')

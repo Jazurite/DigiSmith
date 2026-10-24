@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RunDetail } from '#nightwatch-schema'
+import type { RunDetail } from '#oculus-schema'
 import { fmtUtc7 } from '../../utils/nw-format'
 
 defineProps<{ steps: RunDetail['pipeline'] }>()

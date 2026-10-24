@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Attention } from '#nightwatch-schema'
+import type { Attention } from '#oculus-schema'
 import { ageOf, fmtDay } from '../../utils/nw-format'
 
 defineProps<{ open: Attention['open']; resolved: Attention['resolved']; nowMs: number }>()

@@ -1,6 +1,6 @@
 // scripts/nexus-web/app/composables/nightwatch-api.ts
 import type { z } from 'zod'
-import { attentionSchema, eventsSchema, nightwatchErrorSchema, overviewSchema, planSchema, runDetailSchema, runsSchema } from '#nightwatch-schema'
+import { attentionSchema, eventsSchema, oculusErrorSchema, overviewSchema, planSchema, runDetailSchema, runsSchema } from '#oculus-schema'
 
 export class NightwatchApiError extends Error {
   status: number
@@ -9,7 +9,7 @@ export class NightwatchApiError extends Error {
 }
 export interface ApiOptions { base?: string; fetch?: typeof fetch }
 
-const BASE = '/api/v1/nightwatch'
+const BASE = '/api/v1/oculus'
 
 async function get<T extends z.ZodType>(path: string, schema: T, o: ApiOptions): Promise<z.infer<T>> {
   const f = o.fetch ?? fetch
@@ -18,7 +18,7 @@ async function get<T extends z.ZodType>(path: string, schema: T, o: ApiOptions):
   try { res = await f(`${origin}${BASE}${path}`, { headers: { accept: 'application/json' } }) } catch { throw new NightwatchApiError(0, 'unreachable') }
   const body: unknown = await res.json().catch(() => null)
   if (!res.ok) {
-    const err = nightwatchErrorSchema.safeParse(body)
+    const err = oculusErrorSchema.safeParse(body)
     throw new NightwatchApiError(res.status, err.success ? err.data.error : 'unknown')
   }
   const parsed = schema.safeParse(body)

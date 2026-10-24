@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Overview } from '#nightwatch-schema'
+import type { Overview } from '#oculus-schema'
 import { ageOf, fmtClock, fmtUtc7 } from '../../utils/nw-format'
 
 const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null }>()

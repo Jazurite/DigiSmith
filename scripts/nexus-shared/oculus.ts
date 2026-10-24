@@ -11,7 +11,7 @@ export const RUN_SOURCES = ['auto', 'start'] as const
 export const TRIGGERS = ['manual', 'night-scan', 'away', 'unknown'] as const
 export const TICKET_PHASES = ['claimed', 'building', 'review', 'merge-ready', 'merged', 'released', 'lost'] as const
 export const EVENT_GROUPS = ['all', 'agent', 'system', 'errors'] as const
-export const NIGHTWATCH_ERROR_CODES = ['bad_request', 'not_found', 'method_not_allowed', 'reader_unavailable', 'internal_invalid'] as const
+export const OCULUS_ERROR_CODES = ['bad_request', 'not_found', 'method_not_allowed', 'reader_unavailable', 'internal_invalid'] as const
 
 export const runRowSchema = z.strictObject({
   run: z.string(), ticket: z.string().nullable(), role: z.enum(ROLES),
@@ -92,4 +92,4 @@ export const planSchema = z.strictObject({
 })
 export type Plan = z.infer<typeof planSchema>
 
-export const nightwatchErrorSchema = z.strictObject({ error: z.enum(NIGHTWATCH_ERROR_CODES), message: z.string().optional() })
+export const oculusErrorSchema = z.strictObject({ error: z.enum(OCULUS_ERROR_CODES), message: z.string().optional() })

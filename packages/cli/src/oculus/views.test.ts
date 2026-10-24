@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/views.test.ts
+// packages/cli/src/oculus/views.test.ts
 import { appendFileSync, mkdirSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

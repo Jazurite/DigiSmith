@@ -2,9 +2,9 @@
 import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { makeDepot, type Depot } from '../../../packages/cli/src/nightwatch/fixture.test-util.ts'
-import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/nightwatch/views.ts'
-import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/nightwatch.ts'
+import { makeDepot, type Depot } from '../../../packages/cli/src/oculus/fixture.test-util.ts'
+import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/oculus/views.ts'
+import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
 
 const NOW = new Date('2026-10-22T03:00:00.000Z')
 let d: Depot

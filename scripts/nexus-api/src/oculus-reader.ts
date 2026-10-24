@@ -1,4 +1,4 @@
-// scripts/nexus-api/src/nightwatch-reader.ts
+// scripts/nexus-api/src/oculus-reader.ts
 import { execFile } from 'node:child_process'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -6,7 +6,7 @@ import { join } from 'node:path'
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 export const DEFAULT_ENTRY = join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')
 
-// The flags `dg nightwatch view` accepts (packages/cli/src/nightwatch/index.ts VALUE_FLAGS).
+// The flags `dg oculus view` accepts (packages/cli/src/oculus/index.ts VALUE_FLAGS).
 const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'project', 'limit'])
 
 export type ViewName = 'overview' | 'attention' | 'runs' | 'run' | 'events' | 'plan'
@@ -39,7 +39,7 @@ export function createReader(opts: ReaderOptions = {}): Reader {
         if (v === undefined) continue
         if (!ALLOWED_KEYS.has(k) || (typeof v !== 'string' && typeof v !== 'number') || String(v).startsWith('-')) return reject(new ReaderError('reader_unavailable'))
       }
-      const argv = [entry, 'nightwatch', 'view', view]
+      const argv = [entry, 'oculus', 'view', view]
       for (const k of Object.keys(args).sort()) {
         const v = args[k]
         if (v !== undefined) argv.push(`--${k}=${String(v)}`)

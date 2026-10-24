@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { HEALTH, ROLES, TRIGGERS } from '#nightwatch-schema'
-import type { Runs } from '#nightwatch-schema'
+import { HEALTH, ROLES, TRIGGERS } from '#oculus-schema'
+import type { Runs } from '#oculus-schema'
 import { loadRuns } from '../../composables/nightwatch-api'
 import { useRestartingPoll } from '../../composables/useRestartingPoll'
 import { isSafeId } from '../../utils/nw-format'

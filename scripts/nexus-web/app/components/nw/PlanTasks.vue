@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Plan } from '#nightwatch-schema'
+import type { Plan } from '#oculus-schema'
 
 const props = defineProps<{ plan: Plan }>()
 // the current task is the first one that is not done; when all are done it is the last

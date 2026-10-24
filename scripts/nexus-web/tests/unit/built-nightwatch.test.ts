@@ -38,8 +38,8 @@ describe.skipIf(!existsSync(OUT))('the generated Nightwatch pages', () => {
   it('every /api/ path in the JS is a Life Calendar or Nightwatch path', () => {
     const js = files(OUT).filter(f => f.endsWith('.js')).map(f => readFileSync(f, 'utf8')).join('\n')
     const paths = [...new Set(js.match(/\/api\/[a-z0-9/_-]+/g) ?? [])]
-    expect(paths.some(p => p.startsWith('/api/v1/nightwatch'))).toBe(true)
-    expect(paths.filter(p => p !== '/api/' && !p.startsWith('/api/v1/nightwatch') && !p.startsWith('/api/v1/life-calendar'))).toEqual([])
+    expect(paths.some(p => p.startsWith('/api/v1/oculus'))).toBe(true)
+    expect(paths.filter(p => p !== '/api/' && !p.startsWith('/api/v1/oculus') && !p.startsWith('/api/v1/life-calendar'))).toEqual([])
   })
   it('ships the Warren notice in a built CSS file', () => {
     const css = files(OUT).filter(f => f.endsWith('.css')).map(f => readFileSync(f, 'utf8')).join('\n')

@@ -1,4 +1,4 @@
-// packages/cli/src/nightwatch/derive.test.ts
+// packages/cli/src/oculus/derive.test.ts
 import { describe, expect, it } from "vitest";
 import { DEFAULT_BUDGETS } from "../autonomous/watchdog.ts";
 import type { EventLine } from "../run/events.ts";
