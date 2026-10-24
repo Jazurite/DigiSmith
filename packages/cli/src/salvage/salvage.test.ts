@@ -59,6 +59,22 @@ describe("salvage", () => {
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
   });
+  it("a committed design-token stylesheet and a dirty board tokens.json do not stop salvage", () => {
+    writeFileSync(join(wt, "nightwatch-tokens.scss"), "a{}\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "feat: tokens");
+    mkdirSync(join(wt, ".digismith", "board", "DGS-9\u2014x"), { recursive: true });
+    writeFileSync(join(wt, ".digismith", "board", "DGS-9\u2014x", "tokens.json"), "{}\n");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(r.ok).toBe(true);
+    expect(rescue()).toContain("rescue/DGS-9");
+  });
+  it("a committed api-token.txt stops everything, even when a later commit removes it", () => {
+    writeFileSync(join(wt, "api-token.txt"), "s\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "feat: add");
+    sh(wt, "rm", "-q", "api-token.txt"); sh(wt, "commit", "-qm", "feat: remove");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: api-token.txt (matches *token*); Jack decides");
+    expect(bundles()).toEqual([]);
+    expect(rescue()).toBe("");
+  });
   it("a staged new .env stops everything", () => {
     writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", ".env");
     const before = sh(wt, "rev-parse", "HEAD");
