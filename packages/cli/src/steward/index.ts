@@ -7,7 +7,7 @@ import { fileIdea, type ModelRunner } from "./file.ts";
 import { rebuild, runEvent, UsageError, type EventDeps, type EventResult } from "./event.ts";
 import { readStewardProfile } from "./profile.ts";
 import { stewardDir } from "./state.ts";
-import { EVENTS, type ApproveTarget, type EventName } from "./types.ts";
+import { APPROVE_TARGETS, EVENTS, type ApproveTarget, type EventName } from "./types.ts";
 
 /** The real dependencies: the profile picks the tracker; none or an unbuilt one means no tracker. */
 export function defaultDeps(): EventDeps {
@@ -61,7 +61,7 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps,
               .option("sha", { type: "string", requiresArg: true, describe: "merge sha, for merged" })
               .option("answer", { type: "string", choices: ["yes", "no"], describe: "Jack's answer, for accepted" })
               .option("quote", { type: "string", requiresArg: true, describe: "Jack's own words; required for approved, accepted, discard and close" })
-              .option("into", { type: "string", choices: ["to do", "ready", "scheduled"], describe: "approved only: the starter status (default to do)" })
+              .option("into", { type: "string", choices: [...APPROVE_TARGETS], describe: "approved only: the starter status (default to do)" })
               .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" }),
           handler: (argv) =>
             guarded(depsFactory, async (deps) => {

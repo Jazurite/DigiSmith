@@ -56,8 +56,9 @@ function fakeClient(o: FakeOpts) {
     async searchTeamTasks(spaceId: string, maxPages = 10, status?: string) {
       calls.push(`searchTeamTasks ${spaceId} ${status ?? "-"}`);
       const out: T[] = [];
+      const pool = status === undefined ? o.search : o.search.filter((t) => (t.status as { status: string }).status.toLowerCase() === status.toLowerCase());
       for (let page = 0; page < maxPages; page++) {
-        const batch = o.search.slice(page * 100, page * 100 + 100);
+        const batch = pool.slice(page * 100, page * 100 + 100);
         out.push(...batch);
         if (batch.length < 100) break;
       }
@@ -143,11 +144,10 @@ describe("ClickUpLoTracker.listByStatus", () => {
         { key: "DGS-602", done: true },
       ],
     }]);
-    // The open blocker came from the search; only to-do tickets and unknown blockers are fetched.
-    expect(calls).not.toContain("getTaskByRef b-open");
+    // The search returns only to-do tickets, so the open blocker (in progress) is fetched with getTaskByRef like the other blockers; the in-progress ticket t2 is never fetched.
     expect(calls).not.toContain("getTaskByRef t2");
     expect(calls.filter((c) => c.startsWith("getTaskByRef")).sort())
-      .toEqual(["getTaskByRef b-closed", "getTaskByRef b-done", "getTaskByRef t1"]);
+      .toEqual(["getTaskByRef b-closed", "getTaskByRef b-done", "getTaskByRef b-open", "getTaskByRef t1"]);
   });
 
   it("maps a missing sign-off, milestone, priority and due to null", async () => {

@@ -55,7 +55,7 @@ describe("dg steward", () => {
     const t = new FakeTracker(snapshot("refinement"));
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await cli(t).parse(["steward", "event", "approved", "--ticket", "DGS-1", "--quote", "go", "--into", "ready", "--dry-run"]);
-    expect(log.mock.calls.flat().join("\n")).toContain("ready");
+    expect(log.mock.calls.flat().join("\n")).toBe("steward: dry run: DGS-1: refinement -> ready");
     expect(process.exitCode ?? 0).toBe(0);
   });
   it("--into with another event is a usage error (exit 2)", async () => {

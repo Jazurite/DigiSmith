@@ -10,7 +10,7 @@ import NwTopBar from './NwTopBar.vue'
 import { overviewFixture } from '../../../tests/nightwatch-fixtures'
 
 describe('NwTopBar', () => {
-  it('shows health, workers, to do waiting, the mode and the two not-measured slots', async () => {
+  it('shows health, workers, Ready waiting, the mode and the two not-measured slots', async () => {
     const w = await mountSuspended(NwTopBar, { props: { overview: overviewFixture(), stale: false, updatedAt: Date.parse('2026-10-22T03:42:10Z') } })
     const t = w.text()
     expect(t).toContain('Nexus healthy')
