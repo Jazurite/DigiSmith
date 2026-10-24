@@ -40,6 +40,31 @@ describe("repoInfo", () => {
     fs.mkdirSync(dir);
     expect(repoInfo(dir)).toEqual({ project: "My-Notes-old-", root: null, branch: null, worktree: null });
   });
+  it("falls back to the folder holding a .git file that has no gitdir line", () => {
+    const dir = path.join(tmp, "odd-repo");
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, ".git"), "not a pointer\n");
+    expect(repoInfo(dir)).toEqual({ project: "odd-repo", root: dir, branch: null, worktree: null });
+  });
+  it("falls back to the holding folder for a submodule gitdir", () => {
+    const root = mainRepo("super", "main");
+    const modules = path.join(root, ".git", "modules", "sub");
+    fs.mkdirSync(modules, { recursive: true });
+    fs.writeFileSync(path.join(modules, "HEAD"), "ref: refs/heads/feature\n");
+    const sub = path.join(root, "sub");
+    fs.mkdirSync(sub, { recursive: true });
+    fs.writeFileSync(path.join(sub, ".git"), "gitdir: ../.git/modules/sub\n");
+    expect(repoInfo(sub)).toEqual({ project: "sub", root: sub, branch: "feature", worktree: sub });
+  });
+  it("falls back to the holding folder for a gitdir outside .git/worktrees", () => {
+    const dir = path.join(tmp, "bare-pointer");
+    const elsewhere = path.join(tmp, "elsewhere");
+    fs.mkdirSync(dir);
+    fs.mkdirSync(elsewhere);
+    fs.writeFileSync(path.join(elsewhere, "HEAD"), "ref: refs/heads/topic\n");
+    fs.writeFileSync(path.join(dir, ".git"), `gitdir: ${elsewhere}\n`);
+    expect(repoInfo(dir)).toEqual({ project: "bare-pointer", root: dir, branch: "topic", worktree: dir });
+  });
   it("gives project unknown for a missing or relative cwd", () => {
     expect(repoInfo(undefined).project).toBe("unknown");
     expect(repoInfo("relative/path").project).toBe("unknown");
@@ -61,6 +86,7 @@ describe("ticketOfBranch", () => {
     expect(ticketOfBranch("DGS-598__every-session-a-run")).toBe("DGS-598");
     expect(ticketOfBranch("EMKT-9001__fix")).toBe("EMKT-9001");
     expect(ticketOfBranch("main")).toBeNull();
+    expect(ticketOfBranch("B2B-1__x")).toBe("B2B-1");
     expect(ticketOfBranch("dgs-598__x")).toBeNull();
     expect(ticketOfBranch(null)).toBeNull();
   });

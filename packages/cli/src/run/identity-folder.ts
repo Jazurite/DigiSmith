@@ -6,6 +6,13 @@ import { depotDir } from "./paths.ts";
 
 const strip = (p: string): string => (p.length > 1 ? p.replace(/[\\/]+$/, "") : p);
 
+// One pair of surrounding quotes and a trailing " # comment" come off the raw value.
+function cardValue(raw: string): string {
+  const v = raw.replace(/\s+#.*$/, "").trim();
+  const q = /^(["'])(.*)\1$/.exec(v);
+  return q ? q[2] : v;
+}
+
 export function maestroIdentityAt(root: string | null, env: NodeJS.ProcessEnv): boolean {
   if (root === null) return false;
   const dir = path.join(depotDir(env), "identities");
@@ -15,7 +22,7 @@ export function maestroIdentityAt(root: string | null, env: NodeJS.ProcessEnv): 
   for (const f of files) {
     try {
       const m = /^folder:\s*(.+?)\s*$/m.exec(fs.readFileSync(path.join(dir, f), "utf8"));
-      if (m && strip(m[1]) === strip(root)) hits++;
+      if (m && strip(cardValue(m[1])) === strip(root)) hits++;
     } catch { /* unreadable card: not a match */ }
   }
   return hits === 1;

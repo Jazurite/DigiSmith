@@ -2,6 +2,7 @@
 // Project, root, branch and worktree of a cwd, read from the .git files. No git process: the hook must stay fast.
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { BRANCH_KEY_PREFIX } from "../ticket-key.ts";
 
 export type RepoInfo = { project: string; root: string | null; branch: string | null; worktree: string | null };
 
@@ -47,6 +48,6 @@ export function repoInfo(cwd: unknown): RepoInfo {
 }
 
 export function ticketOfBranch(branch: string | null): string | null {
-  const m = branch === null ? null : /^([A-Z]+-\d+)__/.exec(branch);
+  const m = branch === null ? null : BRANCH_KEY_PREFIX.exec(branch);
   return m ? m[1] : null;
 }

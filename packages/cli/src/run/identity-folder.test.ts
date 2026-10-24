@@ -35,4 +35,12 @@ describe("maestroIdentityAt", () => {
     card("m.yml", "/w/DigiSmith/");
     expect(maestroIdentityAt("/w/DigiSmith", env)).toBe(true);
   });
+  it("reads quoted folder values and drops a trailing comment", () => {
+    fs.writeFileSync(path.join(tmp, "identities", "dq.yml"), 'folder: "/w/A"\n');
+    fs.writeFileSync(path.join(tmp, "identities", "sq.yml"), "folder: '/w/B'\n");
+    fs.writeFileSync(path.join(tmp, "identities", "cm.yml"), "folder: /w/C  # main\n");
+    expect(maestroIdentityAt("/w/A", env)).toBe(true);
+    expect(maestroIdentityAt("/w/B", env)).toBe(true);
+    expect(maestroIdentityAt("/w/C", env)).toBe(true);
+  });
 });
