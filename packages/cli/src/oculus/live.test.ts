@@ -111,6 +111,29 @@ describe("liveView", () => {
     expect(runOf("dgs-602")).toBeNull();
     expect(JSON.stringify(v)).not.toMatch(/sess-\d/);
   });
+  it("ignores a pane match whose run belongs to another Claude session (a reused pane id)", () => {
+    const open = (run: string, at: string, o: { pane?: string; session?: string }) => {
+      const f = join(d.writeRun({ ticket: "DGS-599", run, role: "builder", created_at: at }), "run.json");
+      const r = JSON.parse(readFileSync(f, "utf8"));
+      if (o.pane) r.herdr.pane = o.pane;
+      if (o.session) r.session_id = o.session;
+      writeFileSync(f, JSON.stringify(r));
+      d.writeEvents("DGS-599", run, [{ type: "started", ts: at }]);
+    };
+    open("stale-pane", "2026-10-24T05:00:00.000Z", { pane: "w2:p10", session: "sess-old" });
+    open("fresh", "2026-10-24T07:00:00.000Z", { session: "sess-new" });
+    open("stale-pane-2", "2026-10-24T05:00:00.000Z", { pane: "w2:p11", session: "sess-old2" });
+    open("pane-no-session", "2026-10-24T05:00:00.000Z", { pane: "w2:p12" });
+    const v = liveView(d.env, NOW, herdrOf([
+      agent({ name: "dgs-603", pane_id: "w2:p10", agent_session: { value: "sess-new" } }),
+      agent({ name: "dgs-604", pane_id: "w2:p11", agent_session: { value: "sess-other" } }),
+      agent({ name: "dgs-605", pane_id: "w2:p12", agent_session: { value: "sess-any" } }),
+    ]), HOME);
+    const runOf = (n: string) => v.agents.find((a) => a.name === n)?.run;
+    expect(runOf("dgs-603")).toBe("fresh");
+    expect(runOf("dgs-604")).toBeNull();
+    expect(runOf("dgs-605")).toBe("pane-no-session");
+  });
   it("says unreachable, with no agents, when herdr fails or answers something else", () => {
     for (const h of [() => ({ ok: false as const }), () => ({ ok: true as const, stdout: "not json" }), () => ({ ok: true as const, stdout: "{\"result\":{}}" })]) {
       expect(liveView(d.env, NOW, h, HOME)).toEqual({ readAt: NOW.toISOString(), herdr: "unreachable", agents: [] });

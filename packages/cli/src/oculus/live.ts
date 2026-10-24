@@ -47,20 +47,21 @@ export function projectOf(cwd: unknown, home: string): string | null {
 const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 
 // Open runs, the newest per herdr pane and per Claude session id. The session id is only a join key: never output.
-function openRuns(env: NodeJS.ProcessEnv): { byPane: Map<string, string>; bySession: Map<string, string> } {
-  const pane = new Map<string, { run: string; at: string }>();
-  const session = new Map<string, { run: string; at: string }>();
-  const keep = (m: Map<string, { run: string; at: string }>, k: string, run: string, at: string) => {
+type Open = { run: string; at: string; session: string | null };
+function openRuns(env: NodeJS.ProcessEnv): { byPane: Map<string, Open>; bySession: Map<string, Open> } {
+  const pane = new Map<string, Open>();
+  const session = new Map<string, Open>();
+  const keep = (m: Map<string, Open>, k: string, run: string, at: string, sid: string | null) => {
     const prev = m.get(k);
-    if (!prev || at > prev.at) m.set(k, { run, at });
+    if (!prev || at > prev.at) m.set(k, { run, at, session: sid });
   };
   for (const { record, summary } of listRuns(env)) {
     if (summary.ended) continue;
-    if (record.herdr?.pane) keep(pane, record.herdr.pane, record.run, record.created_at);
-    if (typeof record.session_id === "string" && record.session_id !== "") keep(session, record.session_id, record.run, record.created_at);
+    const sid = typeof record.session_id === "string" && record.session_id !== "" ? record.session_id : null;
+    if (record.herdr?.pane) keep(pane, record.herdr.pane, record.run, record.created_at, sid);
+    if (sid) keep(session, sid, record.run, record.created_at, sid);
   }
-  const runs = (m: Map<string, { run: string; at: string }>) => new Map([...m].map(([k, v]) => [k, v.run]));
-  return { byPane: runs(pane), bySession: runs(session) };
+  return { byPane: pane, bySession: session };
 }
 
 export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, home: string = os.homedir()): LiveView {
@@ -78,7 +79,10 @@ export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, ho
     if (!pane) continue;
     const name = str(a.name)?.slice(0, NAME_MAX) ?? null;
     const sessionId = str((a.agent_session as { value?: unknown } | undefined)?.value);
-    const run = runs.byPane.get(pane) ?? (sessionId ? runs.bySession.get(sessionId) : undefined) ?? null;   // the pane match wins
+    // the pane match wins, unless its run carries another Claude session (herdr reused the pane id)
+    const byPane = runs.byPane.get(pane);
+    const paneRun = byPane && !(byPane.session && sessionId && byPane.session !== sessionId) ? byPane : undefined;
+    const run = paneRun?.run ?? (sessionId ? runs.bySession.get(sessionId)?.run : undefined) ?? null;
     const status = (AGENT_STATUSES as readonly string[]).includes(a.agent_status as string) ? (a.agent_status as AgentStatus) : "unknown";
     agents.push({ name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: herdrRole(name), project: projectOf(a.cwd, home), status, run });
   }
