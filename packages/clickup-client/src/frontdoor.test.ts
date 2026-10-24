@@ -337,6 +337,18 @@ describe("FrontdoorClient", () => {
       data: body,
     });
   });
+
+  it("setFieldLocations PUTs new_locations to the workspace field path", async () => {
+    const client = makeClient();
+    const loc = { parent: { type: 4, id: "77" }, required: false as const, required_on_subtasks: false as const, hide_from_guests: false as const };
+    request.mockResolvedValueOnce({ data: "" });
+    await client.setFieldLocations("f1", [loc]);
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/field/v3/experience/workspaces/123/fields/f1/locations",
+      data: { new_locations: [loc] },
+    });
+  });
 });
 
 describe("readFrontdoorAuth", () => {

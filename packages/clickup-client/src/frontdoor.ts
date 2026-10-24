@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { randomBytes } from "node:crypto";
-import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldWithLocations, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
+import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldWithLocations, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorFieldLocation, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 import { RenewalError, isDue, renewSession, tokenExpiry } from "./frontdoor-session.ts";
@@ -225,6 +225,11 @@ export class FrontdoorClient {
   /** Replaces the WHOLE status set of a space: a status missing from the body is removed. ClickUp answers {}. */
   async putSpaceStatuses(spaceId: string, body: FrontdoorStatusSetBody): Promise<void> {
     await this.request("PUT", `/hierarchy/v1/project/${spaceId}/status?checkConflict=true`, body);
+  }
+
+  /** Adds locations to a field (where it shows). ClickUp answers 204. */
+  async setFieldLocations(fieldId: string, locations: FrontdoorFieldLocation[]): Promise<void> {
+    await this.request("PUT", `/field/v3/experience/workspaces/${this.teamId}/fields/${fieldId}/locations`, { new_locations: locations });
   }
 
   /** Creates a field. With category_id in the body it is scoped to that folder; no second location call is needed. */

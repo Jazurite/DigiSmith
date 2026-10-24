@@ -378,7 +378,7 @@ export interface FrontdoorFieldCreateOption {
   orderindex: null;
 }
 
-/** Body of the web app's POST /customFields/v2/field (captured 2026-10-02): a dropdown scoped to one folder. */
+/** Body of the web app's POST /customFields/v2/field (captured 2026-10-02 with a folder, 2026-10-10 with team_id). Exactly one of category_id and team_id. */
 export interface FrontdoorFieldCreateBody {
   name: string;
   description: string;
@@ -388,7 +388,8 @@ export interface FrontdoorFieldCreateBody {
     sorting: "manual";
     options: FrontdoorFieldCreateOption[];
   };
-  category_id: string;
+  category_id?: string;
+  team_id?: string;
   required: boolean;
   required_on_subtasks: boolean;
   pinned: boolean;
@@ -397,6 +398,14 @@ export interface FrontdoorFieldCreateBody {
   permission_level: string | null;
   members: unknown[];
   groups: unknown[];
+}
+
+/** One item of PUT /field/v3/experience/workspaces/{ws}/fields/{id}/locations (captured 2026-10-10; type 7 was the workspace). */
+export interface FrontdoorFieldLocation {
+  parent: { type: number; id: string };
+  required: false;
+  required_on_subtasks: false;
+  hide_from_guests: false;
 }
 
 /** Where move-list puts a List: a Folder and a place in it. */
