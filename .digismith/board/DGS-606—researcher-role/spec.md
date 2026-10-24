@@ -24,7 +24,7 @@ Card text, short:
 - **Its ONE write:** the clone in `~/Workspace/Library/<name>` and the findings file in the depot.
 - **Where the other cards live:** `skills/reviewer/SKILL.md`; the scout has no skill file (its card is the session card plus the brief). The card lists them.
 - **Ends with:** one pane line `done: <findings path>`, then stop.
-- **Registers its session** with `entry.ts session --ticket <KEY> --role researcher` when the order has a ticket key (skip on `none`).
+- **Registers its session** with `entry.ts session --ticket <KEY> --role other` (until DGS-609 adds `researcher` to the tokens roles; section 5) when the order has a ticket key (skip on `none`).
 
 ### 3. Brief template: `skills/researcher/brief.md`
 Placeholders `{{AGENT}}`, `{{KEY}}`, `{{SUBJECT}}` (what to study), `{{NAME}}` (library folder name), `{{FINDINGS}}` (findings path), `{{PLUGIN_ROOT}}`. It repeats the may-not list in the Rules section: no write in the DigiSmith repo, no ClickUp write, no commit, no push.
