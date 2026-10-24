@@ -68,14 +68,14 @@ export function tailEvents(runId: string, since: number, env: NodeJS.ProcessEnv)
 export function formatList(rows: RunRow[]): string {
   if (rows.length === 0) return "no runs";
   return rows
-    .map(({ record: r, summary: s }) => [r.run, r.ticket, r.role, r.seat ?? "-", r.created_at, `${s.events} events`, s.last_type ?? "-"].join("  "))
+    .map(({ record: r, summary: s }) => [r.run, r.ticket ?? "-", r.role, r.seat ?? "-", r.created_at, `${s.events} events`, s.last_type ?? "-"].join("  "))
     .join("\n");
 }
 
 export function formatShow({ record: r, summary: s }: RunRow): string {
   return [
     `run       ${r.run}`,
-    `ticket    ${r.ticket}`,
+    `ticket    ${r.ticket ?? "-"}`,
     `role      ${r.role}`,
     `seat      ${r.seat ?? "-"}`,
     `model     ${r.model ?? "-"}`,

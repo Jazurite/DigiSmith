@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { createRun } from "./record.ts";
 import { findRunDir } from "./paths.ts";
 import { appendEvent } from "./events.ts";
-import { listRuns, showRun, summarize, tailEvents } from "./read.ts";
+import { formatList, formatShow, listRuns, showRun, summarize, tailEvents } from "./read.ts";
 
 let tmp: string;
 let env: NodeJS.ProcessEnv;
@@ -76,5 +76,16 @@ describe("readers", () => {
   });
   it("summarize of no events is empty", () => {
     expect(summarize([])).toEqual({ events: 0, first_ts: null, last_ts: null, last_type: null, ended: false });
+  });
+});
+
+describe("a run with no ticket", () => {
+  it("prints - in list and show, never the text null", () => {
+    const a = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, env);
+    const row = { record: { ...a, ticket: null }, summary: summarize([]) };
+    expect(formatList([row])).not.toContain("null");
+    expect(formatList([row]).split("  ")[1]).toBe("-");
+    expect(formatShow(row)).toContain("ticket    -\n");
+    expect(formatShow(row)).not.toContain("null");
   });
 });

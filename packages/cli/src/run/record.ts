@@ -103,6 +103,11 @@ export function readRun(runDir: string): RunRecord {
 // The labeller's one edit of an automatic run: a temp file, then an atomic rename, so a reader sees the old or the new file.
 export function rewriteRun(runDir: string, record: RunRecord): void {
   const tmp = path.join(runDir, `run.json.${process.pid}.tmp`);
-  fs.writeFileSync(tmp, JSON.stringify(record, null, 2) + "\n");
-  fs.renameSync(tmp, path.join(runDir, "run.json"));
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(record, null, 2) + "\n");
+    fs.renameSync(tmp, path.join(runDir, "run.json"));
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
+  }
 }

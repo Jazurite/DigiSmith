@@ -111,3 +111,15 @@ describe("DGS-598 fields", () => {
     expect(fs.readdirSync(dir).filter((f) => f.startsWith("run.json."))).toEqual([]);
   });
 });
+
+describe("rewriteRun failure", () => {
+  it("throws and leaves no temp file when the rename fails", () => {
+    const r = createRun({ ticket: "DGS-598", role: "other", order: "/o.md" }, env);
+    const dir = path.join(tmp, "runs", "DGS-598", r.run);
+    fs.rmSync(path.join(dir, "run.json"));
+    fs.mkdirSync(path.join(dir, "run.json"));
+    fs.writeFileSync(path.join(dir, "run.json", "keep"), "x");
+    expect(() => rewriteRun(dir, r)).toThrow();
+    expect(fs.readdirSync(dir).filter((f) => f.startsWith("run.json.") && f.endsWith(".tmp"))).toEqual([]);
+  });
+});
