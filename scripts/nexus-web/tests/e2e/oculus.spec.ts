@@ -58,6 +58,18 @@ test('Runs filters go in the URL and narrow the rows', async ({ page }) => {
   expect(filtered.every((r) => r === 'reviewer')).toBe(true)   // every row is a reviewer
 })
 
+test('Runs by role and project: only those runs, and a conductor row has no health dot (Task 9)', async ({ page }) => {
+  await page.goto(`${stub.url}/runs/?role=conductor&project=DigiSmith`)
+  const rows = page.locator('tbody tr')
+  await expect(rows).toHaveCount(1)
+  await expect(rows.locator('td[data-label="Role"]')).toHaveText('conductor')
+  await expect(rows.locator('td[data-label="Project"]')).toHaveText('DigiSmith')
+  await expect(rows.locator('td[data-label="State"]')).toHaveText('-')
+  await expect(rows.locator('.st')).toHaveCount(0)
+  await expect(page.getByLabel('Role')).toHaveValue('conductor')
+  await expect(page.getByLabel('Project')).toHaveValue('DigiSmith')
+})
+
 test('Run detail: pipeline, event filter, tail and the read-only order', async ({ page }) => {
   await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
   await expect(page.getByRole('list', { name: /pipeline/i }).locator('li')).toHaveCount(6)

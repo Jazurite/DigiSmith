@@ -59,7 +59,7 @@ function ocRead(mode: () => Mode): Reader {
       case 'runs': {
         const r = runsFixture()
         if (empty) return { readAt, total: 0, runs: [] }
-        const runs = r.runs.filter((x) => (!args.state || x.state === args.state) && (!args.role || x.role === args.role) && (!args.ticket || x.ticket === args.ticket) && (!args.trigger || x.trigger === args.trigger))
+        const runs = r.runs.filter((x) => (!args.state || x.state === args.state) && (!args.role || x.role === args.role) && (!args.ticket || x.ticket === args.ticket) && (!args.trigger || x.trigger === args.trigger) && (!args.project || x.project === args.project))
         return { ...r, total: runs.length, runs: runs.slice(0, Number(args.limit ?? 100)) }
       }
       case 'run': {

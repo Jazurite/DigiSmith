@@ -62,6 +62,10 @@ export function runsFixture(): Runs {
     runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350 }),
     runFixture({ run: 'builder-20261021T144000-aa11bb', ticket: 'DGS-586', trigger: 'manual', state: 'ended', phase: null, startedAt: '2026-10-21T14:40:00.000Z', endedAt: '2026-10-21T16:45:00.000Z', elapsedSec: 7500, merged: true, pushed: true }),
     runFixture({ run: 'builder-20261021T110200-cc22dd', ticket: 'DGS-585', trigger: 'away', seat: 'jack', state: 'lost', phase: null, startedAt: '2026-10-21T11:02:00.000Z', endedAt: '2026-10-21T11:57:00.000Z', elapsedSec: 3300 }),
+    // Task 9: automatic runs (DGS-598) of a Maestro and two conductors, with projects; they carry no health flag
+    runFixture({ run: 'maestro-20261022T000000-aa00aa', ticket: null, role: 'maestro', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'jack', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:00:00.000Z', elapsedSec: 9000 }),
+    runFixture({ run: 'conductor-20261022T000500-bb11bb', ticket: null, role: 'conductor', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'dev0', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:05:00.000Z', elapsedSec: 8700 }),
+    runFixture({ run: 'conductor-20261022T001000-cc22cc', ticket: null, role: 'conductor', project: 'Emma', source: 'auto', trigger: 'unknown', seat: 'dev0', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:10:00.000Z', elapsedSec: 8400 }),
   ]
   return { readAt: '2026-10-22T03:42:10.000Z', total: runs.length, runs }
 }

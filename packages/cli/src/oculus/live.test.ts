@@ -2,7 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
-import { HERDR_ARGS, liveView, maestroNames, projectOf, realHerdr, roleOf, type HerdrCall } from "./live.ts";
+import { roleOf } from "../run/role.ts";
+import { HERDR_ARGS, liveView, projectOf, realHerdr, type HerdrCall } from "./live.ts";
 import { runOculus } from "./index.ts";
 
 const NOW = new Date("2026-10-24T08:00:00.000Z");
@@ -18,12 +19,18 @@ let d: Depot;
 beforeEach(() => { d = makeDepot(); });
 afterEach(() => d.cleanup());
 
-describe("roleOf (same rule as DGS-598)", () => {
-  const m = new Set(["digismith-maestro"]);
+describe("the herdr role rule (DGS-598 roleOf, inside herdr)", () => {
+  const herdrRole = (name: string | null) => roleOf({ inHerdr: true, looked: true, agentName: name, maestroIdentity: false }).role;
   it.each([
-    ["digismith-maestro", "maestro"], ["digismith-conductor", "conductor"], ["dgs-599", "builder"], ["EMKT-12", "builder"],
+    ["digismith-maestro", "other"], ["digismith-conductor", "conductor"], ["dgs-599", "builder"], ["EMKT-12", "other"],
     ["dgs-599-rev1", "reviewer"], ["rev-dgs-599", "other"], ["dgs-599-scout", "scout"], ["probe-408", "scout"], ["shell", "other"], [null, "other"],
-  ] as const)("%s -> %s", (name, role) => expect(roleOf(name, m)).toBe(role));
+  ] as const)("%s -> %s", (name, role) => expect(herdrRole(name)).toBe(role));
+  it("liveView uses it: a pane named like a maestro is other (even with a maestro identity card), a conductor is conductor", () => {
+    mkdirSync(join(d.dir, "identities"));
+    writeFileSync(join(d.dir, "identities", "a.yml"), "id: digismith-maestro\nrole: maestro\n");
+    const v = liveView(d.env, NOW, herdrOf([agent({ name: "digismith-maestro", pane_id: "w2:p1" }), agent({ name: "emma-conductor", pane_id: "w2:p2" })]), HOME);
+    expect(v.agents.map((a) => [a.name, a.role])).toEqual([["digismith-maestro", "other"], ["emma-conductor", "conductor"]]);
+  });
 });
 
 describe("projectOf", () => {
@@ -38,22 +45,6 @@ describe("projectOf", () => {
     expect(projectOf("/tmp/x", HOME)).toBeNull();
     expect(projectOf(42, HOME)).toBeNull();
   });
-});
-
-describe("maestroNames", () => {
-  it("reads the identity cards with role: maestro", () => {
-    mkdirSync(join(d.dir, "identities"));
-    writeFileSync(join(d.dir, "identities", "a.yml"), "id: digismith-maestro\nrole: maestro\n");
-    writeFileSync(join(d.dir, "identities", "b.yml"), "id: something-else\nrole: conductor\n");
-    expect([...maestroNames(d.env)]).toEqual(["digismith-maestro"]);
-  });
-  it("strips optional quotes around the id", () => {
-    mkdirSync(join(d.dir, "identities"));
-    writeFileSync(join(d.dir, "identities", "a.yml"), 'id: "digismith-maestro"\nrole: maestro\n');
-    writeFileSync(join(d.dir, "identities", "b.yml"), "id: 'emma-maestro'\nrole: maestro\n");
-    expect([...maestroNames(d.env)].sort()).toEqual(["digismith-maestro", "emma-maestro"]);
-  });
-  it("is empty without an identities folder", () => expect(maestroNames(d.env).size).toBe(0));
 });
 
 describe("liveView", () => {
@@ -94,6 +85,31 @@ describe("liveView", () => {
     const v = liveView(d.env, NOW, herdrOf([agent({ name: "dgs-599", pane_id: "w2:p5" }), agent({ name: "dgs-600", pane_id: "w2:p6" })]), HOME);
     expect(v.agents.find((a) => a.name === "dgs-599")?.run).toBe("builder-new");
     expect(v.agents.find((a) => a.name === "dgs-600")?.run).toBeNull();
+  });
+  it("joins an open run by the Claude session id when no run has the pane; the pane match wins when both exist", () => {
+    const open = (run: string, at: string, o: { pane?: string; session?: string }) => {
+      const f = join(d.writeRun({ ticket: "DGS-599", run, role: "builder", created_at: at }), "run.json");
+      const r = JSON.parse(readFileSync(f, "utf8"));
+      if (o.pane) r.herdr.pane = o.pane;
+      if (o.session) r.session_id = o.session;
+      writeFileSync(f, JSON.stringify(r));
+      d.writeEvents("DGS-599", run, [{ type: "started", ts: at }]);
+    };
+    open("by-session", "2026-10-24T07:00:00.000Z", { session: "sess-9" });
+    open("by-pane", "2026-10-24T06:00:00.000Z", { pane: "w2:p7" });
+    open("other-session", "2026-10-24T07:10:00.000Z", { session: "sess-8" });
+    const v = liveView(d.env, NOW, herdrOf([
+      agent({ name: "dgs-599", pane_id: "w2:p5", agent_session: { value: "sess-9" } }),
+      agent({ name: "dgs-600", pane_id: "w2:p7", agent_session: { value: "sess-8" } }),
+      agent({ name: "dgs-601", pane_id: "w2:p8", agent_session: { value: "sess-0" } }),
+      agent({ name: "dgs-602", pane_id: "w2:p9", agent_session: undefined }),
+    ]), HOME);
+    const runOf = (n: string) => v.agents.find((a) => a.name === n)?.run;
+    expect(runOf("dgs-599")).toBe("by-session");
+    expect(runOf("dgs-600")).toBe("by-pane");
+    expect(runOf("dgs-601")).toBeNull();
+    expect(runOf("dgs-602")).toBeNull();
+    expect(JSON.stringify(v)).not.toMatch(/sess-\d/);
   });
   it("says unreachable, with no agents, when herdr fails or answers something else", () => {
     for (const h of [() => ({ ok: false as const }), () => ({ ok: true as const, stdout: "not json" }), () => ({ ok: true as const, stdout: "{\"result\":{}}" })]) {

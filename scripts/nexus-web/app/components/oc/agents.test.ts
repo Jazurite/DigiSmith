@@ -16,6 +16,14 @@ describe('OcAgentsTable', () => {
     expect(w.find('a[href="/run/?id=builder-20261022T021000-a1b2c3"]').exists()).toBe(true)
     expect(w.find('td[data-label="Where"]').text()).toBe('w2 · t7')
   })
+  it('links a project to the runs of that project, and shows "-" for none (Task 9)', async () => {
+    const w = await mountSuspended(OcAgentsTable, { props: { agents: live.agents, disconnected: false } })
+    expect(w.findAll('a[href="/runs/?project=DigiSmith"]').length).toBe(live.agents.filter((a) => a.project === 'DigiSmith').length)
+    expect(w.find('a[href="/runs/?project=Emma"]').text()).toBe('Emma')
+    const unnamed = w.findAll('tbody tr').find((r) => r.text().includes('unnamed'))!
+    expect(unnamed.find('td[data-label="Project"]').text()).toBe('-')
+    expect(unnamed.find('td[data-label="Project"] a').exists()).toBe(false)
+  })
   it('only working is green; disconnected makes every dot neutral and no green at all', async () => {
     const on = await mountSuspended(OcAgentsTable, { props: { agents: live.agents, disconnected: false } })
     expect(on.findAll('.st.ok').map((e) => e.text())).toEqual(['working', 'working'])

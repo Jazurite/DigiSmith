@@ -32,7 +32,7 @@ describe('Runs page', () => {
     const w = await mountSuspended(Runs)
     await flushPromises()
     expect(api.loadRuns).toHaveBeenCalledWith({ state: 'lost', role: '', trigger: 'away', project: '', ticket: 'DGS-1', limit: 100 })
-    expect(w.findAll('tbody tr')).toHaveLength(4)
+    expect(w.findAll('tbody tr')).toHaveLength(runsFixture().runs.length)
     w.unmount()
   })
   it('sends a valid project from the URL and drops an unsafe one', async () => {
@@ -89,7 +89,7 @@ describe('Runs page', () => {
     const w = await mountSuspended(Runs)
     await vi.advanceTimersByTimeAsync(0)
     await vi.advanceTimersByTimeAsync(10_000)
-    expect(w.findAll('tbody tr')).toHaveLength(4)
+    expect(w.findAll('tbody tr')).toHaveLength(runsFixture().runs.length)
     expect(w.text()).toContain('The last update failed')
     w.unmount()
   })

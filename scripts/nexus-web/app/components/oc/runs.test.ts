@@ -20,6 +20,20 @@ describe('RunsTable', () => {
     expect(w.find('a').attributes('href')).toMatch(/^\/run\/\?id=/)
     expect(w.text()).toContain('merged · pushed')
   })
+  it('has a Project column and gives a maestro or conductor row "-" with no health dot (Task 9)', async () => {
+    const runs = runsFixture().runs
+    const w = await mountSuspended(RunsTable, { props: { runs, nowMs: NOW } })
+    expect(w.findAll('thead th').map((t) => t.text())).toContain('Project')
+    const rows = w.findAll('tbody tr')
+    runs.forEach((r, i) => {
+      const row = rows[i]!
+      expect(row.find('td[data-label="Project"]').text(), r.run).toBe(r.project ?? '-')
+      const unflagged = r.role === 'maestro' || r.role === 'conductor'
+      expect(row.find('td[data-label="State"] .st').exists(), r.run).toBe(!unflagged)
+      if (unflagged) expect(row.find('td[data-label="State"]').text()).toBe('-')
+    })
+    expect(runs.some((r) => r.role === 'maestro') && runs.some((r) => r.role === 'conductor')).toBe(true)
+  })
   it('says no run yet', async () => {
     expect((await mountSuspended(RunsTable, { props: { runs: [], nowMs: NOW } })).text()).toContain('No run yet.')
   })
@@ -89,15 +103,15 @@ describe('Plan components', () => {
 
 describe('RunsTable cells', () => {
   const cell = async (row: ReturnType<typeof runFixture>, i: number) => (await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })).findAll('tbody td')[i]!.text()
-  it('has a header row with the nine column names', async () => {
+  it('has a header row with the ten column names', async () => {
     const w = await mountSuspended(RunsTable, { props: { runs: runsFixture().runs, nowMs: NOW } })
-    expect(w.findAll('thead th').map((h) => h.text())).toEqual(['State', 'Key', 'Role', 'Seat / model', 'Trigger', 'Started', 'Duration', 'Tokens', 'Delivery'])
+    expect(w.findAll('thead th').map((h) => h.text())).toEqual(['State', 'Key', 'Role', 'Project', 'Seat / model', 'Trigger', 'Started', 'Duration', 'Tokens', 'Delivery'])
   })
   it('shows delivery for merged and pushed, one of them, or a dash', async () => {
-    expect(await cell(runFixture({ endedAt: '2026-10-22T03:00:00.000Z', merged: true, pushed: true }), 8)).toBe('merged · pushed')
-    expect(await cell(runFixture({ merged: true }), 8)).toBe('merged')
-    expect(await cell(runFixture({ pushed: true }), 8)).toBe('pushed')
-    expect(await cell(runFixture(), 8)).toBe('-')
+    expect(await cell(runFixture({ endedAt: '2026-10-22T03:00:00.000Z', merged: true, pushed: true }), 9)).toBe('merged · pushed')
+    expect(await cell(runFixture({ merged: true }), 9)).toBe('merged')
+    expect(await cell(runFixture({ pushed: true }), 9)).toBe('pushed')
+    expect(await cell(runFixture(), 9)).toBe('-')
   })
   it('shows a dash for a null ticket and still links to the run', async () => {
     const w = await mountSuspended(RunsTable, { props: { runs: [runFixture({ ticket: null, run: 's-abc' })], nowMs: NOW } })
@@ -106,11 +120,13 @@ describe('RunsTable cells', () => {
     expect(a.attributes('href')).toContain('s-abc')
   })
   it('counts a running row live and freezes an ended row; dashes for unknown seat and model; UTC+7 start', async () => {
-    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', elapsedSec: 5 }), 6)).toBe('1:00:00')
-    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', endedAt: '2026-10-22T02:30:00.000Z', elapsedSec: 1800 }), 6)).toBe('0:30:00')
-    expect(await cell(runFixture({ seat: null, model: null }), 3)).toBe('- · -')
-    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z' }), 5)).toBe('2026-10-22 09:00')
-    expect(await cell(runFixture(), 7)).toBe('-')
+    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', elapsedSec: 5 }), 7)).toBe('1:00:00')
+    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', endedAt: '2026-10-22T02:30:00.000Z', elapsedSec: 1800 }), 7)).toBe('0:30:00')
+    expect(await cell(runFixture({ seat: null, model: null }), 4)).toBe('- · -')
+    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z' }), 6)).toBe('2026-10-22 09:00')
+    expect(await cell(runFixture(), 8)).toBe('-')
+    expect(await cell(runFixture(), 3)).toBe('-')   // Project: none
+    expect(await cell(runFixture({ project: 'Emma' }), 3)).toBe('Emma')
   })
 })
 
@@ -218,5 +234,14 @@ describe('RunFilters', () => {
     await w.find('[aria-label="State"]').setValue('lost')
     await w.find('[aria-label="Trigger"]').setValue('away')
     expect(w.emitted('update:modelValue')).toHaveLength(4)
+  })
+  it('offers maestro and conductor as roles and the given projects (Task 9)', async () => {
+    const value = { state: '', role: '', trigger: '', project: '', ticket: '' }
+    const w = await mountSuspended(RunFilters, { props: { modelValue: value, projects: ['DigiSmith', 'Emma'] } })
+    const opts = (l: string) => w.find(`[aria-label="${l}"]`).findAll('option').map((o) => o.attributes('value'))
+    expect(opts('Role')).toEqual(expect.arrayContaining(['maestro', 'conductor', 'builder', 'reviewer', 'scout', 'other']))
+    expect(opts('Project')).toEqual(['', 'DigiSmith', 'Emma'])
+    await w.find('[aria-label="Project"]').setValue('Emma')
+    expect(w.emitted('update:modelValue')![0]).toEqual([{ ...value, project: 'Emma' }])
   })
 })

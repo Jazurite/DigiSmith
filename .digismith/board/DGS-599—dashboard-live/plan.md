@@ -1868,6 +1868,13 @@ git commit -m "feat(oculus): show every herdr agent on the index page" -- script
 
 ### Task 9: Runs page role and project, no health flags for maestro and conductor (after DGS-598)
 
+**DGS-598 names found after the rebase (written before Step 1):**
+- Role function: `roleOf(i: RoleInput): { role: Role; role_from: RoleFrom }` in `packages/cli/src/run/role.ts`, with `RoleInput = { headless?: boolean; inHerdr: boolean; looked: boolean; agentName: string | null; maestroIdentity: boolean }`. Inside herdr it ignores `maestroIdentity` (a Maestro runs outside herdr): conductor, reviewer, scout and builder come from the name, else `other`. Oculus calls `roleOf({ inHerdr: true, looked: true, agentName: name, maestroIdentity: false }).role`. Also there: `ticketOfAgentName(name)`.
+- Role set: `ROLES = ["builder", "reviewer", "scout", "maestro", "conductor", "other"]` and `type Role` in `packages/cli/src/run/schema.ts`.
+- Run record fields: `project: string | null` and `session_id: string | null` (`RunRecord` in `run/schema.ts`; `record.ts` gives null for old records).
+- Already on main from DGS-598 / earlier tasks: `runRowOf` `project`, `runsView` project filter, `VALUE_FLAGS` `project` with `isSafe`, shared `ROLES` and `runRowSchema.project`, `runsQuery.project`, `ALLOWED_KEYS` `project`, `loadRuns` `project`, `runs.vue` project filter and the `RunFilters` Project select.
+- Decision: `maestroNames` is deleted (the shared rule does not need the maestro set inside herdr).
+
 **Blocked until DGS-598 is merged into `main`.** The conductor tells the Builder when. Then:
 
 ```bash

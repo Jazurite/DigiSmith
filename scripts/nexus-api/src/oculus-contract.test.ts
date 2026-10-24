@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { liveView } from '../../../packages/cli/src/oculus/live.ts'
 import { makeDepot, type Depot } from '../../../packages/cli/src/oculus/fixture.test-util.ts'
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/oculus/views.ts'
-import { liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
+import { ROLES as CLI_ROLES } from '../../../packages/cli/src/run/schema.ts'
+import { AGENT_ROLES, ROLES, liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
 
 const NOW = new Date('2026-10-22T03:00:00.000Z')
 let d: Depot
@@ -55,6 +56,10 @@ describe('live schemas (DGS-599)', () => {
     expect(liveViewSchema.parse(v).agents[0]).toMatchObject({ pane: 'w2:p5', role: 'builder', status: 'working' })
     expect(JSON.stringify(v)).not.toContain('secret')
     expect(liveViewSchema.parse(liveView(d.env, NOW, () => ({ ok: false }))).herdr).toBe('unreachable')
+  })
+  it('the agent roles and the run roles are the one DGS-598 role set', () => {
+    expect([...AGENT_ROLES].sort()).toEqual([...CLI_ROLES].sort())
+    expect([...ROLES].sort()).toEqual([...CLI_ROLES].sort())
   })
   it('liveSchema parses connected and disconnected answers and rejects an extra agent field', () => {
     expect(liveSchema.parse({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'connected', asOf: '2026-10-22T03:00:00.000Z' }, agents: [agent] })).toBeTruthy()

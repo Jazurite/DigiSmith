@@ -15,7 +15,7 @@ const where = (a: LiveAgent): string => [a.workspace, a.tab?.split(':')[1]].filt
     <tr v-for="a in agents" :key="a.pane">
       <td data-label="Agent" class="mono"><template v-if="a.name">{{ a.name }}</template><template v-else><span class="muted">unnamed</span> {{ a.pane }}</template></td>
       <td data-label="Role">{{ a.role }}</td>
-      <td data-label="Project">{{ a.project ?? '-' }}</td>
+      <td data-label="Project"><NuxtLink v-if="a.project" :to="`/runs/?project=${encodeURIComponent(a.project)}`">{{ a.project }}</NuxtLink><template v-else>-</template></td>
       <td data-label="Status"><OcAgentStatus :status="a.status" :disconnected="disconnected" /></td>
       <td data-label="Where" class="mono">{{ where(a) }}</td>
       <td data-label="Run" class="mono"><NuxtLink v-if="a.run" :to="`/run/?id=${encodeURIComponent(a.run)}`">{{ a.run }}</NuxtLink><template v-else>-</template></td>

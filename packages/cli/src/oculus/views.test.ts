@@ -236,7 +236,7 @@ describe("plan", () => {
 });
 
 describe("DGS-598", () => {
-  const autoRun = (folder: string, run: string, ticket: string | null, role: "maestro" | "builder", project: string): void => {
+  const autoRun = (folder: string, run: string, ticket: string | null, role: "maestro" | "conductor" | "builder", project: string): void => {
     d.writeRun({ folder, ticket, run, role, created_at: "2026-10-22T00:00:00.000Z", project, source: "auto" });
     d.writeEvents(folder, run, [{ type: "started", ts: "2026-10-22T00:00:00.000Z", data: { source: "startup" } }]);
   };
@@ -257,6 +257,14 @@ describe("DGS-598", () => {
     autoRun("EMKT-1", "s-b2", "EMKT-1", "builder", "emma-theme");
     expect(runsView(d.env, NOW, { project: "DigiSmith", role: "maestro" }).runs.map((r) => r.run)).toEqual(["s-m1"]);
     expect(runsView(d.env, NOW, { project: "emma-theme", role: "builder" }).runs.map((r) => r.run)).toEqual(["s-b2"]);
+  });
+  it("the role filter takes conductor; every row has a project (Task 9)", () => {
+    autoRun("DigiSmith", "s-m1", null, "maestro", "DigiSmith");
+    autoRun("DigiSmith-c", "s-c1", null, "conductor", "DigiSmith");
+    autoRun("EMKT-1", "s-b2", "EMKT-1", "builder", "Emma");
+    expect(runsView(d.env, NOW, { role: "conductor" }).runs.map((r) => r.run)).toEqual(["s-c1"]);
+    expect(runsView(d.env, NOW, { project: "Emma" }).runs.map((r) => r.run)).toEqual(["s-b2"]);
+    for (const r of runsView(d.env, NOW, {}).runs) expect(r).toHaveProperty("project");
   });
   it("overview and runs skip runs idle for more than 7 days", () => {
     autoRun("DigiSmith", "s-old", null, "maestro", "DigiSmith");

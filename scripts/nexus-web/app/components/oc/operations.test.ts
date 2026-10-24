@@ -36,6 +36,14 @@ describe('WorkersTable', () => {
     expect(rows[0]).toContain('0:50:00')   // 02:10 to 03:00
     expect(rows[1]).toContain('0:10:00')
   })
+  it('a maestro or conductor row shows "-" in place of the health dot (Task 9)', async () => {
+    const [run] = overviewFixture().workers
+    const workers = [run!, { ...run!, run: 'c-1', ticket: null, role: 'conductor' as const }, { ...run!, run: 'm-1', ticket: null, role: 'maestro' as const }]
+    const w = await mountSuspended(WorkersTable, { props: { workers, nowMs: NOW } })
+    const health = w.findAll('td[data-label="Health"]')
+    expect(health[0]!.find('.st').exists()).toBe(true)
+    for (const h of health.slice(1)) { expect(h.find('.st').exists()).toBe(false); expect(h.text()).toBe('-') }
+  })
   it('says so when no worker runs', async () => {
     const w = await mountSuspended(WorkersTable, { props: { workers: [], nowMs: NOW } })
     expect(w.text()).toContain('No worker is running.')
