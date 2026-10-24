@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "ticket": "DGS-601",
+  "generated_at": "2026-10-24T12:00:42.442Z",
+  "reader_versions": {
+    "claude-code": "1"
+  },
+  "steps": {
+    "other": {
+      "claude-opus-5-5": {
+        "input": 74,
+        "output": 31151,
+        "cache_read": 4105398,
+        "cache_write_5m": 0,
+        "cache_write_1h": 210377,
+        "responses": 37
+      },
+      "claude-sonnet-5-5": {
+        "input": 74,
+        "output": 21702,
+        "cache_read": 1830405,
+        "cache_write_5m": 0,
+        "cache_write_1h": 291022,
+        "responses": 37
+      }
+    },
+    "implementation": {
+      "claude-opus-5-5": {
+        "input": 170,
+        "output": 34055,
+        "cache_read": 9617612,
+        "cache_write_5m": 0,
+        "cache_write_1h": 113916,
+        "responses": 75
+      },
+      "claude-haiku-5-5": {
+        "input": 228,
+        "output": 58259,
+        "cache_read": 5215226,
+        "cache_write_5m": 350116,
+        "cache_write_1h": 0,
+        "responses": 114
+      },
+      "claude-sonnet-5-5": {
+        "input": 44,
+        "output": 13947,
+        "cache_read": 1196269,
+        "cache_write_5m": 83593,
+        "cache_write_1h": 0,
+        "responses": 22
+      }
+    }
+  },
+  "tasks": {
+    "1": {
+      "claude-opus-5-5": {
+        "input": 18,
+        "output": 3530,
+        "cache_read": 861607,
+        "cache_write_5m": 0,
+        "cache_write_1h": 8650,
+        "responses": 8
+      },
+      "claude-haiku-5-5": {
+        "input": 24,
+        "output": 6735,
+        "cache_read": 480638,
+        "cache_write_5m": 50428,
+        "cache_write_1h": 0,
+        "responses": 12
+      }
+    },
+    "2": {
+      "claude-opus-5-5": {
+        "input": 14,
+        "output": 2758,
+        "cache_read": 681980,
+        "cache_write_5m": 0,
+        "cache_write_1h": 4486,
+        "responses": 6
+      },
+      "claude-haiku-5-5": {
+        "input": 28,
+        "output": 8655,
+        "cache_read": 670655,
+        "cache_write_5m": 38771,
+        "cache_write_1h": 0,
+        "responses": 14
+      }
+    },
+    "3": {
+      "claude-opus-5-5": {
+        "input": 14,
+        "output": 3250,
+        "cache_read": 711123,
+        "cache_write_5m": 0,
+        "cache_write_1h": 4392,
+        "responses": 6
+      },
+      "claude-haiku-5-5": {
+        "input": 34,
+        "output": 8347,
+        "cache_read": 833345,
+        "cache_write_5m": 39863,
+        "cache_write_1h": 0,
+        "responses": 17
+      }
+    },
+    "4": {
+      "claude-haiku-5-5": {
+        "input": 48,
+        "output": 10035,
+        "cache_read": 1142862,
+        "cache_write_5m": 42508,
+        "cache_write_1h": 0,
+        "responses": 24
+      },
+      "claude-opus-5-5": {
+        "input": 12,
+        "output": 2546,
+        "cache_read": 616368,
+        "cache_write_5m": 0,
+        "cache_write_1h": 4046,
+        "responses": 5
+      }
+    },
+    "5": {
+      "claude-opus-5-5": {
+        "input": 12,
+        "output": 2592,
+        "cache_read": 638679,
+        "cache_write_5m": 0,
+        "cache_write_1h": 4244,
+        "responses": 5
+      },
+      "claude-sonnet-5-5": {
+        "input": 10,
+        "output": 1906,
+        "cache_read": 192464,
+        "cache_write_5m": 29289,
+        "cache_write_1h": 0,
+        "responses": 5
+      }
+    },
+    "6": {
+      "claude-haiku-5-5": {
+        "input": 22,
+        "output": 6248,
+        "cache_read": 523278,
+        "cache_write_5m": 60868,
+        "cache_write_1h": 0,
+        "responses": 11
+      },
+      "claude-opus-5-5": {
+        "input": 12,
+        "output": 2180,
+        "cache_read": 661738,
+        "cache_write_5m": 0,
+        "cache_write_1h": 4266,
+        "responses": 5
+      }
+    },
+    "7": {
+      "claude-haiku-5-5": {
+        "input": 20,
+        "output": 4798,
+        "cache_read": 413371,
+        "cache_write_5m": 30719,
+        "cache_write_1h": 0,
+        "responses": 10
+      },
+      "claude-opus-5-5": {
+        "input": 12,
+        "output": 2489,
+        "cache_read": 683087,
+        "cache_write_5m": 0,
+        "cache_write_1h": 3931,
+        "responses": 5
+      }
+    },
+    "8": {
+      "claude-haiku-5-5": {
+        "input": 34,
+        "output": 9900,
+        "cache_read": 804349,
+        "cache_write_5m": 38740,
+        "cache_write_1h": 0,
+        "responses": 17
+      },
+      "claude-opus-5-5": {
+        "input": 24,
+        "output": 4056,
+        "cache_read": 1579020,
+        "cache_write_5m": 0,
+        "cache_write_1h": 9053,
+        "responses": 11
+      }
+    },
+    "final": {
+      "claude-opus-5-5": {
+        "input": 30,
+        "output": 6446,
+        "cache_read": 2098229,
+        "cache_write_5m": 0,
+        "cache_write_1h": 17519,
+        "responses": 13
+      },
+      "claude-sonnet-5-5": {
+        "input": 34,
+        "output": 12041,
+        "cache_read": 1003805,
+        "cache_write_5m": 54304,
+        "cache_write_1h": 0,
+        "responses": 17
+      },
+      "claude-haiku-5-5": {
+        "input": 18,
+        "output": 3541,
+        "cache_read": 346728,
+        "cache_write_5m": 48219,
+        "cache_write_1h": 0,
+        "responses": 9
+      }
+    }
+  },
+  "sessions": [
+    {
+      "session_id": "4243392c-a99a-4be7-a327-280ce07f4cea",
+      "role": "worker",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "09e5b858-79a0-456a-8913-61758fdecb96",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "64244bb1-8271-45e8-ac64-b63016999a0d",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "66666786-073e-4790-ac47-19023e633251",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "156dd37c-652d-4cc2-bbb4-03ad52c6f338",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "6f47db15-b087-412e-97b3-4b9b30d28356",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "1218e0c0-8ef5-4c05-89de-51cc173a44e9",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "07e78c15-c59a-4826-a47d-ba9383c72155",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "c4c32f14-c5b5-4868-8cd6-0a72334ea029",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "a16629d2-d404-4991-a84c-e54970e1a567",
+      "role": "reviewer",
+      "attribution": "registry"
+    },
+    {
+      "session_id": "e7f843ac-ccdc-4386-a422-31113c5b3817",
+      "role": "reviewer",
+      "attribution": "registry"
+    }
+  ],
+  "unattributed": {}
+}
