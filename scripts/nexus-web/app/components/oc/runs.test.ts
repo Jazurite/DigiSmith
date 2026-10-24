@@ -170,7 +170,11 @@ describe('TokensCard (DGS-590)', () => {
     const w = await mountSuspended(TokensCard, { props: { tokens: t, asOf: t.generatedAt } })
     expect(w.text()).toContain('Tokens and cost')
     expect(w.findAll('tbody tr')).toHaveLength(t.models.length + 1)
-    expect(w.findAll('tbody tr').at(-1)!.text()).toContain('Total')
+    const total = w.findAll('tbody tr').at(-1)!
+    expect(total.find('th[scope="row"]').text()).toBe('Total')
+    expect(total.find('th').attributes('role')).toBe('rowheader')
+    expect(total.find('[aria-hidden]').exists()).toBe(false)
+    expect(total.find('th').attributes('data-label')).toBeUndefined()
     expect(w.findAll('thead th').every((h) => h.attributes('scope') === 'col')).toBe(true)
     expect(w.findAll('thead th').map((h) => h.text())).toEqual(['Model', 'Input', 'Output', 'Cache read', 'Cache write 5m', 'Cache write 1h', 'Tokens', 'Cost'])
     expect(w.text()).toContain('Anthropic price table 2026-10-18')

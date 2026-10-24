@@ -34,17 +34,21 @@ export function fmtMinutes(min: number): string {
   const m = Number.isFinite(min) ? Math.max(0, Math.floor(min)) : 0
   return `${Math.floor(m / 60)}:${pad(m % 60)}`
 }
-// 950, 12.3k, 1.2M, 3.40B: one decimal under 100 of a unit, none above; B keeps two decimals
+// 950, 12.3k, 1.2M, 3.40B: one decimal under 100 of a unit, none above; B keeps two decimals.
+// The value is rounded first and the unit chosen after, so 999_950 is 1.0M and never 1000k.
 export function fmtTokens(n: number): string {
   if (n < 1000) return String(n)
-  const units: [number, string][] = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']]
-  for (const [size, unit] of units) {
-    if (n >= size) {
-      const v = n / size
-      return unit === 'B' ? `${v.toFixed(2)}B` : `${v < 100 ? v.toFixed(1) : Math.round(v)}${unit}`
-    }
+  const units: [number, string][] = [[1e3, 'k'], [1e6, 'M'], [1e9, 'B']]
+  let i = 0
+  while (i < units.length - 1 && n >= units[i + 1]![0]) i++
+  for (;;) {
+    const [size, unit] = units[i]!
+    const v = n / size
+    if (unit === 'B') return `${v.toFixed(2)}B`
+    const r = v < 100 ? Math.round(v * 10) / 10 : Math.round(v)
+    if (r >= 1000) { i++; continue }   // rounds up to the next unit
+    return `${r < 100 && v < 100 ? v.toFixed(1) : Math.round(v)}${unit}`
   }
-  return String(n)
 }
 const usdFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 export function fmtUsd(n: number | null): string {

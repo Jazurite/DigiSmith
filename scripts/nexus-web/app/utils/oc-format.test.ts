@@ -30,6 +30,9 @@ describe('oc-format', () => {
   it('formats tokens compactly', () => {
     expect([950, 12_300, 1_234_567, 3_400_000_000].map(fmtTokens)).toEqual(['950', '12.3k', '1.2M', '3.40B'])
   })
+  it('rounds before it picks the unit at a boundary', () => {
+    expect([99_960, 999_950, 999_999_999].map(fmtTokens)).toEqual(['100k', '1.0M', '1.00B'])
+  })
   it('formats dollars, null as -', () => {
     expect([null, 0.004, 3.411, 1204.5].map(fmtUsd)).toEqual(['-', '<$0.01', '$3.41', '$1,204.50'])
   })

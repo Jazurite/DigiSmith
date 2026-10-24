@@ -11,7 +11,7 @@ const tokenModels: RunTokens['models'] = [
 export function tokensFixture(over: Partial<RunTokens> = {}): RunTokens {
   return {
     generatedAt: '2026-10-22T03:40:00.000Z', final: false, priceVersion: '2026-10-18', models: tokenModels,
-    total: { tokens: 1_210_200, responses: 62, costUsd: 3.411 }, unpriced: [],
+    total: { tokens: 1_210_200, responses: 62, costUsd: 3.415 }, unpriced: [],
     ...over,
   }
 }

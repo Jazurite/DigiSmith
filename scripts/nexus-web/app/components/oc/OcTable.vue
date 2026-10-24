@@ -7,7 +7,7 @@ defineProps<{ caption?: string; dense?: boolean }>()
 const table = ref<HTMLElement | null>(null)
 const ROLES: Record<string, string> = { TR: 'row', TD: 'cell', TH: 'columnheader' }
 function applyRoles(): void {
-  table.value?.querySelectorAll('tr, td, th').forEach((el) => { const r = ROLES[el.tagName]; if (r && el.getAttribute('role') !== r) el.setAttribute('role', r) })
+  table.value?.querySelectorAll('tr, td, th').forEach((el) => { const r = el.tagName === 'TH' && el.getAttribute('scope') === 'row' ? 'rowheader' : ROLES[el.tagName]; if (r && el.getAttribute('role') !== r) el.setAttribute('role', r) })
 }
 onMounted(applyRoles)
 onUpdated(applyRoles)

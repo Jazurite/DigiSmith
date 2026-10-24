@@ -20,8 +20,8 @@ const heads = ['Input', 'Output', 'Cache read', 'Cache write 5m', 'Cache write 1
           <td data-label="Cost" class="num" :class="{ muted: m.costUsd === null }" :title="m.costUsd === null ? 'unpriced model' : `list price $${m.costUsd.toFixed(4)}`">{{ fmtUsd(m.costUsd) }}</td>
         </tr>
         <tr class="total">
-          <td data-label="Model"><b>Total</b></td>
-          <td v-for="(c, i) in cols.slice(0, -1)" :key="c" class="num muted" :data-label="heads[i]" aria-hidden="true" />
+          <th scope="row">Total</th>
+          <td :colspan="cols.length - 1" class="gap" />
           <td data-label="Tokens" class="num" :title="String(tokens.total.tokens)"><b>{{ fmtTokens(tokens.total.tokens) }}</b></td>
           <td data-label="Cost" class="num" :class="{ muted: tokens.total.costUsd === null }" :title="tokens.total.costUsd === null ? `unpriced model: ${tokens.unpriced.join(', ')}` : undefined"><b>{{ fmtUsd(tokens.total.costUsd) }}</b></td>
         </tr>
@@ -34,7 +34,11 @@ const heads = ['Input', 'Output', 'Cache read', 'Cache write 5m', 'Cache write 1
 </template>
 
 <style scoped lang="scss">
-.total td { border-top: 1px solid var(--oc-strong); }
-// the empty cells of the Total row would print bare labels in the phone row cards
-@media (max-width: 760px) { .total td[aria-hidden='true'] { display: none; } }
+.total td, .total th { border-top: 1px solid var(--oc-strong); }
+.total th { text-align: left; font-weight: 700; color: var(--oc-text); background: none; text-transform: none; letter-spacing: 0; font: 700 11px/16px var(--oc-mono); padding: 5px 14px; }
+// the gap cell only spans the empty columns on a desktop table
+@media (max-width: 760px) {
+  .total th { display: block; padding: 4px 14px; }
+  .total td.gap { display: none; }
+}
 </style>
