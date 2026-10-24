@@ -14,7 +14,7 @@
           },
           {
             "type": "command",
-            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" started"
+            "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" started"
           }
         ]
       }
@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" blocked"
+            "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" blocked"
           }
         ]
       }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" tool"
+            "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" tool"
           }
         ]
       }
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" turn_end"
+            "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" turn_end"
           }
         ]
       }
@@ -69,7 +69,7 @@
           },
           {
             "type": "command",
-            "command": "[ -z \"$DIGISMITH_RUN_ID\" ] || node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" ended"
+            "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" ended"
           }
         ]
       }

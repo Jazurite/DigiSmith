@@ -1,11 +1,13 @@
 # Nightwatch run record
 
-Every worker run (Builder, Reviewer, Scout) gets two files in the depot. Later Nightwatch tickets read these two files and nothing else.
+Every Claude Code session with the DigiSmith plugin is a run (DGS-598): a run that `dg run start` makes (Builder, Reviewer, Scout, sent by the conductor) or an automatic run that the SessionStart hook makes. Oculus and later tickets read these files and nothing else.
 
 ## Files
 
 The root is `$DIGISMITH_DEPOT_DIR` when set, else `~/.digismith-depot`.
-A run lives in `<root>/runs/<KEY>/<run-id>/`.
+A run lives in `<root>/runs/<ticket or project>/<run-id>/`. The folder is the ticket key when the branch names one (`<KEY>__…`) at the start, else the project (the main repo folder name, made safe). It never changes.
+`runs/.index/` holds `sessions/<session_id>` and `pids/<claude pid>` (one line: `<folder>/<run-id>`, plus the session for a pid) and `node-cache/` (the hooks' compile cache). Readers skip names that start with `.`.
+An automatic run id is `s-<session_id>` of the session that started it.
 It holds `run.json` and `events.jsonl`.
 Two helper files may sit beside them: `seq` (the counter) and `lock/` (the lock directory).
 A run id looks like `builder-20261021T133005-a1b2c3`: role, UTC time, 6 hex digits.
@@ -16,9 +18,19 @@ Hook errors go to `<root>/runs/hook-errors.log`, which stops growing at 256 KB.
 ## run.json
 
 `dg run start` writes it once, at dispatch. Nothing edits it later.
-Fields: `schema` (`nightwatch-run/v1`), `run`, `ticket`, `role` (builder, reviewer, scout, other), `order`, `seat`, `model`, `plugin_version`, `base_sha`, `branch`, `worktree`, `herdr` (`workspace`, `tab`, `pane`), `budget` (optional), `created_at`.
+Fields: `schema` (`nightwatch-run/v1`), `run`, `ticket`, `role` (builder, reviewer, scout, maestro, conductor, other), `order`, `seat`, `model`, `plugin_version`, `base_sha`, `branch`, `worktree`, `herdr` (`workspace`, `tab`, `pane`), `budget` (optional), `created_at`, `source` (`auto` or `start`), `project`, `session_id`, `role_from` (`herdr`, `identity`, `pending`, `none`, `start`).
+`ticket` is `null` for an automatic run without a ticket. A missing field in an old record reads as `start`/`null`.
+The herdr labeller rewrites an automatic run's `run.json` once (role, role_from, ticket) through a temp file and a rename.
 A fact that is not known is `null`, so the field set is always the same.
 `created_at` is the dispatch time. Later facts go into events.
+
+## Automatic runs
+
+SessionStart without DIGISMITH_RUN_ID: a known session_id (resume, compact) appends `started` to its run. A `/clear` (source clear) continues the run of the same claude process (`CLAUDE_PID`) when that run is open or ended with reason `clear`. Otherwise a new run is made.
+The role comes from `roleOf` in `role.ts`, the only role rule (DGS-599 imports it): outside herdr, one identity card for the repo root gives `maestro`, else `other`. Inside herdr the hook writes `other`/`pending` and starts `label-cli.ts` detached; the labeller reads this pane's agent name through `herdr-ws agent list` (3 s timeout) and applies the name table: `*-conductor` conductor, `*-rev*` reviewer, `*scout*`/`*probe*` scout, `<lower-case ticket key>` builder, else other.
+The other hooks find an automatic run through `runs/.index/sessions/<session_id>`. No entry: nothing is written.
+An explicit DIGISMITH_RUN_ID always wins.
+Two env overrides exist for tests: `NIGHTWATCH_HERDR_WS` (path of the herdr-ws program) and `NIGHTWATCH_LABEL_NODE` (node path for the labeller spawn).
 
 ## Events
 
@@ -51,7 +63,7 @@ If the counter file is missing, the writer counts the lines of `events.jsonl` in
 
 Every hook event carries the `session_id` of the session that fired it (an id or null), so an `ended` from a child `claude -p` session that inherits `DIGISMITH_RUN_ID` can be told apart.
 
-Each command tests `DIGISMITH_RUN_ID` in the shell first. With no id, no node process starts.
+Each command starts node only when `DIGISMITH_RUN_ID` is set or the depot folder exists, and sets `NODE_COMPILE_CACHE` to `runs/.index/node-cache`. A machine without the depot starts no node process. Each hook stays under 100 ms (`scripts/run-events/hook-timing.test.ts`).
 The script also writes nothing when the run directory has no `run.json`.
 A hook always exits 0 and prints nothing.
 A hook never writes message text, prompts, tool inputs or tool outputs.

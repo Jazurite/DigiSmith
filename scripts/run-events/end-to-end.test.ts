@@ -48,9 +48,27 @@ describe("a worker run, start to end", () => {
     expect(lines[3].data).toEqual({ kind: "permission_prompt", session_id: null });
   });
 
-  it("a session without DIGISMITH_RUN_ID writes nothing", () => {
+  it("a session without DIGISMITH_RUN_ID is an automatic run: started, tools, /clear, resume, end", () => {
+    const env = { ...base(), CLAUDE_PID: "31337" };
+    const cwd = path.join(tmp, "Proj");
+    fs.mkdirSync(cwd);
+    fire("SessionStart", env, { session_id: "e1", source: "startup", cwd });
+    fire("PostToolUse", env, { session_id: "e1", tool_name: "Read", tool_response: {} });
+    fire("SessionEnd", env, { session_id: "e1", reason: "clear" });
+    fire("SessionStart", env, { session_id: "e2", source: "clear", cwd });
+    fire("Stop", env, { session_id: "e2" });
+    fire("SessionStart", env, { session_id: "e2", source: "resume", cwd });
+    fire("SessionEnd", env, { session_id: "e2", reason: "other" });
+    const lines = tailEvents("s-e1", 0, env)!;
+    expect(lines.map((e) => e.type)).toEqual(["started", "tool", "ended", "started", "turn_end", "started", "ended"]);
+    expect(showRun("s-e1", env)!.record).toMatchObject({ source: "auto", project: "Proj", role: "other" });
+    expect(showRun("s-e2", env)).toBeNull();
+  });
+  it("a session without a session_id writes nothing", () => {
     const env = base();
     for (const e of ["SessionStart", "PostToolUse", "Notification", "Stop", "SessionEnd"]) expect(fire(e, env, { source: "startup" }).status).toBe(0);
-    expect(fs.existsSync(path.join(tmp, "runs"))).toBe(false);
+    const runs = path.join(tmp, "runs");
+    const folders = fs.existsSync(runs) ? fs.readdirSync(runs).filter((n) => !n.startsWith(".")) : [];
+    expect(folders).toEqual([]); // only runs/.index (the compile cache) may exist
   });
 });

@@ -41,11 +41,12 @@ function sh(command: string, extra: NodeJS.ProcessEnv, input = "{}") {
 }
 
 describe("hooks.json", () => {
-  it("has the five nightwatch commands, each testing DIGISMITH_RUN_ID in the shell first", () => {
+  const GUARD = 'D="${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}"; [ -n "$DIGISMITH_RUN_ID" ] || [ -d "$D" ] || exit 0; NODE_COMPILE_CACHE="$D/runs/.index/node-cache" node --experimental-strip-types ';
+  it("has the five run commands, each with the depot guard and the compile cache", () => {
     for (const [event, kind] of Object.entries(EXPECTED)) {
       const c = commandFor(event);
-      expect(c.startsWith('[ -z "$DIGISMITH_RUN_ID" ] || node ')).toBe(true);
-      expect(c.endsWith(` ${kind}`)).toBe(true);
+      expect(c.startsWith(GUARD)).toBe(true);
+      expect(c.endsWith(`/scripts/run-events/hook-cli.ts" ${kind}`)).toBe(true);
     }
   });
   it("keeps the existing session-cards and session-init commands", () => {
@@ -54,13 +55,23 @@ describe("hooks.json", () => {
       expect(all.some((c) => c.includes(needle))).toBe(true);
     }
   });
-  it("starts no node process when DIGISMITH_RUN_ID is unset or empty, and exits 0", () => {
+  it("starts no node process when DIGISMITH_RUN_ID is unset and there is no depot folder, and exits 0", () => {
     for (const event of Object.keys(EXPECTED)) {
       expect(sh(commandFor(event), {}).status).toBe(0);
       expect(sh(commandFor(event), { DIGISMITH_RUN_ID: "" }).status).toBe(0);
     }
     expect(fs.existsSync(shimLog)).toBe(false);
     expect(fs.existsSync(path.join(tmp, "depot"))).toBe(false);
+  });
+  it("records a session without DIGISMITH_RUN_ID when the depot exists", () => {
+    const depot = path.join(tmp, "depot");
+    fs.mkdirSync(depot);
+    const r = sh(commandFor("SessionStart"), {}, JSON.stringify({ session_id: "auto-1", source: "startup", cwd: tmp }));
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe("");
+    const dir = findRunDir("s-auto-1", { DIGISMITH_DEPOT_DIR: depot })!;
+    expect(readEvents(dir).map((e) => e.type)).toEqual(["started"]);
+    expect(fs.existsSync(path.join(depot, "runs", ".index", "node-cache"))).toBe(true);
   });
   it("writes the event for each command when the run id is set", () => {
     const env = { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") };
