@@ -60,5 +60,8 @@ export function costFromPricing(pricing: PricingEntry, usage: TokenUsage): numbe
 const DATE_SUFFIX = /-\d{8}$/;
 
 export function resolveAnthropicPrice(model: string): PricingEntry | undefined {
-  return anthropicPricing[model] ?? anthropicPricing[model.replace(DATE_SUFFIX, "")];
+  for (const key of [model, model.replace(DATE_SUFFIX, "")]) {
+    if (Object.hasOwn(anthropicPricing, key)) return anthropicPricing[key];
+  }
+  return undefined;
 }

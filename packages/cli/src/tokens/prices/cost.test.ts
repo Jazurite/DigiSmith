@@ -24,4 +24,9 @@ describe("anthropic prices in the CLI", () => {
     expect(resolveAnthropicPrice("claude-opus-5-9")).toBeUndefined();
     expect(resolveAnthropicPrice("<synthetic>")).toBeUndefined();
   });
+  it("ignores inherited object keys", () => {
+    expect(resolveAnthropicPrice("constructor")).toBeUndefined();
+    expect(resolveAnthropicPrice("__proto__")).toBeUndefined();
+    expect(resolveAnthropicPrice("toString")).toBeUndefined();
+  });
 });
