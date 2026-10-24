@@ -1,7 +1,9 @@
 import type { CommandModule } from "yargs";
 import { isSafe } from "../run/paths.ts";
+import { liveView, realHerdr, type HerdrCall } from "./live.ts";
 import { attentionView, eventsView, overviewView, planView, runsView, runView, VIEW_NAMES } from "./views.ts";
 
+export interface OculusDeps { herdr?: HerdrCall }
 export interface Result { code: number; out: string; err: string }
 const ok = (v: unknown): Result => ({ code: 0, out: `${JSON.stringify(v)}\n`, err: "" });
 const fail = (err: string): Result => ({ code: 1, out: "", err: `${err}\n` });
@@ -30,7 +32,7 @@ function num(f: Record<string, string>, flag: string): number | undefined {
 }
 
 /** Pure entry for the tests: argv after "oculus". Reads only; never writes. */
-export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date): Result {
+export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date, deps: OculusDeps = {}): Result {
   if (argv[0] !== "view") return fail("usage: oculus view <name>");
   const name = argv[1];
   const f = flags(argv.slice(2));
@@ -39,6 +41,10 @@ export function runOculus(argv: string[], env: NodeJS.ProcessEnv, now: Date): Re
   for (const k of ["run", "ticket", "project"]) if (f[k] !== undefined && !isSafe(f[k])) return fail("bad id");
   const since = num(f, "since"), before = num(f, "before"), tail = num(f, "tail"), limit = num(f, "limit");
   if ([since, before, tail, limit].some((n) => Number.isNaN(n))) return fail("bad number");
+  if (name === "live") {
+    if (Object.keys(f).length > 0) return fail("live takes no flag");
+    return ok(liveView(env, now, deps.herdr ?? realHerdr()));
+  }
   switch (name) {
     case "overview": return ok(overviewView(env, now));
     case "attention": return ok(attentionView(env, now));

@@ -19,7 +19,7 @@ import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { groupsOf, ledgerTasks, parsePlanTasks, phaseTable, pipelineOf, runRowOf, scalarData, triggerOf } from "./derive.ts";
 import type { EventRowView, RunRowView } from "./types.ts";
 
-export const VIEW_NAMES = ["overview", "attention", "runs", "run", "events", "plan"] as const;
+export const VIEW_NAMES = ["overview", "attention", "runs", "run", "events", "plan", "live"] as const;
 const DAY_MS = 24 * 3600_000;
 const ORDER_MAX = 64 * 1024;
 
