@@ -41,7 +41,7 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
 </template>
 
 <style scoped lang="scss">
-.bar { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 10px 24px; border-bottom: 1px solid var(--nw-border); font: 11px/14px var(--nw-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--nw-text-2); }
+.bar { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 10px max(24px, env(safe-area-inset-right)) 10px max(24px, env(safe-area-inset-left)); border-bottom: 1px solid var(--nw-border); font: 11px/14px var(--nw-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--nw-text-2); }
 b { color: var(--nw-text); font-weight: 600; }
 .sp { flex: 1; }
 .muted { color: var(--nw-text-3); }
@@ -50,5 +50,5 @@ b { color: var(--nw-text); font-weight: 600; }
 .dot.warn { background: var(--nw-warn); }
 .dot.bad { background: var(--nw-bad); }
 .dot.hollow { background: transparent; box-shadow: inset 0 0 0 1.5px var(--nw-neutral); }
-@media (max-width: 760px) { .bar { padding: 10px 16px; } }
+@media (max-width: 760px) { .bar { padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); } }
 </style>

@@ -20,7 +20,8 @@ const LINKS = [
 </template>
 
 <style scoped lang="scss">
-.nw-nav { background: var(--nw-sidebar); border-right: 1px solid var(--nw-border); padding: 16px 10px; }
+// DGS-599: 16 px nav padding + the 8 px inner padding of the brand, the label and the links = the 24 px page gutter. env() is 0 without an inset.
+.nw-nav { background: var(--nw-sidebar); border-right: 1px solid var(--nw-border); padding: 16px 10px; padding-inline-start: max(16px, env(safe-area-inset-left)); }
 .brand { font-weight: 600; font-size: 14px; line-height: 16px; padding: 0 8px 16px; }
 h2 { font: 600 11px/14px var(--nw-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--nw-text-3); margin: 16px 8px 6px; }
 .link { display: flex; justify-content: space-between; align-items: center; min-height: 32px; padding: 8px; border-radius: var(--nw-radius-sm); color: var(--nw-text-2); text-decoration: none; }
@@ -29,7 +30,7 @@ h2 { font: 600 11px/14px var(--nw-mono); letter-spacing: 0.08em; text-transform:
 .link:focus-visible { outline: 2px solid var(--nw-primary); outline-offset: 1px; }
 .badge { font-family: var(--nw-mono); color: var(--nw-bad); }
 @media (max-width: 760px) {
-  .nw-nav { display: flex; overflow-x: auto; padding: 6px; border-right: 0; border-bottom: 1px solid var(--nw-border); }
+  .nw-nav { display: flex; overflow-x: auto; padding: 6px max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left)); border-right: 0; border-bottom: 1px solid var(--nw-border); }
   .brand, h2 { display: none; }
   .link { white-space: nowrap; gap: 8px; }
 }

@@ -307,7 +307,8 @@ pazurite.com {
 <h3>Cause (to confirm in the first task)</h3>
 <ul>
   <li>The side bar has only 18 px of left inset, the smallest on the page, and no safe-area inset. In Safari with the window against a rounded screen corner, a notch, or a landscape phone, the edge eats into those 18 px, so the text looks like it touches the edge.</li>
-  <li>The first task reproduces Jack's view in WebKit (Playwright WebKit at his window size; landscape iPhone for the safe area) before the fix. If the cause is different, the task says so and fixes that cause; the target below stays the same.</li>
+  <li>The first task reproduces Jack's view in Chromium (Chrome at 110% browser zoom, window about 1860 px wide, plus 1440, 1024 and 390 px) before the fix. If the cause is different, the task says so and fixes that cause; the target below stays the same.</li>
+  <li>The WebKit landscape baseline is dropped (WebKit cannot run in the build sandbox); the repro and the baselines use Chromium, including Jack's view at 110% zoom, about 1860 px wide. Spec change approved by the Maestro, 2026-10-24.</li>
 </ul>
 <h3>Fix</h3>
 <ul>
@@ -342,7 +343,8 @@ pazurite.com {
   <li>Caddy: <code>scripts/caddy/test-config.mjs</code> (a throwaway Caddy on 127.0.0.1 high ports, as today) gains: <code>caddy validate</code> passes; <code>oculus.pazurite.com</code> serves a file from <code>DIGISMITH_OCULUS_WWW</code> and proxies <code>/api/*</code> without the Authorization header; <code>pazurite.com/</code> still serves the Life Calendar and <code>/api/*</code> as before; caddy-run fails closed without an Oculus root.</li>
   <li>Build: <code>build-www.test.ts</code> covers two sites and two symlinks. The built-page tests: the Oculus output has <code>index.html</code>, <code>attention/</code>, <code>runs/</code>, <code>run/</code>, <code>plan/</code> with "DigiSmith Oculus" titles and no Life Calendar; the Life output has no Oculus pages and no <code>nightwatch/</code> folder; Oculus calls only <code>/api/v1/oculus/…</code>, the Life site only <code>/api/v1/life-calendar</code>.</li>
   <li>Web, the same gates as DGS-586: Vitest, Storybook stories for each new component and state, visual baselines desktop and mobile (renamed to the new paths), Playwright on the stub server with the Oculus build at <code>/</code> (the agents section: states, filters, disconnected banner with grey dots, top-bar count and its link to <code>/#agents</code>), axe on every page, the live-region test. The Lighthouse configs use the Oculus root <code>/</code> and <code>/runs/</code> on the Oculus static server next to the Life root. Storybook stories cover the disconnected state (with and without a snapshot).</li>
-  <li>Side bar: a visual baseline of the side bar edge (desktop 1440 px, a narrow desktop window 1024 px, mobile 390 px, and WebKit landscape iPhone for the safe area), plus a Playwright check that the brand and the first nav label start at least 16 px from the left edge.</li>
+  <li>Side bar: a visual baseline of the side bar edge (desktop 1440 px, a narrow desktop window 1024 px, desktop at 110% zoom about 1860 px wide, and mobile 390 px), plus a Playwright check that the brand, the section label and the first nav label start 24 px from the left edge.</li>
+  <li>The WebKit landscape baseline is dropped (WebKit cannot run in the build sandbox); the repro and the baselines use Chromium, including Jack's view at 110% zoom, about 1860 px wide. Spec change approved by the Maestro, 2026-10-24.</li>
 </ul>
 </section>
 
