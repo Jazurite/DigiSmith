@@ -274,3 +274,25 @@ describe("DGS-598", () => {
     expect(overviewView(d.env, NOW).workers).toEqual([]);
   });
 });
+
+describe("tokens in the views (DGS-590)", () => {
+  const tokensFile = (generated: string) => ({
+    schema: "oculus-tokens/v1", run: "builder-1", generated_at: generated, final: false, price_table: { source: "anthropic", version: "2026-10-18" },
+    models: { "claude-opus-5-5": { input: 1, output: 2, cache_read: 3, cache_write_5m: 4, cache_write_1h: 5, responses: 1, tokens: 15, cost_usd: 0.5 } },
+    total: { tokens: 15, responses: 1, cost_usd: 0.5 }, unpriced_models: [], sessions: 1, buckets: [],
+  });
+  it("a depot with no token files has null burn, seats and row tokens", () => {
+    seedRun();
+    const o = overviewView(d.env, NOW);
+    expect(o.burn).toBeNull();
+    expect(o.seats).toBeNull();
+    expect(runsView(d.env, NOW, {}).runs[0]).toMatchObject({ tokens: null, tokensAsOf: null });
+    expect(runView(d.env, NOW, { run: "builder-1" })).toMatchObject({ tokens: null, tokensAsOf: null });
+  });
+  it("a fresh tokens.json shows on the row and the run view", () => {
+    seedRun();
+    writeFileSync(join(d.dir, "runs", "DGS-590", "builder-1", "tokens.json"), JSON.stringify(tokensFile("2026-10-22T02:55:00.000Z")));
+    expect(runsView(d.env, NOW, {}).runs[0].tokens).toEqual({ total: 15, costUsd: 0.5, unpriced: [] });
+    expect(runView(d.env, NOW, { run: "builder-1" })?.tokens?.models).toHaveLength(1);
+  });
+});

@@ -4,7 +4,7 @@ import { liveFixture } from '../../tests/oculus-fixtures'
 import { loadEvents, loadLive, loadOverview, loadRuns, OculusApiError } from './oculus-api'
 
 const json = (status: number, body: unknown) => async () => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
-const row = { run: 'b-1', ticket: 'DGS-1', role: 'builder', project: null, source: 'start', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: null, startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 0, events: 0, merged: false, pushed: false }
+const row = { run: 'b-1', ticket: 'DGS-1', role: 'builder', project: null, source: 'start', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: null, startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 0, events: 0, merged: false, pushed: false, tokens: null, tokensAsOf: null }
 
 describe('oculus-api', () => {
   it('requests the right URL with the query and parses the answer', async () => {

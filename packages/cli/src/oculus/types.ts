@@ -1,5 +1,6 @@
 // packages/cli/src/oculus/types.ts
 import type { Role } from "../run/schema.ts";
+import type { RowTokens } from "./tokens.ts";
 export type Health = "healthy" | "blocked" | "stalled" | "lost" | "ended";
 export type Trigger = "manual" | "night-scan" | "away" | "unknown";
 export type EventGroup = "agent" | "system" | "errors";
@@ -12,6 +13,7 @@ export interface RunRowView {
   project: string | null; source: "auto" | "start";
   seat: string | null; model: string | null; trigger: Trigger; state: Health; phase: RunPhase | null;
   startedAt: string; endedAt: string | null; elapsedSec: number; events: number; merged: boolean; pushed: boolean;
+  tokens: RowTokens | null; tokensAsOf: string | null;
 }
 export interface EventRowView { n: number; seq: number; ts: string; type: string; groups: EventGroup[]; data: Record<string, Scalar> }
 export interface PipelineStep { step: "claimed" | "worktree-ready" | "building" | "review" | "merged" | "pushed"; at: string | null; state: "done" | "current" | "waiting" | "lost" }

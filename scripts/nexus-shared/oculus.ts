@@ -13,6 +13,17 @@ export const TICKET_PHASES = ['claimed', 'building', 'review', 'merge-ready', 'm
 export const EVENT_GROUPS = ['all', 'agent', 'system', 'errors'] as const
 export const OCULUS_ERROR_CODES = ['bad_request', 'not_found', 'method_not_allowed', 'reader_unavailable', 'internal_invalid'] as const
 
+const usd = z.number().min(0)
+export const rowTokensSchema = z.strictObject({ total: count, costUsd: usd.nullable(), unpriced: z.array(z.string()) })
+export const runTokensSchema = z.strictObject({
+  generatedAt: iso, final: z.boolean(), priceVersion: z.string(),
+  models: z.array(z.strictObject({ model: z.string(), input: count, output: count, cacheRead: count, cacheWrite5m: count, cacheWrite1h: count, responses: count, tokens: count, costUsd: usd.nullable() })),
+  total: z.strictObject({ tokens: count, responses: count, costUsd: usd.nullable() }), unpriced: z.array(z.string()),
+})
+const seatWindow = z.strictObject({ usedPct: z.number().min(0).max(100), resetsAt: iso }).nullable()
+export const burnSchema = z.strictObject({ tokensPerH: count, usdPerH: usd.nullable(), asOf: iso })
+export const seatsSchema = z.strictObject({ asOf: iso, seats: z.array(z.strictObject({ seat: z.string(), readAt: iso, stale: z.boolean(), fiveHour: seatWindow, weekly: seatWindow })) })
+
 export const runRowSchema = z.strictObject({
   run: z.string(), ticket: z.string().nullable(), role: z.enum(ROLES),
   project: z.string().nullable(), source: z.enum(RUN_SOURCES),
@@ -21,6 +32,7 @@ export const runRowSchema = z.strictObject({
   phase: z.enum(RUN_PHASES).nullable(),
   startedAt: iso, endedAt: iso.nullable(), elapsedSec: count, events: count,
   merged: z.boolean(), pushed: z.boolean(),
+  tokens: rowTokensSchema.nullable(), tokensAsOf: iso.nullable(),
 })
 export type RunRow = z.infer<typeof runRowSchema>
 
@@ -42,6 +54,8 @@ export const overviewViewSchema = z.strictObject({
     rows: z.array(z.strictObject({ phase: z.enum(TICKET_PHASES), count, oldestSince: iso.nullable() })),
   }),
   lastEvents: z.array(z.strictObject({ ts: iso, source: z.string(), kind: z.string(), text: z.string() })),
+  burn: burnSchema.nullable(),
+  seats: seatsSchema.nullable(),
   scan: z.strictObject({
     lastScanAt: iso.nullable(), candidates: count.nullable(), away: z.boolean(),
     nightWindow: z.boolean(), breakerOpen: z.boolean(), breakerStreak: count,
@@ -75,6 +89,7 @@ export const runDetailSchema = z.strictObject({
   row: runRowSchema,
   pipeline: z.array(pipelineStepSchema),
   budget: z.strictObject({ phase: z.enum(RUN_PHASES).nullable(), limitMin: count.nullable(), elapsedMin: count.nullable(), building: count, review: count, merge: count }),
+  tokens: runTokensSchema.nullable(), tokensAsOf: iso.nullable(),
   record: z.record(z.string(), z.unknown()),
   order: z.strictObject({ available: z.boolean(), text: z.string() }),
 })

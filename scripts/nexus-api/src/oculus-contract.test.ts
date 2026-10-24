@@ -6,7 +6,8 @@ import { liveView } from '../../../packages/cli/src/oculus/live.ts'
 import { makeDepot, type Depot } from '../../../packages/cli/src/oculus/fixture.test-util.ts'
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/oculus/views.ts'
 import { ROLES as CLI_ROLES } from '../../../packages/cli/src/run/schema.ts'
-import { AGENT_ROLES, ROLES, liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { AGENT_ROLES, rowTokensSchema, runTokensSchema, ROLES, liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
 
 const NOW = new Date('2026-10-22T03:00:00.000Z')
 let d: Depot
@@ -45,6 +46,30 @@ describe('view output parses with the shared schemas', () => {
     expect(attentionSchema.parse(attentionView(d.env, NOW)).open).toHaveLength(1)
     expect(runDetailSchema.parse(runView(d.env, NOW, { run: 'builder-1' }))).toBeTruthy()
     expect(eventsSchema.parse(eventsView(d.env, { run: 'builder-1' })).lines).toHaveLength(2)
+  })
+})
+
+describe('token fields (DGS-590)', () => {
+  it('parse with values and with nulls, and refuse an extra key inside tokens', () => {
+    d.writeRun({ ticket: 'DGS-590', run: 'builder-1', role: 'builder', created_at: '2026-10-22T02:20:00.000Z', order: '/d/order-ao-1.md' })
+    const nulls = runDetailSchema.parse(runView(d.env, NOW, { run: 'builder-1' }))
+    expect(nulls.tokens).toBeNull()
+    expect(overviewViewSchema.parse(overviewView(d.env, NOW))).toMatchObject({ burn: null, seats: null })
+    const f = { schema: 'oculus-tokens/v1', run: 'builder-1', generated_at: '2026-10-22T02:55:00.000Z', final: false, price_table: { source: 'a', version: 'v1' },
+      models: { m: { input: 1, output: 2, cache_read: 3, cache_write_5m: 4, cache_write_1h: 5, responses: 1, tokens: 15, cost_usd: 0.5 } }, total: { tokens: 15, responses: 1, cost_usd: 0.5 }, unpriced_models: [], sessions: 1, buckets: [] }
+    writeFileSync(join(d.dir, 'runs', 'DGS-590', 'builder-1', 'tokens.json'), JSON.stringify(f))
+    mkdirSync(join(d.dir, 'runs', '.tokens'), { recursive: true })
+    writeFileSync(join(d.dir, 'runs', '.tokens', 'burn.json'), JSON.stringify({ schema: 'oculus-burn/v1', generated_at: '2026-10-22T02:50:00.000Z', window_min: 60, tokens: 100, cost_usd: 1.5, runs: 1, unpriced_models: [] }))
+    mkdirSync(join(d.dir, 'usage-probe'), { recursive: true })
+    writeFileSync(join(d.dir, 'usage-probe', 'seats.json'), JSON.stringify({ schema: 'oculus-seats/v1', generated_at: '2026-10-22T02:58:00.000Z', seats: [{ seat: 'jack', read_at: '2026-10-22T02:58:00.000Z', five_hour: { used_pct: 7, resets_at: '2026-10-22T05:00:00.000Z' }, weekly: null }] }))
+    const detail = runDetailSchema.parse(runView(d.env, NOW, { run: 'builder-1' }))
+    expect(detail.tokens?.total.tokens).toBe(15)
+    expect(runsSchema.parse(runsView(d.env, NOW, {})).runs[0].tokens?.total).toBe(15)
+    const o = overviewViewSchema.parse(overviewView(d.env, NOW))
+    expect(o.burn?.tokensPerH).toBe(100)
+    expect(o.seats?.seats[0].fiveHour?.usedPct).toBe(7)
+    expect(() => rowTokensSchema.parse({ total: 1, costUsd: null, unpriced: [], extra: 1 })).toThrow()
+    expect(() => runTokensSchema.parse({ ...detail.tokens, extra: 1 })).toThrow()
   })
 })
 

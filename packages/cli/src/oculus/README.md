@@ -12,3 +12,8 @@ Flags: `--run ID`, `--ticket KEY`, `--since N`, `--before N`, `--tail N`, `--gro
 - Read-only: the command never writes to the depot.
 - The Nexus API calls this command to serve the Oculus UI.
 - `live` lists every herdr agent (name, pane, tab, workspace, role, project, status, open run). It makes one herdr call with the fixed argv `--session default agent list` (3 s timeout) and keeps only allowed fields: no pane text, no terminal title, no folder path. It takes no flag. When herdr fails it still exits 0 with `herdr: "unreachable"` and no agents.
+- Token fields (DGS-590). The views only read the files that `dg tokens runs` writes; they never count.
+  - `runs` rows and `run` carry `tokens` (`{ total, costUsd, unpriced }` on a row; models, total and price version on `run`) and `tokensAsOf`. Source: `runs/<folder>/<run>/tokens.json`.
+  - `overview` carries `burn` (`tokensPerH`, `usdPerH`, `asOf`; source `runs/.tokens/burn.json`) and `seats` (per seat: `readAt`, `stale`, `fiveHour`, `weekly`; source `usage-probe/seats.json`).
+  - Freshness is 15 minutes. A run snapshot that is not final and older than that gives `tokens: null` and keeps `tokensAsOf` (the UI says "stale since"). A final snapshot never goes stale. A wrong schema or an unreadable file gives both null.
+  - `burn` is null when the file is missing, has the wrong schema or is older than 15 minutes. `seats` is null when the file is missing or older than 15 minutes. A seat is `stale` when its own reading is older than 15 minutes. A window whose `resetsAt` has passed is null.

@@ -57,6 +57,7 @@ export function runRowOf(run: RunRecord, events: EventLine[], trigger: Trigger, 
     run: run.run, ticket: run.ticket, role: run.role, project: run.project ?? null, source: run.source ?? "start", seat: run.seat, model: run.model, trigger, state,
     phase: p?.phase ?? null, startedAt, endedAt, elapsedSec: Math.max(0, Math.round((stop - ms(startedAt)) / 1000)),
     events: events.length, merged: events.some((e) => e.type === "merged"), pushed: events.some((e) => e.type === "pushed"),
+    tokens: null, tokensAsOf: null, // views.ts fills these from tokens.json
   };
 }
 

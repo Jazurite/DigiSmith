@@ -7,7 +7,7 @@ export function runFixture(over: Partial<RunRow> = {}): RunRow {
     run: 'builder-20261022T021000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: 'sonnet-5-5',
     trigger: 'night-scan', state: 'healthy', phase: 'building',
     startedAt: '2026-10-22T02:10:00.000Z', endedAt: null, elapsedSec: 2467, events: 382,
-    merged: false, pushed: false,
+    merged: false, pushed: false, tokens: null, tokensAsOf: null,
     ...over,
   }
 }
@@ -37,6 +37,7 @@ export function overviewFixture(over: Partial<Overview> = {}): Overview {
       { ts: '2026-10-22T03:40:02.000Z', source: 'watchdog', kind: 'attention', text: 'DGS-588 stalled review-over-60-min' },
       { ts: '2026-10-22T03:10:44.000Z', source: 'scan', kind: 'claim', text: 'DGS-590' },
     ],
+    burn: null, seats: null,
     scan: { lastScanAt: '2026-10-22T02:10:00.000Z', candidates: 5, away: true, nightWindow: true, breakerOpen: false, breakerStreak: 0 },
     nexus: { status: 'healthy', reasons: [] },
     ...over,
@@ -83,6 +84,7 @@ export function runDetailFixture(): RunDetail {
       { step: 'pushed', at: null, state: 'waiting' },
     ],
     budget: { phase: 'building', limitMin: 120, elapsedMin: 41, building: 41, review: 0, merge: 0 },
+    tokens: null, tokensAsOf: null,
     record: { branch: 'DGS-590__example-branch', seat: 'dev0' },
     order: { available: true, text: 'Build DGS-590 on the example branch.' },
   }

@@ -17,20 +17,21 @@ import { depotDir, findRunDir, isSafe } from "../run/paths.ts";
 import { readRun, type RunRecord } from "../run/record.ts";
 import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { groupsOf, ledgerTasks, parsePlanTasks, phaseTable, pipelineOf, runRowOf, scalarData, triggerOf } from "./derive.ts";
+import { readBurn, readRunTokens, readSeatsView, rowTokensOf } from "./tokens.ts";
 import type { EventRowView, RunRowView } from "./types.ts";
 
 export const VIEW_NAMES = ["overview", "attention", "runs", "run", "events", "plan", "live"] as const;
 const DAY_MS = 24 * 3600_000;
 const ORDER_MAX = 64 * 1024;
 
-interface Loaded { record: RunRecord; events: EventLine[] }
+interface Loaded { record: RunRecord; events: EventLine[]; dir: string }
 
 function loadAll(env: NodeJS.ProcessEnv, ticket?: string, days?: number, nowMs?: number): Loaded[] {
   const out: Loaded[] = [];
   for (const row of listRuns(env, ticket, days === undefined ? {} : { days, nowMs })) {
     const dir = findRunDir(row.record.run, env);
     if (dir === null) continue;
-    out.push({ record: row.record, events: readEvents(dir) });
+    out.push({ record: row.record, events: readEvents(dir), dir });
   }
   return out;
 }
@@ -71,7 +72,10 @@ function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView
   const away = readAway(adir);
   const budgets = readBudgets(depotCwd(env)).budgets;
   const claims = claimsOf(adir, loaded);
-  return loaded.map((l) => runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()));
+  return loaded.map((l) => {
+    const t = readRunTokens(l.dir, now.getTime());
+    return { ...runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()), tokens: rowTokensOf(t.value), tokensAsOf: t.asOf };
+  });
 }
 
 // Budgets come from config.yml in NIGHTWATCH_CONFIG_CWD when it is set, else in the depot folder (depotDir). The depot is not a checkout, so a missing file means defaults; the API sets no NIGHTWATCH_CONFIG_CWD.
@@ -100,6 +104,8 @@ export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
     attentionCount: open.length,
     tickets: { windowDays: 7, lockTicket: lock?.ticket ?? null, rows: phaseTable({ lock, releases, lostOpen: open.filter((i) => i.kind === "lost"), nowMs: now.getTime() }) },
     lastEvents,
+    burn: readBurn(env, now.getTime()),
+    seats: readSeatsView(env, now.getTime()),
     scan: {
       lastScanAt: lastScan?.ts ?? null,
       candidates: typeof lastScan?.candidates === "number" ? lastScan.candidates : null,
@@ -171,7 +177,8 @@ export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd
   if (dir === null) return null;
   let record: RunRecord;
   try { record = readRun(dir); } catch { return null; }
-  const loaded: Loaded = { record, events: readEvents(dir) };
+  const loaded: Loaded = { record, events: readEvents(dir), dir };
+  const tokens = readRunTokens(dir, now.getTime());
   const row = rowsOf(env, now, [loaded])[0];
   const adir = autonomousDir(env);
   const claim = readJournal(adir).find((l) => l.status === "planned" && l.key === `${record.ticket}:claimed:1:claim`);
@@ -187,6 +194,7 @@ export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd
       elapsedMin: since === null ? null : Math.max(0, Math.round((now.getTime() - Date.parse(since)) / 60_000)),
       building: budgets.building ?? DEFAULT_BUDGETS.building, review: budgets.review, merge: budgets.merge,
     },
+    tokens: tokens.value, tokensAsOf: tokens.asOf,
     record: record as unknown as Record<string, unknown>,
     order: readOrder(env, record.order),
   };

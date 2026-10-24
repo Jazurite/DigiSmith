@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { eventRowSchema, oculusErrorSchema, overviewSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
 
-const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false }
+const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false, tokens: null, tokensAsOf: null }
 
 describe('oculus schemas', () => {
   it('accepts a run row and refuses an unknown key', () => {
@@ -27,6 +27,7 @@ describe('oculus schemas', () => {
       readAt: '2026-10-22T01:00:00.000Z', workers: [row], attentionCount: 0,
       tickets: { windowDays: 7, lockTicket: null, rows: [{ phase: 'building', count: 1, oldestSince: '2026-10-22T01:00:00.000Z' }] },
       lastEvents: [{ ts: '2026-10-22T01:00:00.000Z', source: 'DGS-590', kind: 'tool', text: 'tool Edit ok' }],
+      burn: null, seats: null,
       scan: { lastScanAt: null, candidates: null, away: false, nightWindow: false, breakerOpen: false, breakerStreak: 0 },
     }
     expect(overviewSchema.safeParse({ ...view, nexus: { status: 'healthy', reasons: [] } }).success).toBe(true)
