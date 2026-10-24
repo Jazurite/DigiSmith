@@ -83,4 +83,16 @@ describe("runTokensPass", () => {
     writeRun(depot, "DGS-1", "xbuilder-b", { created: "2026-10-24T08:00:00.000Z", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s2" }] });
     expect(runTokensPass({ env: env(), now, projectsDir: projects, run: "builder-b" }).updated).toBe(0);
   });
+  it("leaves burn.json alone on a --run pass", () => {
+    writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-10-24T08:30:00.000Z", output: 5 }]);
+    writeTranscript(projects, "s2", [{ id: "m2", req: "r2", ts: "2026-10-24T08:31:00.000Z", output: 7 }]);
+    writeRun(depot, "DGS-1", "builder-a", { created: "2026-10-24T08:00:00.000Z", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s1" }] });
+    writeRun(depot, "DGS-1", "builder-b", { created: "2026-10-24T08:00:00.000Z", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s2" }] });
+    runTokensPass({ env: env(), now, projectsDir: projects });
+    const file = join(depot, "runs", ".tokens", "burn.json");
+    const before = readFileSync(file, "utf8");
+    expect(JSON.parse(before).tokens).toBe(12);
+    runTokensPass({ env: env(), now: new Date(now.getTime() + 60_000), projectsDir: projects, run: "builder-a" });
+    expect(readFileSync(file, "utf8")).toBe(before);
+  });
 });

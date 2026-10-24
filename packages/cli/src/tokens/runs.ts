@@ -74,9 +74,11 @@ export function runTokensPass(opts: { env: NodeJS.ProcessEnv; now: Date; project
   const burn = burnOf(snapshots, opts.now);
   let seats = readProbeSeats(probeDir(opts.env)).length;
   if (!opts.dryRun) {
-    const tokensDir = join(runsDir(opts.env), ".tokens");
-    mkdirSync(tokensDir, { recursive: true });
-    writeJsonAtomic(join(tokensDir, "burn.json"), burn);
+    if (opts.run === undefined) { // a one-run pass sees one run only: it must not replace the all-runs burn
+      const tokensDir = join(runsDir(opts.env), ".tokens");
+      mkdirSync(tokensDir, { recursive: true });
+      writeJsonAtomic(join(tokensDir, "burn.json"), burn);
+    }
     seats = writeSeats(probeDir(opts.env), opts.now).seats.length;
   }
   return { updated, skipped, failed, burn, seats };

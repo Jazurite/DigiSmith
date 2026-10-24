@@ -56,7 +56,7 @@ A worker session with no `step_start` and a `step_end finishing` (a build that n
 
 ## Run snapshots (DGS-590)
 
-`dg tokens runs [--run <run-id>] [--dry-run]` is the 5-minute job for the Oculus dashboard. One pass writes three files. `--run` matches the whole run id. `--dry-run` writes nothing.
+`dg tokens runs [--run <run-id>] [--dry-run]` is the 5-minute job for the Oculus dashboard. One pass writes three files. `--run` matches the whole run id. `--dry-run` writes nothing. `--run` leaves `burn.json` alone, because one run is not the burn of all runs.
 
 - `runs/<folder>/<run>/tokens.json` (`oculus-tokens/v1`): per model counts and cost, the total, `unpriced_models`, `sessions`, 5-minute `buckets` and `final`.
 - `runs/.tokens/burn.json` (`oculus-burn/v1`): tokens and cost of the last 60 minutes (12 full 5-minute buckets before now) over all runs, the number of runs with a bucket in it, and `unpriced_models`.
