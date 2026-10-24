@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-defineProps<{ attention: number }>()
+withDefaults(defineProps<{ attention: number; blocked?: number }>(), { blocked: 0 })
 const route = useRoute()
 const current = computed(() => {
   const p = route.path
@@ -14,7 +14,7 @@ const current = computed(() => {
 
 <template>
   <div class="shell">
-    <OcNav :attention="attention" :current="current" />
+    <OcNav :attention="attention" :blocked="blocked" :current="current" />
     <div class="body">
       <slot name="topbar" />
       <main id="main" class="main"><slot /></main>

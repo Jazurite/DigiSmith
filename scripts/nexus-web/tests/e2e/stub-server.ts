@@ -8,10 +8,12 @@ import { buildApp } from '../../../nexus-api/src/app.ts'
 import type { Profile } from '../../../nexus-api/src/profile-crypto.ts'
 import type { JobInfo, RunRecord } from '../../../nexus-api/src/scheduler/types.ts'
 import { ReaderError, type Reader } from '../../../nexus-api/src/oculus-reader.ts'
-import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../oculus-fixtures.ts'
+import type { LiveAgent } from '../../../nexus-shared/oculus.ts'
+import type { SnapshotStore } from '../../../nexus-api/src/oculus-snapshot.ts'
+import { attentionFixture, eventsFixture, liveFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../oculus-fixtures.ts'
 
 export type LifeMode = 'ok' | 'before' | 'past' | 'locked' | 'empty' | 'down'
-export type OcMode = 'oc-ok' | 'oc-empty' | 'oc-down' | 'oc-more-attention' | 'oc-unknown'
+export type OcMode = 'oc-ok' | 'oc-empty' | 'oc-down' | 'oc-more-attention' | 'oc-unknown' | 'oc-herdr-down' | 'oc-herdr-down-fresh'
 export type Mode = LifeMode | OcMode
 const NOW = Date.parse('2026-10-16T14:00:00Z')   // 21:00 on 2026-10-16 in UTC+7
 const OC_NOW = Date.parse('2026-10-22T03:00:00Z')   // the Oculus fixture times are on 2026-10-22
@@ -78,19 +80,37 @@ function ocRead(mode: () => Mode): Reader {
         const p = planFixture()
         return args.ticket === p.ticket ? p : { ticket: String(args.ticket), found: false, planFile: null, tasksTotal: 0, tasksDone: 0, tasks: [], verdicts: [], ledgerError: false }
       }
+      case 'live': {
+        if (m === 'oc-herdr-down' || m === 'oc-herdr-down-fresh') return { readAt, herdr: 'unreachable', agents: [] }
+        if (empty) return { readAt, herdr: 'ok', agents: [] }
+        return { readAt: liveFixture().readAt, herdr: 'ok', agents: liveFixture().agents }
+      }
     }
   }
+}
+
+// A memory snapshot store, prefilled with the agents as of 02:20 UTC (09:20 UTC+7). oc-herdr-down-fresh: no snapshot yet.
+function snapStore(mode: () => Mode): SnapshotStore {
+  let v: { asOf: string; agents: LiveAgent[] } | null = { asOf: '2026-10-22T02:20:00.000Z', agents: liveFixture().agents }
+  return { save: (s) => { v = s; return true }, load: () => (mode() === 'oc-herdr-down-fresh' ? null : v) }
 }
 
 export async function startStub(opts: { dir: string; port?: number }) {
   let mode: Mode = 'ok'
   const read = ocRead(() => mode)
   const life = (): LifeMode => (isOc(mode) ? 'ok' : mode)
-  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, oculus: { read: (v, a) => read(v, a), jobs: () => ocJobs(mode), now: () => OC_NOW } })
+  // re-created on each mode change, so a disconnected test sees the prefilled 02:20 snapshot, not the last connected answer
+  let snap = snapStore(() => mode)
+  const snapshot: SnapshotStore = { save: (s) => snap.save(s), load: () => snap.load() }
+  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, oculus: { read: (v, a) => read(v, a), jobs: () => ocJobs(mode), now: () => OC_NOW, snapshot } })
   const api = getRequestListener(app.fetch)
   const server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0]
-    if (url.startsWith('/__stub/')) { mode = url.slice('/__stub/'.length) as Mode; res.end('ok'); return }
+    if (url.startsWith('/__stub/')) {
+      const next = url.slice('/__stub/'.length) as Mode
+      if (next !== mode) snap = snapStore(() => mode)
+      mode = next; res.end('ok'); return
+    }
     if (url.startsWith('/api/')) { api(req, res); return }
     let file = join(opts.dir, normalize(url).replace(/^(\.\.[/\\])+/, ''))
     if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html')

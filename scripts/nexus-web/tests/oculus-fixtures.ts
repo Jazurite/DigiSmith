@@ -1,6 +1,6 @@
 // scripts/nexus-web/tests/oculus-fixtures.ts
 // Fake, fixed values for web tests, stories and the e2e stub. Each type is the z.infer type of the shared schema, so a shape change breaks the build.
-import type { Attention, Events, EventRow, Overview, Plan, RunDetail, RunRow, Runs } from '#oculus-schema'
+import type { Attention, Events, EventRow, Live, LiveAgent, Overview, Plan, RunDetail, RunRow, Runs } from '#oculus-schema'
 
 export function runFixture(over: Partial<RunRow> = {}): RunRow {
   return {
@@ -113,5 +113,22 @@ export function planFixture(): Plan {
       { scope: 'task 3', id: 'F2', round: 2, finding: 'Flaky retry', verdict: 'fixing', reason: '' },
     ],
     ledgerError: false,
+  }
+}
+
+// DGS-599: herdr agents across three workspaces, every status, one unnamed agent, one run link. No terminal title anywhere.
+export function liveFixture(): Live {
+  const a = (name: string | null, pane: string, workspace: string, role: LiveAgent['role'], project: string | null, status: LiveAgent['status'], run: string | null = null): LiveAgent => ({ name, pane, tab: `${workspace}:t${pane.split(':p')[1]}`, workspace, role, project, status, run })
+  return {
+    readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'connected', asOf: '2026-10-22T03:00:00.000Z' },
+    agents: [
+      a('dgs-601', 'w2:p7', 'w2', 'builder', 'DigiSmith', 'blocked'),
+      a('dgs-590', 'w2:p5', 'w2', 'builder', 'DigiSmith', 'working', 'builder-20261022T021000-a1b2c3'),
+      a('dgs-590-rev1', 'w2:p6', 'w2', 'reviewer', 'DigiSmith', 'working'),
+      a('digismith-conductor', 'w2:p1', 'w2', 'conductor', 'DigiSmith', 'idle'),
+      a('emma-conductor', 'w3:p1', 'w3', 'conductor', 'Emma', 'idle'),
+      a(null, 'w4:p2', 'w4', 'other', null, 'unknown'),
+      a('dgs-571', 'w2:p9', 'w2', 'builder', 'shoppable-video', 'done'),
+    ],
   }
 }

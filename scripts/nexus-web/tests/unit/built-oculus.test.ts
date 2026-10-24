@@ -27,6 +27,13 @@ describe.skipIf(!existsSync(OUT))('the generated Oculus pages', () => {
   it.each(PAGES)('%s carries the DigiSmith Oculus title', (file) => {
     expect(readFileSync(join(OUT, file), 'utf8')).toMatch(/<title>[^<]*DigiSmith Oculus<\/title>/)
   })
+  it('the index holds the agents section in its loading state, never a disconnected banner or a fixture agent (DGS-599)', () => {
+    const html = readFileSync(join(OUT, 'index.html'), 'utf8')
+    const section = html.match(/<section[^>]*id="agents"[\s\S]*?<\/section>/)?.[0] ?? ''
+    expect(section).toContain('aria-busy="true"')
+    expect(html).not.toContain('Disconnected from herdr')
+    expect(html).not.toContain('dgs-601')
+  })
   it('the Oculus build has no Life Calendar', () => {
     expect(readFileSync(join(OUT, 'index.html'), 'utf8')).not.toContain('Life Calendar')
   })

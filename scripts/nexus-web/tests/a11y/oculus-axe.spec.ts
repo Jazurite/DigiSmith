@@ -21,6 +21,16 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([])
     })
   }
+  // DGS-599: herdr down, the last agent list with the banner and the neutral dots
+  test(`axe: / disconnected ${scheme}`, async ({ page }) => {
+    await stub.setMode('oc-herdr-down')
+    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' })
+    await page.goto(`${stub.url}/`)
+    await expect(page.getByText(/Disconnected from herdr, as of/)).toBeVisible()
+    await expect(page.locator('#agents tbody tr')).toHaveCount(7)
+    const r = await new AxeBuilder({ page }).withTags(TAGS).analyze()
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([])
+  })
   // the top bar in the states that are not green: unknown, and stale (amber) after a failed poll
   test(`axe: top bar unknown ${scheme}`, async ({ page }) => {
     await stub.setMode('oc-unknown')

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Overview } from '#oculus-schema'
+import type { Live, Overview } from '#oculus-schema'
 import { ageOf, fmtClock, fmtUtc7 } from '../../utils/oc-format'
 
-const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null }>()
+const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null; live?: Live | null }>()
+const count = (s: string): number => props.live?.agents.filter((a) => a.status === s).length ?? 0
 
 type Tone = 'ok' | 'warn' | 'bad' | 'neutral'
 const health = computed<{ label: string; tone: Tone; hollow: boolean } | null>(() => {
@@ -28,6 +29,8 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
   <div class="bar" role="group" aria-label="Nexus status">
     <span v-if="health" role="status"><i class="dot" :class="[health.tone, { hollow: health.hollow }]" aria-hidden="true" /><b>{{ health.label }}</b></span>
     <span v-else class="muted" role="status">Nexus loading</span>
+    <NuxtLink v-if="live" to="/#agents" class="agents" :class="{ warn: live.herdr.state === 'disconnected' }">Agents <b>{{ live.agents.length }}</b> · working <b>{{ count('working') }}</b> · blocked <b>{{ count('blocked') }}</b><template v-if="live.herdr.state === 'disconnected'"> · disconnected</template></NuxtLink>
+    <span v-else>Agents <b>-</b></span>
     <template v-if="overview">
       <span>Workers <b>{{ overview.workers.length }}</b></span>
       <span>Ready waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
@@ -50,5 +53,8 @@ b { color: var(--oc-text); font-weight: 600; }
 .dot.warn { background: var(--oc-warn); }
 .dot.bad { background: var(--oc-bad); }
 .dot.hollow { background: transparent; box-shadow: inset 0 0 0 1.5px var(--oc-neutral); }
+.agents { color: inherit; text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; gap: 0.5ch; }
+.agents:focus-visible { outline: 2px solid var(--oc-primary); }
+.agents.warn { color: var(--oc-warn); }
 @media (max-width: 760px) { .bar { padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); } }
 </style>

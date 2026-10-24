@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ attention: number; current: string }>()
+withDefaults(defineProps<{ attention: number; current: string; blocked?: number }>(), { blocked: 0 })
 const LINKS = [
   { key: 'oculus', to: '/', label: 'Oculus' },
   { key: 'attention', to: '/attention/', label: 'Attention' },
@@ -14,6 +14,7 @@ const LINKS = [
     <h2>Watch</h2>
     <NuxtLink v-for="l in LINKS" :key="l.key" :to="l.to" class="link" :aria-current="current === l.key ? 'page' : undefined">
       {{ l.label }}
+      <span v-if="l.key === 'oculus' && blocked > 0" class="badge">{{ blocked }}<span class="sr-only"> blocked</span></span>
       <span v-if="l.key === 'attention' && attention > 0" class="badge">{{ attention }}</span>
     </NuxtLink>
   </nav>
