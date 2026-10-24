@@ -1,5 +1,5 @@
 // packages/cli/src/nightwatch/views.test.ts
-import { appendFileSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
@@ -232,5 +232,29 @@ describe("plan", () => {
     writeFileSync(join(ws, "progress.md"), "# SDD ledger — plan: /etc/hosts\n");
     d.writeRun({ ticket: "DGS-592", run: "builder-8", role: "builder", created_at: "2026-10-22T02:20:00.000Z", worktree: wt });
     expect(planView(d.env, { ticket: "DGS-592" })).toMatchObject({ found: true, planFile: null, tasks: [] });
+  });
+});
+
+describe("DGS-598", () => {
+  const autoRun = (folder: string, run: string, ticket: string | null, role: "maestro" | "builder", project: string): void => {
+    d.writeRun({ folder, ticket, run, role, created_at: "2026-10-22T00:00:00.000Z", project, source: "auto" });
+    d.writeEvents(folder, run, [{ type: "started", ts: "2026-10-22T00:00:00.000Z", data: { source: "startup" } }]);
+  };
+  it("runs rows carry project and source; --project filters; a null ticket stays null", () => {
+    autoRun("DigiSmith", "s-m1", null, "maestro", "DigiSmith");
+    autoRun("EMKT-1", "s-b1", "EMKT-1", "builder", "emma-theme");
+    const all = runsView(d.env, NOW, {}).runs;
+    expect(all.map((r) => [r.run, r.project, r.source]).sort()).toEqual([["s-b1", "emma-theme", "auto"], ["s-m1", "DigiSmith", "auto"]]);
+    expect(runsView(d.env, NOW, { project: "emma-theme" }).runs.map((r) => r.run)).toEqual(["s-b1"]);
+    const m = all.find((r) => r.run === "s-m1")!;
+    expect(m.ticket).toBeNull();
+    expect(m.state).toBe("healthy"); // silent 3 h, but a maestro run is never lost
+  });
+  it("overview and runs skip runs idle for more than 7 days", () => {
+    autoRun("DigiSmith", "s-old", null, "maestro", "DigiSmith");
+    const t = (NOW.getTime() - 9 * 86_400_000) / 1000;
+    for (const f of ["run.json", "events.jsonl"]) utimesSync(join(d.dir, "runs", "DigiSmith", "s-old", f), t, t);
+    expect(runsView(d.env, NOW, {}).runs).toEqual([]);
+    expect(overviewView(d.env, NOW).workers).toEqual([]);
   });
 });

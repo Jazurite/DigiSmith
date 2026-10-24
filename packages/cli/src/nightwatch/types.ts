@@ -9,6 +9,7 @@ export type Scalar = string | number | boolean | null;
 
 export interface RunRowView {
   run: string; ticket: string | null; role: Role;
+  project: string | null; source: "auto" | "start";
   seat: string | null; model: string | null; trigger: Trigger; state: Health; phase: RunPhase | null;
   startedAt: string; endedAt: string | null; elapsedSec: number; events: number; merged: boolean; pushed: boolean;
 }

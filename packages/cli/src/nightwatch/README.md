@@ -4,9 +4,10 @@
 
 Views: `overview`, `attention`, `runs`, `run`, `events`, `plan`.
 
-Flags: `--run ID`, `--ticket KEY`, `--since N`, `--before N`, `--tail N`, `--group G`, `--state S`, `--role R`, `--trigger T`, `--limit N`.
+Flags: `--run ID`, `--ticket KEY`, `--since N`, `--before N`, `--tail N`, `--group G`, `--state S`, `--role R`, `--trigger T`, `--project P`, `--limit N`.
 
 - `run` and `events` need `--run`; `plan` needs `--ticket`. An unknown run exits 1 with `not found`.
+- `overview` and `runs` show runs with an event in the last 7 days.
 - Ids must be safe names (no path parts).
 - Read-only: the command never writes to the depot.
 - The Nexus API calls this command to serve the Nightwatch UI.

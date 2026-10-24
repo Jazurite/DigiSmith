@@ -51,7 +51,11 @@ describe("groupsOf and scalarData", () => {
 describe("runRowOf", () => {
   it("a fresh builder is healthy and building", () => {
     const r = runRowOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z")], "manual", DEFAULT_BUDGETS, T0 + 60_000);
-    expect(r).toMatchObject({ state: "healthy", phase: "building", elapsedSec: 60, merged: false, pushed: false, endedAt: null });
+    expect(r).toMatchObject({ state: "healthy", phase: "building", elapsedSec: 60, merged: false, pushed: false, endedAt: null, project: null, source: "start" });
+  });
+  it("carries project and source from the record", () => {
+    const r = runRowOf(run({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" }), [ev(1, "started", "2026-10-22T01:00:00.000Z")], "unknown", DEFAULT_BUDGETS, T0 + 60_000);
+    expect(r).toMatchObject({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" });
   });
   it("a builder over its budget is stalled", () => {
     const r = runRowOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "tool", "2026-10-22T01:50:00.000Z", { tool: "Edit", ok: true })], "manual", DEFAULT_BUDGETS, T0 + 51 * 60_000);

@@ -45,6 +45,8 @@ describe("runNightwatch", () => {
     expect(JSON.parse(runNightwatch(["view", "runs", "--role=reviewer"], d.env, NOW).out).total).toBe(0);
     expect(JSON.parse(runNightwatch(["view", "runs", "--role=builder"], d.env, NOW).out).total).toBe(1);
     expect(runNightwatch(["view", "runs", "--limit=x"], d.env, NOW).code).toBe(1);
+    expect(runNightwatch(["view", "runs", "--project", "DigiSmith"], d.env, NOW).code).toBe(0);
+    expect(runNightwatch(["view", "runs", "--project", "../x"], d.env, NOW)).toMatchObject({ code: 1, err: expect.stringContaining("bad id") });
   });
   it("creates nothing in an empty depot", () => {
     runNightwatch(["view", "overview"], d.env, NOW);

@@ -15,7 +15,7 @@ import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { readEvents as readEventLines, type EventLine } from "../run/events.ts";
 import { depotDir, findRunDir, isSafe } from "../run/paths.ts";
 import { readRun, type RunRecord } from "../run/record.ts";
-import { listRuns } from "../run/read.ts";
+import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { groupsOf, ledgerTasks, parsePlanTasks, phaseTable, pipelineOf, runRowOf, scalarData, triggerOf } from "./derive.ts";
 import type { EventRowView, RunRowView } from "./types.ts";
 
@@ -25,9 +25,9 @@ const ORDER_MAX = 64 * 1024;
 
 interface Loaded { record: RunRecord; events: EventLine[] }
 
-function loadAll(env: NodeJS.ProcessEnv, ticket?: string): Loaded[] {
+function loadAll(env: NodeJS.ProcessEnv, ticket?: string, days?: number, nowMs?: number): Loaded[] {
   const out: Loaded[] = [];
-  for (const row of listRuns(env, ticket)) {
+  for (const row of listRuns(env, ticket, days === undefined ? {} : { days, nowMs })) {
     const dir = findRunDir(row.record.run, env);
     if (dir === null) continue;
     out.push({ record: row.record, events: readEvents(dir) });
@@ -79,7 +79,7 @@ const depotCwd = (env: NodeJS.ProcessEnv): string => env.NIGHTWATCH_CONFIG_CWD ?
 
 export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
   const adir = autonomousDir(env);
-  const loadedAll = loadAll(env);
+  const loadedAll = loadAll(env, undefined, LIST_DAYS, now.getTime());
   const rows = rowsOf(env, now, loadedAll);
   const workers = rows.filter((r) => r.state === "healthy" || r.state === "blocked" || r.state === "stalled");
   const open = readOpen(adir);
@@ -143,11 +143,12 @@ function readAttentionLines(adir: string): Record<string, unknown>[] {
   return out;
 }
 
-export function runsView(env: NodeJS.ProcessEnv, now: Date, a: { state?: string; role?: string; ticket?: string; trigger?: string; limit?: number }) {
-  let rows = rowsOf(env, now, loadAll(env, a.ticket));
+export function runsView(env: NodeJS.ProcessEnv, now: Date, a: { state?: string; role?: string; ticket?: string; trigger?: string; project?: string; limit?: number }) {
+  let rows = rowsOf(env, now, loadAll(env, a.ticket, LIST_DAYS, now.getTime()));
   if (a.state) rows = rows.filter((r) => r.state === a.state);
   if (a.role) rows = rows.filter((r) => r.role === a.role);
   if (a.trigger) rows = rows.filter((r) => r.trigger === a.trigger);
+  if (a.project) rows = rows.filter((r) => r.project === a.project);
   const limit = Math.min(Math.max(a.limit ?? 100, 1), 500);
   return { readAt: now.toISOString(), total: rows.length, runs: rows.slice(0, limit) };
 }

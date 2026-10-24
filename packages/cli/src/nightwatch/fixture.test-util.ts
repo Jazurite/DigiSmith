@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RunRecord } from "../run/record.ts";
 
-export interface FakeRun { ticket: string; run: string; role: RunRecord["role"]; created_at: string; order?: string | null; seat?: string | null; model?: string | null; worktree?: string | null; branch?: string | null }
+export interface FakeRun { ticket: string | null; folder?: string; run: string; role: RunRecord["role"]; created_at: string; order?: string | null; seat?: string | null; model?: string | null; worktree?: string | null; branch?: string | null; project?: string | null; source?: "auto" | "start" }
 export interface FakeEvent { type: string; ts: string; data?: Record<string, unknown> }
 export interface Depot {
   dir: string; env: NodeJS.ProcessEnv; autonomous: string;
@@ -25,12 +25,13 @@ export function makeDepot(): Depot {
   return {
     dir, env, autonomous,
     writeRun(r) {
-      const d = join(dir, "runs", r.ticket, r.run);
+      const d = join(dir, "runs", r.folder ?? r.ticket ?? "unknown", r.run);
       mkdirSync(d, { recursive: true });
       const rec: RunRecord = {
         schema: "nightwatch-run/v1", run: r.run, ticket: r.ticket, role: r.role, order: r.order ?? null, seat: r.seat ?? null,
         model: r.model ?? null, plugin_version: null, base_sha: null, branch: r.branch ?? null, worktree: r.worktree ?? null,
         herdr: { workspace: null, tab: null, pane: null }, budget: null, created_at: r.created_at,
+        source: r.source ?? "start", project: r.project ?? null, session_id: null, role_from: r.source === "auto" ? "none" : "start",
       };
       writeFileSync(join(d, "run.json"), JSON.stringify(rec));
       return d;
