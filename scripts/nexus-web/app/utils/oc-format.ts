@@ -1,4 +1,5 @@
 // scripts/nexus-web/app/utils/oc-format.ts
+import type { RunDetail, RunRow } from '#oculus-schema'
 const OFFSET = 7 * 3600_000
 const pad = (n: number): string => String(n).padStart(2, '0')
 const local = (iso: string): Date => new Date(Date.parse(iso) + OFFSET)
@@ -55,4 +56,34 @@ export function fmtUsd(n: number | null): string {
   if (n === null) return '-'
   if (n > 0 && n < 0.01) return '<$0.01'
   return usdFmt.format(n)
+}
+const RUNNING = new Set(['healthy', 'blocked', 'stalled'])
+const minutesSince = (iso: string, nowMs: number): number | null => {
+  const t = Date.parse(iso)
+  return Number.isFinite(t) ? Math.max(0, Math.floor((nowMs - t) / 60_000)) : null
+}
+// The current phase and its whole minutes, for a running run only: an ended or lost run, or one with no phase, gets none (never a false number).
+export function phaseTime(r: Pick<RunRow, 'state' | 'phase' | 'phaseSince'>, nowMs: number): { phase: string; min: number } | null {
+  if (!RUNNING.has(r.state) || r.phase === null || r.phaseSince === null) return null
+  const min = minutesSince(r.phaseSince, nowMs)
+  return min === null ? null : { phase: r.phase, min }
+}
+// A done step's minutes come from the CLI; the current step counts on the page clock. Lost, waiting and Pushed get none.
+export function stepTime(s: RunDetail['pipeline'][number], nowMs: number): { min: number; live: boolean } | null {
+  if (s.state === 'current' && s.at !== null) {
+    const min = minutesSince(s.at, nowMs)
+    return min === null ? null : { min, live: true }
+  }
+  if (s.state === 'done' && s.durationSec !== null) return { min: Math.floor(s.durationSec / 60), live: false }
+  return null
+}
+const words = (parts: [number, string][], zero: string): string => parts.filter(([n]) => n > 0).map(([n, u]) => `${n} ${u}`).join(' ') || zero
+// Durations for screen readers: "31 min 7 s", "1 h 7 min"; the "·" and h:mm are not read out.
+export function spokenSeconds(sec: number): string {
+  const s = Number.isFinite(sec) ? Math.max(0, Math.floor(sec)) : 0
+  return words([[Math.floor(s / 3600), 'h'], [Math.floor((s % 3600) / 60), 'min'], [s % 60, 's']], '0 s')
+}
+export function spokenMinutes(min: number): string {
+  const m = Number.isFinite(min) ? Math.max(0, Math.floor(min)) : 0
+  return words([[Math.floor(m / 60), 'h'], [m % 60, 'min']], '0 min')
 }
