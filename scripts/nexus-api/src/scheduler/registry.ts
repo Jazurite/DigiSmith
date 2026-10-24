@@ -78,6 +78,13 @@ export const JOBS: readonly JobDef[] = [
     command: { file: process.execPath, args: [...DG, 'autonomous', 'watch'] },
     timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 40, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
+  defineJob({
+    name: 'schedule-release',
+    description: 'Scheduling: move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual). No model tokens.',
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
+    command: { file: process.execPath, args: [...DG, 'autonomous', 'schedule-release'] },
+    timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed',
+  }),
 ]
 
 validateJobs(JOBS)

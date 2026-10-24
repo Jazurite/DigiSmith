@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ClickUpApiError, type ClickUpClient } from "@digismith/clickup-client";
-import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue } from "./field-set.ts";
+import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue, parseDateTimeValue } from "./field-set.ts";
 
 const dd = (id: string, name: string, options: { id: string; name: string }[]) => ({
   id,
@@ -201,5 +201,37 @@ describe("Relationship fields", () => {
   });
   it("other unsupported types are still refused", async () => {
     await expect(resolveFieldArgs(clientWith(), "L", ["Tags=x"])).rejects.toThrow("not supported by --field");
+  });
+});
+
+describe("date fields", () => {
+  const dateField = { id: "fd", name: "Scheduled at", type: "date" };
+  it("reads YYYY-MM-DD HH:MM as UTC+7", () => {
+    expect(parseDateTimeValue("2026-10-25 22:00", "Scheduled at")).toBe(Date.parse("2026-10-25T15:00:00Z"));
+  });
+  it("reads an ISO time with an offset", () => {
+    expect(parseDateTimeValue("2026-10-25T22:00:00+07:00", "Scheduled at")).toBe(Date.parse("2026-10-25T15:00:00Z"));
+  });
+  it("reads an ISO time ending in Z", () => {
+    expect(parseDateTimeValue("2026-10-25T15:00:00Z", "Scheduled at")).toBe(Date.parse("2026-10-25T15:00:00Z"));
+  });
+  it("refuses a plain day, a missing offset and a day that does not exist", () => {
+    for (const bad of ["2026-10-25", "2026-10-25T22:00", "2026-02-30 10:00", "tomorrow", "2026-10-25 24:00"]) {
+      expect(() => parseDateTimeValue(bad, "Scheduled at")).toThrow(/Scheduled at/);
+    }
+  });
+  it("resolveFieldArgs gives the ms and time: true; applyFields sends value_options", async () => {
+    const setCustomField = vi.fn();
+    const client = { getListFields: vi.fn().mockResolvedValue([dateField]), setCustomField } as unknown as ClickUpClient;
+    const resolved = await resolveFieldArgs(client, "l1", ["Scheduled at=2026-10-25 22:00"]);
+    expect(resolved).toEqual([{ field: dateField, value: Date.parse("2026-10-25T15:00:00Z"), valueOptions: { time: true } }]);
+    await applyFields(client, "t1", resolved);
+    expect(setCustomField).toHaveBeenCalledWith("t1", "fd", Date.parse("2026-10-25T15:00:00Z"), { time: true });
+  });
+  it("other fields are sent without value options", async () => {
+    const setCustomField = vi.fn();
+    const client = { setCustomField } as unknown as ClickUpClient;
+    await applyFields(client, "t1", [{ field: { id: "x", name: "N", type: "text" }, value: "a" }]);
+    expect(setCustomField).toHaveBeenCalledWith("t1", "x", "a");
   });
 });

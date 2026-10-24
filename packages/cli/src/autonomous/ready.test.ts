@@ -4,7 +4,7 @@ import type { LoTask } from "./types.ts";
 
 const base: LoTask = {
   id: "1", key: "DGS-1", name: "t", typeId: 0, priority: null, due: null, created: 0,
-  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", milestone: "Dawn", blockers: [],
+  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: "Dawn", blockers: [],
 };
 const ctx = { repo: "/r", fileExists: () => false };
 
@@ -32,7 +32,7 @@ describe("checkReady", () => {
     expect(checkReady({ ...base, mode: null }, ctx)).toEqual([REASON.mode]);
   });
   it("lists all five in order", () => {
-    const t = { ...base, attachments: [], text: "", signOff: null, milestone: null, blockers: [{ key: "DGS-1", done: false }], mode: null };
+    const t = { ...base, attachments: [], text: "", signOff: null, milestone: null, blockers: [{ key: "DGS-1", done: false }], mode: null, scheduledAt: null };
     expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.signOff, REASON.milestone, REASON.blocked(["DGS-1"]), REASON.mode]);
   });
   it("pins the Mode reason text", () => {

@@ -16,12 +16,14 @@ import type {
   ClickUpListWriteBody,
   ClickUpMoveTaskOptions,
   ClickUpMoveTaskResponse,
-  ClickUpUpdatedList,
   ClickUpTask,
   ClickUpTasksResponse,
   ClickUpTaskType,
   ClickUpTaskTypesResponse,
   ClickUpTaskWriteBody,
+  ClickUpUpdatedList,
+  ClickUpView,
+  ClickUpViewCreateBody,
   DependencyRelation,
   MoveFolderTarget,
 } from "./types.ts";
@@ -254,8 +256,19 @@ export class ClickUpClient {
     return this.put<ClickUpUpdatedList>(`/list/${listId}`, { data: body });
   }
 
-  async setCustomField(taskId: string, fieldId: string, value: unknown): Promise<void> {
-    await this.post(`/task/${taskId}/field/${fieldId}`, { data: { value } });
+  /** valueOptions.time: the value is a date with a time part (ms epoch), not a day. */
+  async setCustomField(taskId: string, fieldId: string, value: unknown, valueOptions?: { time: boolean }): Promise<void> {
+    await this.post(`/task/${taskId}/field/${fieldId}`, {
+      data: valueOptions === undefined ? { value } : { value, value_options: valueOptions },
+    });
+  }
+
+  async getSpaceViews(spaceId: string): Promise<ClickUpView[]> {
+    return (await this.get<{ views: ClickUpView[] }>(`/space/${spaceId}/view`)).views ?? [];
+  }
+
+  async createSpaceView(spaceId: string, body: ClickUpViewCreateBody): Promise<ClickUpView> {
+    return (await this.post<{ view: ClickUpView }>(`/space/${spaceId}/view`, { data: body })).view;
   }
 
   /** Multipart upload — ClickUp's attachment endpoint requires this content type. */

@@ -134,6 +134,13 @@ describe("ClickUpLoTracker.listByStatus", () => {
     const got = await new ClickUpLoTracker(client, SPACE).listByStatus("ready");
     expect(got.map((t) => t.mode)).toEqual(["Autonomous", "Manual", null, null]);
   });
+  it("reads Scheduled at as ms, null when empty, invalid when not a positive number", async () => {
+    const scheduledAtField = (value?: unknown) => ({ id: "field-s", name: "Scheduled at", type: "date", type_config: {}, ...(value === undefined ? {} : { value }) });
+    const mk = (id: string, v?: unknown) => task({ id, status: { status: "scheduled", type: "custom" }, custom_fields: [scheduledAtField(v)] });
+    const { client } = fakeClient({ search: [mk("a", "1793000000000"), mk("b"), mk("c", ""), mk("d", "soon"), mk("e", "-5"), mk("f", 1793000000000)] });
+    const got = await new ClickUpLoTracker(client, SPACE).listByStatus("scheduled");
+    expect(got.map((t) => t.scheduledAt)).toEqual([1793000000000, null, null, "invalid", "invalid", 1793000000000]);
+  });
   it("keeps only to do tickets and maps every field", async () => {
     const { client, calls } = fakeClient({
       search: [READY, WIP, OPEN_BLOCKER],
@@ -147,7 +154,7 @@ describe("ClickUpLoTracker.listByStatus", () => {
       id: "t1", key: "DGS-600", name: "Ready one", typeId: 0,
       priority: 2, due: 1792372602438, created: 1792000000000,
       attachments: ["design.md", "plan.md"], text: "see .digismith/board/DGS-600—x",
-      signOff: "Jack", mode: null, milestone: "V1.1 ClickUp Sync",
+      signOff: "Jack", mode: null, scheduledAt: null, milestone: "V1.1 ClickUp Sync",
       blockers: [
         { key: "DGS-603", done: false },
         { key: "DGS-601", done: true },

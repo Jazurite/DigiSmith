@@ -1,5 +1,22 @@
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { REF } from "./refs.ts";
+import { parseDateFlag } from "./parse-date.ts";
+
+const LOCAL_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2}) ([01]\d|2[0-3]):([0-5]\d)$/;
+
+/** A date with a time for a date field: "YYYY-MM-DD HH:MM" (UTC+7) or an ISO time with an offset. A plain day is refused. */
+export function parseDateTimeValue(raw: string, fieldName: string): number {
+  const local = LOCAL_DATE_TIME.exec(raw.trim());
+  const iso = local ? `${local[1]}-${local[2]}-${local[3]}T${local[4]}:${local[5]}:00+07:00` : raw.trim();
+  let parsed;
+  try {
+    parsed = parseDateFlag(iso, `value for field "${fieldName}"`);
+  } catch (e) {
+    throw new Error(`field "${fieldName}" needs a date and a time, "YYYY-MM-DD HH:MM" (UTC+7) or 2026-10-25T22:00:00+07:00: ${(e as Error).message}`);
+  }
+  if (!parsed.hasTime) throw new Error(`field "${fieldName}" needs a time too: "YYYY-MM-DD HH:MM" (UTC+7)`);
+  return parsed.ms;
+}
 
 /** The slice of a list field that --field needs; the client's union type does not cover text or number. */
 export interface FieldLike {
@@ -12,6 +29,7 @@ export interface FieldLike {
 export interface ResolvedField {
   field: FieldLike;
   value: unknown;
+  valueOptions?: { time: boolean };
 }
 
 /** Splits "Name=value" at the first "=": names have no "=", values may. */
@@ -118,6 +136,10 @@ export async function resolveFieldArgs(client: ClickUpClient, listId: string, ar
     const { key, value } = parseFieldArg(arg);
     const field = resolveField(fields, key);
     let resolvedValue: unknown;
+    if (field.type === "date") {
+      resolved.push({ field, value: parseDateTimeValue(value, field.name), valueOptions: { time: true } });
+      continue;
+    }
     if (RELATIONSHIP_TYPES.includes(field.type)) {
       const rel = await resolveRelationValue(client, field, value);
       const prior = seen.get(field.id) ?? { add: new Set<string>(), rem: new Set<string>() };
@@ -136,9 +158,10 @@ export async function resolveFieldArgs(client: ClickUpClient, listId: string, ar
 }
 
 export async function applyFields(client: ClickUpClient, taskId: string, resolved: ResolvedField[]): Promise<void> {
-  for (const { field, value } of resolved) {
+  for (const { field, value, valueOptions } of resolved) {
     try {
-      await client.setCustomField(taskId, field.id, value);
+      if (valueOptions === undefined) await client.setCustomField(taskId, field.id, value);
+      else await client.setCustomField(taskId, field.id, value, valueOptions);
     } catch (err) {
       const body = (err as { body?: unknown }).body;
       const shown = body === undefined ? "" : JSON.stringify(body);

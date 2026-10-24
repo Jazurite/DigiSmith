@@ -219,6 +219,16 @@ export interface ClickUpFolderWithLists { id: string; name: string; lists: Click
 /** GET /list/{id}: a folderless list has folder.hidden true. */
 export interface ClickUpListDetail { id: string; name: string; folder?: { id: string; hidden?: boolean }; }
 export interface ClickUpFoldersResponse { folders: ClickUpFolderWithLists[]; }
+/** A space view as ClickUp lists it (GET /space/{id}/view). */
+export interface ClickUpView { id: string; name: string; type: string; }
+/** POST /space/{id}/view body: a list view with one EQ filter, sorting and visible columns. */
+export interface ClickUpViewCreateBody {
+  name: string;
+  type: "list";
+  filters: { op: "AND"; fields: { field: string; op: "EQ"; values: string[] }[]; search: ""; show_closed: false };
+  sorting: { fields: { field: string; dir: 1 | -1 }[] };
+  columns: { fields: { field: string; hidden: false }[] };
+}
 export interface ClickUpListsResponse { lists: ClickUpListSummary[]; }
 export interface ClickUpFieldsResponse { fields: ClickUpCustomField[]; }
 export interface ClickUpListStatusOption {
@@ -378,16 +388,21 @@ export interface FrontdoorFieldCreateOption {
   orderindex: null;
 }
 
-/** Body of the web app's POST /customFields/v2/field (captured 2026-10-02 with a folder, 2026-10-10 with team_id). Exactly one of category_id and team_id. */
+/**
+ * Body of the web app's POST /customFields/v2/field (captured 2026-10-02 with a folder, 2026-10-10 with team_id). Exactly one of category_id and team_id.
+ * A date body (type_config {}) is not captured; DGS-601 sends it once and stops on a 4xx.
+ */
 export interface FrontdoorFieldCreateBody {
   name: string;
   description: string;
-  type: "drop_down";
-  type_config: {
-    new_drop_down: true;
-    sorting: "manual";
-    options: FrontdoorFieldCreateOption[];
-  };
+  type: "drop_down" | "date";
+  type_config:
+    | {
+        new_drop_down: true;
+        sorting: "manual";
+        options: FrontdoorFieldCreateOption[];
+      }
+    | Record<string, never>;
   category_id?: string;
   team_id?: string;
   required: boolean;
