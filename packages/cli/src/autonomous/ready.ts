@@ -10,6 +10,7 @@ export const REASON = {
   signOff: "no Sign-off mark (Auto or Jack)",
   milestone: "no milestone",
   blocked: (keys: string[]) => `blocked by open ticket(s): ${keys.join(", ")}`,
+  mode: "Mode is not Autonomous (Manual or missing)",
 } as const;
 
 function hasSpecPlan(t: LoTask, ctx: ReadyCtx): boolean {
@@ -31,5 +32,6 @@ export function checkReady(t: LoTask, ctx: ReadyCtx): string[] {
   if (t.milestone === null) out.push(REASON.milestone);
   const open = t.blockers.filter((b) => !b.done).map((b) => b.key);
   if (open.length > 0) out.push(REASON.blocked(open));
+  if (t.mode !== "Autonomous") out.push(REASON.mode);
   return out;
 }

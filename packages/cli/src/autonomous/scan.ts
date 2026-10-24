@@ -79,7 +79,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     if (wroteOrder) rmSync(order, { force: true });
     // Each cleanup step is independent: one failing never skips the others.
     try { clearLock(d.dir); } catch { /* best effort */ }
-    try { await d.tracker.setStatus(t.id, "to do"); } catch { /* best effort */ }
+    try { await d.tracker.setStatus(t.id, "ready"); } catch { /* best effort */ }
     try { close("permanent", errText(e)); } catch { /* best effort */ }
     appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
     return "claim-failed";
@@ -161,12 +161,12 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   const verdicts: { key: string; reasons: string[] }[] = [];
 
   // 3. The starter status.
-  if (!(await d.tracker.hasStatus("to do"))) {
+  if (!(await d.tracker.hasStatus("ready"))) {
     if (!d.dryRun) {
       appendEvent(d.dir, now, "no-starter-status");
       if (notes[NO_STARTER] === undefined) {
         try {
-          await d.tracker.comment("DGS-548", `Autonomous scan (${fmtUtc7(now)} UTC+7): the status "to do" is missing, so no ticket can be picked up. Add it back to the space's status set.`);
+          await d.tracker.comment("DGS-548", `Autonomous scan (${fmtUtc7(now)} UTC+7): the status "ready" is missing, so no ticket can be picked up. Add it back to the space's status set.`);
           notes[NO_STARTER] = now.toISOString();
           notesChanged = true;
         } catch { /* retried on the next scan */ }
@@ -176,7 +176,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   }
 
   // 4. Only Task and Bug are candidates.
-  const all = await d.tracker.listToDo();
+  const all = await d.tracker.listByStatus("ready");
   const candidates: LoTask[] = [];
   for (const t of all) {
     if (t.typeId === TYPE_TASK || t.typeId === TYPE_BUG) candidates.push(t);
@@ -211,7 +211,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
       const h = hash(reasons.join("|"));
       if (notes[key] !== h) {
         try {
-          await d.tracker.comment(t.id, `Autonomous scan skipped this ticket (${fmtUtc7(now)} UTC+7): ${reason}. It stays in to do. Fix and it is picked up on a later scan.`);
+          await d.tracker.comment(t.id, `Autonomous scan skipped this ticket (${fmtUtc7(now)} UTC+7): ${reason}. It stays in ready. Fix and it is picked up on a later scan.`);
           notes[key] = h;
           notesChanged = true;
         } catch { /* retried on the next scan */ }

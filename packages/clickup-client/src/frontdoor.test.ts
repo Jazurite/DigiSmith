@@ -83,6 +83,13 @@ describe("FrontdoorClient", () => {
     expect(field.name).toBe("Bucket");
   });
 
+  it("getFieldLocations asks for the locations", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "Sign-off", type: "drop_down", type_config: {}, locations: [] } });
+    await client.getFieldLocations("f1");
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/customFields/v2/field/f1?locations=true", data: undefined });
+  });
+
   it("getFieldValueCount reads value_count for one option as a number", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: { id: "f1", value_count: "3" } });
@@ -328,6 +335,18 @@ describe("FrontdoorClient", () => {
       method: "PUT",
       url: "/hierarchy/v1/project/1/status?checkConflict=true",
       data: body,
+    });
+  });
+
+  it("setFieldLocations PUTs new_locations to the workspace field path", async () => {
+    const client = makeClient();
+    const loc = { parent: { type: 4, id: "77" }, required: false as const, required_on_subtasks: false as const, hide_from_guests: false as const };
+    request.mockResolvedValueOnce({ data: "" });
+    await client.setFieldLocations("f1", [loc]);
+    expect(request).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/field/v3/experience/workspaces/123/fields/f1/locations",
+      data: { new_locations: [loc] },
     });
   });
 });

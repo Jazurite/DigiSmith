@@ -8,7 +8,6 @@ export const TYPE_MILESTONE = 1;
 /** The V1.1 initiative ("after Dawn") is also a milestone link target. */
 export const V11_KEY = "DGS-470";
 
-const TO_DO = "to do";
 const KEY = /^[A-Za-z]+-\d+$/;
 
 interface Dependency { task_id?: string; depends_on?: string }
@@ -21,11 +20,12 @@ function isDone(t: ClickUpTask): boolean {
   return name === "done" || name === "closed";
 }
 
-function signOff(t: ClickUpTask): "Auto" | "Jack" | null {
-  const field = (t.custom_fields as unknown as Field[] | undefined)?.find((f) => f.name === "Sign-off");
+/** The option name of a dropdown field, read by its orderindex value; null when absent or not one of `allowed`. */
+function dropdown<T extends string>(t: ClickUpTask, name: string, allowed: readonly T[]): T | null {
+  const field = (t.custom_fields as unknown as Field[] | undefined)?.find((f) => f.name === name);
   if (!field || typeof field.value !== "number") return null;
   const option = field.type_config?.options?.find((o) => o.orderindex === field.value);
-  return option?.name === "Auto" || option?.name === "Jack" ? option.name : null;
+  return option?.name !== undefined && (allowed as readonly string[]).includes(option.name) ? (option.name as T) : null;
 }
 
 /** Tracker over the ClickUp API for one space. Reads only, except setStatus and comment. */
@@ -67,13 +67,14 @@ export class ClickUpLoTracker implements Tracker {
     return [...folders.flatMap((f) => f.lists ?? []), ...folderless].map((l) => l.id);
   }
 
-  async listToDo(): Promise<LoTask[]> {
-    const all = await this.client.searchTeamTasks(this.spaceId);
+  async listByStatus(name: string): Promise<LoTask[]> {
+    const want = name.toLowerCase();
+    const all = await this.client.searchTeamTasks(this.spaceId, 10, name);
     const byId = new Map(all.map((t) => [t.id, t]));
     const out: LoTask[] = [];
     for (const hit of all) {
-      if (hit.status?.status?.toLowerCase() !== TO_DO) continue;
-      // Search leaves out attachments: read the full ticket, only for to-do tickets.
+      if (hit.status?.status?.toLowerCase() !== want) continue;
+      // Search leaves out attachments: read the full ticket, only for tickets in this status.
       const full = await this.client.getTaskByRef(hit.id);
       out.push(await this.toLoTask({ ...hit, ...full, dependencies: full.dependencies ?? hit.dependencies,
         linked_tasks: full.linked_tasks ?? hit.linked_tasks }, byId));
@@ -141,7 +142,8 @@ export class ClickUpLoTracker implements Tracker {
       created: Number(t.date_created),
       attachments: (t.attachments ?? []).map((a) => a.title),
       text: t.text_content || t.description || "",
-      signOff: signOff(t),
+      signOff: dropdown(t, "Sign-off", ["Auto", "Jack"] as const),
+      mode: dropdown(t, "Mode", ["Autonomous", "Manual"] as const),
       milestone: await this.milestone(t),
       blockers: await this.blockers(t, known),
     };

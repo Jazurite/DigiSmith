@@ -142,8 +142,8 @@ describe("dg autonomous status", () => {
 
 describe("dg autonomous scan", () => {
   it("--dry-run prints the verdict rows at any hour and writes nothing", async () => {
-    tracker.add({ id: "t1", key: "DGS-1" });
-    tracker.add({ id: "t2", key: "DGS-2", attachments: [] });
+    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
+    tracker.add({ id: "t2", status: "ready", key: "DGS-2", attachments: [] });
     await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
     expect(process.exitCode ?? 0).toBe(0);
     expect(out()).toMatch(/DGS-1\s+ready/);
@@ -176,7 +176,7 @@ describe("dg autonomous scan", () => {
   it("a git that cannot read main stops the scan: guardrail-config, no claim", async () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
-    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
     const broken = (): AutonomousDeps => ({ ...deps(), git: () => { throw new Error("no repo"); } });
     await yargs(["autonomous", "scan", "--repo", "/repo"]).exitProcess(false).command(createAutonomousCommand(broken)).strict().parseAsync();
     expect(out()).toMatch(/scan: guardrail-config/);
@@ -186,7 +186,7 @@ describe("dg autonomous scan", () => {
     const other = join(root, "other-orders");
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
-    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
     await parse(["autonomous", "scan", "--repo", "/repo", "--orders", other]);
     expect(out()).toMatch(/scan: claimed DGS-1/);
     expect(readdirSync(other)).toHaveLength(1);

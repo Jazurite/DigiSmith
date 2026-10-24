@@ -5,7 +5,7 @@ export type FakeTask = LoTask & { status: string };
 export class FakeTracker implements Tracker {
   tasks = new Map<string, FakeTask>();
   comments: { ref: string; text: string }[] = [];
-  statuses = new Set<string>(["to do", "in progress", "complete"]);
+  statuses = new Set<string>(["to do", "ready", "scheduled", "in progress", "complete"]);
   calls: string[] = [];
   failSetStatus = false;
   readBackWrong = false;
@@ -13,8 +13,8 @@ export class FakeTracker implements Tracker {
   add(t: Partial<FakeTask> & { id: string }): FakeTask {
     const task: FakeTask = {
       key: t.id.toUpperCase(), name: `Task ${t.id}`, typeId: 0, priority: 3, due: null, created: 1,
-      attachments: ["design.md", "plan.md"], text: "", signOff: "Auto", milestone: "Dawn", blockers: [],
-      status: "to do", ...t,
+      attachments: ["design.md", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", milestone: "Dawn", blockers: [],
+      status: "ready", ...t,
     };
     this.tasks.set(task.id, task);
     return task;
@@ -25,9 +25,9 @@ export class FakeTracker implements Tracker {
     return this.statuses.has(name);
   }
 
-  async listToDo(): Promise<LoTask[]> {
-    this.calls.push("listToDo");
-    return [...this.tasks.values()].filter((t) => t.status === "to do").map(({ status: _s, ...t }) => ({ ...t }));
+  async listByStatus(name: string): Promise<LoTask[]> {
+    this.calls.push(`listByStatus ${name}`);
+    return [...this.tasks.values()].filter((t) => t.status.toLowerCase() === name.toLowerCase()).map(({ status: _s, ...t }) => ({ ...t }));
   }
 
   async setStatus(taskId: string, status: string): Promise<void> {
@@ -42,7 +42,7 @@ export class FakeTracker implements Tracker {
     this.calls.push(`getStatus ${taskId}`);
     const t = this.tasks.get(taskId);
     if (!t) throw new Error(`no task ${taskId}`);
-    return this.readBackWrong ? "to do" : t.status;
+    return this.readBackWrong ? "ready" : t.status;
   }
 
   async comment(ref: string, text: string): Promise<void> {

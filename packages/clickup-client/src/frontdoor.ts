@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { randomBytes } from "node:crypto";
-import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
+import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldWithLocations, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorFieldLocation, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 import { RenewalError, isDue, renewSession, tokenExpiry } from "./frontdoor-session.ts";
@@ -189,6 +189,11 @@ export class FrontdoorClient {
     return this.request<FrontdoorField>("GET", `/customFields/v2/field/${id}`);
   }
 
+  /** The field with its locations (where it shows). Read only. */
+  getFieldLocations(id: string): Promise<FrontdoorFieldWithLocations> {
+    return this.request<FrontdoorFieldWithLocations>("GET", `/customFields/v2/field/${id}?locations=true`);
+  }
+
   /** How many tasks hold one option of a dropdown (the web app asks before a removal). Read only; ClickUp answers a string. Throws on anything but a whole number >= 0, so a caller never reads a bad answer as zero. */
   async getFieldValueCount(id: string, optionId: string): Promise<number> {
     const res = await this.request<{ value_count?: string | number }>(
@@ -222,7 +227,12 @@ export class FrontdoorClient {
     await this.request("PUT", `/hierarchy/v1/project/${spaceId}/status?checkConflict=true`, body);
   }
 
-  /** Creates a field. With category_id in the body it is scoped to that folder; no second location call is needed. */
+  /** Adds locations to a field (where it shows). ClickUp answers 204. */
+  async setFieldLocations(fieldId: string, locations: FrontdoorFieldLocation[]): Promise<void> {
+    await this.request("PUT", `/field/v3/experience/workspaces/${this.teamId}/fields/${fieldId}/locations`, { new_locations: locations });
+  }
+
+  /** Creates a field. With category_id in the body it is scoped to that folder and needs no second call. With team_id in the body the field has no place yet: call setFieldLocations next. */
   createField(body: FrontdoorFieldCreateBody): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("POST", "/customFields/v2/field?ignore_existing=true", body);
   }

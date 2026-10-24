@@ -4,7 +4,7 @@ import type { LoTask } from "./types.ts";
 
 const base: LoTask = {
   id: "1", key: "DGS-1", name: "t", typeId: 0, priority: null, due: null, created: 0,
-  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", milestone: "Dawn", blockers: [],
+  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", milestone: "Dawn", blockers: [],
 };
 const ctx = { repo: "/r", fileExists: () => false };
 
@@ -24,6 +24,19 @@ describe("checkReady", () => {
   it("lists all four in order", () => {
     const t = { ...base, attachments: [], signOff: null, milestone: null, blockers: [{ key: "DGS-2", done: false }, { key: "DGS-3", done: false }] };
     expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.signOff, REASON.milestone, "blocked by open ticket(s): DGS-2, DGS-3"]);
+  });
+  it("Mode Manual fails with the Mode reason only", () => {
+    expect(checkReady({ ...base, mode: "Manual" }, ctx)).toEqual([REASON.mode]);
+  });
+  it("Mode missing fails with the Mode reason only", () => {
+    expect(checkReady({ ...base, mode: null }, ctx)).toEqual([REASON.mode]);
+  });
+  it("lists all five in order", () => {
+    const t = { ...base, attachments: [], text: "", signOff: null, milestone: null, blockers: [{ key: "DGS-1", done: false }], mode: null };
+    expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.signOff, REASON.milestone, REASON.blocked(["DGS-1"]), REASON.mode]);
+  });
+  it("pins the Mode reason text", () => {
+    expect(REASON.mode).toBe("Mode is not Autonomous (Manual or missing)");
   });
   it("attachments: plan alone fails, spec works", () => {
     expect(checkReady({ ...base, attachments: ["plan.md"] }, ctx)).toEqual([REASON.specPlan]);

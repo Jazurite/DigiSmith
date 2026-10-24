@@ -157,11 +157,11 @@ export class ClickUpClient {
   }
 
   /** GET /team/{team_id}/task for one space: open tasks only, 100 per page, up to maxPages pages. */
-  async searchTeamTasks(spaceId: string, maxPages = 10): Promise<ClickUpTask[]> {
+  async searchTeamTasks(spaceId: string, maxPages = 10, status?: string): Promise<ClickUpTask[]> {
     const all: ClickUpTask[] = [];
     for (let page = 0; page < maxPages; page++) {
       const res = await this.get<{ tasks: ClickUpTask[] }>(`/team/${this.teamId}/task`, {
-        params: { "space_ids[]": spaceId, include_closed: false, subtasks: true, page },
+        params: { "space_ids[]": spaceId, include_closed: false, subtasks: true, page, ...(status === undefined ? {} : { "statuses[]": status }) },
       });
       all.push(...res.tasks);
       if (res.tasks.length < 100) break;

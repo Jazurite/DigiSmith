@@ -30,7 +30,7 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
     <span v-else class="muted" role="status">Nexus loading</span>
     <template v-if="overview">
       <span>Workers <b>{{ overview.workers.length }}</b></span>
-      <span>To do waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
+      <span>Ready waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
       <span>Mode <b>{{ mode }}</b></span>
     </template>
     <span title="not measured">Burn <b>-</b>/h</span>

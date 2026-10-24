@@ -6,12 +6,13 @@ export interface LoTask {
   attachments: string[];        // titles
   text: string;
   signOff: "Auto" | "Jack" | null;
+  mode: "Autonomous" | "Manual" | null;
   milestone: string | null;
   blockers: { key: string; done: boolean }[];
 }
 export interface Tracker {
   hasStatus(name: string): Promise<boolean>;
-  listToDo(): Promise<LoTask[]>;                 // status exactly "to do", whole space, any type
+  listByStatus(name: string): Promise<LoTask[]>;   // status equal to name (any case), whole space, any type
   setStatus(taskId: string, status: string): Promise<void>;
   getStatus(taskId: string): Promise<string>;
   comment(ref: string, text: string): Promise<void>;   // ref = task id or key

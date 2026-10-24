@@ -157,3 +157,9 @@ describe('version literal', () => {
       expect(readFileSync(join(dir, f), 'utf8')).not.toMatch(/['"`]v\d+['"`]/)
   })
 })
+
+describe('autonomous-scan text', () => {
+  it('autonomous-scan says it claims a ready ticket', () => {
+    expect(JOBS.find((j) => j.name === 'autonomous-scan')!.description).toBe('Autonomous Operation: at night or while Jack is away, claim one ready ticket and hand it to the conductor')
+  })
+})

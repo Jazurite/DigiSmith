@@ -74,7 +74,7 @@ function lazyTracker(make: () => Tracker): Tracker {
   const get = (): Tracker => (t ??= make());
   return {
     hasStatus: (name) => get().hasStatus(name),
-    listToDo: () => get().listToDo(),
+    listByStatus: (name) => get().listByStatus(name),
     setStatus: (id, status) => get().setStatus(id, status),
     getStatus: (id) => get().getStatus(id),
     comment: (ref, text) => get().comment(ref, text),
@@ -210,12 +210,12 @@ function statusLines(d: AutonomousDeps): string[] {
 export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defaultDeps): CommandModule {
   return {
     command: "autonomous",
-    describe: "Autonomous Operation: scan to do and claim one ticket, the away switch, release, report, status",
+    describe: "Autonomous Operation: scan ready and claim one ticket, the away switch, release, report, status",
     builder: (y) =>
       y
         .command({
           command: "scan",
-          describe: "scan to do and claim the first ready ticket (works only at night or while away)",
+          describe: "scan ready and claim the first ticket that passes the Definition of Ready (works only at night or while away)",
           builder: (e) =>
             e
               .option("dry-run", { type: "boolean", default: false, describe: "print the verdict for each candidate, write nothing, any hour" })

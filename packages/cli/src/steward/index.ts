@@ -7,7 +7,7 @@ import { fileIdea, type ModelRunner } from "./file.ts";
 import { rebuild, runEvent, UsageError, type EventDeps, type EventResult } from "./event.ts";
 import { readStewardProfile } from "./profile.ts";
 import { stewardDir } from "./state.ts";
-import { EVENTS, type EventName } from "./types.ts";
+import { APPROVE_TARGETS, EVENTS, type ApproveTarget, type EventName } from "./types.ts";
 
 /** The real dependencies: the profile picks the tracker; none or an unbuilt one means no tracker. */
 export function defaultDeps(): EventDeps {
@@ -61,15 +61,18 @@ export function createStewardCommand(depsFactory: () => EventDeps = defaultDeps,
               .option("sha", { type: "string", requiresArg: true, describe: "merge sha, for merged" })
               .option("answer", { type: "string", choices: ["yes", "no"], describe: "Jack's answer, for accepted" })
               .option("quote", { type: "string", requiresArg: true, describe: "Jack's own words; required for approved, accepted, discard and close" })
+              .option("into", { type: "string", choices: [...APPROVE_TARGETS], describe: "approved only: the starter status (default to do)" })
               .option("dry-run", { type: "boolean", default: false, describe: "print the move, write nothing" }),
           handler: (argv) =>
-            guarded(depsFactory, (deps) =>
-              runEvent(
+            guarded(depsFactory, async (deps) => {
+              if (argv.into !== undefined && argv.event !== "approved") throw new UsageError("--into is valid only with approved");
+              return runEvent(
                 deps,
                 argv.ticket as string,
-                { event: argv.event as EventName, by: argv.by as string | undefined, sha: argv.sha as string | undefined, answer: argv.answer as "yes" | "no" | undefined, quote: argv.quote as string | undefined },
+                { event: argv.event as EventName, by: argv.by as string | undefined, sha: argv.sha as string | undefined, answer: argv.answer as "yes" | "no" | undefined, quote: argv.quote as string | undefined, into: argv.into as ApproveTarget | undefined },
                 argv.dryRun as boolean,
-              )),
+              );
+            }),
         })
         .command({
           command: "rebuild",

@@ -16,10 +16,19 @@ export function parseOption(input: string, position: number): { name: string; co
   return { name: input.trim(), color: DEFAULT_COLORS[position % DEFAULT_COLORS.length] };
 }
 
+const LOCATION = /^([1-9]\d?):(\d+)$/;
+
+/** "<type>:<id>" as printed by get-field: a location type number and a numeric id. */
+export function parseLocation(input: string): { type: number; id: string } {
+  const m = LOCATION.exec(input.trim());
+  if (!m) throw new Error(`--location "${input}" must look like "<type>:<id>" with a type from 1 to 99 and a numeric id (read them with dg clickup get-field on a field that already has the place)`);
+  return { type: Number(m[1]), id: m[2] };
+}
+
 export function buildFieldCreateBody(
   name: string,
   optionArgs: string[],
-  folder: string,
+  scope: { folder: string } | { teamId: string },
   description: string
 ): FrontdoorFieldCreateBody {
   const options = optionArgs.map((o, i) => parseOption(o, i));
@@ -39,7 +48,7 @@ export function buildFieldCreateBody(
       sorting: "manual",
       options: options.map((o) => ({ id: null, name: o.name, color: o.color, orderindex: null })),
     },
-    category_id: folder,
+    ...("folder" in scope ? { category_id: scope.folder } : { team_id: scope.teamId }),
     required: false,
     required_on_subtasks: false,
     pinned: false,
@@ -56,7 +65,7 @@ export function createCreateFieldCommand(
 ): CommandModule {
   return {
     command: "create-field",
-    describe: "create a dropdown custom field scoped to a folder (Frontdoor); a dry run unless --yes",
+    describe: "create a dropdown custom field at a folder or at locations read with get-field (Frontdoor); a dry run unless --yes",
     builder: (y) =>
       y
         .option("name", { type: "string", requiresArg: true, demandOption: true, describe: "field name" })
@@ -68,13 +77,19 @@ export function createCreateFieldCommand(
           describe: 'dropdown option: "<name>" or "<name>:<hex colour>"; repeat for more, in order',
         })
         .option("folder", { type: "string", requiresArg: true, describe: "folder id the field is scoped to" })
+        .option("location", {
+          type: "string",
+          array: true,
+          requiresArg: true,
+          describe: 'a place the field shows: "<type>:<id>" as printed by get-field; repeat for more; not with --folder',
+        })
         .option("list", { type: "string", requiresArg: true, describe: "not supported yet" })
         .option("description", { type: "string", requiresArg: true, default: "", describe: "field description" })
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
         if (argv.list !== undefined) {
-          throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder.");
+          throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder or --location.");
         }
         if (argv.type !== "drop_down") throw new Error(`type "${argv.type}" is not supported; only drop_down`);
         for (const flag of ["name", "folder", "description"] as const) {
@@ -83,19 +98,41 @@ export function createCreateFieldCommand(
         const name = ((argv.name as string) ?? "").trim();
         if (name === "") throw new Error("--name must not be empty");
         const folder = argv.folder as string | undefined;
-        if (folder === undefined) throw new Error("--folder is required");
-        if (!/^\d+$/.test(folder)) throw new Error("--folder must be a numeric id");
         const optionArgs = (argv.option as string[] | undefined) ?? [];
         if (optionArgs.length === 0) throw new Error("at least one --option is required");
-        const body = buildFieldCreateBody(name, optionArgs, folder, (argv.description as string) ?? "");
+        const locationArgs = (argv.location as string[] | undefined) ?? [];
+        if (folder !== undefined && locationArgs.length > 0) throw new Error("use --folder or --location, not both");
+        if (folder === undefined && locationArgs.length === 0) throw new Error("--folder or --location is required");
+        if (folder !== undefined && !/^\d+$/.test(folder)) throw new Error("--folder must be a numeric id");
+        const locations = [...new Set(locationArgs.map((l) => l.trim()))]
+          .map(parseLocation)
+          .map((parent) => ({ parent, required: false as const, required_on_subtasks: false as const, hide_from_guests: false as const }));
+        const client = clientFactory();
+        const body = buildFieldCreateBody(name, optionArgs, folder !== undefined ? { folder } : { teamId: client.teamId }, (argv.description as string) ?? "");
         if (!argv.yes) {
           printCall("POST", "/customFields/v2/field?ignore_existing=true", body);
+          if (locations.length > 0) {
+            printCall("PUT", `/field/v3/experience/workspaces/${client.teamId}/fields/<new field id>/locations`, { new_locations: locations });
+          }
           console.log("nothing sent; add --yes to send");
         } else {
-          const field = await clientFactory().createField(body);
+          const field = await client.createField(body);
           console.log(`field ${field.id} (${field.type}) ${JSON.stringify(field.name)}`);
           for (const o of field.type_config.options ?? []) {
             console.log(`option ${o.id} ${o.name} (orderindex ${o.orderindex})`);
+          }
+          if (locations.length > 0) {
+            try {
+              await client.setFieldLocations(field.id, locations);
+            } catch (e) {
+              throw new Error(`field ${field.id} was created, but setting its locations failed: ${(e as Error).message}. Run get-field ${field.id} and set the locations again; do not create the field twice.`);
+            }
+            try {
+              const back = await client.getFieldLocations(field.id);
+              console.log(`locations read back: ${(back.locations ?? []).length}`);
+            } catch (e) {
+              throw new Error(`field ${field.id} was created and its locations were set, but the read-back failed: ${(e as Error).message}. Run get-field ${field.id} to check the locations; do not create the field twice.`);
+            }
           }
         }
         process.exitCode = 0;

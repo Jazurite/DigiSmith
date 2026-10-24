@@ -842,4 +842,17 @@ describe("ClickUpClient searchTeamTasks", () => {
     expect(request.mock.calls[0][0].params).toMatchObject({ "space_ids[]": "S1", page: 0, include_closed: false });
     expect(request.mock.calls[1][0].params).toMatchObject({ page: 1 });
   });
+
+  it("searchTeamTasks sends one statuses[] filter when a status is given", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { tasks: [] } });
+    await client.searchTeamTasks("space-1", 10, "ready");
+    expect(request.mock.calls[0][0].params).toEqual({ "space_ids[]": "space-1", include_closed: false, subtasks: true, page: 0, "statuses[]": "ready" });
+  });
+  it("searchTeamTasks sends no statuses[] without a status", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { tasks: [] } });
+    await client.searchTeamTasks("space-1");
+    expect(request.mock.calls[0][0].params).not.toHaveProperty("statuses[]");
+  });
 });
