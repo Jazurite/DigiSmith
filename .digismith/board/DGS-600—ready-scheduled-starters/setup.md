@@ -56,3 +56,9 @@ Run 2026-10-24 19:05 UTC+7 (12:05 UTC), in the main checkout after the merge (`7
 schedule-release (dry run, nothing written): 0 scheduled
 ```
 No ticket is scheduled. The worker scheduled none.
+
+## B3 Nexus picks up the job: DONE (2026-10-24 ~19:10 UTC+7 [12:10Z])
+- The Scheduling Maestro ran `sh scripts/nexus-api/install.sh` (writes only in the depot; refreshes the copy in
+  `~/.digismith-depot/nexus-api/src`), then `launchctl kickstart -k gui/$(id -u)/com.jazurite.digismith.nexus-api`.
+- `GET /api/v1/jobs` lists `schedule-release`. Its 19:10 run was ok: 0 scheduled, 0 moved.
+- Follow-up tickets: DGS-617 (hook 03 misses `report-<key>.html`), DGS-618 (clickup-client parameter property), DGS-611 (read-back line).
