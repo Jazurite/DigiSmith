@@ -388,16 +388,21 @@ export interface FrontdoorFieldCreateOption {
   orderindex: null;
 }
 
-/** Body of the web app's POST /customFields/v2/field (captured 2026-10-02 with a folder, 2026-10-10 with team_id). Exactly one of category_id and team_id. */
+/**
+ * Body of the web app's POST /customFields/v2/field (captured 2026-10-02 with a folder, 2026-10-10 with team_id). Exactly one of category_id and team_id.
+ * A date body (type_config {}) is not captured; DGS-601 sends it once and stops on a 4xx.
+ */
 export interface FrontdoorFieldCreateBody {
   name: string;
   description: string;
-  type: "drop_down";
-  type_config: {
-    new_drop_down: true;
-    sorting: "manual";
-    options: FrontdoorFieldCreateOption[];
-  };
+  type: "drop_down" | "date";
+  type_config:
+    | {
+        new_drop_down: true;
+        sorting: "manual";
+        options: FrontdoorFieldCreateOption[];
+      }
+    | Record<string, never>;
   category_id?: string;
   team_id?: string;
   required: boolean;

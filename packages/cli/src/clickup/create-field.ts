@@ -29,8 +29,26 @@ export function buildFieldCreateBody(
   name: string,
   optionArgs: string[],
   scope: { folder: string } | { teamId: string },
-  description: string
+  description: string,
+  fieldType: "drop_down" | "date" = "drop_down"
 ): FrontdoorFieldCreateBody {
+  if (fieldType === "date") {
+    return {
+      name,
+      description,
+      type: "date",
+      type_config: {},
+      ...("folder" in scope ? { category_id: scope.folder } : { team_id: scope.teamId }),
+      required: false,
+      required_on_subtasks: false,
+      pinned: false,
+      private: false,
+      hide_from_guests: false,
+      permission_level: null,
+      members: [],
+      groups: [],
+    };
+  }
   const options = optionArgs.map((o, i) => parseOption(o, i));
   const seen = new Set<string>();
   for (const o of options) {
@@ -65,11 +83,11 @@ export function createCreateFieldCommand(
 ): CommandModule {
   return {
     command: "create-field",
-    describe: "create a dropdown custom field at a folder or at locations read with get-field (Frontdoor); a dry run unless --yes",
+    describe: "create a dropdown or date custom field at a folder or at locations read with get-field (Frontdoor); a dry run unless --yes",
     builder: (y) =>
       y
         .option("name", { type: "string", requiresArg: true, demandOption: true, describe: "field name" })
-        .option("type", { type: "string", choices: ["drop_down"], default: "drop_down", describe: "field type" })
+        .option("type", { type: "string", choices: ["drop_down", "date"], default: "drop_down", describe: "field type" })
         .option("option", {
           type: "string",
           array: true,
@@ -91,7 +109,8 @@ export function createCreateFieldCommand(
         if (argv.list !== undefined) {
           throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder or --location.");
         }
-        if (argv.type !== "drop_down") throw new Error(`type "${argv.type}" is not supported; only drop_down`);
+        if (argv.type !== "drop_down" && argv.type !== "date") throw new Error(`type "${argv.type}" is not supported; only drop_down and date`);
+        const fieldType = argv.type as "drop_down" | "date";
         for (const flag of ["name", "folder", "description"] as const) {
           if (Array.isArray(argv[flag])) throw new Error(`--${flag} was given more than once`);
         }
@@ -99,7 +118,8 @@ export function createCreateFieldCommand(
         if (name === "") throw new Error("--name must not be empty");
         const folder = argv.folder as string | undefined;
         const optionArgs = (argv.option as string[] | undefined) ?? [];
-        if (optionArgs.length === 0) throw new Error("at least one --option is required");
+        if (fieldType === "date" && optionArgs.length > 0) throw new Error("--option is only for --type drop_down");
+        if (fieldType === "drop_down" && optionArgs.length === 0) throw new Error("at least one --option is required");
         const locationArgs = (argv.location as string[] | undefined) ?? [];
         if (folder !== undefined && locationArgs.length > 0) throw new Error("use --folder or --location, not both");
         if (folder === undefined && locationArgs.length === 0) throw new Error("--folder or --location is required");
@@ -108,7 +128,7 @@ export function createCreateFieldCommand(
           .map(parseLocation)
           .map((parent) => ({ parent, required: false as const, required_on_subtasks: false as const, hide_from_guests: false as const }));
         const client = clientFactory();
-        const body = buildFieldCreateBody(name, optionArgs, folder !== undefined ? { folder } : { teamId: client.teamId }, (argv.description as string) ?? "");
+        const body = buildFieldCreateBody(name, optionArgs, folder !== undefined ? { folder } : { teamId: client.teamId }, (argv.description as string) ?? "", fieldType);
         if (!argv.yes) {
           printCall("POST", "/customFields/v2/field?ignore_existing=true", body);
           if (locations.length > 0) {
@@ -116,7 +136,13 @@ export function createCreateFieldCommand(
           }
           console.log("nothing sent; add --yes to send");
         } else {
-          const field = await client.createField(body);
+          let field;
+          try {
+            field = await client.createField(body);
+          } catch (e) {
+            const m = (e as Error).message;
+            throw new Error(fieldType === "date" ? `${m} (the date body is not captured yet: create one date field in the ClickUp web app with Proxyman on, then compare with dg clickup frontdoor dump --match customFields)` : m);
+          }
           console.log(`field ${field.id} (${field.type}) ${JSON.stringify(field.name)}`);
           for (const o of field.type_config.options ?? []) {
             console.log(`option ${o.id} ${o.name} (orderindex ${o.orderindex})`);
