@@ -53,7 +53,7 @@ git fetch -q . main:main 2>/dev/null || true
 git rebase main
 ls packages/cli/src/oculus/derive.ts packages/cli/src/oculus/views.ts packages/cli/src/oculus/types.ts \
    scripts/nexus-shared/oculus.ts scripts/nexus-web/app/utils/oc-format.ts \
-   scripts/nexus-web/app/components/oc/OcRunsTable.vue scripts/nexus-web/app/components/oc/OcPipelineBar.vue \
+   scripts/nexus-web/app/components/oc/RunsTable.vue scripts/nexus-web/app/components/oc/PipelineBar.vue \
    scripts/nexus-web/app/pages/oculus/run.vue scripts/nexus-web/tests/oculus-fixtures.ts
 ```
 
@@ -451,11 +451,11 @@ git commit -m "feat(oculus): add phase and step time helpers" -- scripts/nexus-w
 
 ### Task 3: Runs table: the phase inside the Duration cell
 
-Needs DGS-599 merged (`OcRunsTable.vue`), Tasks 1 and 2.
+Needs DGS-599 merged (`oc/RunsTable.vue`), Tasks 1 and 2.
 
 **Files:**
-- Modify: `scripts/nexus-web/app/components/oc/OcRunsTable.vue`
-- Modify: `scripts/nexus-web/app/components/oc/OcRunsTable.stories.ts`
+- Modify: `scripts/nexus-web/app/components/oc/RunsTable.vue`
+- Modify: `scripts/nexus-web/app/components/oc/RunsTable.stories.ts`
 - Test: `scripts/nexus-web/app/components/oc/runs.test.ts`
 
 **Interfaces:**
@@ -487,7 +487,7 @@ Expected: FAIL (no `aria-hidden` span in the Duration cell).
 
 - [ ] **Step 3: Implement**
 
-In `OcRunsTable.vue` `<script setup>`, import `fmtMinutes`, `phaseTime`, `spokenMinutes`, `spokenSeconds` from `../../utils/oc-format` beside the existing imports, and add under `duration`:
+In `oc/RunsTable.vue` `<script setup>`, import `fmtMinutes`, `phaseTime`, `spokenMinutes`, `spokenSeconds` from `../../utils/oc-format` beside the existing imports, and add under `duration`:
 
 ```ts
 const totalSec = (r: RunRow, nowMs: number): number => (r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
@@ -519,7 +519,7 @@ Add a scoped style so the phase part never breaks inside itself (on a phone it m
 
 - [ ] **Step 4: Stories**
 
-`OcRunsTable.stories.ts`: the `Default` story already shows running, stalled, ended and lost rows. Add a story for a run whose phase start is after the page clock and one with no phase:
+`oc/RunsTable.stories.ts`: the `Default` story already shows running, stalled, ended and lost rows. Add a story for a run whose phase start is after the page clock and one with no phase:
 
 ```ts
 export const PhaseEdges = { args: { runs: [
@@ -538,18 +538,18 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git commit -m "feat(oculus): show the phase and its time in the runs duration cell" -- scripts/nexus-web/app/components/oc/OcRunsTable.vue scripts/nexus-web/app/components/oc/OcRunsTable.stories.ts scripts/nexus-web/app/components/oc/runs.test.ts
+git commit -m "feat(oculus): show the phase and its time in the runs duration cell" -- scripts/nexus-web/app/components/oc/RunsTable.vue scripts/nexus-web/app/components/oc/RunsTable.stories.ts scripts/nexus-web/app/components/oc/runs.test.ts
 ```
 
 ---
 
 ### Task 4: Run page phase strip: durations and the current step's counter
 
-Needs DGS-599 merged (`OcPipelineBar.vue`, `pages/oculus/run.vue`), Tasks 1 and 2.
+Needs DGS-599 merged (`oc/PipelineBar.vue`, `pages/oculus/run.vue`), Tasks 1 and 2.
 
 **Files:**
-- Modify: `scripts/nexus-web/app/components/oc/OcPipelineBar.vue`
-- Modify: `scripts/nexus-web/app/components/oc/OcPipelineBar.stories.ts`
+- Modify: `scripts/nexus-web/app/components/oc/PipelineBar.vue`
+- Modify: `scripts/nexus-web/app/components/oc/PipelineBar.stories.ts`
 - Modify: `scripts/nexus-web/app/pages/oculus/run.vue`
 - Test: `scripts/nexus-web/app/components/oc/runs.test.ts`
 
@@ -590,7 +590,7 @@ Expected: FAIL (no `.dur`).
 
 - [ ] **Step 3: Implement the strip**
 
-`OcPipelineBar.vue`:
+`oc/PipelineBar.vue`:
 
 ```vue
 <script setup lang="ts">
@@ -641,7 +641,7 @@ Keep the existing `<style>` block and add:
 
 - [ ] **Step 5: Stories**
 
-`OcPipelineBar.stories.ts`:
+`oc/PipelineBar.stories.ts`:
 
 ```ts
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
@@ -667,7 +667,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git commit -m "feat(oculus): show phase durations and a live counter on the run page strip" -- scripts/nexus-web/app/components/oc/OcPipelineBar.vue scripts/nexus-web/app/components/oc/OcPipelineBar.stories.ts scripts/nexus-web/app/pages/oculus/run.vue scripts/nexus-web/app/components/oc/runs.test.ts
+git commit -m "feat(oculus): show phase durations and a live counter on the run page strip" -- scripts/nexus-web/app/components/oc/PipelineBar.vue scripts/nexus-web/app/components/oc/PipelineBar.stories.ts scripts/nexus-web/app/pages/oculus/run.vue scripts/nexus-web/app/components/oc/runs.test.ts
 ```
 
 ---
