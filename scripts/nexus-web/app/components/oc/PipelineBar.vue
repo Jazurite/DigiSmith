@@ -1,17 +1,30 @@
 <script setup lang="ts">
 import type { RunDetail } from '#oculus-schema'
-import { fmtUtc7 } from '../../utils/oc-format'
+import { fmtMinutes, fmtUtc7, spokenMinutes, stepTime } from '../../utils/oc-format'
 
-defineProps<{ steps: RunDetail['pipeline'] }>()
+type Step = RunDetail['pipeline'][number]
+defineProps<{ steps: RunDetail['pipeline']; nowMs: number }>()
 const LABEL = { claimed: 'Claimed', 'worktree-ready': 'Worktree ready', building: 'Building', review: 'Review', merged: 'Merged', pushed: 'Pushed' } as const
+// Pushed is the end mark: blank once reached, a dash before
+const durText = (s: Step, nowMs: number): string => {
+  const t = stepTime(s, nowMs)
+  if (t) return fmtMinutes(t.min)
+  return s.step === 'pushed' && s.state === 'done' ? '' : '-'
+}
+const srText = (s: Step, nowMs: number): string => {
+  const t = stepTime(s, nowMs)
+  if (!t) return `(${s.state})`
+  return t.live ? `(${s.state}, ${spokenMinutes(t.min)} so far)` : `(${s.state}, ${spokenMinutes(t.min)})`
+}
 </script>
 
 <template>
   <ol class="pipe" aria-label="Run pipeline, times UTC+7">
     <li v-for="s in steps" :key="s.step" :class="s.state">
       <i class="dot" aria-hidden="true" />{{ LABEL[s.step] }}
-      <span class="sr"> ({{ s.state }})</span>
+      <span class="sr"> {{ srText(s, nowMs) }}</span>
       <small>{{ fmtUtc7(s.at) }}</small>
+      <small class="dur" :class="{ live: stepTime(s, nowMs)?.live }" aria-hidden="true">{{ durText(s, nowMs) }}</small>
       <b v-if="s.state === 'lost'" class="word">lost</b>
     </li>
   </ol>
@@ -28,6 +41,8 @@ small { display: block; font: 11px var(--oc-mono); color: var(--oc-text-3); marg
 .lost .dot { background: var(--oc-bad); }
 .lost, .word { color: var(--oc-bad); }
 .word { font: 600 11px var(--oc-mono); }
+.dur { min-height: 1.4em; }
+.dur.live { color: var(--oc-info); font-weight: 600; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 760px) { .pipe { grid-template-columns: repeat(2, 1fr); } }
 </style>

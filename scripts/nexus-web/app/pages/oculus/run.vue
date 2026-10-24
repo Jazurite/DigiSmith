@@ -5,6 +5,7 @@ import { loadRun, OculusApiError } from '../../composables/oculus-api'
 import { useEventTail } from '../../composables/useEventTail'
 import { useRestartingPoll } from '../../composables/useRestartingPoll'
 import { isSafeId } from '../../utils/oc-format'
+import { useNow } from '../../utils/use-now'
 import OcBudgetCard from '../../components/oc/BudgetCard.vue'
 import OcEventStream from '../../components/oc/EventStream.vue'
 import OcOrderCard from '../../components/oc/OrderCard.vue'
@@ -19,6 +20,7 @@ const route = useRoute()
 // the id comes from the query and can change without a new page (a link to another run): everything restarts on a change
 const id = computed(() => { const q = route.query.id; const v = Array.isArray(q) ? q[0] : q; return isSafeId(v) ? v : null })
 const notFound = ref(false)
+const nowMs = useNow()
 // the generated page has no query: until the client has mounted, the id is unknown, so never say "does not exist" yet
 const mounted = ref(false)
 onMounted(() => { mounted.value = true })
@@ -60,7 +62,7 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
     <OcPanel v-else-if="!run" kind="error" title="This run is not available right now." @retry="poll.refresh()" />
     <template v-else>
       <OcStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
-      <OcPipelineBar :steps="run.pipeline" />
+      <OcPipelineBar :steps="run.pipeline" :now-ms="nowMs" />
       <div class="cols">
         <div>
           <OcStaleBanner v-if="tail && tail.error.value && tail.lines.value.length" :failed-at="tail.failedAt.value" />

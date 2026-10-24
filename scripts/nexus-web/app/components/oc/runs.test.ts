@@ -54,11 +54,30 @@ describe('RunsTable', () => {
 describe('PipelineBar', () => {
   it('has six steps in order, a time or a dash, and the word lost', async () => {
     const steps = runDetailFixture().pipeline
-    const w = await mountSuspended(PipelineBar, { props: { steps } })
+    const w = await mountSuspended(PipelineBar, { props: { steps, nowMs: NOW } })
     expect(w.findAll('li')).toHaveLength(6)
     expect(w.text().indexOf('Claimed')).toBeLessThan(w.text().indexOf('Pushed'))
     const lost = steps.map((s, i) => (i === 2 ? { ...s, state: 'lost' as const } : s))
-    expect((await mountSuspended(PipelineBar, { props: { steps: lost } })).text()).toContain('lost')
+    expect((await mountSuspended(PipelineBar, { props: { steps: lost, nowMs: NOW } })).text()).toContain('lost')
+  })
+  it('shows each done step\'s duration, the current step\'s time only, and words for screen readers', async () => {
+    const w = await mountSuspended(PipelineBar, { props: { steps: runDetailFixture().pipeline, nowMs: NOW } })
+    const dur = w.findAll('li .dur').map((d) => d.text())
+    expect(dur).toEqual(['0:01', '0:00', '0:50', '-', '-', '-'])
+    expect(w.findAll('li')[2]!.find('.dur').classes()).toContain('live')
+    expect(w.text()).not.toContain('now')
+    expect(w.findAll('li')[0]!.find('.sr').text()).toBe('(done, 1 min)')
+    expect(w.findAll('li')[2]!.find('.sr').text()).toBe('(current, 50 min so far)')
+    expect(w.findAll('li')[3]!.find('.sr').text()).toBe('(waiting)')
+  })
+  it('an ended run: Pushed shows no duration; a lost step shows the word lost and a dash', async () => {
+    const ended = runDetailFixture().pipeline.map((s) => ({ ...s, at: s.at ?? '2026-10-22T02:59:00.000Z', state: 'done' as const, durationSec: s.step === 'pushed' ? null : 600 }))
+    const e = await mountSuspended(PipelineBar, { props: { steps: ended, nowMs: NOW } })
+    expect(e.findAll('li .dur').map((d) => d.text())).toEqual(['0:10', '0:10', '0:10', '0:10', '0:10', ''])
+    const lost = runDetailFixture().pipeline.map((s) => (s.state === 'current' ? { ...s, state: 'lost' as const } : s))
+    const l = await mountSuspended(PipelineBar, { props: { steps: lost, nowMs: NOW } })
+    expect(l.findAll('li')[2]!.text()).toContain('lost')
+    expect(l.findAll('li')[2]!.find('.dur').text()).toBe('-')
   })
 })
 
@@ -208,7 +227,7 @@ describe('TokensCard (DGS-590)', () => {
 
 describe('PipelineBar details', () => {
   it('shows a UTC+7 time for a step with a time and a dash for one without, and names each state', async () => {
-    const w = await mountSuspended(PipelineBar, { props: { steps: runDetailFixture().pipeline } })
+    const w = await mountSuspended(PipelineBar, { props: { steps: runDetailFixture().pipeline, nowMs: NOW } })
     const li = w.findAll('li')
     expect(li[0]!.find('small').text()).toBe('09:09')
     expect(li[3]!.find('small').text()).toBe('-')
