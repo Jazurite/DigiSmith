@@ -1,5 +1,5 @@
 import type { CommandModule } from "yargs";
-import type { FrontdoorClient, FrontdoorFieldCreateBody } from "@digismith/clickup-client";
+import { ClickUpApiError, type FrontdoorClient, type FrontdoorFieldCreateBody } from "@digismith/clickup-client";
 import { createFrontdoorClient } from "./lib.ts";
 import { printCall } from "./task-type-write.ts";
 
@@ -32,40 +32,9 @@ export function buildFieldCreateBody(
   description: string,
   fieldType: "drop_down" | "date" = "drop_down"
 ): FrontdoorFieldCreateBody {
-  if (fieldType === "date") {
-    return {
-      name,
-      description,
-      type: "date",
-      type_config: {},
-      ...("folder" in scope ? { category_id: scope.folder } : { team_id: scope.teamId }),
-      required: false,
-      required_on_subtasks: false,
-      pinned: false,
-      private: false,
-      hide_from_guests: false,
-      permission_level: null,
-      members: [],
-      groups: [],
-    };
-  }
-  const options = optionArgs.map((o, i) => parseOption(o, i));
-  const seen = new Set<string>();
-  for (const o of options) {
-    if (o.name === "") throw new Error("option name must not be empty");
-    const key = o.name.toLowerCase();
-    if (seen.has(key)) throw new Error(`duplicate option "${key}"`);
-    seen.add(key);
-  }
-  return {
+  const shared = {
     name,
     description,
-    type: "drop_down",
-    type_config: {
-      new_drop_down: true,
-      sorting: "manual",
-      options: options.map((o) => ({ id: null, name: o.name, color: o.color, orderindex: null })),
-    },
     ...("folder" in scope ? { category_id: scope.folder } : { team_id: scope.teamId }),
     required: false,
     required_on_subtasks: false,
@@ -75,6 +44,24 @@ export function buildFieldCreateBody(
     permission_level: null,
     members: [],
     groups: [],
+  };
+  if (fieldType === "date") return { ...shared, type: "date", type_config: {} };
+  const options = optionArgs.map((o, i) => parseOption(o, i));
+  const seen = new Set<string>();
+  for (const o of options) {
+    if (o.name === "") throw new Error("option name must not be empty");
+    const key = o.name.toLowerCase();
+    if (seen.has(key)) throw new Error(`duplicate option "${key}"`);
+    seen.add(key);
+  }
+  return {
+    ...shared,
+    type: "drop_down",
+    type_config: {
+      new_drop_down: true,
+      sorting: "manual",
+      options: options.map((o) => ({ id: null, name: o.name, color: o.color, orderindex: null })),
+    },
   };
 }
 
@@ -141,7 +128,9 @@ export function createCreateFieldCommand(
             field = await client.createField(body);
           } catch (e) {
             const m = (e as Error).message;
-            throw new Error(fieldType === "date" ? `${m} (the date body is not captured yet: create one date field in the ClickUp web app with Proxyman on, then compare with dg clickup frontdoor dump --match customFields)` : m);
+            const status = e instanceof ClickUpApiError ? e.status : undefined;
+            const refused = status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 403;
+            throw new Error(fieldType === "date" && refused ? `${m} (the date body is not captured yet: create one date field in the ClickUp web app with Proxyman on, then compare with dg clickup frontdoor dump --match customFields)` : m);
           }
           console.log(`field ${field.id} (${field.type}) ${JSON.stringify(field.name)}`);
           for (const o of field.type_config.options ?? []) {

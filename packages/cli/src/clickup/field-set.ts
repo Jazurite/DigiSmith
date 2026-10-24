@@ -139,7 +139,8 @@ export async function resolveFieldArgs(client: ClickUpClient, listId: string, ar
     if (field.type === "date") {
       resolved.push({ field, value: parseDateTimeValue(value, field.name), valueOptions: { time: true } });
       continue;
-    } else if (RELATIONSHIP_TYPES.includes(field.type)) {
+    }
+    if (RELATIONSHIP_TYPES.includes(field.type)) {
       const rel = await resolveRelationValue(client, field, value);
       const prior = seen.get(field.id) ?? { add: new Set<string>(), rem: new Set<string>() };
       const clash = [...rel.add.filter((id) => prior.rem.has(id)), ...rel.rem.filter((id) => prior.add.has(id))][0];

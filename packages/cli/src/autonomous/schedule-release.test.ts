@@ -109,6 +109,44 @@ describe("runScheduleRelease", () => {
     await runScheduleRelease(mk());
     expect(existsSync(join(dir, SCHEDULE_NOTES)) ? JSON.parse(readFileSync(join(dir, SCHEDULE_NOTES), "utf8")) : {}).toEqual({});
   });
+  it("an event write that throws never aborts the run: tickets still move, notes are still saved", async () => {
+    sched("a", { mode: null });
+    sched("t1", { scheduledAt: PAST - 1000 });
+    sched("t2");
+    const boom = () => { throw new Error("EACCES"); };
+    const r = await runScheduleRelease(mk({ appendEvent: boom }));
+    expect(r.lines.map((l) => [l.key, l.verdict])).toEqual([["T1", "moved"], ["A", "no-mode"], ["T2", "moved"]]);
+    expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t2")?.status).toBe("ready");
+    expect(Object.keys(JSON.parse(readFileSync(join(dir, SCHEDULE_NOTES), "utf8")))).toEqual(["A"]);
+  });
+  it("a failed move whose event write throws is still a failed line, and notes are saved", async () => {
+    sched("t1");
+    sched("a", { mode: null, scheduledAt: PAST - 5000 });
+    tracker.failSetStatus = true;
+    const r = await runScheduleRelease(mk({ appendEvent: () => { throw new Error("EACCES"); } }));
+    expect(r.lines.map((l) => [l.key, l.verdict])).toEqual([["A", "no-mode"], ["T1", "failed"]]);
+    expect(Object.keys(JSON.parse(readFileSync(join(dir, SCHEDULE_NOTES), "utf8"))).sort()).toEqual(["A", "T1"]);
+  });
+  it("a note is cleared when the ticket is valid but not yet due", async () => {
+    const t = sched("a", { mode: null });
+    await runScheduleRelease(mk());
+    t.mode = "Autonomous";
+    t.scheduledAt = FUTURE;
+    await runScheduleRelease(mk());
+    expect(JSON.parse(readFileSync(join(dir, SCHEDULE_NOTES), "utf8"))).toEqual({});
+    t.mode = null;
+    await runScheduleRelease(mk());
+    expect(tracker.comments).toHaveLength(2);
+  });
+  it("the same failure on two runs writes one schedule-move-failed event", async () => {
+    sched("t1");
+    tracker.failSetStatus = true;
+    await runScheduleRelease(mk());
+    await runScheduleRelease(mk());
+    expect(events().map((e) => e.kind)).toEqual(["schedule-move-failed"]);
+    expect(tracker.comments).toHaveLength(1);
+  });
   it("a second run after a move does nothing (idempotent)", async () => {
     sched("t1");
     await runScheduleRelease(mk());

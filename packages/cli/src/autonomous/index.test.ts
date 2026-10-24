@@ -425,6 +425,12 @@ describe("schedule-release", () => {
     expect(out()).toContain("schedule-release (dry run, nothing written): 1 scheduled");
     expect(out()).toMatch(/T1\s+.*would-move -> ready/);
   });
+  it("--dry-run shows a Manual ticket as would-move -> to do", async () => {
+    tracker.add({ id: "t2", status: "scheduled", scheduledAt: DAY.getTime() - 60_000, mode: "Manual" });
+    await parse(["autonomous", "schedule-release", "--dry-run"]);
+    expect(tracker.tasks.get("t2")?.status).toBe("scheduled");
+    expect(out()).toMatch(/T2\s+.*would-move -> to do/);
+  });
   it("a tracker that cannot list exits 1", async () => {
     tracker.listByStatus = async () => { throw new Error("401"); };
     await parse(["autonomous", "schedule-release"]);

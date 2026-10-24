@@ -31,7 +31,11 @@ export function createCreateViewCommand(clientFactory: () => ClickUpClient = cre
         if (!/^\d+$/.test(space)) throw new Error("--space must be a numeric id");
         const name = ((argv.name as string) ?? "").trim();
         if (name === "") throw new Error("--name must not be empty");
-        const body = buildViewBody(name, (argv.status as string).trim(), argv.sortFieldId as string, (argv.columnFieldId as string[]) ?? []);
+        const status = ((argv.status as string) ?? "").trim();
+        if (status === "") throw new Error("--status must not be empty");
+        const sortFieldId = ((argv.sortFieldId as string) ?? "").trim();
+        if (sortFieldId === "") throw new Error("--sort-field-id must not be empty");
+        const body = buildViewBody(name, status, sortFieldId, (argv.columnFieldId as string[]) ?? []);
         const client = clientFactory();
         const clash = (await client.getSpaceViews(space)).find((v) => v.name.trim().toLowerCase() === name.toLowerCase());
         if (clash) throw new Error(`the space already has a view named "${clash.name}" (${clash.id}); nothing sent`);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import type { FrontdoorClient } from "@digismith/clickup-client";
+import { ClickUpApiError, type FrontdoorClient } from "@digismith/clickup-client";
 import { createCreateFieldCommand, parseLocation } from "./create-field.ts";
 
 function fake() {
@@ -146,8 +146,8 @@ describe("create-field", () => {
   it("--type date --yes sends the date body", async () => {
     const client = fake();
     client.createField = vi.fn().mockResolvedValue({ id: "f7", name: "Scheduled at", type: "date", type_config: {} });
-    client.getFieldLocations = vi.fn().mockResolvedValue({ id: "f7", name: "Scheduled at", type: "date", type_config: {}, locations: [{}] });
     vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     await run(client, { type: "date", name: "Scheduled at", location: ["4:1301150000001271"], yes: true });
     expect(client.createField.mock.calls[0][0]).toMatchObject({ name: "Scheduled at", type: "date", type_config: {}, team_id: "5738747" });
     expect(client.setFieldLocations).toHaveBeenCalledWith("f7", [{ parent: { type: 4, id: "1301150000001271" }, required: false, required_on_subtasks: false, hide_from_guests: false }]);
@@ -162,11 +162,30 @@ describe("create-field", () => {
 
   it("a refused date body says a capture is needed", async () => {
     const client = fake();
-    client.createField = vi.fn().mockRejectedValue(new Error("Request failed with status code 400"));
+    client.createField = vi.fn().mockRejectedValue(new ClickUpApiError("Request failed with status code 400", { method: "POST", path: "/customFields/v2/field", status: 400 }));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
     await run(client, { type: "date", name: "Scheduled at", location: ["4:1"], yes: true });
     expect(err.mock.calls[0][0]).toBe("clickup create-field: Request failed with status code 400 (the date body is not captured yet: create one date field in the ClickUp web app with Proxyman on, then compare with dg clickup frontdoor dump --match customFields)");
+  });
+
+  it("a 5xx, a network error or an auth error gets the plain error, with no capture hint", async () => {
+    const errors = [
+      new ClickUpApiError("Request failed with status code 500", { method: "POST", path: "/x", status: 500 }),
+      new ClickUpApiError("connect ECONNREFUSED", { method: "POST", path: "/x", code: "ECONNREFUSED" }),
+      new ClickUpApiError("Request failed with status code 401", { method: "POST", path: "/x", status: 401 }),
+      new ClickUpApiError("Request failed with status code 403", { method: "POST", path: "/x", status: 403 }),
+      new Error("session expired"),
+    ];
+    for (const e of errors) {
+      const client = fake();
+      client.createField = vi.fn().mockRejectedValue(e);
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
+      await run(client, { type: "date", name: "Scheduled at", location: ["4:1"], yes: true });
+      expect(err.mock.calls.at(-1)?.[0]).toBe(`clickup create-field: ${e.message}`);
+      err.mockRestore();
+    }
   });
 
   it("parseLocation reads type:id and refuses anything else", () => {

@@ -212,6 +212,9 @@ describe("date fields", () => {
   it("reads an ISO time with an offset", () => {
     expect(parseDateTimeValue("2026-10-25T22:00:00+07:00", "Scheduled at")).toBe(Date.parse("2026-10-25T15:00:00Z"));
   });
+  it("reads an ISO time ending in Z", () => {
+    expect(parseDateTimeValue("2026-10-25T15:00:00Z", "Scheduled at")).toBe(Date.parse("2026-10-25T15:00:00Z"));
+  });
   it("refuses a plain day, a missing offset and a day that does not exist", () => {
     for (const bad of ["2026-10-25", "2026-10-25T22:00", "2026-02-30 10:00", "tomorrow", "2026-10-25 24:00"]) {
       expect(() => parseDateTimeValue(bad, "Scheduled at")).toThrow(/Scheduled at/);

@@ -3,9 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUtc7 } from "./clock.ts";
 import { appendEvent, atomicWrite } from "./state.ts";
-import type { LoTask, Tracker } from "./types.ts";
+import type { EventKind, LoTask, Tracker } from "./types.ts";
 
-export interface ScheduleDeps { tracker: Tracker; dir: string; now: () => Date; dryRun: boolean }
+export interface ScheduleDeps {
+  tracker: Tracker; dir: string; now: () => Date; dryRun: boolean;
+  /** The event writer; defaults to appendEvent. A failure to write an event never stops the run. */
+  appendEvent?: typeof appendEvent;
+}
 export type ScheduleVerdict = "moved" | "would-move" | "not-due" | "no-date" | "bad-date" | "no-mode" | "failed";
 export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: "ready" | "to do"; error?: string }
 export interface ScheduleResult { scheduled: number; moved: number; lines: ScheduleLine[] }
@@ -54,33 +58,53 @@ export async function runScheduleRelease(d: ScheduleDeps): Promise<ScheduleResul
     } catch { /* tried again on the next run */ }
   };
 
+  const writeEvent = (kind: EventKind, fields: Record<string, unknown>): void => {
+    if (d.dryRun) return;
+    try { (d.appendEvent ?? appendEvent)(d.dir, now, kind, fields); } catch { /* an event is a trace, not the work */ }
+  };
+
   const lines: ScheduleLine[] = [];
   let moved = 0;
-  for (const t of tickets) {
-    const key = keyOf(t);
-    const when = typeof t.scheduledAt === "number" ? fmtUtc7(new Date(t.scheduledAt)) : null;
-    const line = (verdict: ScheduleVerdict, extra: Partial<ScheduleLine> = {}): void => { lines.push({ key, scheduledAtUtc7: when, mode: t.mode, verdict, ...extra }); };
-    if (t.scheduledAt === null) { await tell(t, SCHEDULE_TEXT.noDate); line("no-date"); continue; }
-    if (t.scheduledAt === "invalid") { await tell(t, SCHEDULE_TEXT.badDate); line("bad-date"); continue; }
-    if (t.mode === null) { await tell(t, SCHEDULE_TEXT.noMode); line("no-mode"); continue; }
-    if (t.scheduledAt > now.getTime()) { line("not-due"); continue; }
-    const to = t.mode === "Autonomous" ? "ready" : "to do";
-    if (d.dryRun) { line("would-move", { to }); continue; }
-    try {
-      await d.tracker.setStatus(t.id, to);
-      const back = await d.tracker.getStatus(t.id);
-      if (back.toLowerCase() !== to) throw new Error(`status read back "${back}", expected "${to}"`);
-      appendEvent(d.dir, now, "schedule-move", { ticket: key, to, mode: t.mode, scheduledAtUtc7: when });
-      if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
-      moved++;
-      line("moved", { to });
-    } catch (e) {
-      const error = errText(e);
-      appendEvent(d.dir, now, "schedule-move-failed", { ticket: key, to, error });
-      await tell(t, SCHEDULE_TEXT.failed(to, error));
-      line("failed", { to, error });
+  try {
+    for (const t of tickets) {
+      const key = keyOf(t);
+      const when = typeof t.scheduledAt === "number" ? fmtUtc7(new Date(t.scheduledAt)) : null;
+      const line = (verdict: ScheduleVerdict, extra: Partial<ScheduleLine> = {}): void => { lines.push({ key, scheduledAtUtc7: when, mode: t.mode, verdict, ...extra }); };
+      if (t.scheduledAt === null) { await tell(t, SCHEDULE_TEXT.noDate); line("no-date"); continue; }
+      if (t.scheduledAt === "invalid") { await tell(t, SCHEDULE_TEXT.badDate); line("bad-date"); continue; }
+      if (t.mode === null) { await tell(t, SCHEDULE_TEXT.noMode); line("no-mode"); continue; }
+      if (t.scheduledAt > now.getTime()) {
+        if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
+        line("not-due");
+        continue;
+      }
+      const to = t.mode === "Autonomous" ? "ready" : "to do";
+      if (d.dryRun) { line("would-move", { to }); continue; }
+      let failure: string | null = null;
+      try {
+        await d.tracker.setStatus(t.id, to);
+        const back = await d.tracker.getStatus(t.id);
+        if (back.toLowerCase() !== to) throw new Error(`status read back "${back}", expected "${to}"`);
+      } catch (e) {
+        failure = errText(e);
+      }
+      if (failure === null) {
+        writeEvent("schedule-move", { ticket: key, to, mode: t.mode, scheduledAtUtc7: when });
+        if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
+        moved++;
+        line("moved", { to });
+      } else {
+        const text = SCHEDULE_TEXT.failed(to, failure);
+        // The event and the comment are written once per distinct failure text.
+        if (notes[key] !== hash(text)) writeEvent("schedule-move-failed", { ticket: key, to, error: failure });
+        await tell(t, text);
+        line("failed", { to, error: failure });
+      }
+    }
+  } finally {
+    if (!d.dryRun && notesChanged) {
+      try { atomicWrite(d.dir, SCHEDULE_NOTES, `${JSON.stringify(notes, null, 2)}\n`); } catch { /* the next run tries again */ }
     }
   }
-  if (!d.dryRun && notesChanged) atomicWrite(d.dir, SCHEDULE_NOTES, `${JSON.stringify(notes, null, 2)}\n`);
   return { scheduled: tickets.length, moved, lines };
 }

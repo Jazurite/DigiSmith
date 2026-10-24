@@ -58,6 +58,13 @@ describe("create-view", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run(fake(), { ...base, space: "abc" });
     await run(fake(), { ...base, name: " " });
-    expect(err.mock.calls.map((c) => c[0])).toEqual(["clickup create-view: --space must be a numeric id", "clickup create-view: --name must not be empty"]);
+    await run(fake(), { ...base, status: " " });
+    await run(fake(), { ...base, sortFieldId: "  " });
+    expect(err.mock.calls.map((c) => c[0])).toEqual([
+      "clickup create-view: --space must be a numeric id",
+      "clickup create-view: --name must not be empty",
+      "clickup create-view: --status must not be empty",
+      "clickup create-view: --sort-field-id must not be empty",
+    ]);
   });
 });
