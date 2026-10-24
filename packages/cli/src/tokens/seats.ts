@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { depotDir, isSafe } from "../run/paths.ts";
 import { writeJsonAtomic } from "./run-count.ts";
@@ -45,6 +45,7 @@ export function readProbeSeats(dir: string): SeatReading[] {
 
 export function writeSeats(dir: string, now: Date): SeatsFile {
   const file: SeatsFile = { schema: SEATS_SCHEMA, generated_at: now.toISOString(), seats: readProbeSeats(dir) };
+  mkdirSync(dir, { recursive: true });
   writeJsonAtomic(join(dir, "seats.json"), file);
   return file;
 }
