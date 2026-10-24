@@ -15,13 +15,13 @@ const elapsed = (w: RunRow, nowMs: number): string => fmtDuration(w.endedAt ? w.
         <tr><th scope="col">Health</th><th scope="col">Key</th><th scope="col">Role</th><th scope="col">Seat</th><th scope="col">Phase</th><th scope="col" class="num">Elapsed</th><th scope="col" class="num">Tokens</th></tr>
       </template>
       <tr v-for="w in workers" :key="w.run">
-        <td><NwStatus :state="w.state" /></td>
-        <td class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(w.run)}`">{{ w.ticket ?? w.run }}</NuxtLink></td>
-        <td>{{ w.role }}</td>
-        <td class="mono">{{ w.seat ?? '-' }}</td>
-        <td class="mono">{{ w.phase ?? '-' }}</td>
-        <td class="num">{{ elapsed(w, nowMs) }}</td>
-        <td class="num muted" title="not measured">-</td>
+        <td data-label="Health"><NwStatus :state="w.state" /></td>
+        <td data-label="Key" class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(w.run)}`">{{ w.ticket ?? w.run }}</NuxtLink></td>
+        <td data-label="Role">{{ w.role }}</td>
+        <td data-label="Seat" class="mono">{{ w.seat ?? '-' }}</td>
+        <td data-label="Phase" class="mono">{{ w.phase ?? '-' }}</td>
+        <td data-label="Elapsed" class="num">{{ elapsed(w, nowMs) }}</td>
+        <td data-label="Tokens" class="num muted" title="not measured">-</td>
       </tr>
     </NwTable>
   </NwCard>

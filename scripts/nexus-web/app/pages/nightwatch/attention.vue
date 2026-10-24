@@ -33,7 +33,7 @@ watch(() => poll.data.value?.open, async (open) => {
   <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
   <NwPanel v-else-if="!poll.data.value" kind="error" title="The attention list is not available right now." @retry="poll.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="poll.error.value" />
+    <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
     <NwAttentionTable :open="poll.data.value.open" :resolved="poll.data.value.resolved" :now-ms="nowMs" />
   </template>
 </template>

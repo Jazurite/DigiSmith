@@ -11,11 +11,11 @@ import NwVerdictTable from '../../components/nw/VerdictTable.vue'
 definePageMeta({ layout: 'nightwatch' })
 useHead({ title: 'Plan · Nightwatch' })
 
-// the layout owns the overview poll; the page only reads it to find the ticket of the first worker
-const nw = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('nwOverview')!
+// the layout owns the overview poll; the page only reads it to find the ticket under lock, else the first worker
+const nw = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('nwOverview')!
 const route = useRoute()
 const fromQuery = computed(() => { const q = route.query.ticket; const v = Array.isArray(q) ? q[0] : q; return isSafeId(v) ? v : null })
-const ticket = computed(() => fromQuery.value ?? nw.overview.value?.workers.find((w) => isSafeId(w.ticket))?.ticket ?? null)
+const ticket = computed(() => fromQuery.value ?? (isSafeId(nw.overview.value?.tickets.lockTicket) ? nw.overview.value!.tickets.lockTicket : null) ?? nw.overview.value?.workers.find((w) => isSafeId(w.ticket))?.ticket ?? null)
 // the overview either arrived or failed; before that the page does not know yet whether a worker exists
 const settled = computed(() => nw.overview.value !== null || nw.stale.value)
 
@@ -39,7 +39,7 @@ const pick = (e: Event): void => { const v = (e.target as HTMLSelectElement).val
     <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
     <NwPanel v-else-if="!poll.data.value" kind="error" title="The plan is not available right now." @retry="poll.refresh()" />
     <template v-else>
-      <NwStaleBanner v-if="poll.error.value" />
+      <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
       <NwPanel v-if="!poll.data.value.found" kind="empty" title="No plan yet for this ticket." />
       <div v-else class="grid">
         <NwPlanTasks :plan="poll.data.value" />

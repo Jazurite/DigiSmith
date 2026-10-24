@@ -82,6 +82,13 @@ describe('AttentionTable', () => {
     expect(resolvedHeads).toEqual(['Time (UTC+7)', 'Ticket', 'Kind', 'Resolution'])
     expect(w.find('button').exists()).toBe(false)
   })
+  it('shows the resolve command of each open item as copy text, never as a button', async () => {
+    const a = attentionFixture()
+    const w = await mountSuspended(AttentionTable, { props: { open: a.open, resolved: a.resolved, nowMs: NOW } })
+    const cmds = w.findAll('tbody tr').slice(0, a.open.length).map((r) => r.find('code.cmd').text())
+    expect(cmds).toEqual(a.open.map((o) => `dg autonomous attention resolve ${o.id}`))
+    expect(w.find('button').exists()).toBe(false)
+  })
   it('empty says nothing waits', async () => {
     const w = await mountSuspended(AttentionTable, { props: { open: [], resolved: [], nowMs: NOW } })
     expect(w.text()).toContain('Nothing waits for you.')

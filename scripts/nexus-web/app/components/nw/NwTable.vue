@@ -22,5 +22,14 @@ defineProps<{ caption?: string; dense?: boolean }>()
 .nw-table.dense td { padding: 5px 14px; }
 .nw-table a { color: var(--nw-primary); min-height: 24px; display: inline-block; }
 .nw-table a:focus-visible { outline: 2px solid var(--nw-primary); outline-offset: 2px; }
+@media (max-width: 760px) {
+  // row cards: the header row hides (still read by screen readers), each row is a card, each cell shows its data-label
+  .nw-table, .nw-table tbody, .nw-table tr, .nw-table td { display: block; width: 100%; }
+  .nw-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .nw-table tr { border-top: 1px solid var(--nw-border); padding: 6px 0; }
+  .nw-table td { border-top: 0; padding: 4px 14px; display: flex; gap: 12px; justify-content: space-between; align-items: baseline; text-align: right; overflow-wrap: anywhere; }
+  .nw-table td::before { content: attr(data-label); flex: none; text-align: left; font: 600 11px/14px var(--nw-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--nw-text-3); }
+  .nw-table td.num { text-align: right; }
+}
 .nw-table .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>

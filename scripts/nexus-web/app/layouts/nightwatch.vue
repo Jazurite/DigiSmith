@@ -6,7 +6,7 @@ import { useNightwatchPoll } from '../composables/useNightwatchPoll'
 // The layout owns the one poll; the top bar and the Operations page read the same object through 'nwOverview'.
 const poll = useNightwatchPoll(() => loadOverview())
 const attention = computed(() => poll.data.value?.attentionCount ?? 0)
-const shared = { overview: poll.data, stale: poll.error, updatedAt: poll.updatedAt, attention, refresh: poll.refresh }
+const shared = { overview: poll.data, stale: poll.error, updatedAt: poll.updatedAt, failedAt: poll.failedAt, attention, refresh: poll.refresh }
 provide('nwOverview', shared)
 </script>
 

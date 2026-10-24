@@ -7,7 +7,7 @@ import { useNow } from '../../utils/use-now'
 definePageMeta({ layout: 'nightwatch' })
 useHead({ title: 'Operations · Nightwatch' })
 // the layout owns the one overview poll; this page only reads it
-const nw = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('nwOverview')!
+const nw = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('nwOverview')!
 const nowMs = useNow()
 </script>
 
@@ -16,7 +16,7 @@ const nowMs = useNow()
   <NwPanel v-if="!nw.overview.value && !nw.stale.value" kind="loading" />
   <NwPanel v-else-if="!nw.overview.value" kind="error" title="The operations view is not available right now." @retry="nw.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="nw.stale.value" />
+    <NwStaleBanner v-if="nw.stale.value" :failed-at="nw.failedAt.value" />
     <div class="grid">
       <NwPhaseTable :rows="nw.overview.value.tickets.rows" :lock-ticket="nw.overview.value.tickets.lockTicket" :window-days="nw.overview.value.tickets.windowDays" :now-ms="nowMs" />
       <NwScanCard :scan="nw.overview.value.scan" :lock-ticket="nw.overview.value.tickets.lockTicket" />

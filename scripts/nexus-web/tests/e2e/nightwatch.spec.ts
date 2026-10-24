@@ -32,7 +32,7 @@ test('a failed poll turns the top bar stale (amber) and never keeps the old heal
   await page.clock.fastForward(10_500)
   await expect(topBar(page).getByRole('status')).toContainText('Nexus stale')
   await expect(topBar(page)).not.toContainText('healthy')
-  await expect(page.getByText('The last update failed.')).toBeVisible()
+  await expect(page.getByText('The last update failed at 10:00 (UTC+7).')).toBeVisible()
 })
 
 test('the nav reaches every page and marks the current one', async ({ page }) => {
@@ -114,4 +114,21 @@ test('the page makes only GET requests to /api/v1/nightwatch', async ({ page }) 
   await page.waitForLoadState('networkidle')
   expect(seen.length).toBeGreaterThan(0)
   for (const s of seen) expect(s).toMatch(/^GET \/api\/v1\/nightwatch\//)
+})
+
+test('no Nightwatch page scrolls sideways at 390 px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  for (const path of ['/nightwatch/', '/nightwatch/attention/', '/nightwatch/runs/', '/nightwatch/run/?id=builder-20261022T021000-a1b2c3', '/nightwatch/plan/?ticket=DGS-590']) {
+    await page.goto(`${stub.url}${path}`)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    const [scroll, inner] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth])
+    expect(scroll, `${path}: scrollWidth ${scroll} > innerWidth ${inner}`).toBeLessThanOrEqual(inner)
+  }
+})
+
+test('Attention shows the resolve command as text and no button runs it', async ({ page }) => {
+  await page.goto(`${stub.url}/nightwatch/attention/`)
+  await expect(page.locator('code.cmd').first()).toContainText('dg autonomous attention resolve ')
+  await expect(page.getByRole('button', { name: /resolve/i })).toHaveCount(0)
 })

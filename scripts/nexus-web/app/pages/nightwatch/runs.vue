@@ -36,7 +36,7 @@ const nowMs = useNow()
   <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
   <NwPanel v-else-if="!poll.data.value" kind="error" title="The runs are not available right now." @retry="poll.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="poll.error.value" />
+    <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
     <NwPanel v-if="filtered && poll.data.value.runs.length === 0" kind="empty" title="No run matches." />
     <NwRunsTable v-else :runs="poll.data.value.runs" :now-ms="nowMs" />
   </template>

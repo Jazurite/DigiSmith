@@ -58,11 +58,11 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
     <NwPanel v-if="!run && !poll.error.value" kind="loading" />
     <NwPanel v-else-if="!run" kind="error" title="This run is not available right now." @retry="poll.refresh()" />
     <template v-else>
-      <NwStaleBanner v-if="poll.error.value" />
+      <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
       <NwPipelineBar :steps="run.pipeline" />
       <div class="cols">
         <div>
-          <NwStaleBanner v-if="tail && tail.error.value && tail.lines.value.length" />
+          <NwStaleBanner v-if="tail && tail.error.value && tail.lines.value.length" :failed-at="tail.failedAt.value" />
           <p v-if="tail && tail.earlierError.value" class="nw-sub" role="status">Earlier lines could not be loaded. Try again.</p>
           <NwPanel v-if="tail && tail.error.value && !tail.lines.value.length" kind="error" title="The events are not available right now." @retry="tail.setGroup(tail.group.value)" />
           <NwEventStream

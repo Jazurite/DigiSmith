@@ -12,9 +12,9 @@ const oldest = (since: string | null, nowMs: number): string => (since ? fmtDura
     <NwTable caption="Tickets per phase" dense>
       <template #head><tr><th scope="col">Phase</th><th scope="col" class="num">Count</th><th scope="col" class="num">Oldest</th></tr></template>
       <tr v-for="r in rows" :key="r.phase">
-        <td><NwStatus :state="TONE[r.phase]" :label="r.phase" /></td>
-        <td class="num">{{ r.count }}</td>
-        <td class="num" :class="{ muted: !r.oldestSince }">{{ oldest(r.oldestSince, nowMs) }}</td>
+        <td data-label="Phase"><NwStatus :state="TONE[r.phase]" :label="r.phase" /></td>
+        <td data-label="Count" class="num">{{ r.count }}</td>
+        <td data-label="Oldest" class="num" :class="{ muted: !r.oldestSince }">{{ oldest(r.oldestSince, nowMs) }}</td>
       </tr>
     </NwTable>
     <p class="foot">one claimed ticket at a time (scan lock) · window: {{ windowDays }} days<template v-if="lockTicket"> · locked: <span class="lock">{{ lockTicket }}</span></template></p>

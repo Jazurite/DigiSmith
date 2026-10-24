@@ -15,9 +15,9 @@ const tone = { done: 'ok', 'fix-round': 'warn', waiting: 'ended' } as const
     <NwTable v-else caption="Plan tasks">
       <template #head><tr><th scope="col">Task</th><th scope="col">Title</th><th scope="col">State</th></tr></template>
       <tr v-for="t in plan.tasks" :key="t.n">
-        <td class="mono">{{ t.n }}</td>
-        <td>{{ t.title }}</td>
-        <td><NwStatus :state="tone[t.state]" :label="label(t)" /></td>
+        <td data-label="Task" class="mono">{{ t.n }}</td>
+        <td data-label="Title">{{ t.title }}</td>
+        <td data-label="State"><NwStatus :state="tone[t.state]" :label="label(t)" /></td>
       </tr>
     </NwTable>
   </NwCard>

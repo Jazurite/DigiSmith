@@ -19,6 +19,7 @@ export function useRestartingPoll<T>(key: () => string | null, load: (key: strin
   return {
     data: computed(() => current.value?.data.value ?? null),
     error: computed(() => current.value?.error.value ?? false),
+    failedAt: computed(() => current.value?.failedAt.value ?? null),
     refresh: async (): Promise<void> => { await current.value?.refresh() },
     stop,
   }

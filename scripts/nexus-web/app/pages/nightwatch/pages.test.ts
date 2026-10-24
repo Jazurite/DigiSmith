@@ -19,7 +19,7 @@ const nav = vi.hoisted(() => vi.fn())
 mockNuxtImport('navigateTo', () => nav)
 
 const provide = (overview: ReturnType<typeof overviewFixture> | null, stale = false) => ({
-  nwOverview: { overview: ref(overview), stale: ref(stale), updatedAt: ref(null), attention: ref(0), refresh: vi.fn() },
+  nwOverview: { overview: ref(overview), stale: ref(stale), updatedAt: ref(null), failedAt: ref(null), attention: ref(0), refresh: vi.fn() },
 })
 
 beforeEach(() => { route.query = {}; Object.values(api).forEach((f) => f.mockReset()); nav.mockReset() })
@@ -150,6 +150,15 @@ describe('Run page', () => {
 })
 
 describe('Plan page', () => {
+  const noTicket = () => { const o = overviewFixture({ workers: [] }); return { ...o, tickets: { ...o.tickets, lockTicket: null } } }
+  it('prefers the ticket under the scan lock over the first worker', async () => {
+    const o = overviewFixture()
+    api.loadPlan.mockResolvedValue(planFixture())
+    const w = await mountSuspended(Plan, { global: { provide: provide({ ...o, tickets: { ...o.tickets, lockTicket: 'DGS-600' } }) } })
+    await flushPromises()
+    expect(api.loadPlan).toHaveBeenCalledWith('DGS-600')
+    w.unmount()
+  })
   it('uses the ticket in the URL and shows tasks and verdicts', async () => {
     route.query = { ticket: 'DGS-590' }
     api.loadPlan.mockResolvedValue(planFixture())
@@ -179,7 +188,7 @@ describe('Plan page', () => {
   it('with no ticket and no worker shows the picker built from the runs, and an unsafe ticket is not used', async () => {
     route.query = { ticket: '../x' }
     api.loadRuns.mockResolvedValue(runsFixture())
-    const w = await mountSuspended(Plan, { global: { provide: provide(overviewFixture({ workers: [] })) } })
+    const w = await mountSuspended(Plan, { global: { provide: provide(noTicket()) } })
     await flushPromises()
     expect(api.loadPlan).not.toHaveBeenCalled()
     expect(w.text()).toContain('Pick a ticket.')
@@ -190,7 +199,7 @@ describe('Plan page', () => {
   })
   it('a failed picker load shows an error with Retry that loads again', async () => {
     api.loadRuns.mockRejectedValueOnce(new Error('x')).mockResolvedValue(runsFixture())
-    const w = await mountSuspended(Plan, { global: { provide: provide(overviewFixture({ workers: [] })) } })
+    const w = await mountSuspended(Plan, { global: { provide: provide(noTicket()) } })
     await flushPromises()
     expect(w.find('[role="alert"]').text()).toContain('The tickets are not available right now.')
     await w.find('button.retry').trigger('click')

@@ -21,6 +21,43 @@ function fakeApi(total: number) {
   return { fetch: fetch as typeof globalThis.fetch, urls, state }
 }
 
+describe('useEventTail pauses and backs off like the page polls', () => {
+  it('does not poll in a hidden tab and loads again when it shows', async () => {
+    const api = fakeApi(10)
+    let hidden = true
+    const spy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => (hidden ? 'hidden' : 'visible'))
+    const t = useEventTail('b-1', { fetch: api.fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    const before = api.urls.length
+    api.state.total = 14
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(api.urls.length).toBe(before)
+    hidden = false
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.urls.length).toBe(before + 1)
+    expect(t.lines.value).toHaveLength(14)
+    t.stop()
+    spy.mockRestore()
+  })
+  it('waits 30 s after an error', async () => {
+    let fail = false
+    let calls = 0
+    const base = fakeApi(10)
+    const fetch = (async (u: string | URL | Request) => { calls++; if (fail) throw new Error('down'); return base.fetch(u) }) as typeof globalThis.fetch
+    const t = useEventTail('b-1', { fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    fail = true
+    await vi.advanceTimersByTimeAsync(10_000)   // the poll fails
+    const n = calls
+    await vi.advanceTimersByTimeAsync(29_000)
+    expect(calls).toBe(n)
+    await vi.advanceTimersByTimeAsync(1_500)
+    expect(calls).toBe(n + 1)
+    t.stop()
+  })
+})
+
 describe('useEventTail', () => {
   it('loads the last 200 lines first, then asks only for lines after the line count', async () => {
     const api = fakeApi(300)
