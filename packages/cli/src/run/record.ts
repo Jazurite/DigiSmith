@@ -70,7 +70,7 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     budget,
     created_at: now.toISOString(),
     source: "start" as const,
-    project: repoInfo(input.worktree ?? process.cwd()).project,
+    project: repoInfo(path.resolve(input.worktree ?? process.cwd())).project,
     session_id: null,
     role_from: "start" as const,
   };

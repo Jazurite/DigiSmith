@@ -53,6 +53,12 @@ describe("createRun", () => {
     expect(r.base_sha).toMatch(/^[0-9a-f]{40}$/);
     expect(r.branch).toBe("main");
   });
+  it("a relative --worktree gets the project of the resolved path", () => {
+    const { dir } = tempRepo();
+    const r = createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: path.relative(process.cwd(), dir) }, env);
+    expect(r.project).not.toBe("unknown");
+    expect(r.project).toBe(createRun({ ticket: "DGS-581", role: "builder", order: "/o.md", worktree: dir }, env).project);
+  });
   it("stores a null branch on a detached head", () => {
     const { dir, sha } = tempRepo();
     execFileSync("git", ["checkout", "--detach"], { cwd: dir, stdio: "ignore" });
