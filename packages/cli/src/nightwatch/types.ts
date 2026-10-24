@@ -1,4 +1,5 @@
 // packages/cli/src/nightwatch/types.ts
+import type { Role } from "../run/schema.ts";
 export type Health = "healthy" | "blocked" | "stalled" | "lost" | "ended";
 export type Trigger = "manual" | "night-scan" | "away" | "unknown";
 export type EventGroup = "agent" | "system" | "errors";
@@ -7,7 +8,7 @@ export type TicketPhase = "claimed" | "building" | "review" | "merge-ready" | "m
 export type Scalar = string | number | boolean | null;
 
 export interface RunRowView {
-  run: string; ticket: string; role: "builder" | "reviewer" | "scout" | "other";
+  run: string; ticket: string | null; role: Role;
   seat: string | null; model: string | null; trigger: Trigger; state: Health; phase: RunPhase | null;
   startedAt: string; endedAt: string | null; elapsedSec: number; events: number; merged: boolean; pushed: boolean;
 }

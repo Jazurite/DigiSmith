@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
-import { createRun, readRun } from "./record.ts";
+import { createRun, readRun, rewriteRun, ROLES } from "./record.ts";
 import { findRunDir, runsDir } from "./paths.ts";
 
 let tmp: string;
@@ -84,5 +84,30 @@ describe("findRunDir", () => {
   it("returns null for an unknown or unsafe id", () => {
     expect(findRunDir("builder-x-000000", env)).toBeNull();
     expect(findRunDir("../etc", env)).toBeNull();
+  });
+});
+
+describe("DGS-598 fields", () => {
+  it("dg run start writes source start, role_from start, session_id null and the project", () => {
+    const r = createRun({ ticket: "DGS-598", role: "conductor", order: "/o.md" }, env);
+    expect(r).toMatchObject({ source: "start", role_from: "start", session_id: null, role: "conductor" });
+    expect(typeof r.project).toBe("string");
+  });
+  it("accepts maestro and conductor", () => {
+    expect(ROLES).toEqual(["builder", "reviewer", "scout", "maestro", "conductor", "other"]);
+    expect(createRun({ ticket: "DGS-598", role: "maestro", order: "/o.md" }, env).role).toBe("maestro");
+  });
+  it("readRun fills the new fields of an old record", () => {
+    const dir = path.join(tmp, "runs", "DGS-1", "builder-old");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "run.json"), JSON.stringify({ schema: "nightwatch-run/v1", run: "builder-old", ticket: "DGS-1", role: "builder", order: null, seat: null, model: null, plugin_version: null, base_sha: null, branch: null, worktree: null, herdr: { workspace: null, tab: null, pane: null }, budget: null, created_at: "2026-10-20T00:00:00.000Z" }));
+    expect(readRun(dir)).toMatchObject({ source: "start", project: null, session_id: null, role_from: null, ticket: "DGS-1" });
+  });
+  it("rewriteRun replaces run.json in one rename and leaves no temp file", () => {
+    const r = createRun({ ticket: "DGS-598", role: "other", order: "/o.md" }, env);
+    const dir = path.join(tmp, "runs", "DGS-598", r.run);
+    rewriteRun(dir, { ...r, role: "builder" });
+    expect(readRun(dir).role).toBe("builder");
+    expect(fs.readdirSync(dir).filter((f) => f.startsWith("run.json."))).toEqual([]);
   });
 });

@@ -3,27 +3,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { isSafe, runsDir } from "./paths.ts";
+import { pluginVersion, ROLES, RUN_SCHEMA, type Role, type RunRecord } from "./schema.ts";
+import { repoInfo } from "./repo-info.ts";
 
-export const RUN_SCHEMA = "nightwatch-run/v1";
-export const ROLES = ["builder", "reviewer", "scout", "other"] as const;
-export type Role = (typeof ROLES)[number];
-
-export type RunRecord = {
-  schema: typeof RUN_SCHEMA;
-  run: string;
-  ticket: string;
-  role: Role;
-  order: string | null;
-  seat: string | null;
-  model: string | null;
-  plugin_version: string | null;
-  base_sha: string | null;
-  branch: string | null;
-  worktree: string | null;
-  herdr: { workspace: string | null; tab: string | null; pane: string | null };
-  budget: Record<string, unknown> | null;
-  created_at: string;
-};
+export { ROLES, RUN_SCHEMA };
+export type { Role, RunRecord };
 
 export type StartInput = {
   ticket: string;
@@ -39,17 +23,6 @@ export type StartInput = {
   pane?: string;
   budget?: string;
 };
-
-const MANIFEST = path.join(import.meta.dirname, "..", "..", "..", "..", ".claude-plugin", "plugin.json");
-
-function pluginVersion(): string | null {
-  try {
-    const v = (JSON.parse(fs.readFileSync(MANIFEST, "utf8")) as { version?: unknown }).version;
-    return typeof v === "string" ? v : null;
-  } catch {
-    return null;
-  }
-}
 
 function git(cwd: string, ...args: string[]): string | null {
   const r = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -96,6 +69,10 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
     herdr: { workspace: input.workspace ?? null, tab: input.tab ?? null, pane: input.pane ?? null },
     budget,
     created_at: now.toISOString(),
+    source: "start" as const,
+    project: repoInfo(input.worktree ?? process.cwd()).project,
+    session_id: null,
+    role_from: "start" as const,
   };
   const ticketDir = path.join(runsDir(env), input.ticket);
   fs.mkdirSync(ticketDir, { recursive: true });
@@ -115,6 +92,17 @@ export function createRun(input: StartInput, env: NodeJS.ProcessEnv = process.en
   throw new Error("could not find a free run id");
 }
 
+const DEFAULTS = { source: "start", project: null, session_id: null, role_from: null } as const;
+
+// An old record has no source, project, session_id or role_from: they read as start, null, null, null.
 export function readRun(runDir: string): RunRecord {
-  return JSON.parse(fs.readFileSync(path.join(runDir, "run.json"), "utf8")) as RunRecord;
+  const raw = JSON.parse(fs.readFileSync(path.join(runDir, "run.json"), "utf8")) as RunRecord;
+  return { ...DEFAULTS, ...raw };
+}
+
+// The labeller's one edit of an automatic run: a temp file, then an atomic rename, so a reader sees the old or the new file.
+export function rewriteRun(runDir: string, record: RunRecord): void {
+  const tmp = path.join(runDir, `run.json.${process.pid}.tmp`);
+  fs.writeFileSync(tmp, JSON.stringify(record, null, 2) + "\n");
+  fs.renameSync(tmp, path.join(runDir, "run.json"));
 }

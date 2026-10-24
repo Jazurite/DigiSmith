@@ -5,19 +5,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { findRunDir, isSafe, runsDir } from "./paths.ts";
 import { appendEvent, HOOK_TYPES } from "./events.ts";
+import { plainName } from "./schema.ts";
 
 export type HookKind = (typeof HOOK_TYPES)[number];
 
 const LOG_CAP = 256 * 1024;
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/;
 
 export function waitFor(kind: HookKind): number {
   return kind === "tool" ? 150 : 2000;
-}
-
-// A name or id from the payload, or null. Anything with spaces or text in it is dropped.
-function name(v: unknown): string | null {
-  return typeof v === "string" && NAME_RE.test(v) ? v : null;
 }
 
 function toolOk(response: unknown): boolean {
@@ -28,16 +23,16 @@ function toolOk(response: unknown): boolean {
 
 export function buildData(kind: HookKind, payload: unknown): Record<string, unknown> {
   const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
-  const session_id = name(p.session_id);
+  const session_id = plainName(p.session_id);
   switch (kind) {
     case "started":
-      return { source: name(p.source), session_id };
+      return { source: plainName(p.source), session_id };
     case "blocked":
-      return { kind: name(p.notification_type), session_id };
+      return { kind: plainName(p.notification_type), session_id };
     case "tool":
-      return { tool: name(p.tool_name), ok: toolOk(p.tool_response), session_id };
+      return { tool: plainName(p.tool_name), ok: toolOk(p.tool_response), session_id };
     case "ended":
-      return { reason: name(p.reason), session_id };
+      return { reason: plainName(p.reason), session_id };
     case "turn_end":
       return { session_id };
   }

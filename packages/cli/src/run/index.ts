@@ -15,7 +15,7 @@ const startCommand: CommandModule = {
   builder: (y) =>
     y
       .option("ticket", { type: "string", demandOption: true, describe: "ticket key, e.g. DGS-581" })
-      .option("role", { type: "string", demandOption: true, describe: "builder, reviewer, scout or other" })
+      .option("role", { type: "string", demandOption: true, describe: "builder, reviewer, scout, maestro, conductor or other" })
       .option("order", { type: "string", demandOption: true, describe: "path of the order (a Scout without an order file passes the path of its brief)" })
       .option("seat", { type: "string" })
       .option("model", { type: "string" })
