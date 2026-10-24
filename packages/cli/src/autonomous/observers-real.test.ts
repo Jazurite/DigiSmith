@@ -323,6 +323,14 @@ describe("realStores", () => {
     arrangeR3R4("Critical", "Review ticket final r3: F1 -> fixing (x)\n");
     expect(await r3Row()).toBe("findings");
   });
+  it("DGS-592: when r3 and r4 both raise F1, an r4 line rules on the r4 finding only", async () => {
+    addReview("ticket-final-r3", "ticket", "eeeeeee3", report(`[${finding("F1", "Important")}]`), 3);
+    addReview("ticket-final-r4", "ticket", "fffffff4", report(`[${finding("F1", "Important")}]`), 4);
+    writeFileSync(join(sdd(), "progress.md"), "Review ticket final r4: F1 -> fixed (abc)\n");
+    const v = await realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" }).reviewerData.verdicts();
+    expect(v.find((x) => x.head === "eeeeeee3")?.result).toBe("findings");
+    expect(v.find((x) => x.head === "fffffff4")?.result).toBe("clean");
+  });
   it("without a builder run there are no packs", async () => {
     const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => null });
     expect(await s.reviewerData.packs()).toEqual([]);
