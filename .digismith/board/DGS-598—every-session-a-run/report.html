@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Every AI Session Is a Run (DGS-598) — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Every AI Session Is a Run (DGS-598) — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: <strong>DGS-598</strong></span>
+    <span>Commit range: <code>e4519f9..ee734e0</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Every Claude Code session with the DigiSmith plugin is now a run by itself. Each run has a role, a project and a ticket when one is known. Oculus and <code>dg run list</code> show these runs, and the watchdog flags only builder, reviewer and scout runs. The SessionStart hook makes an automatic run when <code>DIGISMITH_RUN_ID</code> is not set. The run id is <code>s-&lt;session_id&gt;</code>. An index in <code>runs/.index/</code> maps the session id and the claude pid to the run. Inside herdr, a detached labeller sets the role once. The role rule is one function, <code>roleOf</code>. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (9 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 9 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Repo info and identity folder match</h4><p><code>repoInfo</code> reads project, root, branch and worktree from <code>.git</code> files without a git process; <code>ticketOfBranch</code> and <code>maestroIdentityAt</code> match the ticket key and the Maestro identity folder.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>The role rule and the run record fields</h4><p><code>roleOf</code> in <code>run/role.ts</code> is the one role rule; the run record gets <code>source</code>, <code>project</code>, <code>session_id</code>, <code>role_from</code> and a nullable ticket.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>The run index and the automatic start</h4><p><code>runs/.index/</code> maps a session id and a claude pid to a run; <code>startAuto</code> makes <code>s-&lt;session_id&gt;</code> runs and continues a run after <code>/clear</code>.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The hook's automatic path and the herdr labeller</h4><p>The hook records a session without <code>DIGISMITH_RUN_ID</code>; a detached labeller reads <code>herdr-ws agent list</code> once and sets the role.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>The hooks.json guard, the compile cache, the timing test and the README</h4><p>The hook command line skips a machine without a depot, uses the node compile cache, and has a timing test.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>Readers: dot folders, ticket by record, the activity window, project in the output</h4><p><code>listRuns</code> skips dot folders, filters by ticket before it reads events, and keeps a 7-day window; <code>dg run list</code> shows the project.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>Watchdog scope: only builder, reviewer and scout</h4><p><code>WATCHED_ROLES</code> and <code>isWatched</code> in <code>watchdog.ts</code>; unwatched runs close their open items with "role not watched".</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>nightwatch views: project, source, a null ticket, the project filter, the window</h4><p><code>RunRowView</code> gets project, source and a nullable ticket; <code>runsView</code> and <code>dg nightwatch view runs</code> take <code>--project</code>.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Nexus API and Oculus web: new roles, project, a null ticket</h4><p><code>GET /api/v1/nightwatch/runs?project=P</code>; six roles; Oculus shows the project and has a Project filter.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Repo info and identity folder match</td><td><code>repoInfo</code> reads project, root, branch and worktree from <code>.git</code> files without a git process; <code>ticketOfBranch</code> and <code>maestroIdentityAt</code> match the ticket key and the Maestro identity folder.</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 2: The role rule and the run record fields</td><td><code>roleOf</code> in <code>run/role.ts</code> is the one role rule; the run record gets <code>source</code>, <code>project</code>, <code>session_id</code>, <code>role_from</code> and a nullable ticket.</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 3: The run index and the automatic start</td><td><code>runs/.index/</code> maps a session id and a claude pid to a run; <code>startAuto</code> makes <code>s-&lt;session_id&gt;</code> runs and continues a run after <code>/clear</code>.</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 4: The hook's automatic path and the herdr labeller</td><td>The hook records a session without <code>DIGISMITH_RUN_ID</code>; a detached labeller reads <code>herdr-ws agent list</code> once and sets the role.</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 5: The hooks.json guard, the compile cache, the timing test and the README</td><td>The hook command line skips a machine without a depot, uses the node compile cache, and has a timing test.</td><td>Approved after 1 fix round(s)</td><td>Timing baseline runs once before the hook samples, not interleaved (fixed later by the whole-branch F2).</td></tr>
+    <tr><td>Task 6: Readers: dot folders, ticket by record, the activity window, project in the output</td><td><code>listRuns</code> skips dot folders, filters by ticket before it reads events, and keeps a 7-day window; <code>dg run list</code> shows the project.</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 7: Watchdog scope: only builder, reviewer and scout</td><td><code>WATCHED_ROLES</code> and <code>isWatched</code> in <code>watchdog.ts</code>; unwatched runs close their open items with "role not watched".</td><td>Approved after 1 fix round(s)</td><td>A watched run with a null ticket prints "null" in its watch line.</td></tr>
+    <tr><td>Task 8: nightwatch views: project, source, a null ticket, the project filter, the window</td><td><code>RunRowView</code> gets project, source and a nullable ticket; <code>runsView</code> and <code>dg nightwatch view runs</code> take <code>--project</code>.</td><td>Approved after 1 fix round(s), 1 rejected</td><td>—</td></tr>
+    <tr><td>Task 9: Nexus API and Oculus web: new roles, project, a null ticket</td><td><code>GET /api/v1/nightwatch/runs?project=P</code>; six roles; Oculus shows the project and has a Project filter.</td><td>Approved, clean, 1 parked</td><td>—</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Round 1: with fixes, 2 Important and 3 Minor findings. Four fixed, one parked. Round 2: clean. All review findings, per task and for the whole branch, are in <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>A <code>claude -p</code> child session without <code>DIGISMITH_RUN_ID</code> took the Maestro role or the parent pane's herdr role, not role other.</td><td>Fixed (<code>8efa559</code>, <code>d2b6c11</code>): <code>CLAUDE_CODE_ENTRYPOINT=sdk-cli</code> gives role other, role_from none and no labeller.</td></tr>
+    <tr><td>Important</td><td>The timing assertion failed in a normal parallel test run.</td><td>Fixed (<code>1071a95</code>): interleaved samples and minimums; report-only by default, <code>NIGHTWATCH_TIMING=assert</code> is the opt-in.</td></tr>
+    <tr><td>Minor</td><td>A resume in a new process did not write the pid index, so a later <code>/clear</code> started a new run.</td><td>Fixed (<code>d2b6c11</code>).</td></tr>
+    <tr><td>Minor</td><td><code>dg run start</code> with a relative <code>--worktree</code> recorded project unknown.</td><td>Fixed (<code>a2f1388</code>, and <code>3c7cb06</code> stores the path absolute).</td></tr>
+    <tr><td>Minor</td><td>The Project select offers only the projects in the filtered rows.</td><td>Parked: the spec text prescribes it. Follow-up: take the choices from an unfiltered source.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">4850f69</span> docs(dgs-598): add the spec for automatic runs</li>
+    <li><span class="sha">4ee46bb</span> docs(dgs-598): name the Emma project check plainly</li>
+    <li><span class="sha">8dea795</span> docs(dgs-598): name Oculus and the shared role rule in the spec</li>
+    <li><span class="sha">c9d5661</span> docs(dgs-598): add the implementation plan</li>
+    <li><span class="sha">b702bde</span> feat(run): read project, branch and maestro identity without git</li>
+    <li><span class="sha">291c997</span> fix(run): match quoted identity folders and shared ticket keys</li>
+    <li><span class="sha">3266999</span> feat(run): add the role rule and the automatic run fields</li>
+    <li><span class="sha">ca70c89</span> fix(run): print a missing ticket as - and clean up the rewrite temp file</li>
+    <li><span class="sha">789c906</span> feat(run): start and continue automatic runs from the session id</li>
+    <li><span class="sha">be9584a</span> fix(run): skip odd event lines and recover an empty run dir</li>
+    <li><span class="sha">632445c</span> feat(run): record sessions without a run id and label herdr panes</li>
+    <li><span class="sha">c968e71</span> fix(run): log a failed labeller spawn instead of crashing the hook</li>
+    <li><span class="sha">5d7b3d7</span> feat(hooks): record every session as a run with a fast depot guard</li>
+    <li><span class="sha">7201f32</span> test(hooks): measure the hook cost above a bare node start</li>
+    <li><span class="sha">2edf202</span> feat(run): list recent runs fast and show the project</li>
+    <li><span class="sha">2e69f72</span> fix(run): filter runs by ticket before reading their events</li>
+    <li><span class="sha">8fdcb52</span> feat(watchdog): flag only builder, reviewer and scout runs</li>
+    <li><span class="sha">b28ffc9</span> perf(watchdog): close unwatched run items in one pass</li>
+    <li><span class="sha">5c466fc</span> feat(nightwatch): show project and source and filter runs by project</li>
+    <li><span class="sha">65526bc</span> test(nightwatch): cover the project and role filters together</li>
+    <li><span class="sha">7e987fb</span> feat(oculus): show maestro and conductor runs and filter runs by project</li>
+    <li><span class="sha">8efa559</span> fix(run): give a claude -p session role other</li>
+    <li><span class="sha">d2b6c11</span> fix(run): mark claude -p runs and refresh the pid index on resume</li>
+    <li><span class="sha">a2f1388</span> fix(run): resolve a relative worktree before reading its project</li>
+    <li><span class="sha">1071a95</span> test(run-events): interleave the hook timing samples and assert only on opt-in</li>
+    <li><span class="sha">3c7cb06</span> fix(run): store a relative worktree as an absolute path</li>
+    <li><span class="sha">ee734e0</span> test(oculus): refresh the phone runs baseline after the rebase</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-598—every-session-a-run/report.html</footer>
+
+</body>
+</html>
