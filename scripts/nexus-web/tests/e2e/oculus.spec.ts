@@ -176,7 +176,9 @@ test.describe('the index page: agents (DGS-599)', () => {
     await page.goto(`${stub.url}/`)
     await expect(page.getByText(/Disconnected from herdr/)).toBeVisible()
     await stub.setMode('oc-ok')
-    await expect(page.getByTestId('agents-live')).toHaveText('Connected to herdr.', { timeout: 15_000 })
+    // the live poll waits 5 s after each answer: move the page clock past it instead of waiting for real time
+    await page.clock.fastForward(5_500)
+    await expect(page.getByTestId('agents-live')).toHaveText('Connected to herdr.')
     await expect(page.getByText(/Disconnected from herdr/)).toHaveCount(0)
   })
   test('nothing on the page shows a terminal title or a folder path', async ({ page }) => {

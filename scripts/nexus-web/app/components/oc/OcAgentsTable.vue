@@ -7,7 +7,8 @@ const where = (a: LiveAgent): string => [a.workspace, a.tab?.split(':')[1]].filt
 </script>
 
 <template>
-  <OcTable caption="herdr agents">
+  <p v-if="agents.length === 0" class="empty">No herdr agents are running.</p>
+  <OcTable v-else caption="herdr agents">
     <template #head>
       <tr><th scope="col">Agent</th><th scope="col">Role</th><th scope="col">Project</th><th scope="col">Status</th><th scope="col">Where</th><th scope="col">Run</th></tr>
     </template>
@@ -21,3 +22,7 @@ const where = (a: LiveAgent): string => [a.workspace, a.tab?.split(':')[1]].filt
     </tr>
   </OcTable>
 </template>
+
+<style scoped lang="scss">
+.empty { color: var(--oc-text-2); margin: 0; padding: 12px 0; }
+</style>
