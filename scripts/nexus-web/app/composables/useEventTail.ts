@@ -23,6 +23,7 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
   let generation = 0   // a group change starts a new generation; an answer from an older one is dropped
   let timer: ReturnType<typeof setTimeout> | undefined
   let stopped = false
+  let inflight = 0   // requests of first() and poll() in progress; a visibility change must not start a second poll next to one
   const g = (): { group?: string } => (group.value === 'all' ? {} : { group: group.value })
   // Line numbers are run-wide. Without a filter, a first line above 1 means earlier lines exist.
   // With a filter the answer cannot say, so a full page means there may be more; a short page means there is not.
@@ -30,6 +31,7 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
 
   async function first(): Promise<void> {
     const mine = ++generation
+    inflight++
     try {
       const r = await loadEvents(run, { ...g(), tail: PAGE }, api)
       if (mine !== generation) return
@@ -38,7 +40,7 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
       seen = r.total
       hasEarlier.value = earlier(r.lines)
       error.value = false
-    } catch { if (mine === generation) { error.value = true; failedAt.value = Date.now() } }
+    } catch { if (mine === generation) { error.value = true; failedAt.value = Date.now() } } finally { inflight-- }
   }
   const hidden = (): boolean => typeof document !== 'undefined' && document.visibilityState === 'hidden'
   // 10 s after an answer, 30 s after an error; a hidden tab does not poll (the visibilitychange handler polls again when it shows)
@@ -46,19 +48,22 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
   async function poll(): Promise<void> {
     if (stopped) return
     if (hidden()) return
-    if (error.value) {
-      await first()
-    } else if (tail.value) {
-      const mine = generation
-      try {
-        const r = await loadEvents(run, { since: seen, ...g() }, api)
-        if (mine === generation) {
-          if (r.lines.length) lines.value = [...lines.value, ...r.lines]
-          total.value = r.total
-          seen = r.total
-        }
-      } catch { error.value = true; failedAt.value = Date.now() }
-    }
+    inflight++
+    try {
+      if (error.value) {
+        await first()
+      } else if (tail.value) {
+        const mine = generation
+        try {
+          const r = await loadEvents(run, { since: seen, ...g() }, api)
+          if (mine === generation) {
+            if (r.lines.length) lines.value = [...lines.value, ...r.lines]
+            total.value = r.total
+            seen = r.total
+          }
+        } catch { error.value = true; failedAt.value = Date.now() }
+      }
+    } finally { inflight-- }
     schedule()
   }
   async function loadEarlier(): Promise<void> {
@@ -77,6 +82,7 @@ export function useEventTail(run: string, opts: ApiOptions & { intervalMs?: numb
 
   function onVisible(): void {
     if (hidden()) { if (timer) clearTimeout(timer); return }
+    if (inflight > 0) return   // the running request schedules the next poll when it ends
     if (timer) clearTimeout(timer)
     void poll()
   }

@@ -58,6 +58,38 @@ describe('useEventTail pauses and backs off like the page polls', () => {
   })
 })
 
+describe('useEventTail in-flight guard', () => {
+  it('hide then show during a pending poll does not start a second request or duplicate lines', async () => {
+    const base = fakeApi(10)
+    let release: (() => void) | null = null
+    let hold = false
+    let calls = 0
+    const fetch = (async (u: string | URL | Request) => {
+      calls++
+      if (hold) await new Promise<void>((r) => { release = r })
+      return base.fetch(u)
+    }) as typeof globalThis.fetch
+    let hidden = false
+    const spy = vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => (hidden ? 'hidden' : 'visible'))
+    const t = useEventTail('b-1', { fetch, base: 'http://h', intervalMs: 10_000 })
+    await vi.advanceTimersByTimeAsync(0)
+    base.state.total = 13
+    hold = true
+    await vi.advanceTimersByTimeAsync(10_000)   // the poll is now pending
+    const n = calls
+    hidden = true; document.dispatchEvent(new Event('visibilitychange'))
+    hidden = false; document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toBe(n)
+    hold = false
+    release!()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(t.lines.value.map((l) => l.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+    t.stop()
+    spy.mockRestore()
+  })
+})
+
 describe('useEventTail', () => {
   it('loads the last 200 lines first, then asks only for lines after the line count', async () => {
     const api = fakeApi(300)

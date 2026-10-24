@@ -39,6 +39,20 @@ describe('row cards on mobile: every cell carries its column name', () => {
   })
 })
 
+describe('NwTable keeps its table semantics for assistive tech (row cards drop display:table)', () => {
+  it('has explicit roles on the table, groups, rows, header cells and cells', async () => {
+    const w = await mountSuspended(RunsTable, { props: { runs: runsFixture().runs, nowMs: NOW } })
+    await nextTick()
+    const t = w.find('table')
+    expect(t.attributes('role')).toBe('table')
+    expect(w.findAll('thead, tbody').map((e) => e.attributes('role'))).toEqual(['rowgroup', 'rowgroup'])
+    expect(w.findAll('tr').every((r) => r.attributes('role') === 'row')).toBe(true)
+    expect(w.findAll('th').every((h) => h.attributes('role') === 'columnheader')).toBe(true)
+    expect(w.findAll('td').every((c) => c.attributes('role') === 'cell')).toBe(true)
+    expect(w.findAll('td')[0]!.attributes('data-label')).toBe('State')
+  })
+})
+
 describe('NwStaleBanner', () => {
   it('shows the time of the failed update in UTC+7 and no error code', async () => {
     const w = await mountSuspended(NwStaleBanner, { props: { failedAt: Date.parse('2026-10-22T03:41:09.000Z') } })

@@ -1,12 +1,23 @@
 <script setup lang="ts">
+import { onMounted, onUpdated, ref } from 'vue'
+
 defineProps<{ caption?: string; dense?: boolean }>()
+// The mobile row cards use display:block, which drops the table semantics in some screen readers.
+// The rows and cells come from the page's slots, so the roles are set on the elements after each render.
+const table = ref<HTMLElement | null>(null)
+const ROLES: Record<string, string> = { TR: 'row', TD: 'cell', TH: 'columnheader' }
+function applyRoles(): void {
+  table.value?.querySelectorAll('tr, td, th').forEach((el) => { const r = ROLES[el.tagName]; if (r && el.getAttribute('role') !== r) el.setAttribute('role', r) })
+}
+onMounted(applyRoles)
+onUpdated(applyRoles)
 </script>
 
 <template>
-  <table class="nw-table" :class="{ dense }">
+  <table ref="table" class="nw-table" :class="{ dense }" role="table">
     <caption v-if="caption" class="sr">{{ caption }}</caption>
-    <thead><slot name="head" /></thead>
-    <tbody><slot /></tbody>
+    <thead role="rowgroup"><slot name="head" /></thead>
+    <tbody role="rowgroup"><slot /></tbody>
   </table>
 </template>
 

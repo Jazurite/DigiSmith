@@ -74,7 +74,7 @@ function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView
   return loaded.map((l) => runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()));
 }
 
-// Budgets come from config.yml in the process working directory (the watchdog reads it the same way); the depot is not a checkout and the API sets no NIGHTWATCH_CONFIG_CWD, so a missing file means defaults.
+// Budgets come from config.yml in NIGHTWATCH_CONFIG_CWD when it is set, else in the depot folder (depotDir). The depot is not a checkout, so a missing file means defaults; the API sets no NIGHTWATCH_CONFIG_CWD.
 const depotCwd = (env: NodeJS.ProcessEnv): string => env.NIGHTWATCH_CONFIG_CWD ?? depotDir(env);
 
 export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
