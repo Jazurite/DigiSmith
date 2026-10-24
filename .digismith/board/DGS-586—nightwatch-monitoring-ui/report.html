@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightwatch monitoring UI — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Nightwatch monitoring UI — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: <strong>DGS-586</strong></span>
+    <span>Commit range: <code>3c41271..6b5cda6</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#screens">How Jack opens each screen</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A read-only Nightwatch dashboard (Operations, Attention, Runs, Run detail, Plan) in the Nexus web app, fed by new <code>/api/v1/nightwatch/</code> routes that run the built CLI. A new <code>dg nightwatch view &lt;name&gt; --json</code> command calls the existing Nightwatch readers and prints one JSON document; the Nexus API spawns the built CLI, caches the answer for 5 s and checks it with zod schemas; the Nuxt app has static pages under <code>/nightwatch/</code> that poll every 10 s. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (12 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 11 fix rounds before merge, and 2 more rounds for the final review.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="screens">
+  <h2>How Jack opens each screen</h2>
+  <p>On the tailnet, open <code>https://pazurite.com/nightwatch/</code> and then the page paths below. No login in v1. On the Workbox itself the site answers at <code>https://127.0.0.1:8443</code> with the Host header <code>pazurite.com</code> (for example <code>curl -k -H 'Host: pazurite.com' https://127.0.0.1:8443/nightwatch/</code>); the API is at <code>http://127.0.0.1:4300/api/v1/nightwatch/overview</code>.</p>
+  <ul>
+    <li>Operations: <code>/nightwatch/</code></li>
+    <li>Attention: <code>/nightwatch/attention</code></li>
+    <li>Runs: <code>/nightwatch/runs</code></li>
+    <li>Run detail: <code>/nightwatch/run?id=&lt;run-id&gt;</code></li>
+    <li>Plan: <code>/nightwatch/plan?ticket=&lt;KEY&gt;</code></li>
+  </ul>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Shared schemas</h4><p>zod schemas and types of every Nightwatch answer (<code>scripts/nexus-shared/nightwatch.ts</code>).</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Pure derivations and the fake depot</h4><p>Trigger, health row, phase table, pipeline, event groups and plan parsing, plus a fake depot for tests.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>The six view builders</h4><p><code>overview</code>, <code>attention</code>, <code>runs</code>, <code>run</code>, <code>events</code> and <code>plan</code> views over the real readers.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The <code>dg nightwatch view</code> command</h4><p>One read-only JSON view per call; unknown flags refused.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>The API reader</h4><p>Spawns the built CLI, one flight per view, 5 s cache, 8 s timeout, argument allowlist.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>The API routes, Nexus health and wiring</h4><p>GET-only routes under <code>/api/v1/nightwatch/</code>, id checks, Nexus health with four states.</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>Web foundation</h4><p>Router, Warren tokens (MIT), polling composable, typed loaders.</p></div>
+    <div class="card"><span class="tag">Task 8</span><h4>Shell, top bar and shared state components</h4><p>Nightwatch shell, top bar with stale and unknown states, tables.</p></div>
+    <div class="card"><span class="tag">Task 9</span><h4>Operations and Attention pages</h4><p>Worker table, phase table, scan card, attention list with live announcements.</p></div>
+    <div class="card"><span class="tag">Task 10</span><h4>Runs, Run detail and Plan pages</h4><p>Filterable runs, run pipeline and event tail, plan progress and verdicts.</p></div>
+    <div class="card"><span class="tag">Task 11</span><h4>Gates</h4><p>Stub API, e2e, axe, contrast, visual baselines and built-page tests; layout and prerender bugs fixed.</p></div>
+    <div class="card"><span class="tag">Task 12</span><h4>Docs and the full check</h4><p>README line, runbook text, full check, fix for main's <code>fixing</code> verdict.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Shared schemas</td><td>zod schemas and types of every Nightwatch answer (<code>scripts/nexus-shared/nightwatch.ts</code>).</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>2. Pure derivations and the fake depot</td><td>Trigger, health row, phase table, pipeline, event groups and plan parsing, plus a fake depot for tests.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>3. The six view builders</td><td><code>overview</code>, <code>attention</code>, <code>runs</code>, <code>run</code>, <code>events</code> and <code>plan</code> views over the real readers.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>4. The <code>dg nightwatch view</code> command</td><td>One read-only JSON view per call; unknown flags refused.</td><td>Approved after 1 fix round, 1 minor deferred</td><td>'--role --json' takes --json as the value of --role (harmless)</td></tr>
+    <tr><td>5. The API reader</td><td>Spawns the built CLI, one flight per view, 5 s cache, 8 s timeout, argument allowlist.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>6. The API routes, Nexus health and wiring</td><td>GET-only routes under <code>/api/v1/nightwatch/</code>, id checks, Nexus health with four states.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>7. Web foundation</td><td>Router, Warren tokens (MIT), polling composable, typed loaders.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>8. Shell, top bar and shared state components</td><td>Nightwatch shell, top bar with stale and unknown states, tables.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>9. Operations and Attention pages</td><td>Worker table, phase table, scan card, attention list with live announcements.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>10. Runs, Run detail and Plan pages</td><td>Filterable runs, run pipeline and event tail, plan progress and verdicts.</td><td>Approved after 1 fix round (plus 1 follow-up fix)</td><td></td></tr>
+    <tr><td>11. Gates</td><td>Stub API, e2e, axe, contrast, visual baselines and built-page tests; layout and prerender bugs fixed.</td><td>Approved after 1 fix round</td><td></td></tr>
+    <tr><td>12. Docs and the full check</td><td>README line, runbook text, full check, fix for main's <code>fixing</code> verdict.</td><td>Ticket review only (no separate task review)</td><td></td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 3 Important findings and 9 Minor, all fixed except one Minor parked with a ruling. Findings of every review: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1 event lines of the wrong shape crash the views or fail the shared schema.</td><td>Fixed: lines kept only with string ts, integer seq and string type; data defaults to {}.</td></tr>
+    <tr><td>Important</td><td>F2 Attention rows lacked the resolve command.</td><td>Fixed: <code>dg autonomous attention resolve &lt;id&gt;</code> shown as copy text.</td></tr>
+    <tr><td>Important</td><td>F3 Tables did not become cards on mobile.</td><td>Fixed: row cards below 760 px, e2e check at 390 px, phone baselines.</td></tr>
+    <tr><td>Minor</td><td>F4 to F8 plan default ticket, stale banner time, tail pause and backoff, stick to bottom, strip-types smoke case.</td><td>Fixed.</td></tr>
+    <tr><td>Minor</td><td>F9 to F11 comment, double poll on show, table roles on mobile cards.</td><td>Fixed in the third round.</td></tr>
+    <tr><td>Minor</td><td>F12 <code>useEventTail</code>: first() from setGroup never schedules the next poll.</td><td>Parked: rare and recoverable (the tail restarts on the next visibility change).</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">771cd71</span> docs(dgs-586): add the Nightwatch monitoring UI spec and layout mock</li>
+    <li><span class="sha">deb7045</span> docs(dgs-586): raise the mock's smallest text to 11px</li>
+    <li><span class="sha">70b51e6</span> docs(dgs-586): raise the last 10px mock text to 11px</li>
+    <li><span class="sha">62b6fa1</span> docs(dgs-586): apply the checkpoint 1 decisions to the spec</li>
+    <li><span class="sha">74b7727</span> docs(dgs-586): add the implementation plan</li>
+    <li><span class="sha">401e813</span> feat(nightwatch): add the shared schemas of the monitoring UI</li>
+    <li><span class="sha">33a8475</span> fix(nightwatch): check ISO UTC timestamps and share the run phase enum</li>
+    <li><span class="sha">7ff8b0c</span> feat(nightwatch): add the pure derivations and the fake depot</li>
+    <li><span class="sha">6f0c209</span> fix(nightwatch): harden the fake depot and cover the derive branches</li>
+    <li><span class="sha">bb87c89</span> feat(nightwatch): add the six read-only view builders</li>
+    <li><span class="sha">8fe4382</span> fix(nightwatch): load views once, validate event cursors and realpath the plan file</li>
+    <li><span class="sha">3ad765e</span> feat(nightwatch): add the read-only dg nightwatch view command</li>
+    <li><span class="sha">76f877a</span> fix(nightwatch): refuse unknown flags, accept --key=value and test flags through the real entry</li>
+    <li><span class="sha">0febbe8</span> feat(nexus-api): add the Nightwatch reader that runs the built CLI</li>
+    <li><span class="sha">a066a4a</span> fix(nexus-api): validate Nightwatch reader arguments and evict cache entries one by one</li>
+    <li><span class="sha">4803bc1</span> feat(nexus-api): add the read-only Nightwatch routes and Nexus health</li>
+    <li><span class="sha">77e85f8</span> fix(nexus-api): report unknown or degraded Nexus health for missing jobs and answer 404 on unknown Nightwatch paths</li>
+    <li><span class="sha">4e4bd32</span> feat(nexus-web): add the router, Warren tokens, polling and typed loaders</li>
+    <li><span class="sha">760c7e8</span> fix(nexus-web): floor and clamp durations and test polling resume after a hidden load</li>
+    <li><span class="sha">73a9e2c</span> feat(nexus-web): add the Nightwatch shell, top bar and state components</li>
+    <li><span class="sha">07bede1</span> fix(nexus-web): show a stale top bar, narrow its live region and test the shell and layout</li>
+    <li><span class="sha">76c5ebc</span> feat(nexus-web): add the Operations and Attention pages</li>
+    <li><span class="sha">d4aca0e</span> fix(nexus-web): label the resolved table, count worker elapsed live, start the clock on the client and share the stale banner</li>
+    <li><span class="sha">d9015b5</span> feat(nexus-web): add the Runs, Run detail and Plan pages</li>
+    <li><span class="sha">2d2b8c7</span> fix(nexus-web): restart the run page on a query change, fix earlier-lines state, pipeline time format and picker retry</li>
+    <li><span class="sha">23aa4d9</span> fix(nexus-web): ignore a late 404 of a run that is no longer shown</li>
+    <li><span class="sha">5757a3b</span> fix(nexus-web): apply the Nightwatch layout and start the poll on the client only</li>
+    <li><span class="sha">3f4015e</span> fix(nexus-web): announce new attention items, hold the Run page loading until mounted, darken light primary and ok, ship the Warren notice</li>
+    <li><span class="sha">a27515d</span> test(nexus-web): add the Nightwatch e2e, axe, contrast, built and visual gates</li>
+    <li><span class="sha">2194389</span> fix(nexus-web): announce attention arrivals by id set, ship the full MIT notice, cover hover, thead and neutral contrast, assert the role filter property</li>
+    <li><span class="sha">1e49391</span> docs(nightwatch): document the monitoring UI and its post-merge steps</li>
+    <li><span class="sha">d6aab50</span> fix(nightwatch): retry the real-entry test while another test rebuilds the client dist</li>
+    <li><span class="sha">eb908cd</span> fix(nexus-web): satisfy the typecheck in the attention poll tests</li>
+    <li><span class="sha">983735b</span> fix(nightwatch): show a finding being fixed as a fixing verdict in the plan view</li>
+    <li><span class="sha">353cf0b</span> fix(nightwatch): skip event lines of the wrong shape, add the view smoke case, correct the config comment</li>
+    <li><span class="sha">030b636</span> fix(nexus-web): add row cards, the resolve command, the scan-lock plan, stale time, tail backoff and stick-to-bottom</li>
+    <li><span class="sha">6b5cda6</span> fix(nexus-web): keep table roles on the mobile cards, guard the event tail against a double poll, correct the budgets comment</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-586—nightwatch-monitoring-ui/report.html</footer>
+
+</body>
+</html>
