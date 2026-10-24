@@ -28,6 +28,15 @@ function dropdown<T extends string>(t: ClickUpTask, name: string, allowed: reado
   return option?.name !== undefined && (allowed as readonly string[]).includes(option.name) ? (option.name as T) : null;
 }
 
+/** "Scheduled at" (a date field; ClickUp sends ms as a string). */
+function scheduledAt(t: ClickUpTask): number | null | "invalid" {
+  const field = (t.custom_fields as unknown as Field[] | undefined)?.find((f) => f.name === "Scheduled at");
+  const v = field?.value;
+  if (v === undefined || v === null || v === "") return null;
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\d+$/.test(v) ? Number(v) : NaN;
+  return Number.isSafeInteger(n) && n > 0 ? n : "invalid";
+}
+
 /** Tracker over the ClickUp API for one space. Reads only, except setStatus and comment. */
 export class ClickUpLoTracker implements Tracker {
   private milestones: Promise<Map<string, string>> | null = null;
@@ -144,6 +153,7 @@ export class ClickUpLoTracker implements Tracker {
       text: t.text_content || t.description || "",
       signOff: dropdown(t, "Sign-off", ["Auto", "Jack"] as const),
       mode: dropdown(t, "Mode", ["Autonomous", "Manual"] as const),
+      scheduledAt: scheduledAt(t),
       milestone: await this.milestone(t),
       blockers: await this.blockers(t, known),
     };
