@@ -55,13 +55,13 @@ export function runRowOf(run: RunRecord, events: EventLine[], trigger: Trigger, 
   const p = state === "ended" ? null : phaseOf(run, events);
   return {
     run: run.run, ticket: run.ticket, role: run.role, project: run.project ?? null, source: run.source ?? "start", seat: run.seat, model: run.model, trigger, state,
-    phase: p?.phase ?? null, startedAt, endedAt, elapsedSec: Math.max(0, Math.round((stop - ms(startedAt)) / 1000)),
+    phase: p?.phase ?? null, phaseSince: p?.since || null, startedAt, endedAt, elapsedSec: Math.max(0, Math.round((stop - ms(startedAt)) / 1000)),
     events: events.length, merged: events.some((e) => e.type === "merged"), pushed: events.some((e) => e.type === "pushed"),
     tokens: null, tokensAsOf: null, // views.ts fills these from tokens.json
   };
 }
 
-export function pipelineOf(run: RunRecord, events: EventLine[], claimAt: string | null, state: Health): PipelineStep[] {
+export function pipelineOf(run: RunRecord, events: EventLine[], claimAt: string | null, state: Health, endedAt: string | null): PipelineStep[] {
   const first = (pred: (e: EventLine) => boolean): string | null => events.find(pred)?.ts ?? null;
   const at: Record<PipelineStep["step"], string | null> = {
     claimed: claimAt,
@@ -75,12 +75,21 @@ export function pipelineOf(run: RunRecord, events: EventLine[], claimAt: string 
   // The furthest step with a time is where the run stands. A manual run has no claim time, so "claimed" is skipped, not blocking.
   let reached = -1;
   order.forEach((s, i) => { if (at[s] !== null) reached = i; });
+  const nextAt = (i: number): string | null => order.slice(i + 1).map((s) => at[s]).find((t) => t !== null) ?? null;
   return order.map((step, i) => {
     let s: PipelineStep["state"] = "waiting";
     if (i < reached) s = "done";
     else if (i === reached) s = state === "ended" ? "done" : state === "lost" ? "lost" : "current";
     if (step === "claimed" && at.claimed === null) s = "waiting";
-    return { step, at: at[step], state: s };
+    // A done step lasts until the next step with a time; the last one of an ended run until its end. Pushed is the end mark.
+    let durationSec: number | null = null;
+    const start = at[step];
+    const end = s === "done" && step !== "pushed" && start !== null ? nextAt(i) ?? (state === "ended" ? endedAt : null) : null;
+    if (start !== null && end !== null) {
+      const sec = (ms(end) - ms(start)) / 1000;
+      durationSec = sec >= 0 ? Math.round(sec) : null;   // times out of order: no number rather than a false one
+    }
+    return { step, at: start, state: s, durationSec };
   });
 }
 

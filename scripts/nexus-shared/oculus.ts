@@ -29,7 +29,7 @@ export const runRowSchema = z.strictObject({
   project: z.string().nullable(), source: z.enum(RUN_SOURCES),
   seat: z.string().nullable(), model: z.string().nullable(),
   trigger: z.enum(TRIGGERS), state: z.enum(HEALTH),
-  phase: z.enum(RUN_PHASES).nullable(),
+  phase: z.enum(RUN_PHASES).nullable(), phaseSince: iso.nullable(),
   startedAt: iso, endedAt: iso.nullable(), elapsedSec: count, events: count,
   merged: z.boolean(), pushed: z.boolean(),
   tokens: rowTokensSchema.nullable(), tokensAsOf: iso.nullable(),
@@ -82,7 +82,7 @@ export type Runs = z.infer<typeof runsSchema>
 
 export const pipelineStepSchema = z.strictObject({
   step: z.enum(['claimed', 'worktree-ready', 'building', 'review', 'merged', 'pushed']),
-  at: iso.nullable(), state: z.enum(['done', 'current', 'waiting', 'lost']),
+  at: iso.nullable(), state: z.enum(['done', 'current', 'waiting', 'lost']), durationSec: count.nullable(),
 })
 export const runDetailSchema = z.strictObject({
   readAt: iso,

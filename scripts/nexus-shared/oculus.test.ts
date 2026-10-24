@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { eventRowSchema, oculusErrorSchema, overviewSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
+import { eventRowSchema, oculusErrorSchema, overviewSchema, pipelineStepSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
 
-const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false, tokens: null, tokensAsOf: null }
+const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', phaseSince: '2026-10-22T01:00:00.000Z', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false, tokens: null, tokensAsOf: null }
 
 describe('oculus schemas', () => {
   it('accepts a run row and refuses an unknown key', () => {
@@ -43,5 +43,16 @@ describe('oculus schemas', () => {
     expect(v('open')).toBe(false)
     expect(oculusErrorSchema.safeParse({ error: 'reader_unavailable' }).success).toBe(true)
     expect(oculusErrorSchema.safeParse({ error: 'boom' }).success).toBe(false)
+  })
+})
+
+describe('phase time fields', () => {
+  it('a row needs phaseSince and a step needs durationSec', () => {
+    const { phaseSince: _p, ...noSince } = row
+    expect(runRowSchema.safeParse(noSince).success).toBe(false)
+    expect(runRowSchema.safeParse({ ...row, phaseSince: null }).success).toBe(true)
+    expect(pipelineStepSchema.safeParse({ step: 'building', at: null, state: 'waiting' }).success).toBe(false)
+    expect(pipelineStepSchema.safeParse({ step: 'building', at: null, state: 'waiting', durationSec: null }).success).toBe(true)
+    expect(pipelineStepSchema.safeParse({ step: 'building', at: null, state: 'done', durationSec: -1 }).success).toBe(false)
   })
 })

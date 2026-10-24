@@ -7,7 +7,7 @@ import { ReaderError, type Reader } from './oculus-reader.ts'
 import type { Env } from './app.ts'
 
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
-const row = { run: 'builder-1', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: 'building', startedAt: '2026-10-22T02:00:00.000Z', endedAt: null, elapsedSec: 3600, events: 2, merged: false, pushed: false, tokens: null, tokensAsOf: null }
+const row = { run: 'builder-1', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: 'building', phaseSince: '2026-10-22T02:00:00.000Z', startedAt: '2026-10-22T02:00:00.000Z', endedAt: null, elapsedSec: 3600, events: 2, merged: false, pushed: false, tokens: null, tokensAsOf: null }
 const overviewView = {
   readAt: '2026-10-22T03:00:00.000Z', workers: [row], attentionCount: 0,
   tickets: { windowDays: 7, lockTicket: null, rows: [] },

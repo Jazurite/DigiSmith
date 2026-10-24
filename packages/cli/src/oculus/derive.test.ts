@@ -71,14 +71,14 @@ describe("runRowOf", () => {
 describe("pipelineOf", () => {
   it("marks done steps, the current one and the waiting ones", () => {
     const events = [ev(1, "started", "2026-10-22T01:01:00.000Z"), ev(2, "phase", "2026-10-22T01:02:00.000Z", { phase: "building" })];
-    const p = pipelineOf(run(), events, "2026-10-22T00:59:00.000Z", "healthy");
+    const p = pipelineOf(run(), events, "2026-10-22T00:59:00.000Z", "healthy", null);
     expect(p.map((s) => [s.step, s.state])).toEqual([
       ["claimed", "done"], ["worktree-ready", "done"], ["building", "current"], ["review", "waiting"], ["merged", "waiting"], ["pushed", "waiting"],
     ]);
     expect(p[0].at).toBe("2026-10-22T00:59:00.000Z");
   });
   it("a lost run turns the current step lost; a manual run has no claim time", () => {
-    const p = pipelineOf(run(), [ev(1, "started", "2026-10-22T01:01:00.000Z"), ev(2, "lost", "2026-10-22T01:20:00.000Z")], null, "lost");
+    const p = pipelineOf(run(), [ev(1, "started", "2026-10-22T01:01:00.000Z"), ev(2, "lost", "2026-10-22T01:20:00.000Z")], null, "lost", null);
     expect(p[0]).toMatchObject({ step: "claimed", at: null });
     expect(p.find((s) => s.state === "lost")?.step).toBe("building");
   });
@@ -88,16 +88,16 @@ describe("pipelineOf more states", () => {
   const started = ev(1, "started", "2026-10-22T01:01:00.000Z");
   it("blocked and stalled keep the furthest step current", () => {
     for (const st of ["blocked", "stalled"] as const) {
-      const p = pipelineOf(run(), [started], null, st);
+      const p = pipelineOf(run(), [started], null, st, null);
       expect(p.find((s) => s.state === "current")?.step).toBe("building");
     }
   });
   it("review reached makes building done and review current", () => {
-    const p = pipelineOf(run(), [started, ev(2, "review_ready", "2026-10-22T01:10:00.000Z")], null, "healthy");
+    const p = pipelineOf(run(), [started, ev(2, "review_ready", "2026-10-22T01:10:00.000Z")], null, "healthy", null);
     expect(p.map((s) => s.state)).toEqual(["waiting", "done", "done", "current", "waiting", "waiting"]);
   });
   it("merged without pushed leaves pushed waiting", () => {
-    const p = pipelineOf(run(), [started, ev(2, "merged", "2026-10-22T01:30:00.000Z")], null, "healthy");
+    const p = pipelineOf(run(), [started, ev(2, "merged", "2026-10-22T01:30:00.000Z")], null, "healthy", null);
     expect(p.find((s) => s.step === "merged")?.state).toBe("current");
     expect(p.find((s) => s.step === "pushed")?.state).toBe("waiting");
   });
@@ -150,5 +150,59 @@ describe("phaseTable window", () => {
     const rows = phaseTable({ lock: null, releases, lostOpen: [], nowMs: T0 });
     expect(rows.find((r) => r.phase === "released")?.count).toBe(1);
     expect(rows.find((r) => r.phase === "merged")?.count).toBe(1);
+  });
+});
+
+describe("phaseSince", () => {
+  it("a builder's phase starts at its started event", () => {
+    const r = runRowOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z")], "manual", DEFAULT_BUDGETS, T0 + 60_000);
+    expect(r).toMatchObject({ phase: "building", phaseSince: "2026-10-22T01:00:00.000Z" });
+  });
+  it("a phase event moves it; a fix wave restarts building at the first tool after review_ready", () => {
+    const events = [
+      ev(1, "started", "2026-10-22T01:00:00.000Z"),
+      ev(2, "review_ready", "2026-10-22T01:30:00.000Z"),
+      ev(3, "tool", "2026-10-22T01:50:00.000Z", { tool: "Edit", ok: true }),
+    ];
+    expect(runRowOf(run(), events, "manual", DEFAULT_BUDGETS, T0 + 55 * 60_000)).toMatchObject({ phase: "building", phaseSince: "2026-10-22T01:50:00.000Z" });
+    const waiting = runRowOf(run(), events.slice(0, 2), "manual", DEFAULT_BUDGETS, T0 + 35 * 60_000);
+    expect(waiting).toMatchObject({ phase: null, phaseSince: null });
+  });
+  it("an ended run has no phase and no phaseSince", () => {
+    const events = [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "ended", "2026-10-22T01:32:00.000Z")];
+    expect(runRowOf(run(), events, "manual", DEFAULT_BUDGETS, T0 + 3600_000)).toMatchObject({ phase: null, phaseSince: null });
+  });
+  it("a reviewer counts review from its start", () => {
+    const r = runRowOf(run({ role: "reviewer" }), [ev(1, "started", "2026-10-22T01:05:00.000Z")], "manual", DEFAULT_BUDGETS, T0 + 10 * 60_000);
+    expect(r).toMatchObject({ phase: "review", phaseSince: "2026-10-22T01:05:00.000Z" });
+  });
+});
+
+describe("pipelineOf durations", () => {
+  const dur = (p: { step: string; durationSec: number | null }[]) => Object.fromEntries(p.map((s) => [s.step, s.durationSec]));
+  it("a done step lasts until the next step with a time; current and waiting steps have none", () => {
+    const events = [ev(1, "started", "2026-10-22T01:01:00.000Z"), ev(2, "review_ready", "2026-10-22T01:40:00.000Z")];
+    const p = pipelineOf(run(), events, "2026-10-22T00:59:00.000Z", "healthy", null);
+    expect(dur(p)).toEqual({ claimed: 60, "worktree-ready": 60, building: 39 * 60, review: null, merged: null, pushed: null });
+  });
+  it("an ended run: the last reached step runs to endedAt; Pushed has none", () => {
+    const events = [
+      ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "review_ready", "2026-10-22T02:07:00.000Z"),
+      ev(3, "merged", "2026-10-22T03:04:00.000Z"), ev(4, "pushed", "2026-10-22T03:05:00.000Z"), ev(5, "ended", "2026-10-22T03:06:00.000Z"),
+    ];
+    const p = pipelineOf(run(), events, null, "ended", "2026-10-22T03:06:00.000Z");
+    expect(dur(p)).toEqual({ claimed: null, "worktree-ready": 0, building: 67 * 60, review: 57 * 60, merged: 60, pushed: null });
+    const noReview = pipelineOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "ended", "2026-10-22T01:20:00.000Z")], null, "ended", "2026-10-22T01:20:00.000Z");
+    expect(noReview.find((s) => s.step === "building")).toMatchObject({ state: "done", durationSec: 20 * 60 });
+  });
+  it("a lost step and a manual run's claim have none", () => {
+    const p = pipelineOf(run(), [ev(1, "started", "2026-10-22T01:01:00.000Z")], null, "lost", null);
+    expect(p.find((s) => s.step === "building")).toMatchObject({ state: "lost", durationSec: null });
+    expect(p[0]).toMatchObject({ step: "claimed", durationSec: null });
+  });
+  it("times out of order give null, never a negative number", () => {
+    const p = pipelineOf(run({ created_at: "2026-10-22T01:30:00.000Z" }), [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "review_ready", "2026-10-22T01:40:00.000Z")], null, "healthy", null);
+    expect(p.find((s) => s.step === "worktree-ready")?.durationSec).toBeNull();
+    expect(p.find((s) => s.step === "building")?.durationSec).toBe(40 * 60);
   });
 });

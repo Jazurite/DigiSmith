@@ -184,14 +184,14 @@ export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd
   const claim = readJournal(adir).find((l) => l.status === "planned" && l.key === `${record.ticket}:claimed:1:claim`);
   const budgets = readBudgets(a.cwd ?? depotCwd(env)).budgets;
   const phase = row.phase;
-  const since = phase === null ? null : loaded.events.filter((e) => e.type === "phase" && e.data.phase === phase).map((e) => e.ts).pop() ?? row.startedAt;
+  const since = row.phaseSince;   // the watchdog's clock (phaseOf), the same number the Runs table shows
   return {
     readAt: now.toISOString(),
     row,
-    pipeline: pipelineOf(record, loaded.events, claim?.ts ?? null, row.state),
+    pipeline: pipelineOf(record, loaded.events, claim?.ts ?? null, row.state, row.endedAt),
     budget: {
       phase, limitMin: phase === null ? null : budgets[phase],
-      elapsedMin: since === null ? null : Math.max(0, Math.round((now.getTime() - Date.parse(since)) / 60_000)),
+      elapsedMin: since === null ? null : Math.max(0, Math.floor((now.getTime() - Date.parse(since)) / 60_000)),
       building: budgets.building ?? DEFAULT_BUDGETS.building, review: budgets.review, merge: budgets.merge,
     },
     tokens: tokens.value, tokensAsOf: tokens.asOf,

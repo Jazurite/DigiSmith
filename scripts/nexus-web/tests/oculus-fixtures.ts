@@ -26,7 +26,7 @@ export function unpricedTokensFixture(): RunTokens {
 export function runFixture(over: Partial<RunRow> = {}): RunRow {
   return {
     run: 'builder-20261022T021000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: 'sonnet-5-5',
-    trigger: 'night-scan', state: 'healthy', phase: 'building',
+    trigger: 'night-scan', state: 'healthy', phase: 'building', phaseSince: '2026-10-22T02:46:00.000Z',
     startedAt: '2026-10-22T02:10:00.000Z', endedAt: null, elapsedSec: 2467, events: 382,
     merged: false, pushed: false, tokens: null, tokensAsOf: null,
     ...over,
@@ -38,7 +38,7 @@ export function overviewFixture(over: Partial<Overview> = {}): Overview {
     readAt: '2026-10-22T03:42:10.000Z',
     workers: [
       runFixture(),
-      runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350, events: 120 }),
+      runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', phaseSince: '2026-10-22T01:30:00.000Z', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350, events: 120 }),
     ],
     attentionCount: 2,
     tickets: {
@@ -89,9 +89,9 @@ export function attentionFixture(): Attention {
 export function runsFixture(): Runs {
   const runs = [
     runFixture({ tokens: { total: 1_210_200, costUsd: 3.411, unpriced: [] }, tokensAsOf: '2026-10-22T03:40:00.000Z' }),   // fresh
-    runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350, tokensAsOf: '2026-10-22T02:15:00.000Z' }),   // stale: no usable snapshot
-    runFixture({ run: 'builder-20261021T144000-aa11bb', ticket: 'DGS-586', trigger: 'manual', state: 'ended', phase: null, startedAt: '2026-10-21T14:40:00.000Z', endedAt: '2026-10-21T16:45:00.000Z', elapsedSec: 7500, merged: true, pushed: true, tokens: { total: 8_400_000, costUsd: 41.2, unpriced: [] }, tokensAsOf: '2026-10-21T16:46:00.000Z' }),
-    runFixture({ run: 'builder-20261021T110200-cc22dd', ticket: 'DGS-585', trigger: 'away', seat: 'jack', state: 'lost', phase: null, startedAt: '2026-10-21T11:02:00.000Z', endedAt: '2026-10-21T11:57:00.000Z', elapsedSec: 3300, tokens: { total: 7_000, costUsd: null, unpriced: ['claude-mystery-9'] }, tokensAsOf: '2026-10-21T11:57:00.000Z' }),   // unpriced model
+    runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', phaseSince: '2026-10-22T01:30:00.000Z', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350, tokensAsOf: '2026-10-22T02:15:00.000Z' }),   // stale: no usable snapshot
+    runFixture({ run: 'builder-20261021T144000-aa11bb', ticket: 'DGS-586', trigger: 'manual', state: 'ended', phase: null, phaseSince: null, startedAt: '2026-10-21T14:40:00.000Z', endedAt: '2026-10-21T16:45:00.000Z', elapsedSec: 7500, merged: true, pushed: true, tokens: { total: 8_400_000, costUsd: 41.2, unpriced: [] }, tokensAsOf: '2026-10-21T16:46:00.000Z' }),
+    runFixture({ run: 'builder-20261021T110200-cc22dd', ticket: 'DGS-585', trigger: 'away', seat: 'jack', state: 'lost', phase: null, phaseSince: null, startedAt: '2026-10-21T11:02:00.000Z', endedAt: '2026-10-21T11:57:00.000Z', elapsedSec: 3300, tokens: { total: 7_000, costUsd: null, unpriced: ['claude-mystery-9'] }, tokensAsOf: '2026-10-21T11:57:00.000Z' }),   // unpriced model
     // Task 9: automatic runs (DGS-598) of a Maestro and two conductors, with projects; they carry no health flag
     runFixture({ run: 'maestro-20261022T000000-aa00aa', ticket: null, role: 'maestro', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'jack', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:00:00.000Z', elapsedSec: 9000 }),
     runFixture({ run: 'conductor-20261022T000500-bb11bb', ticket: null, role: 'conductor', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'dev0', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:05:00.000Z', elapsedSec: 8700 }),
@@ -105,14 +105,14 @@ export function runDetailFixture(): RunDetail {
     readAt: '2026-10-22T03:42:10.000Z',
     row: runFixture(),
     pipeline: [
-      { step: 'claimed', at: '2026-10-22T03:10:44.000Z', state: 'done' },
-      { step: 'worktree-ready', at: '2026-10-22T03:11:02.000Z', state: 'done' },
-      { step: 'building', at: '2026-10-22T03:11:20.000Z', state: 'current' },
-      { step: 'review', at: null, state: 'waiting' },
-      { step: 'merged', at: null, state: 'waiting' },
-      { step: 'pushed', at: null, state: 'waiting' },
+      { step: 'claimed', at: '2026-10-22T02:09:00.000Z', state: 'done', durationSec: 60 },
+      { step: 'worktree-ready', at: '2026-10-22T02:10:00.000Z', state: 'done', durationSec: 0 },
+      { step: 'building', at: '2026-10-22T02:10:00.000Z', state: 'current', durationSec: null },
+      { step: 'review', at: null, state: 'waiting', durationSec: null },
+      { step: 'merged', at: null, state: 'waiting', durationSec: null },
+      { step: 'pushed', at: null, state: 'waiting', durationSec: null },
     ],
-    budget: { phase: 'building', limitMin: 120, elapsedMin: 41, building: 41, review: 0, merge: 0 },
+    budget: { phase: 'building', limitMin: 120, elapsedMin: 14, building: 41, review: 0, merge: 0 },
     tokens: tokensFixture(), tokensAsOf: '2026-10-22T03:40:00.000Z',
     record: { branch: 'DGS-590__example-branch', seat: 'dev0' },
     order: { available: true, text: 'Build DGS-590 on the example branch.' },

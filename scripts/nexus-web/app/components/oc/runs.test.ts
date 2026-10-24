@@ -198,7 +198,7 @@ describe('PipelineBar details', () => {
   it('shows a UTC+7 time for a step with a time and a dash for one without, and names each state', async () => {
     const w = await mountSuspended(PipelineBar, { props: { steps: runDetailFixture().pipeline } })
     const li = w.findAll('li')
-    expect(li[0]!.find('small').text()).toBe('10:10')
+    expect(li[0]!.find('small').text()).toBe('09:09')
     expect(li[3]!.find('small').text()).toBe('-')
     expect(li[2]!.text()).toContain('current')
     expect(li[3]!.text()).toContain('waiting')

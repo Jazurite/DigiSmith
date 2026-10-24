@@ -181,6 +181,30 @@ describe("run and events", () => {
     const e = eventsView(d.env, { run: "builder-1" });
     expect(JSON.stringify(e)).not.toMatch(/session_id|S1/);
   });
+  it("the budget counts from the row's phaseSince, so a fix wave restarts it like the watchdog", () => {
+    seedRun();
+    d.writeEvents("DGS-590", "builder-1", [
+      { type: "started", ts: "2026-10-22T02:00:00.000Z" },
+      { type: "review_ready", ts: "2026-10-22T02:30:00.000Z" },
+      { type: "tool", ts: "2026-10-22T02:50:00.000Z", data: { tool: "Edit", ok: true } },
+    ]);
+    const r = runView(d.env, NOW, { run: "builder-1" });
+    expect(r?.row).toMatchObject({ phase: "building", phaseSince: "2026-10-22T02:50:00.000Z" });
+    expect(r?.budget).toMatchObject({ phase: "building", elapsedMin: 10 });
+    expect(r?.pipeline.find((s) => s.step === "building")?.durationSec).toBe(30 * 60);
+    expect(runsView(d.env, NOW, {}).runs[0].phaseSince).toBe("2026-10-22T02:50:00.000Z");
+  });
+  it("an ended run's strip has durations up to its end", () => {
+    seedRun();
+    d.writeEvents("DGS-590", "builder-1", [
+      { type: "started", ts: "2026-10-22T02:00:00.000Z" },
+      { type: "ended", ts: "2026-10-22T02:25:00.000Z", data: { reason: "other" } },
+    ]);
+    const r = runView(d.env, NOW, { run: "builder-1" });
+    expect(r?.row.phaseSince).toBeNull();
+    expect(r?.budget.elapsedMin).toBeNull();
+    expect(r?.pipeline.find((s) => s.step === "building")).toMatchObject({ state: "done", durationSec: 25 * 60 });
+  });
 });
 
 describe("plan", () => {
