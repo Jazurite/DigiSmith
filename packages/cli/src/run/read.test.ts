@@ -89,3 +89,38 @@ describe("a run with no ticket", () => {
     expect(formatShow(row)).not.toContain("null");
   });
 });
+
+describe("DGS-598 readers", () => {
+  const mk = (folder: string, id: string, rec: Partial<Record<string, unknown>>, ageDays: number) => {
+    const dir = path.join(tmp, "runs", folder, id);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "run.json"), JSON.stringify({ schema: "nightwatch-run/v1", run: id, ticket: null, role: "other", order: null, seat: null, model: null, plugin_version: null, base_sha: null, branch: null, worktree: null, herdr: { workspace: null, tab: null, pane: null }, budget: null, created_at: "2026-10-01T00:00:00.000Z", source: "auto", project: "DigiSmith", session_id: id, role_from: "none", ...rec }));
+    fs.writeFileSync(path.join(dir, "events.jsonl"), "");
+    const t = (Date.now() - ageDays * 86_400_000) / 1000;
+    fs.utimesSync(path.join(dir, "events.jsonl"), t, t);
+    fs.utimesSync(path.join(dir, "run.json"), t, t);
+  };
+  it("skips dot folders without a word", () => {
+    fs.mkdirSync(path.join(tmp, "runs", ".index", "sessions"), { recursive: true });
+    mk("DigiSmith", "s-a", {}, 0);
+    expect(listRuns(env).map((r) => r.record.run)).toEqual(["s-a"]);
+  });
+  it("matches --ticket on the folder or the record", () => {
+    mk("DigiSmith", "s-b", { ticket: "DGS-598" }, 0);
+    mk("DGS-598", "s-c", { ticket: "DGS-598" }, 0);
+    mk("DigiSmith", "s-d", {}, 0);
+    expect(listRuns(env, "DGS-598").map((r) => r.record.run).sort()).toEqual(["s-b", "s-c"]);
+  });
+  it("keeps only runs active within the window, by file time", () => {
+    mk("DigiSmith", "s-new", {}, 1);
+    mk("DigiSmith", "s-old", {}, 9);
+    expect(listRuns(env, undefined, { days: 7 }).map((r) => r.record.run)).toEqual(["s-new"]);
+    expect(listRuns(env).map((r) => r.record.run).sort()).toEqual(["s-new", "s-old"]);
+  });
+  it("prints the project and a null ticket as -", () => {
+    mk("DigiSmith", "s-e", {}, 0);
+    const [row] = listRuns(env);
+    expect(formatList([row])).toMatch(/^s-e {2}- {2}DigiSmith {2}other /);
+    expect(formatShow(row)).toMatch(/ticket {4}-\nproject {3}DigiSmith\n/);
+  });
+});

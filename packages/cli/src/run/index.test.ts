@@ -151,4 +151,17 @@ describe("dg run", () => {
     expect(r.status).toBe(0);
     expect(r.stdout.trim()).toBe("[]");
   });
+  it("list hides runs idle for more than 7 days unless --all or a wider --days", async () => {
+    const fresh = (await dg("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).stdout.trim();
+    const old = (await dg("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md")).stdout.trim();
+    const t = (Date.now() - 9 * 86_400_000) / 1000;
+    fs.utimesSync(path.join(findRunDir(old, process.env)!, "run.json"), t, t);
+    const ids = async (...a: string[]) => (JSON.parse((await dg("list", "--json", ...a)).stdout) as { record: { run: string } }[]).map((r) => r.record.run).sort();
+    expect(await ids()).toEqual([fresh]);
+    expect(await ids("--all")).toEqual([fresh, old].sort());
+    expect(await ids("--days", "10")).toEqual([fresh, old].sort());
+    const bad = await dg("list", "--days", "0");
+    expect(bad.status).toBe(1);
+    expect(bad.stderr).toContain("--days must be a whole number of 1 or more");
+  });
 });

@@ -29,7 +29,19 @@ function row(dir: string): RunRow | null {
   }
 }
 
-export function listRuns(env: NodeJS.ProcessEnv, ticket?: string): RunRow[] {
+export const LIST_DAYS = 7;
+const DAY_MS = 86_400_000;
+export type ListOptions = { days?: number; nowMs?: number };
+
+// The newest file time of a run: events.jsonl, else run.json. A stat costs far less than reading the events.
+function lastActivity(dir: string): number {
+  for (const f of ["events.jsonl", "run.json"]) {
+    try { return fs.statSync(path.join(dir, f)).mtimeMs; } catch { /* next */ }
+  }
+  return 0;
+}
+
+export function listRuns(env: NodeJS.ProcessEnv, ticket?: string, opts: ListOptions = {}): RunRow[] {
   const root = runsDir(env);
   let keys: string[];
   try {
@@ -37,9 +49,10 @@ export function listRuns(env: NodeJS.ProcessEnv, ticket?: string): RunRow[] {
   } catch {
     return [];
   }
+  const since = opts.days === undefined ? null : (opts.nowMs ?? Date.now()) - opts.days * DAY_MS;
   const rows: RunRow[] = [];
   for (const key of keys) {
-    if (ticket !== undefined && key !== ticket) continue;
+    if (key.startsWith(".")) continue; // runs/.index
     const keyDir = path.join(root, key);
     let ids: string[];
     try {
@@ -48,8 +61,12 @@ export function listRuns(env: NodeJS.ProcessEnv, ticket?: string): RunRow[] {
       continue; // hook-errors.log is a file, not a ticket folder
     }
     for (const id of ids) {
-      const r = row(path.join(keyDir, id));
-      if (r) rows.push(r);
+      const dir = path.join(keyDir, id);
+      if (since !== null && lastActivity(dir) < since) continue;
+      const r = row(dir);
+      if (!r) continue;
+      if (ticket !== undefined && key !== ticket && r.record.ticket !== ticket) continue;
+      rows.push(r);
     }
   }
   return rows.sort((a, b) => (a.record.created_at < b.record.created_at ? 1 : a.record.created_at > b.record.created_at ? -1 : 0));
@@ -68,7 +85,7 @@ export function tailEvents(runId: string, since: number, env: NodeJS.ProcessEnv)
 export function formatList(rows: RunRow[]): string {
   if (rows.length === 0) return "no runs";
   return rows
-    .map(({ record: r, summary: s }) => [r.run, r.ticket ?? "-", r.role, r.seat ?? "-", r.created_at, `${s.events} events`, s.last_type ?? "-"].join("  "))
+    .map(({ record: r, summary: s }) => [r.run, r.ticket ?? "-", r.project ?? "-", r.role, r.seat ?? "-", r.created_at, `${s.events} events`, s.last_type ?? "-"].join("  "))
     .join("\n");
 }
 
@@ -76,6 +93,7 @@ export function formatShow({ record: r, summary: s }: RunRow): string {
   return [
     `run       ${r.run}`,
     `ticket    ${r.ticket ?? "-"}`,
+    `project   ${r.project ?? "-"}`,
     `role      ${r.role}`,
     `seat      ${r.seat ?? "-"}`,
     `model     ${r.model ?? "-"}`,

@@ -2,7 +2,7 @@ import type { CommandModule } from "yargs";
 import { appendEvent, CONDUCTOR_TYPES, validEventData } from "./events.ts";
 import { findRunDir } from "./paths.ts";
 import { createRun } from "./record.ts";
-import { formatList, formatShow, listRuns, showRun, tailEvents } from "./read.ts";
+import { formatList, formatShow, LIST_DAYS, listRuns, showRun, tailEvents } from "./read.ts";
 
 function fail(message: string): void {
   console.error(message);
@@ -85,10 +85,17 @@ const eventCommand: CommandModule = {
 
 const listCommand: CommandModule = {
   command: "list",
-  describe: "list runs, newest first",
-  builder: (y) => y.option("ticket", { type: "string" }).option("json", { type: "boolean", default: false }),
+  describe: "list runs active in the last 7 days, newest first",
+  builder: (y) =>
+    y
+      .option("ticket", { type: "string" })
+      .option("days", { type: "number", default: LIST_DAYS, describe: "only runs with an event in the last N days" })
+      .option("all", { type: "boolean", default: false, describe: "every run, however old" })
+      .option("json", { type: "boolean", default: false }),
   handler: (a) => {
-    const rows = listRuns(process.env, a.ticket as string | undefined);
+    const days = a.days as number;
+    if (!a.all && (!Number.isInteger(days) || days < 1)) return fail("--days must be a whole number of 1 or more");
+    const rows = listRuns(process.env, a.ticket as string | undefined, a.all ? {} : { days });
     console.log(a.json ? JSON.stringify(rows) : formatList(rows));
   },
 };
