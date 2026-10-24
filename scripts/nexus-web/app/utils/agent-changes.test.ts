@@ -22,4 +22,14 @@ describe('agentChanges: sets of names, never the whole table', () => {
     expect(agentChanges(down, down)).toBe('')
     expect(agentChanges(down, live)).toBe('Connected to herdr.')
   })
+  it('keys agents by pane: a duplicate name is announced and a change on either one is reported', () => {
+    const twin = { ...live.agents[1]!, pane: 'w5:p1' }   // same name dgs-590, other pane
+    const withTwin = { ...live, agents: [...live.agents, twin] }
+    expect(agentChanges(live, withTwin)).toBe('New: dgs-590.')
+    const blockedTwin = { ...withTwin, agents: withTwin.agents.map((a) => (a.pane === 'w5:p1' ? { ...a, status: 'blocked' as const } : a)) }
+    expect(agentChanges(withTwin, blockedTwin)).toBe('Blocked: dgs-590.')
+    const blockedFirst = { ...withTwin, agents: withTwin.agents.map((a) => (a.pane === 'w2:p5' ? { ...a, status: 'blocked' as const } : a)) }
+    expect(agentChanges(withTwin, blockedFirst)).toBe('Blocked: dgs-590.')
+    expect(agentChanges(withTwin, live)).toBe('Gone: dgs-590.')
+  })
 })

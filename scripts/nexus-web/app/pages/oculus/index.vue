@@ -43,10 +43,11 @@ watch(() => lv.live.value, async (next) => {
     <OcPanel v-else-if="!lv.live.value" kind="error" title="The agent list is not available right now." @retry="lv.refresh()" />
     <template v-else>
       <OcDisconnectedBanner v-if="disconnected" :as-of="lv.live.value.herdr.asOf" />
+      <OcStaleBanner v-else-if="lv.stale.value" />
       <OcAgentFilters :model-value="filter" :agents="lv.live.value.agents" @update:model-value="setFilter" />
       <p v-if="lv.live.value.agents.length === 0 && !disconnected" class="empty">No herdr agents are running.</p>
       <p v-else-if="shown.length === 0 && lv.live.value.agents.length > 0" class="empty">No agent matches.</p>
-      <OcAgentsTable v-else-if="shown.length > 0" :agents="shown" :disconnected="disconnected" />
+      <OcAgentsTable v-else-if="shown.length > 0" :agents="shown" :disconnected="disconnected || lv.stale.value" />
     </template>
   </section>
   <OcAttentionSummary v-if="attention.data.value" :open="attention.data.value.open" />

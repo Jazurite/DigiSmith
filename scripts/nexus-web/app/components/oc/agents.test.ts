@@ -35,4 +35,10 @@ describe('OcTopBar agents count', () => {
     expect(w.find('a[href="/#agents"]').text().replace(/\s+/g, ' ')).toBe('Agents 7 · working 2 · blocked 1 · disconnected')
     expect(w.text()).not.toMatch(/Agents unknown/)
   })
+  it('stale live data gives the agents item the warn tone, fresh data does not', async () => {
+    const fresh = await mountSuspended(OcTopBar, { props: { overview: null, stale: false, updatedAt: null, live, liveStale: false } })
+    expect(fresh.find('a.agents').classes()).not.toContain('warn')
+    const old = await mountSuspended(OcTopBar, { props: { overview: null, stale: false, updatedAt: null, live, liveStale: true } })
+    expect(old.find('a.agents').classes()).toContain('warn')
+  })
 })

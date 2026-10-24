@@ -18,7 +18,7 @@ provide('ocLive', { live: livePoll.data, stale: livePoll.error, refresh: livePol
   <div class="oc">
     <a class="skip" href="#main">Skip to the content</a>
     <OcShell :attention="attention" :blocked="blocked">
-      <template #topbar><OcTopBar :overview="shared.overview.value" :stale="shared.stale.value" :updated-at="shared.updatedAt.value" :live="livePoll.data.value" /></template>
+      <template #topbar><OcTopBar :overview="shared.overview.value" :stale="shared.stale.value" :updated-at="shared.updatedAt.value" :live="livePoll.data.value" :live-stale="livePoll.error.value" /></template>
       <slot />
     </OcShell>
   </div>

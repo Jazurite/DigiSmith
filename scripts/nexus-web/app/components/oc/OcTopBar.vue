@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { Live, Overview } from '#oculus-schema'
 import { ageOf, fmtClock, fmtUtc7 } from '../../utils/oc-format'
 
-const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null; live?: Live | null }>()
+const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null; live?: Live | null; liveStale?: boolean }>()
 const count = (s: string): number => props.live?.agents.filter((a) => a.status === s).length ?? 0
 
 type Tone = 'ok' | 'warn' | 'bad' | 'neutral'
@@ -29,7 +29,7 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
   <div class="bar" role="group" aria-label="Nexus status">
     <span v-if="health" role="status"><i class="dot" :class="[health.tone, { hollow: health.hollow }]" aria-hidden="true" /><b>{{ health.label }}</b></span>
     <span v-else class="muted" role="status">Nexus loading</span>
-    <NuxtLink v-if="live" to="/#agents" class="agents" :class="{ warn: live.herdr.state === 'disconnected' }">Agents <b>{{ live.agents.length }}</b> · working <b>{{ count('working') }}</b> · blocked <b>{{ count('blocked') }}</b><template v-if="live.herdr.state === 'disconnected'"> · disconnected</template></NuxtLink>
+    <NuxtLink v-if="live" to="/#agents" class="agents" :class="{ warn: live.herdr.state === 'disconnected' || liveStale }">Agents <b>{{ live.agents.length }}</b> · working <b>{{ count('working') }}</b> · blocked <b>{{ count('blocked') }}</b><template v-if="live.herdr.state === 'disconnected'"> · disconnected</template></NuxtLink>
     <span v-else>Agents <b>-</b></span>
     <template v-if="overview">
       <span>Workers <b>{{ overview.workers.length }}</b></span>
