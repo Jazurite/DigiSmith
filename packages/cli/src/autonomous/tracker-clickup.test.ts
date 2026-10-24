@@ -42,6 +42,7 @@ interface FakeOpts {
   lists?: Record<string, string[]>;   // list id -> statuses
   folderLists?: string[];
   folderless?: string[];
+  ignoreStatus?: boolean;             // the search answers every status, as a server that skips the filter
 }
 
 function fakeClient(o: FakeOpts) {
@@ -56,7 +57,7 @@ function fakeClient(o: FakeOpts) {
     async searchTeamTasks(spaceId: string, maxPages = 10, status?: string) {
       calls.push(`searchTeamTasks ${spaceId} ${status ?? "-"}`);
       const out: T[] = [];
-      const pool = status === undefined ? o.search : o.search.filter((t) => (t.status as { status: string }).status.toLowerCase() === status.toLowerCase());
+      const pool = status === undefined || o.ignoreStatus ? o.search : o.search.filter((t) => (t.status as { status: string }).status.toLowerCase() === status.toLowerCase());
       for (let page = 0; page < maxPages; page++) {
         const batch = pool.slice(page * 100, page * 100 + 100);
         out.push(...batch);
@@ -117,6 +118,15 @@ describe("ClickUpLoTracker.listByStatus", () => {
     const got = await new ClickUpLoTracker(client, SPACE).listByStatus("ready");
     expect(got.map((t) => t.id)).toEqual(["r1"]);
     expect(calls).toContain(`searchTeamTasks ${SPACE} ready`);
+  });
+  it("drops a ticket of another status that the search returned anyway, and does not read it", async () => {
+    const { client, calls } = fakeClient({ ignoreStatus: true, search: [
+      task({ id: "r1", status: { status: "ready", type: "custom" } }),
+      task({ id: "d1", status: { status: "to do", type: "custom" } }),
+    ] });
+    const got = await new ClickUpLoTracker(client, SPACE).listByStatus("ready");
+    expect(got.map((t) => t.id)).toEqual(["r1"]);
+    expect(calls).not.toContain("getTaskByRef d1");
   });
   it("reads Mode Autonomous, Manual, and null for no value or an unknown index", async () => {
     const mk = (id: string, v?: number) => task({ id, status: { status: "ready", type: "custom" }, custom_fields: [modeField(v)] });
