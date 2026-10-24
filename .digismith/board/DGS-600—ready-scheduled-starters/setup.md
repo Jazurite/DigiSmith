@@ -27,3 +27,32 @@ Six changes, word for word as in the plan (statuses in backticks as the page wri
 
 ## B6
 This file, committed on `main` with a pathspec.
+
+# DGS-601 setup log
+
+Run 2026-10-24 19:05 UTC+7 (12:05 UTC), in the main checkout after the merge (`7da3516`, bump `db8c0b0`) and the CLI build (`pnpm build` in `packages/cli`, exit 0).
+
+## B1 Scheduled at field
+`dg clickup create-field --type date --name 'Scheduled at' --description 'When a scheduled ticket starts (UTC+7). Then schedule-release moves it by its Mode.' --location 5:1301150000001908`. The dry run body had `type: "date"`, `type_config: {}`, `team_id` `5738747` and one location `{parent: {type: 5, id: 1301150000001908}}`. Then `--yes`, one try: it worked.
+- Field id: `7e066e74-d408-4193-add8-2660a9d6fe86` (date).
+- Read back with `get-field`: type date, one location in `categories`, `5:1301150000001908`, the same as Mode and Sign-off.
+- The known defect again: the command printed `locations read back: undefined` (see DGS-600 B3). The field and its location are right.
+
+## B2 Schedule view
+`dg clickup create-view --space 1301150000001271 --name Schedule --status scheduled --sort-field-id 7e066e74-d408-4193-add8-2660a9d6fe86 --column-field-id 7e066e74-d408-4193-add8-2660a9d6fe86 --column-field-id c89fcfe7-d043-46fd-b6d4-b00995a465d4`. Dry run checked, then `--yes`.
+- View id: `5f47v-112736` (list), read back in the space's views.
+- Not checked by the worker: whether the status filter and the sort took effect. Jack looks at the view once in the ClickUp web app.
+
+## B3 Nexus picks up the job: BLOCKED
+- The rebuilt `dg autonomous schedule-release --help` printed help (before the restart).
+- `launchctl kickstart -k "gui/$(id -u)/com.jazurite.digismith.nexus-api"`: exit 0. Nexus logged `listening` at 12:05:41 UTC.
+- `GET /api/v1/jobs` (it answers without a token) lists `selftest`, `autonomous-scan`, `autonomous-report`, `nightwatch-watchdog`. `schedule-release` is missing.
+- Why: the service runs `~/.digismith-depot/nexus-api/src/server.ts`, a copy that `scripts/nexus-api/install.sh` makes. The restart alone does not copy the new `registry.ts`. Of the Nexus source files, only `scheduler/registry.ts` differs between the main checkout and the depot copy.
+- Not done: `install.sh` (it also rewrites `~/.digismith-depot/bin/nexus-api` with the node on PATH and stages the plist and sudoers files), and no copy by hand. The brief allows the restart only.
+
+## B4 First run, read only
+`dg autonomous schedule-release --dry-run`:
+```
+schedule-release (dry run, nothing written): 0 scheduled
+```
+No ticket is scheduled. The worker scheduled none.
