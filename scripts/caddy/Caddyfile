@@ -16,26 +16,47 @@ opencode.pazurite.com {
 	import opencode_routes
 }
 
-pazurite.com {
-	tls {
-		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-	}
-	encode zstd gzip
+(nexus_api) {
 	# Nexus API (DGS-324): the whole /api/* space goes to the API, which names the version. No login for now (tailnet only, read-only; login design: DGS-458).
 	handle /api/* {
 		reverse_proxy 127.0.0.1:4300 {
 			header_up -Authorization
 		}
 	}
+}
+
+(static_site) {
+	@hashed path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
+	@notHashed not path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	header @notHashed Cache-Control "no-cache"
+	# No `hide .*`: Caddy tests the hide patterns against the whole path, so a web root under a dot-folder (~/.digismith-depot/...) would answer 404 for every file.
+	# The web roots only ever hold build output; build-www.sh refuses a build that contains a dotfile.
+	file_server
+}
+
+oculus.pazurite.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	encode zstd gzip
+	import nexus_api
+	# Oculus (DGS-599): its own static build at the root of this host.
+	handle {
+		root * {env.DIGISMITH_OCULUS_WWW}
+		import static_site
+	}
+}
+
+pazurite.com {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	}
+	encode zstd gzip
+	import nexus_api
 	# The life dashboard (DGS-481): static files from the depot. /storybook/ is the Storybook build next to the page. No CDN for now.
 	handle {
 		root * {env.DIGISMITH_WWW}
-		@hashed path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
-		@notHashed not path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
-		header @hashed Cache-Control "public, max-age=31536000, immutable"
-		header @notHashed Cache-Control "no-cache"
-		# No `hide .*`: Caddy tests the hide patterns against the whole path, so a web root under a dot-folder (~/.digismith-depot/...) would answer 404 for every file.
-		# The web root only ever holds build output; build-www.sh refuses a build that contains a dotfile.
-		file_server
+		import static_site
 	}
 }
