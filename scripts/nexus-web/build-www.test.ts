@@ -87,6 +87,16 @@ describe('build-www.sh', () => {
     expect(r.stderr).toMatch(/built-page check failed/)
     expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
   })
+  it('fails the build when only the built Oculus check fails, and switches neither link', () => {
+    const s = setup()
+    writeFileSync(join(s.bin, 'pnpm'), readFileSync(join(s.bin, 'pnpm'), 'utf8').replace('*vitest*) exit 0', '*built-oculus*) exit 1 ;;\n  *vitest*) exit 0'))
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/built Oculus check failed/)
+    expect(r.stderr).not.toMatch(/built-page check failed/)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+    expect(existsSync(join(s.depot, 'nexus/oculus'))).toBe(false)
+  })
   it('does not copy storybook logs/ or project.json (build diagnostics with absolute paths)', () => {
     const s = setup()
     const r = run(s, { STAMP: '1', SB_LOGS: '1' })

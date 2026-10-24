@@ -3,6 +3,7 @@
 # The Life page and Storybook go to $DEPOT/nexus/www.d/<stamp>/ (symlink $DEPOT/nexus/www); the Oculus site goes to
 # $DEPOT/nexus/oculus.d/<stamp>/ (symlink $DEPOT/nexus/oculus). Each symlink is pointed with one rename, so Caddy
 # never sees a half-built site. Old build folders are kept: nothing is deleted here (deletes need Jack).
+# The two switches are not atomic together: the oculus switch can fail after www has switched; both old builds are kept, so a rerun or a manual link fixes it.
 # Env: DEPOT (default ~/.digismith-depot), SKIP_STORYBOOK=1 (page only), WEB (the web folder, tests only), STAMP (tests only).
 set -eu
 WEB="${WEB:-$(cd "$(dirname "$0")" && pwd)}"
