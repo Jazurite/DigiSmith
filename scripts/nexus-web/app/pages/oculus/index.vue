@@ -5,14 +5,14 @@ import type { Overview } from '#oculus-schema'
 import { useNow } from '../../utils/use-now'
 
 definePageMeta({ layout: 'oculus' })
-useHead({ title: 'Operations · Nightwatch' })
+useHead({ title: 'DigiSmith Oculus' })
 // the layout owns the one overview poll; this page only reads it
 const oc = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('ocOverview')!
 const nowMs = useNow()
 </script>
 
 <template>
-  <OcPageHead title="Operations" sub="Tickets per phase, active workers and the latest events." />
+  <OcPageHead title="Oculus" sub="Every herdr agent, what waits on Jack, and the latest work." />
   <OcPanel v-if="!oc.overview.value && !oc.stale.value" kind="loading" />
   <OcPanel v-else-if="!oc.overview.value" kind="error" title="The operations view is not available right now." @retry="oc.refresh()" />
   <template v-else>

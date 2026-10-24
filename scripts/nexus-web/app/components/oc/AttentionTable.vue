@@ -18,7 +18,7 @@ const tone = (kind: string): 'bad' | 'warn' | 'ok' => (kind in TONE ? TONE[kind 
         <td data-label="Kind"><OcStatus :state="tone(a.kind)" :label="a.kind" /></td>
         <td data-label="Cause">{{ a.cause }}</td>
         <td data-label="Class"><span v-if="a.causeClass" class="tag">{{ a.causeClass }}</span> <span v-if="a.retryEligible" class="tag">retry</span><span v-if="!a.causeClass && !a.retryEligible" class="muted">-</span></td>
-        <td data-label="Run" class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(a.run)}`">{{ a.run }}</NuxtLink></td>
+        <td data-label="Run" class="mono"><NuxtLink :to="`/run/?id=${encodeURIComponent(a.run)}`">{{ a.run }}</NuxtLink></td>
         <td data-label="Resolve with" class="mono"><code class="cmd">dg autonomous attention resolve {{ a.id }}</code></td>
       </tr>
     </OcTable>

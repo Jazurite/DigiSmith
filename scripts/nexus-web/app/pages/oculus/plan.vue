@@ -9,7 +9,7 @@ import OcPlanTasks from '../../components/oc/PlanTasks.vue'
 import OcVerdictTable from '../../components/oc/VerdictTable.vue'
 
 definePageMeta({ layout: 'oculus' })
-useHead({ title: 'Plan · Nightwatch' })
+useHead({ title: 'Plan · DigiSmith Oculus' })
 
 // the layout owns the overview poll; the page only reads it to find the ticket under lock, else the first worker
 const oc = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('ocOverview')!

@@ -12,7 +12,7 @@ import OcPipelineBar from '../../components/oc/PipelineBar.vue'
 import OcRecordCard from '../../components/oc/RecordCard.vue'
 
 definePageMeta({ layout: 'oculus' })
-useHead({ title: 'Run · Nightwatch' })
+useHead({ title: 'Run · DigiSmith Oculus' })
 
 const route = useRoute()
 // the id comes from the query and can change without a new page (a link to another run): everything restarts on a change
@@ -52,7 +52,7 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
     <OcPanel kind="empty" title="This run does not exist." />
   </template>
   <template v-else>
-    <p class="muted mono crumb"><NuxtLink to="/nightwatch/runs/">Runs</NuxtLink> / {{ id }}</p>
+    <p class="muted mono crumb"><NuxtLink to="/runs/">Runs</NuxtLink> / {{ id }}</p>
     <h1 class="mono">{{ id }} <OcStatus v-if="run" class="state" :state="run.row.state" /></h1>
     <p v-if="run" class="oc-sub mono">{{ meta }}</p>
     <OcPanel v-if="!run && !poll.error.value" kind="loading" />

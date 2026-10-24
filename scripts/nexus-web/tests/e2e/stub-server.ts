@@ -114,9 +114,9 @@ export async function startStub(opts: { dir: string; port?: number }) {
   }
 }
 
-// The same stub over the generated site (`.output/public`), for the Oculus gates. Start modes: oc-ok.
+// The same stub over the generated Oculus site (`.output-oculus/public`). Start mode: oc-ok.
 export async function startStubForOculus() {
-  const stub = await startStub({ dir: join(import.meta.dirname, '../../.output/public') })
+  const stub = await startStub({ dir: join(import.meta.dirname, '../../.output-oculus/public') })
   await stub.setMode('oc-ok')
   return stub
 }

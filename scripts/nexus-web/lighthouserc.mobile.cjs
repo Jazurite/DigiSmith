@@ -3,7 +3,7 @@ module.exports = {
     collect: {
       startServerCommand: 'node --experimental-strip-types tests/e2e/serve-stub-cli.ts',
       startServerReadyPattern: 'stub listening',
-      url: ['http://127.0.0.1:4390/', 'http://127.0.0.1:4390/nightwatch/'],
+      url: ['http://127.0.0.1:4390/', 'http://127.0.0.1:4391/', 'http://127.0.0.1:4391/runs/'],
       numberOfRuns: 3,
       settings: { onlyCategories: ['performance'], chromeFlags: '--no-sandbox --headless=new' },   // Lighthouse's default mobile profile (slow 4G, 4x CPU)
     },

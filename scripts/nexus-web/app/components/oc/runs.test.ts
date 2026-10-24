@@ -17,7 +17,7 @@ describe('RunsTable', () => {
   it('shows a row per run with a link and the delivery words', async () => {
     const w = await mountSuspended(RunsTable, { props: { runs: runsFixture().runs, nowMs: NOW } })
     expect(w.findAll('tbody tr').length).toBe(runsFixture().runs.length)
-    expect(w.find('a').attributes('href')).toMatch(/^\/nightwatch\/run\/\?id=/)
+    expect(w.find('a').attributes('href')).toMatch(/^\/run\/\?id=/)
     expect(w.text()).toContain('merged · pushed')
   })
   it('says no run yet', async () => {

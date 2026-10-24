@@ -10,7 +10,7 @@ import OcRunFilters from '../../components/oc/RunFilters.vue'
 import OcRunsTable from '../../components/oc/RunsTable.vue'
 
 definePageMeta({ layout: 'oculus' })
-useHead({ title: 'Runs · Nightwatch' })
+useHead({ title: 'Runs · DigiSmith Oculus' })
 
 const route = useRoute()
 const one = (v: unknown): string => (Array.isArray(v) ? String(v[0] ?? '') : typeof v === 'string' ? v : '')

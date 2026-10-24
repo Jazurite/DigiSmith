@@ -3,11 +3,11 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const OUT = join(__dirname, '../../.output/public')
+const OUT = join(__dirname, '../../.output-oculus/public')
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)])
 }
-const PAGES = [['nightwatch/index.html', 'Operations'], ['nightwatch/attention/index.html', 'Attention'], ['nightwatch/runs/index.html', 'Runs'], ['nightwatch/run/index.html', 'Run'], ['nightwatch/plan/index.html', 'Plan']] as const
+const PAGES = [['index.html', 'Oculus'], ['attention/index.html', 'Attention'], ['runs/index.html', 'Runs'], ['run/index.html', 'Run'], ['plan/index.html', 'Plan']] as const
 
 describe.skipIf(!existsSync(OUT))('the generated Oculus pages', () => {
   it.each(PAGES)('%s exists and holds its h1', (file, h1) => {
@@ -24,8 +24,14 @@ describe.skipIf(!existsSync(OUT))('the generated Oculus pages', () => {
     expect(html).toContain('Nexus loading')
     expect(html).not.toMatch(/Nexus (healthy|stale|unreachable)|The last update failed/)
   })
+  it.each(PAGES)('%s carries the DigiSmith Oculus title', (file) => {
+    expect(readFileSync(join(OUT, file), 'utf8')).toMatch(/<title>[^<]*DigiSmith Oculus<\/title>/)
+  })
+  it('the Oculus build has no Life Calendar', () => {
+    expect(readFileSync(join(OUT, 'index.html'), 'utf8')).not.toContain('Life Calendar')
+  })
   it('the generated Run page never says the run does not exist (the id is only known on the client)', () => {
-    expect(readFileSync(join(OUT, 'nightwatch/run/index.html'), 'utf8')).not.toContain('does not exist')
+    expect(readFileSync(join(OUT, 'run/index.html'), 'utf8')).not.toContain('does not exist')
   })
   it('no built file loads a font or script from another host', () => {
     for (const f of files(OUT).filter(f => /\.(html|js|css)$/.test(f))) {
@@ -35,11 +41,11 @@ describe.skipIf(!existsSync(OUT))('the generated Oculus pages', () => {
       expect(text.match(/<link[^>]+href=["']https?:\/\/[^"']*(font|\.css|\.js)/g), f).toBeNull()
     }
   })
-  it('every /api/ path in the JS is a Life Calendar or Oculus path', () => {
+  it('every /api/ path in the JS is an Oculus path', () => {
     const js = files(OUT).filter(f => f.endsWith('.js')).map(f => readFileSync(f, 'utf8')).join('\n')
     const paths = [...new Set(js.match(/\/api\/[a-z0-9/_-]+/g) ?? [])]
     expect(paths.some(p => p.startsWith('/api/v1/oculus'))).toBe(true)
-    expect(paths.filter(p => p !== '/api/' && !p.startsWith('/api/v1/oculus') && !p.startsWith('/api/v1/life-calendar'))).toEqual([])
+    expect(paths.filter(p => p !== '/api/' && !p.startsWith('/api/v1/oculus'))).toEqual([])
   })
   it('ships the Warren notice in a built CSS file', () => {
     const css = files(OUT).filter(f => f.endsWith('.css')).map(f => readFileSync(f, 'utf8')).join('\n')

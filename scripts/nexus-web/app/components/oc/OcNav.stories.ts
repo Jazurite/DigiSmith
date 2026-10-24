@@ -7,4 +7,4 @@ const meta = {
 export default meta
 
 export const AttentionBadge = { args: { attention: 2, current: 'attention' } }
-export const NoBadge = { args: { attention: 0, current: 'operations' } }
+export const NoBadge = { args: { attention: 0, current: 'oculus' } }

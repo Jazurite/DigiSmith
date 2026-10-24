@@ -1,16 +1,16 @@
 <script setup lang="ts">
 defineProps<{ attention: number; current: string }>()
 const LINKS = [
-  { key: 'operations', to: '/nightwatch/', label: 'Operations' },
-  { key: 'attention', to: '/nightwatch/attention/', label: 'Attention' },
-  { key: 'runs', to: '/nightwatch/runs/', label: 'Runs' },
-  { key: 'plan', to: '/nightwatch/plan/', label: 'Plan' },
+  { key: 'oculus', to: '/', label: 'Oculus' },
+  { key: 'attention', to: '/attention/', label: 'Attention' },
+  { key: 'runs', to: '/runs/', label: 'Runs' },
+  { key: 'plan', to: '/plan/', label: 'Plan' },
 ] as const
 </script>
 
 <template>
-  <nav class="oc-nav" aria-label="Nightwatch">
-    <div class="brand">nightwatch</div>
+  <nav class="oc-nav" aria-label="Oculus">
+    <div class="brand">Oculus</div>
     <h2>Watch</h2>
     <NuxtLink v-for="l in LINKS" :key="l.key" :to="l.to" class="link" :aria-current="current === l.key ? 'page' : undefined">
       {{ l.label }}

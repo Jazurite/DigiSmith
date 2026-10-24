@@ -5,10 +5,10 @@ defineProps<{ attention: number }>()
 const route = useRoute()
 const current = computed(() => {
   const p = route.path
-  if (p.startsWith('/nightwatch/attention')) return 'attention'
-  if (p.startsWith('/nightwatch/runs')) return 'runs'
-  if (p.startsWith('/nightwatch/plan')) return 'plan'
-  return 'operations'
+  if (p.startsWith('/attention')) return 'attention'
+  if (p.startsWith('/runs')) return 'runs'
+  if (p.startsWith('/plan')) return 'plan'
+  return 'oculus'
 })
 </script>
 

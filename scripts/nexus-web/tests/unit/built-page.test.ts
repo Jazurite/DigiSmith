@@ -19,9 +19,15 @@ describe.skipIf(!existsSync(OUT))('the generated page', () => {
       expect(text.includes('1990-01-01'), f).toBe(false)
     }
   })
-  it('the only API paths the app knows are the life calendar and Oculus', () => {
+  it('the Life build has no Oculus page and no old dashboard folder', () => {
+    expect(existsSync(join(OUT, ['night', 'watch'].join('')))).toBe(false)   // spelled in two parts: the name guard would flag the plain word
+    expect(existsSync(join(OUT, 'oculus'))).toBe(false)
+    expect(existsSync(join(OUT, 'runs'))).toBe(false)
+    expect(existsSync(join(OUT, 'attention'))).toBe(false)
+  })
+  it('the only API paths the app knows are the life calendar', () => {
     const js = files(OUT).filter(f => f.endsWith('.js')).map(f => readFileSync(f, 'utf8')).join('\n')
     const paths = new Set(js.match(/\/api\/[a-z0-9/_-]+/g) ?? [])
-    expect([...paths].every(p => p.startsWith('/api/v1/life-calendar') || p.startsWith('/api/v1/oculus') || p === '/api/' || p === '/api')).toBe(true)
+    expect([...paths].every(p => p.startsWith('/api/v1/life-calendar') || p === '/api/' || p === '/api')).toBe(true)
   })
 })

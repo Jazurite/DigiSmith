@@ -100,7 +100,7 @@ describe('OcStatus', () => {
 describe('OcShell and OcTable', () => {
   it('the shell renders the nav, the topbar slot and the main landmark with the slot content', async () => {
     const w = await mountSuspended(OcShell, { props: { attention: 3 }, slots: { default: '<p id="x">page</p>', topbar: '<div id="tb">bar</div>' } })
-    expect(w.find('nav.oc-nav[aria-label="Nightwatch"]').exists()).toBe(true)
+    expect(w.find('nav.oc-nav[aria-label="Oculus"]').exists()).toBe(true)
     expect(w.find('main#main #x').exists()).toBe(true)
     expect(w.find('#tb').exists()).toBe(true)
     expect(w.find('.badge').text()).toBe('3')

@@ -5,7 +5,7 @@ import { useOculusPoll } from '../../composables/useOculusPoll'
 import { useNow } from '../../utils/use-now'
 
 definePageMeta({ layout: 'oculus' })
-useHead({ title: 'Attention · Nightwatch' })
+useHead({ title: 'Attention · DigiSmith Oculus' })
 const poll = useOculusPoll(() => loadAttention())
 const nowMs = useNow()
 // A polite announcement of the open ids that are new since the last poll (never on the first poll).

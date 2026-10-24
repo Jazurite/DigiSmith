@@ -12,7 +12,8 @@ function setup() {
   // a fake pnpm: "generate" makes .output/public/index.html in the web folder; "build-storybook" makes storybook-static/
   writeFileSync(join(bin, 'pnpm'), `#!/bin/sh
 case "$*" in
-  *generate*) mkdir -p "$WEB/.output/public/_nuxt" && echo "<h1>page $STAMP</h1>" > "$WEB/.output/public/index.html" && echo x > "$WEB/.output/public/_nuxt/a.js" && { [ -z "$DOTFILE" ] || echo secret > "$WEB/.output/public/$DOTFILE"; } ;;
+  *generate*) mkdir -p "$WEB/.output/public/_nuxt" "$WEB/.output-oculus/public/_nuxt" && echo "<h1>page $STAMP</h1>" > "$WEB/.output/public/index.html" && echo "<h1>oculus $STAMP</h1>" > "$WEB/.output-oculus/public/index.html" && echo x > "$WEB/.output/public/_nuxt/a.js" && echo y > "$WEB/.output-oculus/public/_nuxt/b.js" && { [ -z "$DOTFILE" ] || echo secret > "$WEB/.output/public/$DOTFILE"; } && { [ -z "$OC_DOTFILE" ] || echo secret > "$WEB/.output-oculus/public/$OC_DOTFILE"; } ;;
+  *vitest*) exit 0 ;;
   *build-storybook*) mkdir -p "$WEB/storybook-static" && echo "<h1>sb</h1>" > "$WEB/storybook-static/index.html" && { [ -z "$SB_LOGS" ] || { mkdir -p "$WEB/storybook-static/logs" && echo '{"cwd":"/Users/x/repo"}' > "$WEB/storybook-static/logs/vite-final.config.json" && echo '{}' > "$WEB/storybook-static/project.json"; }; } && { [ -z "$SB_LEAK" ] || { mkdir -p "$WEB/storybook-static/_nuxt" && echo "sourceFiles:['$SB_LEAK/app/X.vue']" > "$WEB/storybook-static/_nuxt/a.js"; }; } && { [ -z "$SB_CONFIG" ] || echo '{}' > "$WEB/storybook-static/vite.config.json"; } ;;
 esac
 `)
@@ -80,7 +81,7 @@ describe('build-www.sh', () => {
   })
   it('runs the built-page check after generate and fails the build when it fails', () => {
     const s = setup()
-    writeFileSync(join(s.bin, 'pnpm'), readFileSync(join(s.bin, 'pnpm'), 'utf8').replace('esac', '  *vitest*) exit 1 ;;\nesac'))
+    writeFileSync(join(s.bin, 'pnpm'), readFileSync(join(s.bin, 'pnpm'), 'utf8').replace('*vitest*) exit 0', '*vitest*) exit 1'))
     const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
     expect(r.status).not.toBe(0)
     expect(r.stderr).toMatch(/built-page check failed/)
@@ -115,5 +116,40 @@ describe('build-www.sh', () => {
     expect(r.status).not.toBe(0)
     expect(r.stderr).toMatch(/logs\/, project.json or a \*\.config\.\*/)
     expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+  })
+  it('builds the Oculus site into oculus.d/<stamp> and points the oculus symlink at it', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(lstatSync(join(s.depot, 'nexus/oculus')).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(join(s.depot, 'nexus/oculus'))).toBe('oculus.d/1')
+    expect(readFileSync(join(s.depot, 'nexus/oculus/index.html'), 'utf8')).toContain('oculus 1')
+    expect(readFileSync(join(s.depot, 'nexus/www/index.html'), 'utf8')).toContain('page 1')
+  })
+  it('a second run switches both links and keeps both old builds', () => {
+    const s = setup()
+    run(s, { STAMP: '1', SKIP_STORYBOOK: '1' }); run(s, { STAMP: '2', SKIP_STORYBOOK: '1' })
+    expect(readlinkSync(join(s.depot, 'nexus/oculus'))).toBe('oculus.d/2')
+    expect(readdirSync(join(s.depot, 'nexus/oculus.d'))).toHaveLength(2)
+  })
+  it('refuses a real oculus directory and leaves it alone', () => {
+    const s = setup()
+    mkdirSync(join(s.depot, 'nexus/oculus'), { recursive: true })
+    expect(run(s, { STAMP: '1', SKIP_STORYBOOK: '1' }).status).not.toBe(0)
+    expect(lstatSync(join(s.depot, 'nexus/oculus')).isDirectory()).toBe(true)
+  })
+  it('refuses an Oculus build with a dotfile and does not switch either link', () => {
+    const s = setup()
+    const r = run(s, { STAMP: '1', SKIP_STORYBOOK: '1', OC_DOTFILE: '.env' })
+    expect(r.status).not.toBe(0)
+    expect(existsSync(join(s.depot, 'nexus/oculus'))).toBe(false)
+    expect(existsSync(join(s.depot, 'nexus/www'))).toBe(false)
+  })
+  it('replaces the oculus placeholder symlink that caddy-run.sh makes before the first build', () => {
+    const s = setup()
+    mkdirSync(join(s.depot, 'nexus/oculus.d/empty'), { recursive: true })
+    symlinkSync('oculus.d/empty', join(s.depot, 'nexus/oculus'))
+    expect(run(s, { STAMP: '1', SKIP_STORYBOOK: '1' }).status).toBe(0)
+    expect(readlinkSync(join(s.depot, 'nexus/oculus'))).toBe('oculus.d/1')
   })
 })

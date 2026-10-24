@@ -4,20 +4,20 @@
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "generate": "nuxt generate && NEXUS_SITE=oculus nuxt generate",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:built": "nuxt generate && pnpm build-storybook && vitest run tests/unit/built-page.test.ts tests/unit/built-storybook.test.ts",
+    "test:built": "pnpm generate && pnpm build-storybook && vitest run tests/unit/built-page.test.ts tests/unit/built-oculus.test.ts tests/unit/built-storybook.test.ts",
     "postinstall": "nuxt prepare",
-    "e2e": "nuxt generate && playwright test tests/e2e",
+    "e2e": "pnpm generate && playwright test tests/e2e",
     "e2e:install": "playwright install chromium",
-    "a11y": "nuxt generate && playwright test tests/a11y",
+    "a11y": "pnpm generate && playwright test tests/a11y",
     "visual": "playwright test tests/visual",
     "visual:update": "playwright test tests/visual --update-snapshots",
-    "perf": "nuxt generate && playwright test tests/perf",
-    "lhci": "nuxt generate && CHROME_PATH=$(node tests/perf/chrome-path.mjs) lhci autorun --config=lighthouserc.mobile.cjs && CHROME_PATH=$(node tests/perf/chrome-path.mjs) lhci autorun --config=lighthouserc.desktop.cjs"
+    "perf": "pnpm generate && playwright test tests/perf",
+    "lhci": "pnpm generate && CHROME_PATH=$(node tests/perf/chrome-path.mjs) lhci autorun --config=lighthouserc.mobile.cjs && CHROME_PATH=$(node tests/perf/chrome-path.mjs) lhci autorun --config=lighthouserc.desktop.cjs"
   },
   "dependencies": {
     "hono": "4.13.13",

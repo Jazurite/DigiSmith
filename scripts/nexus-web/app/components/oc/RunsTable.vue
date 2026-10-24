@@ -17,7 +17,7 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
       </template>
       <tr v-for="r in runs" :key="r.run">
         <td data-label="State"><OcStatus :state="r.state" /></td>
-        <td data-label="Key" class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(r.run)}`">{{ r.ticket ?? '-' }}</NuxtLink></td>
+        <td data-label="Key" class="mono"><NuxtLink :to="`/run/?id=${encodeURIComponent(r.run)}`">{{ r.ticket ?? '-' }}</NuxtLink></td>
         <td data-label="Role">{{ r.role }}</td>
         <td data-label="Seat / model" class="mono">{{ r.seat ?? '-' }} · {{ r.model ?? '-' }}</td>
         <td data-label="Trigger">{{ r.trigger }}</td>

@@ -6,7 +6,7 @@ let stub: Awaited<ReturnType<typeof startStubForOculus>>
 test.beforeAll(async () => { stub = await startStubForOculus() })
 test.afterAll(async () => { await stub.close() })
 
-const PATH = '/nightwatch/'
+const PATH = '/'
 // the left edge of the text itself, not of the box, for every shown element
 const textLefts = (els: Element[]) => els.filter((e) => e.getClientRects().length > 0).map((e) => { const r = document.createRange(); r.selectNodeContents(e); return Math.round(r.getBoundingClientRect().left) })
 const expectAt24 = (lefts: number[], sel: string) => {

@@ -24,7 +24,7 @@ describe('WorkersTable', () => {
   it('links each worker to its run and shows tokens as not measured', async () => {
     const w = await mountSuspended(WorkersTable, { props: { workers: overviewFixture().workers, nowMs: NOW } })
     const links = w.findAll('a').map((a) => a.attributes('href'))
-    expect(links[0]).toMatch(/^\/nightwatch\/run\/\?id=/)
+    expect(links[0]).toMatch(/^\/run\/\?id=/)
     expect(w.text()).toContain('stalled')
     expect(w.find('[title="not measured"]').exists()).toBe(true)
   })

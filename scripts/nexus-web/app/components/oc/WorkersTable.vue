@@ -16,7 +16,7 @@ const elapsed = (w: RunRow, nowMs: number): string => fmtDuration(w.endedAt ? w.
       </template>
       <tr v-for="w in workers" :key="w.run">
         <td data-label="Health"><OcStatus :state="w.state" /></td>
-        <td data-label="Key" class="mono"><NuxtLink :to="`/nightwatch/run/?id=${encodeURIComponent(w.run)}`">{{ w.ticket ?? w.run }}</NuxtLink></td>
+        <td data-label="Key" class="mono"><NuxtLink :to="`/run/?id=${encodeURIComponent(w.run)}`">{{ w.ticket ?? w.run }}</NuxtLink></td>
         <td data-label="Role">{{ w.role }}</td>
         <td data-label="Seat" class="mono">{{ w.seat ?? '-' }}</td>
         <td data-label="Phase" class="mono">{{ w.phase ?? '-' }}</td>
