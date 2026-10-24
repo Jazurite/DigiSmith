@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { eventsFixture } from '../../tests/nightwatch-fixtures'
+import { eventsFixture } from '../../tests/oculus-fixtures'
 import { useEventTail } from './useEventTail'
 
 beforeEach(() => { vi.useFakeTimers() })

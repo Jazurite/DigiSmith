@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { loadAttention } from '../../composables/nightwatch-api'
-import { useNightwatchPoll } from '../../composables/useNightwatchPoll'
+import { loadAttention } from '../../composables/oculus-api'
+import { useOculusPoll } from '../../composables/useOculusPoll'
 import { useNow } from '../../utils/use-now'
 
-definePageMeta({ layout: 'nightwatch' })
+definePageMeta({ layout: 'oculus' })
 useHead({ title: 'Attention · Nightwatch' })
-const poll = useNightwatchPoll(() => loadAttention())
+const poll = useOculusPoll(() => loadAttention())
 const nowMs = useNow()
 // A polite announcement of the open ids that are new since the last poll (never on the first poll).
 // Comparing the SET of ids, not the length, catches a resolve plus an arrival in one poll. The text is cleared for a tick first,
@@ -28,13 +28,13 @@ watch(() => poll.data.value?.open, async (open) => {
 </script>
 
 <template>
-  <NwPageHead title="Attention" sub="Waiting on Jack. Read-only: no buttons yet." />
+  <OcPageHead title="Attention" sub="Waiting on Jack. Read-only: no buttons yet." />
   <div class="sr-only" aria-live="polite" aria-atomic="true">{{ announce }}</div>
-  <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
-  <NwPanel v-else-if="!poll.data.value" kind="error" title="The attention list is not available right now." @retry="poll.refresh()" />
+  <OcPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
+  <OcPanel v-else-if="!poll.data.value" kind="error" title="The attention list is not available right now." @retry="poll.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
-    <NwAttentionTable :open="poll.data.value.open" :resolved="poll.data.value.resolved" :now-ms="nowMs" />
+    <OcStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
+    <OcAttentionTable :open="poll.data.value.open" :resolved="poll.data.value.resolved" :now-ms="nowMs" />
   </template>
 </template>
 

@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: false },
   telemetry: false,
-  css: ['~/assets/main.scss', '~/assets/nightwatch-tokens.scss'],
+  css: ['~/assets/main.scss', '~/assets/oculus-tokens.scss'],
   alias: {
     // type-only import of the API app (never bundled), the shared schema and the shared day helpers
     '#api-type': fileURLToPath(new URL('../nexus-api/src/app.ts', import.meta.url)),

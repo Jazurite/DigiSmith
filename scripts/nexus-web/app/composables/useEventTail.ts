@@ -1,6 +1,6 @@
 import { getCurrentScope, onScopeDispose, ref } from 'vue'
 import type { EventRow } from '#oculus-schema'
-import { loadEvents, type ApiOptions } from './nightwatch-api'
+import { loadEvents, type ApiOptions } from './oculus-api'
 
 export type Group = 'all' | 'agent' | 'system' | 'errors'
 const PAGE = 200

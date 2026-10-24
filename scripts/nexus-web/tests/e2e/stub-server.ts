@@ -8,13 +8,13 @@ import { buildApp } from '../../../nexus-api/src/app.ts'
 import type { Profile } from '../../../nexus-api/src/profile-crypto.ts'
 import type { JobInfo, RunRecord } from '../../../nexus-api/src/scheduler/types.ts'
 import { ReaderError, type Reader } from '../../../nexus-api/src/oculus-reader.ts'
-import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../nightwatch-fixtures.ts'
+import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../oculus-fixtures.ts'
 
 export type LifeMode = 'ok' | 'before' | 'past' | 'locked' | 'empty' | 'down'
-export type NwMode = 'nw-ok' | 'nw-empty' | 'nw-down' | 'nw-more-attention' | 'nw-unknown'
-export type Mode = LifeMode | NwMode
+export type OcMode = 'oc-ok' | 'oc-empty' | 'oc-down' | 'oc-more-attention' | 'oc-unknown'
+export type Mode = LifeMode | OcMode
 const NOW = Date.parse('2026-10-16T14:00:00Z')   // 21:00 on 2026-10-16 in UTC+7
-const NW_NOW = Date.parse('2026-10-22T03:00:00Z')   // the Nightwatch fixture times are on 2026-10-22
+const OC_NOW = Date.parse('2026-10-22T03:00:00Z')   // the Oculus fixture times are on 2026-10-22
 const TYPES: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2' }
 // fake profiles only: no real date is ever in a test
 const LOADERS: Record<LifeMode, () => Promise<Profile>> = {
@@ -27,21 +27,21 @@ const LOADERS: Record<LifeMode, () => Promise<Profile>> = {
 }
 
 // Scheduler jobs for the Nexus status: both ran fine a minute ago (healthy), or never ran (unknown).
-function nwJobs(mode: Mode): JobInfo[] {
+function ocJobs(mode: Mode): JobInfo[] {
   const info = (name: string, lastRun: RunRecord | null): JobInfo => ({ name, description: name, schedule: null, nextRunAt: null, nextRunAtUtc7: null, running: null, queued: null, lastRun })
   const ran = (job: string): RunRecord => ({ id: `${job}-1`, job, trigger: 'schedule', slot: null, status: 'ok', startedAt: '2026-10-22T02:58:00.000Z', startedAtUtc7: '2026-10-22T09:58:00+07:00', endedAt: '2026-10-22T02:59:00.000Z', durationMs: 60_000, exitCode: 0, detail: '' })
-  const never = mode === 'nw-unknown'
+  const never = mode === 'oc-unknown'
   return ['autonomous-scan', 'nightwatch-watchdog'].map((n) => info(n, never ? null : ran(n)))
 }
 
-const isNw = (m: Mode): m is NwMode => m.startsWith('nw-')
+const isOc = (m: Mode): m is OcMode => m.startsWith('oc-')
 
 // A fake Reader: the Task 8 fixtures by view name. The route adds `nexus` to the overview itself.
-function nwRead(mode: () => Mode): Reader {
+function ocRead(mode: () => Mode): Reader {
   return async (view, args = {}) => {
     const m = mode()
-    if (m === 'nw-down') throw new ReaderError('reader_unavailable')
-    const empty = m === 'nw-empty'
+    if (m === 'oc-down') throw new ReaderError('reader_unavailable')
+    const empty = m === 'oc-empty'
     const readAt = overviewFixture().readAt
     switch (view) {
       case 'overview': {
@@ -51,7 +51,7 @@ function nwRead(mode: () => Mode): Reader {
       case 'attention': {
         const a = attentionFixture()
         if (empty) return { ...a, open: [], resolved: [] }
-        if (m === 'nw-more-attention') return { ...a, open: [...a.open, { ...a.open[0], id: 'att-3', since: '2026-10-22T02:55:00.000Z' }] }
+        if (m === 'oc-more-attention') return { ...a, open: [...a.open, { ...a.open[0], id: 'att-3', since: '2026-10-22T02:55:00.000Z' }] }
         return a
       }
       case 'runs': {
@@ -84,9 +84,9 @@ function nwRead(mode: () => Mode): Reader {
 
 export async function startStub(opts: { dir: string; port?: number }) {
   let mode: Mode = 'ok'
-  const read = nwRead(() => mode)
-  const life = (): LifeMode => (isNw(mode) ? 'ok' : mode)
-  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, oculus: { read: (v, a) => read(v, a), jobs: () => nwJobs(mode), now: () => NW_NOW } })
+  const read = ocRead(() => mode)
+  const life = (): LifeMode => (isOc(mode) ? 'ok' : mode)
+  const app = buildApp(async () => null, { loadProfile: () => LOADERS[life()](), now: () => NOW, oculus: { read: (v, a) => read(v, a), jobs: () => ocJobs(mode), now: () => OC_NOW } })
   const api = getRequestListener(app.fetch)
   const server = createServer((req, res) => {
     const url = (req.url ?? '/').split('?')[0]
@@ -114,9 +114,9 @@ export async function startStub(opts: { dir: string; port?: number }) {
   }
 }
 
-// The same stub over the generated site (`.output/public`), for the Nightwatch gates. Start modes: nw-ok.
-export async function startStubForNightwatch() {
+// The same stub over the generated site (`.output/public`), for the Oculus gates. Start modes: oc-ok.
+export async function startStubForOculus() {
   const stub = await startStub({ dir: join(import.meta.dirname, '../../.output/public') })
-  await stub.setMode('nw-ok')
+  await stub.setMode('oc-ok')
   return stub
 }

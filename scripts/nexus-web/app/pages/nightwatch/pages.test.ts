@@ -2,15 +2,15 @@ import { flushPromises } from '@vue/test-utils'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { reactive, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
-import { NightwatchApiError } from '../../composables/nightwatch-api'
+import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runFixture, runsFixture } from '../../../tests/oculus-fixtures'
+import { OculusApiError } from '../../composables/oculus-api'
 import Attention from './attention.vue'
 import Plan from './plan.vue'
 import Run from './run.vue'
 import Runs from './runs.vue'
 
 const api = vi.hoisted(() => ({ loadAttention: vi.fn(), loadRuns: vi.fn(), loadRun: vi.fn(), loadEvents: vi.fn(), loadPlan: vi.fn() }))
-vi.mock('../../composables/nightwatch-api', async (orig) => ({ ...(await orig<typeof import('../../composables/nightwatch-api')>()), ...api }))
+vi.mock('../../composables/oculus-api', async (orig) => ({ ...(await orig<typeof import('../../composables/oculus-api')>()), ...api }))
 const holder = vi.hoisted(() => ({ route: null as unknown as { query: Record<string, string> } }))
 const route = reactive({ query: {} as Record<string, string> })
 holder.route = route
@@ -19,7 +19,7 @@ const nav = vi.hoisted(() => vi.fn())
 mockNuxtImport('navigateTo', () => nav)
 
 const provide = (overview: ReturnType<typeof overviewFixture> | null, stale = false) => ({
-  nwOverview: { overview: ref(overview), stale: ref(stale), updatedAt: ref(null), failedAt: ref(null), attention: ref(0), refresh: vi.fn() },
+  ocOverview: { overview: ref(overview), stale: ref(stale), updatedAt: ref(null), failedAt: ref(null), attention: ref(0), refresh: vi.fn() },
 })
 
 beforeEach(() => { route.query = {}; Object.values(api).forEach((f) => f.mockReset()); nav.mockReset() })
@@ -149,7 +149,7 @@ describe('Run page', () => {
     await vi.advanceTimersByTimeAsync(0)
     route.query = { id: 'b-2' }
     await vi.advanceTimersByTimeAsync(0)
-    late(new NightwatchApiError(404, 'not_found'))
+    late(new OculusApiError(404, 'not_found'))
     await vi.advanceTimersByTimeAsync(0)
     expect(w.text()).not.toContain('This run does not exist.')
     api.loadRun.mockClear()
@@ -160,8 +160,8 @@ describe('Run page', () => {
   it('a 404 shows the missing panel and stops the polling', async () => {
     vi.useFakeTimers()
     route.query = { id: 'b-1' }
-    api.loadRun.mockRejectedValue(new NightwatchApiError(404, 'not_found'))
-    api.loadEvents.mockRejectedValue(new NightwatchApiError(404, 'not_found'))
+    api.loadRun.mockRejectedValue(new OculusApiError(404, 'not_found'))
+    api.loadEvents.mockRejectedValue(new OculusApiError(404, 'not_found'))
     const w = await mountSuspended(Run)
     await vi.advanceTimersByTimeAsync(0)
     expect(w.text()).toContain('This run does not exist.')

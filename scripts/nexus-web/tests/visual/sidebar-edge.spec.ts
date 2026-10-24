@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { startStubForNightwatch } from '../e2e/stub-server.ts'
+import { startStubForOculus } from '../e2e/stub-server.ts'
 
 // DGS-599: the side bar text starts at the 24 px page gutter (16 px nav padding + 8 px inner padding), never at the window edge.
-let stub: Awaited<ReturnType<typeof startStubForNightwatch>>
-test.beforeAll(async () => { stub = await startStubForNightwatch() })
+let stub: Awaited<ReturnType<typeof startStubForOculus>>
+test.beforeAll(async () => { stub = await startStubForOculus() })
 test.afterAll(async () => { await stub.close() })
 
 const PATH = '/nightwatch/'

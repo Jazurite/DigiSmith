@@ -1,0 +1,44 @@
+/*
+ * Colour, radius and font tokens from Warren docs/ui-revamp/tokens.css
+ * (https://github.com/jayminwest/warren/blob/main/docs/ui-revamp/tokens.css), MIT License.
+ *
+ * Copyright (c) 2026 Jaymin West
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+ * to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+ * the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+ * THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+ * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+// Scope: .oc only. The Life Calendar keeps its own tokens. Dark is the default; light follows the system or data-theme.
+.oc {
+  // The minifier drops comments, so the full notice also rides as a custom property: it ships in the built CSS (and in /THIRD-PARTY-NOTICES.txt).
+  --oc-notice: 'Colour, radius and font tokens from Warren docs/ui-revamp/tokens.css (https://github.com/jayminwest/warren/blob/main/docs/ui-revamp/tokens.css), MIT License. Copyright (c) 2026 Jaymin West Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
+  --oc-bg: oklch(14% 0.008 264); --oc-sidebar: oklch(12.8% 0.008 264); --oc-surface: oklch(16.5% 0.010 264);
+  --oc-raised: oklch(19% 0.011 264); --oc-hover: oklch(21% 0.012 264); --oc-thead: oklch(15.5% 0.009 264);
+  --oc-text: oklch(96% 0.005 264); --oc-text-2: oklch(72% 0.012 264); --oc-text-3: oklch(61% 0.014 264);
+  --oc-border: oklch(24% 0.012 264); --oc-strong: oklch(31% 0.013 264);
+  --oc-primary: oklch(72% 0.110 152); --oc-ok: oklch(72% 0.130 150); --oc-warn: oklch(80% 0.150 75);
+  --oc-bad: oklch(68% 0.210 27); --oc-info: oklch(72% 0.140 240); --oc-neutral: oklch(70% 0.020 264);
+  --oc-radius-xs: 2px; --oc-radius-sm: 3px; --oc-radius-md: 4px;
+  --oc-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --oc-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@mixin oc-light {
+  --oc-bg: oklch(96.8% 0.004 264); --oc-sidebar: oklch(98.6% 0.002 264); --oc-surface: oklch(100% 0 0);
+  --oc-raised: oklch(97.6% 0.004 264); --oc-hover: oklch(95.2% 0.006 264); --oc-thead: oklch(98% 0.003 264);
+  --oc-text: oklch(22% 0.015 264); --oc-text-2: oklch(45% 0.015 264); --oc-text-3: oklch(50% 0.014 264);
+  --oc-border: oklch(90% 0.006 264); --oc-strong: oklch(82.5% 0.010 264);
+  --oc-primary: oklch(52% 0.125 152); --oc-ok: oklch(52% 0.125 150); --oc-warn: oklch(52% 0.130 75);
+  --oc-bad: oklch(54% 0.190 27); --oc-info: oklch(52% 0.125 240); --oc-neutral: oklch(48% 0.018 264);
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme='dark']) .oc { @include oc-light; } }
+:root[data-theme='light'] .oc { @include oc-light; }

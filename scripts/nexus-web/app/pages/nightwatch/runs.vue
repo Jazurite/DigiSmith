@@ -2,14 +2,14 @@
 import { computed } from 'vue'
 import { HEALTH, ROLES, TRIGGERS } from '#oculus-schema'
 import type { Runs } from '#oculus-schema'
-import { loadRuns } from '../../composables/nightwatch-api'
+import { loadRuns } from '../../composables/oculus-api'
 import { useRestartingPoll } from '../../composables/useRestartingPoll'
-import { isSafeId } from '../../utils/nw-format'
+import { isSafeId } from '../../utils/oc-format'
 import { useNow } from '../../utils/use-now'
-import NwRunFilters from '../../components/nw/RunFilters.vue'
-import NwRunsTable from '../../components/nw/RunsTable.vue'
+import OcRunFilters from '../../components/oc/RunFilters.vue'
+import OcRunsTable from '../../components/oc/RunsTable.vue'
 
-definePageMeta({ layout: 'nightwatch' })
+definePageMeta({ layout: 'oculus' })
 useHead({ title: 'Runs · Nightwatch' })
 
 const route = useRoute()
@@ -38,13 +38,13 @@ const nowMs = useNow()
 </script>
 
 <template>
-  <NwPageHead title="Runs" sub="Every run, newest first." />
-  <NwRunFilters :model-value="filters" :projects="projects" @update:model-value="setFilters" />
-  <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
-  <NwPanel v-else-if="!poll.data.value" kind="error" title="The runs are not available right now." @retry="poll.refresh()" />
+  <OcPageHead title="Runs" sub="Every run, newest first." />
+  <OcRunFilters :model-value="filters" :projects="projects" @update:model-value="setFilters" />
+  <OcPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
+  <OcPanel v-else-if="!poll.data.value" kind="error" title="The runs are not available right now." @retry="poll.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
-    <NwPanel v-if="filtered && poll.data.value.runs.length === 0" kind="empty" title="No run matches." />
-    <NwRunsTable v-else :runs="poll.data.value.runs" :now-ms="nowMs" />
+    <OcStaleBanner v-if="poll.error.value" :failed-at="poll.failedAt.value" />
+    <OcPanel v-if="filtered && poll.data.value.runs.length === 0" kind="empty" title="No run matches." />
+    <OcRunsTable v-else :runs="poll.data.value.runs" :now-ms="nowMs" />
   </template>
 </template>

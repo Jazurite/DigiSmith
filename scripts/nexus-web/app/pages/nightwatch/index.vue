@@ -4,25 +4,25 @@ import type { ComputedRef, Ref } from 'vue'
 import type { Overview } from '#oculus-schema'
 import { useNow } from '../../utils/use-now'
 
-definePageMeta({ layout: 'nightwatch' })
+definePageMeta({ layout: 'oculus' })
 useHead({ title: 'Operations · Nightwatch' })
 // the layout owns the one overview poll; this page only reads it
-const nw = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('nwOverview')!
+const oc = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('ocOverview')!
 const nowMs = useNow()
 </script>
 
 <template>
-  <NwPageHead title="Operations" sub="Tickets per phase, active workers and the latest events." />
-  <NwPanel v-if="!nw.overview.value && !nw.stale.value" kind="loading" />
-  <NwPanel v-else-if="!nw.overview.value" kind="error" title="The operations view is not available right now." @retry="nw.refresh()" />
+  <OcPageHead title="Operations" sub="Tickets per phase, active workers and the latest events." />
+  <OcPanel v-if="!oc.overview.value && !oc.stale.value" kind="loading" />
+  <OcPanel v-else-if="!oc.overview.value" kind="error" title="The operations view is not available right now." @retry="oc.refresh()" />
   <template v-else>
-    <NwStaleBanner v-if="nw.stale.value" :failed-at="nw.failedAt.value" />
+    <OcStaleBanner v-if="oc.stale.value" :failed-at="oc.failedAt.value" />
     <div class="grid">
-      <NwPhaseTable :rows="nw.overview.value.tickets.rows" :lock-ticket="nw.overview.value.tickets.lockTicket" :window-days="nw.overview.value.tickets.windowDays" :now-ms="nowMs" />
-      <NwScanCard :scan="nw.overview.value.scan" :lock-ticket="nw.overview.value.tickets.lockTicket" />
+      <OcPhaseTable :rows="oc.overview.value.tickets.rows" :lock-ticket="oc.overview.value.tickets.lockTicket" :window-days="oc.overview.value.tickets.windowDays" :now-ms="nowMs" />
+      <OcScanCard :scan="oc.overview.value.scan" :lock-ticket="oc.overview.value.tickets.lockTicket" />
     </div>
-    <NwWorkersTable :workers="nw.overview.value.workers" :now-ms="nowMs" />
-    <NwLastEvents :events="nw.overview.value.lastEvents" />
+    <OcWorkersTable :workers="oc.overview.value.workers" :now-ms="nowMs" />
+    <OcLastEvents :events="oc.overview.value.lastEvents" />
   </template>
 </template>
 
