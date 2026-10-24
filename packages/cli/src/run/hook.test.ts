@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildData, runHook, waitFor } from "./hook.ts";
-import { createRun } from "./record.ts";
+import { createRun, readRun } from "./record.ts";
 import { findRunDir, runsDir } from "./paths.ts";
 import { readEvents } from "./events.ts";
 
@@ -62,11 +62,12 @@ describe("runHook", () => {
     expect(ev[0].data).toMatchObject({ session_id: "parent" });
     expect(ev[1].data).toEqual({ reason: "other", session_id: "child-claude-p" });
   });
-  it("writes nothing without DIGISMITH_RUN_ID", () => {
+  it("writes nothing without DIGISMITH_RUN_ID when the payload has no session_id", () => {
     const before = fs.readdirSync(path.join(runsDir(env), "DGS-581", run));
     runHook("started", "{}", { DIGISMITH_DEPOT_DIR: tmp });
     runHook("started", "{}", { DIGISMITH_DEPOT_DIR: tmp, DIGISMITH_RUN_ID: "" });
     expect(fs.readdirSync(path.join(runsDir(env), "DGS-581", run))).toEqual(before);
+    expect(fs.readdirSync(runsDir(env))).toEqual(["DGS-581"]);
     expect(fs.existsSync(path.join(runsDir(env), "hook-errors.log"))).toBe(false);
   });
   it("writes nothing for a run id that has no run.json, and creates no directory", () => {
@@ -124,4 +125,46 @@ describe("runHook", () => {
     expect(() => runHook("bogus", "{}", env)).not.toThrow();
     expect(events()).toHaveLength(0);
   });
+});
+
+describe("automatic runs (no DIGISMITH_RUN_ID)", () => {
+  const auto = (): NodeJS.ProcessEnv => ({ DIGISMITH_DEPOT_DIR: tmp, CLAUDE_PID: "777" });
+  it("SessionStart makes the run; the other kinds find it by session_id", () => {
+    const e = auto();
+    runHook("started", JSON.stringify({ session_id: "sa", source: "startup", cwd: "/nowhere/Proj", prompt: "SECRET" }), e);
+    runHook("tool", JSON.stringify({ session_id: "sa", tool_name: "Bash", tool_input: { command: "SECRET" } }), e);
+    runHook("blocked", JSON.stringify({ session_id: "sa", notification_type: "permission_prompt", message: "SECRET" }), e);
+    runHook("turn_end", JSON.stringify({ session_id: "sa" }), e);
+    runHook("ended", JSON.stringify({ session_id: "sa", reason: "other" }), e);
+    const dir = findRunDir("s-sa", e)!;
+    expect(dir).toBe(path.join(tmp, "runs", "Proj", "s-sa"));
+    expect(readEvents(dir).map((x) => x.type)).toEqual(["started", "tool", "blocked", "turn_end", "ended"]);
+    for (const f of fs.readdirSync(dir)) if (f !== "lock") expect(fs.readFileSync(path.join(dir, f), "utf8")).not.toMatch(/SECRET/);
+  });
+  it("a resume appends a second started to the same run", () => {
+    const e = auto();
+    runHook("started", JSON.stringify({ session_id: "sb", source: "startup", cwd: "/nowhere/Proj" }), e);
+    runHook("started", JSON.stringify({ session_id: "sb", source: "resume", cwd: "/nowhere/Proj" }), e);
+    expect(readEvents(findRunDir("s-sb", e)!).map((x) => x.data.source)).toEqual(["startup", "resume"]);
+  });
+  it("a tool event with an unknown session_id writes nothing", () => {
+    runHook("tool", JSON.stringify({ session_id: "zz", tool_name: "Bash" }), auto());
+    expect(fs.readdirSync(runsDir(env))).toEqual(["DGS-581"]);
+  });
+  it("an explicit DIGISMITH_RUN_ID wins: no automatic run, no index", () => {
+    runHook("started", JSON.stringify({ session_id: "sc", source: "startup", cwd: "/nowhere/Proj" }), { ...env, CLAUDE_PID: "777" });
+    expect(events()).toHaveLength(1);
+    expect(fs.readdirSync(runsDir(env))).toEqual(["DGS-581"]);
+  });
+  it("inside herdr it starts the labeller, which sets the role", async () => {
+    const fake = path.join(tmp, "herdr-ws");
+    const list = JSON.stringify({ result: { agents: [{ name: "main-conductor", pane_id: "w2:p5Q", tab_id: "w2:t5Q", workspace_id: "w2" }] } });
+    fs.writeFileSync(fake, `#!/bin/sh\ncat <<'EOF'\n${list}\nEOF\n`, { mode: 0o755 });
+    const e = { ...auto(), HERDR_PANE_ID: "w2:p5Q", HERDR_WORKSPACE_ID: "w2", NIGHTWATCH_HERDR_WS: fake };
+    runHook("started", JSON.stringify({ session_id: "sd", source: "startup", cwd: "/nowhere/Proj" }), e);
+    const dir = findRunDir("s-sd", e)!;
+    const deadline = Date.now() + 10_000;
+    while (readRun(dir).role_from === "pending" && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+    expect(readRun(dir)).toMatchObject({ role: "conductor", role_from: "herdr" });
+  }, 15_000);
 });

@@ -1,11 +1,20 @@
 // packages/cli/src/run/hook.ts
-// The Nightwatch hook handler. Imports only node:fs, node:os and node:path (through ./paths.ts and ./events.ts), with no yargs
-// and no child_process, so a hook process starts fast. Never throws; never writes message text, prompts, tool inputs or outputs.
+// The Nightwatch hook handler. Imports node:fs, node:os and node:path (through the run modules); node:child_process only lazily,
+// to start the labeller. No yargs, no git. Never throws; never writes message text, prompts, tool inputs or outputs.
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findRunDir, isSafe, runsDir } from "./paths.ts";
 import { appendEvent, HOOK_TYPES } from "./events.ts";
 import { plainName } from "./schema.ts";
+import { findAuto, startAuto } from "./auto.ts";
+
+const LABEL_CLI = path.join(import.meta.dirname, "label-cli.ts");
+
+// Starts the labeller and returns at once; child_process is loaded only here.
+function spawnLabeller(dir: string, env: NodeJS.ProcessEnv): void {
+  const cp = process.getBuiltinModule("node:child_process") as typeof import("node:child_process");
+  cp.spawn(process.execPath, ["--experimental-strip-types", LABEL_CLI, dir], { detached: true, stdio: "ignore", env }).unref();
+}
 
 export type HookKind = (typeof HOOK_TYPES)[number];
 
@@ -38,7 +47,7 @@ export function buildData(kind: HookKind, payload: unknown): Record<string, unkn
   }
 }
 
-function logError(kind: string, message: string, env: NodeJS.ProcessEnv): void {
+export function logError(kind: string, message: string, env: NodeJS.ProcessEnv): void {
   try {
     const root = runsDir(env);
     if (!fs.existsSync(root)) return;
@@ -52,23 +61,37 @@ function logError(kind: string, message: string, env: NodeJS.ProcessEnv): void {
 
 export function runHook(kind: string, stdin: string, env: NodeJS.ProcessEnv = process.env): void {
   try {
-    const id = env.DIGISMITH_RUN_ID;
-    if (!id || !isSafe(id)) return;
     if (!(HOOK_TYPES as readonly string[]).includes(kind)) return;
     const k = kind as HookKind;
-    const dir = findRunDir(id, env);
-    if (!dir) return;
     let payload: unknown = {};
     try {
       payload = JSON.parse(stdin || "{}");
     } catch {
       /* not JSON: the event is still written, with empty data */
     }
+    const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+    let target: { dir: string; run: string } | null;
+    let label = false;
+    const id = env.DIGISMITH_RUN_ID;
+    if (id) {
+      // An explicit run id wins (DGS-581): no automatic run, no index.
+      if (!isSafe(id)) return;
+      const dir = findRunDir(id, env);
+      target = dir ? { dir, run: id } : null;
+    } else if (k === "started") {
+      const a = startAuto(p, env);
+      target = a;
+      label = a?.needsLabel ?? false;
+    } else {
+      target = findAuto(p, env);
+    }
+    if (!target) return;
     try {
-      appendEvent(dir, id, k, buildData(k, payload), waitFor(k));
+      appendEvent(target.dir, target.run, k, buildData(k, payload), waitFor(k));
     } catch (e) {
       logError(k, (e as Error).message, env);
     }
+    if (label) spawnLabeller(target.dir, env);
   } catch (e) {
     logError(kind, (e as Error).message, env);
   }
