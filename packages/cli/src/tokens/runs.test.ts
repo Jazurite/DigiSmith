@@ -115,7 +115,7 @@ describe("runTokensPass", () => {
     expect(runTokensPass({ env: env(), now, projectsDir: projects }).burn).toMatchObject({ tokens: 5, runs: 1 });
   });
   it("recounts an ended run that started again, and clears final (F2)", () => {
-    const tr = writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-10-24T08:30:00.000Z", output: 5 }]);
+    writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-10-24T08:30:00.000Z", output: 5 }]);
     const dir = writeRun(depot, "DGS-1", "builder-a", { created: "2026-10-24T08:00:00.000Z", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s1" }], ended: "2026-10-24T08:40:00.000Z" });
     runTokensPass({ env: env(), now, projectsDir: projects });
     expect(JSON.parse(readFileSync(join(dir, "tokens.json"), "utf8"))).toMatchObject({ final: true });
@@ -124,7 +124,6 @@ describe("runTokensPass", () => {
     const past = new Date(Date.now() - 60_000), later = new Date(Date.now() + 60_000);
     utimesSync(join(dir, "tokens.json"), past, past); utimesSync(join(dir, "events.jsonl"), later, later);
     writeTranscript(projects, "s1", [{ id: "m2", req: "r2", ts: "2026-10-24T08:55:00.000Z", output: 7 }], true);
-    void tr;
     expect(runTokensPass({ env: env(), now, projectsDir: projects }).updated).toBe(1);
     const t = JSON.parse(readFileSync(join(dir, "tokens.json"), "utf8"));
     expect(t).toMatchObject({ final: false, total: { responses: 2, tokens: 12 } });
