@@ -110,4 +110,23 @@ describe("countRun", () => {
     writeFileSync(join(dir, "tokens.state.json"), "{broken");
     expect(run(dir)!.total.responses).toBe(1);
   });
+  it("gives no snapshot when created_at is not a date", () => {
+    writeTranscript(projects, "s1", [{ id: "m1", req: "r1", ts: "2026-10-24T08:10:00.000Z", output: 5 }]);
+    const dir = writeRun(depot, "DGS-1", "builder-1", { created: "not-a-date", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s1" }] });
+    expect(run(dir)).toBeNull();
+    expect(readdirSync(dir)).not.toContain("tokens.json");
+  });
+  it("survives a replaced, shorter transcript and keeps earlier responses", () => {
+    writeTranscript(projects, "s1", [
+      { id: "m1", req: "r1", ts: "2026-10-24T08:10:00.000Z", output: 5 },
+      { id: "m2", req: "r2", ts: "2026-10-24T08:11:00.000Z", output: 6 },
+    ]);
+    const dir = writeRun(depot, "DGS-1", "builder-1", { created: "2026-10-24T08:00:00.000Z", started: [{ ts: "2026-10-24T08:00:01.000Z", session: "s1" }] });
+    expect(run(dir)!.total.responses).toBe(2);
+    unlinkSync(join(projects, "-Users-fake-Workspace-SECRET-PATH", "s1.jsonl"));
+    writeTranscript(projects, "s1", [{ id: "m3", req: "r3", ts: "2026-10-24T08:12:00.000Z", output: 1 }]);
+    const t = run(dir)!;
+    expect(t.total.responses).toBe(3);
+    expect(t.models["claude-opus-5-5"].output).toBe(12);
+  });
 });

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { readEvents, type EventLine } from "../run/events.ts";
 import { summarize } from "../run/read.ts";
@@ -57,9 +57,9 @@ function readState(path: string, run: string): RunTokensState {
 function filesOf(sid: string, main: string): { key: string; path: string; agent: string | null }[] {
   const out = [{ key: `${sid}/main`, path: main, agent: null as string | null }];
   const sub = join(dirname(main), sid, "subagents");
-  if (existsSync(sub)) {
-    for (const n of readdirSync(sub)) if (n.startsWith("agent-") && n.endsWith(".jsonl")) out.push({ key: `${sid}/${n}`, path: join(sub, n), agent: n.slice(6, -6) });
-  }
+  let names: string[] = [];
+  try { names = readdirSync(sub); } catch { return out; }
+  for (const n of names) if (n.startsWith("agent-") && n.endsWith(".jsonl")) out.push({ key: `${sid}/${n}`, path: join(sub, n), agent: n.slice(6, -6) });
   return out;
 }
 
@@ -104,6 +104,7 @@ export function countRun(runDir: string, opts: { now: Date; index: Map<string, s
   const statePath = join(runDir, "tokens.state.json");
   const state = readState(statePath, record.run);
   const created = Date.parse(record.created_at);
+  if (!Number.isFinite(created)) return null; // no lower bound: never count older work
   for (const sid of sessions) {
     const main = opts.index.get(sid);
     if (!main) continue; // no file yet: the next pass tries again
