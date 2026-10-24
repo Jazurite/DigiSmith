@@ -15,7 +15,8 @@ The Maestro does not research itself. No clone, no long read and no web study in
    - the subject (link or name) and Jack's words;
    - the library `<name>`;
    - the findings path `~/.digismith-depot/research/<name>.md`;
-   - the seat.
+   - the seat;
+   - the ticket key for the run. Use a related open ticket when the study serves one, else `study-<name>` (`dg run start` accepts any key that matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`).
 3. The conductor starts the researcher by the card `skills/researcher/SKILL.md`, section "Start of a researcher". The brief is `skills/researcher/brief.md`. The run role is `--role other` until DGS-609.
 
 ## What the researcher does
