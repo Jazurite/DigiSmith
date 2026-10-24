@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createRun } from "../run/record.ts";
+import { createRun, readRun, rewriteRun } from "../run/record.ts";
 import { findRunDir } from "../run/paths.ts";
 import { appendResolved, readOpen } from "./attention.ts";
 import { runWatch, type WatchDeps } from "./watch.ts";
@@ -58,6 +58,34 @@ function fiveRuns(): void {
 }
 
 describe("runWatch", () => {
+  it("skips a conductor run before its events are read and opens nothing for it", async () => {
+    present = new Set();
+    const id = mk("DGS-8", "conductor", 120, [[110, "started"]]);
+    writeFileSync(join(findRunDir(id, env)!, "events.jsonl"), "{{{ not json\n");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await runWatch(deps());
+    expect(r.opened).toBe(0);
+    expect(r.lines.some((l) => l.includes(id))).toBe(false);
+    expect(err).not.toHaveBeenCalled();
+  });
+  it("closes an open blocked item when its run is now a maestro run", async () => {
+    present = new Set(["w2:DGS-9"]);
+    const id = mk("DGS-9", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    expect((await runWatch(deps())).opened).toBe(1);
+    const rd = findRunDir(id, env)!;
+    rewriteRun(rd, { ...readRun(rd), role: "maestro" });
+    const r2 = await runWatch(deps());
+    expect(r2.resolved).toBe(1);
+    expect(readOpen(dir)).toEqual([]);
+    expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain("role not watched");
+  });
+  it("makes no stderr line for runs/.index", async () => {
+    mkdirSync(join(env.DIGISMITH_DEPOT_DIR!, "runs", ".index", "sessions"), { recursive: true });
+    writeFileSync(join(env.DIGISMITH_DEPOT_DIR!, "runs", ".index", "sessions", "x"), "DGS-1/s-x\n");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await runWatch(deps());
+    expect(err).not.toHaveBeenCalled();
+  });
   it("opens blocked, stalled and lost, comments once each, and a second pass adds nothing", async () => {
     fiveRuns();
     const r = await runWatch(deps());

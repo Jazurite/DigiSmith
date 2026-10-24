@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, decideRetry, DEFAULT_BUDGETS, phaseOf } from "./watchdog.ts";
+import { classify, decideRetry, DEFAULT_BUDGETS, isWatched, phaseOf } from "./watchdog.ts";
 
 const T0 = Date.parse("2026-10-21T10:00:00Z");
 const min = (m: number) => new Date(T0 + m * 60_000).toISOString();
@@ -150,5 +150,21 @@ describe("decideRetry", () => {
     expect(decideRetry("failed", "unknown", 0)).toBe("attention");
     expect(decideRetry("blocked", "transient", 0)).toBe("attention");
     expect(decideRetry("stalled", "transient", 0)).toBe("attention");
+  });
+});
+
+describe("DGS-598 role scope", () => {
+  for (const role of ["maestro", "conductor", "other"]) {
+    it(`never flags a ${role} run`, () => {
+      expect(classify(run(role), [ev("started", 0)], "present", at(180), DEFAULT_BUDGETS)).toEqual({ state: "healthy", cause: "", since: "" });
+      expect(classify(run(role), [ev("started", 0)], "gone", at(5), DEFAULT_BUDGETS).state).toBe("healthy");
+      expect(classify(run(role), [ev("started", 0), ev("blocked", 1)], "present", at(2), DEFAULT_BUDGETS).state).toBe("healthy");
+      expect(classify(run(role), [ev("started", 0), ev("ended", 1)], "present", at(2), DEFAULT_BUDGETS).state).toBe("ended");
+    });
+  }
+  it("still flags builder, reviewer and scout", () => {
+    expect(classify(run("scout"), [ev("started", 0)], "present", at(180), DEFAULT_BUDGETS).state).toBe("lost");
+    expect(isWatched("builder") && isWatched("reviewer") && isWatched("scout")).toBe(true);
+    expect(isWatched("maestro") || isWatched("conductor") || isWatched("other")).toBe(false);
   });
 });

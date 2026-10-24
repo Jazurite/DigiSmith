@@ -4,6 +4,8 @@ The watchdog looks at every open run and says what state it is in. It writes a l
 
 Command: `dg autonomous watch`. The Nexus scheduler runs it every 5 minutes, all day (job `nightwatch-watchdog`). Runs older than 7 days with no `ended` event are skipped.
 
+Role scope (DGS-598): only builder, reviewer and scout runs are classified. A maestro, conductor or other run is skipped before its events are read: it gets no item and no comment. An open blocked or stalled item of such a run is closed with the note "role not watched". Oculus still lists these runs, as healthy or ended.
+
 ## The five states
 
 - `healthy`: the run moves and is inside its time budget.
@@ -16,6 +18,7 @@ Command: `dg autonomous watch`. The Nexus scheduler runs it every 5 minutes, all
 
 `classify` stops at the first rule that matches:
 
+0. The role is not builder, reviewer or scout: ended when it has ended, else healthy.
 1. An `ended` event: `ended`.
 2. The pane is gone: `lost`.
 3. A `blocked` event with nothing after it: `blocked`. This beats silence.

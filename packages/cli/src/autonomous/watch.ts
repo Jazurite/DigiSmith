@@ -9,7 +9,7 @@ import { readBudgets } from "./budgets.ts";
 import { atomicWrite } from "./state.ts";
 import { notifyNew, type RunDg } from "./notify.ts";
 import type { PaneLookup } from "./pane.ts";
-import { classify, decideRetry, type Pane } from "./watchdog.ts";
+import { classify, decideRetry, isWatched, type Pane } from "./watchdog.ts";
 
 export interface WatchDeps {
   env: NodeJS.ProcessEnv; dir: string; cwd: string; now: () => number;
@@ -21,17 +21,19 @@ const RETENTION_MS = 7 * 24 * 3600_000;
 const AUTO: AttentionKind[] = ["blocked", "stalled"];
 
 /** Each run is read once; a run older than 7 days is skipped unless it still has an open item and has ended. A broken run dir gives one stderr line; an unreadable runs root throws. */
-function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string) => boolean): { record: RunRecord; events: EventLine[] }[] {
+function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string) => boolean): { runs: { record: RunRecord; events: EventLine[] }[]; unwatched: string[] } {
   const root = runsDir(env);
   let keys: string[];
   try {
     keys = readdirSync(root);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { runs: [], unwatched: [] };
     throw new Error(`watch: cannot read the runs folder ${root}: ${e instanceof Error ? e.message : String(e)}`);
   }
   const out: { record: RunRecord; events: EventLine[] }[] = [];
+  const unwatched: string[] = [];
   for (const key of keys) {
+    if (key.startsWith(".")) continue; // runs/.index
     const keyDir = join(root, key);
     let ids: string[];
     try { ids = readdirSync(keyDir); } catch { continue; } // hook-errors.log is a file, not a ticket folder
@@ -39,6 +41,7 @@ function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string
       const rd = join(keyDir, id);
       try {
         const record = readRun(rd);
+        if (!isWatched(record.role)) { unwatched.push(record.run); continue; }
         // An old run is read only when it still has an open item: an ended one closes it, any other old run is skipped.
         const old = nowMs - Date.parse(record.created_at) > RETENTION_MS;
         if (old && !hasOpen(record.run)) continue;
@@ -50,7 +53,7 @@ function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string
       }
     }
   }
-  return out;
+  return { runs: out, unwatched };
 }
 
 /** What the pass remembers between runs: the (run, kind) pairs it opened with the since of that episode, cleared when the run is seen healthy or ended again. A pair from an older file has no since (null). */
@@ -107,7 +110,11 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     return set ? (set.has(pane) ? "present" : "gone") : "unknown";
   };
 
-  const runs = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
+  const { runs, unwatched } = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
+  for (const run of unwatched) {
+    for (const it of items.filter((o) => o.run === run && AUTO.includes(o.kind))) close(it, "role not watched");
+    for (const k of [...opened.keys()]) if (k.startsWith(`${run}|`)) opened.delete(k);
+  }
   for (const { record, events } of runs) {
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);
     const v = classify(record, events, pane, nowMs, budgets);

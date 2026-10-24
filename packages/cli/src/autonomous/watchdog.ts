@@ -39,9 +39,14 @@ export function phaseOf(run: RunRecord, events: EventLine[]): { phase: Phase; si
   return phase ? { phase, since } : null;
 }
 
+/** DGS-598: only these roles are classified blocked, stalled or lost. Maestro, conductor and other runs are listed, never flagged. */
+export const WATCHED_ROLES: readonly string[] = ["builder", "reviewer", "scout"];
+export const isWatched = (role: string): boolean => WATCHED_ROLES.includes(role);
+
 export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: number, budgets: Budgets): Verdict {
   // /clear writes ended then started: the run is over only when no started follows the last ended.
   if (summarize(events).ended) return { state: "ended", cause: "", since: "" };
+  if (!isWatched(run.role)) return { state: "healthy", cause: "", since: "" };
   const last = events.length ? events[events.length - 1] : null;
   const lastTs = last ? ms(last.ts) : ms(run.created_at);
   if (pane === "gone") return { state: "lost", cause: "pane-gone", since: last?.ts ?? run.created_at };
