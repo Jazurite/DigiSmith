@@ -67,13 +67,13 @@ function readEvents(dir: string): EventLine[] {
   return out;
 }
 
-function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView[] {
+function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[], reads?: ReturnType<typeof readRunTokens>[]): RunRowView[] {
   const adir = autonomousDir(env);
   const away = readAway(adir);
   const budgets = readBudgets(depotCwd(env)).budgets;
   const claims = claimsOf(adir, loaded);
-  return loaded.map((l) => {
-    const t = readRunTokens(l.dir, now.getTime());
+  return loaded.map((l, i) => {
+    const t = reads?.[i] ?? readRunTokens(l.dir, now.getTime());
     return { ...runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()), tokens: rowTokensOf(t.value), tokensAsOf: t.asOf };
   });
 }
@@ -179,7 +179,7 @@ export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd
   try { record = readRun(dir); } catch { return null; }
   const loaded: Loaded = { record, events: readEvents(dir), dir };
   const tokens = readRunTokens(dir, now.getTime());
-  const row = rowsOf(env, now, [loaded])[0];
+  const row = rowsOf(env, now, [loaded], [tokens])[0];
   const adir = autonomousDir(env);
   const claim = readJournal(adir).find((l) => l.status === "planned" && l.key === `${record.ticket}:claimed:1:claim`);
   const budgets = readBudgets(a.cwd ?? depotCwd(env)).budgets;

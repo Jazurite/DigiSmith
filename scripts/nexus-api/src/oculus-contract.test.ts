@@ -1,12 +1,11 @@
 // The CLI builds plain objects; this test checks that they parse with the shared schemas (the two copies of the shape cannot drift).
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { liveView } from '../../../packages/cli/src/oculus/live.ts'
 import { makeDepot, type Depot } from '../../../packages/cli/src/oculus/fixture.test-util.ts'
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/oculus/views.ts'
 import { ROLES as CLI_ROLES } from '../../../packages/cli/src/run/schema.ts'
-import { writeFileSync, mkdirSync } from 'node:fs'
 import { AGENT_ROLES, rowTokensSchema, runTokensSchema, ROLES, liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
 
 const NOW = new Date('2026-10-22T03:00:00.000Z')

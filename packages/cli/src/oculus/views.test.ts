@@ -295,4 +295,10 @@ describe("tokens in the views (DGS-590)", () => {
     expect(runsView(d.env, NOW, {}).runs[0].tokens).toEqual({ total: 15, costUsd: 0.5, unpriced: [] });
     expect(runView(d.env, NOW, { run: "builder-1" })?.tokens?.models).toHaveLength(1);
   });
+  it("a stale live snapshot gives null tokens and keeps tokensAsOf", () => {
+    seedRun();
+    writeFileSync(join(d.dir, "runs", "DGS-590", "builder-1", "tokens.json"), JSON.stringify(tokensFile("2026-10-22T02:30:00.000Z")));
+    expect(runsView(d.env, NOW, {}).runs[0]).toMatchObject({ tokens: null, tokensAsOf: "2026-10-22T02:30:00.000Z" });
+    expect(runView(d.env, NOW, { run: "builder-1" })).toMatchObject({ tokens: null, tokensAsOf: "2026-10-22T02:30:00.000Z" });
+  });
 });

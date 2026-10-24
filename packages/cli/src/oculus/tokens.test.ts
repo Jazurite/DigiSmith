@@ -57,3 +57,26 @@ describe("readSeatsView", () => {
     expect(readSeatsView({ DIGISMITH_DEPOT_DIR: depot }, now + 30 * 60_000)).toBeNull();
   });
 });
+
+describe("wrong-typed fields give null", () => {
+  it("run tokens", () => {
+    const bad = runTokens("2026-10-24T08:55:00.000Z", false) as Record<string, unknown>;
+    put("runs/DGS-1/r1/tokens.json", { ...bad, total: { tokens: "15", responses: 1, cost_usd: 0.5 } });
+    expect(readRunTokens(join(depot, "runs/DGS-1/r1"), now).value).toBeNull();
+    put("runs/DGS-1/r1/tokens.json", { ...bad, final: "no" });
+    expect(readRunTokens(join(depot, "runs/DGS-1/r1"), now).value).toBeNull();
+    put("runs/DGS-1/r1/tokens.json", { ...bad, models: { m: { input: 1 } } });
+    expect(readRunTokens(join(depot, "runs/DGS-1/r1"), now).value).toBeNull();
+  });
+  it("burn", () => {
+    put("runs/.tokens/burn.json", { schema: "oculus-burn/v1", generated_at: "2026-10-24T08:50:00.000Z", tokens: "x", cost_usd: 1 });
+    expect(readBurn({ DIGISMITH_DEPOT_DIR: depot }, now)).toBeNull();
+  });
+  it("seats: a bad seat is dropped, a bad window becomes null", () => {
+    put("usage-probe/seats.json", { schema: "oculus-seats/v1", generated_at: "2026-10-24T08:58:00.000Z", seats: [
+      { seat: 5, read_at: "2026-10-24T08:55:00.000Z", five_hour: null, weekly: null },
+      { seat: "dev0", read_at: "2026-10-24T08:55:00.000Z", five_hour: { used_pct: "7", resets_at: "2026-10-24T12:00:00.000Z" }, weekly: { used_pct: 130, resets_at: "2026-10-24T12:00:00.000Z" } },
+    ] });
+    expect(readSeatsView({ DIGISMITH_DEPOT_DIR: depot }, now)?.seats).toEqual([{ seat: "dev0", readAt: "2026-10-24T08:55:00.000Z", stale: false, fiveHour: null, weekly: null }]);
+  });
+});
