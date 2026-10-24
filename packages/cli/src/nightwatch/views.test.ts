@@ -250,6 +250,14 @@ describe("DGS-598", () => {
     expect(m.ticket).toBeNull();
     expect(m.state).toBe("healthy"); // silent 3 h, but a maestro run is never lost
   });
+  it("project and role filters combine", () => {
+    autoRun("DigiSmith", "s-m1", null, "maestro", "DigiSmith");
+    autoRun("DS-1", "s-b1", "DS-1", "builder", "DigiSmith");
+    autoRun("emma", "s-m2", null, "maestro", "emma-theme");
+    autoRun("EMKT-1", "s-b2", "EMKT-1", "builder", "emma-theme");
+    expect(runsView(d.env, NOW, { project: "DigiSmith", role: "maestro" }).runs.map((r) => r.run)).toEqual(["s-m1"]);
+    expect(runsView(d.env, NOW, { project: "emma-theme", role: "builder" }).runs.map((r) => r.run)).toEqual(["s-b2"]);
+  });
   it("overview and runs skip runs idle for more than 7 days", () => {
     autoRun("DigiSmith", "s-old", null, "maestro", "DigiSmith");
     const t = (NOW.getTime() - 9 * 86_400_000) / 1000;
