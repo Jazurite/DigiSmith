@@ -371,6 +371,48 @@ describe("ClickUpClient domain write/read methods", () => {
     });
   });
 
+  it("setCustomField() sends value_options when given", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: {} });
+
+    await client.setCustomField("abc", "field-uuid", 1793000000000, { time: true });
+
+    expect(request).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/task/abc/field/field-uuid",
+      params: undefined,
+      data: { value: 1793000000000, value_options: { time: true } },
+    });
+  });
+
+  it("getSpaceViews() GETs the space views", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { views: [{ id: "v1", name: "List", type: "list" }] } });
+
+    expect(await client.getSpaceViews("s1")).toEqual([{ id: "v1", name: "List", type: "list" }]);
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/space/s1/view", params: undefined, data: undefined });
+  });
+
+  it("createSpaceView() POSTs the body and returns the view", async () => {
+    const client = makeClient();
+    const body = {
+      name: "Schedule",
+      type: "list" as const,
+      filters: {
+        op: "AND" as const,
+        fields: [{ field: "status", op: "EQ" as const, values: ["scheduled"] }],
+        search: "" as const,
+        show_closed: false as const,
+      },
+      sorting: { fields: [{ field: "cf_f1", dir: 1 as const }] },
+      columns: { fields: [{ field: "cf_f1", hidden: false as const }] },
+    };
+    request.mockResolvedValueOnce({ data: { view: { id: "v9", name: "Schedule", type: "list" } } });
+
+    expect(await client.createSpaceView("s1", body)).toEqual({ id: "v9", name: "Schedule", type: "list" });
+    expect(request).toHaveBeenCalledWith({ method: "POST", url: "/space/s1/view", params: undefined, data: body });
+  });
+
   it("getSpaceFolders() returns folders with their lists", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({
