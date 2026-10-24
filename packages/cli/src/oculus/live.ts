@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
 import { isSafe } from "../run/paths.ts";
-import { listRuns } from "../run/read.ts";
+import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { roleOf } from "../run/role.ts";
 import type { Role } from "../run/schema.ts";
 
@@ -48,14 +48,14 @@ const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? 
 
 // Open runs, the newest per herdr pane and per Claude session id. The session id is only a join key: never output.
 type Open = { run: string; at: string; session: string | null };
-function openRuns(env: NodeJS.ProcessEnv): { byPane: Map<string, Open>; bySession: Map<string, Open> } {
+function openRuns(env: NodeJS.ProcessEnv, now: Date): { byPane: Map<string, Open>; bySession: Map<string, Open> } {
   const pane = new Map<string, Open>();
   const session = new Map<string, Open>();
   const keep = (m: Map<string, Open>, k: string, run: string, at: string, sid: string | null) => {
     const prev = m.get(k);
     if (!prev || at > prev.at) m.set(k, { run, at, session: sid });
   };
-  for (const { record, summary } of listRuns(env)) {
+  for (const { record, summary } of listRuns(env, undefined, { days: LIST_DAYS, nowMs: now.getTime() })) {   // the same window as the other views
     if (summary.ended) continue;
     const sid = typeof record.session_id === "string" && record.session_id !== "" ? record.session_id : null;
     if (record.herdr?.pane) keep(pane, record.herdr.pane, record.run, record.created_at, sid);
@@ -72,7 +72,7 @@ export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, ho
   let raw: unknown;
   try { raw = (JSON.parse(r.stdout) as { result?: { agents?: unknown } }).result?.agents; } catch { return down; }
   if (!Array.isArray(raw)) return down;
-  const runs = openRuns(env);
+  const runs = openRuns(env, now);
   const agents: LiveAgent[] = [];
   for (const a of raw as Record<string, unknown>[]) {
     const pane = str(a?.pane_id);

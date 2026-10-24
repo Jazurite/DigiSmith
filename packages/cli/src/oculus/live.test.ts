@@ -1,5 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
 import { roleOf } from "../run/role.ts";
@@ -133,6 +133,17 @@ describe("liveView", () => {
     expect(runOf("dgs-603")).toBe("fresh");
     expect(runOf("dgs-604")).toBeNull();
     expect(runOf("dgs-605")).toBe("pane-no-session");
+  });
+  it("skips an old never-ended run on a reused pane id (the 7-day window of the other views)", () => {
+    const f = join(d.writeRun({ ticket: "DGS-599", run: "ancient", role: "builder", created_at: "2026-10-01T05:00:00.000Z" }), "run.json");
+    const r = JSON.parse(readFileSync(f, "utf8"));
+    r.herdr.pane = "w2:p1";
+    writeFileSync(f, JSON.stringify(r));
+    d.writeEvents("DGS-599", "ancient", [{ type: "started", ts: "2026-10-01T05:00:00.000Z" }]);
+    const old = new Date("2026-10-01T05:00:00.000Z");
+    for (const n of ["run.json", "events.jsonl"]) utimesSync(join(dirname(f), n), old, old);
+    const v = liveView(d.env, NOW, herdrOf([agent({ name: "dgs-606", pane_id: "w2:p1", agent_session: undefined })]), HOME);
+    expect(v.agents.find((a) => a.name === "dgs-606")?.run).toBeNull();
   });
   it("says unreachable, with no agents, when herdr fails or answers something else", () => {
     for (const h of [() => ({ ok: false as const }), () => ({ ok: true as const, stdout: "not json" }), () => ({ ok: true as const, stdout: "{\"result\":{}}" })]) {
