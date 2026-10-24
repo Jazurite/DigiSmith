@@ -79,7 +79,7 @@
     <li><a href="#start">4. SessionStart without DIGISMITH_RUN_ID</a></li>
     <li><a href="#role">5. Role, project and ticket</a></li>
     <li><a href="#hooks">6. Hooks, guard and cost</a></li>
-    <li><a href="#watchdog">7. Watchdog and dashboard</a></li>
+    <li><a href="#watchdog">7. Watchdog and Oculus</a></li>
     <li><a href="#readme">8. Other changes</a></li>
     <li><a href="#tests">9. Tests without Jack</a></li>
     <li><a href="#first-use">10. First use (after the merge and the plugin update)</a></li>
@@ -89,7 +89,8 @@
 
 <section id="goal">
 <h2>1. Goal</h2>
-<p>Every Claude Code session that has the DigiSmith plugin becomes a Nightwatch run on its own. This includes the Maestro, conductors, workers, Reviewers, Scouts and any other session, in every project. No <code>dg run start</code> is needed. The dashboard and <code>dg run list</code> show every session.</p>
+<p>Every Claude Code session that has the DigiSmith plugin becomes a run on its own. This includes the Maestro, conductors, workers, Reviewers, Scouts and any other session, in every project. No <code>dg run start</code> is needed. Oculus (the dashboard) and <code>dg run list</code> show every session.</p>
+<p><b>Names.</b> The product name is Oculus. DGS-599 renames the dashboard surface, and DGS-604 renames the engine after both merge. This ticket keeps every code name as it is on <code>main</code> today: the <code>nightwatch</code> views, <code>/api/v1/nightwatch</code>, <code>nightwatch-run/v1</code> and the <code>NIGHTWATCH_*</code> env prefix. New env overrides use that prefix too, and DGS-604 renames them later. This avoids a collision with DGS-599 and DGS-604.</p>
 <p>Today a session is a run only when the conductor starts it with <code>dg run start</code> and passes <code>DIGISMITH_RUN_ID</code> (DGS-581, opt-in). Two days of real work left no run.</p>
 <div class="callout">Done when: a fresh conductor, worker, Reviewer and Desktop Maestro session each show up in <code>dg run list</code> with the right role and project, without <code>dg run start</code>. A resumed session continues its run. The watchdog flags no maestro or conductor run.</div>
 </section>
@@ -148,6 +149,7 @@ runs/.index/node-cache/              the node compile cache of the hooks</code><
 
 <section id="role">
 <h2>5. Role, project and ticket</h2>
+<div class="callout"><b>One role rule.</b> DGS-598 owns the role rule. It is one exported function, <code>roleOf</code> in <code>packages/cli/src/run/role.ts</code>, typed <code>roleOf(input: { inHerdr: boolean; looked: boolean; agentName: string | null; maestroIdentity: boolean }): { role: Role; role_from: RoleFrom }</code>. <code>looked</code> is false in the hook and true in the labeller, so inside herdr the hook gets <code>pending</code> and the labeller gets the name rule. It covers every rule in this section (the identity rule and the agent-name table). The hook, the labeller and <code>dg run start</code> use only this function. DGS-599 imports it after this ticket merges and keeps no copy of its own. The function imports nothing outside <code>node:</code> modules, so the hook stays fast.</div>
 <h3>Fast rules (in the hook, file reads only)</h3>
 <ul>
 <li>Outside herdr (<code>HERDR_PANE_ID</code> unset), when one identity card's <code>folder</code> equals the main repo root of the cwd: role <code>maestro</code>, <code>role_from: identity</code>. With no card, or with two cards for the folder: role <code>other</code>, <code>role_from: none</code>. The card files are read with a line regex. This is the same match as <code>findByFolder</code>, without the full validator.</li>
@@ -188,11 +190,11 @@ runs/.index/node-cache/              the node compile cache of the hooks</code><
 </section>
 
 <section id="watchdog">
-<h2>7. Watchdog and dashboard</h2>
+<h2>7. Watchdog and Oculus</h2>
 <ul>
 <li><code>classify</code> (DGS-583) handles only <code>builder</code>, <code>reviewer</code> and <code>scout</code> fully. For <code>maestro</code>, <code>conductor</code> and <code>other</code> it returns only <code>ended</code> or <code>healthy</code>: never blocked, stalled or lost. This also covers old <code>dg run start</code> runs with role <code>other</code>. No phase budget applies to them.</li>
 <li><code>runWatch</code> reads a run's <code>run.json</code> first and skips a run of those three roles before it reads its events. Such a run gets no attention item and no ClickUp comment. An open item that an older pass made for such a run is closed with the note "role not watched".</li>
-<li>Nightwatch views: <code>RunRowView</code> gets <code>project</code> and <code>source</code>. <code>ticket</code> may be <code>null</code>. <code>runs</code> takes a <code>project</code> filter. <code>ROLES</code> in <code>scripts/nexus-shared/nightwatch.ts</code> gets <code>maestro</code> and <code>conductor</code>. The Nexus API runs query takes <code>project</code>. The web run filters get a Project select, filled from the projects in the loaded rows. A <code>null</code> ticket shows as <code>-</code>. Nothing else in the UI changes.</li>
+<li>Oculus reads runs through the <code>nightwatch</code> views (code name kept): <code>RunRowView</code> gets <code>project</code> and <code>source</code>. <code>ticket</code> may be <code>null</code>. <code>runs</code> takes a <code>project</code> filter. <code>ROLES</code> in <code>scripts/nexus-shared/nightwatch.ts</code> gets <code>maestro</code> and <code>conductor</code>. The Nexus API runs query takes <code>project</code>. The Oculus run filters get a Project select, filled from the projects in the loaded rows. A <code>null</code> ticket shows as <code>-</code>. Nothing else in the UI changes.</li>
 </ul>
 <h3>Speed and retention</h3>
 <p>Maestro and conductor runs are many and long, so each read path gets an activity window:</p>
@@ -200,7 +202,7 @@ runs/.index/node-cache/              the node compile cache of the hooks</code><
 <li>"Active within N days" means that the <code>mtime</code> of <code>events.jsonl</code> (else of <code>run.json</code>) is newer than N days. A <code>stat</code> costs far less than reading the events.</li>
 <li><code>dg run list</code> shows runs active within 7 days by default. <code>--days N</code> and <code>--all</code> widen it. The window is checked before any events file is read.</li>
 <li><code>runWatch</code>: unchanged 7-day rule on <code>created_at</code> for the watched roles. Unwatched roles are skipped at the <code>run.json</code> step.</li>
-<li>Nightwatch views <code>overview</code> and <code>runs</code> load only runs active within 7 days. <code>run</code> and <code>events</code> still open any run by id.</li>
+<li>The <code>nightwatch</code> views <code>overview</code> and <code>runs</code> load only runs active within 7 days. <code>run</code> and <code>events</code> still open any run by id.</li>
 <li>No deletion or archive in this ticket. Deletes need Jack. If the folder grows too large later, an archive is a new ticket.</li>
 </ul>
 </section>
@@ -241,7 +243,7 @@ runs/.index/node-cache/              the node compile cache of the hooks</code><
 <li>Start a fresh conductor tab, one worker and one Reviewer without <code>dg run start</code>. Then open the Desktop Maestro. <code>dg run list</code> shows four new runs with roles conductor, builder, reviewer and maestro, and project DigiSmith.</li>
 <li>Resume one of them (<code>claude --resume</code>) and run <code>/clear</code> in another. Each one keeps its run id, and <code>dg run tail</code> shows the extra <code>started</code> event.</li>
 <li><code>dg autonomous watch --dry-run</code> lists no maestro or conductor run.</li>
-<li>One session in an Emma repo shows that repo folder name as its project. The dashboard Project filter shows it.</li>
+<li>One session in an Emma repo shows that repo folder name as its project. The Oculus Project filter shows it.</li>
 </ol>
 </section>
 
