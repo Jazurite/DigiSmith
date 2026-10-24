@@ -2,18 +2,19 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { z } from 'zod'
-import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema, EVENT_GROUPS, HEALTH, ROLES, TRIGGERS } from '../../nexus-shared/oculus.ts'
+import { attentionSchema, eventsSchema, liveSchema, liveViewSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema, EVENT_GROUPS, HEALTH, ROLES, TRIGGERS } from '../../nexus-shared/oculus.ts'
 import { sendJson, type Env } from './app.ts'
 import { ReaderError, type Reader, type ViewArgs, type ViewName } from './oculus-reader.ts'
+import type { SnapshotStore } from './oculus-snapshot.ts'
 import type { JobInfo } from './scheduler/types.ts'
 import { API_VERSION } from './version.ts'
 
 export const OCULUS_PATH = `/api/${API_VERSION}/oculus` as const
 
-export interface OculusDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number }
+export interface OculusDeps { read: Reader; jobs?: () => JobInfo[]; now?: () => number; snapshot?: SnapshotStore }
 
 const WATCHDOG_STALE_MS = 15 * 60_000
-const KNOWN_PATH = new RegExp(`^${OCULUS_PATH}/(overview|attention|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
+const KNOWN_PATH = new RegExp(`^${OCULUS_PATH}/(overview|attention|live|runs|runs/[^/]+|runs/[^/]+/events|plan/[^/]+)$`)
 const ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 export type NexusState = 'healthy' | 'degraded' | 'unknown' | 'breaker-open'
@@ -95,6 +96,23 @@ export function createOculusRoutes(deps: OculusDeps): Hono<Env> {
     const t = id.safeParse(c.req.param('ticket'))
     if (!t.success || !none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
     return serve(c, 'plan', { ticket: t.data }, planSchema)
+  })
+  let lastSaved: string | null = null
+  app.get(`${OCULUS_PATH}/live`, async (c) => {
+    if (!none.safeParse(query(c)).success) return fail(c, 400, 'bad_request')
+    let view: unknown = null
+    try { view = await deps.read('live', {}) } catch { view = null }
+    const v = liveViewSchema.safeParse(view)
+    if (v.success && v.data.herdr === 'ok') {
+      if (deps.snapshot && lastSaved !== v.data.readAt) {
+        if (deps.snapshot.save({ asOf: v.data.readAt, agents: v.data.agents })) lastSaved = v.data.readAt
+        else c.set('errorCode', 'snapshot_write_failed')   // logged as a code; the answer still goes out
+      }
+      return sendJson(c, 200, liveSchema.parse({ readAt: v.data.readAt, herdr: { state: 'connected', asOf: v.data.readAt }, agents: v.data.agents }))
+    }
+    const snap = deps.snapshot?.load() ?? null
+    const readAt = v.success ? v.data.readAt : new Date(now()).toISOString()
+    return sendJson(c, 200, liveSchema.parse({ readAt, herdr: { state: 'disconnected', asOf: snap?.asOf ?? null }, agents: snap?.agents ?? [] }))
   })
   return app
 }

@@ -132,3 +132,41 @@ describe('Oculus prefix (DGS-599)', () => {
     expect((await a.request('/api/v1/nightwatch/overview')).status).toBe(404)
   })
 })
+
+describe('GET /api/v1/oculus/live (DGS-599)', () => {
+  const agent = { name: 'dgs-599', pane: 'w2:p5', tab: 'w2:t5', workspace: 'w2', role: 'builder', project: 'DigiSmith', status: 'working', run: null }
+  const mem = () => { let v: { asOf: string; agents: unknown[] } | null = null; let saves = 0; return { save: (s: { asOf: string; agents: unknown[] }) => { v = s; saves++; return true }, load: () => v as never, saves: () => saves } }
+  const liveApp = (read: Reader, snapshot = mem()) => { const a = new Hono<Env>(); a.route('/', createOculusRoutes({ read, now: () => NOW, snapshot: snapshot as never })); return { a, snapshot } }
+
+  it('connected: answers the agents and saves the snapshot once per readAt', async () => {
+    const { a, snapshot } = liveApp(async () => ({ readAt: '2026-10-22T03:00:00.000Z', herdr: 'ok', agents: [agent] }))
+    const r = await a.request('/api/v1/oculus/live')
+    expect(r.status).toBe(200)
+    expect(await r.json()).toEqual({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'connected', asOf: '2026-10-22T03:00:00.000Z' }, agents: [agent] })
+    await a.request('/api/v1/oculus/live')
+    expect(snapshot.saves()).toBe(1)
+  })
+  it('herdr unreachable: 200 with the last snapshot and its time', async () => {
+    const snap = mem(); snap.save({ asOf: '2026-10-22T02:30:00.000Z', agents: [agent] })
+    const { a } = liveApp(async () => ({ readAt: '2026-10-22T03:00:00.000Z', herdr: 'unreachable', agents: [] }), snap)
+    expect(await (await a.request('/api/v1/oculus/live')).json()).toEqual({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'disconnected', asOf: '2026-10-22T02:30:00.000Z' }, agents: [agent] })
+  })
+  it('reader failure: the same disconnected answer; no snapshot yet: no agents and asOf null', async () => {
+    const { a } = liveApp(async () => { throw new ReaderError('reader_unavailable') })
+    const r = await a.request('/api/v1/oculus/live')
+    expect(r.status).toBe(200)
+    expect(await r.json()).toEqual({ readAt: new Date(NOW).toISOString(), herdr: { state: 'disconnected', asOf: null }, agents: [] })
+  })
+  it('an answer that does not fit the schema counts as disconnected and is never saved', async () => {
+    const { a, snapshot } = liveApp(async () => ({ readAt: '2026-10-22T03:00:00.000Z', herdr: 'ok', agents: [{ ...agent, terminal_title: 'secret' }] }))
+    const body = await (await a.request('/api/v1/oculus/live')).json()
+    expect(body.herdr.state).toBe('disconnected')
+    expect(JSON.stringify(body)).not.toContain('secret')
+    expect(snapshot.saves()).toBe(0)
+  })
+  it('400 on any query, 405 on POST', async () => {
+    const { a } = liveApp(async () => ({ readAt: '2026-10-22T03:00:00.000Z', herdr: 'ok', agents: [] }))
+    expect((await a.request('/api/v1/oculus/live?x=1')).status).toBe(400)
+    expect((await a.request('/api/v1/oculus/live', { method: 'POST' })).status).toBe(405)
+  })
+})

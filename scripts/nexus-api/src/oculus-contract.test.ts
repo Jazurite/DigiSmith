@@ -2,9 +2,10 @@
 import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { liveView } from '../../../packages/cli/src/oculus/live.ts'
 import { makeDepot, type Depot } from '../../../packages/cli/src/oculus/fixture.test-util.ts'
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from '../../../packages/cli/src/oculus/views.ts'
-import { attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
+import { liveSchema, liveViewSchema, attentionSchema, eventsSchema, overviewViewSchema, planSchema, runDetailSchema, runsSchema } from '../../nexus-shared/oculus.ts'
 
 const NOW = new Date('2026-10-22T03:00:00.000Z')
 let d: Depot
@@ -43,5 +44,21 @@ describe('view output parses with the shared schemas', () => {
     expect(attentionSchema.parse(attentionView(d.env, NOW)).open).toHaveLength(1)
     expect(runDetailSchema.parse(runView(d.env, NOW, { run: 'builder-1' }))).toBeTruthy()
     expect(eventsSchema.parse(eventsView(d.env, { run: 'builder-1' })).lines).toHaveLength(2)
+  })
+})
+
+describe('live schemas (DGS-599)', () => {
+  const agent = { name: 'dgs-599', pane: 'w2:p5', tab: 'w2:t5', workspace: 'w2', role: 'builder', project: 'DigiSmith', status: 'working', run: null }
+  it('the CLI live view output parses with liveViewSchema', () => {
+    const herdr = () => ({ ok: true as const, stdout: JSON.stringify({ result: { agents: [{ pane_id: 'w2:p5', tab_id: 'w2:t5', workspace_id: 'w2', name: 'dgs-599', agent_status: 'working', terminal_title: 'secret', cwd: '/Users/x/Workspace/Jazurite/DigiSmith' }] } }) })
+    const v = liveView(d.env, NOW, herdr, '/Users/x')
+    expect(liveViewSchema.parse(v).agents[0]).toMatchObject({ pane: 'w2:p5', role: 'builder', status: 'working' })
+    expect(JSON.stringify(v)).not.toContain('secret')
+    expect(liveViewSchema.parse(liveView(d.env, NOW, () => ({ ok: false }))).herdr).toBe('unreachable')
+  })
+  it('liveSchema parses connected and disconnected answers and rejects an extra agent field', () => {
+    expect(liveSchema.parse({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'connected', asOf: '2026-10-22T03:00:00.000Z' }, agents: [agent] })).toBeTruthy()
+    expect(liveSchema.parse({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'disconnected', asOf: null }, agents: [] })).toBeTruthy()
+    expect(liveSchema.safeParse({ readAt: '2026-10-22T03:00:00.000Z', herdr: { state: 'connected', asOf: null }, agents: [{ ...agent, terminal_title: 'x' }] }).success).toBe(false)
   })
 })

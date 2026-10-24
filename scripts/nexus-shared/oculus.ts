@@ -93,3 +93,21 @@ export const planSchema = z.strictObject({
 export type Plan = z.infer<typeof planSchema>
 
 export const oculusErrorSchema = z.strictObject({ error: z.enum(OCULUS_ERROR_CODES), message: z.string().optional() })
+
+// DGS-599: the live herdr agent list. Matches packages/cli/src/oculus/live.ts (pinned by oculus-contract.test.ts).
+export const AGENT_STATUSES = ['working', 'idle', 'blocked', 'done', 'unknown'] as const
+export const AGENT_ROLES = ['maestro', 'conductor', 'builder', 'reviewer', 'scout', 'other'] as const
+const label = z.string().max(64)
+export const liveAgentSchema = z.strictObject({
+  name: label.nullable(), pane: label, tab: label.nullable(), workspace: label.nullable(),
+  role: z.enum(AGENT_ROLES), project: z.string().nullable(), status: z.enum(AGENT_STATUSES), run: z.string().nullable(),
+})
+export type LiveAgent = z.infer<typeof liveAgentSchema>
+export const liveViewSchema = z.strictObject({ readAt: iso, herdr: z.enum(['ok', 'unreachable']), agents: z.array(liveAgentSchema) })
+export const liveSnapshotSchema = z.strictObject({ asOf: iso, agents: z.array(liveAgentSchema) })
+export const liveSchema = z.strictObject({
+  readAt: iso,
+  herdr: z.strictObject({ state: z.enum(['connected', 'disconnected']), asOf: iso.nullable() }),
+  agents: z.array(liveAgentSchema),
+})
+export type Live = z.infer<typeof liveSchema>

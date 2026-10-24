@@ -17,6 +17,7 @@ import { createClickupNotifier } from './scheduler/notify.ts'
 import { JOBS } from './scheduler/registry.ts'
 import type { JobDef } from './scheduler/types.ts'
 import { createReader } from './oculus-reader.ts'
+import { createSnapshotStore, snapshotDir, webRootsOf } from './oculus-snapshot.ts'
 import { stateDir } from './scheduler/runlog.ts'
 
 export const HOST = '127.0.0.1'
@@ -71,6 +72,7 @@ export interface NexusOptions {
   stateDir: string
   dg: { file: string; args: string[] }
   jobs?: readonly JobDef[]
+  depot?: string
 }
 
 export async function startNexus(opts: NexusOptions): Promise<{ server: Server; scheduler: boolean; stop: () => Promise<void> }> {
@@ -89,7 +91,8 @@ export async function startNexus(opts: NexusOptions): Promise<{ server: Server; 
     engine = null
   }
   const eng = engine
-  const oculus = { read: createReader(), ...(eng ? { jobs: () => eng.snapshot() } : {}) }
+  const depot = opts.depot ?? join(homedir(), '.digismith-depot')
+  const oculus = { read: createReader(), snapshot: createSnapshotStore(snapshotDir(depot), { webRoots: webRootsOf(depot) }), ...(eng ? { jobs: () => eng.snapshot() } : {}) }
   const server = createApiServer(opts.getReading, { logger, ...(opts.loadProfile ? { loadProfile: opts.loadProfile } : {}), ...(jobs ? { jobs } : {}), oculus })
   const running = engine
   return { server, scheduler: running !== null, stop: () => (running ? running.stop() : Promise.resolve()) }
@@ -111,7 +114,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const dg = { file: process.execPath, args: ['--experimental-strip-types', join(depot, 'repo', 'packages', 'cli', 'src', 'index.ts')] }
   // test-only switch: a module exporting JOBS replaces the real registry; unset in production
   const jobs = process.env.NEXUS_JOBS_MODULE ? ((await import(pathToFileURL(process.env.NEXUS_JOBS_MODULE).href)) as { JOBS: readonly JobDef[] }).JOBS : undefined
-  const nexus = await startNexus({ getReading: createDefaultReader(), logger, loadProfile, stateDir: dir, dg, ...(jobs ? { jobs } : {}) })
+  const nexus = await startNexus({ getReading: createDefaultReader(), logger, loadProfile, stateDir: dir, dg, depot, ...(jobs ? { jobs } : {}) })
   const server = nexus.server
   const shutdown = createShutdown({
     stop: () => nexus.stop(),

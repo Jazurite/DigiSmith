@@ -9,7 +9,7 @@ export const DEFAULT_ENTRY = join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'ind
 // The flags `dg oculus view` accepts (packages/cli/src/oculus/index.ts VALUE_FLAGS).
 const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'project', 'limit'])
 
-export type ViewName = 'overview' | 'attention' | 'runs' | 'run' | 'events' | 'plan'
+export type ViewName = 'overview' | 'attention' | 'runs' | 'run' | 'events' | 'plan' | 'live'
 export type ViewArgs = Record<string, string | number | undefined>
 export type Reader = (view: ViewName, args?: ViewArgs) => Promise<unknown>
 
