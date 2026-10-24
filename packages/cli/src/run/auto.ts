@@ -32,9 +32,12 @@ function continuable(dir: string): boolean {
 export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessEnv, now: Date = new Date()): AutoRun | null {
   const sid = sessionOf(payload);
   if (sid === null || !fs.existsSync(depotDir(env))) return null;
-  const known = readSessionIndex(env, sid);
-  if (known) return { dir: known, run: path.basename(known), created: false, needsLabel: false };
   const pid = env.CLAUDE_PID && /^\d+$/.test(env.CLAUDE_PID) ? env.CLAUDE_PID : null;
+  const known = readSessionIndex(env, sid);
+  if (known) {
+    if (pid) writePidIndex(env, pid, relOf(known), sid); // a resume in a new process: a later /clear there continues
+    return { dir: known, run: path.basename(known), created: false, needsLabel: false };
+  }
   if (payload.source === "clear" && pid) {
     const prev = readPidIndex(env, pid);
     if (prev && continuable(prev.dir)) {
@@ -46,7 +49,8 @@ export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessE
   const info = repoInfo(payload.cwd);
   const ticket = ticketOfBranch(info.branch);
   const inHerdr = Boolean(env.HERDR_PANE_ID);
-  const r = roleOf({ inHerdr, looked: false, agentName: null, maestroIdentity: !inHerdr && maestroIdentityAt(info.root, env) });
+  const headless = env.CLAUDE_CODE_ENTRYPOINT === "sdk-cli";
+  const r = roleOf({ headless, inHerdr, looked: false, agentName: null, maestroIdentity: !inHerdr && maestroIdentityAt(info.root, env) });
   const run = `s-${sid}`;
   const folder = ticket ?? info.project;
   const dir = path.join(runsDir(env), folder, run);

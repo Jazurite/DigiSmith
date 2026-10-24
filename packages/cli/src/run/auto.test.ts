@@ -65,6 +65,21 @@ describe("startAuto", () => {
     expect(a.needsLabel).toBe(true);
     expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "pending", herdr: { workspace: "w2", tab: "w2:t8W", pane: "w2:p8W" } });
   });
+  it("a claude -p child (CLAUDE_CODE_ENTRYPOINT=sdk-cli) is other, none, with no labeller, in herdr and at a Maestro folder", () => {
+    const a = start({ session_id: "sid-p1", source: "startup" }, { ...env, CLAUDE_CODE_ENTRYPOINT: "sdk-cli", HERDR_PANE_ID: "w2:p8W" })!;
+    expect(a.needsLabel).toBe(false);
+    expect(readRun(a.dir)).toMatchObject({ role: "other", role_from: "none" });
+    fs.mkdirSync(path.join(depot, "identities"));
+    fs.writeFileSync(path.join(depot, "identities", "m.yml"), `folder: ${repo}\n`);
+    expect(readRun(start({ session_id: "sid-p2", source: "startup" }, { ...env, CLAUDE_CODE_ENTRYPOINT: "sdk-cli" })!.dir)).toMatchObject({ role: "other", role_from: "none" });
+    expect(readRun(start({ session_id: "sid-p3", source: "startup" }, { ...env, CLAUDE_CODE_ENTRYPOINT: "cli" })!.dir)).toMatchObject({ role: "maestro", role_from: "identity" });
+  });
+  it("a resume in a new claude process, then a /clear there, continues the run", () => {
+    const a = start({ session_id: "sid-r1", source: "startup" })!;
+    expect(start({ session_id: "sid-r1", source: "resume" }, { ...env, CLAUDE_PID: "5151" })!.run).toBe("s-sid-r1");
+    appendEvent(a.dir, a.run, "ended", { reason: "clear", session_id: "sid-r1" }, 2000);
+    expect(start({ session_id: "sid-r2", source: "clear" }, { ...env, CLAUDE_PID: "5151" })).toEqual({ dir: a.dir, run: "s-sid-r1", created: false, needsLabel: false });
+  });
   it("a resume (same session_id) continues the run", () => {
     const a = start({ session_id: "sid-5", source: "startup" })!;
     expect(start({ session_id: "sid-5", source: "resume" })).toEqual({ dir: a.dir, run: "s-sid-5", created: false, needsLabel: false });
