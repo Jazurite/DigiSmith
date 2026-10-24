@@ -63,7 +63,7 @@ If the counter file is missing, the writer counts the lines of `events.jsonl` in
 
 Every hook event carries the `session_id` of the session that fired it (an id or null), so an `ended` from a child `claude -p` session that inherits `DIGISMITH_RUN_ID` can be told apart.
 
-Each command starts node only when `DIGISMITH_RUN_ID` is set or the depot folder exists, and sets `NODE_COMPILE_CACHE` to `runs/.index/node-cache`. A machine without the depot starts no node process. Each hook stays under 100 ms (`scripts/run-events/hook-timing.test.ts`).
+Each command starts node only when `DIGISMITH_RUN_ID` is set or the depot folder exists, and sets `NODE_COMPILE_CACHE` to `runs/.index/node-cache`. A machine without the depot starts no node process. The target is under 100 ms per hook on an idle machine. `scripts/run-events/hook-timing.test.ts` asserts that a hook costs 40 ms or less above a bare node start, and prints both numbers.
 The script also writes nothing when the run directory has no `run.json`.
 A hook always exits 0 and prints nothing.
 A hook never writes message text, prompts, tool inputs or tool outputs.
