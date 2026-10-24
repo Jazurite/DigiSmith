@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { randomBytes } from "node:crypto";
-import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
+import type { ClickUpTaskType, MoveListTarget, FrontdoorField, FrontdoorFieldWithLocations, FrontdoorFieldPutBody, FrontdoorFieldCreateBody, FrontdoorTaskTypeBody, FrontdoorStatus, FrontdoorStatusSetBody } from "./types.ts";
 import { isAxiosLike, toApiError } from "./errors.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 import { RenewalError, isDue, renewSession, tokenExpiry } from "./frontdoor-session.ts";
@@ -187,6 +187,11 @@ export class FrontdoorClient {
 
   getField(id: string): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("GET", `/customFields/v2/field/${id}`);
+  }
+
+  /** The field with its locations (where it shows). Read only. */
+  getFieldLocations(id: string): Promise<FrontdoorFieldWithLocations> {
+    return this.request<FrontdoorFieldWithLocations>("GET", `/customFields/v2/field/${id}?locations=true`);
   }
 
   /** How many tasks hold one option of a dropdown (the web app asks before a removal). Read only; ClickUp answers a string. Throws on anything but a whole number >= 0, so a caller never reads a bad answer as zero. */

@@ -83,6 +83,13 @@ describe("FrontdoorClient", () => {
     expect(field.name).toBe("Bucket");
   });
 
+  it("getFieldLocations asks for the locations", async () => {
+    const client = makeClient();
+    request.mockResolvedValueOnce({ data: { id: "f1", name: "Sign-off", type: "drop_down", type_config: {}, locations: [] } });
+    await client.getFieldLocations("f1");
+    expect(request).toHaveBeenCalledWith({ method: "GET", url: "/customFields/v2/field/f1?locations=true", data: undefined });
+  });
+
   it("getFieldValueCount reads value_count for one option as a number", async () => {
     const client = makeClient();
     request.mockResolvedValueOnce({ data: { id: "f1", value_count: "3" } });

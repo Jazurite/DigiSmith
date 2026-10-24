@@ -337,6 +337,11 @@ export interface FrontdoorField {
   groups: unknown[];
 }
 
+/** A field read with ?locations=true: where it shows. */
+export interface FrontdoorFieldWithLocations extends FrontdoorField {
+  locations?: unknown[];
+}
+
 /**
  * Body of the web app's PUT /customFields/v2/field/{id} (captured 2026-10-10): the full
  * field, not a patch. Options are sent as add / update / rem, never as a plain list.
