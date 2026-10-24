@@ -4,9 +4,13 @@ import { join } from "node:path";
 import { buildHerdrCall, herdrPaneLookup } from "./pane.ts";
 
 describe("herdrPaneLookup", () => {
-  it("returns the pane ids", async () => {
-    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1"},{"pane_id":"w2:p7P"}]}}' }));
-    expect(await lookup("w2")).toEqual(new Set(["w2:p1", "w2:p7P"]));
+  it("returns pane ids with their agent_status", async () => {
+    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1","agent_status":"blocked"},{"pane_id":"w2:p7P","agent_status":"done"}]}}' }));
+    expect(await lookup("w2")).toEqual(new Map([["w2:p1", "blocked"], ["w2:p7P", "done"]]));
+  });
+  it("gives a pane with a missing or non-string agent_status the status unknown", async () => {
+    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1"},{"pane_id":"w2:p2","agent_status":7},{"pane_id":"w2:p3","agent_status":null}]}}' }));
+    expect(await lookup("w2")).toEqual(new Map([["w2:p1", "unknown"], ["w2:p2", "unknown"], ["w2:p3", "unknown"]]));
   });
   it("returns null for a non-zero code, non-JSON, a missing list and a throw", async () => {
     expect(await herdrPaneLookup(async () => ({ code: 1, stdout: "{}" }))("w2")).toBeNull();
@@ -15,8 +19,8 @@ describe("herdrPaneLookup", () => {
     expect(await herdrPaneLookup(async () => { throw new Error("boom"); })("w2")).toBeNull();
   });
   it("skips a pane entry without a string pane_id", async () => {
-    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1"},{},{"pane_id":null},{"pane_id":7}]}}' }));
-    expect(await lookup("w2")).toEqual(new Set(["w2:p1"]));
+    const lookup = herdrPaneLookup(async () => ({ code: 0, stdout: '{"result":{"panes":[{"pane_id":"w2:p1","agent_status":"idle"},{},{"pane_id":null},{"pane_id":7}]}}' }));
+    expect(await lookup("w2")).toEqual(new Map([["w2:p1", "idle"]]));
   });
   it("passes the workspace to the exec", async () => {
     const seen: string[] = [];

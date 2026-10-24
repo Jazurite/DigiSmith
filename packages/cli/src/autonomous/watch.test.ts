@@ -16,6 +16,7 @@ let cwd: string;
 let env: NodeJS.ProcessEnv;
 let calls: string[][];
 let present: Set<string> | null;
+let status: Map<string, string>; // pane -> herdr agent_status; a pane not listed reads "unknown", which keeps a prompt blocked
 
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "nw-watch-"));
@@ -25,6 +26,7 @@ beforeEach(() => {
   env = { DIGISMITH_DEPOT_DIR: join(tmp, "depot"), AUTONOMOUS_DIR: dir };
   calls = [];
   present = new Set();
+  status = new Map();
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
@@ -42,7 +44,7 @@ const addEvent = (run: string, m: number, type: string, seq: number): void => {
 
 const deps = (over: Partial<WatchDeps> = {}): WatchDeps => ({
   env, dir, cwd, now: () => NOW,
-  panes: async () => present,
+  panes: async () => (present ? new Map([...present].map((p) => [p, status.get(p) ?? "unknown"] as [string, string])) : null),
   runDg: async (args) => { calls.push(args); return { ok: true }; },
   dryRun: false,
   ...over,

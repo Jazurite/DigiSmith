@@ -102,7 +102,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     open({ ticket: null, run: "-", kind: "failed", cause: "bad-budget-config", since: nowIso });
   }
 
-  const paneCache = new Map<string, Set<string> | null>();
+  const paneCache = new Map<string, ReadonlyMap<string, string> | null>();
   const paneOf = async (ws: string | null, pane: string | null): Promise<Pane> => {
     if (!ws || !pane) return "unknown";
     if (!paneCache.has(ws)) paneCache.set(ws, await d.panes(ws));
