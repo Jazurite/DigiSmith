@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { UsageRecord } from "./types.ts";
 
@@ -40,45 +40,104 @@ function rawFlags(usage: Record<string, unknown>): Record<string, unknown> {
   return flags;
 }
 
+export function parseUsageLine(raw: string, sessionFallback: string, fileAgentId: string | null, fallbackId: string): UsageRecord | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isObject(parsed)) return null;
+  const o = parsed as Line;
+  const m = o.message;
+  if (o.type !== "assistant" || !isObject(m) || !isObject(m.usage) || typeof m.model !== "string" || !m.model || m.model === "<synthetic>") return null;
+  const u = m.usage;
+  const split = isObject(u.cache_creation) ? u.cache_creation : undefined;
+  // A usage object with any invalid consumed count (not a finite, non-negative number) is skipped whole.
+  const counts = [u.input_tokens, u.output_tokens, u.cache_read_input_tokens, u.cache_creation_input_tokens, split?.ephemeral_5m_input_tokens, split?.ephemeral_1h_input_tokens];
+  if (!counts.every(validCount)) return null;
+  const total = u.cache_creation_input_tokens ?? 0;
+  return {
+    source: "claude-code",
+    session_id: typeof o.sessionId === "string" ? o.sessionId : sessionFallback,
+    agent_id: typeof o.agentId === "string" && o.agentId ? o.agentId : fileAgentId,
+    response_id: typeof m.id === "string" && m.id && typeof o.requestId === "string" && o.requestId ? `${m.id}|${o.requestId}` : fallbackId,
+    model: m.model,
+    ts: typeof o.timestamp === "string" ? o.timestamp : "",
+    input: u.input_tokens ?? 0,
+    output: u.output_tokens ?? 0,
+    cache_read: u.cache_read_input_tokens ?? 0,
+    cache_write_5m: split ? (split.ephemeral_5m_input_tokens ?? 0) : total,
+    cache_write_1h: split ? (split.ephemeral_1h_input_tokens ?? 0) : 0,
+    write_split: split ? "known" : "unknown",
+    raw_flags: rawFlags(u),
+  };
+}
+
 function parseFile(path: string, sessionFallback: string, into: Map<string, UsageRecord>, fileAgentId: string | null = null): void {
   const lines = readFileSync(path, "utf-8").split("\n");
   for (let index = 0; index < lines.length; index++) {
-    const raw = lines[index];
-    if (!raw) continue;
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      continue;
-    }
-    if (!isObject(parsed)) continue;
-    const o = parsed as Line;
-    const m = o.message;
-    if (o.type !== "assistant" || !isObject(m) || !isObject(m.usage) || typeof m.model !== "string" || !m.model || m.model === "<synthetic>") continue;
-    const u = m.usage;
-    const split = isObject(u.cache_creation) ? u.cache_creation : undefined;
-    // A usage object with any invalid consumed count (not a finite, non-negative number) is skipped whole.
-    const counts = [u.input_tokens, u.output_tokens, u.cache_read_input_tokens, u.cache_creation_input_tokens, split?.ephemeral_5m_input_tokens, split?.ephemeral_1h_input_tokens];
-    if (!counts.every(validCount)) continue;
-    const total = u.cache_creation_input_tokens ?? 0;
-    const record: UsageRecord = {
-      source: "claude-code",
-      session_id: typeof o.sessionId === "string" ? o.sessionId : sessionFallback,
-      agent_id: typeof o.agentId === "string" && o.agentId ? o.agentId : fileAgentId,
-      response_id: typeof m.id === "string" && m.id && typeof o.requestId === "string" && o.requestId ? `${m.id}|${o.requestId}` : `line|${path}|${index}`,
-      model: m.model,
-      ts: typeof o.timestamp === "string" ? o.timestamp : "",
-      input: u.input_tokens ?? 0,
-      output: u.output_tokens ?? 0,
-      cache_read: u.cache_read_input_tokens ?? 0,
-      cache_write_5m: split ? (split.ephemeral_5m_input_tokens ?? 0) : total,
-      cache_write_1h: split ? (split.ephemeral_1h_input_tokens ?? 0) : 0,
-      write_split: split ? "known" : "unknown",
-      raw_flags: rawFlags(u),
-    };
+    const record = lines[index] ? parseUsageLine(lines[index], sessionFallback, fileAgentId, `line|${path}|${index}`) : null;
+    if (!record) continue;
     const prior = into.get(record.response_id);
     if (!prior || record.output >= prior.output) into.set(record.response_id, record);
   }
+}
+
+export interface FileCursor { offset: number; size: number; ino: number }
+
+const CHUNK = 64 * 1024;
+const MAX_LINE = 1024 * 1024;
+
+// Reads the full lines after the cursor. A half-written last line waits for the next call.
+export function readUsageFrom(path: string, prior: FileCursor | null, sessionFallback: string, fileAgentId: string | null): { records: UsageRecord[]; cursor: FileCursor; restarted: boolean } {
+  const st = statSync(path);
+  const restarted = prior === null || prior.ino !== st.ino || st.size < prior.offset;
+  const start = prior === null || restarted ? 0 : prior.offset;
+  let offset = start;
+  const name = basename(path);
+  const records: UsageRecord[] = [];
+  const fd = openSync(path, "r");
+  try {
+    let pending: Buffer[] = [];
+    let pendingLen = 0;
+    let lineStart = offset;
+    let skipping = false;
+    const buf = Buffer.alloc(CHUNK);
+    let pos = offset;
+    for (;;) {
+      const n = readSync(fd, buf, 0, CHUNK, pos);
+      if (n === 0) break;
+      let from = 0;
+      for (let i = 0; i < n; i++) {
+        if (buf[i] !== 0x0a) continue;
+        if (!skipping) {
+          const raw = Buffer.concat([...pending, buf.subarray(from, i)]).toString("utf-8");
+          const r = raw ? parseUsageLine(raw, sessionFallback, fileAgentId, `line|${name}|${lineStart}`) : null;
+          if (r) records.push(r);
+        }
+        pending = [];
+        pendingLen = 0;
+        skipping = false;
+        from = i + 1;
+        lineStart = pos + i + 1;
+        offset = lineStart;
+      }
+      if (!skipping && from < n) {
+        pending.push(Buffer.from(buf.subarray(from, n)));
+        pendingLen += n - from;
+        if (pendingLen > MAX_LINE) {
+          skipping = true;
+          pending = [];
+          pendingLen = 0;
+        }
+      }
+      pos += n;
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return { records, cursor: { offset, size: st.size, ino: st.ino }, restarted };
 }
 
 export function readClaudeCodeSession(transcriptPath: string): UsageRecord[] {
