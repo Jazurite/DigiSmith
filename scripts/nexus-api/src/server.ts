@@ -44,6 +44,11 @@ export function createDefaultReader(run?: RunPowermetrics): () => Promise<PowerM
   }
 }
 
+// The one default depot: DIGISMITH_DEPOT, else ~/.digismith-depot.
+export function defaultDepot(env: NodeJS.ProcessEnv = process.env): string {
+  return env.DIGISMITH_DEPOT ?? join(homedir(), '.digismith-depot')
+}
+
 export interface ShutdownDeps {
   stop: () => Promise<void>
   close: (done: () => void) => void
@@ -91,7 +96,7 @@ export async function startNexus(opts: NexusOptions): Promise<{ server: Server; 
     engine = null
   }
   const eng = engine
-  const depot = opts.depot ?? join(homedir(), '.digismith-depot')
+  const depot = opts.depot ?? defaultDepot()
   const oculus = { read: createReader(), snapshot: createSnapshotStore(snapshotDir(depot), { webRoots: webRootsOf(depot) }), ...(eng ? { jobs: () => eng.snapshot() } : {}) }
   const server = createApiServer(opts.getReading, { logger, ...(opts.loadProfile ? { loadProfile: opts.loadProfile } : {}), ...(jobs ? { jobs } : {}), oculus })
   const running = engine
@@ -101,7 +106,7 @@ export async function startNexus(opts: NexusOptions): Promise<{ server: Server; 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const port = parsePort(process.env.PORT)
   const logger = createLogger()
-  const depot = process.env.DIGISMITH_DEPOT ?? join(homedir(), '.digismith-depot')
+  const depot = defaultDepot()
   const loadProfile = createProfileLoader({
     dataDir: join(depot, 'nexus', 'db'),
     // lazy, so a missing key makes the calendar route answer 503 key_unavailable and never stops the server from starting

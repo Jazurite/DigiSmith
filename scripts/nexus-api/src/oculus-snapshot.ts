@@ -2,7 +2,7 @@
 // DGS-599: the last good herdr agent list, so Oculus can show it (marked disconnected) during a herdr outage, also on a fresh page load.
 // Lives in $DEPOT/nexus/state/, never under a web root (nexus/www, nexus/oculus are what Caddy serves and build-www.sh switches).
 import { chmodSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve, sep } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { liveSnapshotSchema, type LiveAgent } from '../../nexus-shared/oculus.ts'
 
 export interface Snapshot { asOf: string; agents: LiveAgent[] }
@@ -18,7 +18,7 @@ function real(p: string): string {
   for (;;) {
     try { return join(realpathSync(cur), ...rest.reverse()) } catch { /* not there yet */ }
     const up = dirname(cur); if (up === cur) return resolve(p)
-    rest.push(cur.slice(up.length + 1)); cur = up
+    rest.push(basename(cur)); cur = up
   }
 }
 const inside = (child: string, parent: string): boolean => (child + sep).startsWith(parent + sep)

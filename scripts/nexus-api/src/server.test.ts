@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import { API_VERSION } from './version.ts'
-import { createApiServer, HOST, parsePort, startNexus } from './server.ts'
+import { createApiServer, defaultDepot, HOST, parsePort, startNexus } from './server.ts'
 import { createLogger } from './logger.ts'
 import { defineJob } from './scheduler/registry.ts'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { PowerMetrics } from './types.ts'
 import { buildReading } from './reading.ts'
@@ -84,12 +84,20 @@ describe('server', () => {
   })
 })
 
+describe('defaultDepot', () => {
+  it('reads DIGISMITH_DEPOT and falls back to ~/.digismith-depot', () => {
+    expect(defaultDepot({ DIGISMITH_DEPOT: '/x/depot' })).toBe('/x/depot')
+    expect(defaultDepot({})).toBe(join(homedir(), '.digismith-depot'))
+  })
+})
+
 describe('startNexus', () => {
   const dg = { file: '/nonexistent/dg', args: [] }
   const testJobs = [defineJob({ name: 'test-only', description: 'never runs here', command: { file: process.execPath, args: ['-e', ''] } })]
   async function boot(dir: string) {
     const lines: string[] = []
-    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg, jobs: testJobs })
+    // a temp depot, so no test can reach the real depot through the live snapshot
+    const nexus = await startNexus({ getReading: async () => reading, logger: createLogger(l => lines.push(l)), stateDir: dir, dg, jobs: testJobs, depot: mkdtempSync(join(tmpdir(), 'nexus-depot-')) })
     server = nexus.server
     await new Promise<void>(r => server!.listen(0, HOST, r))
     const { port } = server.address() as AddressInfo
