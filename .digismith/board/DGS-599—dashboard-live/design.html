@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DGS-599 Dashboard: /dashboard/ and the Live panel</title>
+<title>DGS-599 Bastion: /bastion/ and the Live panel</title>
 <style>
   :root {
     --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
@@ -63,10 +63,10 @@
 
 <header class="doc-head">
   <span class="badge">waiting for Jack's approval</span>
-  <h1>DGS-599 Dashboard: /dashboard/ titled DigiSmith, a Live panel of every herdr agent, role and project filters</h1>
+  <h1>DGS-599 Bastion: /bastion/ titled DigiSmith Bastion, a Live panel of every herdr agent, role and project filters</h1>
   <div class="meta">
-    <span>Date: 2026-10-24 12:15 UTC+7 (05:15 UTC)</span>
-    <span>Ticket: DGS-599 (J.6 Dashboard, DGS-597)</span>
+    <span>Date: 2026-10-24 12:15 UTC+7 (05:15 UTC), revised for the name Bastion</span>
+    <span>Ticket: DGS-599 (J.6 Bastion, was J.6 Dashboard; DGS-597)</span>
   </div>
 </header>
 
@@ -74,11 +74,12 @@
   <h2>Contents</h2>
   <ol>
     <li><a href="#goal">Goal</a></li>
-    <li><a href="#rename">Rename to /dashboard/</a></li>
+    <li><a href="#rename">Rename to /bastion/ (Bastion)</a></li>
     <li><a href="#live">The Live panel</a></li>
     <li><a href="#source">Data source: herdr, read-only</a></li>
     <li><a href="#runs">Runs page: role and project</a></li>
     <li><a href="#errors">Errors and privacy</a></li>
+    <li><a href="#sidebar">Side bar edge fix</a></li>
     <li><a href="#order">Build order</a></li>
     <li><a href="#tests">Tests without Jack</a></li>
     <li><a href="#firstuse">First use</a></li>
@@ -88,30 +89,31 @@
 
 <section id="goal">
 <h2>1. Goal</h2>
-<p>Jack, 2026-10-24: the dashboard is DigiSmith's control room for the whole factory ("this is not a night watch"); "I want all those on the whole herdr panel". This ticket does three things:</p>
+<p>Jack, 2026-10-24: the dashboard is DigiSmith's control room for the whole factory ("this is not a night watch"); "I want all those on the whole herdr panel". Jack named it <b>Bastion</b> (lineage J.6: Bastion). This ticket does four things:</p>
 <ol>
-  <li>The pages move from <code>/nightwatch/</code> to <code>/dashboard/</code>, titled "DigiSmith".</li>
+  <li>The pages move from <code>/nightwatch/</code> to <code>/bastion/</code>, titled "DigiSmith Bastion".</li>
   <li>A new Live page and a top-bar count show every herdr agent on the Workbox, in all workspaces.</li>
   <li>The Runs page gets role and project filters. Maestro and conductor runs show without health flags.</li>
+  <li>The side bar no longer touches the left window edge (section 7).</li>
 </ol>
-<p>Out of scope: new run data (DGS-598 makes every session a run), pane text, any action on an agent (the dashboard stays read-only).</p>
+<p>Out of scope: new run data (DGS-598 makes every session a run), pane text, any action on an agent (Bastion stays read-only).</p>
 </section>
 
 <section id="rename">
-<h2>2. Rename to /dashboard/</h2>
+<h2>2. Rename to /bastion/ (Bastion)</h2>
 <ul>
-  <li>Pages move: <code>/dashboard/</code> (Operations), <code>/dashboard/live/</code> (new), <code>/dashboard/attention/</code>, <code>/dashboard/runs/</code>, <code>/dashboard/run/</code>, <code>/dashboard/plan/</code>.</li>
-  <li>The brand in the side bar and the page titles say "DigiSmith" (for example "Runs · DigiSmith"). The nav landmark is named "Dashboard".</li>
-  <li>Each old page <code>/nightwatch/…</code> stays as a small redirect page to the same page under <code>/dashboard/</code>. It keeps the query (for example <code>?id=</code> on the run page). It uses a client redirect with a <code>&lt;meta http-equiv="refresh"&gt;</code> fallback and a plain link, so it works without JavaScript too (the fallback goes to the page without the query).</li>
+  <li>Pages move: <code>/bastion/</code> (Operations), <code>/bastion/live/</code> (new), <code>/bastion/attention/</code>, <code>/bastion/runs/</code>, <code>/bastion/run/</code>, <code>/bastion/plan/</code>.</li>
+  <li>The side bar brand says "Bastion". The page titles say "DigiSmith Bastion" (for example "Runs · DigiSmith Bastion"; the Operations page is "Operations · DigiSmith Bastion"). The nav landmark is named "Bastion".</li>
+  <li>Each old page <code>/nightwatch/…</code> stays as a small redirect page to the same page under <code>/bastion/</code>. It keeps the query (for example <code>?id=</code> on the run page). It uses a client redirect with a <code>&lt;meta http-equiv="refresh"&gt;</code> fallback and a plain link, so it works without JavaScript too (the fallback goes to the page without the query).</li>
   <li>The API routes stay <code>/api/v1/nightwatch/…</code>. The new route is <code>/api/v1/nightwatch/live</code>.</li>
   <li>Internal names (the <code>Nw*</code> components, the token file, the <code>dg nightwatch view</code> command) do not change. A rename there gives a large diff and no value to Jack.</li>
-  <li>The Lighthouse configs and the built-page tests change to the new paths. No Caddy change: <code>/dashboard/</code> is a new folder in the same static site.</li>
+  <li>The Lighthouse configs and the built-page tests change to the new paths. No Caddy change: <code>/bastion/</code> is a new folder in the same static site.</li>
 </ul>
 </section>
 
 <section id="live">
 <h2>3. The Live panel</h2>
-<h3>Live page (<code>/dashboard/live/</code>)</h3>
+<h3>Live page (<code>/bastion/live/</code>)</h3>
 <p>One table, one row per herdr agent, all workspaces. Columns:</p>
 <div class="table-wrap"><table>
 <tr><th>Column</th><th>Value</th></tr>
@@ -146,7 +148,7 @@
 <h2>4. Data source: herdr, read-only</h2>
 <p>Probe result (2026-10-24): <code>herdr-ws agent list</code> filters the list to one workspace (<code>HERDR_WS</code>, the DGS-198 guardrail), and herdr-ws has no way to list workspaces. The plain <code>herdr agent list</code> returns all workspaces (w2, w3, w4 today; 17 agents). Its fields: name, agent_status, workspace_id, tab_id, pane_id, cwd, agent_session, and <code>terminal_title</code>.</p>
 <div class="callout">
-<b>Decision (technical):</b> herdr-ws stays unchanged. A new read-only view <code>dg nightwatch view live</code> (in <code>packages/cli/src/nightwatch/</code>) runs the herdr binary with one fixed argument list, <code>--session default agent list</code>, with <code>XDG_CONFIG_HOME</code> set the same way herdr-ws sets it. No input from the request reaches that argument list (a test checks the exact argv). It is the only herdr call in the dashboard. It never calls <code>agent read</code>, <code>prompt</code>, <code>send-keys</code> or any other verb.
+<b>Decision (technical):</b> herdr-ws stays unchanged. A new read-only view <code>dg nightwatch view live</code> (in <code>packages/cli/src/nightwatch/</code>) runs the herdr binary with one fixed argument list, <code>--session default agent list</code>, with <code>XDG_CONFIG_HOME</code> set the same way herdr-ws sets it. No input from the request reaches that argument list (a test checks the exact argv). It is the only herdr call in Bastion. It never calls <code>agent read</code>, <code>prompt</code>, <code>send-keys</code> or any other verb.
 </div>
 <ul>
   <li>An allowlist keeps only: name, agent_status, workspace_id, tab_id, pane_id, the project name from cwd, and the session id (used only for the run join, never output). <code>terminal_title</code> is dropped: Claude sets it from the conversation, so it can hold message text.</li>
@@ -174,10 +176,32 @@
 </ul>
 </section>
 
+<section id="sidebar">
+<h2>7. Side bar edge fix</h2>
+<p>Jack's screenshot: the brand ("nightwatch") and the "WATCH" label touch the left window edge.</p>
+<h3>What the CSS does today</h3>
+<ul>
+  <li><code>NwShell.vue</code>: a grid, <code>grid-template-columns: 200px 1fr</code>, no padding. <code>NwNav.vue</code>: <code>.nw-nav { padding: 16px 10px }</code>, <code>.brand { padding: 0 8px 16px }</code>, <code>h2 { margin: 16px 8px 6px }</code>. So the text sits 10 + 8 = <b>18 px</b> from the edge. The main column sits <b>24 px</b> in (<code>.main { padding: 20px 24px }</code>), the top bar 24 px too. There is no negative offset and no transform in the side bar.</li>
+  <li>Probe (2026-10-24, the live build in Chromium at 1440, 1280 and 390 px wide): the brand box starts at 10 px, its text at 18 px; no clipping. I could not reproduce the touch in Chromium.</li>
+</ul>
+<h3>Cause (to confirm in the first task)</h3>
+<ul>
+  <li>The side bar has only 18 px of left inset, the smallest on the page, and no safe-area inset. In Safari with the window against a rounded screen corner, a notch, or a landscape phone, the left edge eats into those 18 px, so the text looks like it touches the edge.</li>
+  <li>The first task reproduces Jack's view in WebKit (Playwright WebKit, his window size; landscape iPhone for the safe area) before the fix. If the cause is different, the task says so and fixes that cause; the target below stays the same.</li>
+</ul>
+<h3>Fix</h3>
+<ul>
+  <li><code>.nw-nav</code> left and right padding goes to the page gutter: <code>padding-inline-start: max(16px, env(safe-area-inset-left))</code> (16 px of nav padding plus the 8 px inner padding of the brand, the "WATCH" label and the links puts their text at 24 px from the edge (the same 24 px as the main column and the top bar). The link hover and current-page fill keep their 8 px inner padding.</li>
+  <li>The phone layout (the nav row under 760 px) gets <code>padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right))</code>, the 16 px gutter of the rest of the page.</li>
+  <li>The top bar and <code>.main</code> also take <code>env(safe-area-inset-*)</code> with <code>max()</code>, so nothing sits under a notch. <code>env()</code> is 0 when there is no inset, so desktop layout does not move except the side bar.</li>
+  <li>No <code>viewport-fit=cover</code> change: the viewport meta stays as it is.</li>
+</ul>
+</section>
+
 <section id="order">
-<h2>7. Build order</h2>
+<h2>8. Build order</h2>
 <ol>
-  <li>Rename: <code>/dashboard/</code> pages, "DigiSmith" title, <code>/nightwatch/</code> redirect pages, Lighthouse and built-page tests.</li>
+  <li>Rename: <code>/bastion/</code> pages, "DigiSmith Bastion" titles, "Bastion" brand and landmark, <code>/nightwatch/</code> redirect pages, the side bar edge fix (section 7), Lighthouse and built-page tests.</li>
   <li>Live view in the CLI (herdr call, allowlist, role, project, run join) with a fake herdr.</li>
   <li>API route <code>/live</code> and its schema.</li>
   <li>Live page, top-bar count, nav link, live region, stories and baselines.</li>
@@ -186,22 +210,22 @@
 </section>
 
 <section id="tests">
-<h2>8. Tests without Jack</h2>
+<h2>9. Tests without Jack</h2>
 <p>Fakes only: no real herdr, no real ClickUp, no live API, no real depot (<code>DIGISMITH_DEPOT_DIR</code> in a temp folder).</p>
 <ul>
   <li>CLI: the live view with a fake herdr (several workspaces, an unnamed agent, all five statuses, a terminal title that must not appear), runs in a temp depot for the join; herdr failure and timeout give a non-zero exit; the exact argv.</li>
   <li>API: route tests with a fake reader (200, 503, 405, 400 on any query, strict schema).</li>
-  <li>Web, the same gates as DGS-586: Vitest, Storybook stories for each new component and state, visual baselines desktop and mobile, Playwright on the stub server (redirects keep the query, Live page states, filters, top-bar count), axe on every page, the live-region test. Warren tokens and the MIT notice stay unchanged.</li>
+  <li>Web, the same gates as DGS-586: Vitest, Storybook stories for each new component and state, visual baselines desktop and mobile, Playwright on the stub server (redirects keep the query, Live page states, filters, top-bar count), axe on every page, the live-region test. A visual baseline of the side bar edge (desktop 1440 px, a narrow desktop window 1024 px, mobile 390 px, and WebKit landscape iPhone for the safe area), plus a Playwright check that the brand and the first nav label start at least 16 px from the left edge. Warren tokens and the MIT notice stay unchanged.</li>
 </ul>
 </section>
 
 <section id="firstuse">
-<h2>9. First use</h2>
-<p>After the merge, the CLI build and <code>build-www.sh</code>: Jack opens <code>pazurite.com/dashboard/live/</code> and sees every herdr agent in w2, w3 and w4 with role, project and status, and the count in the top bar. <code>pazurite.com/nightwatch/</code> takes him to <code>/dashboard/</code>. After DGS-598: the Runs page filters by role and project, and his Maestro and conductor runs show with no health flag.</p>
+<h2>10. First use</h2>
+<p>After the merge, the CLI build and <code>build-www.sh</code>: Jack opens <code>pazurite.com/bastion/live/</code> and sees every herdr agent in w2, w3 and w4 with role, project and status, and the count in the top bar. <code>pazurite.com/nightwatch/</code> takes him to <code>/bastion/</code>. After DGS-598: the Runs page filters by role and project, and his Maestro and conductor runs show with no health flag.</p>
 </section>
 
 <section id="jack">
-<h2>10. Questions for Jack</h2>
+<h2>11. Questions for Jack</h2>
 <ol>
   <li>On a herdr failure the Live page hides the old list and shows only the error. The other choice: keep the old list, greyed out, with all dots neutral and "as of 12:15". Which do you want? (Default in this spec: hide.)</li>
   <li>Done agents stay in the list (herdr still has their pane). Show them, or hide them behind a "show done" switch? (Default: show, sorted last.)</li>
