@@ -15,7 +15,7 @@ describe('NwTopBar', () => {
     const t = w.text()
     expect(t).toContain('Nexus healthy')
     expect(t).toContain('Workers 2')
-    expect(t).toContain('To do waiting 5')
+    expect(t).toContain('Ready waiting 5')
     expect(t).toContain('away')
     expect(t).toContain('10:42:10 (UTC+7)')
     expect(w.findAll('[title="not measured"]')).toHaveLength(2)
