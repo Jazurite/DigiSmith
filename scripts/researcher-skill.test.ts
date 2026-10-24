@@ -33,4 +33,9 @@ describe("researcher card and brief", () => {
     const b = read("brief.md");
     for (const p of ["{{AGENT}}", "{{KEY}}", "{{SUBJECT}}", "{{NAME}}", "{{FINDINGS}}", "{{PLUGIN_ROOT}}"]) expect(b).toContain(p);
   });
+  it("the card puts the four prohibitions under the may-not heading", () => {
+    const card = read("SKILL.md");
+    const section = card.slice(card.indexOf("## What it may not do"), card.indexOf("## Process")).toLowerCase();
+    for (const s of ["no write in the digismith repo", "no clickup write", "no commit", "no push"]) expect(section).toContain(s);
+  });
 });

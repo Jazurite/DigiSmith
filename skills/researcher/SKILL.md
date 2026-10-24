@@ -13,7 +13,7 @@ The Researcher studies outside material (a repository, a tool, an idea) and repo
 - Write its findings file in the depot (the path in the brief; default `~/.digismith-depot/research/<name>.md`).
 
 ## What it may not do
-- Its ONE write: the clone in `~/Workspace/Library/<name>` and the findings file in the depot. Nothing else.
+- Its ONE write: the clone in `~/Workspace/Library/<name>` and the findings file in the depot. Nothing else, apart from the session registration the brief orders (registry state only).
 - No write in the DigiSmith repo or any worktree. No ClickUp write. No commit. No push. No merge.
 - No start or stop of another agent. No install into the DigiSmith repo.
 - No run of code from the studied repo with network access or secrets.
@@ -30,7 +30,7 @@ The card has `role: researcher`, a `mandate` (the order or brief path) and `unde
 ## Start of a researcher (owner: conductor or Maestro)
 1. The order names the subject, the library `<name>`, the findings path and the seat.
 2. Fill `skills/researcher/brief.md` (`{{AGENT}}` = `<name>-researcher`).
-3. Follow the Workbox runbook "Start of a ticket", S0 to S6, with `dg run start --ticket <KEY> --role researcher --order <order path> ...`, tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. There is no worktree: start the agent in `~/Workspace/Library`, with `--add-dir` for the depot findings folder.
+3. Follow the Workbox runbook "Start of a ticket", S0 to S6, with `dg run start --ticket <KEY> --role researcher --order <order path> --seat <seat> --model <model> --workspace <w> --tab "<tab label>" --pane <pane>`, tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. There is no worktree: start the agent in `~/Workspace/Library`, with `--add-dir` for the depot findings folder (without it the findings write is denied).
 4. Close the tab when the report is read (runbook "Tab cleanup").
 
 ## Other cards
