@@ -1,0 +1,10 @@
+# Review findings
+
+| Reviewer type | Round | Path:line | Severity | What is wrong | Failing scenario | Verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| task 1 | 1 | scripts/session-card.test.ts:32 | Minor | The unrelated edit changed `const errs = (c: unknown)` to `const errs =(c: unknown)`, dropping a space. | A formatter or lint check on the test file flags or rewrites the line, and the diff carries noise outside the task. | fixed (84f9f17) |
+| task 2 | 1 | skills/researcher/SKILL.md:76 | Minor | The ONE-write rule excludes the session registration write that the brief orders. | A Researcher reads 'Nothing else' and skips or doubts the registration command in brief.md, so its tokens go uncounted. | fixed (bcec2de) |
+| task 2 | 1 | scripts/researcher-skill.test.ts:37 | Minor | Tests are substring presence checks only and cannot tell a prohibition from a permission. | Someone rewrites the card so 'no push' appears inside an allowing sentence and the tests still pass. | fixed (bcec2de) |
+| task 2 | 1 | skills/researcher/SKILL.md:90 | Minor | The dg run start line ends in an ellipsis and leaves seat and add-dir flags implicit. | A conductor starts a Researcher without --add-dir for the depot folder and the findings write is denied. | fixed (bcec2de) |
+| ticket | 1 | skills/researcher/brief.md:14 | Important | The brief orders `entry.ts session --role researcher`, but the tokens CLI accepts only worker, maestro, reviewer, other, so the registration always fails. | Any researcher with a ticket key runs the brief's registration rule: exit 1, `tokens: invalid --role researcher (one of worker, maestro, reviewer, other)`; its tokens are not counted. | fixed (356f5fb) |
+| ticket | 2 | .digismith/board/DGS-606—researcher-role/spec.md:27 | Minor | Spec section 2 still says the researcher registers its session with --role researcher, which contradicts section 5 and the shipped brief (--role other until DGS-609). | A reader (or the DGS-609 builder) takes section 2 as the card text and restores --role researcher before the tokens ROLES list has it; entry.ts session then fails with invalid --role. | fixed (a5d9c5f) |
