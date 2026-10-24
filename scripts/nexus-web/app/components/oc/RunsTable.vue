@@ -36,6 +36,7 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
         <td data-label="Trigger">{{ r.trigger }}</td>
         <td data-label="Started" class="mono">{{ fmtDay(r.startedAt) }}</td>
         <td data-label="Duration" class="num">
+          <!-- one-item v-for: binds the per-row cell parts to d, computed once per row -->
           <template v-for="d in [durationCell(r, nowMs)]" :key="0">
             <span aria-hidden="true">{{ d.shown }}<template v-if="d.phase"> · <span class="phase">{{ d.phase }}</span></template></span>
             <span class="sr">{{ d.spoken }}</span>
