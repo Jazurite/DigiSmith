@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-598: every AI session is a run</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">spec for Jack's approval</span>
+  <h1>DGS-598: every AI session is a run</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: DGS-598</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">1. Goal</a></li>
+    <li><a href="#facts">2. Facts found by the probe (2026-10-24 12:15 UTC+7 [05:15 UTC])</a></li>
+    <li><a href="#layout">3. Layout and record</a></li>
+    <li><a href="#start">4. SessionStart without DIGISMITH_RUN_ID</a></li>
+    <li><a href="#role">5. Role, project and ticket</a></li>
+    <li><a href="#hooks">6. Hooks, guard and cost</a></li>
+    <li><a href="#watchdog">7. Watchdog and dashboard</a></li>
+    <li><a href="#readme">8. Other changes</a></li>
+    <li><a href="#tests">9. Tests without Jack</a></li>
+    <li><a href="#first-use">10. First use (after the merge and the plugin update)</a></li>
+    <li><a href="#out">11. Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>1. Goal</h2>
+<p>Every Claude Code session that has the DigiSmith plugin becomes a Nightwatch run on its own. This includes the Maestro, conductors, workers, Reviewers, Scouts and any other session, in every project. No <code>dg run start</code> is needed. The dashboard and <code>dg run list</code> show every session.</p>
+<p>Today a session is a run only when the conductor starts it with <code>dg run start</code> and passes <code>DIGISMITH_RUN_ID</code> (DGS-581, opt-in). Two days of real work left no run.</p>
+<div class="callout">Done when: a fresh conductor, worker, Reviewer and Desktop Maestro session each show up in <code>dg run list</code> with the right role and project, without <code>dg run start</code>. A resumed session continues its run. The watchdog flags no maestro or conductor run.</div>
+</section>
+
+<section id="facts">
+<h2>2. Facts found by the probe (2026-10-24 12:15 UTC+7 [05:15 UTC])</h2>
+<ul>
+<li><b>What a hook sees.</b> Claude Code gives every child process <code>CLAUDE_PID</code> (the claude process; it equals the parent pid of a tool shell), <code>CLAUDE_CODE_SESSION_ID</code> and <code>CLAUDE_CODE_ENTRYPOINT</code>. Inside herdr it also gives <code>HERDR_PANE_ID</code> (for example <code>w2:p8W</code>), <code>HERDR_TAB_ID</code>, <code>HERDR_WORKSPACE_ID</code> and <code>HERDR_ENV=1</code>. The hook payload on stdin has <code>session_id</code>, <code>cwd</code>, <code>source</code> (SessionStart) and <code>reason</code> (SessionEnd).</li>
+<li><b>The herdr agent name is not in the environment.</b> herdr sets no variable with the agent name. The DGS-418 card variables (<code>DIGISMITH_ID</code>, <code>DIGISMITH_ROLE</code>) are empty in a worker pane. The name comes only from <code>herdr-ws agent list</code>, where each agent has <code>name</code>, <code>pane_id</code>, <code>tab_id</code> and <code>workspace_id</code>. That call takes about 85–90 ms (python wrapper).</li>
+<li><b>Hook cost today.</b> On the Workbox, bare <code>node -e 0</code> takes 60–70 ms. The current <code>hook-cli.ts</code> takes 120–140 ms per call, so it is already over 100 ms. With <code>NODE_COMPILE_CACHE</code> set, the same hook takes about 90 ms. Node start-up dominates, and the cache is the fast path.</li>
+<li><b>Identity cards.</b> <code>~/.digismith-depot/identities/*.yml</code> have flat <code>key: value</code> lines. The <code>folder:</code> line names the repo root of a Maestro (DGS-411). The session-card hook already treats a session outside herdr in that folder as the Maestro.</li>
+<li><b>Readers.</b> <code>listRuns</code>, <code>findRunDir</code>, <code>watch.ts</code> and the nightwatch views all scan <code>runs/*/&lt;id&gt;/run.json</code>. Any folder name works. The Nexus API checks <code>role</code> against <code>ROLES</code> in <code>scripts/nexus-shared/nightwatch.ts</code>.</li>
+</ul>
+</section>
+
+<section id="layout">
+<h2>3. Layout and record</h2>
+<h3>Folders</h3>
+<pre><code>runs/&lt;ticket or project&gt;/&lt;run-id&gt;/run.json, events.jsonl, seq, lock/
+runs/.index/sessions/&lt;session_id&gt;   one line: &lt;folder&gt;/&lt;run-id&gt;
+runs/.index/pids/&lt;CLAUDE_PID&gt;       one line: &lt;folder&gt;/&lt;run-id&gt; &lt;session_id&gt;
+runs/.index/node-cache/              the node compile cache of the hooks</code></pre>
+<p>The folder is the ticket key when the branch names one at SessionStart. Otherwise it is the project name. The folder never changes after the run is made. Readers skip names that start with <code>.</code>. <code>dg run list --ticket KEY</code> now matches the record's <code>ticket</code> field as well as the folder name, so a run that learns its ticket later still shows.</p>
+<h3>Run id</h3>
+<p>An automatic run id is <code>s-&lt;session_id&gt;</code>, made from the session that started the run. A UUID matches <code>SAFE_RE</code>. A resume keeps the session_id, so it finds the same id. A <code>/clear</code> gets a new session_id and continues through the pid index (section 4). <code>dg run start</code> ids stay as they are (<code>builder-…</code>).</p>
+<h3>run.json: new and changed fields (schema stays <code>nightwatch-run/v1</code>, fields only added)</h3>
+<div class="table-wrap"><table>
+<tr><th>Field</th><th>Automatic run</th><th><code>dg run start</code> run</th></tr>
+<tr><td><code>source</code> (new)</td><td><code>"auto"</code></td><td><code>"start"</code> (a missing field reads as <code>"start"</code>)</td></tr>
+<tr><td><code>project</code> (new)</td><td>the main repo folder name, made safe (characters outside <code>[A-Za-z0-9._-]</code> become <code>-</code>)</td><td>the same rule from <code>--worktree</code> or the cwd</td></tr>
+<tr><td><code>session_id</code> (new)</td><td>the first session_id</td><td><code>null</code></td></tr>
+<tr><td><code>role_from</code> (new)</td><td><code>herdr</code>, <code>identity</code>, <code>pending</code> or <code>none</code></td><td><code>start</code></td></tr>
+<tr><td><code>role</code></td><td>adds <code>maestro</code> and <code>conductor</code> to builder, reviewer, scout, other</td><td>unchanged (<code>dg run start</code> also takes the two new roles)</td></tr>
+<tr><td><code>ticket</code></td><td>a key or <code>null</code></td><td>a key (required, as now)</td></tr>
+<tr><td><code>order</code>, <code>budget</code>, <code>base_sha</code></td><td><code>null</code></td><td>as now</td></tr>
+<tr><td><code>branch</code>, <code>worktree</code></td><td>read from the <code>.git</code> files under the cwd, without spawning git</td><td>as now</td></tr>
+<tr><td><code>model</code></td><td>the SessionStart payload <code>model</code>, through the existing <code>name()</code> filter, else <code>null</code></td><td>as now</td></tr>
+<tr><td><code>seat</code></td><td><code>DIGISMITH_SEAT</code> when set, else <code>null</code></td><td>as now</td></tr>
+<tr><td><code>herdr</code></td><td>workspace and pane from <code>HERDR_*</code>; tab = <code>HERDR_TAB_ID</code></td><td>as now</td></tr>
+</table></div>
+<p>A reader that meets an old record with no new fields reads <code>source</code> as <code>start</code>, and <code>project</code>, <code>session_id</code> and <code>role_from</code> as <code>null</code>.</p>
+</section>
+
+<section id="start">
+<h2>4. SessionStart without DIGISMITH_RUN_ID</h2>
+<ol>
+<li><b>Guard.</b> No depot folder: nothing happens, and no node process starts (shell test, section 6). The hook creates <code>runs/</code> when the depot exists and <code>runs/</code> does not.</li>
+<li><b>Same session.</b> <code>.index/sessions/&lt;session_id&gt;</code> exists (resume, compact, or a second SessionStart): append <code>started</code> with its <code>source</code> to that run. Done.</li>
+<li><b>/clear.</b> <code>source</code> is <code>clear</code>, and <code>.index/pids/&lt;CLAUDE_PID&gt;</code> names a run whose last event is <code>ended</code> with reason <code>clear</code>, or which has not ended: write <code>.index/sessions/&lt;new session_id&gt;</code> to that run, then append <code>started</code> (source <code>clear</code>, with the new session_id). The run continues.</li>
+<li><b>New run.</b> Otherwise, make the run folder and <code>run.json</code> (fields from section 3; role from the fast rules in section 5), then append <code>started</code>. Write both index files.</li>
+<li><b>Herdr labeller.</b> Inside herdr (<code>HERDR_PANE_ID</code> set), when the run was just made with <code>role_from: pending</code>, the hook starts one detached child (<code>spawn</code>, <code>detached</code>, <code>stdio: ignore</code>, <code>unref</code>) and returns at once. Section 5 has the details.</li>
+</ol>
+<p>An explicit <code>DIGISMITH_RUN_ID</code> always wins. With it set, every hook works as today (DGS-581), and no automatic run or index entry is made.</p>
+<p>A sub-<code>claude -p</code> that inherits <code>DIGISMITH_RUN_ID</code> writes into the parent run, as today. A sub-<code>claude -p</code> without it becomes its own automatic run with role <code>other</code>. Subagents inside a session fire no SessionStart and stay out of scope.</p>
+</section>
+
+<section id="role">
+<h2>5. Role, project and ticket</h2>
+<h3>Fast rules (in the hook, file reads only)</h3>
+<ul>
+<li>Outside herdr (<code>HERDR_PANE_ID</code> unset), when one identity card's <code>folder</code> equals the main repo root of the cwd: role <code>maestro</code>, <code>role_from: identity</code>. With no card, or with two cards for the folder: role <code>other</code>, <code>role_from: none</code>. The card files are read with a line regex. This is the same match as <code>findByFolder</code>, without the full validator.</li>
+<li>Inside herdr: role <code>other</code>, <code>role_from: pending</code>, until the labeller finishes.</li>
+</ul>
+<h3>Labeller (detached, inside herdr only)</h3>
+<p>It runs <code>~/.digismith-depot/bin/herdr-ws agent list</code> with <code>HERDR_WS</code> set to the workspace part of <code>HERDR_PANE_ID</code> and a 3 s timeout. It reads only <code>name</code>, <code>pane_id</code>, <code>tab_id</code> and <code>workspace_id</code> of the entry whose <code>pane_id</code> equals this pane. It reads no pane text and touches no other agent. Name rules, first match wins:</p>
+<div class="table-wrap"><table>
+<tr><th>Agent name</th><th>Role</th></tr>
+<tr><td>ends with <code>-conductor</code></td><td>conductor</td></tr>
+<tr><td>contains <code>-rev</code></td><td>reviewer</td></tr>
+<tr><td>contains <code>scout</code> or <code>probe</code></td><td>scout</td></tr>
+<tr><td><code>^[a-z]+-\d+$</code> (for example <code>dgs-598</code>)</td><td>builder</td></tr>
+<tr><td>anything else, or no entry for this pane</td><td>other</td></tr>
+</table></div>
+<p>The labeller rewrites <code>run.json</code> once, through a temp file and an atomic rename. It fills <code>role</code>, sets <code>role_from</code> to <code>herdr</code> (<code>none</code> when no name was found), and fills <code>ticket</code> from a <code>dgs-NNN</code> name when the ticket is still <code>null</code>. It changes no other field. This is the only edit of a <code>run.json</code> after it is made. The README rule "nothing edits it later" gets this one exception. When the labeller fails (timeout, herdr down, bad JSON), it sets <code>role_from: none</code> if it can, logs one line to <code>hook-errors.log</code> and exits.</p>
+<h3>Project and ticket</h3>
+<ul>
+<li><b>Project</b>: walk up from the payload <code>cwd</code> to the first <code>.git</code>. If <code>.git</code> is a file (<code>gitdir: …/.git/worktrees/x</code>), the main root is the folder above that <code>.git</code>. Otherwise the root is the folder that holds <code>.git</code>. Project = the base name of the root, made safe. With no <code>.git</code>, project = the base name of the cwd. With no usable cwd, project = <code>unknown</code>. A repo without <code>.digismith/</code> is recorded the same way (Emma, Soveron and others).</li>
+<li><b>Branch</b>: <code>HEAD</code> of that git dir (<code>ref: refs/heads/X</code>). A detached HEAD gives <code>null</code>. <b>Worktree</b>: the folder that holds the <code>.git</code> file, else <code>null</code>.</li>
+<li><b>Ticket</b>: <code>^([A-Z]+-\d+)__</code> on the branch, else (labeller) the <code>dgs-NNN</code> agent name upper-cased, else <code>null</code>.</li>
+</ul>
+<p>A conductor, the Maestro or a Builder can move to another branch or worktree later. The record keeps the start values. Later facts belong in events, as in DGS-581.</p>
+</section>
+
+<section id="hooks">
+<h2>6. Hooks, guard and cost</h2>
+<p>The guard <code>[ -z "$DIGISMITH_RUN_ID" ] || …</code> (DGS-581 decision 6) becomes this, for all five run-event entries in <code>hooks/hooks.json</code>:</p>
+<pre><code>D="${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}"; [ -n "$DIGISMITH_RUN_ID" ] || [ -d "$D" ] || exit 0; NODE_COMPILE_CACHE="$D/runs/.index/node-cache" node --experimental-strip-types "${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts" &lt;kind&gt;</code></pre>
+<ul>
+<li>No depot (a machine without DigiSmith's depot): exit 0, and no node process starts.</li>
+<li>Other hooks (blocked, tool, turn_end, ended) without <code>DIGISMITH_RUN_ID</code>: the hook reads <code>session_id</code> from stdin, then the one index file, then appends. With no index entry, it writes nothing. Nothing else changes: same data, same 150 ms lock wait for <code>tool</code> (drop and log on timeout), 2 s for the rest.</li>
+<li>Every failure: exit 0, print nothing, at most one line to <code>hook-errors.log</code> (256 KB cap, as now). A session is never hurt.</li>
+<li>The hook keeps its import rule: <code>node:fs</code>, <code>node:path</code>, <code>node:os</code>, <code>node:crypto</code>, plus <code>node:child_process</code> only in the SessionStart path, loaded only when it spawns the labeller. No yargs and no git process.</li>
+</ul>
+<h3>Cost target, measured in a test</h3>
+<p>A test runs the real <code>hook-cli.ts</code> with the hooks.json command line (compile cache on, temp depot), 7 times for each of <code>started</code> (new run, in a fake herdr pane, so the labeller spawn is counted) and <code>tool</code>. It checks that the median wall time is under 100 ms. The labeller's own time (about 90 ms for <code>herdr-ws</code>) is not in the hook, because the hook does not wait for it. On a slow or busy machine the test reports the numbers. A separate env flag can turn the assertion into a report only (<code>NIGHTWATCH_TIMING=report</code>) so that a loaded CI box does not fail it at random.</p>
+</section>
+
+<section id="watchdog">
+<h2>7. Watchdog and dashboard</h2>
+<ul>
+<li><code>classify</code> (DGS-583) handles only <code>builder</code>, <code>reviewer</code> and <code>scout</code> fully. For <code>maestro</code>, <code>conductor</code> and <code>other</code> it returns only <code>ended</code> or <code>healthy</code>: never blocked, stalled or lost. This also covers old <code>dg run start</code> runs with role <code>other</code>. No phase budget applies to them.</li>
+<li><code>runWatch</code> reads a run's <code>run.json</code> first and skips a run of those three roles before it reads its events. Such a run gets no attention item and no ClickUp comment. An open item that an older pass made for such a run is closed with the note "role not watched".</li>
+<li>Nightwatch views: <code>RunRowView</code> gets <code>project</code> and <code>source</code>. <code>ticket</code> may be <code>null</code>. <code>runs</code> takes a <code>project</code> filter. <code>ROLES</code> in <code>scripts/nexus-shared/nightwatch.ts</code> gets <code>maestro</code> and <code>conductor</code>. The Nexus API runs query takes <code>project</code>. The web run filters get a Project select, filled from the projects in the loaded rows. A <code>null</code> ticket shows as <code>-</code>. Nothing else in the UI changes.</li>
+</ul>
+<h3>Speed and retention</h3>
+<p>Maestro and conductor runs are many and long, so each read path gets an activity window:</p>
+<ul>
+<li>"Active within N days" means that the <code>mtime</code> of <code>events.jsonl</code> (else of <code>run.json</code>) is newer than N days. A <code>stat</code> costs far less than reading the events.</li>
+<li><code>dg run list</code> shows runs active within 7 days by default. <code>--days N</code> and <code>--all</code> widen it. The window is checked before any events file is read.</li>
+<li><code>runWatch</code>: unchanged 7-day rule on <code>created_at</code> for the watched roles. Unwatched roles are skipped at the <code>run.json</code> step.</li>
+<li>Nightwatch views <code>overview</code> and <code>runs</code> load only runs active within 7 days. <code>run</code> and <code>events</code> still open any run by id.</li>
+<li>No deletion or archive in this ticket. Deletes need Jack. If the folder grows too large later, an archive is a new ticket.</li>
+</ul>
+</section>
+
+<section id="readme">
+<h2>8. Other changes</h2>
+<ul>
+<li><code>dg run start</code> accepts roles <code>maestro</code> and <code>conductor</code>, and writes <code>source: start</code>, <code>project</code> and <code>role_from: start</code>.</li>
+<li><code>formatList</code> and <code>formatShow</code> print <code>project</code> and show a <code>null</code> ticket as <code>-</code>.</li>
+<li><code>packages/cli/src/run/README.md</code> and <code>autonomous/WATCHDOG.md</code> describe automatic runs, the index, the labeller, the guard and the role scope.</li>
+<li>Privacy is unchanged: no message text, prompts, tool inputs or outputs anywhere. The labeller keeps four fields from the agent list and drops everything else, including <code>cwd</code> and <code>terminal_title</code>.</li>
+</ul>
+</section>
+
+<section id="tests">
+<h2>9. Tests without Jack</h2>
+<p>All tests use fakes only: <code>DIGISMITH_DEPOT_DIR</code> in a temp folder, fake git trees (<code>.git</code> folders and <code>.git</code> files written by the test), fake identity cards, and a fake <code>herdr-ws</code> script, set through an env override (<code>NIGHTWATCH_HERDR_WS</code>), that prints a fixture agent list. No real ClickUp, herdr, live API or real depot.</p>
+<ul>
+<li>SessionStart with no run id: a new run in <code>runs/&lt;project&gt;/s-&lt;sid&gt;/</code>, the index files, and one <code>started</code> event. With a <code>DGS-1__x</code> branch, the folder is <code>DGS-1</code> and the ticket is set.</li>
+<li>Resume (same session_id): no new run, a second <code>started</code> with source <code>resume</code>.</li>
+<li>/clear (new session_id, same <code>CLAUDE_PID</code>, after <code>ended</code> reason <code>clear</code>): the same run continues. With another pid, or after <code>ended</code> with a different reason: a new run.</li>
+<li>Explicit <code>DIGISMITH_RUN_ID</code>: the DGS-581 behaviour, byte for byte, and no index entry.</li>
+<li>Roles: a Maestro identity outside herdr; no card; two cards; each herdr name rule; a missing pane entry; labeller timeout and bad JSON (record stays valid, <code>role_from: none</code>, log line).</li>
+<li>Project: a main checkout, a linked worktree, a folder with no git, a name with spaces.</li>
+<li>No depot folder: the hooks.json command exits 0 and makes no file. A <code>tool</code> hook with no index entry writes nothing.</li>
+<li>Privacy: a payload with prompt, tool input and output text leaves none of it in any file under the temp depot (the existing test, extended to automatic runs and to the labeller).</li>
+<li>Timing test (section 6).</li>
+<li>Watchdog: maestro, conductor and other runs that are silent 2 h, over budget or blocked come back <code>healthy</code>, open no item, and are skipped before their events are read. Builder, reviewer and scout keep all DGS-583 tests.</li>
+<li>Readers: old records without the new fields; dot folders skipped; <code>--ticket</code> by record; the 7-day activity window; the Nexus contract and route tests with the new roles, <code>project</code> and a <code>null</code> ticket; the web filter test.</li>
+<li>The strip-types smoke test covers every new file.</li>
+</ul>
+</section>
+
+<section id="first-use">
+<h2>10. First use (after the merge and the plugin update)</h2>
+<ol>
+<li>The conductor runs the plugin update in the worker panes. The Desktop Maestro restarts to load the new hooks (the conductor notes this).</li>
+<li>Start a fresh conductor tab, one worker and one Reviewer without <code>dg run start</code>. Then open the Desktop Maestro. <code>dg run list</code> shows four new runs with roles conductor, builder, reviewer and maestro, and project DigiSmith.</li>
+<li>Resume one of them (<code>claude --resume</code>) and run <code>/clear</code> in another. Each one keeps its run id, and <code>dg run tail</code> shows the extra <code>started</code> event.</li>
+<li><code>dg autonomous watch --dry-run</code> lists no maestro or conductor run.</li>
+<li>One session in Emma shows project <code>emma-…</code> (its repo folder name). The dashboard Project filter shows it.</li>
+</ol>
+</section>
+
+<section id="out">
+<h2>11. Out of scope</h2>
+<ul>
+<li>Subagents inside a session (later: shown within their parent run).</li>
+<li>Non-Claude harnesses (OpenCode).</li>
+<li>Seat detection beyond <code>DIGISMITH_SEAT</code>.</li>
+<li>Archive or deletion of old runs.</li>
+<li>Any settings file, LaunchAgent or Caddy change. The hooks change only in the plugin's <code>hooks/hooks.json</code>.</li>
+</ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-598—every-session-a-run/design.html</footer>
+
+</body>
+</html>
