@@ -126,7 +126,7 @@ describe('routes', () => {
 })
 
 describe('Oculus prefix (DGS-599)', () => {
-  it('serves /api/v1/oculus/overview and answers 404 on the old /api/v1/oculus/ prefix', async () => {
+  it('serves /api/v1/oculus/overview and answers 404 on the old /api/v1/nightwatch/ prefix', async () => {
     const a = app(async () => overviewView)
     expect((await a.request('/api/v1/oculus/overview')).status).toBe(200)
     expect((await a.request('/api/v1/nightwatch/overview')).status).toBe(404)
