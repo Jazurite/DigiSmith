@@ -146,11 +146,12 @@ describe("create-field", () => {
   it("--type date --yes sends the date body", async () => {
     const client = fake();
     client.createField = vi.fn().mockResolvedValue({ id: "f7", name: "Scheduled at", type: "date", type_config: {} });
+    client.getFieldLocations = vi.fn().mockResolvedValue({ id: "f7", name: "Scheduled at", type: "date", type_config: {}, locations: [{ parent: { type: 4, id: "1301150000001271" } }] });
     vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "error").mockImplementation(() => {});
     await run(client, { type: "date", name: "Scheduled at", location: ["4:1301150000001271"], yes: true });
     expect(client.createField.mock.calls[0][0]).toMatchObject({ name: "Scheduled at", type: "date", type_config: {}, team_id: "5738747" });
     expect(client.setFieldLocations).toHaveBeenCalledWith("f7", [{ parent: { type: 4, id: "1301150000001271" }, required: false, required_on_subtasks: false, hide_from_guests: false }]);
+    expect(process.exitCode).not.toBe(1);
   });
 
   it("--type date with --option is refused", async () => {
