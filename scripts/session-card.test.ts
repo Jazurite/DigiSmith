@@ -28,7 +28,7 @@ const worker = (): SessionCard => ({
   started: "2026-10-13T13:00+07:00", last_seen: "2026-10-13T13:01+07:00", status: "open",
 });
 const researcher = (): SessionCard => ({ ...worker(), name: "study-tool", role: "researcher", id: "study-tool-researcher", under: "dsm-conductor-01", domain: "DGS-605" });
-const errs =(c: unknown): string[] => {
+const errs = (c: unknown): string[] => {
   const r = validateCard(c);
   return r.ok ? [] : r.errors;
 };
