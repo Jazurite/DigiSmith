@@ -89,7 +89,7 @@ export function createCreateFieldCommand(
     handler: async (argv) => {
       try {
         if (argv.list !== undefined) {
-          throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder.");
+          throw new Error("--list is not supported yet: the list location type is not captured (DGS-134). Use --folder or --location.");
         }
         if (argv.type !== "drop_down") throw new Error(`type "${argv.type}" is not supported; only drop_down`);
         for (const flag of ["name", "folder", "description"] as const) {
@@ -104,7 +104,7 @@ export function createCreateFieldCommand(
         if (folder !== undefined && locationArgs.length > 0) throw new Error("use --folder or --location, not both");
         if (folder === undefined && locationArgs.length === 0) throw new Error("--folder or --location is required");
         if (folder !== undefined && !/^\d+$/.test(folder)) throw new Error("--folder must be a numeric id");
-        const locations = locationArgs
+        const locations = [...new Set(locationArgs.map((l) => l.trim()))]
           .map(parseLocation)
           .map((parent) => ({ parent, required: false as const, required_on_subtasks: false as const, hide_from_guests: false as const }));
         const client = clientFactory();
@@ -127,8 +127,12 @@ export function createCreateFieldCommand(
             } catch (e) {
               throw new Error(`field ${field.id} was created, but setting its locations failed: ${(e as Error).message}. Run get-field ${field.id} and set the locations again; do not create the field twice.`);
             }
-            const back = await client.getFieldLocations(field.id);
-            console.log(`locations read back: ${(back.locations ?? []).length}`);
+            try {
+              const back = await client.getFieldLocations(field.id);
+              console.log(`locations read back: ${(back.locations ?? []).length}`);
+            } catch (e) {
+              throw new Error(`field ${field.id} was created and its locations were set, but the read-back failed: ${(e as Error).message}. Run get-field ${field.id} to check the locations; do not create the field twice.`);
+            }
           }
         }
         process.exitCode = 0;

@@ -232,7 +232,7 @@ export class FrontdoorClient {
     await this.request("PUT", `/field/v3/experience/workspaces/${this.teamId}/fields/${fieldId}/locations`, { new_locations: locations });
   }
 
-  /** Creates a field. With category_id in the body it is scoped to that folder; no second location call is needed. */
+  /** Creates a field. With category_id in the body it is scoped to that folder and needs no second call. With team_id in the body the field has no place yet: call setFieldLocations next. */
   createField(body: FrontdoorFieldCreateBody): Promise<FrontdoorField> {
     return this.request<FrontdoorField>("POST", "/customFields/v2/field?ignore_existing=true", body);
   }

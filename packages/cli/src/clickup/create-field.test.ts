@@ -105,7 +105,7 @@ describe("create-field", () => {
   });
 
   it.each([
-    ["--list", { name: "P", option: ["a"], list: "5" }, "--list is not supported yet"],
+    ["--list", { name: "P", option: ["a"], list: "5" }, "Use --folder or --location"],
     ["other type", { name: "P", option: ["a"], folder: "1", type: "text" }, "only drop_down"],
     ["no folder", { name: "P", option: ["a"] }, "--folder or --location is required"],
     ["non-numeric folder", { name: "P", option: ["a"], folder: "abc" }, "--folder must be a numeric id"],
@@ -177,6 +177,30 @@ describe("create-field", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run(fake(), { name: "Mode", option: ["A"] });
     expect(err.mock.calls[0][0]).toBe("clickup create-field: --folder or --location is required");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("a failed read-back says the field and its locations exist, gives the id, exits 1", async () => {
+    const client = fake();
+    client.getFieldLocations = vi.fn().mockRejectedValue(new Error("502"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { name: "Mode", option: ["A"], location: ["4:1"], yes: true });
+    expect(client.setFieldLocations).toHaveBeenCalledTimes(1);
+    const msg = err.mock.calls[0][0] as string;
+    expect(msg).toContain("field f9 was created and its locations were set");
+    expect(msg).toContain("read-back failed: 502");
+    expect(msg).toContain("get-field f9");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("repeated --location values are sent once, in first-seen order", async () => {
+    const client = fake();
+    client.getFieldLocations = vi.fn().mockResolvedValue({ locations: [] });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { name: "Mode", option: ["A"], location: ["4:1", "5:2", "4:1", " 5:2"], yes: true });
+    const sent = client.setFieldLocations.mock.calls[0][1] as { parent: { type: number; id: string } }[];
+    expect(sent.map((l) => `${l.parent.type}:${l.parent.id}`)).toEqual(["4:1", "5:2"]);
   });
 
   it("a failed location call says the field exists without a location", async () => {
