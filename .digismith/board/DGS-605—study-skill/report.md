@@ -17,13 +17,13 @@ New `scripts/study-skill.test.ts`, 7 tests: frontmatter name, trigger words, exc
 - Green: `scripts/study-skill.test.ts` and `scripts/researcher-skill.test.ts`: 15 passed.
 
 ## Review
-One task Reviewer (claude-sonnet-5-5), round 1: pass, no Critical or Important. One Minor, F1: the order did not name the ticket key of the researcher run. Fixed in 7906dcd. The conductor ordered no re-review and no ticket-level review (the Maestro ordered one Reviewer for this ticket). Table: `findings.md`.
+One task Reviewer (claude-sonnet-5-5), round 1: pass, no Critical or Important. One Minor, F1: the order did not name the ticket key of the researcher run. Fixed in c10131f. The conductor ordered no re-review and no ticket-level review (the Maestro ordered one Reviewer for this ticket). Table: `findings.md`.
 
 ## Commits
-- 3dfd87e docs(dgs-605): add the ticket file
-- c33c5a8 docs(dgs-605): add the study skill plan
-- 4f73f2d feat(dgs-605): add the digismith:study skill
-- 7906dcd fix(dgs-605): name the ticket key of the researcher run
+- bc7ecc6 docs(dgs-605): add the ticket file
+- 3dddb3a docs(dgs-605): add the study skill plan
+- 52bfce6 feat(dgs-605): add the digismith:study skill
+- c10131f fix(dgs-605): name the ticket key of the researcher run
 
 ## First use (after merge)
 In a new Maestro session, "study <a small GitHub link>" loads the skill and writes a researcher order. Dry run: stop at the order.
