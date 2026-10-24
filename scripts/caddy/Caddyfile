@@ -25,6 +25,7 @@ opencode.pazurite.com {
 	}
 }
 
+# Shared by both static sites. The /storybook/ matchers serve only the life site; on oculus they match nothing today.
 (static_site) {
 	@hashed path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
 	@notHashed not path /_nuxt/* /storybook/assets/* /storybook/_nuxt/*
