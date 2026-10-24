@@ -126,6 +126,46 @@ describe("classify", () => {
   it("a custom budget is used", () => {
     expect(classify(run(), [ev("started", 0), ev("tool", 5)], "present", at(6), { building: 5, review: 60, merge: 20 }).state).toBe("stalled");
   });
+  describe("DGS-589: herdr status answers a permission prompt", () => {
+    // the prompt is at minute 1; now is minute 6, so it is 5 minutes old
+    const prompt = () => [ev("started", 0), ev("blocked", 1)];
+    const st = (status: string | null, events = prompt(), nowMin = 6) =>
+      classify(run(), events, "present", at(nowMin), DEFAULT_BUDGETS, status);
+
+    it("stays blocked when herdr says blocked, unknown, null or a value we do not know", () => {
+      for (const s of ["blocked", "unknown", null, "weird", ""]) expect(st(s).state).toBe("blocked");
+    });
+    it("is healthy when herdr says idle, done or working", () => {
+      for (const s of ["idle", "done", "working"]) expect(st(s)).toEqual({ state: "healthy", cause: "", since: "" });
+    });
+    it("no status argument behaves as null: stays blocked", () => {
+      expect(classify(run(), prompt(), "present", at(6), DEFAULT_BUDGETS).state).toBe("blocked");
+    });
+    it("keeps the 60 s grace: done with a 30 s old prompt is still blocked, at 60 s it is healthy", () => {
+      expect(st("done", prompt(), 1.5).state).toBe("blocked");
+      expect(st("done", prompt(), 2).state).toBe("healthy");
+    });
+    it("a second permission_prompt is a new episode: blocked again with the new since", () => {
+      const e = [ev("started", 0), ev("blocked", 1), ev("blocked", 8)];
+      const v = st("blocked", e, 10);
+      expect(v.state).toBe("blocked");
+      expect(v.since).toBe(min(8));
+      // a stale done right after the second prompt does not clear it (grace)
+      expect(st("done", e, 8.5).state).toBe("blocked");
+    });
+    it("a gone pane is lost, even with status done", () => {
+      expect(classify(run(), prompt(), "gone", at(6), DEFAULT_BUDGETS, "done").state).toBe("lost");
+    });
+    it("idle_prompt is no answer: permission_prompt then idle_prompt with a null status stays blocked", () => {
+      const e = [ev("started", 0), ev("blocked", 1), ev("blocked", 2, { kind: "idle_prompt" })];
+      expect(st(null, e, 6).state).toBe("blocked");
+    });
+    it("a healthy answer still meets the silence rule: done, but 30 min of silence is lost", () => {
+      const v = st("done", prompt(), 1 + 30);
+      expect(v.state).toBe("lost");
+      expect(v.cause).toBe("silent-30-min");
+    });
+  });
 });
 
 describe("decideRetry", () => {

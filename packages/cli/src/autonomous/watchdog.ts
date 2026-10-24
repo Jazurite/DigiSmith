@@ -10,6 +10,10 @@ export interface Verdict { state: State; cause: string; since: string } // since
 
 export const SILENCE_MS = 30 * 60_000;
 export const DEFAULT_BUDGETS: Budgets = { building: 45, review: 60, merge: 20 };
+/** DGS-589: herdr agent_status values that mean the permission prompt is no longer waiting (answered or denied). Anything else keeps the run blocked. */
+export const ANSWERED_STATUSES: readonly string[] = ["idle", "done", "working"];
+/** A prompt younger than this is never called answered: herdr may lag behind the Notification hook. */
+export const PROMPT_GRACE_MS = 60_000;
 
 type Phase = "building" | "review" | "merge";
 const PHASES: readonly string[] = ["building", "review", "merge"];
@@ -43,7 +47,7 @@ export function phaseOf(run: RunRecord, events: EventLine[]): { phase: Phase; si
 export const WATCHED_ROLES: readonly string[] = ["builder", "reviewer", "scout"];
 export const isWatched = (role: string): boolean => WATCHED_ROLES.includes(role);
 
-export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: number, budgets: Budgets): Verdict {
+export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: number, budgets: Budgets, agentStatus: string | null = null): Verdict {
   // /clear writes ended then started: the run is over only when no started follows the last ended.
   if (summarize(events).ended) return { state: "ended", cause: "", since: "" };
   if (!isWatched(run.role)) return { state: "healthy", cause: "", since: "" };
@@ -55,7 +59,9 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   // Only a permission prompt waits for an answer; idle_prompt and the other kinds fall to the silence and phase rules.
   for (let i = events.length - 1; i >= 0; i--) if (events[i].type === "blocked" && events[i].data.kind === "permission_prompt") { lastBlocked = i; break; }
   if (lastBlocked >= 0 && !events.slice(lastBlocked + 1).some((e) => e.type === "tool" || e.type === "turn_end")) {
-    return { state: "blocked", cause: "waiting-for-answer", since: events[lastBlocked].ts };
+    // A denial writes no event, so herdr's status for the pane is the only sign. Unsure means still blocked.
+    const answered = agentStatus !== null && ANSWERED_STATUSES.includes(agentStatus) && now - ms(events[lastBlocked].ts) >= PROMPT_GRACE_MS;
+    if (!answered) return { state: "blocked", cause: "waiting-for-answer", since: events[lastBlocked].ts };
   }
 
   if (now - lastTs >= SILENCE_MS) return { state: "lost", cause: "silent-30-min", since: last?.ts ?? run.created_at };
