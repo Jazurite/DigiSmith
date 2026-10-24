@@ -27,7 +27,7 @@ function typeLabel(r: Review): string {
 
 type Ruling = { round: number; verdict: string; reason: string };
 type Logged = Ruling & { line: number; text: string }; // line and text stay out of the JSON
-type Resolved = { review: Review; finding: Finding; history: Logged[] };
+export type Resolved = { review: Review; finding: Finding; history: Logged[] };
 
 const sortReviews = (reviews: Review[]): Review[] =>
   [...reviews].sort((a, b) => {
@@ -38,7 +38,7 @@ const sortReviews = (reviews: Review[]): Review[] =>
 const packName = (r: Review): string => `${r.kind}-${r.id}-r${r.round}`;
 
 // One entry rules on the finding of the pack with the same round, else on the latest earlier raise.
-function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resolved> {
+function link(reviews: Review[], entries: VerdictEntry[], strict: boolean): Map<Finding, Resolved> {
   const raised = new Map<string, Resolved[]>();
   const all = new Map<Finding, Resolved>();
   for (const r of sortReviews(reviews)) {
@@ -54,16 +54,27 @@ function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resol
     const target = candidates.find((c) => c.review.round === e.round)
       ?? [...candidates].reverse().find((c) => c.review.round < e.round);
     if (!target) {
+      if (!strict) continue;
       const packs = sortReviews(reviews).map(packName).join(", ");
       throw new Error(`ledger line ${e.line}: ${e.text}: no pack raised ${e.kind} ${e.id} ${e.finding}; packs read: ${packs}`);
     }
     target.history.push({ round: e.round, verdict: e.verdict, reason: e.reason, line: e.line, text: e.text });
   }
+  for (const r of all.values()) r.history.sort((a, b) => a.round - b.round); // stable: ledger order inside a round
+  return all;
+}
+
+export const linkRulings = (reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resolved> => link(reviews, entries, false);
+
+export const isOpen = (history: { verdict: string }[]): boolean =>
+  history.length === 0 || history[history.length - 1].verdict === "fixing";
+
+function resolve(reviews: Review[], entries: VerdictEntry[]): Map<Finding, Resolved> {
+  const all = link(reviews, entries, true);
   const unjudged = [...all.values()]
     .filter((r) => r.history.length === 0)
     .map((r) => judgementKeyOf(r));
   if (unjudged.length > 0) throw new Error(`findings with no verdict line: ${unjudged.join(", ")}`);
-  for (const r of all.values()) r.history.sort((a, b) => a.round - b.round); // stable: ledger order inside a round
   const unfinished = [...all.values()]
     .map((r) => ({ r, last: r.history[r.history.length - 1] }))
     .filter((u) => u.last.verdict === "fixing")

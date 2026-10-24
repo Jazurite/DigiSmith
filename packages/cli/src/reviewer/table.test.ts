@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { buildRows, buildJson, renderMarkdown, runTable } from "./table.ts";
+import { buildRows, buildJson, renderMarkdown, runTable, linkRulings, isOpen } from "./table.ts";
 import type { Review } from "./findings.ts";
 import { parseVerdictEntries } from "./verdicts.ts";
 
@@ -248,5 +248,34 @@ describe("runTable", () => {
   });
   it("needs --out without --json", () => {
     expect(() => runTable({ workspace: ws })).toThrow(/--out is required/);
+  });
+});
+
+describe("linkRulings", () => {
+  const ledgerOf = (lines: string[]) => parseVerdictEntries(["Review mode: role", ...lines, ""].join("\n"));
+  it("links a later round's ruling to the earlier raise, sorted by round", () => {
+    const r3 = review("task", "1", 3, [f("F1")]);
+    const out = linkRulings([r3], ledgerOf(["Review task 1 r4: F1 -> fixed (abc1234)", "Review task 1 r3: F1 -> fixing"]));
+    expect(out.get(r3.findings[0])?.history.map((h) => [h.round, h.verdict])).toEqual([[3, "fixing"], [4, "fixed"]]);
+  });
+  it("skips a line no pack raised without throwing", () => {
+    const r1 = review("task", "1", 1, [f("F1")]);
+    const out = linkRulings([r1], ledgerOf(["Review task 9 r1: F1 -> fixed (abc1234)"]));
+    expect(out.get(r1.findings[0])?.history).toEqual([]);
+  });
+  it("does not throw for an unjudged finding or a last fixing", () => {
+    const r1 = review("task", "1", 1, [f("F1"), f("F2")]);
+    const out = linkRulings([r1], ledgerOf(["Review task 1 r1: F2 -> fixing"]));
+    expect(out.get(r1.findings[0])?.history).toEqual([]);
+    expect(out.get(r1.findings[1])?.history).toHaveLength(1);
+  });
+});
+
+describe("isOpen", () => {
+  it("is open when empty or the last verdict is fixing", () => {
+    expect(isOpen([])).toBe(true);
+    expect(isOpen([{ verdict: "fixing" }])).toBe(true);
+    expect(isOpen([{ verdict: "fixing" }, { verdict: "fixed" }])).toBe(false);
+    expect(isOpen([{ verdict: "fixed" }, { verdict: "fixing" }])).toBe(true);
   });
 });
