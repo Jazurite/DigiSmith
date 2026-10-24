@@ -259,10 +259,10 @@ describe("realStores", () => {
       { scope: "ticket", result: "clean", head: "ccccccc2" },
     ]);
   });
-  const addReview = (name: string, type: string, head: string, report: string | null) => {
+  const addReview = (name: string, type: string, head: string, report: string | null, round = 1) => {
     const dir = join(root, "wt", ".digismith", "board", "DGS-1—thing", ".sdd-workspace", "reviews", name);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "pack.md"), `# p\n\nticket: DGS-1\ntype: ${type}\nid: x\nround: 1\nmodel: m\nbase: bbbbbbb1\nhead: ${head}\n`);
+    writeFileSync(join(dir, "pack.md"), `# p\n\nticket: DGS-1\ntype: ${type}\nid: x\nround: ${round}\nmodel: m\nbase: bbbbbbb1\nhead: ${head}\n`);
     if (report !== null) writeFileSync(join(dir, "report.md"), report);
   };
   const sdd = () => join(root, "wt", ".digismith", "board", "DGS-1—thing", ".sdd-workspace");
@@ -300,6 +300,28 @@ describe("realStores", () => {
     expect((await s.reviewerData.verdicts())[0].result).toBe("clean");
     writeFileSync(join(sdd(), "progress.md"), "Review ticket final r1: F1 -> fixed (abc)\nReview ticket final r1: F1 -> fixing (x)\n");
     expect((await s.reviewerData.verdicts())[0].result).toBe("findings");
+  });
+  const r3Row = async () => (await realStores({ env: env(), ticket: "DGS-1", builderRunId: () => "builder-1" }).reviewerData.verdicts()).find((v) => v.head === "eeeeeee3")?.result;
+  const arrangeR3R4 = (sev: string, ledger: string) => {
+    addReview("ticket-final-r3", "ticket", "eeeeeee3", report(`[${finding("F1", sev)}]`), 3);
+    addReview("ticket-final-r4", "ticket", "fffffff4", report("[]"), 4);
+    writeFileSync(join(sdd(), "progress.md"), ledger);
+  };
+  it("DGS-592: an Important finding fixing in r3 and fixed in r4 leaves the r3 pack clean", async () => {
+    arrangeR3R4("Important", "Review ticket final r3: F1 -> fixing (x)\nReview ticket final r4: F1 -> fixed (abc)\n");
+    expect(await r3Row()).toBe("clean");
+  });
+  it("DGS-592: the same finding with no r4 line stays findings", async () => {
+    arrangeR3R4("Important", "Review ticket final r3: F1 -> fixing (x)\n");
+    expect(await r3Row()).toBe("findings");
+  });
+  it("DGS-592: Minor never blocks; Critical follows the cross-round ruling", async () => {
+    arrangeR3R4("Minor", "Review ticket final r3: F1 -> fixing (x)\n");
+    expect(await r3Row()).toBe("clean");
+    arrangeR3R4("Critical", "Review ticket final r3: F1 -> fixing (x)\nReview ticket final r4: F1 -> fixed (abc)\n");
+    expect(await r3Row()).toBe("clean");
+    arrangeR3R4("Critical", "Review ticket final r3: F1 -> fixing (x)\n");
+    expect(await r3Row()).toBe("findings");
   });
   it("without a builder run there are no packs", async () => {
     const s = realStores({ env: env(), ticket: "DGS-1", builderRunId: () => null });

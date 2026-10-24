@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { appendEvent, readEvents } from "../run/events.ts";
 import { findRunDir } from "../run/paths.ts";
 import { listRuns } from "../run/read.ts";
-import { extractFindings } from "../reviewer/findings.ts";
+import { extractFindings, type Review } from "../reviewer/findings.ts";
+import { isOpen, linkRulings } from "../reviewer/table.ts";
+import type { ReviewerType } from "../reviewer/types.ts";
 import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { PromptError, type ActDeps } from "./act.ts";
 import { classifyInputBox } from "./input-box.ts";
@@ -233,7 +235,8 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
         try { entries = parseVerdictEntries(readFileSync(join(ws, "progress.md"), "utf8")); } catch (e) {
           if ((e as { code?: unknown }).code !== "ENOENT") throw e;
         }
-        const out: VerdictView[] = [];
+        const reviews: Review[] = [];
+        const heads: string[] = [];
         for (const name of readdirSync(root).sort()) {
           const m = /^(task|ticket)-(\d+|final)-r(\d+)$/.exec(name);
           const dir = join(root, name);
@@ -242,13 +245,15 @@ export function realStores(d: { env: NodeJS.ProcessEnv; ticket: string; builderR
           if (!existsSync(report)) continue; // the Reviewer has not finished: the phase waits
           const p = packOf(dir);
           if (p === null) throw new Error(`no readable pack.md next to ${report}`);
-          // a finding blocks only when it is Critical or Important and its LAST ledger entry is missing or still `fixing`
-          const blocking = extractFindings(readFileSync(report, "utf8"), report).filter((f) =>
-            (f.severity === "Critical" || f.severity === "Important") &&
-            [undefined, "fixing"].includes(entries.filter((e) => e.kind === m[1] && e.id === m[2] && e.round === Number(m[3]) && e.finding === f.id).pop()?.verdict));
-          out.push({ scope: m[1] as "task" | "ticket", result: blocking.length === 0 ? "clean" : "findings", head: p.head });
+          reviews.push({ kind: m[1] as ReviewerType, id: m[2], round: Number(m[3]), file: report, findings: extractFindings(readFileSync(report, "utf8"), report) });
+          heads.push(p.head);
         }
-        return out;
+        // the ruling comes from the table's model across rounds: a finding blocks only when it is Critical or Important and its LAST ruling, in any round, is missing or still `fixing`
+        const linked = linkRulings(reviews, entries);
+        return reviews.map((r, i): VerdictView => {
+          const blocking = r.findings.filter((f) => (f.severity === "Critical" || f.severity === "Important") && isOpen(linked.get(f)!.history));
+          return { scope: r.kind as "task" | "ticket", result: blocking.length === 0 ? "clean" : "findings", head: heads[i] };
+        });
       },
     },
   };
