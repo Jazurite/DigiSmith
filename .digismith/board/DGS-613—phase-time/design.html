@@ -62,7 +62,7 @@
 <body>
 
 <header class="doc-head">
-  <span class="badge">draft: waiting for approval</span>
+  <span class="badge">approved for planning</span>
   <h1>Oculus: phase and time in phase</h1>
   <div class="meta">
     <span>Date: 2026-10-24</span>
@@ -81,7 +81,7 @@
     <li><a href="#files">Files</a></li>
     <li><a href="#tests">Tests without Jack</a></li>
     <li><a href="#first-use">First use</a></li>
-    <li><a href="#signoff">Sign-off questions</a></li>
+    <li><a href="#signoff">Decided by Jack</a></li>
   </ol>
 </nav>
 
@@ -89,8 +89,8 @@
 <h2>1. Goal</h2>
 <p>Jack, 2026-10-24 ~17:5x UTC+7, from two Oculus screenshots: "we should see the running build time here and here".</p>
 <ul>
-  <li><b>Runs table:</b> a running run shows its current phase and the time in that phase, for example <code>building 0:14</code>, in a new Phase column next to Duration.</li>
-  <li><b>Run page:</b> each cell of the phase strip (Claimed, Worktree ready, Building, Review, Merged, Pushed) shows how long that phase took. The current phase shows a counter that keeps counting.</li>
+  <li><b>Runs table:</b> a running run shows its current phase and the time in that phase inside the Duration cell, after the total: <code>0:31:07 · building 0:14</code>. There is no new column.</li>
+  <li><b>Run page:</b> each cell of the phase strip (Claimed, Worktree ready, Building, Review, Merged, Pushed) shows how long that phase took. The current phase shows a counter that keeps counting, marked by its color.</li>
 </ul>
 <p>All clock times are UTC+7. Durations are <code>h:mm</code>, the same as the budget bar ("building 0:15 of 45 min").</p>
 <p><b>Not in scope:</b> forecasts (DGS-614); the Workers table on the index page; a new event type; any change to the budget bar's look.</p>
@@ -117,14 +117,14 @@
 
 <section id="runs">
 <h2>3. Runs table (oculus.pazurite.com/runs/)</h2>
-<p>A new column <b>Phase</b> goes between Started and Duration. It shows <code>&lt;phase&gt; h:mm</code> for a running run, and a muted "-" otherwise. Project is the DGS-599 column (its Task 9, after DGS-598).</p>
+<p>Jack's answer: no new column. The Duration cell reads <code>&lt;duration&gt; · &lt;phase&gt; h:mm</code> for a running run that has a phase, and only <code>&lt;duration&gt;</code> otherwise. The columns stay as DGS-599 leaves them (Project is its Task 9, after DGS-598).</p>
 <h3>Desktop</h3>
 <div class="table-wrap"><table style="font-family: ui-monospace, Menlo, monospace; font-size: .8rem">
-  <tr><th>State</th><th>Key</th><th>Role</th><th>Project</th><th>Seat / model</th><th>Trigger</th><th>Started</th><th>Phase</th><th>Duration</th><th>Tokens</th><th>Delivery</th></tr>
-  <tr><td>● healthy</td><td>DGS-613</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 18:02</td><td><b>building 0:14</b></td><td>0:31:07</td><td>-</td><td>-</td></tr>
-  <tr><td>● healthy</td><td>DGS-599</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 16:40</td><td><b>review 0:06</b></td><td>1:52:40</td><td>-</td><td>-</td></tr>
-  <tr><td>● healthy</td><td>DGS-601</td><td>scout</td><td>DigiSmith</td><td>dev0 · sonnet</td><td>manual</td><td>2026-10-24 18:20</td><td style="color:var(--muted)">-</td><td>0:12:55</td><td>-</td><td>-</td></tr>
-  <tr><td>○ ended</td><td>DGS-600</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 12:05</td><td style="color:var(--muted)">-</td><td>2:10:33</td><td>-</td><td>merged · pushed</td></tr>
+  <tr><th>State</th><th>Key</th><th>Role</th><th>Project</th><th>Seat / model</th><th>Trigger</th><th>Started</th><th>Duration</th><th>Tokens</th><th>Delivery</th></tr>
+  <tr><td>● healthy</td><td>DGS-613</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 18:02</td><td>0:31:07 · <b>building 0:14</b></td><td>-</td><td>-</td></tr>
+  <tr><td>● healthy</td><td>DGS-599</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 16:40</td><td>1:52:40 · <b>review 0:06</b></td><td>-</td><td>-</td></tr>
+  <tr><td>● healthy</td><td>DGS-601</td><td>scout</td><td>DigiSmith</td><td>dev0 · sonnet</td><td>manual</td><td>2026-10-24 18:20</td><td>0:12:55</td><td>-</td><td>-</td></tr>
+  <tr><td>○ ended</td><td>DGS-600</td><td>builder</td><td>DigiSmith</td><td>jack · opus</td><td>manual</td><td>2026-10-24 12:05</td><td>2:10:33</td><td>-</td><td>merged · pushed</td></tr>
 </table></div>
 <h3>Phone (row card, the existing <code>data-label</code> layout)</h3>
 <pre><code>┌──────────────────────────────┐
@@ -135,26 +135,28 @@
 │ Seat      jack · opus        │
 │ Trigger   manual             │
 │ Started   2026-10-24 18:02   │
-│ Phase     building 0:14      │
-│ Duration  0:31:07            │
+│ Duration  0:31:07 ·          │
+│           building 0:14      │
 │ Tokens    -                  │
 │ Delivery  -                  │
 └──────────────────────────────┘</code></pre>
+<p>On a phone the Duration row shows both parts. The phase part may wrap to a second line; it never wraps inside <code>building 0:14</code>.</p>
 <ul>
   <li>The phase word is the watchdog's: <code>building</code>, <code>review</code> or <code>merge</code>.</li>
-  <li>The time counts up between polls (page clock every 30 s), like Duration does today.</li>
-  <li>Phase "-" when: the run ended; the run is lost (its pane is gone, so a counter would suggest work); the run has no phase (a scout or other run with no phase marker; a builder after <code>review_ready</code> that waits for its Reviewer).</li>
+  <li>The phase time counts up between polls (page clock every 30 s), like the total does today.</li>
+  <li>The cell shows only the duration when: the run ended; the run is lost (its pane is gone, so a counter would suggest work); the run has no phase (a scout or other run with no phase marker; a builder after <code>review_ready</code> that waits for its Reviewer).</li>
+  <li><b>Screen readers:</b> the visible text is hidden from them and a hidden text gives the cell's name in words: "31 min 7 s, building for 14 min" (or "31 min 7 s" alone). The "·" and <code>h:mm</code> are not read out.</li>
 </ul>
 </section>
 
 <section id="strip">
 <h2>4. Run page: phase strip (oculus.pazurite.com/run/?id=…)</h2>
-<p>Each cell keeps its label and start time (UTC+7) and gets a second line: the time spent in that step. The current step shows its counter in the info color with the word "now". The budget card below does not change.</p>
+<p>Each cell keeps its label and start time (UTC+7) and gets a second line: the time spent in that step. The current step shows its counter as the time only, marked by the info color (no extra word). The budget card below does not change.</p>
 <h3>Desktop: a running build</h3>
 <pre><code>┌─────────────┬────────────────┬────────────────┬─────────────┬─────────────┬─────────────┐
 │ ● Claimed   │ ● Worktree     │ ◉ Building     │ ○ Review    │ ○ Merged    │ ○ Pushed    │
 │   18:01     │   ready  18:02 │   18:02        │   -         │   -         │   -         │
-│   0:01      │   0:00         │   now 0:14     │   -         │   -         │   -         │
+│   0:01      │   0:00         │   0:14 (info)  │   -         │   -         │   -         │
 └─────────────┴────────────────┴────────────────┴─────────────┴─────────────┴─────────────┘</code></pre>
 <h3>Desktop: a run that ended (merged and pushed)</h3>
 <pre><code>┌─────────────┬────────────────┬────────────────┬─────────────┬─────────────┬─────────────┐
@@ -162,7 +164,7 @@
 │   12:04     │   ready  12:05 │   12:05        │   13:12     │   14:09     │   14:10     │
 │   0:01      │   0:00         │   1:07         │   0:57      │   0:01      │             │
 └─────────────┴────────────────┴────────────────┴─────────────┴─────────────┴─────────────┘</code></pre>
-<p>Pushed is the end mark: it shows its time and no duration.</p>
+<p>Pushed is the end mark: it shows its time and no duration. "(info)" in the sketches marks the info color; it is not text on the page.</p>
 <h3>Phone (the strip's existing two-column grid)</h3>
 <pre><code>┌──────────────────┬──────────────────┐
 │ ● Claimed        │ ● Worktree ready │
@@ -171,7 +173,7 @@
 ├──────────────────┼──────────────────┤
 │ ◉ Building       │ ○ Review         │
 │   18:02          │   -              │
-│   now 0:14       │   -              │
+│   0:14 (info)    │   -              │
 ├──────────────────┼──────────────────┤
 │ ○ Merged         │ ○ Pushed         │
 │   -              │   -              │
@@ -184,17 +186,18 @@
 
 <section id="cases">
 <h2>5. Edge cases: "-", never a false number</h2>
+<p>Where the Runs table has no phase time to show, the Duration cell shows the duration only (no "· -").</p>
 <div class="table-wrap"><table>
-  <tr><th>Case</th><th>Runs table Phase</th><th>Phase strip</th></tr>
-  <tr><td>Running build with phase markers</td><td><code>building 0:14</code></td><td>Done steps: durations. Current: <code>now 0:14</code>.</td></tr>
-  <tr><td>Run with no phase markers (scout, other)</td><td>-</td><td>Times come from <code>started</code> and <code>created_at</code> as today. The current step counts from its own start; steps not reached show "-".</td></tr>
-  <tr><td>Builder after <code>review_ready</code>, waiting for its Reviewer</td><td>- (no watchdog phase)</td><td>Review is current: <code>now 0:06</code> from <code>review_ready</code>.</td></tr>
-  <tr><td>Builder in a fix wave (first tool after <code>review_ready</code>)</td><td><code>building 0:03</code> (the clock restarts, same as the watchdog)</td><td>Review stays current: the strip shows milestones, not the watchdog clock.</td></tr>
-  <tr><td>Ended run</td><td>-</td><td>All reached steps: durations. The last reached step runs to <code>endedAt</code>; Pushed has none.</td></tr>
-  <tr><td>Lost run</td><td>-</td><td>The lost step shows "lost" and "-" (no counter).</td></tr>
+  <tr><th>Case</th><th>Runs table Duration cell</th><th>Phase strip</th></tr>
+  <tr><td>Running build with phase markers</td><td><code>0:31:07 · building 0:14</code></td><td>Done steps: durations. Current: <code>0:14</code> in the info color.</td></tr>
+  <tr><td>Run with no phase markers (scout, other)</td><td>duration only</td><td>Times come from <code>started</code> and <code>created_at</code> as today. The current step counts from its own start; steps not reached show "-".</td></tr>
+  <tr><td>Builder after <code>review_ready</code>, waiting for its Reviewer</td><td>duration only (no watchdog phase)</td><td>Review is current: <code>0:06</code> from <code>review_ready</code>.</td></tr>
+  <tr><td>Builder in a fix wave (first tool after <code>review_ready</code>)</td><td><code>1:02:10 · building 0:03</code> (the clock restarts, same as the watchdog)</td><td>Review stays current: the strip shows milestones, not the watchdog clock.</td></tr>
+  <tr><td>Ended run</td><td>duration only</td><td>All reached steps: durations. The last reached step runs to <code>endedAt</code>; Pushed has none.</td></tr>
+  <tr><td>Lost run</td><td>duration only</td><td>The lost step shows "lost" and "-" (no counter).</td></tr>
   <tr><td>Manual run (no claim)</td><td>as above</td><td>Claimed: "-" and "-".</td></tr>
   <tr><td>Times out of order (a later step before an earlier one)</td><td>as above</td><td>That step's duration: "-".</td></tr>
-  <tr><td>Clock skew: <code>phaseSince</code> or <code>at</code> after the page clock</td><td><code>building 0:00</code></td><td><code>now 0:00</code> (never below zero, as Duration today).</td></tr>
+  <tr><td>Clock skew: <code>phaseSince</code> or <code>at</code> after the page clock</td><td><code>0:00:00 · building 0:00</code></td><td><code>0:00</code> (never below zero, as Duration today).</td></tr>
 </table></div>
 <p>The Review step reads its start from the first <code>review_ready</code> or <code>phase: review</code>. Its duration ends at Merged. The watchdog's <code>merge</code> phase has no own cell; it is inside Review's time. This is today's strip; this ticket does not add a cell.</p>
 </section>
@@ -207,9 +210,9 @@
   <tr><td><code>packages/cli/src/oculus/derive.ts</code></td><td><code>runRowOf</code> sets <code>phaseSince</code>; <code>pipelineOf</code> gets <code>endedAt</code> and sets <code>durationSec</code></td></tr>
   <tr><td><code>packages/cli/src/oculus/views.ts</code></td><td><code>runView</code>: pass <code>row.endedAt</code> to <code>pipelineOf</code>; <code>budget.elapsedMin</code> from <code>row.phaseSince</code></td></tr>
   <tr><td><code>scripts/nexus-shared/oculus.ts</code></td><td><code>runRowSchema.phaseSince</code>, <code>pipelineStepSchema.durationSec</code> (both strict, nullable)</td></tr>
-  <tr><td><code>scripts/nexus-web/app/utils/oc-format.ts</code></td><td><code>phaseTime(row, nowMs)</code> and <code>stepTime(step, nowMs)</code>: the "-" rules in one place</td></tr>
-  <tr><td><code>scripts/nexus-web/app/components/oc/OcRunsTable.vue</code></td><td>Phase column</td></tr>
-  <tr><td><code>scripts/nexus-web/app/components/oc/OcPipelineBar.vue</code></td><td>Duration line, <code>now</code> counter, screen reader text; new prop <code>nowMs</code></td></tr>
+  <tr><td><code>scripts/nexus-web/app/utils/oc-format.ts</code></td><td><code>phaseTime(row, nowMs)</code> (the phase part of the Duration cell, or null) and <code>stepTime(step, nowMs)</code>: the "-" rules in one place</td></tr>
+  <tr><td><code>scripts/nexus-web/app/components/oc/OcRunsTable.vue</code></td><td>Duration cell: <code>&lt;duration&gt; · &lt;phase&gt; h:mm</code>, or the duration only; hidden text for screen readers (section 3). No new column.</td></tr>
+  <tr><td><code>scripts/nexus-web/app/components/oc/OcPipelineBar.vue</code></td><td>Duration line, the current step's counter in the info color, screen reader text; new prop <code>nowMs</code></td></tr>
   <tr><td><code>scripts/nexus-web/app/pages/oculus/run.vue</code></td><td><code>useNow()</code>, passes <code>nowMs</code> to the strip</td></tr>
   <tr><td>Stories, fixtures, stub server, tests</td><td><code>OcRunsTable.stories.ts</code>, <code>OcPipelineBar.stories.ts</code>, <code>tests/oculus-fixtures.ts</code>, <code>tests/e2e/stub-server.ts</code>, and the tests in section 7</td></tr>
 </table></div>
@@ -223,10 +226,10 @@
   <li><b>CLI unit</b> (<code>derive.test.ts</code>): <code>phaseSince</code> for a builder, a reviewer, a fix wave, an ended run; <code>durationSec</code> for done steps, the last step of an ended run, Pushed, a manual run with no claim, times out of order, a lost run.</li>
   <li><b>CLI view</b> (<code>views.test.ts</code>, temp depot with fixture events): the run view's strip and budget, and the runs view's rows, carry the new fields; the budget number equals the row's phase time during a fix wave.</li>
   <li><b>Schema</b>: the API test's fixtures pass the strict schema with the new fields; an answer without them fails (no silent drift between CLI and web).</li>
-  <li><b>Web unit</b>: <code>phaseTime</code> and <code>stepTime</code> for every row of section 5; <code>OcRunsTable</code> and <code>OcPipelineBar</code> render with a fixed <code>nowMs</code>.</li>
-  <li><b>Storybook and visual baselines</b>, desktop and phone, light and dark: Runs table with running, no-phase, lost and ended rows; strip running, ended, manual, lost.</li>
-  <li><b>e2e</b> (stub server): the Runs page shows <code>building 0:14</code> for the fixture run; the run page shows <code>now 0:14</code> on Building and durations on done steps.</li>
-  <li><b>axe</b> on both pages; the strip's hidden text is checked.</li>
+  <li><b>Web unit</b>: <code>phaseTime</code> and <code>stepTime</code> for every row of section 5; <code>OcRunsTable</code> renders the Duration cell as <code>0:31:07 · building 0:14</code> for a running run and the duration only for the no-phase, lost and ended rows (fixed <code>nowMs</code>); the table has no Phase column; <code>OcPipelineBar</code> renders durations, the current step's time with no "now" word, and its class for the info color.</li>
+  <li><b>Storybook and visual baselines</b>, desktop and phone, light and dark: Runs table with running, no-phase, lost and ended rows (the phone Duration row shows both parts); strip running, ended, manual, lost.</li>
+  <li><b>e2e</b> (stub server): the fixture run's Duration cell on the Runs page reads <code>&lt;total&gt; · building 0:14</code>; the run page shows <code>0:14</code> on Building and durations on done steps.</li>
+  <li><b>axe</b> on both pages. The Duration cell's accessible text reads the phase in words ("31 min 7 s, building for 14 min"), not the "·" and <code>h:mm</code>; the strip's hidden text reads "current, 14 min so far" and "done, 1 h 7 min".</li>
   <li><code>packages/cli/src/</code> code runs under <code>node --experimental-strip-types</code> (the existing smoke test).</li>
 </ul>
 </section>
@@ -234,15 +237,16 @@
 <section id="first-use">
 <h2>8. First use</h2>
 <p>After the merge, the conductor runs the usual Oculus publish: CLI build in the main checkout, a restart of the existing Nexus API LaunchAgent, <code>build-www.sh</code>. No Caddy, DNS or LaunchAgent change.</p>
-<p>Then, while a Builder runs: open <code>oculus.pazurite.com/runs/</code>. The Builder's row shows <code>building h:mm</code>, and that number equals the budget bar on its run page. The run page's strip shows durations on done steps and <code>now h:mm</code> on the current one. An ended run's strip shows all its durations. The first use is verified when both screens show this on a real run.</p>
+<p>Then, while a Builder runs: open <code>oculus.pazurite.com/runs/</code>. The Builder's Duration cell shows <code>&lt;total&gt; · building h:mm</code>, and that phase time equals the budget bar on its run page. The run page's strip shows durations on done steps and the current step's time in the info color. An ended run's strip shows all its durations. The first use is verified when both screens show this on a real run.</p>
 </section>
 
 <section id="signoff">
-<h2>9. Sign-off questions for Jack (taste)</h2>
+<h2>9. Decided by Jack (2026-10-24)</h2>
 <ol>
-  <li><b>Phase in its own column</b> (this spec), or inside the Duration cell as <code>0:31:07 · building 0:14</code>?</li>
-  <li><b>Durations as <code>h:mm</code></b> (this spec, same as the budget bar, so a step under one minute shows <code>0:00</code>), or <code>h:mm:ss</code> like the Duration column?</li>
-  <li><b>The current step's label: <code>now 0:14</code></b> (this spec), or the time only, marked by its color?</li>
+  <li><b>Phase place:</b> inside the Duration cell, <code>0:31:07 · building 0:14</code>; no separate Phase column.</li>
+  <li><b>Step durations:</b> <code>h:mm</code>, the same as the budget bar (a step under one minute shows <code>0:00</code>).</li>
+  <li><b>Current step:</b> the time only, marked by its color; no "now" word. The screen reader text keeps "current, 14 min so far".</li>
+  <li><b>Sign-off:</b> Auto.</li>
 </ol>
 </section>
 
