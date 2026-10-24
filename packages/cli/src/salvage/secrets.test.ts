@@ -26,11 +26,15 @@ describe("secretHits and the message", () => {
 describe("harmless source files with secret or token in the name", () => {
   it.each([
     "scripts/nexus-web/app/assets/nightwatch-tokens.scss", "tokens.test.ts", "a/token.tsx", "a/token.js", "a/token.mjs",
-    "a/token.vue", "a/token.css", "secret-notes.md", "token.html", "token.yml", "secrets.yaml", "a/Token.TS",
+    "a/token.vue", "a/token.css", "secret-notes.md", "token.html", "token.yml", "tokens.yml", "token-config.yaml", "a/Token.TS",
     ".digismith/board/DGS-1\u2014x/tokens.json",
   ])("passes %s", (p) => expect(secretFiles([f(p)])).toEqual([]));
   it.each(["src/tokens.json", ".digismith/board/a/b/tokens.json", ".digismith/board/tokens.json", ".digismith/board/a/tokens.json.bak"])
     ("still flags %s", (p) => expect(secretFiles([f(p)])).toEqual([p]));
+  it.each([
+    ["secrets.yaml", "*secret*"], ["secrets.yml", "*secret*"], ["db-secret.yaml", "*secret*"],
+    ["k8s/db-secret.yaml", "*secret*"], ["secret-token.yaml", "*secret*"],
+  ])("a secret name stays strict on yaml: %s", (p, pattern) => expect(secretHits([f(p)])).toEqual([{ path: p, pattern }]));
   it.each(["api-token.txt", "secrets.json", "TOKEN", "token", "a/secret.sh", "token.txt.ts.bak"])
     ("still flags %s", (p) => expect(secretFiles([f(p)])).toEqual([p]));
 });

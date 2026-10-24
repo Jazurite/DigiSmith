@@ -75,6 +75,13 @@ describe("salvage", () => {
     expect(bundles()).toEqual([]);
     expect(rescue()).toBe("");
   });
+  it("a committed token yaml salvages, a committed secret yaml stops everything", () => {
+    writeFileSync(join(wt, "token-config.yaml"), "a: 1\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "feat: token yaml");
+    expect(salvage(mk(), { ticket: "DGS-9" }).ok).toBe(true);
+    mkdirSync(join(wt, "k8s")); writeFileSync(join(wt, "k8s", "db-secret.yaml"), "a: 1\n"); sh(wt, "add", "."); sh(wt, "commit", "-qm", "feat: secret yaml");
+    const r = salvage(mk(), { ticket: "DGS-9" });
+    expect(!r.ok && r.message).toBe("not salvaged: k8s/db-secret.yaml (matches *secret*); Jack decides");
+  });
   it("a staged new .env stops everything", () => {
     writeFileSync(join(wt, ".env"), "s\n"); sh(wt, "add", ".env");
     const before = sh(wt, "rev-parse", "HEAD");

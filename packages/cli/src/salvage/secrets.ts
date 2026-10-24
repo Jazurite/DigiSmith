@@ -13,7 +13,9 @@ const LOOSE: { re: RegExp; label: string }[] = [
   { re: /secret/i, label: "*secret*" },
   { re: /token/i, label: "*token*" },
 ];
-const HARMLESS_EXT = /\.(ts|tsx|js|mjs|vue|scss|css|md|html|yml|yaml)$/i;
+// Source, style and doc files skip both name matches; yaml skips only *token* (yaml is where real secret stores live).
+const HARMLESS_EXT = /\.(ts|tsx|js|mjs|vue|scss|css|md|html)$/i;
+const YAML_EXT = /\.ya?ml$/i;
 const BOARD_SNAPSHOT = /^\.digismith\/board\/[^/]+\/tokens\.json$/;
 
 export interface SecretHit { path: string; pattern: string }
@@ -23,8 +25,10 @@ export function secretHits(files: { path: string; size: number }[]): SecretHit[]
   const out: SecretHit[] = [];
   for (const f of files) {
     const base = f.path.split("/").pop() ?? f.path;
-    const harmless = HARMLESS_EXT.test(base) || BOARD_SNAPSHOT.test(f.path);
-    const name = STRICT.find((n) => n.re.test(base)) ?? (harmless ? undefined : LOOSE.find((n) => n.re.test(base)));
+    const skipSecret = HARMLESS_EXT.test(base);
+    const skipToken = skipSecret || YAML_EXT.test(base) || BOARD_SNAPSHOT.test(f.path);
+    const loose = LOOSE.find((n) => n.re.test(base) && !(n.label === "*secret*" ? skipSecret : skipToken));
+    const name = STRICT.find((n) => n.re.test(base)) ?? loose;
     if (name) out.push({ path: f.path, pattern: name.label });
     else if (f.size > MAX_BYTES) out.push({ path: f.path, pattern: "over 5 MB" });
   }
