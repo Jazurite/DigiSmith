@@ -4,7 +4,7 @@ import type { LoTask } from "./types.ts";
 
 const base: LoTask = {
   id: "1", key: "DGS-1", name: "t", typeId: 0, priority: null, due: null, created: 0,
-  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", milestone: "Dawn", blockers: [],
+  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", milestone: "Dawn", blockers: [],
 };
 const ctx = { repo: "/r", fileExists: () => false };
 

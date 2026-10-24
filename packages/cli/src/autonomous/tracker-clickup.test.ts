@@ -4,6 +4,14 @@ import { ClickUpLoTracker, IMPERIUM_LIST_ID } from "./tracker-clickup.ts";
 
 // Fixtures shaped like probe.md (made-up ids, no secrets).
 const SPACE = "space-1";
+const modeField = (value?: number) => ({
+  id: "field-m", name: "Mode", type: "drop_down",
+  type_config: { options: [
+    { id: "opt-a", name: "Autonomous", color: null, orderindex: 0 },
+    { id: "opt-m", name: "Manual", color: null, orderindex: 1 },
+  ] },
+  ...(value === undefined ? {} : { value }),
+});
 const signOffField = (value?: number) => ({
   id: "field-b", name: "Sign-off", type: "drop_down",
   type_config: { options: [
@@ -45,8 +53,8 @@ function fakeClient(o: FakeOpts) {
     return { attachments: [], ...hit };
   };
   const client = {
-    async searchTeamTasks(spaceId: string, maxPages = 10) {
-      calls.push(`searchTeamTasks ${spaceId}`);
+    async searchTeamTasks(spaceId: string, maxPages = 10, status?: string) {
+      calls.push(`searchTeamTasks ${spaceId} ${status ?? "-"}`);
       const out: T[] = [];
       for (let page = 0; page < maxPages; page++) {
         const batch = o.search.slice(page * 100, page * 100 + 100);
@@ -99,7 +107,22 @@ const BLOCKERS: Record<string, T> = {
 const OPEN_BLOCKER = task({ id: "b-open", custom_id: "DGS-603", status: { status: "in progress", type: "custom" } });
 const WIP = task({ id: "t2", custom_id: "DGS-604", status: { status: "in progress", type: "custom" } });
 
-describe("ClickUpLoTracker.listToDo", () => {
+describe("ClickUpLoTracker.listByStatus", () => {
+  it("keeps only the named status, any case, and passes it to the search", async () => {
+    const { client, calls } = fakeClient({ search: [
+      task({ id: "r1", status: { status: "Ready", type: "custom" } }),
+      task({ id: "d1", status: { status: "to do", type: "custom" } }),
+    ] });
+    const got = await new ClickUpLoTracker(client, SPACE).listByStatus("ready");
+    expect(got.map((t) => t.id)).toEqual(["r1"]);
+    expect(calls).toContain(`searchTeamTasks ${SPACE} ready`);
+  });
+  it("reads Mode Autonomous, Manual, and null for no value or an unknown index", async () => {
+    const mk = (id: string, v?: number) => task({ id, status: { status: "ready", type: "custom" }, custom_fields: [modeField(v)] });
+    const { client } = fakeClient({ search: [mk("a", 0), mk("m", 1), mk("n"), mk("x", 7)] });
+    const got = await new ClickUpLoTracker(client, SPACE).listByStatus("ready");
+    expect(got.map((t) => t.mode)).toEqual(["Autonomous", "Manual", null, null]);
+  });
   it("keeps only to do tickets and maps every field", async () => {
     const { client, calls } = fakeClient({
       search: [READY, WIP, OPEN_BLOCKER],
@@ -107,13 +130,13 @@ describe("ClickUpLoTracker.listToDo", () => {
         { id: "a1", title: "design.md", extension: "md" }, { id: "a2", title: "plan.md", extension: "md" },
       ] } },
     });
-    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
-    expect(calls[0]).toBe(`searchTeamTasks ${SPACE}`);
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(calls[0]).toBe(`searchTeamTasks ${SPACE} to do`);
     expect(out).toEqual([{
       id: "t1", key: "DGS-600", name: "Ready one", typeId: 0,
       priority: 2, due: 1792372602438, created: 1792000000000,
       attachments: ["design.md", "plan.md"], text: "see .digismith/board/DGS-600—x",
-      signOff: "Jack", milestone: "V1.1 ClickUp Sync",
+      signOff: "Jack", mode: null, milestone: "V1.1 ClickUp Sync",
       blockers: [
         { key: "DGS-603", done: false },
         { key: "DGS-601", done: true },
@@ -132,27 +155,27 @@ describe("ClickUpLoTracker.listToDo", () => {
       { task_id: "t3", link_id: "i-other" },
     ] });
     const { client } = fakeClient({ search: [bare] });
-    const [t] = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const [t] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(t).toMatchObject({ signOff: null, milestone: null, priority: null, due: null, blockers: [], attachments: [] });
   });
 
   it("reads Auto by the option order index of that clan's own field", async () => {
     const auto = task({ id: "t4", custom_fields: [{ ...signOffField(0), id: "field-other-clan" }] });
     const { client } = fakeClient({ search: [auto] });
-    const [t] = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const [t] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(t.signOff).toBe("Auto");
   });
 
   it("fetches no ticket that is not to do and reads the milestones once", async () => {
     const { client, calls } = fakeClient({ search: [WIP] });
     const tr = new ClickUpLoTracker(client, SPACE);
-    expect(await tr.listToDo()).toEqual([]);
+    expect(await tr.listByStatus("to do")).toEqual([]);
     expect(calls.some((c) => c.startsWith("getTaskByRef"))).toBe(false);
 
     const two = fakeClient({ search: [task({ id: "a" }), task({ id: "b" })] });
     const tr2 = new ClickUpLoTracker(two.client, SPACE);
-    await tr2.listToDo();
-    await tr2.listToDo();
+    await tr2.listByStatus("to do");
+    await tr2.listByStatus("to do");
     expect(two.calls.filter((c) => c.startsWith("getAllListTasks"))).toEqual([`getAllListTasks ${IMPERIUM_LIST_ID}`]);
   });
 
@@ -160,7 +183,7 @@ describe("ClickUpLoTracker.listToDo", () => {
     const search = Array.from({ length: 250 }, (_, i) =>
       task({ id: `p${i}`, status: { status: i === 230 ? "to do" : "backlog", type: "custom" } }));
     const { client } = fakeClient({ search });
-    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out.map((t) => t.id)).toEqual(["p230"]);
   });
 
@@ -182,7 +205,7 @@ describe("ClickUpLoTracker.listToDo", () => {
       }
     }
     const client = new OfflineClient({ CLICKUP_TEAM_ID: "team-1", CLICKUP_API_TOKEN: "not-a-token" });
-    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out.map((t) => t.id)).toEqual(["p230"]);
     expect(pages).toEqual([0, 1, 2]);
   });
@@ -196,8 +219,8 @@ describe("ClickUpLoTracker.listToDo", () => {
       return real(id);
     };
     const tr = new ClickUpLoTracker(client, SPACE);
-    await expect(tr.listToDo()).rejects.toThrow("network down");
-    const out = await tr.listToDo();
+    await expect(tr.listByStatus("to do")).rejects.toThrow("network down");
+    const out = await tr.listByStatus("to do");
     expect(out.map((t) => t.id)).toEqual(["a"]);
     expect(calls.filter((c) => c.startsWith("getAllListTasks"))).toHaveLength(1);
   });
@@ -207,7 +230,7 @@ describe("ClickUpLoTracker.listToDo", () => {
     const { client } = fakeClient({ search: [t], full: {
       "b-disc": task({ id: "b-disc", custom_id: "DGS-605", status: { status: "discarded", type: "closed" } }),
     } });
-    const [out] = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const [out] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out.blockers).toEqual([{ key: "DGS-605", done: false }]);
   });
 
@@ -215,7 +238,7 @@ describe("ClickUpLoTracker.listToDo", () => {
     const bad = task({ id: "t6", dependencies: [{ task_id: "t6", depends_on: "gone" }] });
     const good = task({ id: "t7" });
     const { client } = fakeClient({ search: [bad, good] });
-    const out = await new ClickUpLoTracker(client, SPACE).listToDo();
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out.map((t) => t.id)).toEqual(["t6", "t7"]);
     expect(out[0].blockers).toEqual([{ key: "gone (unreadable)", done: false }]);
   });

@@ -74,7 +74,7 @@ function lazyTracker(make: () => Tracker): Tracker {
   const get = (): Tracker => (t ??= make());
   return {
     hasStatus: (name) => get().hasStatus(name),
-    listToDo: () => get().listToDo(),
+    listByStatus: (name) => get().listByStatus(name),
     setStatus: (id, status) => get().setStatus(id, status),
     getStatus: (id) => get().getStatus(id),
     comment: (ref, text) => get().comment(ref, text),

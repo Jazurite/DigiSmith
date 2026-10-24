@@ -44,7 +44,7 @@ describe("gatherDrift", () => {
   it("reads the status and the main log", async () => {
     const tracker = new FakeTracker();
     tracker.add({ id: "t1", status: "complete" });
-    tracker.add({ id: "t2" });
+    tracker.add({ id: "t2", status: "to do" });
     const git = fakeGit("abc1234\tfeat(dgs-2): thing\n");
     const facts = await gatherDrift({ tracker, git, repo: "/r" }, claimed);
     expect(facts.get("DGS-1")).toEqual({ status: "complete", mergedSha: null, branchEmpty: false, gitOk: true });

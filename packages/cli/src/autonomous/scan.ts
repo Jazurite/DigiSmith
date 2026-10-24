@@ -176,7 +176,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   }
 
   // 4. Only Task and Bug are candidates.
-  const all = await d.tracker.listToDo();
+  const all = await d.tracker.listByStatus("to do");
   const candidates: LoTask[] = [];
   for (const t of all) {
     if (t.typeId === TYPE_TASK || t.typeId === TYPE_BUG) candidates.push(t);
