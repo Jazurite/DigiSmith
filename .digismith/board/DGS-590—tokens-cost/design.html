@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oculus: tokens and cost per run, burn per hour and seat windows</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Oculus: tokens and cost per run, burn per hour and seat windows</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24 15:50 UTC+7 [08:50 UTC]</span>
+    <span>Ticket: DGS-590</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal</a></li>
+    <li><a href="#facts">Facts found</a></li>
+    <li><a href="#job">The data job</a></li>
+    <li><a href="#count">Counting a run</a></li>
+    <li><a href="#cost">Cost and the price table</a></li>
+    <li><a href="#files">Files</a></li>
+    <li><a href="#seats">Seat windows</a></li>
+    <li><a href="#views">Views and API</a></li>
+    <li><a href="#ui">Oculus screens</a></li>
+    <li><a href="#rules">Freshness, errors, privacy</a></li>
+    <li><a href="#order">Order of work</a></li>
+    <li><a href="#tests">Tests without Jack</a></li>
+    <li><a href="#first">First use</a></li>
+    <li><a href="#out">Out of scope</a></li>
+    <li><a href="#decisions">Decisions for the Maestro</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>1. Goal</h2>
+<p>Oculus (DGS-586, renamed by DGS-599) keeps three empty slots: tokens per run, burn per hour, and each seat's 5h and weekly window. Jack, 2026-10-24: "show cost too, make it auto". This ticket fills the slots, adds cost in USD, and does it with no manual step except the existing usage probe.</p>
+<p>Done when: the Runs table shows Tokens and Cost per run, the run page shows a tokens and cost card per model, the top bar shows burn per hour (tokens and $) and the seat windows. A value is "-" when its file is missing or stale. Oculus never shows a false number.</p>
+</section>
+
+<section id="facts">
+<h2>2. Facts found (2026-10-24, read only)</h2>
+<ul>
+<li><b>Counter.</b> <code>packages/cli/src/tokens/claude-code-reader.ts</code> (DGS-214) reads a transcript whole and gives one <code>UsageRecord</code> per response: five classes (<code>input</code>, <code>output</code>, <code>cache_read</code>, <code>cache_write_5m</code>, <code>cache_write_1h</code>), model, ts, and the dedupe key message id + request id. A repeated line keeps the highest <code>output</code>. Subagent files are <code>&lt;session&gt;/subagents/agent-*.jsonl</code>. <code>findTranscript</code> finds <code>&lt;session&gt;.jsonl</code> under <code>~/.claude/projects/*/</code>.</li>
+<li><b>Sessions of a run.</b> Every hook event already carries <code>data.session_id</code> (DGS-581). DGS-598 adds <code>run.json</code> <code>session_id</code> (the first session) and keeps a run across <code>/clear</code> with a new session id, which gets its own <code>started</code> event. So the <code>started</code> events list every session of a run, for automatic runs and for <code>dg run start</code> runs alike.</li>
+<li><b>Price table.</b> DGS-567 merged: <code>scripts/token-counter/anthropic-pricing.ts</code>, prices fetched 2026-10-18, with 5m and 1h cache-write prices and the Haiku 5.5 long-prompt tier (per request). It has no version field. The CLI build (<code>tsc</code>, <code>rootDir: src</code>) cannot import from <code>scripts/</code>; scripts already import from <code>packages/cli/src/</code>.</li>
+<li><b>Scheduler.</b> The Nexus API process runs jobs from <code>scripts/nexus-api/src/scheduler/registry.ts</code>; <code>autonomous-scan</code> and <code>nightwatch-watchdog</code> run every 5 min as <code>node dist/index.js …</code>. A new entry there is a job in the existing process, not a new LaunchAgent. It loads at the next API restart.</li>
+<li><b>Usage probe.</b> The conductor runs it by hand (runbook "Reading usage"): a short haiku session with the probe status line writes <code>usage-probe/out.json</code> (<code>at</code>, <code>rate_limits.five_hour</code>/<code>seven_day</code> with <code>used_percentage</code> and <code>resets_at</code> in Unix seconds, <code>claude_version</code>). The conductor saves it as <code>out-&lt;seat&gt;.json</code> (today <code>out-jack.json</code>, <code>out-dev0.json</code>, <code>out-emma.json</code> with no rate limits). No token in these files.</li>
+<li><b>Slots.</b> <code>RunsTable.vue</code> has a Tokens column that prints "-" ("not measured"). <code>NwTopBar.vue</code> prints <code>Burn -/h</code> and <code>Seat 5h / week - / -</code>.</li>
+</ul>
+</section>
+
+<section id="job">
+<h2>3. The data job</h2>
+<ul>
+<li>A new scheduler job <code>oculus-tokens</code> in <code>registry.ts</code>: every 5 min, all day, catch-up skip, timeout 4 min, notify on failures. Command: <code>node dist/index.js tokens runs</code>. No new LaunchAgent, no model tokens, no Claude session.</li>
+<li><code>dg tokens runs</code> (new subcommand next to <code>dg tokens &lt;ticket&gt;</code>) does three things in one pass: update the <code>tokens.json</code> of each run in scope (section 4), write the burn file, write <code>seats.json</code> (section 7). It prints one summary line (runs updated, skipped, failed). <code>--run ID</code> updates one run only. <code>--dry-run</code> prints and writes nothing.</li>
+<li>Runs in scope: runs active within 7 days (the DGS-598 activity window: mtime of <code>events.jsonl</code>, else <code>run.json</code>), and a run whose <code>tokens.json</code> is older than its last event. An ended run gets one last pass after its <code>ended</code> event and is then marked <code>final</code>; later passes skip it.</li>
+<li>One failed run never stops the others. The command exits 1 only when it could not write anything at all.</li>
+</ul>
+</section>
+
+<section id="count">
+<h2>4. Counting a run</h2>
+<h3>Which sessions</h3>
+<p>The sessions of a run are <code>run.json</code> <code>session_id</code> (when present, DGS-598) plus every <code>data.session_id</code> of a <code>started</code> event in <code>events.jsonl</code>. A run with no session id at all gets no <code>tokens.json</code> and shows "-". Each session reads its main file and its subagent files. A session whose file is not found yet is retried next pass.</p>
+<h3>Which responses</h3>
+<p>Responses with <code>ts</code> at or after the run's <code>created_at</code>. This keeps a resumed session's older work out of a <code>dg run start</code> run. Dedupe by response id across all files of the run (a resumed transcript replays old lines), keeping the highest <code>output</code>, as the DGS-214 reader does.</p>
+<h3>Incremental by offset</h3>
+<ul>
+<li>A new reader function reads one file from a byte offset in 64 KB chunks and stops at the last full line. It returns the records and the new offset. It reuses the line parser of <code>claude-code-reader.ts</code> (one parser, so the counts match <code>dg tokens</code>).</li>
+<li>Per file the state keeps <code>offset</code>, <code>size</code> and the file's <code>ino</code>. A file that shrank or has a new inode is read again from 0.</li>
+<li>The state also keeps each counted response (id → model, five counts, cost, 5-min bucket). A repeated id with a higher <code>output</code> replaces the earlier one: subtract the old, add the new. So the totals equal a full recount.</li>
+<li>State lives in <code>tokens.state.json</code> next to <code>tokens.json</code>. It holds ids, counts, offsets and file names (<code>&lt;session&gt;.jsonl</code>, <code>agent-&lt;id&gt;.jsonl</code>), never text and never the project folder path. When the state is missing or unreadable, the run is counted again from 0.</li>
+</ul>
+<h3>Burn buckets</h3>
+<p>Each response falls in a 5-min UTC bucket. <code>tokens.json</code> keeps the buckets of the last 24 hours (at most 288). Burn per hour = the sum over all runs of the 12 buckets that end at or before the job's run time.</p>
+</section>
+
+<section id="cost">
+<h2>5. Cost and the price table</h2>
+<ul>
+<li>The Anthropic table and <code>costFromPricing</code> (with the long-prompt tier) move into <code>packages/cli/src/tokens/prices/</code>. <code>scripts/token-counter/</code> re-exports them, so there is one table. The table gets <code>ANTHROPIC_PRICES_VERSION = "2026-10-18"</code> (the fetch date in its header). A price change bumps the version.</li>
+<li>Cost is computed per response (the Haiku 5.5 tier is per request), then summed per model. A response's cost: input, output, cache read, 5m write, 1h write at the listed rates.</li>
+<li>A model with no price (<code>resolvePricing</code> gives nothing) gets <code>cost_usd: null</code> and is named in <code>unpriced_models</code>. The run total cost is then <code>null</code> too: a partial sum would be a false number.</li>
+<li>Not priced, as in DGS-567: fast mode, batch, US-only. Seats are subscriptions, so the dollar figure is the list price of the tokens, not money paid. The card says "list price".</li>
+</ul>
+</section>
+
+<section id="files">
+<h2>6. Files</h2>
+<h3><code>runs/&lt;folder&gt;/&lt;run&gt;/tokens.json</code></h3>
+<pre><code>{
+  "schema": "oculus-tokens/v1",
+  "run": "s-…",
+  "generated_at": "2026-10-24T08:50:00.000Z",
+  "final": false,
+  "price_table": { "source": "anthropic", "version": "2026-10-18" },
+  "models": {
+    "claude-opus-5-5": { "input": 1, "output": 2, "cache_read": 3, "cache_write_5m": 4, "cache_write_1h": 5,
+                         "responses": 6, "tokens": 15, "cost_usd": 0.0012 }
+  },
+  "total": { "tokens": 15, "responses": 6, "cost_usd": 0.0012 },
+  "unpriced_models": [],
+  "sessions": 2,
+  "buckets": [ { "start": "2026-10-24T08:45:00Z", "tokens": 15, "cost_usd": 0.0012 } ]
+}</code></pre>
+<p><code>tokens</code> is the sum of the five classes (the ccusage "total tokens" rule). <code>sessions</code> is a count, not ids. Written by a temp file and one rename.</p>
+<h3><code>runs/.tokens/burn.json</code></h3>
+<p><code>{ schema: "oculus-burn/v1", generated_at, window_min: 60, tokens, cost_usd, runs, unpriced_models }</code>. The <code>.tokens</code> folder starts with a dot, so run readers skip it (DGS-598). <code>cost_usd</code> is null when any counted model is unpriced.</p>
+<h3><code>usage-probe/seats.json</code></h3>
+<p>Section 7.</p>
+</section>
+
+<section id="seats">
+<h2>7. Seat windows</h2>
+<ul>
+<li><b>Who probes.</b> The conductor, as today: the runbook "Reading usage" steps at each ticket start and each limit stop, saving <code>out-&lt;seat&gt;.json</code>. The job never starts a Claude session. A scheduled probe would start one, so it needs the Maestro's word and is a later ticket.</li>
+<li><b>Who writes <code>seats.json</code>.</b> The data job, every 5 min, from the <code>out-&lt;seat&gt;.json</code> files (seat = the name between <code>out-</code> and <code>.json</code>, a safe name; <code>out.json</code> itself is skipped because its seat is unknown). So the conductor's existing habit fills Oculus with no new step.</li>
+<li><b>Shape.</b> <code>{ schema: "oculus-seats/v1", generated_at, seats: [ { seat, read_at, five_hour: { used_pct, resets_at } | null, weekly: { used_pct, resets_at } | null } ] }</code>. Times as ISO UTC. Only these fields are copied; <code>claude_version</code> and anything else is dropped. A seat with no rate limits (emma) has both windows null.</li>
+<li><b>Showing a reading.</b> A reading is shown with its time ("jack 5h 7% · week 32%, as of 15:09"). A window whose <code>resets_at</code> has passed shows "-" for that window: the number is known to be wrong. A reading older than 15 min shows in the warn tone with its "as of" time, so it is never mistaken for a live number.</li>
+</ul>
+</section>
+
+<section id="views">
+<h2>8. Views and API</h2>
+<ul>
+<li>The <code>runs</code> view row gets <code>tokens: { total, cost_usd } | null</code>. The <code>run</code> view gets <code>tokens: { generated_at, final, price_version, models: [ { model, five classes, tokens, cost_usd } ], total, unpriced_models } | null</code>. The <code>overview</code> view gets <code>burn: { tokens_per_h, usd_per_h, as_of } | null</code> and <code>seats: [ … ] | null</code>.</li>
+<li>The views stay read-only. They read the files; they never count.</li>
+<li>The shared zod schema (<code>nexus-shared/oculus.ts</code> after DGS-599) and the contract tests get the new fields. No new API route: the existing overview, runs and run routes carry them.</li>
+</ul>
+</section>
+
+<section id="ui">
+<h2>9. Oculus screens</h2>
+<ul>
+<li><b>Runs table.</b> Tokens (compact: <code>1.2M</code>) and Cost (<code>$3.41</code>) columns, right aligned. A title gives the exact number. "-" with a title saying why ("no snapshot", "stale", "unpriced model").</li>
+<li><b>Run page.</b> A "Tokens and cost" card next to the budget card: one row per model with the five classes, total tokens and cost; a total row; the footer "list price, Anthropic table 2026-10-18 · as of 15:50". When <code>final</code> is false, "counting" in the footer.</li>
+<li><b>Top bar.</b> <code>Burn 4.1M/h · $12.30/h</code>, and per seat <code>jack 5h 7% · wk 32%</code>. "-" by the rules in section 10. On a phone the seat part folds into one line per seat under the top bar.</li>
+<li>Same gates as DGS-586/599: Storybook stories for each state (value, "-", stale, unpriced, counting), visual baselines desktop and mobile, Playwright on the stub server, axe.</li>
+</ul>
+</section>
+
+<section id="rules">
+<h2>10. Freshness, errors, privacy</h2>
+<ul>
+<li><b>Run tokens</b>: "-" when <code>tokens.json</code> is missing or unreadable. A non-final file older than 15 min is stale: "-" with the title "stale since 15:20". A final file never goes stale.</li>
+<li><b>Burn</b>: "-" when <code>burn.json</code> is missing or older than 15 min. <code>$</code> part "-" when <code>cost_usd</code> is null.</li>
+<li><b>Seats</b>: "-" when <code>seats.json</code> is missing or older than 15 min; per window as in section 7.</li>
+<li><b>Never a false number</b>: no partial cost sum, no value from a stale live file, no window past its reset.</li>
+<li><b>Errors</b>: a transcript line that does not parse is skipped (as DGS-214); a line over 1 MB is skipped. A run that fails is logged as one line to stderr (run id and error code, no data) and keeps its last good <code>tokens.json</code>.</li>
+<li><b>Privacy</b>: the job reads transcript lines only for the usage fields; it writes counts, money, ids and file names only. No message text, prompt, tool input or output, terminal title or folder path in any file, view or page. A test greps every written file and view output for the fixture's message text and path.</li>
+</ul>
+</section>
+
+<section id="order">
+<h2>11. Order of work</h2>
+<ol>
+<li><b>Now (no dependency):</b> the price table move and version; the incremental reader; the run counter with state, cost and buckets; <code>seats.json</code>; <code>dg tokens runs</code> with the burn file; the scheduler job entry. These work on <code>dg run start</code> runs today (session ids from <code>started</code> events) and read <code>run.json</code> <code>session_id</code> when present.</li>
+<li><b>After DGS-599 merges (rebase on main):</b> the view fields, the shared schema, the Runs table columns, the run page card, the top bar.</li>
+<li><b>After DGS-598 merges:</b> a test with a DGS-598-shaped run (automatic run, <code>/clear</code> with a second session) and the first-use check on real automatic runs. No code depends on DGS-598 beyond reading the optional <code>session_id</code> field.</li>
+</ol>
+</section>
+
+<section id="tests">
+<h2>12. Tests without Jack</h2>
+<p>Fakes only: <code>DIGISMITH_DEPOT_DIR</code> and <code>DIGISMITH_CLAUDE_PROJECTS_DIR</code> in temp folders, fixture transcripts, fixture probe files. No real depot, transcripts, herdr, ClickUp, live API or API restart.</p>
+<ul>
+<li>Incremental equals full: count a fixture in several appends (including a half-written last line, a streamed response that grows, a resumed file that replays, a subagent file) and compare with <code>readClaudeCodeSession</code> on the whole file.</li>
+<li>A shrunk or replaced file is read from 0; a lost state file gives the same totals.</li>
+<li>Sessions from <code>run.json</code> and from <code>started</code> events; responses before <code>created_at</code> are left out; no session id gives no file.</li>
+<li>Cost per current model id, the Haiku tier per response, an unpriced model (total null), the price version in the file; <code>scripts/token-counter</code> tests still pass on the moved table.</li>
+<li>Buckets and burn: fixed clock, two runs, a bucket at the 60-min edge.</li>
+<li>Seats: two seats, one with no rate limits, <code>out.json</code> skipped, an unsafe name skipped, extra fields dropped, atomic write.</li>
+<li>Job: the registry entry (name, every 5, command args), <code>--dry-run</code> writes nothing, one failing run does not stop the rest, an ended run gets a final pass and is then skipped.</li>
+<li>Views and UI: fresh, stale, missing, final, unpriced and past-reset states; the contract tests; stories, baselines, Playwright, axe.</li>
+<li>Privacy grep (section 10). The strip-types smoke test covers each new file.</li>
+</ul>
+</section>
+
+<section id="first">
+<h2>13. First use (after the merge, conductor on the Maestro's word)</h2>
+<ol>
+<li>CLI build in the main checkout, then the existing Nexus API restart (loads the new job and the view fields), then <code>build-www.sh</code>. These are the conductor's steps; this ticket never restarts the API.</li>
+<li><code>dg tokens runs --dry-run</code>, then wait one 5-min tick. A live run's <code>tokens.json</code> appears; its total matches <code>dg tokens &lt;ticket&gt;</code> for a single-run ticket within the responses before <code>created_at</code>.</li>
+<li>Oculus shows Tokens and Cost in the Runs table, the card on a run page, burn in the top bar. After a probe, the seat windows show.</li>
+</ol>
+</section>
+
+<section id="out">
+<h2>14. Out of scope</h2>
+<ul>
+<li>A scheduled usage probe (it starts a Claude session; needs the Maestro's word; a later ticket).</li>
+<li>Non-Claude sessions (OpenCode, offloaded runners) and their prices.</li>
+<li>Per-ticket or per-step totals in Oculus (<code>dg tokens</code> keeps that).</li>
+<li>Budget alarms on cost, ClickUp cost fields, deletion of old snapshots.</li>
+<li>Fast mode, batch and US-only prices.</li>
+</ul>
+</section>
+
+<section id="decisions">
+<h2>15. Decisions for the Maestro</h2>
+<div class="callout">
+<p>All technical, taken by me; the Maestro may flip any of them at checkpoint 1.</p>
+<ol>
+<li><b>Seat readings older than 15 min</b> show with their "as of" time in the warn tone, not "-". Reason: the probe is manual and runs a few times a day, so a strict 15-min rule would show "-" almost always. A window past its reset shows "-".</li>
+<li><b>Tokens = all five classes</b> (cache reads included, as ccusage counts). The card shows the split.</li>
+<li><b>Cost is list price</b>, labelled so; seats are subscriptions.</li>
+<li><b>One job, one command</b> (<code>dg tokens runs</code>) for run snapshots, burn and seats.</li>
+</ol>
+</div>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-590—tokens-cost/design.html</footer>
+
+</body>
+</html>
