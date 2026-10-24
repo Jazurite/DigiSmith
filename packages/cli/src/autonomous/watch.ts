@@ -111,9 +111,10 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   };
 
   const { runs, unwatched } = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
-  for (const run of unwatched) {
-    for (const it of items.filter((o) => o.run === run && AUTO.includes(o.kind))) close(it, "role not watched");
-    for (const k of [...opened.keys()]) if (k.startsWith(`${run}|`)) opened.delete(k);
+  if (unwatched.length) {
+    const gone = new Set(unwatched);
+    for (const it of items.filter((o) => gone.has(o.run) && AUTO.includes(o.kind))) close(it, "role not watched");
+    for (const k of [...opened.keys()]) if (gone.has(k.slice(0, k.lastIndexOf("|")))) opened.delete(k);
   }
   for (const { record, events } of runs) {
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);

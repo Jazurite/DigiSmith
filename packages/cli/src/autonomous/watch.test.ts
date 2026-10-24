@@ -79,6 +79,20 @@ describe("runWatch", () => {
     expect(readOpen(dir)).toEqual([]);
     expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain("role not watched");
   });
+  it("closes only the items of unwatched runs when two runs change role and a watched run stays open", async () => {
+    present = new Set(["w2:DGS-11", "w2:DGS-12", "w2:DGS-13"]);
+    const a = mk("DGS-11", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    const b = mk("DGS-12", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    const c = mk("DGS-13", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    expect((await runWatch(deps())).opened).toBe(3);
+    for (const [id, role] of [[a, "maestro"], [b, "other"]]) {
+      const rd = findRunDir(id, env)!;
+      rewriteRun(rd, { ...readRun(rd), role });
+    }
+    const r = await runWatch(deps());
+    expect(r.resolved).toBe(2);
+    expect(readOpen(dir).map((i) => i.run)).toEqual([c]);
+  });
   it("makes no stderr line for runs/.index", async () => {
     mkdirSync(join(env.DIGISMITH_DEPOT_DIR!, "runs", ".index", "sessions"), { recursive: true });
     writeFileSync(join(env.DIGISMITH_DEPOT_DIR!, "runs", ".index", "sessions", "x"), "DGS-1/s-x\n");
