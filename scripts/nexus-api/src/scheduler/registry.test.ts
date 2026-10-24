@@ -77,7 +77,7 @@ describe('validateJobs', () => {
 describe('JOBS', () => {
   it('registers a valid selftest with no schedule and the two autonomous jobs', () => {
     expect(() => validateJobs(JOBS)).not.toThrow()
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog', 'schedule-release'])
     expect(JOBS[0]?.schedule).toBeUndefined()
     expect(isAbsolute(JOBS[0]!.command.file)).toBe(true)
   })
@@ -131,6 +131,16 @@ describe('JOBS', () => {
       expect(currentSlot(ms, job.schedule!)).not.toBeNull()
     }
     expect(slotsOfNight('2026-10-19', job.schedule!).map((s) => s.key)).toContain('2026-10-19@10:00')
+  })
+  it('schedule-release runs the built CLI every 5 minutes all day, skips missed slots, before the scan', () => {
+    const job = JOBS.find((j) => j.name === 'schedule-release')!
+    expect(job.schedule).toEqual({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 })
+    expect(job.command.file).toBe(process.execPath)
+    expect(job.command.args.slice(1)).toEqual(['autonomous', 'schedule-release'])
+    expect(job.command.args[0]).toBe(JOBS.find((j) => j.name === 'autonomous-scan')!.command.args[0])
+    expect(job).toMatchObject({ timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed' })
+    expect(job.order).toBeLessThan(JOBS.find((j) => j.name === 'autonomous-scan')!.order)
+    expect(job.description).toBe('Scheduling: move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual). No model tokens.')
   })
   it('selftest prints one line and exits 0 without SELFTEST_FAIL', async () => {
     const { command } = JOBS[0]!
