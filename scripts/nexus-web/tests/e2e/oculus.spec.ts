@@ -222,3 +222,21 @@ test.describe('the index page: agents (DGS-599)', () => {
     expect(html).not.toMatch(/terminal_title|\/Users\//)
   })
 })
+
+// DGS-613: phase times
+test('Runs: the Duration cell shows the running phase and its time', async ({ page }) => {
+  await page.goto(`${stub.url}/runs/`)
+  const first = page.locator('tbody tr').first().locator('td[data-label="Duration"]')
+  await expect(first.locator('[aria-hidden="true"]')).toHaveText('0:50:00 · building 0:14')
+  await expect(page.locator('thead th', { hasText: /^Phase$/ })).toHaveCount(0)
+})
+
+test('Run page: the strip shows durations and the current step in the info color', async ({ page }) => {
+  await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
+  const strip = page.getByRole('list', { name: /pipeline/i })
+  const steps = strip.locator('li')
+  await expect(steps.nth(0).locator('.dur')).toHaveText('0:01')
+  await expect(steps.nth(2).locator('.dur')).toHaveText('0:50')
+  await expect(steps.nth(2).locator('.dur')).toHaveClass(/live/)
+  await expect(strip).not.toContainText('now')
+})

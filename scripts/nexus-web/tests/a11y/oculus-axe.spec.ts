@@ -53,3 +53,16 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([])
   })
 }
+
+// DGS-613: times read in words
+test('the Duration cell and the strip read times in words', async ({ page }) => {
+  await stub.setMode('oc-ok')
+  await page.clock.install({ time: new Date('2026-10-22T03:00:00Z') })
+  await page.goto(`${stub.url}/runs/`)
+  const cell = page.locator('tbody tr').first().getByRole('cell').filter({ has: page.locator('.sr') }).first()
+  await expect(cell.locator('.sr')).toHaveText('50 min, building for 14 min')
+  await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
+  const strip = page.getByRole('list', { name: /pipeline/i })
+  await expect(strip.locator('li').nth(2).locator('.sr')).toHaveText('(current, 50 min so far)')
+  await expect(strip.locator('li').nth(0).locator('.sr')).toHaveText('(done, 1 min)')
+})
