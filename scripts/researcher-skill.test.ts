@@ -38,4 +38,13 @@ describe("researcher card and brief", () => {
     const section = card.slice(card.indexOf("## What it may not do"), card.indexOf("## Process")).toLowerCase();
     for (const s of ["no write in the digismith repo", "no clickup write", "no commit", "no push"]) expect(section).toContain(s);
   });
+  it("the brief's session registration --role value is a tokens role", () => {
+    const m = read("brief.md").match(/entry\.ts session --ticket \{\{KEY\}\} --role (\S+?)`/);
+    expect(m).not.toBeNull();
+    const src = fs.readFileSync(path.join(root, "packages", "cli", "src", "tokens", "entry.ts"), "utf8");
+    const roles = src.match(/const ROLES: readonly Role\[\] = \[([^\]]*)\]/);
+    expect(roles).not.toBeNull();
+    const list = roles![1].split(",").map((s) => s.trim().replace(/"/g, ""));
+    expect(list).toContain(m![1]);
+  });
 });

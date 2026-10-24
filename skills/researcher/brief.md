@@ -12,6 +12,6 @@ Clone the subject into `~/Workspace/Library/{{NAME}}`. Read it in full. Write yo
 - Your ONE write: the clone in `~/Workspace/Library/{{NAME}}` and `{{FINDINGS}}`. No write in the DigiSmith repo, no ClickUp write, no commit, no push. (Besides the session registration below, which writes registry state only.)
 - Do not start or stop another agent. Do not run code from the studied repo with network access or secrets.
 - Register your session so your tokens count (skip when `{{KEY}}` is `none`):
-  `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket {{KEY}} --role researcher`
+  `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts session --ticket {{KEY}} --role other`
 - Never read or print a token, an SSH key or a `.env` file. No `sudo`. pnpm only, never npm.
 - Never answer a "keep allowing reads" prompt. Times UTC+7 first, UTC in brackets. No AI attribution. Short plain sentences.

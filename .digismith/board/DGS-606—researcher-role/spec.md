@@ -35,7 +35,7 @@ Placeholders `{{AGENT}}`, `{{KEY}}`, `{{SUBJECT}}` (what to study), `{{NAME}}` (
 - `dg run start --role other` must work (test in `packages/cli/src/run/start-other.test.ts`).
 
 ### 5. Run-role lists and DGS-598: moved to DGS-609
-Maestro ruling (Jack), 2026-10-24: the run-role lists (`researcher` in the run `ROLES`, the `roleOf` rule, the Nexus copy, the equality test) are DGS-609 (backlog, after DGS-598). DGS-606 is the general DigiSmith role only: session card, researcher card, brief. Until DGS-609 lands the card starts a researcher with `dg run start --role other`; a test checks that `dg run start --role other` works.
+Maestro ruling (Jack), 2026-10-24: the run-role lists (`researcher` in the run `ROLES`, the `roleOf` rule, the Nexus copy, the equality test) are DGS-609 (backlog, after DGS-598). DGS-606 is the general DigiSmith role only: session card, researcher card, brief. Until DGS-609 lands the card starts a researcher with `dg run start --role other`; a test checks that `dg run start --role other` works. The brief's session registration (`entry.ts session --role`) also uses `other`, because the tokens roles are worker, maestro, reviewer, other (`packages/cli/src/tokens/entry.ts`); a test checks the brief's value is in that list. DGS-609 changes the run role, the tokens role, the card and the brief together.
 
 ## Out of scope
 DGS-605 (`digismith:study`; do not touch `.worktrees/dgs-605`), any watchdog change, Oculus view changes, a real herdr start.
