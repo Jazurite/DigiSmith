@@ -23,6 +23,10 @@ describe("roleOf", () => {
     expect(herdr("b2b-1")).toEqual({ role: "builder", role_from: "herdr" });
     expect(herdr("notes")).toEqual({ role: "other", role_from: "herdr" });
   });
+  it("a headless claude -p session is other, none, inside or outside herdr", () => {
+    expect(roleOf({ headless: true, inHerdr: true, looked: false, agentName: null, maestroIdentity: false })).toEqual({ role: "other", role_from: "none" });
+    expect(roleOf({ headless: true, inHerdr: false, looked: false, agentName: null, maestroIdentity: true })).toEqual({ role: "other", role_from: "none" });
+  });
   it("gives other, none when the pane has no agent entry", () => {
     expect(herdr(null)).toEqual({ role: "other", role_from: "none" });
   });

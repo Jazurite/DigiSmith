@@ -4,7 +4,9 @@
 import { TICKET_KEY } from "../ticket-key.ts";
 import type { Role, RoleFrom } from "./schema.ts";
 
-export type RoleInput = { inHerdr: boolean; looked: boolean; agentName: string | null; maestroIdentity: boolean };
+// headless: a non-interactive claude -p session (CLAUDE_CODE_ENTRYPOINT=sdk-cli). It is its own run with role other,
+// even in a herdr pane or a Maestro folder, where it would otherwise take the parent's role.
+export type RoleInput = { headless?: boolean; inHerdr: boolean; looked: boolean; agentName: string | null; maestroIdentity: boolean };
 
 // A builder name is a lower-case ticket key, e.g. dgs-598 or b2b-1.
 function isBuilderName(n: string): boolean {
@@ -13,6 +15,7 @@ function isBuilderName(n: string): boolean {
 
 // looked: false in the hook (the herdr name is not read yet), true in the labeller.
 export function roleOf(i: RoleInput): { role: Role; role_from: RoleFrom } {
+  if (i.headless) return { role: "other", role_from: "none" };
   if (!i.inHerdr) return i.maestroIdentity ? { role: "maestro", role_from: "identity" } : { role: "other", role_from: "none" };
   if (!i.looked) return { role: "other", role_from: "pending" };
   const n = i.agentName;
