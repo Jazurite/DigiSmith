@@ -21,11 +21,12 @@ const env1 = (v: string | undefined): string | null => plainName(v);
 
 // A /clear may continue the run of this claude process when that run is still open or ended for the clear.
 function continuable(dir: string): boolean {
-  const ev = readEvents(dir);
+  // readEvents does not check the shape of a line: skip anything that is not an object with a string type.
+  const ev = readEvents(dir).filter((e) => typeof e === "object" && e !== null && typeof (e as { type?: unknown }).type === "string");
   const types = ev.map((e) => e.type);
   const lastEnded = types.lastIndexOf("ended");
   if (lastEnded <= types.lastIndexOf("started")) return true;
-  return ev[lastEnded].data.reason === "clear";
+  return ev[lastEnded].data?.reason === "clear"; // an ended without data is not a clear end
 }
 
 export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessEnv, now: Date = new Date()): AutoRun | null {
@@ -59,12 +60,22 @@ export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessE
   };
   fs.mkdirSync(path.dirname(dir), { recursive: true });
   let created = true;
+  let madeDir = true;
   try {
     fs.mkdirSync(dir);
-    fs.writeFileSync(path.join(dir, "run.json"), JSON.stringify(record, null, 2) + "\n", { flag: "wx" });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-    created = false; // a second SessionStart of the same session raced us: continue its run
+    madeDir = false; // an earlier or racing start made it: still try to write run.json
+  }
+  try {
+    fs.writeFileSync(path.join(dir, "run.json"), JSON.stringify(record, null, 2) + "\n", { flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST") {
+      created = false; // a second SessionStart of the same session raced us: continue its run
+    } else {
+      if (madeDir) { try { fs.rmdirSync(dir); } catch { /* only an empty dir goes */ } }
+      throw e;
+    }
   }
   writeSessionIndex(env, sid, relOf(dir));
   if (pid) writePidIndex(env, pid, relOf(dir), sid);

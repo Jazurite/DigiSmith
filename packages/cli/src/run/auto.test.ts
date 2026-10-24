@@ -1,10 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
+
 import * as os from "node:os";
 import * as path from "node:path";
 import { findAuto, startAuto } from "./auto.ts";
 import { appendEvent } from "./events.ts";
 import { readRun } from "./record.ts";
+
+const failWrite = vi.hoisted(() => ({ once: false }));
+vi.mock("node:fs", async (orig) => {
+  const real = await orig<typeof import("node:fs")>();
+  const writeFileSync = ((...args: Parameters<typeof real.writeFileSync>) => {
+    if (failWrite.once) {
+      failWrite.once = false;
+      throw Object.assign(new Error("denied"), { code: "EACCES" });
+    }
+    return real.writeFileSync(...args);
+  }) as typeof real.writeFileSync;
+  return { ...real, writeFileSync, default: { ...real, writeFileSync } };
+});
 
 let tmp: string;
 let depot: string;
@@ -77,5 +91,30 @@ describe("startAuto", () => {
   it("keeps prompt text and other payload fields out of run.json", () => {
     const a = start({ session_id: "sid-9", source: "startup", prompt: "SECRET-PROMPT", transcript_path: "/x/SECRET" })!;
     expect(fs.readFileSync(path.join(a.dir, "run.json"), "utf8")).not.toMatch(/SECRET/);
+  });
+  it("a clear continues the run when events.jsonl has a null line", () => {
+    const a = start({ session_id: "sid-10", source: "startup" })!;
+    fs.appendFileSync(path.join(a.dir, "events.jsonl"), "null\n42\n");
+    expect(start({ session_id: "sid-10b", source: "clear" })!.run).toBe("s-sid-10");
+  });
+  it("an ended event without data is not a clear end, so a clear starts a new run", () => {
+    const a = start({ session_id: "sid-11", source: "startup" })!;
+    fs.appendFileSync(path.join(a.dir, "events.jsonl"), JSON.stringify({ type: "ended", seq: 9 }) + "\n");
+    expect(start({ session_id: "sid-11b", source: "clear" })!.run).toBe("s-sid-11b");
+  });
+  it("a failed run.json write removes the dir it made, throws, and the next start works", () => {
+    failWrite.once = true;
+    expect(() => start({ session_id: "sid-12", source: "startup" })).toThrow();
+    expect(fs.existsSync(path.join(depot, "runs", "DigiSmith", "s-sid-12"))).toBe(false);
+    const a = start({ session_id: "sid-12", source: "startup" })!;
+    expect(a).toMatchObject({ run: "s-sid-12", created: true });
+    expect(findAuto({ session_id: "sid-12" }, env)?.run).toBe("s-sid-12");
+  });
+  it("a leftover empty run dir gets its run.json on the next start", () => {
+    fs.mkdirSync(path.join(depot, "runs", "DigiSmith", "s-sid-13"), { recursive: true });
+    const a = start({ session_id: "sid-13", source: "startup" })!;
+    expect(a.run).toBe("s-sid-13");
+    expect(readRun(a.dir).session_id).toBe("sid-13");
+    expect(findAuto({ session_id: "sid-13" }, env)?.run).toBe("s-sid-13");
   });
 });
