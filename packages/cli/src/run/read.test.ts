@@ -1,11 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { createRun } from "./record.ts";
 import { findRunDir } from "./paths.ts";
 import { appendEvent } from "./events.ts";
+import * as eventsMod from "./events.ts";
 import { formatList, formatShow, listRuns, showRun, summarize, tailEvents } from "./read.ts";
+
+vi.mock("./events.ts", async (orig) => {
+  const m = await orig<typeof import("./events.ts")>();
+  return { ...m, readEvents: vi.fn(m.readEvents) };
+});
 
 let tmp: string;
 let env: NodeJS.ProcessEnv;
@@ -122,5 +128,15 @@ describe("DGS-598 readers", () => {
     const [row] = listRuns(env);
     expect(formatList([row])).toMatch(/^s-e {2}- {2}DigiSmith {2}other /);
     expect(formatShow(row)).toMatch(/ticket {4}-\nproject {3}DigiSmith\n/);
+  });
+  it("reads the events only of runs that match the ticket", () => {
+    mk("DigiSmith", "s-m1", { ticket: "DGS-1" }, 0);
+    mk("DigiSmith", "s-m2", {}, 0);
+    mk("DGS-2", "s-m3", { ticket: "DGS-2" }, 0);
+    mk("DGS-1", "s-m4", { ticket: "DGS-1" }, 0);
+    const spy = vi.mocked(eventsMod.readEvents);
+    spy.mockClear();
+    expect(listRuns(env, "DGS-1").map((r) => r.record.run).sort()).toEqual(["s-m1", "s-m4"]);
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

@@ -21,9 +21,9 @@ export function summarize(events: EventLine[]): RunSummary {
   };
 }
 
-function row(dir: string): RunRow | null {
+function row(dir: string, record?: RunRecord): RunRow | null {
   try {
-    return { record: readRun(dir), summary: summarize(readEvents(dir)) };
+    return { record: record ?? readRun(dir), summary: summarize(readEvents(dir)) };
   } catch {
     return null;
   }
@@ -63,10 +63,16 @@ export function listRuns(env: NodeJS.ProcessEnv, ticket?: string, opts: ListOpti
     for (const id of ids) {
       const dir = path.join(keyDir, id);
       if (since !== null && lastActivity(dir) < since) continue;
-      const r = row(dir);
-      if (!r) continue;
-      if (ticket !== undefined && key !== ticket && r.record.ticket !== ticket) continue;
-      rows.push(r);
+      // Read run.json alone first; the events are read only for a run that passes the ticket filter.
+      let record: RunRecord;
+      try {
+        record = readRun(dir);
+      } catch {
+        continue;
+      }
+      if (ticket !== undefined && key !== ticket && record.ticket !== ticket) continue;
+      const r = row(dir, record);
+      if (r) rows.push(r);
     }
   }
   return rows.sort((a, b) => (a.record.created_at < b.record.created_at ? 1 : a.record.created_at > b.record.created_at ? -1 : 0));

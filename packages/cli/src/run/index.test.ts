@@ -155,7 +155,10 @@ describe("dg run", () => {
     const fresh = (await dg("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).stdout.trim();
     const old = (await dg("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md")).stdout.trim();
     const t = (Date.now() - 9 * 86_400_000) / 1000;
-    fs.utimesSync(path.join(findRunDir(old, process.env)!, "run.json"), t, t);
+    for (const f of ["run.json", "events.jsonl"]) {
+      const p = path.join(findRunDir(old, process.env)!, f);
+      if (fs.existsSync(p)) fs.utimesSync(p, t, t);
+    }
     const ids = async (...a: string[]) => (JSON.parse((await dg("list", "--json", ...a)).stdout) as { record: { run: string } }[]).map((r) => r.record.run).sort();
     expect(await ids()).toEqual([fresh]);
     expect(await ids("--all")).toEqual([fresh, old].sort());
