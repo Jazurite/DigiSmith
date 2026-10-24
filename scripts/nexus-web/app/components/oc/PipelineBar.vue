@@ -1,31 +1,35 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { RunDetail } from '#oculus-schema'
 import { fmtMinutes, fmtUtc7, spokenMinutes, stepTime } from '../../utils/oc-format'
 
 type Step = RunDetail['pipeline'][number]
-defineProps<{ steps: RunDetail['pipeline']; nowMs: number }>()
+const props = defineProps<{ steps: RunDetail['pipeline']; nowMs: number }>()
 const LABEL = { claimed: 'Claimed', 'worktree-ready': 'Worktree ready', building: 'Building', review: 'Review', merged: 'Merged', pushed: 'Pushed' } as const
 // Pushed is the end mark: blank once reached, a dash before
-const durText = (s: Step, nowMs: number): string => {
-  const t = stepTime(s, nowMs)
+const durText = (s: Step, t: ReturnType<typeof stepTime>): string => {
   if (t) return fmtMinutes(t.min)
   return s.step === 'pushed' && s.state === 'done' ? '' : '-'
 }
-const srText = (s: Step, nowMs: number): string => {
-  const t = stepTime(s, nowMs)
+const srText = (s: Step, t: ReturnType<typeof stepTime>): string => {
   if (!t) return `(${s.state})`
   return t.live ? `(${s.state}, ${spokenMinutes(t.min)} so far)` : `(${s.state}, ${spokenMinutes(t.min)})`
 }
+// one stepTime call per step per render, shared by the text, the screen-reader words and the live class
+const rows = computed(() => props.steps.map((s) => {
+  const t = stepTime(s, props.nowMs)
+  return { s, dur: durText(s, t), sr: srText(s, t), live: !!t?.live }
+}))
 </script>
 
 <template>
   <ol class="pipe" aria-label="Run pipeline, times UTC+7">
-    <li v-for="s in steps" :key="s.step" :class="s.state">
-      <i class="dot" aria-hidden="true" />{{ LABEL[s.step] }}
-      <span class="sr"> {{ srText(s, nowMs) }}</span>
-      <small>{{ fmtUtc7(s.at) }}</small>
-      <small class="dur" :class="{ live: stepTime(s, nowMs)?.live }" aria-hidden="true">{{ durText(s, nowMs) }}</small>
-      <b v-if="s.state === 'lost'" class="word">lost</b>
+    <li v-for="r in rows" :key="r.s.step" :class="r.s.state">
+      <i class="dot" aria-hidden="true" />{{ LABEL[r.s.step] }}
+      <span class="sr"> {{ r.sr }}</span>
+      <small>{{ fmtUtc7(r.s.at) }}</small>
+      <small class="dur" :class="{ live: r.live }" aria-hidden="true">{{ r.dur }}</small>
+      <b v-if="r.s.state === 'lost'" class="word">lost</b>
     </li>
   </ol>
 </template>
