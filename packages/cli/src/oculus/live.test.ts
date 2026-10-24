@@ -47,6 +47,12 @@ describe("maestroNames", () => {
     writeFileSync(join(d.dir, "identities", "b.yml"), "id: something-else\nrole: conductor\n");
     expect([...maestroNames(d.env)]).toEqual(["digismith-maestro"]);
   });
+  it("strips optional quotes around the id", () => {
+    mkdirSync(join(d.dir, "identities"));
+    writeFileSync(join(d.dir, "identities", "a.yml"), 'id: "digismith-maestro"\nrole: maestro\n');
+    writeFileSync(join(d.dir, "identities", "b.yml"), "id: 'emma-maestro'\nrole: maestro\n");
+    expect([...maestroNames(d.env)].sort()).toEqual(["digismith-maestro", "emma-maestro"]);
+  });
   it("is empty without an identities folder", () => expect(maestroNames(d.env).size).toBe(0));
 });
 

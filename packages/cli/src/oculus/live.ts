@@ -57,7 +57,7 @@ export function maestroNames(env: NodeJS.ProcessEnv): Set<string> {
   for (const f of files) {
     let text: string;
     try { text = fs.readFileSync(path.join(dir, f), "utf8"); } catch { continue; }
-    const id = /^id:\s*(\S+)\s*$/m.exec(text)?.[1];
+    const id = /^id:\s*(["']?)([^\s"']+)\1\s*$/m.exec(text)?.[2];   // one optional pair of quotes
     if (id && /^role:\s*maestro\s*$/m.test(text)) out.add(id);
   }
   return out;
@@ -92,8 +92,9 @@ export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, ho
     if (!pane) continue;
     const name = str(a.name)?.slice(0, NAME_MAX) ?? null;
     const status = (AGENT_STATUSES as readonly string[]).includes(a.agent_status as string) ? (a.agent_status as AgentStatus) : "unknown";
-    agents.push({ name, pane, tab: str(a.tab_id), workspace: str(a.workspace_id), role: roleOf(name, maestros), project: projectOf(a.cwd, home), status, run: runs.get(pane) ?? null });
+    agents.push({ name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: roleOf(name, maestros), project: projectOf(a.cwd, home), status, run: runs.get(pane) ?? null });
   }
-  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || (x.workspace ?? "~").localeCompare(y.workspace ?? "~") || (x.name ?? "~").localeCompare(y.name ?? "~") || x.pane.localeCompare(y.pane));
+  const cmp = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });   // w2 before w10
+  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
   return { readAt, herdr: "ok", agents };
 }
