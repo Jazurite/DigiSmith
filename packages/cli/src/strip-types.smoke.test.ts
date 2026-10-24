@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, it, expect } from "vitest";
@@ -16,6 +17,17 @@ describe("source CLI under --experimental-strip-types", () => {
       expect(stdout).toMatch(/autonomous|scan|report|nightwatch|view/i);
     }, 30_000);
   }
+});
+
+// The view path loads modules that --help does not; run one view on an empty depot.
+describe("nightwatch view under --experimental-strip-types", () => {
+  it("dg nightwatch view overview --json on an empty depot", async () => {
+    const depot = mkdtempSync(join(tmpdir(), "nw-smoke-"));
+    try {
+      const { stdout } = await run(process.execPath, ["--experimental-strip-types", entry, "nightwatch", "view", "overview", "--json"], { env: { ...process.env, DIGISMITH_DEPOT_DIR: depot } });
+      expect(JSON.parse(stdout).workers).toEqual([]);
+    } finally { rmSync(depot, { recursive: true, force: true }); }
+  }, 30_000);
 });
 
 // The import graph of index.ts skips tests and test utils; strip every .ts file so none can bring back enums, namespaces or parameter properties.

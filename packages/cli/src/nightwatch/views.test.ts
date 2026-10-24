@@ -1,5 +1,5 @@
 // packages/cli/src/nightwatch/views.test.ts
-import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
@@ -30,6 +30,28 @@ describe("an empty depot", () => {
     expect(runView(d.env, NOW, { run: "nope-1" })).toBeNull();
     expect(eventsView(d.env, { run: "nope-1" })).toBeNull();
     expect(planView(d.env, { ticket: "DGS-590" })).toMatchObject({ found: false, tasks: [] });
+  });
+});
+
+describe("torn and bad event lines", () => {
+  const seedBad = (): void => {
+    seedRun();
+    appendFileSync(join(d.dir, "runs", "DGS-590", "builder-1", "events.jsonl"), [
+      JSON.stringify({ schema: "nightwatch-event/v1", seq: 3, ts: "2026-10-22T02:59:30.000Z", run: "builder-1", type: "tool" }),
+      JSON.stringify({ type: "tool", data: {} }),
+      "null",
+      "[1,2]",
+      JSON.stringify({ seq: 1.5, ts: "2026-10-22T02:59:40.000Z", type: "tool", data: {} }),
+      '{"seq":9,"ts":"2026-10-22T0',
+    ].join("\n") + "\n");
+  };
+  it("overview and events skip lines of the wrong shape and default a missing data to {}", () => {
+    seedBad();
+    expect(() => overviewView(d.env, NOW)).not.toThrow();
+    const e = eventsView(d.env, { run: "builder-1" });
+    expect(e?.lines).toHaveLength(3);
+    expect(e?.lines.map((l) => l.type)).toEqual(["started", "tool", "tool"]);
+    expect(runView(d.env, NOW, { run: "builder-1" })).not.toBeNull();
   });
 });
 

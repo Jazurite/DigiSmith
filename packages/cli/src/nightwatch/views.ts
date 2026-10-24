@@ -12,7 +12,7 @@ import { autonomousDir, newestEvent, readEvents as readScanEvents, readLock } fr
 import type { Event } from "../autonomous/types.ts";
 import { DEFAULT_BUDGETS } from "../autonomous/watchdog.ts";
 import { parseVerdictEntries } from "../reviewer/verdicts.ts";
-import { readEvents, type EventLine } from "../run/events.ts";
+import { readEvents as readEventLines, type EventLine } from "../run/events.ts";
 import { depotDir, findRunDir, isSafe } from "../run/paths.ts";
 import { readRun, type RunRecord } from "../run/record.ts";
 import { listRuns } from "../run/read.ts";
@@ -53,6 +53,19 @@ function claimFor(claims: Event[], run: RunRecord): Event | null {
   return found.length === 0 ? null : found[found.length - 1];
 }
 
+// A line that is JSON but not an event (null, no ts or seq, wrong types) is skipped like a torn line; a missing data becomes {}.
+function readEvents(dir: string): EventLine[] {
+  const out: EventLine[] = [];
+  for (const raw of readEventLines(dir) as unknown[]) {
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const e = raw as Record<string, unknown>;
+    if (typeof e.ts !== "string" || !Number.isInteger(e.seq) || typeof e.type !== "string") continue;
+    const data = e.data !== null && typeof e.data === "object" && !Array.isArray(e.data) ? e.data : {};
+    out.push({ ...e, data } as unknown as EventLine);
+  }
+  return out;
+}
+
 function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView[] {
   const adir = autonomousDir(env);
   const away = readAway(adir);
@@ -61,7 +74,7 @@ function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[]): RunRowView
   return loaded.map((l) => runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()));
 }
 
-// config.yml is read from the main checkout's .digismith, like the watchdog; the depot is not a checkout, so a missing file means defaults.
+// Budgets come from config.yml in the process working directory (the watchdog reads it the same way); the depot is not a checkout and the API sets no NIGHTWATCH_CONFIG_CWD, so a missing file means defaults.
 const depotCwd = (env: NodeJS.ProcessEnv): string => env.NIGHTWATCH_CONFIG_CWD ?? depotDir(env);
 
 export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
