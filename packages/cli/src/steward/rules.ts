@@ -1,4 +1,4 @@
-import { FINISHED, GATE_EVENTS, type Config, type EventInput, type EventName, type RuleResult, type Status, type TicketView } from "./types.ts";
+import { APPROVE_TARGETS, FINISHED, GATE_EVENTS, type Config, type EventInput, type EventName, type RuleResult, type Status, type TicketView } from "./types.ts";
 
 interface Entry {
   from: Status[];
@@ -10,8 +10,7 @@ const ENTRY: Partial<Record<EventName, Entry>> = {
   "concept-started": { from: ["backlog"], to: "concept" },
   "discovery-started": { from: ["concept"], to: "discovery" },
   "refinement-started": { from: ["concept", "discovery"], to: "refinement" },
-  approved: { from: ["refinement"], to: "to do" },
-  started: { from: ["to do"], to: "in progress" },
+  started: { from: ["to do", "ready"], to: "in progress" },
   "review-started": { from: ["in progress"], to: "review" },
   released: { from: ["release"], to: "done" },
   documented: { from: ["done"], to: "documented" },
@@ -35,6 +34,7 @@ export function evaluate(input: EventInput, view: TicketView, cfg: Config): Rule
   const entry = ENTRY[event];
   if (entry) return viaEntry(event, entry, view);
   switch (event) {
+    case "approved": return approved(input, view);
     case "merged": return merged(view, cfg);
     case "verified": return verified(view);
     case "accepted": return accepted(input, view, cfg);
@@ -51,6 +51,12 @@ function viaEntry(event: EventName, entry: Entry, view: TicketView): RuleResult 
     return refuse(`${event} is valid from ${entry.from.join(" or ")}; the ticket is in ${view.status}`);
   }
   return move(entry.to, event === "started" ? { startDate: true } : {});
+}
+
+function approved(input: EventInput, view: TicketView): RuleResult {
+  const into = input.into ?? "to do";
+  if (!(APPROVE_TARGETS as readonly string[]).includes(into)) return refuse(`approved --into must be one of ${APPROVE_TARGETS.join(", ")}`);
+  return viaEntry("approved", { from: ["refinement"], to: into }, view);
 }
 
 function merged(view: TicketView, cfg: Config): RuleResult {

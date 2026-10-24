@@ -19,6 +19,8 @@ describe("entry events, one per status", () => {
     [ev("refinement-started"), view("concept"), "refinement"],
     [ev("refinement-started"), view("discovery"), "refinement"],
     [ev("approved", Q), view("refinement"), "to do"],
+    [ev("approved", { ...Q, into: "ready" }), view("refinement"), "ready"],
+    [ev("approved", { ...Q, into: "scheduled" }), view("refinement"), "scheduled"],
     [ev("started"), view("to do"), "in progress"],
     [ev("review-started"), view("in progress"), "review"],
     [ev("merged"), view("review", { signoff: "Jack" }), "acceptance"],
@@ -149,5 +151,30 @@ describe("the gates", () => {
     for (const event of GATE_EVENTS)
       for (const status of STATUSES)
         expect(evaluate({ event, answer: "yes" }, view(status), OFF).kind).toBe("refuse");
+  });
+});
+
+describe("approved --into and started from ready", () => {
+  it("approved --into ready moves refinement to ready", () => {
+    expect(evaluate({ event: "approved", quote: "yes", into: "ready" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "ready" });
+  });
+  it("approved --into scheduled moves refinement to scheduled", () => {
+    expect(evaluate({ event: "approved", quote: "yes", into: "scheduled" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "scheduled" });
+  });
+  it("approved without --into still moves to to do", () => {
+    expect(evaluate({ event: "approved", quote: "yes" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "to do" });
+  });
+  it("approved --into ready on a ready ticket is a noop", () => {
+    expect(evaluate({ event: "approved", quote: "yes", into: "ready" }, view("ready"), OFF)).toEqual({ kind: "noop" });
+  });
+  it("approved with a bad --into is refused", () => {
+    const r = evaluate({ event: "approved", quote: "yes", into: "done" as never }, view("refinement"), OFF);
+    expect(r).toEqual({ kind: "refuse", reason: "approved --into must be one of to do, ready, scheduled" });
+  });
+  it("started is valid from ready", () => {
+    expect(evaluate({ event: "started" }, view("ready"), OFF)).toMatchObject({ kind: "move", to: "in progress", startDate: true });
+  });
+  it("started from scheduled is refused", () => {
+    expect(evaluate({ event: "started" }, view("scheduled"), OFF)).toEqual({ kind: "refuse", reason: "started is valid from to do or ready; the ticket is in scheduled" });
   });
 });

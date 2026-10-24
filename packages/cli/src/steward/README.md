@@ -13,8 +13,8 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `concept-started` | backlog | concept |
 | `discovery-started` | concept | discovery |
 | `refinement-started` | concept, discovery | refinement |
-| `approved` (gate, needs `--quote`) | refinement | to do |
-| `started` | to do | in progress (start date; a start later than today is replaced) |
+| `approved` (gate, needs `--quote`; `--into to do\|ready\|scheduled`, default to do) | refinement | to do, ready or scheduled |
+| `started` | to do, ready | in progress (start date; a start later than today is replaced) |
 | `review-started` | in progress | review |
 | `merged` | review | Sign-off Auto: done. Jack: acceptance. Unmarked: stays, records the merge |
 | `verified` | review (merge recorded, unmarked) | done |
@@ -23,6 +23,8 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 | `released` | release | done |
 | `documented` | done | documented |
 | `discard`, `close` (need `--quote`) | any open status | discarded, Closed |
+
+`scheduled` leaves by `dg autonomous schedule-release` (DGS-601), not by a Steward event.
 
 A non-zero exit (code 2) means a usage error only. Tracker or state failures print one line and exit 0.
 Which skill or step sends which event is DGS-551.
