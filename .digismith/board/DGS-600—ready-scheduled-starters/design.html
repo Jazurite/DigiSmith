@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ready and scheduled starters (DGS-600, DGS-601)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Ready and scheduled starters (DGS-600, DGS-601)</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: DGS-600, DGS-601</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal and scope</a></li>
+<li><a href="#flow">Status flow</a></li>
+<li><a href="#fields">Custom fields</a></li>
+<li><a href="#readers">Every reader of "to do" (DGS-600)</a></li>
+<li><a href="#scan">The scan after DGS-600</a></li>
+<li><a href="#tools">ClickUp tool gaps and the new dg commands</a></li>
+<li><a href="#release">schedule-release (DGS-601)</a></li>
+<li><a href="#view">Schedule view and the DGS-488 text</a></li>
+<li><a href="#errors">Errors and edge cases</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#rollout">Rollout (after each merge, with --yes)</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>1. Goal and scope</h2>
+<p>Today <code>to do</code> is the only starter, and the night scan takes every ticket in it. Jack cannot keep a ticket for
+himself, and cannot plan a ticket for a later day. This spec adds two starters and one clock.</p>
+<div class="cards">
+  <div class="card"><span class="tag">DGS-600</span><h4>ready, scheduled, Mode</h4>
+    <p>New statuses <code>ready</code> and <code>scheduled</code>. New field <strong>Mode</strong>. The scan claims
+    <code>ready</code> only. <code>to do</code> becomes attended. The Steward knows the new flow.</p></div>
+  <div class="card"><span class="tag">DGS-601</span><h4>Scheduled at, schedule-release, Schedule view</h4>
+    <p>New date field <strong>Scheduled at</strong>. A Nexus job <code>schedule-release</code> moves a due
+    <code>scheduled</code> ticket by its Mode. A ClickUp view "Schedule".</p></div>
+</div>
+<p><strong>Not in this work:</strong> the Oculus view (DGS-602); the pickup loop, caps and the day/night dial (later in
+DGS-434); the Refiner role (Definition of Ready, Sign-off and Mode proposal, rank); a better name for <code>ready</code>.
+Pickup timing, the night window and the away switch do not change.</p>
+<p><strong>No migration.</strong> Tickets in <code>to do</code> today stay in <code>to do</code> and are now attended.</p>
+</section>
+
+<section id="flow">
+<h2>2. Status flow</h2>
+<pre><code>refinement --(Jack approves)--> to do       attended: Jack starts and observes it; never picked up automatically
+refinement --(Jack approves)--> ready       unattended: autonomous-scan claims it (Mode must be Autonomous)
+refinement --(Jack approves)--> scheduled   parked until "Scheduled at"
+scheduled  --(schedule-release, Scheduled at is past)--> ready  (Mode Autonomous)
+scheduled  --(schedule-release, Scheduled at is past)--> to do  (Mode Manual)
+to do      --(Jack starts it)--> in progress
+ready      --(autonomous-scan claims it)--> in progress</code></pre>
+<p>Space order after the change: backlog, concept, discovery, refinement, <strong>scheduled</strong>, to do,
+<strong>ready</strong>, in progress, review, acceptance, release, done, documented, discarded, Closed.
+Both new statuses are type <code>custom</code>. Colours: <code>scheduled</code> <code>#0091ff</code>,
+<code>ready</code> <code>#2ecd6f</code>.</p>
+<p>Jack can also move <code>scheduled</code> to <code>to do</code> or <code>ready</code> by hand at any time. Nothing
+stops that; <code>schedule-release</code> only reads tickets that are still <code>scheduled</code>.</p>
+</section>
+
+<section id="fields">
+<h2>3. Custom fields</h2>
+<div class="table-wrap"><table>
+<tr><th>Field</th><th>Type</th><th>Values</th><th>Ticket</th></tr>
+<tr><td><strong>Mode</strong></td><td>dropdown</td><td><code>Autonomous</code> (orderindex 0), <code>Manual</code> (orderindex 1)</td><td>DGS-600</td></tr>
+<tr><td><strong>Scheduled at</strong></td><td>date, with time</td><td>an instant (ms). Shown and entered in UTC+7.</td><td>DGS-601</td></tr>
+</table></div>
+<p><strong>Mode</strong> says who carries a ticket through (AI on its own, or Jack). Sign-off says who accepts. Every
+ticket can hold Mode; it is set in refinement (proposed by the Refiner later, approved by Jack). No "Then" field.</p>
+<p><strong>Where the fields live.</strong> Both fields go to the same location as the existing <code>Sign-off</code>
+field (id <code>9f85d93c-…</code>), so every list that shows Sign-off also shows Mode and Scheduled at. The reads of
+DGS-600, DGS-457 and DGS-586 show Sign-off in clans B, C and J; DGS-548 (another folder) does not have it, so Sign-off
+is not workspace-wide. The exact location (space or a set of folders) is read first, with a new read command (section 6).</p>
+<p>The scan reads Mode the same way it reads Sign-off today: the dropdown <code>value</code> is an orderindex; the option
+name is found in <code>type_config.options</code>. Any other value, or no value, reads as <code>null</code>.</p>
+</section>
+
+<section id="readers">
+<h2>4. Every reader of "to do" (DGS-600)</h2>
+<p>Found with a search for the status in <code>packages/</code>, <code>scripts/</code>, <code>skills/</code> and
+<code>hooks/</code>. One row per place; the last column says what changes.</p>
+<div class="table-wrap"><table>
+<tr><th>Place</th><th>What it does with "to do" today</th><th>Change</th></tr>
+<tr><td><code>autonomous/scan.ts</code> step 3</td><td><code>hasStatus("to do")</code>; else event <code>no-starter-status</code> and one comment on DGS-548</td><td>Reads <code>ready</code>. Comment text names <code>ready</code>.</td></tr>
+<tr><td><code>autonomous/scan.ts</code> step 4</td><td><code>tracker.listToDo()</code></td><td><code>tracker.listByStatus("ready")</code>.</td></tr>
+<tr><td><code>autonomous/scan.ts</code> skip comment</td><td>"It stays in to do."</td><td>"It stays in ready."</td></tr>
+<tr><td><code>autonomous/scan.ts</code> <code>claim()</code> failure</td><td>writes the status back to <code>to do</code></td><td>Writes it back to <code>ready</code> (where it came from).</td></tr>
+<tr><td><code>autonomous/advance.ts</code> <code>advanceTicket</code></td><td>a locked ticket that reads <code>to do</code> (claim write lost) gets <code>in progress</code> again</td><td>Reads <code>ready</code>. A locked ticket that Jack moved to <code>to do</code> is no longer pulled back: <code>to do</code> is his.</td></tr>
+<tr><td><code>autonomous/types.ts</code> <code>Tracker</code></td><td><code>listToDo()</code></td><td>Replaced by <code>listByStatus(name)</code>. <code>LoTask</code> gains <code>mode</code> (and <code>scheduledAt</code> in DGS-601).</td></tr>
+<tr><td><code>autonomous/tracker-clickup.ts</code></td><td>constant <code>TO_DO</code>, filter in <code>listToDo</code></td><td><code>listByStatus(name)</code> with the status as a parameter; reads Mode.</td></tr>
+<tr><td><code>autonomous/ready.ts</code> (Definition of Ready)</td><td>no status read</td><td>New reason <code>REASON.mode</code>: "Mode is not Autonomous (Manual or missing)". Same one-comment rule as the other reasons.</td></tr>
+<tr><td><code>autonomous/fake-tracker.test-util.ts</code></td><td>default status <code>to do</code>; <code>listToDo</code></td><td>Default <code>ready</code>; <code>listByStatus</code>; <code>to do</code> stays in its status set.</td></tr>
+<tr><td><code>autonomous/index.ts</code> describe texts</td><td>"scan to do and claim …"</td><td>"scan ready and claim …".</td></tr>
+<tr><td><code>scripts/nexus-api/src/scheduler/registry.ts</code> <code>autonomous-scan</code> description</td><td>"claim one ready to-do ticket"</td><td>"claim one ready ticket".</td></tr>
+<tr><td><code>scripts/nexus-web/…/NwTopBar.vue</code></td><td>label "To do waiting"</td><td>"Ready waiting". <code>ScanCard.vue</code> ("Waiting") does not change.</td></tr>
+<tr><td><code>steward/types.ts</code>, <code>steward/rules.ts</code>, <code>steward/README.md</code></td><td>status list; <code>approved</code>: refinement → to do; <code>started</code>: to do → in progress</td><td>Status list gains <code>scheduled</code> and <code>ready</code>. <code>approved</code> gains <code>--into to do|ready|scheduled</code> (default <code>to do</code>). <code>started</code> is valid from <code>to do</code> or <code>ready</code>. README table updated.</td></tr>
+<tr><td><code>autonomous/report.ts</code></td><td>no status read (skip lines come from events)</td><td>No change. The new Mode reason shows through the existing skip lines.</td></tr>
+<tr><td><code>autonomous/already-done.ts</code> (salvage check), <code>salvage/</code></td><td>no status read</td><td>No change.</td></tr>
+<tr><td><code>autonomous/watch.ts</code>, <code>watchdog.ts</code>, <code>release.ts</code></td><td>no status read</td><td>No change.</td></tr>
+<tr><td><code>scripts/nexus-api/src/nightwatch-reader.ts</code></td><td>reads the scan's <code>candidates</code> count only</td><td>No change (the count now means ready tickets).</td></tr>
+<tr><td>Conductor runbook, section "Autonomous order" (untracked, main checkout)</td><td>describes orders from the scan</td><td>Wording check after the merge, by the conductor (the file is git-excluded; the worker does not edit it).</td></tr>
+<tr><td>DGS-488 status flow (ClickUp)</td><td>"refinement: Jack approves -> to do"; "Lights-Out picks up any ticket in to do"</td><td>New flow text (section 8), written with <code>dg clickup update-task</code>.</td></tr>
+</table></div>
+</section>
+
+<section id="scan">
+<h2>5. The scan after DGS-600</h2>
+<p>Only the starter changes. The order of steps, the night window, the away switch, the lock, the breaker, the
+guardrails, rank order and "claim one and stop" stay as they are.</p>
+<ol>
+<li>Step 3: <code>hasStatus("ready")</code>. Missing → event <code>no-starter-status</code>, one comment on DGS-548:
+"the status "ready" is missing, so no ticket can be picked up".</li>
+<li>Step 4: <code>listByStatus("ready")</code>. Only Task and Bug (unchanged).</li>
+<li>Step 5: <code>checkReady</code> now has five checks, in this order: spec and plan, Sign-off, milestone, blocked,
+<strong>Mode</strong>. Mode passes only when it is <code>Autonomous</code>. A failure is a skip with one comment, posted
+again only when the reasons change (the existing <code>notes.json</code> hash).</li>
+<li>A claim that fails writes <code>ready</code> back.</li>
+</ol>
+<p>A <code>ready</code> ticket with Mode Manual stays in <code>ready</code> with the comment. Jack moves it to
+<code>to do</code> or sets Mode to Autonomous; the scan does not move it.</p>
+</section>
+
+<section id="tools">
+<h2>6. ClickUp tool gaps and the new dg commands</h2>
+<p>Checked: <code>packages/clickup-client</code> (public client and Frontdoor client), <code>packages/cli/src/clickup/</code>,
+the depot clone and the Frontdoor captures (masked, with <code>dg clickup frontdoor dump</code>). Results:</p>
+<div class="table-wrap"><table>
+<tr><th>Need</th><th>Today</th><th>New or changed command</th><th>Ticket</th></tr>
+<tr><td>Add <code>ready</code>, <code>scheduled</code></td><td><code>dg clickup add-status</code> (Frontdoor, space level) works</td><td>None. Used as is, with <code>--after</code>.</td><td>600</td></tr>
+<tr><td>Read where Sign-off lives</td><td><code>FrontdoorClient.getField</code> exists; no command</td><td><code>dg clickup get-field &lt;id&gt; [--locations]</code>: read only; prints id, name, type, options and the locations (<code>GET /customFields/v2/field/{id}?locations=true</code>).</td><td>600</td></tr>
+<tr><td>Create Mode at Sign-off's location</td><td><code>create-field</code>: dropdown, <code>--folder</code> only</td><td><code>create-field --location &lt;type&gt;:&lt;id&gt;</code> (repeatable), not with <code>--folder</code>: the body carries <code>team_id</code> and no <code>category_id</code>, then <code>PUT /field/v3/experience/workspaces/{ws}/fields/{id}/locations</code> with <code>new_locations: [{ parent: { type, id }, required: false, required_on_subtasks: false, hide_from_guests: false }]</code>. Both shapes are in the capture of 2026-10-10 12:19 UTC+7 (that capture used <code>type: 7</code>, the workspace). The location type numbers come from <code>get-field --locations</code> on Sign-off; no number is guessed.</td><td>600</td></tr>
+<tr><td>Create Scheduled at</td><td>dropdown only</td><td><code>create-field --type date</code>: the same body with <code>type: "date"</code>, no options, <code>type_config: {}</code>. This body is not captured. The first live call is one try; a 4xx stops the setup and asks Jack for one capture (he creates any date field in the UI with Proxyman on). Nothing else is guessed.</td><td>601</td></tr>
+<tr><td>Write Scheduled at on a ticket</td><td><code>update-task --field</code> refuses type <code>date</code></td><td><code>--field "Scheduled at=2026-10-25T22:00:00+07:00"</code> (or <code>2026-10-25 22:00</code>, read as UTC+7). Sends <code>value</code> = ms and <code>value_options: { time: true }</code> (public API <code>POST /task/{id}/field/{field}</code>). A plain day is refused for this field (a time is needed).</td><td>601</td></tr>
+<tr><td>Schedule view</td><td>none</td><td><code>dg clickup create-view --space &lt;id&gt; --name &lt;n&gt; --status &lt;s&gt; --sort-field &lt;field name&gt;</code> (public API <code>POST /space/{id}/view</code>, type <code>list</code>, filter status equals <code>scheduled</code>, sort by the field ascending, field column shown). Refuses when a view of that name exists in the space (<code>GET /space/{id}/view</code>). Dry run unless <code>--yes</code>, like the other write commands.</td><td>601</td></tr>
+</table></div>
+<p>All writes go through <code>dg</code>; no one-off scripts. Every new write command prints the call and sends nothing
+without <code>--yes</code>, and reads back after the write.</p>
+</section>
+
+<section id="release">
+<h2>7. schedule-release (DGS-601)</h2>
+<h3>Command</h3>
+<p><code>dg autonomous schedule-release [--dry-run]</code>. Code in <code>packages/cli/src/autonomous/schedule-release.ts</code>
+(pure core with injected tracker and clock) and its command in <code>autonomous/index.ts</code>. It uses the same
+<code>Tracker</code>, state folder (<code>autonomousDir()</code>) and clock helpers as the scan. No model tokens.</p>
+<h3>Nexus job</h3>
+<pre><code>defineJob({
+  name: 'schedule-release',
+  description: 'Scheduling: move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual). No model tokens.',
+  schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
+  command: { file: process.execPath, args: [...DG, 'autonomous', 'schedule-release'] },
+  timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed',
+})</code></pre>
+<p>Order 45 puts it before <code>autonomous-scan</code> (50) in the same slot, so a ticket released to
+<code>ready</code> can be claimed in the same 5-minute slot. The Nexus engine runs one job at a time, so the two never
+run together.</p>
+<h3>Rules, per run</h3>
+<ol>
+<li><code>listByStatus("scheduled")</code>, any task type. The team search gets an optional status filter
+(<code>statuses[]</code>), used by both jobs, so a run reads only the tickets it needs.</li>
+<li>For each ticket, in "Scheduled at" order:
+  <ul>
+  <li>Scheduled at missing or not a number → skip; comment once: "Scheduled at is empty or not a date. Set it (UTC+7) and the ticket moves at that time."</li>
+  <li>Mode missing → skip; comment once: "Mode is empty. Set Autonomous (moves to ready) or Manual (moves to to do)."</li>
+  <li>Scheduled at later than now → nothing.</li>
+  <li>Else move: Autonomous → <code>ready</code>, Manual → <code>to do</code>. Read the status back. Equal → event
+  <code>schedule-move</code> (<code>ticket</code>, <code>to</code>, <code>mode</code>, <code>scheduledAtUtc7</code>).
+  Not equal or an error → event <code>schedule-move-failed</code> (<code>ticket</code>, <code>to</code>, <code>error</code>);
+  comment once with the error; the ticket is still <code>scheduled</code>, so the next run tries again.</li>
+  </ul></li>
+<li>No other write. No comment on a normal move (the event is the journal; ClickUp's own history shows the status change).</li>
+</ol>
+<p><strong>Journal.</strong> The move goes into <code>events.jsonl</code> in the autonomous folder (the Nightwatch
+event tail shows it). It does not use the ticket-phase journal (<code>journal.jsonl</code>), which belongs to the
+locked ticket's controller.</p>
+<p><strong>Comment once.</strong> A separate file <code>schedule-notes.json</code> (ticket key → hash of the reason).
+A comment is posted only when the hash changes, and the entry is removed when the ticket leaves
+<code>scheduled</code> (so a later scheduling problem comments again). Separate from the scan's <code>notes.json</code>,
+so the two jobs never overwrite each other's notes.</p>
+<p><strong>Idempotent.</strong> The only input is the set of tickets still in <code>scheduled</code>. A moved ticket is
+no longer listed. A run that dies halfway leaves each ticket either moved or still scheduled; the next run finishes.
+<code>catchUp: 'skip'</code>: after a Nexus restart the next 5-minute slot moves everything that came due meanwhile.</p>
+<p><strong>Dry run.</strong> <code>--dry-run</code> prints one line per scheduled ticket (key, Scheduled at UTC+7, Mode,
+verdict) and writes nothing.</p>
+<p><strong>Exit code.</strong> 0 when the run finished (even with skips or a failed move, which are events); non-zero
+only when the tracker cannot list tickets. Nexus then notifies on failure, as for the other jobs.</p>
+</section>
+
+<section id="view">
+<h2>8. Schedule view and the DGS-488 text</h2>
+<p><strong>View.</strong> One List view named <code>Schedule</code> at the DigiSmith space (<code>1301150000001271</code>):
+status <code>scheduled</code>, sorted by Scheduled at, ascending, with the Scheduled at and Mode columns. A Calendar view is
+not used: it places tasks by start and due date, not by a custom date field.</p>
+<p><strong>DGS-488.</strong> The status table gets: a row <code>scheduled</code> (parked until Scheduled at; schedule-release
+moves it by Mode), the <code>to do</code> row (attended: Jack starts and observes; never picked up automatically), a row
+<code>ready</code> (unattended: autonomous-scan claims it in rank order; Mode Autonomous), refinement leaves "Jack approves
+-> to do, ready or scheduled", and the Lights-Out role "picks <code>ready</code> tickets". The Definition of Ready gains
+"Mode set". The write: read the current Markdown with <code>dg clickup get-task DGS-488 --markdown</code>, change only those
+lines, write with <code>dg clickup update-task --task DGS-488 --markdown-description-file &lt;file&gt;</code>, read back.</p>
+</section>
+
+<section id="errors">
+<h2>9. Errors and edge cases</h2>
+<ul>
+<li><code>ready</code> missing in a list with its own status set: <code>hasStatus</code> passes when any list has it; a ticket in a list without it cannot reach <code>ready</code>. The setup lists such lists (read only) and reports them; no change to them.</li>
+<li><code>schedule-release</code> cannot set <code>ready</code> or <code>to do</code> (status missing in that list): <code>schedule-move-failed</code>, one comment, retried each run; the comment says what is missing.</li>
+<li>Scheduled at in the past at approval: moves on the next run (at most 5 minutes).</li>
+<li>Mode changed while scheduled: the value at the due run decides.</li>
+<li>A <code>ready</code> ticket with Sign-off Jack: allowed; it runs to acceptance, as today.</li>
+<li>Jack moves a locked (claimed) ticket to <code>to do</code>: the controller no longer writes <code>in progress</code> back; the watchdog's existing rules handle the stalled run.</li>
+</ul>
+</section>
+
+<section id="testing">
+<h2>10. Testing</h2>
+<ul>
+<li>Test first. Fakes only: the existing fake tracker and fake <code>ClickUpClient</code> / <code>FrontdoorClient</code> objects; no real ClickUp, no herdr prompt, no live API, <code>DIGISMITH_DEPOT_DIR</code> in a temp folder.</li>
+<li>Scan: <code>ready</code> claimed, <code>to do</code> never claimed (a fake with one of each); Mode Manual and missing skipped with one comment, again only on a changed reason; claim failure writes <code>ready</code>; missing <code>ready</code> status.</li>
+<li>Advance: <code>ready</code> repaired to <code>in progress</code>; <code>to do</code> left alone.</li>
+<li>Steward: <code>approved --into</code> each target and a bad one; <code>started</code> from <code>ready</code>.</li>
+<li>schedule-release: due Autonomous → <code>ready</code>; due Manual → <code>to do</code>; future → nothing; missing date, invalid date, missing Mode → one comment each, not repeated; read-back mismatch → failed event and retry next run; second run after success does nothing; dry run writes nothing.</li>
+<li>Commands: <code>get-field</code>, <code>create-field --location</code>, <code>create-field --type date</code>, <code>--field</code> date value, <code>create-view</code>: body and path in the dry run, the sent call with <code>--yes</code>, the refusals.</li>
+<li>Registry: the job validates (name, interval, order); <code>registry.test.ts</code> pins its fields.</li>
+<li>Code in <code>packages/cli/src/</code> runs under <code>node --experimental-strip-types</code> (no parameter properties, enums or namespaces).</li>
+</ul>
+</section>
+
+<section id="rollout">
+<h2>11. Rollout (after each merge, with --yes)</h2>
+<ol>
+<li><strong>DGS-600:</strong> <code>add-status --name scheduled --after refinement</code>, <code>add-status --name ready --after "to do"</code>; <code>get-field</code> on Sign-off; <code>create-field --name Mode --option Autonomous --option Manual --location …</code>; read back each; update DGS-488.</li>
+<li><strong>DGS-601:</strong> <code>create-field --name "Scheduled at" --type date --location …</code>; <code>create-view --name Schedule</code>; read back; restart Nexus (an installed service) so the registry loads the new job; check that the Nexus jobs API (<code>GET /api/v1/jobs</code>) lists <code>schedule-release</code>.</li>
+<li>The changed paths are Nightwatch-protected (<code>packages/cli/src/autonomous/</code>, <code>scripts/nexus-api/src/scheduler/</code>): both builds are attended builds, never Autonomous.</li>
+</ol>
+</section>
+
+
+<footer>DigiSmith · .digismith/board/DGS-600—ready-scheduled-starters/design.html</footer>
+
+</body>
+</html>
