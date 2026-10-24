@@ -80,3 +80,4 @@ The `tool` hook waits at most 150 ms for the lock, then drops its event and logs
 
 Cursor caveat: a follower that uses `--since` as a cursor may miss a line that repeats a `seq` it already passed.
 A follower that must not miss a line re-reads the file and counts lines.
+- `dg tokens runs` (the Oculus job, DGS-590) may add `tokens.json` and `tokens.state.json` beside `run.json`. `runs/.tokens/` holds the burn file.

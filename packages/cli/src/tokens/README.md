@@ -53,3 +53,23 @@ A worker session with no `step_start` and a `step_end finishing` (a build that n
 - Fallback tagging misses sessions whose titles and agent names do not carry the ticket key and whose branch and cwd in the first 200 lines do not either.
 - The usage reader (`claude-code-reader.ts`) still reads each transcript whole into memory. Attribution reads incrementally (64 KB chunks, a line over 1 MB is skipped), so a huge unrelated transcript is safe to scan, but a huge ticket transcript is still read whole when counted.
 - If a ticket includes resumed session B but not original session A, the A work replayed inside B's file is counted for the ticket.
+
+## Run snapshots (DGS-590)
+
+`dg tokens runs [--run <run-id>] [--dry-run]` is the 5-minute job for the Oculus dashboard. One pass writes three files. `--run` matches the whole run id. `--dry-run` writes nothing.
+
+- `runs/<folder>/<run>/tokens.json` (`oculus-tokens/v1`): per model counts and cost, the total, `unpriced_models`, `sessions`, 5-minute `buckets` and `final`.
+- `runs/.tokens/burn.json` (`oculus-burn/v1`): tokens and cost of the last 60 minutes (12 full 5-minute buckets before now) over all runs, the number of runs with a bucket in it, and `unpriced_models`.
+- `usage-probe/seats.json` (`oculus-seats/v1`): the five-hour and weekly window of each seat, from the probe's `out-<seat>.json` files.
+
+Scope: every `runs/<folder>/<run>/` with a `run.json`. Folders and runs that start with `.` are skipped. A run with `final: true` is skipped. A run is kept when `events.jsonl` (else `run.json`) changed in the last 7 days, or when its `tokens.json` is older than `events.jsonl`. An ended run gets one last pass and is then marked `final`.
+
+Sessions: the `session_id` in `run.json` plus the `session_id` of each `started` event. Only responses with `ts >= created_at` count.
+
+Incremental: `tokens.state.json` beside `run.json` keeps file cursors and per-response counts. It holds no text and no folder path. Delete it to recount the run.
+
+Cost: per response, at list price, from the table `ANTHROPIC_PRICES_VERSION`. A model with no price is listed in `unpriced_models` and its cost is null, so the sums that include it are null too.
+
+Job: `oculus-tokens` in the Nexus API scheduler runs the command every 5 minutes. It starts no model. It loads at the next API restart.
+
+The usage probe stays manual. The conductor saves `out-<seat>.json` (runbook "Reading usage"). A scheduled probe is a follow-up ticket the Maestro files.

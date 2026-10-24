@@ -38,6 +38,16 @@ describe("oculus view under --experimental-strip-types", () => {
   }, 30_000);
 });
 
+describe("tokens runs under --experimental-strip-types", () => {
+  it("dg tokens runs --dry-run on an empty depot", async () => {
+    const depot = mkdtempSync(join(tmpdir(), "tok-smoke-"));
+    try {
+      const { stdout } = await run(process.execPath, ["--experimental-strip-types", entry, "tokens", "runs", "--dry-run"], { env: { ...process.env, DIGISMITH_DEPOT_DIR: depot, DIGISMITH_CLAUDE_PROJECTS_DIR: depot } });
+      expect(stdout).toMatch(/updated 0/);
+    } finally { rmSync(depot, { recursive: true, force: true }); }
+  }, 30_000);
+});
+
 // The import graph of index.ts skips tests and test utils; strip every .ts file so none can bring back enums, namespaces or parameter properties.
 describe("every .ts file under src strips cleanly", () => {
   const srcDir = new URL(".", import.meta.url).pathname;

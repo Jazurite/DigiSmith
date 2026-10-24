@@ -85,6 +85,13 @@ export const JOBS: readonly JobDef[] = [
     command: { file: process.execPath, args: [...DG, 'autonomous', 'schedule-release'] },
     timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
+  defineJob({
+    name: 'oculus-tokens',
+    description: 'Writes each run\'s tokens and cost, the burn per hour and the seat windows for Oculus (DGS-590). Reads transcripts for counts only. No model tokens.',
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
+    command: { file: process.execPath, args: [...DG, 'tokens', 'runs'] },
+    timeoutMs: 4 * 60 * 1000, catchUp: 'skip', order: 70, notify: 'failures', manualOutsideWindow: 'allowed',
+  }),
 ]
 
 validateJobs(JOBS)
