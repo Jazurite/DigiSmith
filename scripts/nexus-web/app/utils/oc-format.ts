@@ -34,3 +34,21 @@ export function fmtMinutes(min: number): string {
   const m = Number.isFinite(min) ? Math.max(0, Math.floor(min)) : 0
   return `${Math.floor(m / 60)}:${pad(m % 60)}`
 }
+// 950, 12.3k, 1.2M, 3.40B: one decimal under 100 of a unit, none above; B keeps two decimals
+export function fmtTokens(n: number): string {
+  if (n < 1000) return String(n)
+  const units: [number, string][] = [[1e9, 'B'], [1e6, 'M'], [1e3, 'k']]
+  for (const [size, unit] of units) {
+    if (n >= size) {
+      const v = n / size
+      return unit === 'B' ? `${v.toFixed(2)}B` : `${v < 100 ? v.toFixed(1) : Math.round(v)}${unit}`
+    }
+  }
+  return String(n)
+}
+const usdFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+export function fmtUsd(n: number | null): string {
+  if (n === null) return '-'
+  if (n > 0 && n < 0.01) return '<$0.01'
+  return usdFmt.format(n)
+}

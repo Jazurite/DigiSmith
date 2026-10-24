@@ -1,6 +1,6 @@
 // scripts/nexus-web/app/utils/oc-format.test.ts
 import { describe, expect, it } from 'vitest'
-import { ageOf, fmtDay, fmtDuration, fmtMinutes, fmtUtc7, isSafeId } from './oc-format'
+import { ageOf, fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, isSafeId } from './oc-format'
 
 describe('oc-format', () => {
   it('shows UTC+7 times', () => {
@@ -26,5 +26,11 @@ describe('oc-format', () => {
     expect(fmtMinutes(41)).toBe('0:41')
     expect(fmtMinutes(135)).toBe('2:15')
     expect(fmtMinutes(-1)).toBe('0:00')
+  })
+  it('formats tokens compactly', () => {
+    expect([950, 12_300, 1_234_567, 3_400_000_000].map(fmtTokens)).toEqual(['950', '12.3k', '1.2M', '3.40B'])
+  })
+  it('formats dollars, null as -', () => {
+    expect([null, 0.004, 3.411, 1204.5].map(fmtUsd)).toEqual(['-', '<$0.01', '$3.41', '$1,204.50'])
   })
 })

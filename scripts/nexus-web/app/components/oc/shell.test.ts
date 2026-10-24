@@ -10,7 +10,7 @@ import OcTopBar from './OcTopBar.vue'
 import { overviewFixture } from '../../../tests/oculus-fixtures'
 
 describe('OcTopBar', () => {
-  it('shows health, workers, Ready waiting, the mode and the two not-measured slots', async () => {
+  it('shows health, workers, Ready waiting, the mode, the burn and the seats', async () => {
     const w = await mountSuspended(OcTopBar, { props: { overview: overviewFixture(), stale: false, updatedAt: Date.parse('2026-10-22T03:42:10Z') } })
     const t = w.text()
     expect(t).toContain('Nexus healthy')
@@ -18,8 +18,28 @@ describe('OcTopBar', () => {
     expect(t).toContain('Ready waiting 5')
     expect(t).toContain('away')
     expect(t).toContain('10:42:10 (UTC+7)')
-    expect(w.findAll('[title="not measured"]')).toHaveLength(2)
+    expect(t).toContain('Burn 4.1M/h · $12.30/h')
     expect(w.find('[role="status"]').exists()).toBe(true)
+  })
+  it('shows the burn, a dash without it, and the seat windows (DGS-590)', async () => {
+    const o = overviewFixture()
+    const w = await mountSuspended(OcTopBar, { props: { overview: o, stale: false, updatedAt: 1 } })
+    expect(w.text()).toContain('4.1M/h · $12.30/h')
+    const seats = w.find('.seats')
+    expect(seats.attributes('role')).toBe('group')
+    expect(seats.text()).toContain('jack 5h 42% · wk 61%')
+    const spans = seats.findAll(':scope > span')
+    expect(spans[0]!.classes()).not.toContain('warn')
+    expect(spans[1]!.classes()).toContain('warn')   // the stale reading
+    expect(spans[1]!.text()).toContain('as of 08:20')
+    expect(spans[1]!.text()).toContain('5h - · wk 88%')   // the past-reset window is a dash
+    expect(seats.find('.ok').exists()).toBe(false)
+    const none = await mountSuspended(OcTopBar, { props: { overview: { ...o, burn: null, seats: null }, stale: false, updatedAt: 1 } })
+    expect(none.text()).toContain('-/h')
+    expect(none.find('[title="no burn reading in the last 15 min"]').exists()).toBe(true)
+    expect(none.text()).toContain('Seats -')
+    const bare = await mountSuspended(OcTopBar, { props: { overview: null, stale: true, updatedAt: null } })
+    expect(bare.text()).toContain('-/h')
   })
   it('says unreachable when there is no data and the last fetch failed', async () => {
     const w = await mountSuspended(OcTopBar, { props: { overview: null, stale: true, updatedAt: null } })

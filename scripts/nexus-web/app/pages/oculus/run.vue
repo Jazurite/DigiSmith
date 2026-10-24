@@ -10,6 +10,7 @@ import OcEventStream from '../../components/oc/EventStream.vue'
 import OcOrderCard from '../../components/oc/OrderCard.vue'
 import OcPipelineBar from '../../components/oc/PipelineBar.vue'
 import OcRecordCard from '../../components/oc/RecordCard.vue'
+import OcTokensCard from '../../components/oc/TokensCard.vue'
 
 definePageMeta({ layout: 'oculus' })
 useHead({ title: 'Run · DigiSmith Oculus' })
@@ -77,6 +78,7 @@ const meta = computed(() => run.value ? [run.value.row.ticket, run.value.row.rol
           <OcOrderCard :order="run.order" />
         </div>
       </div>
+      <OcTokensCard :tokens="run.tokens" :as-of="run.tokensAsOf" />
     </template>
   </template>
 </template>

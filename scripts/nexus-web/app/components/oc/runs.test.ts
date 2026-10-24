@@ -1,12 +1,13 @@
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { describe, expect, it } from 'vitest'
-import { eventsFixture, planFixture, runDetailFixture, runFixture, runsFixture } from '../../../tests/oculus-fixtures'
+import { eventsFixture, unpricedTokensFixture, tokensFixture, planFixture, runDetailFixture, runFixture, runsFixture } from '../../../tests/oculus-fixtures'
 import BudgetCard from './BudgetCard.vue'
 import EventStream from './EventStream.vue'
 import OrderCard from './OrderCard.vue'
 import PipelineBar from './PipelineBar.vue'
 import PlanTasks from './PlanTasks.vue'
 import RecordCard from './RecordCard.vue'
+import TokensCard from './TokensCard.vue'
 import RunFilters from './RunFilters.vue'
 import RunsTable from './RunsTable.vue'
 import VerdictTable from './VerdictTable.vue'
@@ -105,13 +106,13 @@ describe('RunsTable cells', () => {
   const cell = async (row: ReturnType<typeof runFixture>, i: number) => (await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })).findAll('tbody td')[i]!.text()
   it('has a header row with the ten column names', async () => {
     const w = await mountSuspended(RunsTable, { props: { runs: runsFixture().runs, nowMs: NOW } })
-    expect(w.findAll('thead th').map((h) => h.text())).toEqual(['State', 'Key', 'Role', 'Project', 'Seat / model', 'Trigger', 'Started', 'Duration', 'Tokens', 'Delivery'])
+    expect(w.findAll('thead th').map((h) => h.text())).toEqual(['State', 'Key', 'Role', 'Project', 'Seat / model', 'Trigger', 'Started', 'Duration', 'Tokens', 'Cost', 'Delivery'])
   })
   it('shows delivery for merged and pushed, one of them, or a dash', async () => {
-    expect(await cell(runFixture({ endedAt: '2026-10-22T03:00:00.000Z', merged: true, pushed: true }), 9)).toBe('merged · pushed')
-    expect(await cell(runFixture({ merged: true }), 9)).toBe('merged')
-    expect(await cell(runFixture({ pushed: true }), 9)).toBe('pushed')
-    expect(await cell(runFixture(), 9)).toBe('-')
+    expect(await cell(runFixture({ endedAt: '2026-10-22T03:00:00.000Z', merged: true, pushed: true }), 10)).toBe('merged · pushed')
+    expect(await cell(runFixture({ merged: true }), 10)).toBe('merged')
+    expect(await cell(runFixture({ pushed: true }), 10)).toBe('pushed')
+    expect(await cell(runFixture(), 10)).toBe('-')
   })
   it('shows a dash for a null ticket and still links to the run', async () => {
     const w = await mountSuspended(RunsTable, { props: { runs: [runFixture({ ticket: null, run: 's-abc' })], nowMs: NOW } })
@@ -127,6 +128,65 @@ describe('RunsTable cells', () => {
     expect(await cell(runFixture(), 8)).toBe('-')
     expect(await cell(runFixture(), 3)).toBe('-')   // Project: none
     expect(await cell(runFixture({ project: 'Emma' }), 3)).toBe('Emma')
+  })
+})
+
+describe('RunsTable tokens and cost (DGS-590)', () => {
+  const cells = async (row: ReturnType<typeof runFixture>) => {
+    const w = await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })
+    return { tokens: w.find('td[data-label="Tokens"]'), cost: w.find('td[data-label="Cost"]') }
+  }
+  it('shows a fresh snapshot compactly with the exact number in the title', async () => {
+    const c = await cells(runFixture({ tokens: { total: 1_234_567, costUsd: 3.411, unpriced: [] }, tokensAsOf: '2026-10-22T03:40:00.000Z' }))
+    expect(c.tokens.text()).toBe('1.2M')
+    expect(c.tokens.attributes('title')).toBe('1234567')
+    expect(c.cost.text()).toBe('$3.41')
+    expect(c.tokens.classes()).toContain('num')
+    expect(c.cost.classes()).toContain('num')
+  })
+  it('a stale row shows a dash and the time it went stale', async () => {
+    const c = await cells(runFixture({ tokens: null, tokensAsOf: '2026-10-22T02:15:00.000Z' }))
+    expect(c.tokens.text()).toBe('-')
+    expect(c.tokens.attributes('title')).toMatch(/stale since 09:15/)
+    expect(c.cost.attributes('title')).toMatch(/stale since/)
+  })
+  it('an unpriced model leaves the cost a dash with the model name', async () => {
+    const c = await cells(runFixture({ tokens: { total: 7000, costUsd: null, unpriced: ['claude-mystery-9'] }, tokensAsOf: '2026-10-22T03:40:00.000Z' }))
+    expect(c.tokens.text()).toBe('7.0k')
+    expect(c.cost.text()).toBe('-')
+    expect(c.cost.attributes('title')).toMatch(/unpriced model: claude-mystery-9/)
+  })
+  it('a run with no snapshot says so', async () => {
+    const c = await cells(runFixture())
+    expect(c.tokens.text()).toBe('-')
+    expect(c.tokens.attributes('title')).toBe('no snapshot')
+    expect(c.cost.attributes('title')).toBe('no snapshot')
+  })
+})
+
+describe('TokensCard (DGS-590)', () => {
+  it('has a row per model, a Total row, column headers with scope and the footer', async () => {
+    const t = tokensFixture()
+    const w = await mountSuspended(TokensCard, { props: { tokens: t, asOf: t.generatedAt } })
+    expect(w.text()).toContain('Tokens and cost')
+    expect(w.findAll('tbody tr')).toHaveLength(t.models.length + 1)
+    expect(w.findAll('tbody tr').at(-1)!.text()).toContain('Total')
+    expect(w.findAll('thead th').every((h) => h.attributes('scope') === 'col')).toBe(true)
+    expect(w.findAll('thead th').map((h) => h.text())).toEqual(['Model', 'Input', 'Output', 'Cache read', 'Cache write 5m', 'Cache write 1h', 'Tokens', 'Cost'])
+    expect(w.text()).toContain('Anthropic price table 2026-10-18')
+    expect(w.text()).toContain('10:40 (UTC+7)')
+    expect(w.text()).toContain('counting')
+    expect(w.find('td[title="120000"]').text()).toBe('120k')
+  })
+  it('does not say counting when the snapshot is final, and shows a dash for an unpriced model', async () => {
+    const t = unpricedTokensFixture()
+    const w = await mountSuspended(TokensCard, { props: { tokens: { ...t, final: true }, asOf: t.generatedAt } })
+    expect(w.text()).not.toContain('counting')
+    expect(w.find('td[title="unpriced model"]').text()).toBe('-')
+  })
+  it('says there is no snapshot, or since when it is stale', async () => {
+    expect((await mountSuspended(TokensCard, { props: { tokens: null, asOf: null } })).text()).toContain('No token snapshot.')
+    expect((await mountSuspended(TokensCard, { props: { tokens: null, asOf: '2026-10-22T02:15:00.000Z' } })).text()).toContain('Stale since 09:15 (UTC+7).')
   })
 })
 

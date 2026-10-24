@@ -19,3 +19,7 @@ export const Stale = { args: { overview: o, stale: true, updatedAt: Date.parse('
 const live = liveFixture()
 export const Agents = { args: { overview: o, stale: false, updatedAt: UPDATED, live } }
 export const AgentsDisconnected = { args: { overview: o, stale: false, updatedAt: UPDATED, live: { ...live, herdr: { state: 'disconnected', asOf: '2026-10-22T02:20:00.000Z' } } } }
+// DGS-590: burn and seat windows. The default fixture has a fresh seat and a stale one with a past-reset window.
+export const WithBurnAndSeats = { args: { overview: o, stale: false, updatedAt: UPDATED } }
+export const StaleSeat = { args: { overview: { ...o, seats: { ...o.seats!, seats: [{ ...o.seats!.seats[1]!, weekly: null }] } }, stale: false, updatedAt: UPDATED } }
+export const NoFiles = { args: { overview: { ...o, burn: null, seats: null }, stale: false, updatedAt: UPDATED } }

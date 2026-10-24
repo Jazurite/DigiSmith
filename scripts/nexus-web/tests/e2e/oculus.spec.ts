@@ -70,6 +70,23 @@ test('Runs by role and project: only those runs, and a conductor row has no heal
   await expect(page.getByLabel('Project')).toHaveValue('DigiSmith')
 })
 
+test('Runs shows the Cost column and a dollar value for the fixture run (DGS-590)', async ({ page }) => {
+  await page.goto(`${stub.url}/runs/`)
+  await expect(page.getByRole('columnheader', { name: 'Cost' })).toBeVisible()
+  const first = page.locator('tbody tr').first()
+  await expect(first.locator('td[data-label="Cost"]')).toHaveText('$3.41')
+  await expect(first.locator('td[data-label="Tokens"]')).toHaveText('1.2M')
+  await expect(page.locator('td[data-label="Cost"][title^="unpriced model: claude-mystery-9"]')).toHaveText('-')
+})
+
+test('the top bar shows the burn per hour and the seat windows, a stale seat in words (DGS-590)', async ({ page }) => {
+  await page.goto(`${stub.url}/`)
+  await expect(topBar(page)).toContainText('Burn 4.1M/h · $12.30/h')
+  const seats = topBar(page).getByRole('group', { name: 'Seat windows' })
+  await expect(seats).toContainText('jack 5h 42% · wk 61%')
+  await expect(seats).toContainText('dev0 5h - · wk 88% as of 08:20')
+})
+
 test('Run detail: pipeline, event filter, tail and the read-only order', async ({ page }) => {
   await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
   await expect(page.getByRole('list', { name: /pipeline/i }).locator('li')).toHaveCount(6)
@@ -78,6 +95,10 @@ test('Run detail: pipeline, event filter, tail and the read-only order', async (
   await page.getByRole('button', { name: /Tail: on/ }).click()
   await expect(page.getByRole('button', { name: /Tail: off/ })).toBeVisible()
   await expect(page.getByText('Build DGS-590 on the example branch.')).toBeVisible()
+  // DGS-590: the tokens card, with the price table and no transcript text
+  await expect(page.getByRole('heading', { name: /Tokens and cost/ })).toBeVisible()
+  await expect(page.getByText(/Anthropic price table 2026-10-18 · as of 10:40 \(UTC\+7\) · counting/)).toBeVisible()
+  await expect(page.getByText('SECRET')).toHaveCount(0)
 })
 
 test('an unknown run says so', async ({ page }) => {

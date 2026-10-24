@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Live, Overview } from '#oculus-schema'
-import { ageOf, fmtClock, fmtUtc7 } from '../../utils/oc-format'
+import { ageOf, fmtClock, fmtTokens, fmtUsd, fmtUtc7 } from '../../utils/oc-format'
 
 const props = defineProps<{ overview: Overview | null; stale: boolean; updatedAt: number | null; live?: Live | null; liveStale?: boolean }>()
 const count = (s: string): number => props.live?.agents.filter((a) => a.status === s).length ?? 0
@@ -21,6 +21,7 @@ const health = computed<{ label: string; tone: Tone; hollow: boolean } | null>((
     default: return { label: 'Nexus unknown', tone: 'neutral', hollow: true }   // never a green look
   }
 })
+const pct = (w: { usedPct: number } | null): string => (w === null ? '-' : `${Math.round(w.usedPct)}%`)
 const mode = computed(() => (props.overview?.scan.away ? 'away' : props.overview?.scan.nightWindow ? 'night' : 'day'))
 const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.updatedAt)))
 </script>
@@ -36,8 +37,13 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
       <span>Ready waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
       <span>Mode <b>{{ mode }}</b></span>
     </template>
-    <span title="not measured">Burn <b>-</b>/h</span>
-    <span title="not measured">Seat 5h / week <b>- / -</b></span>
+    <span :title="overview?.burn ? `as of ${fmtUtc7(overview.burn.asOf)} (UTC+7)` : 'no burn reading in the last 15 min'">Burn <b>{{ overview?.burn ? `${fmtTokens(overview.burn.tokensPerH)}/h · ${fmtUsd(overview.burn.usdPerH)}/h` : '-/h' }}</b></span>
+    <span class="seats" role="group" aria-label="Seat windows">
+      <template v-if="overview?.seats">
+        <span v-for="s in overview.seats.seats" :key="s.seat" :class="{ warn: s.stale }">{{ s.seat }} 5h <b>{{ pct(s.fiveHour) }}</b> · wk <b>{{ pct(s.weekly) }}</b><span v-if="s.stale" class="muted"> as of {{ fmtUtc7(s.readAt) }}</span></span>
+      </template>
+      <span v-else title="no seat file in the last 15 min">Seats <b>-</b></span>
+    </span>
     <span class="sp" />
     <span class="muted" aria-live="off">updated <time v-if="updatedAt !== null" :datetime="new Date(updatedAt).toISOString()">{{ stamp }}</time><template v-else>{{ stamp }}</template> (UTC+7)</span>
   </div>
@@ -56,5 +62,7 @@ b { color: var(--oc-text); font-weight: 600; }
 .agents { color: inherit; text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; gap: 0.5ch; }
 .agents:focus-visible { outline: 2px solid var(--oc-primary); }
 .agents.warn { color: var(--oc-warn); }
-@media (max-width: 760px) { .bar { padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); } }
+.seats { display: inline-flex; gap: 6px 14px; flex-wrap: wrap; }
+.warn, .warn b { color: var(--oc-warn); }
+@media (max-width: 760px) { .bar { padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); } .seats { flex-basis: 100%; } }
 </style>

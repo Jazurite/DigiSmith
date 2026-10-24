@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { RunRow } from '#oculus-schema'
-import { fmtDay, fmtDuration } from '../../utils/oc-format'
+import { fmtDay, fmtDuration, fmtTokens, fmtUsd, fmtUtc7 } from '../../utils/oc-format'
 
 defineProps<{ runs: RunRow[]; nowMs: number }>()
 // a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
 const duration = (r: RunRow, nowMs: number): string => fmtDuration(r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
 // a Maestro or conductor run is never classified (DGS-598): no health flag, a plain "-"
 const unflagged = (r: RunRow): boolean => r.role === 'maestro' || r.role === 'conductor'
+// a missing snapshot says why (DGS-590): stale since a time, or none at all
+const missingWhy = (r: RunRow): string => (r.tokensAsOf ? `stale since ${fmtUtc7(r.tokensAsOf)} (UTC+7)` : 'no snapshot')
+const costTitle = (r: RunRow): string =>
+  !r.tokens ? missingWhy(r) : r.tokens.costUsd === null ? `unpriced model: ${r.tokens.unpriced.join(', ')}` : `list price $${r.tokens.costUsd.toFixed(4)}`
 const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'pushed' : ''].filter(Boolean).join(' · ') || '-'
 </script>
 
@@ -15,7 +19,7 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
     <p v-if="runs.length === 0" class="empty">No run yet.</p>
     <OcTable v-else caption="Runs">
       <template #head>
-        <tr><th scope="col">State</th><th scope="col">Key</th><th scope="col">Role</th><th scope="col">Project</th><th scope="col">Seat / model</th><th scope="col">Trigger</th><th scope="col">Started</th><th scope="col" class="num">Duration</th><th scope="col" class="num">Tokens</th><th scope="col">Delivery</th></tr>
+        <tr><th scope="col">State</th><th scope="col">Key</th><th scope="col">Role</th><th scope="col">Project</th><th scope="col">Seat / model</th><th scope="col">Trigger</th><th scope="col">Started</th><th scope="col" class="num">Duration</th><th scope="col" class="num">Tokens</th><th scope="col" class="num">Cost</th><th scope="col">Delivery</th></tr>
       </template>
       <tr v-for="r in runs" :key="r.run">
         <td data-label="State"><span v-if="unflagged(r)" class="muted">-</span><OcStatus v-else :state="r.state" /></td>
@@ -26,7 +30,8 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
         <td data-label="Trigger">{{ r.trigger }}</td>
         <td data-label="Started" class="mono">{{ fmtDay(r.startedAt) }}</td>
         <td data-label="Duration" class="num">{{ duration(r, nowMs) }}</td>
-        <td data-label="Tokens" class="num muted" title="not measured">-</td>
+        <td data-label="Tokens" class="num" :class="{ muted: !r.tokens }" :title="r.tokens ? String(r.tokens.total) : missingWhy(r)">{{ r.tokens ? fmtTokens(r.tokens.total) : '-' }}</td>
+        <td data-label="Cost" class="num" :class="{ muted: !r.tokens || r.tokens.costUsd === null }" :title="costTitle(r)">{{ r.tokens ? fmtUsd(r.tokens.costUsd) : '-' }}</td>
         <td data-label="Delivery" :class="{ muted: delivery(r) === '-' }">{{ delivery(r) }}</td>
       </tr>
     </OcTable>

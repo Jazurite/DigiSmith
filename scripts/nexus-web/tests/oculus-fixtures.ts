@@ -2,6 +2,27 @@
 // Fake, fixed values for web tests, stories and the e2e stub. Each type is the z.infer type of the shared schema, so a shape change breaks the build.
 import type { Attention, Events, EventRow, Live, LiveAgent, Overview, Plan, RunDetail, RunRow, Runs } from '#oculus-schema'
 
+type RunTokens = NonNullable<RunDetail['tokens']>
+const tokenModels: RunTokens['models'] = [
+  { model: 'claude-sonnet-5-5', input: 120_000, output: 310_000, cacheRead: 640_000, cacheWrite5m: 90_000, cacheWrite1h: 40_000, responses: 58, tokens: 1_200_000, costUsd: 3.411 },
+  { model: 'claude-haiku-5', input: 9_000, output: 1_200, cacheRead: 0, cacheWrite5m: 0, cacheWrite1h: 0, responses: 4, tokens: 10_200, costUsd: 0.004 },
+]
+// Task 7 (DGS-590): a fresh snapshot, still counting. Counts, money and ids only.
+export function tokensFixture(over: Partial<RunTokens> = {}): RunTokens {
+  return {
+    generatedAt: '2026-10-22T03:40:00.000Z', final: false, priceVersion: '2026-10-18', models: tokenModels,
+    total: { tokens: 1_210_200, responses: 62, costUsd: 3.411 }, unpriced: [],
+    ...over,
+  }
+}
+// the same snapshot with a model that has no list price
+export function unpricedTokensFixture(): RunTokens {
+  return tokensFixture({
+    models: [tokenModels[0]!, { model: 'claude-mystery-9', input: 5_000, output: 2_000, cacheRead: 0, cacheWrite5m: 0, cacheWrite1h: 0, responses: 3, tokens: 7_000, costUsd: null }],
+    total: { tokens: 1_207_000, responses: 61, costUsd: null }, unpriced: ['claude-mystery-9'],
+  })
+}
+
 export function runFixture(over: Partial<RunRow> = {}): RunRow {
   return {
     run: 'builder-20261022T021000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: 'sonnet-5-5',
@@ -37,7 +58,15 @@ export function overviewFixture(over: Partial<Overview> = {}): Overview {
       { ts: '2026-10-22T03:40:02.000Z', source: 'watchdog', kind: 'attention', text: 'DGS-588 stalled review-over-60-min' },
       { ts: '2026-10-22T03:10:44.000Z', source: 'scan', kind: 'claim', text: 'DGS-590' },
     ],
-    burn: null, seats: null,
+    burn: { tokensPerH: 4_100_000, usdPerH: 12.3, asOf: '2026-10-22T03:40:00.000Z' },
+    // jack: fresh reading. dev0: a stale reading whose 5h window is past its reset (null)
+    seats: {
+      asOf: '2026-10-22T03:40:00.000Z',
+      seats: [
+        { seat: 'jack', readAt: '2026-10-22T03:40:00.000Z', stale: false, fiveHour: { usedPct: 42, resetsAt: '2026-10-22T07:00:00.000Z' }, weekly: { usedPct: 61, resetsAt: '2026-10-26T05:00:00.000Z' } },
+        { seat: 'dev0', readAt: '2026-10-22T01:20:00.000Z', stale: true, fiveHour: null, weekly: { usedPct: 88, resetsAt: '2026-10-26T05:00:00.000Z' } },
+      ],
+    },
     scan: { lastScanAt: '2026-10-22T02:10:00.000Z', candidates: 5, away: true, nightWindow: true, breakerOpen: false, breakerStreak: 0 },
     nexus: { status: 'healthy', reasons: [] },
     ...over,
@@ -59,10 +88,10 @@ export function attentionFixture(): Attention {
 
 export function runsFixture(): Runs {
   const runs = [
-    runFixture(),
-    runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350 }),
-    runFixture({ run: 'builder-20261021T144000-aa11bb', ticket: 'DGS-586', trigger: 'manual', state: 'ended', phase: null, startedAt: '2026-10-21T14:40:00.000Z', endedAt: '2026-10-21T16:45:00.000Z', elapsedSec: 7500, merged: true, pushed: true }),
-    runFixture({ run: 'builder-20261021T110200-cc22dd', ticket: 'DGS-585', trigger: 'away', seat: 'jack', state: 'lost', phase: null, startedAt: '2026-10-21T11:02:00.000Z', endedAt: '2026-10-21T11:57:00.000Z', elapsedSec: 3300 }),
+    runFixture({ tokens: { total: 1_210_200, costUsd: 3.411, unpriced: [] }, tokensAsOf: '2026-10-22T03:40:00.000Z' }),   // fresh
+    runFixture({ run: 'reviewer-20261022T013000-d4e5f6', ticket: 'DGS-588', role: 'reviewer', seat: 'jack', model: 'opus-5-5', state: 'stalled', phase: 'review', startedAt: '2026-10-22T01:30:00.000Z', elapsedSec: 4350, tokensAsOf: '2026-10-22T02:15:00.000Z' }),   // stale: no usable snapshot
+    runFixture({ run: 'builder-20261021T144000-aa11bb', ticket: 'DGS-586', trigger: 'manual', state: 'ended', phase: null, startedAt: '2026-10-21T14:40:00.000Z', endedAt: '2026-10-21T16:45:00.000Z', elapsedSec: 7500, merged: true, pushed: true, tokens: { total: 8_400_000, costUsd: 41.2, unpriced: [] }, tokensAsOf: '2026-10-21T16:46:00.000Z' }),
+    runFixture({ run: 'builder-20261021T110200-cc22dd', ticket: 'DGS-585', trigger: 'away', seat: 'jack', state: 'lost', phase: null, startedAt: '2026-10-21T11:02:00.000Z', endedAt: '2026-10-21T11:57:00.000Z', elapsedSec: 3300, tokens: { total: 7_000, costUsd: null, unpriced: ['claude-mystery-9'] }, tokensAsOf: '2026-10-21T11:57:00.000Z' }),   // unpriced model
     // Task 9: automatic runs (DGS-598) of a Maestro and two conductors, with projects; they carry no health flag
     runFixture({ run: 'maestro-20261022T000000-aa00aa', ticket: null, role: 'maestro', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'jack', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:00:00.000Z', elapsedSec: 9000 }),
     runFixture({ run: 'conductor-20261022T000500-bb11bb', ticket: null, role: 'conductor', project: 'DigiSmith', source: 'auto', trigger: 'unknown', seat: 'dev0', model: 'opus-5-5', phase: null, startedAt: '2026-10-22T00:05:00.000Z', elapsedSec: 8700 }),
@@ -84,7 +113,7 @@ export function runDetailFixture(): RunDetail {
       { step: 'pushed', at: null, state: 'waiting' },
     ],
     budget: { phase: 'building', limitMin: 120, elapsedMin: 41, building: 41, review: 0, merge: 0 },
-    tokens: null, tokensAsOf: null,
+    tokens: tokensFixture(), tokensAsOf: '2026-10-22T03:40:00.000Z',
     record: { branch: 'DGS-590__example-branch', seat: 'dev0' },
     order: { available: true, text: 'Build DGS-590 on the example branch.' },
   }
