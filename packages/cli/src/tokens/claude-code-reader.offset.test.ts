@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -38,6 +38,30 @@ describe("readUsageFrom", () => {
     const f = join(dir, "s1.jsonl");
     writeFileSync(f, "x".repeat(1_100_000) + "\n" + line("m1", "r1", 5));
     expect(readUsageFrom(f, null, "s1", null).records).toHaveLength(1);
+  });
+  it("restarts from 0 when a larger file replaces the old one with a new inode", () => {
+    const f = join(dir, "s1.jsonl");
+    writeFileSync(f, line("m1", "r1", 5));
+    const a = readUsageFrom(f, null, "s1", null);
+    const tmp = join(dir, "s1.new");
+    writeFileSync(tmp, line("m2", "r2", 1) + line("m3", "r3", 2) + line("m4", "r4", 3));
+    renameSync(tmp, f);
+    const b = readUsageFrom(f, a.cursor, "s1", null);
+    expect(b.cursor.ino).not.toBe(a.cursor.ino);
+    expect(b.restarted).toBe(true);
+    expect(b.records.map((r) => r.response_id)).toEqual(["m2|r2", "m3|r3", "m4|r4"]);
+  });
+  it("keeps the cursor at an unterminated oversize line and skips it once it ends", () => {
+    const f = join(dir, "s1.jsonl");
+    const first = line("m1", "r1", 5);
+    writeFileSync(f, first + "x".repeat(1_100_000));
+    const a = readUsageFrom(f, null, "s1", null);
+    expect(a.records.map((r) => r.response_id)).toEqual(["m1|r1"]);
+    expect(a.cursor.offset).toBe(Buffer.byteLength(first));
+    appendFileSync(f, "x".repeat(500) + "\n" + line("m2", "r2", 7));
+    const b = readUsageFrom(f, a.cursor, "s1", null);
+    expect(b.restarted).toBe(false);
+    expect(b.records.map((r) => r.response_id)).toEqual(["m2|r2"]);
   });
   it("gives the same records as the whole-file reader, in several appends", () => {
     const f = join(dir, "s1.jsonl");
