@@ -13,7 +13,10 @@ const LABEL_CLI = path.join(import.meta.dirname, "label-cli.ts");
 // Starts the labeller and returns at once; child_process is loaded only here.
 function spawnLabeller(dir: string, env: NodeJS.ProcessEnv): void {
   const cp = process.getBuiltinModule("node:child_process") as typeof import("node:child_process");
-  cp.spawn(process.execPath, ["--experimental-strip-types", LABEL_CLI, dir], { detached: true, stdio: "ignore", env }).unref();
+  const child = cp.spawn(env.NIGHTWATCH_LABEL_NODE || process.execPath, ["--experimental-strip-types", LABEL_CLI, dir], { detached: true, stdio: "ignore", env });
+  // An async spawn failure (EAGAIN, a bad node path) must not crash the hook.
+  child.on("error", (e) => logError("label", e.message, env));
+  child.unref();
 }
 
 export type HookKind = (typeof HOOK_TYPES)[number];
@@ -91,7 +94,13 @@ export function runHook(kind: string, stdin: string, env: NodeJS.ProcessEnv = pr
     } catch (e) {
       logError(k, (e as Error).message, env);
     }
-    if (label) spawnLabeller(target.dir, env);
+    if (label) {
+      try {
+        spawnLabeller(target.dir, env);
+      } catch (e) {
+        logError("label", (e as Error).message, env);
+      }
+    }
   } catch (e) {
     logError(kind, (e as Error).message, env);
   }

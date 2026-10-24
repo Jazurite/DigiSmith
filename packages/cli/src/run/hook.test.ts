@@ -167,4 +167,12 @@ describe("automatic runs (no DIGISMITH_RUN_ID)", () => {
     while (readRun(dir).role_from === "pending" && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
     expect(readRun(dir)).toMatchObject({ role: "conductor", role_from: "herdr" });
   }, 15_000);
+  it("a labeller that fails to start is logged and does not crash the hook", async () => {
+    const e = { ...auto(), HERDR_PANE_ID: "w2:p9Z", HERDR_WORKSPACE_ID: "w2", NIGHTWATCH_LABEL_NODE: path.join(tmp, "no-such-node") };
+    expect(() => runHook("started", JSON.stringify({ session_id: "se", source: "startup", cwd: "/nowhere/Proj" }), e)).not.toThrow();
+    const log = path.join(tmp, "runs", "hook-errors.log");
+    const deadline = Date.now() + 5_000;
+    while (!fs.existsSync(log) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 25));
+    expect(fs.readFileSync(log, "utf8").trim().split("\n").filter((l) => / label /.test(l))).toHaveLength(1);
+  });
 });
