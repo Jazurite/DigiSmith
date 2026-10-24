@@ -17,7 +17,7 @@ Spec: `.digismith/board/DGS-589—denied-prompt-unblocks/spec.md` (approved by t
 - `idle_prompt` stays ignored: it is never blocked and never an answer (DGS-583 rule).
 - A gone pane is still `lost` (checked before the blocked branch). Do not touch that.
 - Do not edit `watch.ts` outside `paneCache`, `paneOf` (type only), the new `statusOf` and the one `classify(` call. DGS-598 edits `withEvents` and the code above the main loop in the same file, and adds `isWatched` to `watchdog.ts` after the `ended` check. Keep our hunks away from those lines.
-- Do not touch `packages/cli/src/nightwatch/derive.ts` (it calls `classify(..., "unknown", ...)` with no status: unchanged on purpose), the hook, `hooks/hooks.json`, or any settings file.
+- Do not touch `packages/cli/src/oculus/derive.ts` (it calls `classify(..., "unknown", ...)` with no status: unchanged on purpose), the hook, `hooks/hooks.json`, or any settings file.
 - Tests use fakes only: no real herdr, no real ClickUp, no real depot (the watch tests use a temp dir already).
 - No sudo, no LaunchAgent, no Caddy change, never touch the running API (port 4300), no delete outside the worktree.
 - pnpm only; never `pnpm install` in the depot clone. Run tests from the worktree root: `pnpm vitest run <paths>`.

@@ -56,11 +56,12 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   if (pane === "gone") return { state: "lost", cause: "pane-gone", since: last?.ts ?? run.created_at };
 
   let lastBlocked = -1;
+  let answered = false;
   // Only a permission prompt waits for an answer; idle_prompt and the other kinds fall to the silence and phase rules.
   for (let i = events.length - 1; i >= 0; i--) if (events[i].type === "blocked" && events[i].data.kind === "permission_prompt") { lastBlocked = i; break; }
   if (lastBlocked >= 0 && !events.slice(lastBlocked + 1).some((e) => e.type === "tool" || e.type === "turn_end")) {
     // A denial writes no event, so herdr's status for the pane is the only sign. Unsure means still blocked.
-    const answered = agentStatus !== null && ANSWERED_STATUSES.includes(agentStatus) && now - ms(events[lastBlocked].ts) >= PROMPT_GRACE_MS;
+    answered = agentStatus !== null && ANSWERED_STATUSES.includes(agentStatus) && now - ms(events[lastBlocked].ts) >= PROMPT_GRACE_MS;
     if (!answered) return { state: "blocked", cause: "waiting-for-answer", since: events[lastBlocked].ts };
   }
 
@@ -70,6 +71,8 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   if (p && now - ms(p.since) > budgets[p.phase] * 60_000) {
     return { state: "stalled", cause: `${p.phase}-over-${budgets[p.phase]}-min`, since: p.since };
   }
+  // Healthy only because herdr answered the prompt: the caller keeps that episode closed (DGS-589).
+  if (answered) return { state: "healthy", cause: "prompt-answered", since: events[lastBlocked].ts };
   return { state: "healthy", cause: "", since: "" };
 }
 

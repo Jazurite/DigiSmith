@@ -136,7 +136,7 @@ describe("classify", () => {
       for (const s of ["blocked", "unknown", null, "weird", ""]) expect(st(s).state).toBe("blocked");
     });
     it("is healthy when herdr says idle, done or working", () => {
-      for (const s of ["idle", "done", "working"]) expect(st(s)).toEqual({ state: "healthy", cause: "", since: "" });
+      for (const s of ["idle", "done", "working"]) expect(st(s)).toEqual({ state: "healthy", cause: "prompt-answered", since: min(1) });
     });
     it("no status argument behaves as null: stays blocked", () => {
       expect(classify(run(), prompt(), "present", at(6), DEFAULT_BUDGETS).state).toBe("blocked");
@@ -152,6 +152,10 @@ describe("classify", () => {
       expect(v.since).toBe(min(8));
       // a stale done right after the second prompt does not clear it (grace)
       expect(st("done", e, 8.5).state).toBe("blocked");
+    });
+    it("a plain healthy run keeps the empty verdict, also with a status and an older answered prompt", () => {
+      expect(classify(run(), [ev("started", 0), ev("tool", 1)], "present", at(2), DEFAULT_BUDGETS, "done")).toEqual({ state: "healthy", cause: "", since: "" });
+      expect(classify(run(), [ev("started", 0), ev("blocked", 1), ev("tool", 2)], "present", at(3), DEFAULT_BUDGETS, "done")).toEqual({ state: "healthy", cause: "", since: "" });
     });
     it("a gone pane is lost, even with status done", () => {
       expect(classify(run(), prompt(), "gone", at(6), DEFAULT_BUDGETS, "done").state).toBe("lost");

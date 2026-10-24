@@ -21,7 +21,7 @@ Role scope (DGS-598): only builder, reviewer and scout runs are classified. A ma
 0. The role is not builder, reviewer or scout: ended when it has ended, else healthy.
 1. An `ended` event: `ended`.
 2. The pane is gone: `lost`.
-3. A `permission_prompt` with nothing after it: `blocked`. This beats silence. A denial writes no event, so herdr's `agent_status` for the run's pane decides: `idle`, `done` or `working`, with the prompt at least 60 s old, means answered. `blocked`, `unknown`, no status (herdr down, no pane) or a younger prompt stays `blocked`.
+3. A `permission_prompt` with nothing after it: `blocked`. This beats silence. A denial writes no event, so herdr's `agent_status` for the run's pane decides: `idle`, `done` or `working`, with the prompt at least 60 s old, means answered. `blocked`, `unknown`, no status (herdr down, no pane) or a younger prompt stays `blocked`. A prompt answered this way stays closed: a later pass with herdr down or its status unknown or blocked does not reopen the same prompt, only a new one.
 4. No event for 30 minutes: `lost`.
 5. The phase is over its budget: `stalled`.
 6. Otherwise: `healthy`.

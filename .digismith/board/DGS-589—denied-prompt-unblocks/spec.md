@@ -26,7 +26,7 @@ Rule, applied only where `classify` now returns `blocked` (last `permission_prom
 Plumbing (no extra herdr call):
 - `pane.ts`: `PaneLookup` returns `Map<pane_id, agent_status> | null` (was `Set`). `herdrPaneLookup` reads `agent_status` next to `pane_id` (a missing or non-string status becomes `"unknown"`). `null` still means herdr did not answer.
 - `watch.ts`: `paneOf` keeps `Present/gone/unknown` from `map.has`. A second small helper `statusOf(ws, pane)` reads the same cached map (null when the pane or the map is missing). The call becomes `classify(record, events, pane, nowMs, budgets, statusOf(...))`. Nothing else in `watch.ts` changes. The DGS-583 guard (run + kind + `since`) is untouched: `healthy` closes the item and clears the run's `opened` keys; a later prompt has a new `since`.
-- `nightwatch/derive.ts` (Oculus) keeps calling `classify(..., "unknown", ...)` with no status: its view is unchanged (a denied run still shows blocked there until the next turn; out of scope, noted).
+- `packages/cli/src/oculus/derive.ts` (Oculus) keeps calling `classify(..., "unknown", ...)` with no status: its view is unchanged (a denied run still shows blocked there until the next turn; out of scope, noted).
 - Hook, `hooks/hooks.json`, settings: no edit.
 
 ## Fit with DGS-598 (approved spec and plan, read only)

@@ -207,6 +207,22 @@ describe("runWatch", () => {
       expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
     });
 
+    for (const later of ["null", "unknown", "blocked"]) {
+      it(`F1: after the answer, a later ${later} herdr reading does not reopen the item`, async () => {
+        blockedRun();
+        status.set("w2:DGS-1", "blocked");
+        await runWatch(deps());
+        status.set("w2:DGS-1", "done");
+        await runWatch(deps());
+        expect(readOpen(dir)).toEqual([]);
+        if (later === "null") present = null;
+        else status.set("w2:DGS-1", later);
+        const r = await runWatch(deps());
+        expect(r.opened).toBe(0);
+        expect(readOpen(dir)).toEqual([]);
+      });
+    }
+
     it("the DGS-583 guard holds: a resolved item is not reopened by the same prompt", async () => {
       blockedRun();
       status.set("w2:DGS-1", "blocked");

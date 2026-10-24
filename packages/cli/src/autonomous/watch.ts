@@ -126,7 +126,10 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     const v = classify(record, events, pane, nowMs, budgets, statusOf(record.herdr.workspace, record.herdr.pane));
     const mine = items.filter((o) => o.run === record.run && AUTO.includes(o.kind));
     if (v.state === "ended" || v.state === "healthy") {
-      for (const k of [...opened.keys()]) if (k.startsWith(`${record.run}|`)) opened.delete(k);
+      // A prompt herdr showed answered stays closed: keep its key so a later null map or status cannot reopen it. A new prompt has a new since.
+      const keep = v.cause === "prompt-answered" ? key(record.run, "blocked") : null;
+      for (const k of [...opened.keys()]) if (k.startsWith(`${record.run}|`) && k !== keep) opened.delete(k);
+      if (keep) opened.set(keep, v.since);
       for (const it of mine) close(it, `run is ${v.state} again`);
       continue;
     }
