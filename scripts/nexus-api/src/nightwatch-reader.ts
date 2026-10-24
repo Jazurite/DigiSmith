@@ -7,7 +7,7 @@ const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 export const DEFAULT_ENTRY = join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')
 
 // The flags `dg nightwatch view` accepts (packages/cli/src/nightwatch/index.ts VALUE_FLAGS).
-const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'limit'])
+const ALLOWED_KEYS = new Set(['run', 'ticket', 'since', 'before', 'tail', 'group', 'state', 'role', 'trigger', 'project', 'limit'])
 
 export type ViewName = 'overview' | 'attention' | 'runs' | 'run' | 'events' | 'plan'
 export type ViewArgs = Record<string, string | number | undefined>

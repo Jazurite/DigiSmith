@@ -33,7 +33,7 @@ const qs = (q: Record<string, string | number | undefined>): string => {
 
 export const loadOverview = (o: ApiOptions = {}) => get('/overview', overviewSchema, o)
 export const loadAttention = (o: ApiOptions = {}) => get('/attention', attentionSchema, o)
-export const loadRuns = (q: { state?: string; role?: string; ticket?: string; trigger?: string; limit?: number } = {}, o: ApiOptions = {}) => get(`/runs${qs(q)}`, runsSchema, o)
+export const loadRuns = (q: { state?: string; role?: string; ticket?: string; project?: string; trigger?: string; limit?: number } = {}, o: ApiOptions = {}) => get(`/runs${qs(q)}`, runsSchema, o)
 export const loadRun = (id: string, o: ApiOptions = {}) => get(`/runs/${encodeURIComponent(id)}`, runDetailSchema, o)
 export const loadEvents = (id: string, q: { since?: number; before?: number; tail?: number; group?: string } = {}, o: ApiOptions = {}) => get(`/runs/${encodeURIComponent(id)}/events${qs(q)}`, eventsSchema, o)
 export const loadPlan = (ticket: string, o: ApiOptions = {}) => get(`/plan/${encodeURIComponent(ticket)}`, planSchema, o)

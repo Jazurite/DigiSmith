@@ -38,7 +38,7 @@ export function nexusStatus(jobs: JobInfo[] | null, breakerOpen: boolean, nowMs:
 
 const int = (max: number) => z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().max(max))
 const id = z.string().regex(ID)
-const runsQuery = z.strictObject({ state: z.enum(HEALTH).optional(), role: z.enum(ROLES).optional(), ticket: id.optional(), trigger: z.enum(TRIGGERS).optional(), limit: int(500).optional() })
+const runsQuery = z.strictObject({ state: z.enum(HEALTH).optional(), role: z.enum(ROLES).optional(), ticket: id.optional(), project: id.optional(), trigger: z.enum(TRIGGERS).optional(), limit: int(500).optional() })
 const eventsQuery = z.strictObject({ since: int(1e9).optional(), before: int(1e9).optional(), tail: int(1000).optional(), group: z.enum(EVENT_GROUPS).optional() })
 const none = z.strictObject({})
 

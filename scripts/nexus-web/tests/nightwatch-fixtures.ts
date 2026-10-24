@@ -4,7 +4,7 @@ import type { Attention, Events, EventRow, Overview, Plan, RunDetail, RunRow, Ru
 
 export function runFixture(over: Partial<RunRow> = {}): RunRow {
   return {
-    run: 'builder-20261022T021000-a1b2c3', ticket: 'DGS-590', role: 'builder', seat: 'dev0', model: 'sonnet-5-5',
+    run: 'builder-20261022T021000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: 'sonnet-5-5',
     trigger: 'night-scan', state: 'healthy', phase: 'building',
     startedAt: '2026-10-22T02:10:00.000Z', endedAt: null, elapsedSec: 2467, events: 382,
     merged: false, pushed: false,

@@ -18,6 +18,7 @@ const pick = (v: unknown, allowed: readonly string[]): string => (allowed.includ
 // the filter lives in the URL; a value that is not valid is dropped, so the API never gets it
 const filters = computed(() => ({
   state: pick(route.query.state, HEALTH), role: pick(route.query.role, ROLES), trigger: pick(route.query.trigger, TRIGGERS),
+  project: isSafeId(one(route.query.project)) ? one(route.query.project) : '',
   ticket: isSafeId(one(route.query.ticket)) ? one(route.query.ticket) : '',
 }))
 const filtered = computed(() => Object.values(filters.value).some(Boolean))
@@ -27,12 +28,18 @@ function setFilters(next: typeof filters.value): void {
 }
 
 const poll = useRestartingPoll<Runs>(() => JSON.stringify(filters.value), (k) => loadRuns({ ...(JSON.parse(k) as typeof filters.value), limit: 100 }))
+// the Project choices: every project in the loaded rows, plus the one in the URL
+const projects = computed(() => {
+  const seen = new Set<string>((poll.data.value?.runs ?? []).map((r: { project: string | null }) => r.project).filter((p: string | null): p is string => p !== null))
+  if (filters.value.project) seen.add(filters.value.project)
+  return [...seen].sort()
+})
 const nowMs = useNow()
 </script>
 
 <template>
   <NwPageHead title="Runs" sub="Every run, newest first." />
-  <NwRunFilters :model-value="filters" @update:model-value="setFilters" />
+  <NwRunFilters :model-value="filters" :projects="projects" @update:model-value="setFilters" />
   <NwPanel v-if="!poll.data.value && !poll.error.value" kind="loading" />
   <NwPanel v-else-if="!poll.data.value" kind="error" title="The runs are not available right now." @retry="poll.refresh()" />
   <template v-else>

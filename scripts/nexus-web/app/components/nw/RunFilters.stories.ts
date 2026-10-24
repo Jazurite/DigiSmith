@@ -6,4 +6,4 @@ const meta = {
 }
 export default meta
 
-export const Default = { args: { modelValue: { state: '', role: 'builder', trigger: '', ticket: '' } } }
+export const Default = { args: { modelValue: { state: '', role: 'builder', trigger: '', project: '', ticket: '' }, projects: ['DigiSmith', 'emma-theme'] } }

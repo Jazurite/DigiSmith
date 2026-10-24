@@ -2,7 +2,7 @@ import { flushPromises } from '@vue/test-utils'
 import { mountSuspended, mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { reactive, ref } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
+import { attentionFixture, eventsFixture, overviewFixture, planFixture, runDetailFixture, runFixture, runsFixture } from '../../../tests/nightwatch-fixtures'
 import { NightwatchApiError } from '../../composables/nightwatch-api'
 import Attention from './attention.vue'
 import Plan from './plan.vue'
@@ -31,8 +31,30 @@ describe('Runs page', () => {
     api.loadRuns.mockResolvedValue(runsFixture())
     const w = await mountSuspended(Runs)
     await flushPromises()
-    expect(api.loadRuns).toHaveBeenCalledWith({ state: 'lost', role: '', trigger: 'away', ticket: 'DGS-1', limit: 100 })
+    expect(api.loadRuns).toHaveBeenCalledWith({ state: 'lost', role: '', trigger: 'away', project: '', ticket: 'DGS-1', limit: 100 })
     expect(w.findAll('tbody tr')).toHaveLength(4)
+    w.unmount()
+  })
+  it('sends a valid project from the URL and drops an unsafe one', async () => {
+    api.loadRuns.mockResolvedValue(runsFixture())
+    route.query = { project: 'DigiSmith' }
+    const w = await mountSuspended(Runs)
+    await flushPromises()
+    expect(api.loadRuns).toHaveBeenCalledWith(expect.objectContaining({ project: 'DigiSmith' }))
+    w.unmount()
+    api.loadRuns.mockClear()
+    route.query = { project: '../x' }
+    const w2 = await mountSuspended(Runs)
+    await flushPromises()
+    expect(api.loadRuns).toHaveBeenCalledWith(expect.objectContaining({ project: '' }))
+    w2.unmount()
+  })
+  it('writes a chosen project into the URL query', async () => {
+    api.loadRuns.mockResolvedValue({ ...runsFixture(), runs: [runFixture({ project: 'emma-theme' })] })
+    const w = await mountSuspended(Runs)
+    await flushPromises()
+    await w.find('[aria-label="Project"]').setValue('emma-theme')
+    expect(nav).toHaveBeenCalledWith({ query: { project: 'emma-theme' } }, { replace: true })
     w.unmount()
   })
   it('says No run matches. with a filter and No run yet. without', async () => {

@@ -26,6 +26,10 @@ describe('createReader', () => {
     const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
     expect(await read('runs', { role: 'builder', limit: 5 })).toEqual({ argv: ['nightwatch', 'view', 'runs', '--limit=5', '--role=builder'] })
   })
+  it('passes the project filter as a flag', async () => {
+    const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
+    expect(await read('runs', { project: 'DigiSmith' })).toEqual({ argv: ['nightwatch', 'view', 'runs', '--project=DigiSmith'] })
+  })
   it('sorts the flags, skips undefined ones, and never lets a value become a flag or a shell word', async () => {
     const read = createReader({ entry: fakeCli(echo), ttlMs: 0 })
     const out = (await read('plan', { ticket: 'DGS-590; rm -rf /', group: undefined })) as { argv: string[] }

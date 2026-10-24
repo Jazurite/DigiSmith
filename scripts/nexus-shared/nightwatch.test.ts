@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { eventRowSchema, nightwatchErrorSchema, overviewSchema, planSchema, runRowSchema, runsSchema } from './nightwatch.ts'
 
-const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false }
+const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false }
 
 describe('nightwatch schemas', () => {
   it('accepts a run row and refuses an unknown key', () => {

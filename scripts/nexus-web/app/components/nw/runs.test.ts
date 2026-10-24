@@ -99,6 +99,12 @@ describe('RunsTable cells', () => {
     expect(await cell(runFixture({ pushed: true }), 8)).toBe('pushed')
     expect(await cell(runFixture(), 8)).toBe('-')
   })
+  it('shows a dash for a null ticket and still links to the run', async () => {
+    const w = await mountSuspended(RunsTable, { props: { runs: [runFixture({ ticket: null, run: 's-abc' })], nowMs: NOW } })
+    const a = w.findAll('tbody td')[1]!.find('a')
+    expect(a.text()).toBe('-')
+    expect(a.attributes('href')).toContain('s-abc')
+  })
   it('counts a running row live and freezes an ended row; dashes for unknown seat and model; UTC+7 start', async () => {
     expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', elapsedSec: 5 }), 6)).toBe('1:00:00')
     expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', endedAt: '2026-10-22T02:30:00.000Z', elapsedSec: 1800 }), 6)).toBe('0:30:00')
@@ -201,10 +207,10 @@ describe('RecordCard, OrderCard, Plan details', () => {
 })
 
 describe('RunFilters', () => {
-  it('has four labelled controls and emits the whole value on a change', async () => {
-    const value = { state: '', role: '', trigger: '', ticket: '' }
-    const w = await mountSuspended(RunFilters, { props: { modelValue: value } })
-    for (const l of ['State', 'Role', 'Trigger', 'Ticket']) expect(w.find(`[aria-label="${l}"]`).exists(), l).toBe(true)
+  it('has five labelled controls and emits the whole value on a change', async () => {
+    const value = { state: '', role: '', trigger: '', project: '', ticket: '' }
+    const w = await mountSuspended(RunFilters, { props: { modelValue: value, projects: ['DigiSmith'] } })
+    for (const l of ['State', 'Role', 'Trigger', 'Project', 'Ticket']) expect(w.find(`[aria-label="${l}"]`).exists(), l).toBe(true)
     await w.find('[aria-label="Role"]').setValue('reviewer')
     expect(w.emitted('update:modelValue')![0]).toEqual([{ ...value, role: 'reviewer' }])
     await w.find('[aria-label="Ticket"]').setValue(' DGS-1 ')

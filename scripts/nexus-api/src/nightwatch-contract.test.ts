@@ -20,6 +20,15 @@ describe('view output parses with the shared schemas', () => {
     expect(eventsSchema.parse(eventsView(d.env, { run: 'builder-1' })).lines).toHaveLength(2)
     expect(runDetailSchema.parse(runView(d.env, NOW, { run: 'builder-1' }))).toBeTruthy()
   })
+  it('an automatic run with a null ticket, a project and the maestro role, and the project filter', () => {
+    d.writeRun({ ticket: null, folder: 'DigiSmith', run: 's-abc', role: 'maestro', created_at: '2026-10-22T02:20:00.000Z', project: 'DigiSmith', source: 'auto' })
+    d.writeRun({ ticket: 'DGS-590', run: 'builder-1', role: 'builder', created_at: '2026-10-22T02:21:00.000Z', order: '/d/order-ao-1.md', project: 'emma-theme' })
+    const all = runsSchema.parse(runsView(d.env, NOW, {}))
+    expect(all.runs).toHaveLength(2)
+    const only = runsSchema.parse(runsView(d.env, NOW, { project: 'DigiSmith' }))
+    expect(only.runs).toHaveLength(1)
+    expect(only.runs[0]).toMatchObject({ run: 's-abc', ticket: null, project: 'DigiSmith', source: 'auto', role: 'maestro' })
+  })
   it('empty depot', () => {
     expect(overviewViewSchema.parse(overviewView(d.env, NOW))).toBeTruthy()
     expect(attentionSchema.parse(attentionView(d.env, NOW))).toBeTruthy()

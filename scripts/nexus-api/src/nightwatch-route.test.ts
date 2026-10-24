@@ -7,7 +7,7 @@ import { ReaderError, type Reader } from './nightwatch-reader.ts'
 import type { Env } from './app.ts'
 
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
-const row = { run: 'builder-1', ticket: 'DGS-590', role: 'builder', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: 'building', startedAt: '2026-10-22T02:00:00.000Z', endedAt: null, elapsedSec: 3600, events: 2, merged: false, pushed: false }
+const row = { run: 'builder-1', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: null, model: null, trigger: 'manual', state: 'healthy', phase: 'building', startedAt: '2026-10-22T02:00:00.000Z', endedAt: null, elapsedSec: 3600, events: 2, merged: false, pushed: false }
 const overviewView = {
   readAt: '2026-10-22T03:00:00.000Z', workers: [row], attentionCount: 0,
   tickets: { windowDays: 7, lockTicket: null, rows: [] },
@@ -70,6 +70,18 @@ describe('routes', () => {
     const res = await app(fake).request('/api/v1/nightwatch/runs?state=stalled&role=builder&ticket=DGS-590&trigger=manual&limit=20')
     expect(res.status).toBe(200)
     expect(calls[0]).toEqual({ view: 'runs', args: { state: 'stalled', role: 'builder', ticket: 'DGS-590', trigger: 'manual', limit: 20 } })
+  })
+  it('passes the project filter and accepts the new roles', async () => {
+    calls.length = 0
+    expect((await app(fake).request('/api/v1/nightwatch/runs?project=DigiSmith')).status).toBe(200)
+    expect(calls[0]).toEqual({ view: 'runs', args: { project: 'DigiSmith' } })
+    expect((await app(fake).request('/api/v1/nightwatch/runs?project=..%2Fx')).status).toBe(400)
+    expect((await app(fake).request('/api/v1/nightwatch/runs?role=maestro')).status).toBe(200)
+  })
+  it('accepts an automatic run row with a null ticket and project', async () => {
+    const auto = { ...row, ticket: null, project: null, source: 'auto', role: 'conductor' }
+    const read: Reader = async () => ({ readAt: overviewView.readAt, total: 1, runs: [auto] })
+    expect((await app(read).request('/api/v1/nightwatch/runs')).status).toBe(200)
   })
   it('refuses an unknown key, a bad value or a bad id without echoing it', async () => {
     for (const url of ['/api/v1/nightwatch/runs?evil=1', '/api/v1/nightwatch/runs?state=bogus', '/api/v1/nightwatch/runs?limit=9999', '/api/v1/nightwatch/runs/..%2Fx', '/api/v1/nightwatch/plan/a%20b', '/api/v1/nightwatch/runs/builder-1/events?group=bogus', '/api/v1/nightwatch/runs/builder-1/events?since=-1']) {

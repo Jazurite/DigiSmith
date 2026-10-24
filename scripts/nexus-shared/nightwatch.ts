@@ -6,14 +6,16 @@ const count = z.number().int().min(0)
 export const RUN_PHASES = ['building', 'review', 'merge'] as const
 
 export const HEALTH = ['healthy', 'blocked', 'stalled', 'lost', 'ended'] as const
-export const ROLES = ['builder', 'reviewer', 'scout', 'other'] as const
+export const ROLES = ['builder', 'reviewer', 'scout', 'maestro', 'conductor', 'other'] as const
+export const RUN_SOURCES = ['auto', 'start'] as const
 export const TRIGGERS = ['manual', 'night-scan', 'away', 'unknown'] as const
 export const TICKET_PHASES = ['claimed', 'building', 'review', 'merge-ready', 'merged', 'released', 'lost'] as const
 export const EVENT_GROUPS = ['all', 'agent', 'system', 'errors'] as const
 export const NIGHTWATCH_ERROR_CODES = ['bad_request', 'not_found', 'method_not_allowed', 'reader_unavailable', 'internal_invalid'] as const
 
 export const runRowSchema = z.strictObject({
-  run: z.string(), ticket: z.string(), role: z.enum(ROLES),
+  run: z.string(), ticket: z.string().nullable(), role: z.enum(ROLES),
+  project: z.string().nullable(), source: z.enum(RUN_SOURCES),
   seat: z.string().nullable(), model: z.string().nullable(),
   trigger: z.enum(TRIGGERS), state: z.enum(HEALTH),
   phase: z.enum(RUN_PHASES).nullable(),

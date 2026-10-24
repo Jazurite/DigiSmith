@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { HEALTH, ROLES, TRIGGERS } from '#nightwatch-schema'
 
-type Filters = { state: string; role: string; trigger: string; ticket: string }
-const props = defineProps<{ modelValue: Filters }>()
+type Filters = { state: string; role: string; trigger: string; project: string; ticket: string }
+const props = defineProps<{ modelValue: Filters; projects: string[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: Filters] }>()
 const set = (key: keyof Filters, e: Event): void => {
   emit('update:modelValue', { ...props.modelValue, [key]: (e.target as HTMLInputElement | HTMLSelectElement).value.trim() })
@@ -19,6 +19,10 @@ const SELECTS = [
     <select v-for="s in SELECTS" :key="s.key" :aria-label="s.label" :value="modelValue[s.key]" @change="set(s.key, $event)">
       <option value="">{{ s.label }}: all</option>
       <option v-for="o in s.options" :key="o" :value="o">{{ o }}</option>
+    </select>
+    <select aria-label="Project" :value="modelValue.project" @change="set('project', $event)">
+      <option value="">Project: all</option>
+      <option v-for="p in projects" :key="p" :value="p">{{ p }}</option>
     </select>
     <input type="text" aria-label="Ticket" placeholder="Ticket key" :value="modelValue.ticket" @change="set('ticket', $event)">
   </div>
