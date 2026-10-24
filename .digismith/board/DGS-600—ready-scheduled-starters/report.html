@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-600 Ready starter — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-600 Ready starter — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-24</span>
+    <span>Ticket: <strong>DGS-600</strong></span>
+    <span>Commit range: <code>002e53f..3d53baa</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The scan claims tickets in the new status <code>ready</code> only (Mode <code>Autonomous</code>), <code>to do</code> becomes the attended starter, the Steward knows <code>ready</code> and <code>scheduled</code>, and <code>dg</code> can read a field's locations and create a dropdown field at any location, so the statuses and the Mode field can be set up after the merge. The <code>Tracker</code> interface lists by status, the Definition of Ready checks Mode, and two <code>dg clickup</code> changes use the Frontdoor shapes of the capture of 2026-10-10. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (8 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix rounds before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Tracker lists by status and reads Mode</h4><p><code>Tracker.listByStatus(name)</code> replaces <code>listToDo()</code>, <code>LoTask.mode</code> reads the Mode field, and <code>searchTeamTasks</code> takes an optional status filter.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Definition of Ready checks Mode</h4><p><code>REASON.mode</code> is the fifth reason: <code>Mode is not Autonomous (Manual or missing)</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>The scan and the controller read ready</h4><p><code>runScan</code> reads <code>ready</code> only; <code>advanceTicket</code> repairs <code>ready</code>. <code>to do</code> is the attended starter.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>The Steward knows ready and scheduled</h4><p><code>STATUSES</code> gains <code>scheduled</code> and <code>ready</code>; <code>approved --into</code> takes <code>to do</code>, <code>ready</code> or <code>scheduled</code>; <code>started</code> leaves <code>ready</code> too.</p></div>
+    <div class="card"><span class="tag">Task 5</span><h4>Texts: describe lines, the job description and the Nightwatch label</h4><p>The <code>dg autonomous</code> help, the autonomous-scan job description and the top bar label say ready.</p></div>
+    <div class="card"><span class="tag">Task 6</span><h4>dg clickup get-field reads a field and its locations</h4><p><code>dg clickup get-field &lt;id&gt;</code> prints a field, its options and its locations (read only).</p></div>
+    <div class="card"><span class="tag">Task 7</span><h4>dg clickup create-field --location</h4><p><code>create-field --location</code> creates a team field and sets its locations, with a read-back.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: Tracker lists by status and reads Mode</td><td><code>Tracker.listByStatus(name)</code> replaces <code>listToDo()</code>, <code>LoTask.mode</code> reads the Mode field, and <code>searchTeamTasks</code> takes an optional status filter.</td><td>Approved, clean</td><td>F1 fake searchTeamTasks ignores status; stale comment in tracker-clickup.test.ts (fixed in the final wave); F2 filter test passes via the local filter alone (fixed); F3 add helper position in scan.test.ts (gone with Task 3)</td></tr>
+    <tr><td>Task 2: Definition of Ready checks Mode</td><td><code>REASON.mode</code> is the fifth reason: <code>Mode is not Autonomous (Manual or missing)</code>.</td><td>Approved, clean</td><td>none</td></tr>
+    <tr><td>Task 3: The scan and the controller read ready</td><td><code>runScan</code> reads <code>ready</code> only; <code>advanceTicket</code> repairs <code>ready</code>. <code>to do</code> is the attended starter.</td><td>Approved, clean</td><td>F1 dg autonomous help still said to do (Task 5 rewrote it)</td></tr>
+    <tr><td>Task 4: The Steward knows ready and scheduled</td><td><code>STATUSES</code> gains <code>scheduled</code> and <code>ready</code>; <code>approved --into</code> takes <code>to do</code>, <code>ready</code> or <code>scheduled</code>; <code>started</code> leaves <code>ready</code> too.</td><td>Approved, clean</td><td>F1 dry-run test checked a substring (fixed); F2 --into choices duplicated APPROVE_TARGETS (fixed)</td></tr>
+    <tr><td>Task 5: Texts: describe lines, the job description and the Nightwatch label</td><td>The <code>dg autonomous</code> help, the autonomous-scan job description and the top bar label say ready.</td><td>Approved, clean</td><td>F1 test title said to do waiting (fixed)</td></tr>
+    <tr><td>Task 6: dg clickup get-field reads a field and its locations</td><td><code>dg clickup get-field &lt;id&gt;</code> prints a field, its options and its locations (read only).</td><td>Approved, clean</td><td>none</td></tr>
+    <tr><td>Task 7: dg clickup create-field --location</td><td><code>create-field --location</code> creates a team field and sets its locations, with a read-back.</td><td>Approved after 1 fix round</td><td>F1 client built before the dry run (plan-mandated, accepted); F2-F6 fixed in 7072255</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes — 1 Important and 5 Minor findings, all resolved or ruled; the scoped re-review found no new Critical or Important finding. The full review table is in <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1 The top bar visual baselines still showed 'To do waiting' while NwTopBar.vue renders 'Ready waiting'.</td><td>Fixed in 27e7697: 14 baselines refreshed. The old ones passed because the Playwright tolerance (maxDiffPixelRatio 0.001) allows about 900 differing pixels and the label change is 72-75.</td></tr>
+    <tr><td>Minor</td><td>F2 The --into choices repeated APPROVE_TARGETS.</td><td>Fixed in dc2a7b4.</td></tr>
+    <tr><td>Minor</td><td>F3 A test title said 'to do waiting'.</td><td>Fixed in dc2a7b4.</td></tr>
+    <tr><td>Minor</td><td>F4 The fake searchTeamTasks ignored its status.</td><td>Fixed in dc2a7b4.</td></tr>
+    <tr><td>Minor</td><td>F5 The steward dry-run test checked only a substring.</td><td>Fixed in dc2a7b4.</td></tr>
+    <tr><td>Minor</td><td>F6 Between the merge build and setup step B1 the scan posts one no-starter-status comment on DGS-548.</td><td>Rejected, no code change: B1 runs right after the merge and the CLI build.</td></tr>
+    <tr><td>Minor</td><td>Round 2 F6: no test pinned the local status check in listByStatus.</td><td>Fixed in 3d53baa: a fake that ignores the status; two tests fail without the check.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">3e1ce6e</span> refactor(dgs-600): list tickets by status and read the Mode field</li>
+    <li><span class="sha">cc40b2c</span> feat(dgs-600): skip a ready ticket whose Mode is not Autonomous</li>
+    <li><span class="sha">2eedf91</span> feat(dgs-600): claim ready tickets only; to do is attended</li>
+    <li><span class="sha">f438e4a</span> feat(dgs-600): let the steward approve into ready or scheduled</li>
+    <li><span class="sha">07aff18</span> docs(dgs-600): name ready in the scan texts and the Nightwatch top bar</li>
+    <li><span class="sha">a6bdfaa</span> feat(dgs-600): add dg clickup get-field to read a field and its locations</li>
+    <li><span class="sha">e742c9f</span> feat(dgs-600): let create-field place a field at locations read with get-field</li>
+    <li><span class="sha">7072255</span> fix(dgs-600): harden create-field read-back, dedupe locations, fix texts</li>
+    <li><span class="sha">27e7697</span> test(dgs-600): refresh the top bar baselines</li>
+    <li><span class="sha">dc2a7b4</span> fix(dgs-600): use APPROVE_TARGETS for --into, filter the fake search by status, tighten tests</li>
+    <li><span class="sha">3d53baa</span> test(dgs-600): pin the local status check in listByStatus</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-600—ready-scheduled-starters/report.html</footer>
+
+</body>
+</html>
