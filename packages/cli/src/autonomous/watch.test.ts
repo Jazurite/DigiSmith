@@ -153,6 +153,72 @@ describe("runWatch", () => {
     expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
   });
 
+  describe("DGS-589: herdr status resolves a denied prompt", () => {
+    // mk() puts the permission_prompt 5 minutes before NOW, past the 60 s grace
+    const blockedRun = (): string => {
+      present = new Set(["w2:DGS-1"]);
+      return mk("DGS-1", "builder", 22, [[20, "started"], [5, "blocked"]]);
+    };
+
+    it("keeps the item open while herdr says blocked, resolves it once herdr says done", async () => {
+      blockedRun();
+      status.set("w2:DGS-1", "blocked");
+      await runWatch(deps());
+      expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+      const same = await runWatch(deps());
+      expect(same.resolved).toBe(0);
+      status.set("w2:DGS-1", "done");
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(1);
+      expect(r.opened).toBe(0);
+      expect(readOpen(dir)).toEqual([]);
+    });
+
+    it("opens a new item for a second permission_prompt after the first was resolved", async () => {
+      const run = blockedRun();
+      status.set("w2:DGS-1", "blocked");
+      await runWatch(deps());
+      status.set("w2:DGS-1", "done");
+      await runWatch(deps());
+      expect(readOpen(dir)).toEqual([]);
+      addEvent(run, 0, "blocked", 3); // a new prompt at NOW, herdr shows blocked again
+      status.set("w2:DGS-1", "blocked");
+      const r = await runWatch(deps());
+      expect(r.opened).toBe(1);
+      expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    });
+
+    it("stays blocked when herdr does not answer (a null lookup)", async () => {
+      blockedRun();
+      status.set("w2:DGS-1", "blocked");
+      await runWatch(deps());
+      present = null; // herdr down: pane unknown, status unknown
+      status.set("w2:DGS-1", "done");
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(0);
+      expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    });
+
+    it("does not resolve while the pane is listed but its status is unknown", async () => {
+      blockedRun();
+      await runWatch(deps()); // no status set: reads "unknown"
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(0);
+      expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    });
+
+    it("the DGS-583 guard holds: a resolved item is not reopened by the same prompt", async () => {
+      blockedRun();
+      status.set("w2:DGS-1", "blocked");
+      await runWatch(deps());
+      status.set("w2:DGS-1", "done");
+      await runWatch(deps());
+      const r = await runWatch(deps()); // a third pass with the same events
+      expect(r.opened).toBe(0);
+      expect(readOpen(dir)).toEqual([]);
+    });
+  });
+
   it("a dry run says what it would do and resolves nothing", async () => {
     present = new Set(["w2:DGS-1"]);
     const run = mk("DGS-1", "builder", 22, [[20, "started"], [5, "blocked"]]);

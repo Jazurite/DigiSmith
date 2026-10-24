@@ -109,6 +109,11 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     const set = paneCache.get(ws);
     return set ? (set.has(pane) ? "present" : "gone") : "unknown";
   };
+  // The herdr agent_status of a run's pane, from the same cached lookup; null when herdr or the pane is unknown.
+  const statusOf = (ws: string | null, pane: string | null): string | null => {
+    if (!ws || !pane) return null;
+    return paneCache.get(ws)?.get(pane) ?? null;
+  };
 
   const { runs, unwatched } = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
   if (unwatched.length) {
@@ -118,7 +123,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   }
   for (const { record, events } of runs) {
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);
-    const v = classify(record, events, pane, nowMs, budgets);
+    const v = classify(record, events, pane, nowMs, budgets, statusOf(record.herdr.workspace, record.herdr.pane));
     const mine = items.filter((o) => o.run === record.run && AUTO.includes(o.kind));
     if (v.state === "ended" || v.state === "healthy") {
       for (const k of [...opened.keys()]) if (k.startsWith(`${record.run}|`)) opened.delete(k);
