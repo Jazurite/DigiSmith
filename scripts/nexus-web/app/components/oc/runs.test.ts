@@ -35,6 +35,17 @@ describe('RunsTable', () => {
     })
     expect(runs.some((r) => r.role === 'maestro') && runs.some((r) => r.role === 'conductor')).toBe(true)
   })
+  it('the Duration cell carries the phase for a running run and the duration only otherwise', async () => {
+    const w = await mountSuspended(RunsTable, { props: { runs: runsFixture().runs, nowMs: NOW } })
+    const cells = w.findAll('td[data-label="Duration"]')
+    expect(cells[0]!.find('[aria-hidden="true"]').text()).toBe('0:50:00 · building 0:14')
+    expect(cells[0]!.find('.sr').text()).toBe('50 min, building for 14 min')
+    expect(cells[1]!.find('[aria-hidden="true"]').text()).toBe('1:30:00 · review 1:30')
+    expect(cells[2]!.find('[aria-hidden="true"]').text()).toBe('2:05:00')   // ended
+    expect(cells[2]!.text()).not.toContain('·')
+    expect(cells[3]!.find('[aria-hidden="true"]').text()).toBe('0:55:00')   // lost
+    expect(w.findAll('th').map((t) => t.text())).not.toContain('Phase')
+  })
   it('says no run yet', async () => {
     expect((await mountSuspended(RunsTable, { props: { runs: [], nowMs: NOW } })).text()).toContain('No run yet.')
   })
@@ -121,8 +132,9 @@ describe('RunsTable cells', () => {
     expect(a.attributes('href')).toContain('s-abc')
   })
   it('counts a running row live and freezes an ended row; dashes for unknown seat and model; UTC+7 start', async () => {
-    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', elapsedSec: 5 }), 7)).toBe('1:00:00')
-    expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', endedAt: '2026-10-22T02:30:00.000Z', elapsedSec: 1800 }), 7)).toBe('0:30:00')
+    const shown = async (row: ReturnType<typeof runFixture>) => (await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })).find('td[data-label="Duration"] [aria-hidden="true"]').text()
+    expect(await shown(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', elapsedSec: 5 }))).toMatch(/^1:00:00/)
+    expect(await shown(runFixture({ startedAt: '2026-10-22T02:00:00.000Z', endedAt: '2026-10-22T02:30:00.000Z', elapsedSec: 1800, phase: null, phaseSince: null }))).toBe('0:30:00')
     expect(await cell(runFixture({ seat: null, model: null }), 4)).toBe('- · -')
     expect(await cell(runFixture({ startedAt: '2026-10-22T02:00:00.000Z' }), 6)).toBe('2026-10-22 09:00')
     expect(await cell(runFixture(), 8)).toBe('-')

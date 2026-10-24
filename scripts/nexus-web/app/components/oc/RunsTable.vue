@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import type { RunRow } from '#oculus-schema'
-import { fmtDay, fmtDuration, fmtTokens, fmtUsd, fmtUtc7 } from '../../utils/oc-format'
+import { fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, phaseTime, spokenMinutes, spokenSeconds } from '../../utils/oc-format'
 
 defineProps<{ runs: RunRow[]; nowMs: number }>()
 // a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
-const duration = (r: RunRow, nowMs: number): string => fmtDuration(r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
+const totalSec = (r: RunRow, nowMs: number): number => (r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
+const duration = (r: RunRow, nowMs: number): string => fmtDuration(totalSec(r, nowMs))
+// "0:31:07 · building 0:14" on screen; screen readers get words, not the "·" and h:mm
+const spoken = (r: RunRow, nowMs: number): string => {
+  const p = phaseTime(r, nowMs)
+  return p ? `${spokenSeconds(totalSec(r, nowMs))}, ${p.phase} for ${spokenMinutes(p.min)}` : spokenSeconds(totalSec(r, nowMs))
+}
 // a Maestro or conductor run is never classified (DGS-598): no health flag, a plain "-"
 const unflagged = (r: RunRow): boolean => r.role === 'maestro' || r.role === 'conductor'
 // a missing snapshot says why (DGS-590): stale since a time, or none at all
@@ -29,7 +35,10 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
         <td data-label="Seat / model" class="mono">{{ r.seat ?? '-' }} · {{ r.model ?? '-' }}</td>
         <td data-label="Trigger">{{ r.trigger }}</td>
         <td data-label="Started" class="mono">{{ fmtDay(r.startedAt) }}</td>
-        <td data-label="Duration" class="num">{{ duration(r, nowMs) }}</td>
+        <td data-label="Duration" class="num">
+          <span aria-hidden="true">{{ duration(r, nowMs) }}<template v-if="phaseTime(r, nowMs)"> · <span class="phase">{{ phaseTime(r, nowMs)!.phase }} {{ fmtMinutes(phaseTime(r, nowMs)!.min) }}</span></template></span>
+          <span class="sr">{{ spoken(r, nowMs) }}</span>
+        </td>
         <td data-label="Tokens" class="num" :class="{ muted: !r.tokens }" :title="r.tokens ? String(r.tokens.total) : missingWhy(r)">{{ r.tokens ? fmtTokens(r.tokens.total) : '-' }}</td>
         <td data-label="Cost" class="num" :class="{ muted: !r.tokens || r.tokens.costUsd === null }" :title="costTitle(r)">{{ r.tokens ? fmtUsd(r.tokens.costUsd) : '-' }}</td>
         <td data-label="Delivery" :class="{ muted: delivery(r) === '-' }">{{ delivery(r) }}</td>
@@ -37,3 +46,7 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
     </OcTable>
   </OcCard>
 </template>
+
+<style scoped lang="scss">
+.phase { white-space: nowrap; }
+</style>

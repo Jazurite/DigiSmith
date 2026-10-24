@@ -1,5 +1,5 @@
 import RunsTable from './RunsTable.vue'
-import { runsFixture } from '../../../tests/oculus-fixtures'
+import { runFixture, runsFixture } from '../../../tests/oculus-fixtures'
 
 const NOW = Date.parse('2026-10-22T03:00:00.000Z')
 
@@ -24,3 +24,8 @@ export const TokensStates = {
     ],
   },
 }
+// DGS-613: a phase start after the page clock, and a run with no phase
+export const PhaseEdges = { args: { runs: [
+  runFixture({ run: 'builder-skew', phaseSince: '2026-10-22T03:05:00.000Z' }),
+  runFixture({ run: 'scout-1', role: 'scout', phase: null, phaseSince: null }),
+], nowMs: NOW } }
