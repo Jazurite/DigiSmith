@@ -48,10 +48,6 @@ export function conductorCheck(conductorsJson: string): { cause: ConductorCause;
   }
 }
 
-export function conductorProblem(conductorsJson: string): string | null {
-  return conductorCheck(conductorsJson)?.text ?? null;
-}
-
 export async function promptConductor(exec: Exec, conductorsJson: string, message: string): Promise<void> {
   const { workspace } = readConductor(conductorsJson);
   const name = CONDUCTOR_KEY.split("/")[1];

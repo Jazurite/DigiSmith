@@ -201,6 +201,11 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     if (problems.length > 0) verdicts.push({ key: "-", reasons: [`guardrail-config: ${problems.join("; ")}`] });
   }
 
+  if (d.dryRun) {
+    const problem = conductorCheck(d.conductorsJson);
+    if (problem !== null) verdicts.push({ key: "-", reasons: [`conductor-config: ${problem.text}`] });
+  }
+
   // 5. Walk in rank order.
   const ctx = { repo: d.repo, fileExists: d.fileExists };
   for (const t of rankTasks(candidates)) {

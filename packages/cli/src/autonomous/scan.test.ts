@@ -465,9 +465,10 @@ describe("runScan: the conductor workspace", () => {
   it("dry run: no attention item, no event", async () => {
     tracker.add({ id: "t1" });
     breakFile();
-    await runScan(mk({ dryRun: true }));
+    const r = await runScan(mk({ dryRun: true }));
     expect(readOpen(dir)).toEqual([]);
     expect(kinds()).not.toContain("conductor-config");
+    expect(r.verdicts?.some((v) => v.key === "-" && v.reasons[0]?.startsWith("conductor-config: no workspace for"))).toBe(true);
   });
   it("after the file is fixed the next scan resolves the item and claims", async () => {
     tracker.add({ id: "t1" });

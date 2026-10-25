@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promptConductor, realExec, conductorProblem, type Exec } from "./conductor.ts";
+import { promptConductor, realExec, conductorCheck, type Exec } from "./conductor.ts";
 
 function fixture(obj: unknown): string {
   const dir = mkdtempSync(join(tmpdir(), "cond-"));
@@ -120,18 +120,25 @@ describe("promptConductor bad json", () => {
   });
 });
 
-describe("conductorProblem", () => {
+describe("conductorCheck", () => {
   it("is null for a valid file", () => {
-    expect(conductorProblem(fixture(good))).toBeNull();
+    expect(conductorCheck(fixture(good))).toBeNull();
   });
   it("names a missing file", () => {
-    expect(conductorProblem("/nonexistent/conductors.json")).toContain("/nonexistent/conductors.json");
+    const r = conductorCheck("/nonexistent/conductors.json");
+    expect(r?.cause).toBe("conductor-config-unreadable");
+    expect(r?.text).toContain("/nonexistent/conductors.json");
   });
   it("names a missing entry", () => {
-    expect(conductorProblem(fixture({ "Emma/emma-conductor": { workspace: "w3" } }))).toContain("digismith-conductor");
+    const r = conductorCheck(fixture({ "Emma/emma-conductor": { workspace: "w3" } }));
+    expect(r?.cause).toBe("conductor-config-unreadable");
+    expect(r?.text).toContain("digismith-conductor");
   });
   it("names a missing or bad workspace", () => {
-    expect(conductorProblem(fixture({ "DigiSmith/digismith-conductor": { note: "/n" } }))).toContain("no workspace for");
-    expect(conductorProblem(fixture({ "DigiSmith/digismith-conductor": { workspace: "x; rm" } }))).toContain("no workspace for");
+    for (const entry of [{ note: "/n" }, { workspace: "x; rm" }]) {
+      const r = conductorCheck(fixture({ "DigiSmith/digismith-conductor": entry }));
+      expect(r?.cause).toBe("conductor-workspace-missing");
+      expect(r?.text).toContain("no workspace for");
+    }
   });
 });
