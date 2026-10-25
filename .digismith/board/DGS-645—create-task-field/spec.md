@@ -40,7 +40,7 @@ In `create-task.ts`, after `applyFields` and the `client.get` at line 41, check 
    - For `text`, `short_text`, `number`, `currency`, `checkbox`: compare with `===`. Text compares after the same trim `parseFieldArg` does.
    - Skip `date` (ClickUp returns a string of ms; format drift) and relationship fields (the value is a list of tasks, checked by `add-link`-style tools). The skip is documented in a comment. The bug is about dropdowns.
 2. `FieldLike.type_config.options` gets an optional `orderindex?: number`.
-3. One retry. If there is a mismatch, call `applyFields` again for ONLY the mismatched fields, read the task again, and compare again. This covers the late-default race at no cost to a correct run. If it still differs: exit 1.
+3. One retry. If there is a mismatch, call `applyFields` again for ONLY the mismatched fields, read the task again, and compare again. This costs nothing on a correct run and may cure a value that ClickUp dropped. If it still differs: exit 1.
 4. The failure message goes to stderr: `clickup create-task: task DGS-123 was created, but field "Mode" reads Autonomous (0), wanted Manual (1)`. The task still exists: print its key and id so Jack can fix or discard it. Print the task JSON to stdout as today, so a script keeps the id. `process.exitCode = 1`.
 5. `update-task` is out of scope (its existing flow worked). The helper is shared, so a later ticket can add the same check there.
 
