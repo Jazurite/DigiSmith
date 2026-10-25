@@ -10,7 +10,7 @@ Role scope (DGS-598): only builder, reviewer and scout runs are classified. A ma
 
 - `healthy`: the run moves and is inside its time budget.
 - `blocked`: the last `permission_prompt` has no later `tool` or `turn_end` event, and herdr does not show the pane as answered. A prompt waits for an answer.
-- `stalled`: herdr shows the run working but it has written no event for 3 hours, or it has been in one phase longer than its budget (building 180 min, review 60, merge 20).
+- `stalled`: herdr shows the run working but it has written no event for 3 hours, or it has been in one phase longer than its budget (building 180 min, review 60, merge 20). A run that waits (status `idle` or `done`) with no event for 4 hours and the run still open is also `stalled` (`waiting-240-min`).
 - `lost`: the pane is gone, or herdr has no data for the pane and the run has been silent for 30 minutes.
 - `ended`: the run has an `ended` event.
 
@@ -22,8 +22,8 @@ Role scope (DGS-598): only builder, reviewer and scout runs are classified. A ma
 1. An `ended` event: `ended`.
 2. The pane is gone: `lost`.
 3. A `permission_prompt` with nothing after it: `blocked`. This beats silence. A denial writes no event, so herdr's `agent_status` for the run's pane decides: `idle`, `done` or `working`, with the prompt at least 60 s old, means answered. `blocked`, `unknown`, no status (herdr down, no pane) or a younger prompt stays `blocked`. A prompt answered this way stays closed: a later pass with herdr down or its status unknown or blocked does not reopen the same prompt, only a new one.
-4. The pane is present and herdr's status is `blocked` (a dialog the hooks do not see): `blocked` with cause `pane-blocked` once the last event is 60 s old, healthy before that.
-5. The pane is present and the status is `idle`, `done` or any other value except `working`: healthy with cause `waiting`. No silence alarm and no phase budget.
+4. The pane is present and herdr's status is `blocked` (a dialog the hooks do not see): `blocked` with cause `pane-blocked` once the last event is 60 s old, healthy before that. Herdr gives no status timestamp, so the 60 s hold is measured from the age of the last event; with the 5 minute poll, a blocked pane is a real dialog.
+5. The pane is present and the status is `idle`, `done` or any other value except `working`: healthy with cause `waiting`. No phase budget. Exception (R3b): status `idle` or `done` with no event for 240 minutes and the run open is `stalled` (`waiting-240-min`).
 6. The pane is present and the status is `working`: no 30 minute alarm. No event for 3 hours: `stalled` (`silent-working-180-min`).
 7. The pane is unknown, or no status: no event for 30 minutes is `lost`.
 8. The phase is over its budget (working and unknown cases only): `stalled`.

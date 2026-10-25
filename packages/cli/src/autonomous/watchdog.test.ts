@@ -147,16 +147,14 @@ describe("classify", () => {
       expect(c("done", e0(), 1 + 200).cause).toBe("waiting");
       expect(c("idle", e0(), 1 + 100).state).toBe("healthy");
     });
-    it("R3b: idle 3 h is healthy, idle 5 h is stalled waiting-240-min (run still open)", () => {
+    it("R3/R3b: idle 3 h is healthy, idle 5 h is stalled waiting-240-min (run still open); an unusual status is waiting", () => {
       expect(c("idle", e0(), 1 + 180).state).toBe("healthy");
       expect(c("idle", e0(), 1 + 239).cause).toBe("waiting");
       expect(c("idle", e0(), 1 + 300)).toEqual({ state: "stalled", cause: "waiting-240-min", since: min(1) });
       expect(c("done", e0(), 1 + 240).cause).toBe("waiting-240-min");
+      expect(c("weird", e0(), 1 + 100).cause).toBe("waiting");
       expect(c("weird", e0(), 1 + 300).cause).toBe("waiting");
       expect(c("idle", [ev("started", 0), ev("ended", 1)], 400).state).toBe("ended");
-    });
-    it("R3: an unusual status is waiting too", () => {
-      expect(c("weird", e0(), 1 + 100).cause).toBe("waiting");
     });
     it("R4/R5: working, silent 100 min and 2 h are healthy; 3 h is stalled", () => {
       expect(c("working", e0(), 1 + 100)).toEqual({ state: "healthy", cause: "", since: "" });
@@ -228,7 +226,7 @@ describe("classify", () => {
     it("DGS-612 R3: an answered prompt with status done is waiting, not lost, after 30 min of silence", () => {
       expect(st("done", prompt(), 1 + 30)).toEqual({ state: "healthy", cause: "prompt-answered", since: min(1) });
     });
-    it("an answered prompt with status working still meets the 30 min rule no more: 100 min is healthy", () => {
+    it("an answered prompt with status working is not lost after 100 min of silence", () => {
       expect(st("working", prompt(), 1 + 100).state).toBe("healthy");
     });
   });
