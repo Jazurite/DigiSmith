@@ -5,7 +5,7 @@ import { appendResolved, readOpen } from "./attention.ts";
 import { awayExpired, isAway, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
-import { promptConductor, type Exec } from "./conductor.ts";
+import { conductorProblem, promptConductor,type Exec } from "./conductor.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
@@ -27,7 +27,7 @@ export interface ScanDeps {
   tick?: () => Promise<TickResult>;
 }
 export interface ScanResult {
-  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config";
+  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
   claimed?: string;            // ticket key
   candidates: number;
   skipped: { key: string; reason: string }[];
@@ -148,6 +148,19 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     }
     try {
       for (const it of readOpen(d.dir)) if (it.run === "guardrails" && it.cause === "bad-guardrail-config") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "guardrails read clean");
+    } catch { /* the item stays open until a later scan */ }
+  }
+  // 2c. A conductors.json without a workspace stops the scan before any claim; a clean read closes the item.
+  if (!d.dryRun) {
+    const problem = conductorProblem(d.conductorsJson);
+    if (problem !== null) {
+      const cause = "conductor-workspace-missing";
+      try { appendAttention(d.dir, now, { ticket: null, run: "conductor", kind: "failed", cause }); } catch { /* the scan still stops */ }
+      appendEvent(d.dir, now, "conductor-config", { problem: problem.slice(0, 300) });
+      return { outcome: "conductor-config", candidates: 0, skipped };
+    }
+    try {
+      for (const it of readOpen(d.dir)) if (it.run === "conductor" && it.cause === "conductor-workspace-missing") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "conductor workspace read clean");
     } catch { /* the item stays open until a later scan */ }
   }
   const notes = readNotes(d.dir);

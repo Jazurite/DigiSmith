@@ -435,6 +435,41 @@ describe("runScan: the breaker", () => {
   });
 });
 
+describe("runScan: the conductor workspace", () => {
+  const breakFile = () => writeFileSync(conductorsJson, JSON.stringify({ "DigiSmith/digismith-conductor": { tab: 1 } }));
+  const fixFile = () => writeFileSync(conductorsJson, JSON.stringify({ "DigiSmith/digismith-conductor": { tab: 1, workspace: "w2" } }));
+
+  it("a missing workspace: conductor-config, attention item, event, no lock, no tracker call", async () => {
+    tracker.add({ id: "t1" });
+    breakFile();
+    const callsBefore = tracker.calls.length;
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("conductor-config");
+    expect(readOpen(dir).map((i) => ({ ticket: i.ticket, run: i.run, kind: i.kind, cause: i.cause }))).toEqual([{ ticket: null, run: "conductor", kind: "failed", cause: "conductor-workspace-missing" }]);
+    expect(kinds()).toContain("conductor-config");
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.calls.length).toBe(callsBefore);
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
+  });
+  it("dry run: no attention item, no event", async () => {
+    tracker.add({ id: "t1" });
+    breakFile();
+    await runScan(mk({ dryRun: true }));
+    expect(readOpen(dir)).toEqual([]);
+    expect(kinds()).not.toContain("conductor-config");
+  });
+  it("after the file is fixed the next scan resolves the item and claims", async () => {
+    tracker.add({ id: "t1" });
+    breakFile();
+    await runScan(mk());
+    expect(readOpen(dir)).toHaveLength(1);
+    fixFile();
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claimed");
+    expect(readOpen(dir)).toEqual([]);
+  });
+});
+
 describe("runScan: the scan guard", () => {
   const guard = (over: Partial<ScanGuard> = {}): ScanGuard => ({ guardrailProblems: () => [], alreadyDone: () => null, ...over });
 
