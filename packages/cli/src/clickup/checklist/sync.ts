@@ -109,7 +109,8 @@ export async function runSync(client: ClickUpClient, req: SyncRequest, write: bo
     if (op.kind === "remove") {
       await step(`remove "${op.name}"`, () => client.deleteChecklistItem(checklistId, op.id));
     } else if (op.kind === "edit") {
-      const patch: { name?: string; resolved?: boolean } = {};
+      const patch: { name?: string; resolved?: boolean; parent?: string } = {};
+      if (op.parent !== undefined) patch.parent = op.parent;
       if (op.name !== undefined) patch.name = op.name;
       if (op.resolved !== undefined) patch.resolved = op.resolved;
       await step(`edit item ${op.key}`, () => client.editChecklistItem(checklistId, op.id, patch));

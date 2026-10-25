@@ -11,7 +11,7 @@ export interface CurrentItem {
 
 export type ChecklistOp =
   | { kind: "add"; key: string; name: string; resolved: boolean; parentKey?: string }
-  | { kind: "edit"; id: string; key: string; name?: string; resolved?: boolean }
+  | { kind: "edit"; id: string; key: string; name?: string; resolved?: boolean; parent?: string }
   | { kind: "remove"; id: string; name: string };
 
 export interface OpCounts {
@@ -66,13 +66,16 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
   const removeChildren: ChecklistOp[] = [];
   const removeTop: ChecklistOp[] = [];
   const droppedParents = new Set<string>();
+  const orphans: { item: CurrentItem; part: string }[] = [];
   let foreign = 0;
 
   for (const it of current.filter((i) => i.parent === null)) {
     const t = TASK_ITEM.exec(it.name);
     const key = t ? t[1] : FINAL_PREFIX.find(([, re]) => re.test(it.name))?.[0];
     if (key === undefined) {
-      foreign++;
+      const part = CHILD_PREFIX.find(([, re]) => re.test(it.name))?.[0];
+      if (part !== undefined) orphans.push({ item: it, part });
+      else foreign++;
       continue;
     }
     if (!wanted.has(key) || matched.has(key)) {
@@ -102,6 +105,22 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
     matched.set(key, it.id);
   }
 
+  // A top-level Implement/Review/Fix is a child whose nest write never landed: adopt it under a matched parent.
+  const adoptedParent = new Map<string, string>();
+  const used = new Set<string>();
+  for (const w of want) {
+    if (w.parentKey === undefined || matched.has(w.key)) continue;
+    const parentId = matched.get(w.parentKey);
+    if (parentId === undefined) continue;
+    const part = w.key.slice(w.parentKey.length + 1);
+    const o = orphans.find((x) => x.part === part && !used.has(x.item.id));
+    if (!o) continue;
+    used.add(o.item.id);
+    matched.set(w.key, o.item.id);
+    adoptedParent.set(o.item.id, parentId);
+  }
+  foreign += orphans.filter((o) => !used.has(o.item.id)).length;
+
   const byId = new Map(current.map((i) => [i.id, i]));
   const counts: OpCounts = { add: 0, rename: 0, remove: removeChildren.length + removeTop.length, tick: 0, untick: 0 };
   const edits: ChecklistOp[] = [];
@@ -115,7 +134,9 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
       continue;
     }
     const have = byId.get(id)!;
-    const edit: { kind: "edit"; id: string; key: string; name?: string; resolved?: boolean } = { kind: "edit", id, key: w.key };
+    const edit: { kind: "edit"; id: string; key: string; name?: string; resolved?: boolean; parent?: string } = { kind: "edit", id, key: w.key };
+    const adopt = adoptedParent.get(id);
+    if (adopt !== undefined) edit.parent = adopt;
     if (have.name !== w.name) {
       edit.name = w.name;
       counts.rename++;
@@ -125,7 +146,7 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
       if (w.resolved) counts.tick++;
       else counts.untick++;
     }
-    if (edit.name !== undefined || edit.resolved !== undefined) edits.push(edit);
+    if (edit.name !== undefined || edit.resolved !== undefined || edit.parent !== undefined) edits.push(edit);
   }
   return { ops: [...removeChildren, ...removeTop, ...edits, ...adds], counts, foreign, matched };
 }

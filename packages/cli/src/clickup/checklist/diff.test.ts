@@ -94,6 +94,19 @@ describe("diffChecklist", () => {
     expect(d.foreign).toBe(3);
   });
 
+  it("adopts a top-level Review orphan under its matched task item, not foreign", () => {
+    const cur = full().filter((i) => i.id !== "c2");
+    cur.push(item("o", "Review"));
+    const d = diffChecklist(cur, wantedItems(plan, none));
+    expect(d.ops).toEqual([{ kind: "edit", id: "o", key: "1.review", parent: "t1" }]);
+    expect(d.foreign).toBe(0);
+    expect(d.matched.get("1.review")).toBe("o");
+  });
+  it("does not adopt an orphan when the task item is missing", () => {
+    const d = diffChecklist([item("o", "Review")], wantedItems(plan, none));
+    expect(d.ops.every((o) => o.kind === "add")).toBe(true);
+    expect(d.foreign).toBe(1);
+  });
   it("adds a missing child under the existing task item", () => {
     const cur = full().filter((i) => i.id !== "c2");
     const d = diffChecklist(cur, wantedItems(plan, none));

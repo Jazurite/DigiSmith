@@ -112,7 +112,11 @@ describe("runSync", () => {
     const out = await runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile, done: "1.implement" }), true);
     expect(c.createChecklist).toHaveBeenCalledWith("t1", "Plan");
     expect(c.createChecklistItem).toHaveBeenCalledTimes(6);
-    const parentId = c.createChecklistItem.mock.results[0] && (await c.createChecklistItem.mock.results[0].value).items[0].id;
+    const after = (await c.getTaskByRef()).checklists.find((l) => l.id === out.checklist_id)!;
+    const parentId = after.items.find((i) => i.name === "Task 1: One")!.id;
+    const nests = c.editChecklistItem.mock.calls.filter((call) => call[2].parent !== undefined);
+    expect(nests).toHaveLength(3);
+    for (const call of nests) expect(call[2].parent).toBe(parentId);
     expect(c.editChecklistItem).toHaveBeenCalledWith(out.checklist_id, expect.any(String), { parent: parentId, resolved: true });
     expect(c.editChecklistItem).toHaveBeenCalledTimes(3);
     expect(out.dry_run).toBe(false);
@@ -160,6 +164,16 @@ describe("runSync", () => {
     await expect(runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile }), true)).rejects.toThrow(
       'add "Task 1: One" failed: HTTP 500; 0 of 9 writes made; run the sync again',
     );
+  });
+
+  it("a failed nest edit leaves an orphan that the next run adopts without a duplicate", async () => {
+    const c = fakeClient([checklist([])]);
+    c.editChecklistItem.mockRejectedValueOnce(new Error("HTTP 502"));
+    await expect(runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile }), true)).rejects.toThrow("HTTP 502");
+    const out = await runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile }), true);
+    const items = (await c.getTaskByRef()).checklists[0].items;
+    expect(items.filter((i) => i.name === "Implement")).toHaveLength(1);
+    expect(out.dry_run).toBe(false);
   });
 
   it("a read-back that does not match throws (a server that ignores parent)", async () => {
