@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-635: replace ready with claimed, and the scan runs 24/7 — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-635: replace ready with claimed, and the scan runs 24/7 — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-25</span>
+    <span>Ticket: <strong>DGS-635</strong></span>
+    <span>Commit range: <code>b8bd1d87..386a0398</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The scan now claims a <code>to do</code> ticket with Mode Autonomous and sets the status <code>claimed</code>. A ticket with Mode Manual or no Mode is never claimed. The conductor sets <code>in progress</code> when the Builder starts. The scan runs at any hour: it no longer returns <code>off</code> outside 23:00-06:00. It still claims one ticket at a time, and the lock and the breaker do not change. The away switch only marks the time as unattended. A scheduled ticket moves to <code>to do</code> for both Modes. A new command, <code>dg clickup rename-status</code>, renames <code>ready</code> to <code>claimed</code> and moves it before <code>in progress</code>, with the same status id. The live rename, the publish and the first use are the conductor's steps after the merge. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (4 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="plan.md">spec and plan</a> (one page). Final review: clean, no findings. Review findings: <a href="findings.md">findings.md</a>. Commit hashes in the findings table are from before the rebase on main; the commits below are the rebased ones.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4><code>dg clickup rename-status</code></h4><p>Renames a space status, keeps its id, can change its type and move it; dry run without <code>--yes</code>; checks the set by a read-back; refuses a rename that changes nothing.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>The scan claims <code>to do</code> + Autonomous at any hour as <code>claimed</code></h4><p>No night gate; Manual tickets are skipped without a comment; a missing <code>claimed</code> status opens an attention item; the ClickUp tracker reads in full only Autonomous hits.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Repair, journal, scheduled starter, steward, order text</h4><p>Lock-time repair from <code>to do</code>; the claim settles on <code>claimed</code> or <code>in progress</code>; both Modes go to <code>to do</code>; steward uses <code>claimed</code>; the order has a Builder-start status step.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Texts, Oculus label, flow notes</h4><p>Job descriptions, the top bar label “To do (autonomous) waiting” with refreshed baselines, the report without the off count, WATCHDOG.md flow note, <code>flow-update.md</code> for the conductor.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>Task 1: <code>dg clickup rename-status</code></td><td>rename-status.ts, add-status.ts shared checks</td><td>Approved after 1 fix round(s)</td><td>—</td></tr>
+    <tr><td>Task 2: Scan claims to do as claimed</td><td>scan.ts, tracker-clickup.ts, types.ts, tests</td><td>Approved, clean (2 Minor: 1 moved to Task 4, 1 parked)</td><td>report.ts still prints “N off” (fixed in Task 4); NO_STARTER note never cleared (pre-existing, parked); full packages/cli run races index.e2e build vs strip-types smoke (passes alone)</td></tr>
+    <tr><td>Task 3: Repair, journal, starter, steward, order</td><td>advance.ts, reconcile.ts, schedule-release.ts, order.ts, steward</td><td>Approved, clean (2 Minor: 1 fixed in Task 4, 1 parked)</td><td>—</td></tr>
+    <tr><td>Task 4: Texts, Oculus label, flow notes</td><td>registry.ts, OcTopBar.vue, 24 baselines, report.ts, WATCHDOG.md, steward README, flow-update.md</td><td>Approved after 1 fix round(s) (F2 rejected)</td><td>nexus-web typecheck: 8 errors in untouched nexus-api scheduler clock/guard/runlog (pre-existing)</td></tr>
+  </table>
+  </div>
+</section>
+
+
+
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">7b4bdf76</span> docs(dgs-635): add the spec and plan</li>
+    <li><span class="sha">e8a5215c</span> docs(dgs-635): link the first-use ticket to DGS-501</li>
+    <li><span class="sha">99b547f4</span> feat(clickup): add rename-status</li>
+    <li><span class="sha">895234ba</span> fix(clickup): refuse a rename that changes nothing</li>
+    <li><span class="sha">b92df7f4</span> feat(autonomous): claim to do tickets at any hour as claimed</li>
+    <li><span class="sha">ce4edac1</span> feat(autonomous): move scheduled tickets to to do and set in progress at builder start</li>
+    <li><span class="sha">ae901e22</span> refactor(autonomous): inline the to do target</li>
+    <li><span class="sha">4b1a9650</span> test(nexus-web): refresh the top bar baselines</li>
+    <li><span class="sha">47fade70</span> docs(dgs-635): update the ticket flow texts</li>
+    <li><span class="sha">148214c5</span> docs(steward): replace ready with claimed in the rules table</li>
+    <li><span class="sha">73cfb550</span> refactor(autonomous): keep the to do target in one constant</li>
+    <li><span class="sha">386a0398</span> docs(dgs-635): add the ticket</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-635—claimed-status/report.html</footer>
+
+</body>
+</html>
