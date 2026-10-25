@@ -20,6 +20,8 @@ export interface OpCounts {
   remove: number;
   tick: number;
   untick: number;
+  /** Orphan children moved under their task item. */
+  nest: number;
 }
 
 export interface ChecklistDiff {
@@ -32,6 +34,7 @@ export interface ChecklistDiff {
 }
 
 const TASK_ITEM = /^Task (\d+):/;
+const CHILD_NAMES = new Set(["Implement", "Review", "Fix", "Fix (none needed)"]);
 const CHILD_PREFIX: [string, RegExp][] = [
   ["implement", /^Implement\b/],
   ["review", /^Review\b/],
@@ -44,13 +47,15 @@ const FINAL_PREFIX: [string, RegExp][] = [
 
 const isItem = (x: unknown): x is ClickUpChecklistItem => typeof x === "object" && x !== null && typeof (x as { id?: unknown }).id === "string";
 
-/** Flat items with `parent` and nested `children` objects both read; each id once, first seen wins. */
+/** Flat items with `parent` and nested `children` objects both read; each id once, first seen wins (a missing parent is filled in). */
 export function flattenItems(items: ClickUpChecklistItem[]): CurrentItem[] {
   const out = new Map<string, CurrentItem>();
   const walk = (list: unknown[], parent: string | null) => {
     for (const raw of list) {
       if (!isItem(raw)) continue;
-      if (!out.has(raw.id)) out.set(raw.id, { id: raw.id, name: raw.name, resolved: Boolean(raw.resolved), parent: raw.parent ?? parent });
+      const seen = out.get(raw.id);
+      if (!seen) out.set(raw.id, { id: raw.id, name: raw.name, resolved: Boolean(raw.resolved), parent: raw.parent ?? parent });
+      else if (seen.parent === null && (raw.parent ?? parent) !== null) seen.parent = raw.parent ?? parent;
       if (Array.isArray(raw.children)) walk(raw.children, raw.id);
     }
   };
@@ -74,7 +79,7 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
     const key = t ? t[1] : FINAL_PREFIX.find(([, re]) => re.test(it.name))?.[0];
     if (key === undefined) {
       const part = CHILD_PREFIX.find(([, re]) => re.test(it.name))?.[0];
-      if (part !== undefined) orphans.push({ item: it, part });
+      if (part !== undefined && CHILD_NAMES.has(it.name)) orphans.push({ item: it, part });
       else foreign++;
       continue;
     }
@@ -122,7 +127,7 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
   foreign += orphans.filter((o) => !used.has(o.item.id)).length;
 
   const byId = new Map(current.map((i) => [i.id, i]));
-  const counts: OpCounts = { add: 0, rename: 0, remove: removeChildren.length + removeTop.length, tick: 0, untick: 0 };
+  const counts: OpCounts = { add: 0, rename: 0, remove: removeChildren.length + removeTop.length, tick: 0, untick: 0, nest: 0 };
   const edits: ChecklistOp[] = [];
   const adds: ChecklistOp[] = [];
   for (const w of want) {
@@ -136,7 +141,10 @@ export function diffChecklist(current: CurrentItem[], want: WantItem[]): Checkli
     const have = byId.get(id)!;
     const edit: { kind: "edit"; id: string; key: string; name?: string; resolved?: boolean; parent?: string } = { kind: "edit", id, key: w.key };
     const adopt = adoptedParent.get(id);
-    if (adopt !== undefined) edit.parent = adopt;
+    if (adopt !== undefined) {
+      edit.parent = adopt;
+      counts.nest++;
+    }
     if (have.name !== w.name) {
       edit.name = w.name;
       counts.rename++;

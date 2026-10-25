@@ -28,6 +28,13 @@ describe("flattenItems", () => {
       { id: "c2", name: "Review", resolved: false, parent: "t1" },
     ]);
   });
+  it("a flat copy without parent listed before the nested copy gets the parent", () => {
+    const raw = [
+      { id: "c1", name: "Implement", orderindex: 1, resolved: false },
+      { id: "t1", name: "Task 1: One", orderindex: 0, resolved: false, children: [{ id: "c1", name: "Implement", orderindex: 0, resolved: false }] },
+    ];
+    expect(flattenItems(raw).find((i) => i.id === "c1")!.parent).toBe("t1");
+  });
   it("ignores children given as plain id strings", () => {
     expect(flattenItems([{ id: "t1", name: "x", orderindex: 0, resolved: false, children: ["c9"] }])).toEqual([{ id: "t1", name: "x", resolved: false, parent: null }]);
   });
@@ -39,7 +46,7 @@ describe("diffChecklist", () => {
     expect(d.ops.map((o) => (o.kind === "add" ? `${o.key}<${o.parentKey ?? ""}` : o.kind))).toEqual([
       "1<", "1.implement<1", "1.review<1", "1.fix<1", "final.review<", "final.fix<",
     ]);
-    expect(d.counts).toEqual({ add: 6, rename: 0, remove: 0, tick: 0, untick: 0 });
+    expect(d.counts).toEqual({ add: 6, rename: 0, remove: 0, tick: 0, untick: 0, nest: 0 });
   });
 
   it("a matching checklist needs no op and maps every key", () => {
@@ -65,7 +72,7 @@ describe("diffChecklist", () => {
       { kind: "edit", id: "c2", key: "1.review", resolved: true },
       { kind: "edit", id: "c3", key: "1.fix", name: "Fix (none needed)", resolved: true },
     ]);
-    expect(d.counts).toEqual({ add: 0, rename: 1, remove: 0, tick: 4, untick: 0 });
+    expect(d.counts).toEqual({ add: 0, rename: 1, remove: 0, tick: 4, untick: 0, nest: 0 });
   });
 
   it("removes a dropped task with its known children first, and duplicates", () => {
@@ -101,6 +108,15 @@ describe("diffChecklist", () => {
     expect(d.ops).toEqual([{ kind: "edit", id: "o", key: "1.review", parent: "t1" }]);
     expect(d.foreign).toBe(0);
     expect(d.matched.get("1.review")).toBe("o");
+    expect(d.counts.nest).toBe(1);
+  });
+  it("adopts an exact 'Fix (none needed)' orphan but leaves 'Fix login copy' foreign", () => {
+    const cur = full().filter((i) => i.id !== "c3");
+    cur.push(item("o", "Fix (none needed)"), item("x", "Fix login copy"));
+    const d = diffChecklist(cur, wantedItems(plan, none));
+    expect(d.matched.get("1.fix")).toBe("o");
+    expect(d.foreign).toBe(1);
+    expect(d.ops.some((o) => o.kind === "edit" && o.id === "x")).toBe(false);
   });
   it("does not adopt an orphan when the task item is missing", () => {
     const d = diffChecklist([item("o", "Review")], wantedItems(plan, none));

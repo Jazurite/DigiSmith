@@ -103,7 +103,7 @@ describe("runSync", () => {
     expect(writes(c)).toBe(0);
     expect(out.dry_run).toBe(true);
     expect(out.checklist_id).toBeNull();
-    expect(out.ops).toEqual({ create: 1, add: 6, rename: 0, remove: 0, tick: 1, untick: 0 });
+    expect(out.ops).toEqual({ create: 1, add: 6, rename: 0, remove: 0, tick: 1, untick: 0, nest: 0 });
     expect(out.items.map((i) => i.key)).toEqual(["1", "1.implement", "1.review", "1.fix", "final.review", "final.fix"]);
   });
 
@@ -126,7 +126,7 @@ describe("runSync", () => {
     const c = fakeClient([checklist(fullItems())]);
     const out = await runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile }), true);
     expect(writes(c)).toBe(0);
-    expect(out.ops).toEqual({ create: 0, add: 0, rename: 0, remove: 0, tick: 0, untick: 0 });
+    expect(out.ops).toEqual({ create: 0, add: 0, rename: 0, remove: 0, tick: 0, untick: 0, nest: 0 });
     expect(out.checklist_id).toBe("c1");
   });
 
@@ -137,7 +137,7 @@ describe("runSync", () => {
     const out = await runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile, ledger }), true);
     expect(c.editChecklistItem).toHaveBeenCalledWith("c1", "k3", { name: "Fix (none needed)", resolved: true });
     expect(c.editChecklistItem).toHaveBeenCalledWith("c1", "t1", { resolved: true });
-    expect(out.ops).toEqual({ create: 0, add: 0, rename: 1, remove: 0, tick: 4, untick: 0 });
+    expect(out.ops).toEqual({ create: 0, add: 0, rename: 1, remove: 0, tick: 4, untick: 0, nest: 0 });
     const before = writes(c);
     await runSync(asClient(c), parseSyncArgv({ task: "DGS-9", plan: planFile, ledger }), true);
     expect(writes(c)).toBe(before);

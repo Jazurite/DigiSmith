@@ -29,7 +29,7 @@ export interface SyncOutput {
   task: string;
   checklist_id: string | null;
   dry_run: boolean;
-  ops: { create: number; add: number; rename: number; remove: number; tick: number; untick: number };
+  ops: { create: number; add: number; rename: number; remove: number; tick: number; untick: number; nest: number };
   items: { key: string; name: string; resolved: boolean }[];
   foreign: number;
   ignored_done: string[];

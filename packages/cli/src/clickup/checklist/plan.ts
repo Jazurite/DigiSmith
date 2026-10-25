@@ -10,8 +10,8 @@ export interface DoneState {
   noneNeeded: Set<string>;
 }
 
-const TASK_HEADING = /^###\s+Task\s+(\d+):\s*(.*?)\s*$/;
-const FENCE = /^\s*(`{3,}|~{3,})(.*)$/;
+const TASK_HEADING = /^###\s+Task\s+([1-9]\d*):\s*(.*?)\s*$/;
+const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 const DONE_KEY = /^(?:([1-9]\d*)(?:\.(implement|review|fix(:none)?))?|final\.(review|fix(:none)?))$/;
 const LEDGER_LINE = /^\s*(?:[-*]\s+)?Task (\d+|final): (implemented|review requested|reviewed|complete|fix round|dispatch fix)\b/;
 const LEDGER_FIXED = /^\s*(?:[-*]\s+)?Review (?:task (\d+)|ticket (final)) r\d+: .*-> fixed\b/;
@@ -23,7 +23,7 @@ export function parsePlanTasks(text: string): PlanTask[] {
   for (const line of text.split(/\r?\n/)) {
     const f = FENCE.exec(line);
     if (fence === null) {
-      if (f) {
+      if (f && !(f[1][0] === "`" && f[2].includes("`"))) {
         fence = f[1];
         continue;
       }
@@ -36,7 +36,7 @@ export function parsePlanTasks(text: string): PlanTask[] {
     if (!m) continue;
     const n = Number(m[1]);
     if (tasks.some((t) => t.n === n)) throw new Error(`the plan has Task ${n} twice`);
-    tasks.push({ n, name: `Task ${n}: ${m[2]}` });
+    tasks.push({ n, name: `Task ${n}: ${m[2]}`.trimEnd() });
   }
   if (tasks.length === 0) throw new Error('the plan has no "### Task N: <title>" headings');
   return tasks;

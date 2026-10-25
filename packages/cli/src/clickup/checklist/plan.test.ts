@@ -4,6 +4,19 @@ import { parsePlanTasks, parseDoneKeys, parseLedgerDone } from "./plan.ts";
 const sorted = (s: Set<string>) => [...s].sort();
 
 describe("parsePlanTasks", () => {
+  it("an empty title leaves no trailing space", () => {
+    expect(parsePlanTasks("### Task 3:\n")).toEqual([{ n: 3, name: "Task 3:" }]);
+  });
+  it("Task 0 and Task 01 headings are not tasks", () => {
+    expect(parsePlanTasks("### Task 0: a\n### Task 01: b\n### Task 2: c\n")).toEqual([{ n: 2, name: "Task 2: c" }]);
+  });
+  it("a one-line ```x``` does not open a fence", () => {
+    expect(parsePlanTasks("```x```\n### Task 1: A\n").map((t) => t.n)).toEqual([1]);
+  });
+  it("a fence indented 4 spaces does not open", () => {
+    expect(parsePlanTasks("    ```\n### Task 1: A\n").map((t) => t.n)).toEqual([1]);
+  });
+
   it("reads ### Task N: headings in plan order", () => {
     expect(parsePlanTasks("# P\n\n### Task 1: Client calls\n\nbody\n\n### Task 2:   Parse the plan  \n")).toEqual([
       { n: 1, name: "Task 1: Client calls" },
@@ -98,6 +111,12 @@ describe("parseLedgerDone", () => {
     const b = parseLedgerDone("Task final: reviewed (1 findings)\nReview ticket final r1: F1 -> fixed (x)\nTask final: complete\n");
     expect(b.noneNeeded.has("final.fix")).toBe(false);
     expect(b.keys.has("final.fix")).toBe(true);
+  });
+
+  it("an inline whole-branch fix keeps final.fix from reading none needed", () => {
+    const d = parseLedgerDone("Task final: reviewed (3 findings)\nTask final: dispatch fix (inline)\nTask final: complete\n");
+    expect(d.keys.has("final.fix")).toBe(true);
+    expect(d.noneNeeded.has("final.fix")).toBe(false);
   });
 
   it("an empty ledger is nothing done", () => {
