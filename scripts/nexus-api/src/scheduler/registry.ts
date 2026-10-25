@@ -54,7 +54,7 @@ export function validateJobs(jobs: readonly JobDef[]): void {
   }
 }
 
-/** The autonomous-scan schedule: the interval is nightwatch.scan_every_minutes, read at each call (default and fallback 30). */
+/** The autonomous-scan schedule: the interval is nightwatch.scan_every_minutes in .digismith/config.yml, read at each call (default and fallback 30; see WATCHDOG.md, "The scan interval"). */
 export function scanScheduleOf(configFile: string = CONFIG_FILE, onProblem: (problem: string) => void = logScanProblem): () => JobSchedule {
   let last: string | null = null
   return () => {
@@ -80,6 +80,7 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'autonomous-scan',
     description: 'Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor',
+    // every 30 minutes by default; nightwatch.scan_every_minutes in .digismith/config.yml sets it (scheduleOf reads it at each tick)
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 30 },
     scheduleOf: scanScheduleOf(),
     command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },

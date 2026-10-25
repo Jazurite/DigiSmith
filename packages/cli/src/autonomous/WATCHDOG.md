@@ -60,9 +60,15 @@ In `.digismith/config.yml`:
 
 These are the defaults. A value must be a positive whole number. A bad value keeps the default and opens a `bad-budget-config` item.
 
+## The scan interval
+
+`nightwatch.scan_every_minutes` in `.digismith/config.yml` sets how often the Nexus job `autonomous-scan` runs. Default 30. A value is a whole number from 5 to 720 (the scheduler's own limits). The scheduler reads the main checkout's file at every tick, so a change needs no API restart. After a release the factory still rescans at once; the `nightwatch-watchdog`, `schedule-release` and `oculus-tokens` jobs keep their 5-minute cycles.
+
+A bad value (4, 721, `x`, a duplicate key, a line indented under it) or an unreadable file keeps 30. It is NOT a guardrail problem: the scan and the merge gate go on. The watchdog opens one `failed` item with cause `bad-scan-interval-config` (own run key `scan-interval`, so it never shares a slot with `bad-budget-config`) and closes it on the first pass that reads clean. A missing key is 30 with no item. `dg autonomous status` prints the interval in force: `scan interval: 30 min (config)` or `(fallback: <problem>)`. Two readers apply one rule: `parseScanInterval` in `guardrails.ts` and `scheduler/scan-interval.ts` in the Nexus API (a copy of the API cannot import the CLI); a test compares them.
+
 ## The three commands
 
-- `dg autonomous watch [--dry-run]`: one pass. `--dry-run` writes nothing.
+- `dg autonomous watch [--dry-run] [--repo <dir>]`: one pass. `--dry-run` writes nothing. `--repo` names the checkout whose `.digismith/config.yml` is read (the scheduled job passes the main checkout).
 - `dg autonomous attention [--json]`: list the open items. `dg autonomous attention resolve <id> [--note ...]` closes one.
 - `dg autonomous resume`: close the breaker (`dg autonomous back` also does it).
 
@@ -111,7 +117,7 @@ Protected paths come from `nightwatch.protected_paths` in `.digismith/config.yml
 
 ### Strict guardrail config
 
-The reader `packages/cli/src/autonomous/guardrails.ts` judges the whole top-level `nightwatch:` block. `scripts/config-parse.ts` skips that block, so the reader is the only judge of it. A problem is a syntax error inside the block, a wrong type, a budget that is not a positive whole number, or an unknown key under `nightwatch.budgets`. Any problem stops `dg autonomous scan`: no claim, an event `guardrail-config`, and an attention item with cause `bad-guardrail-config` (own run key `guardrails`, so it never shares a slot with `bad-budget-config`). The item closes on the first scan that reads clean. The merge gate refuses on the same problems. The watchdog keeps its own rule: a bad budget keeps the default and opens `bad-budget-config`.
+The reader `packages/cli/src/autonomous/guardrails.ts` judges the whole top-level `nightwatch:` block. `scripts/config-parse.ts` skips that block, so the reader is the only judge of it. A problem is a syntax error inside the block, a wrong type, a budget that is not a positive whole number, or an unknown key under `nightwatch.budgets`. `scan_every_minutes` is the one setting here that is judged apart (see "The scan interval"). Any problem stops `dg autonomous scan`: no claim, an event `guardrail-config`, and an attention item with cause `bad-guardrail-config` (own run key `guardrails`, so it never shares a slot with `bad-budget-config`). The item closes on the first scan that reads clean. The merge gate refuses on the same problems. The watchdog keeps its own rule: a bad budget keeps the default and opens `bad-budget-config`.
 
 ### Policy comes from local main
 

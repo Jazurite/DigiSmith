@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { parseConfig } from "../../../../scripts/config-parse.ts";
 import { DEFAULT_SCAN_EVERY_MINUTES, parseScanInterval, readGuardrails, readMainConfig } from "./guardrails.ts";
 import type { Git } from "./gitx.ts";
@@ -121,5 +122,17 @@ describe("scan_every_minutes", () => {
   });
   it("an unknown key still fails the guardrails", () => {
     expect(readGuardrails("nightwatch:\n  scan_every_minutes: 30\n  nope: 1\n").problems).toHaveLength(1);
+  });
+});
+
+describe("this repo's own config.yml", () => {
+  it("sets scan_every_minutes to 30 and reads clean", () => {
+    const text = readFileSync(new URL("../../../../.digismith/config.yml", import.meta.url), "utf-8");
+    const g = readGuardrails(text);
+    expect(g.problems).toEqual([]);
+    expect(g.scanProblems).toEqual([]);
+    expect(g.scanEveryMinutes).toBe(30);
+    expect(/^  scan_every_minutes: 30\b/m.test(text)).toBe(true);
+    expect(g.protectedPaths).toContain("scripts/nexus-api/src/scheduler/");
   });
 });

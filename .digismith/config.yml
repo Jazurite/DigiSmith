@@ -7,6 +7,10 @@ preferences:
   post_merge_cleanup: auto
 
 nightwatch:
+  # How often the Nexus job autonomous-scan looks for a to do + Autonomous ticket, in minutes (whole number, 5 to 720).
+  # The scheduler reads this at every tick, so a change needs no API restart. A bad or missing value falls back to 30
+  # and the watchdog opens a bad-scan-interval-config item. After a release the factory still rescans at once.
+  scan_every_minutes: 30
   protected_paths:
     - hooks/
     - hooks/hooks.json
