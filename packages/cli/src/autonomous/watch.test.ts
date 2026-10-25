@@ -443,4 +443,92 @@ describe("runWatch: review fixes", () => {
     expect(r.resolved).toBe(1);
     expect(readOpen(dir)).toEqual([]);
   });
+
+  describe("DGS-612 retry flag and closing", () => {
+    it("lost silent-30-min (pane unknown) is not retry-eligible; lost pane-gone is", async () => {
+      present = new Set();
+      mk("DGS-20", "builder", 60, [[50, "started"], [40, "tool"]], { workspace: null });
+      mk("DGS-21", "builder", 60, [[50, "started"], [40, "tool"]]);
+      await runWatch(deps());
+      const items = readOpen(dir);
+      const silent = items.find((i) => i.ticket === "DGS-20")!;
+      const gone = items.find((i) => i.ticket === "DGS-21")!;
+      expect([silent.kind, silent.cause, silent.retryEligible]).toEqual(["lost", "silent-30-min", false]);
+      expect([gone.kind, gone.cause, gone.retryEligible]).toEqual(["lost", "pane-gone", true]);
+    });
+    it("C1: closes the older run's items when a newer run of the same ticket and role exists, opens nothing for it", async () => {
+      present = new Set(["w2:DGS-22"]);
+      const old = mk("DGS-22", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      expect((await runWatch(deps())).opened).toBe(1);
+      const fresh = mk("DGS-22", "builder", 10, [[9, "started"], [1, "tool"]]);
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(1);
+      expect(r.opened).toBe(0);
+      expect(readOpen(dir)).toEqual([]);
+      expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain(`superseded by ${fresh}`);
+      expect(r.lines.some((l) => l.includes(old))).toBe(false);
+      expect((await runWatch(deps())).opened).toBe(0);
+    });
+    it("C1: a different role of the same ticket does not supersede", async () => {
+      present = new Set(["w2:DGS-23"]);
+      mk("DGS-23", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      mk("DGS-23", "reviewer", 10, [[9, "started"], [1, "tool"]]);
+      await runWatch(deps());
+      expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
+    });
+    it("C2: a run with a merged event is finished: item closed, nothing opened", async () => {
+      present = new Set(["w2:DGS-24"]);
+      const id = mk("DGS-24", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      await runWatch(deps());
+      addEvent(id, 4, "merged", 3);
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(1);
+      expect(readOpen(dir)).toEqual([]);
+      expect(readFileSync(join(dir, "attention.jsonl"), "utf-8")).toContain("ticket done");
+      expect((await runWatch(deps())).opened).toBe(0);
+    });
+    it("C2: a run whose worktree folder is removed is finished; one whose folder exists is not", async () => {
+      present = new Set(["w2:DGS-25", "w2:DGS-26"]);
+      const a = mk("DGS-25", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      const b = mk("DGS-26", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      const wtA = join(tmp, "wt-a");
+      const wtB = join(tmp, "wt-b");
+      mkdirSync(wtA); mkdirSync(wtB);
+      for (const [id, wt] of [[a, wtA], [b, wtB]]) { const rd = findRunDir(id, env)!; rewriteRun(rd, { ...readRun(rd), worktree: wt }); }
+      expect((await runWatch(deps())).opened).toBe(2);
+      rmSync(wtA, { recursive: true });
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(1);
+      expect(readOpen(dir).map((i) => i.run)).toEqual([b]);
+      expect((await runWatch(deps())).opened).toBe(0);
+    });
+    it("C3: an auto item whose run record is gone is closed; act/config items stay; a live run's item stays", async () => {
+      present = new Set(["w2:DGS-27"]);
+      const live = mk("DGS-27", "builder", 60, [[50, "started"], [5, "blocked"]]);
+      await runWatch(deps());
+      const att = join(dir, "attention.jsonl");
+      const mkItem = (id: string, run: string, kind: string, ticket: string | null) => JSON.stringify({ id, ts: ago(5), ticket, run, kind, cause: "x", since: ago(5) });
+      writeFileSync(att, readFileSync(att, "utf-8") + [
+        mkItem("g1", "builder-gone-1", "stalled", "DGS-99"),
+        mkItem("g2", "builder-gone-1", "lost", "DGS-99"),
+        mkItem("g3", "builder-gone-1", "failed", "DGS-99"),
+        mkItem("g4", "breaker", "unknown", null),
+      ].join("\n") + "\n");
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(2);
+      expect(readOpen(dir).map((i) => i.id).filter((id) => ["g1", "g2", "g3", "g4"].includes(id)).sort()).toEqual(["g3", "g4"]);
+      expect(readOpen(dir).some((i) => i.run === live && i.kind === "blocked")).toBe(true);
+      expect(readFileSync(att, "utf-8")).toContain("run record gone");
+    });
+    it("a failed item of a finished run is untouched", async () => {
+      present = new Set(["w2:DGS-28"]);
+      const id = mk("DGS-28", "builder", 60, [[50, "started"], [5, "merged"]]);
+      const att = join(dir, "attention.jsonl");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(att, JSON.stringify({ id: "f1", ts: ago(5), ticket: "DGS-28", run: id, kind: "failed", cause: "x", since: ago(5) }) + "\n");
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(0);
+      expect(readOpen(dir).map((i) => i.id)).toEqual(["f1"]);
+    });
+  });
 });

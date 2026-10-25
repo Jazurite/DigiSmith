@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { summarize } from "../run/read.ts";
 import { readEvents, type EventLine } from "../run/events.ts";
@@ -19,19 +19,22 @@ export interface WatchResult { lines: string[]; opened: number; resolved: number
 
 const RETENTION_MS = 7 * 24 * 3600_000;
 const AUTO: AttentionKind[] = ["blocked", "stalled"];
+/** The kinds the pass opens; C1 to C3 close all of them. Items of act, release or config are never in this list. */
+const CLOSABLE: AttentionKind[] = ["blocked", "stalled", "lost"];
 
 /** Each run is read once; a run older than 7 days is skipped unless it still has an open item and has ended. A broken run dir gives one stderr line; an unreadable runs root throws. */
-function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string) => boolean): { runs: { record: RunRecord; events: EventLine[] }[]; unwatched: string[] } {
+function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string) => boolean): { runs: { record: RunRecord; events: EventLine[] }[]; unwatched: string[]; seen: Set<string> } {
   const root = runsDir(env);
   let keys: string[];
   try {
     keys = readdirSync(root);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { runs: [], unwatched: [] };
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { runs: [], unwatched: [], seen: new Set() };
     throw new Error(`watch: cannot read the runs folder ${root}: ${e instanceof Error ? e.message : String(e)}`);
   }
   const out: { record: RunRecord; events: EventLine[] }[] = [];
   const unwatched: string[] = [];
+  const seen = new Set<string>(); // every run id with a readable record, read or skipped
   for (const key of keys) {
     if (key.startsWith(".")) continue; // runs/.index
     const keyDir = join(root, key);
@@ -41,6 +44,7 @@ function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string
       const rd = join(keyDir, id);
       try {
         const record = readRun(rd);
+        seen.add(record.run);
         if (!isWatched(record.role)) { unwatched.push(record.run); continue; }
         // An old run is read only when it still has an open item: an ended one closes it, any other old run is skipped.
         const old = nowMs - Date.parse(record.created_at) > RETENTION_MS;
@@ -49,11 +53,12 @@ function withEvents(env: NodeJS.ProcessEnv, nowMs: number, hasOpen: (run: string
         if (old && !summarize(events).ended) continue;
         out.push({ record, events });
       } catch (e) {
+        seen.add(id); // an unreadable record is not a gone record
         console.error(`watch: skipped run ${rd}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   }
-  return { runs: out, unwatched };
+  return { runs: out, unwatched, seen };
 }
 
 /** What the pass remembers between runs: the (run, kind) pairs it opened with the since of that episode, cleared when the run is seen healthy or ended again. A pair from an older file has no since (null). */
@@ -115,11 +120,32 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     return paneCache.get(ws)?.get(pane) ?? null;
   };
 
-  const { runs, unwatched } = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
+  const { runs: read, unwatched, seen } = withEvents(d.env, nowMs, (run) => items.some((o) => o.run === run && AUTO.includes(o.kind)));
   if (unwatched.length) {
     const gone = new Set(unwatched);
     for (const it of items.filter((o) => gone.has(o.run) && AUTO.includes(o.kind))) close(it, "role not watched");
     for (const k of [...opened.keys()]) if (gone.has(k.slice(0, k.lastIndexOf("|")))) opened.delete(k);
+  }
+  // C3: an open blocked, stalled or lost item whose run record is gone closes.
+  for (const it of items.filter((o) => CLOSABLE.includes(o.kind) && !seen.has(o.run))) close(it, "run record gone");
+  // C1 superseded (a later run of the same ticket and role), C2 finished (merged event, or worktree set and removed): close, open nothing.
+  const newest = new Map<string, { run: string; at: number }>();
+  for (const { record } of read) {
+    if (!record.ticket) continue;
+    const g = `${record.ticket}|${record.role}`;
+    const at = Date.parse(record.created_at);
+    const cur = newest.get(g);
+    if (!cur || at > cur.at) newest.set(g, { run: record.run, at });
+  }
+  const runs: typeof read = [];
+  for (const r of read) {
+    const { record, events } = r;
+    const top = record.ticket ? newest.get(`${record.ticket}|${record.role}`) : undefined;
+    const note = top && top.run !== record.run && top.at > Date.parse(record.created_at) ? `superseded by ${top.run}`
+      : events.some((e) => e.type === "merged") || (record.worktree && !existsSync(record.worktree)) ? "ticket done" : null;
+    if (!note) { runs.push(r); continue; }
+    for (const it of items.filter((o) => o.run === record.run && CLOSABLE.includes(o.kind))) close(it, note);
+    for (const k of [...opened.keys()]) if (k.startsWith(`${record.run}|`)) opened.delete(k);
   }
   for (const { record, events } of runs) {
     const pane = await paneOf(record.herdr.workspace, record.herdr.pane);
@@ -136,7 +162,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     for (const it of mine.filter((o) => o.kind !== v.state)) { close(it, `run is ${v.state} now`); opened.delete(key(it.run, it.kind)); }
     open({
       ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause: v.cause, since: v.since,
-      retryEligible: decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
+      retryEligible: v.cause === "pane-gone" && decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
     });
     res.lines.push(`${record.run}  ${record.ticket}  ${v.state}  ${v.cause}`);
   }
