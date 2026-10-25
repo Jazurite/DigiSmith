@@ -66,6 +66,12 @@ describe('routes', () => {
     expect(res.headers.get('Cache-Control')).toBe('no-store')
     expect((await res.json()).nexus).toEqual({ status: 'healthy', reasons: [] })
   })
+  it('overview answers 200 for a ticketless worker whose events carry a string source', async () => {
+    const ticketless = { ...overviewView, workers: [{ ...row, ticket: null, project: 'shoppable-video' }], lastEvents: [{ ts: '2026-10-22T02:59:00.000Z', source: 'shoppable-video', kind: 'tool', text: 'Edit ok' }] }
+    const res = await app(async () => ticketless).request('/api/v1/oculus/overview')
+    expect(res.status).toBe(200)
+    expect((await res.json()).lastEvents[0].source).toBe('shoppable-video')
+  })
   it('passes only known, validated query values to the reader', async () => {
     calls.length = 0
     const res = await app(fake).request('/api/v1/oculus/runs?state=stalled&role=builder&ticket=DGS-590&trigger=manual&limit=20')

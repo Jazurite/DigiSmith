@@ -107,7 +107,7 @@ export function overviewView(env: NodeJS.ProcessEnv, now: Date, panes?: PaneLook
   const scanFacts = readScanEvents(adir, now.getTime() - DAY_MS, now.getTime() + DAY_MS).filter((e) => e.kind === "claim" || e.kind === "release" || e.kind === "breaker").map((e) => ({ ts: e.ts, source: "scan", kind: e.kind, text: `${e.kind} ${String(e.ticket ?? "")}`.trim() }));
   const runFacts = workers.flatMap((w) => {
     const l = loadedAll.find((x) => x.record.run === w.run);
-    return (l?.events ?? []).slice(-20).map((e) => ({ ts: e.ts, source: w.ticket, kind: e.type, text: eventText(e) }));
+    return (l?.events ?? []).slice(-20).map((e) => ({ ts: e.ts, source: w.ticket ?? w.project ?? w.run, kind: e.type, text: eventText(e) }));
   });
   const lastEvents = [...scanFacts, ...runFacts].sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)).slice(0, 20);
   return {

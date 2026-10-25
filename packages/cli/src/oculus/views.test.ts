@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, symlinkSync, utimesSync, writeFileSync } fro
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { clearPaneSyncCache, herdrPaneLookupSync } from "../autonomous/pane.ts";
+import { overviewViewSchema } from "../../../../scripts/nexus-shared/oculus.ts";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from "./views.ts";
 
@@ -290,6 +291,20 @@ describe("DGS-598", () => {
     expect(runsView(d.env, NOW, { role: "conductor" }).runs.map((r) => r.run)).toEqual(["s-c1"]);
     expect(runsView(d.env, NOW, { project: "Emma" }).runs.map((r) => r.run)).toEqual(["s-b2"]);
     for (const r of runsView(d.env, NOW, {}).runs) expect(r).toHaveProperty("project");
+  });
+  it("overview events of a ticketless worker get a string source: project, else run id", () => {
+    autoRun("shoppable-video", "s-m1", null, "maestro", "shoppable-video");
+    autoRun("DigiSmith", "s-m2", null, "maestro", "DigiSmith");
+    d.writeRun({ folder: "bare", ticket: null, run: "s-m3", role: "maestro", created_at: "2026-10-22T00:00:00.000Z", project: null, source: "auto" });
+    d.writeEvents("bare", "s-m3", [{ type: "started", ts: "2026-10-22T00:00:01.000Z", data: { source: "startup" } }]);
+    seedRun();
+    const o = overviewView(d.env, NOW);
+    const sources = (run: string) => o.lastEvents.filter((e) => e.source === run).length;
+    expect(sources("shoppable-video")).toBeGreaterThan(0);
+    expect(sources("s-m3")).toBeGreaterThan(0);
+    expect(sources("DGS-590")).toBeGreaterThan(0);
+    for (const e of o.lastEvents) expect(typeof e.source).toBe("string");
+    expect(overviewViewSchema.parse(o)).toBeTruthy();
   });
   it("overview and runs skip runs idle for more than 7 days", () => {
     autoRun("DigiSmith", "s-old", null, "maestro", "DigiSmith");
