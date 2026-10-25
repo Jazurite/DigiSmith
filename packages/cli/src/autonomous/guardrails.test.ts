@@ -112,6 +112,13 @@ describe("scan_every_minutes", () => {
     expect(r.problems).toHaveLength(1);
     expect(readGuardrails("nightwatch:\n  scan_every_minutes: 10\n  scan_every_minutes: 20\n").problems).toEqual([]);
   });
+  it("an indented child line under the key is a scan problem and 30 is used", () => {
+    const t = "nightwatch:\n  scan_every_minutes: 10\n    foo: bar\n";
+    const r = parseScanInterval(t);
+    expect(r.minutes).toBe(30);
+    expect(r.problems).toHaveLength(1);
+    expect(readGuardrails(t).problems).toEqual([]);
+  });
   it("an unknown key still fails the guardrails", () => {
     expect(readGuardrails("nightwatch:\n  scan_every_minutes: 30\n  nope: 1\n").problems).toHaveLength(1);
   });

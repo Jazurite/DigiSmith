@@ -48,6 +48,7 @@ export function readGuardrails(text: string): Guardrails {
       if (seen.has(key)) { out.scanProblems.push("nightwatch.scan_every_minutes is set more than once; 30 used"); out.scanEveryMinutes = DEFAULT_SCAN_EVERY_MINUTES; dupScan = true; continue; }
       seen.add(key);
       if (dupScan) continue;
+      if (kids.length > 0) { out.scanProblems.push(`nightwatch.scan_every_minutes: has indented lines under it; ${DEFAULT_SCAN_EVERY_MINUTES} used`); continue; }
       if (!/^[1-9]\d*$/.test(inline) || Number(inline) < SCAN_MIN || Number(inline) > SCAN_MAX) {
         out.scanProblems.push(`nightwatch.scan_every_minutes: "${inline}" is not a whole number from ${SCAN_MIN} to ${SCAN_MAX}; ${DEFAULT_SCAN_EVERY_MINUTES} used`);
       } else out.scanEveryMinutes = Number(inline);
