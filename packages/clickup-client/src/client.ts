@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import type {
   ClickUpAttachment,
+  ClickUpChecklist,
   ClickUpCreatedFolder,
   ClickUpCustomField,
   ClickUpFolderWithLists,
@@ -222,6 +223,33 @@ export class ClickUpClient {
   async getTaskComments(taskId: string): Promise<ClickUpComment[]> {
     const res = await this.get<{ comments?: ClickUpComment[] }>(`/task/${taskId}/comment`);
     return res.comments ?? [];
+  }
+
+  /** POST /task/{id}/checklist. ClickUp answers { checklist }. */
+  async createChecklist(taskId: string, name: string): Promise<ClickUpChecklist> {
+    const res = await this.post<{ checklist: ClickUpChecklist }>(`/task/${taskId}/checklist`, { data: { name } });
+    return res.checklist;
+  }
+
+  /** POST /checklist/{id}/checklist_item: takes only a name (no parent). ClickUp answers the whole checklist. */
+  async createChecklistItem(checklistId: string, name: string): Promise<ClickUpChecklist> {
+    const res = await this.post<{ checklist: ClickUpChecklist }>(`/checklist/${checklistId}/checklist_item`, { data: { name } });
+    return res.checklist;
+  }
+
+  /** PUT /checklist/{id}/checklist_item/{item}: rename, tick or untick, or nest under `parent`. ClickUp answers the whole checklist. */
+  async editChecklistItem(
+    checklistId: string,
+    itemId: string,
+    patch: { name?: string; resolved?: boolean; parent?: string | null },
+  ): Promise<ClickUpChecklist> {
+    const res = await this.put<{ checklist: ClickUpChecklist }>(`/checklist/${checklistId}/checklist_item/${itemId}`, { data: patch });
+    return res.checklist;
+  }
+
+  /** DELETE /checklist/{id}/checklist_item/{item}. ClickUp answers {}. */
+  async deleteChecklistItem(checklistId: string, itemId: string): Promise<void> {
+    await this.delete(`/checklist/${checklistId}/checklist_item/${itemId}`);
   }
 
   async removeLink(taskId: string, linksTo: string): Promise<void> {

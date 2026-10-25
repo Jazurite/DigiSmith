@@ -765,6 +765,30 @@ describe("ClickUpClient relations", () => {
     expect(request).toHaveBeenNthCalledWith(2, { method: "GET", url: "/task/a/comment", params: undefined, data: undefined });
   });
 
+  it("checklist calls: create a checklist, add, edit (with parent) and delete an item", async () => {
+    const client = makeClient();
+    const cl = { id: "c1", task_id: "a", name: "Plan", orderindex: 0, resolved: 0, unresolved: 1, items: [] };
+    request.mockResolvedValueOnce({ data: { checklist: cl } });
+    request.mockResolvedValueOnce({ data: { checklist: { ...cl, items: [{ id: "i1", name: "Implement", orderindex: 0, resolved: false }] } } });
+    request.mockResolvedValueOnce({ data: { checklist: { ...cl, items: [{ id: "i1", name: "Implement", orderindex: 0, resolved: true, parent: "p1" }] } } });
+    request.mockResolvedValueOnce({ data: {} });
+
+    expect((await client.createChecklist("a", "Plan")).id).toBe("c1");
+    expect((await client.createChecklistItem("c1", "Implement")).items[0].id).toBe("i1");
+    expect((await client.editChecklistItem("c1", "i1", { parent: "p1", resolved: true })).items[0].parent).toBe("p1");
+    await client.deleteChecklistItem("c1", "i1");
+
+    expect(request).toHaveBeenNthCalledWith(1, { method: "POST", url: "/task/a/checklist", params: undefined, data: { name: "Plan" } });
+    expect(request).toHaveBeenNthCalledWith(2, { method: "POST", url: "/checklist/c1/checklist_item", params: undefined, data: { name: "Implement" } });
+    expect(request).toHaveBeenNthCalledWith(3, {
+      method: "PUT",
+      url: "/checklist/c1/checklist_item/i1",
+      params: undefined,
+      data: { parent: "p1", resolved: true },
+    });
+    expect(request).toHaveBeenNthCalledWith(4, { method: "DELETE", url: "/checklist/c1/checklist_item/i1", params: undefined, data: undefined });
+  });
+
   /** An error shaped like an AxiosError: config, request header block and response all carry the token. */
   function axiosLike(status: number | undefined, data?: unknown): Error {
     const config = { headers: { Authorization: "tok_123" } };

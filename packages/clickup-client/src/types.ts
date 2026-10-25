@@ -136,6 +136,27 @@ export type ClickUpCustomField =
   | LabelsField
   | RelationshipField;
 
+/** One checklist item. A child item has `parent` set; GET /task may also nest children as objects in `children`. */
+export interface ClickUpChecklistItem {
+  id: string;
+  name: string;
+  orderindex: number;
+  resolved: boolean;
+  parent?: string | null;
+  children?: unknown[];
+}
+
+/** A task checklist. The checklist endpoints answer `{ checklist }` with this shape. */
+export interface ClickUpChecklist {
+  id: string;
+  task_id: string;
+  name: string;
+  orderindex: number;
+  resolved: number;
+  unresolved: number;
+  items: ClickUpChecklistItem[];
+}
+
 export interface ClickUpTask {
   id: string;
   custom_id: string | null;
@@ -154,7 +175,7 @@ export interface ClickUpTask {
   assignees: ClickUpAssignee[];
   group_assignees: unknown[];
   watchers: ClickUpAssignee[];
-  checklists: unknown[];
+  checklists: ClickUpChecklist[];
   tags: ClickUpTag[];
   parent: string | null;
   top_level_parent: string | null;
