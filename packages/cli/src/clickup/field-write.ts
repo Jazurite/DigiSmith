@@ -1,4 +1,4 @@
-import type { FrontdoorField, FrontdoorFieldOption, FrontdoorFieldPutBody } from "@digismith/clickup-client";
+import type { FrontdoorField, FrontdoorFieldDefault, FrontdoorFieldOption, FrontdoorFieldPutBody } from "@digismith/clickup-client";
 
 export interface OptionRename {
   option: FrontdoorFieldOption;
@@ -94,8 +94,30 @@ export function resolveOptionAdds(field: FrontdoorField, names: string[], color:
   return adds;
 }
 
+/** Resolves --default (option name any case, or id) to the default the field stores: the option NAME. */
+export function resolveDefault(field: FrontdoorField, input: string): FrontdoorFieldDefault {
+  return { value: findOption(field.type_config.options ?? [], input.trim()).name };
+}
+
+/** The current default, with its name replaced when its option is renamed. */
+export function defaultAfterRenames(field: FrontdoorField, renames: OptionRename[]): FrontdoorFieldDefault | null {
+  const current = field.default_value;
+  if (!current) return null;
+  const option = (field.type_config.options ?? []).find((o) => o.name === current.value);
+  const rename = option ? renames.find((r) => r.option.id === option.id) : undefined;
+  return rename ? { value: rename.to } : current;
+}
+
+/** Removing the current default option needs a new default or a clear. `undefined` = no default flag given. */
+export function checkDefaultNotRemoved(field: FrontdoorField, removes: FrontdoorFieldOption[], newDefault: FrontdoorFieldDefault | null | undefined): void {
+  const current = field.default_value;
+  if (!current || newDefault !== undefined) return;
+  const hit = removes.find((o) => o.name === current.value);
+  if (hit) throw new Error(`removing "${hit.name}" removes the current default; add --default <other> or --clear-default`);
+}
+
 /** PUT is the full field, not a patch: every flag is sent with its current value. Only name and renamed options change. */
-export function buildFieldPutBody(field: FrontdoorField, name: string | undefined, renames: OptionRename[], adds: OptionAdd[] = [], removes: FrontdoorFieldOption[] = []): FrontdoorFieldPutBody {
+export function buildFieldPutBody(field: FrontdoorField, name: string | undefined, renames: OptionRename[], adds: OptionAdd[] = [], removes: FrontdoorFieldOption[] = [], defaultValue?: FrontdoorFieldDefault | null): FrontdoorFieldPutBody {
   return {
     id: field.id,
     name: name ?? field.name,
@@ -120,7 +142,7 @@ export function buildFieldPutBody(field: FrontdoorField, name: string | undefine
     description: field.description ?? "",
     private: field.private,
     permission_level: field.permission_level,
-    default_value: field.default_value ?? null,
+    default_value: defaultValue !== undefined ? defaultValue : field.default_value ?? null,
     members: field.members ?? [],
     groups: field.groups ?? [],
   };
@@ -131,7 +153,8 @@ export function describeFieldDiff(
   name: string | undefined,
   renames: OptionRename[],
   adds: OptionAdd[] = [],
-  removes: FrontdoorFieldOption[] = []
+  removes: FrontdoorFieldOption[] = [],
+  defaultValue?: FrontdoorFieldDefault | null
 ): string[] {
   const lines = [`field ${field.id} ${JSON.stringify(field.name)} (${field.type})`];
   lines.push(`  current options: ${(field.type_config.options ?? []).map((o) => `${o.name} (${o.id})`).join(", ")}`);
@@ -139,5 +162,9 @@ export function describeFieldDiff(
   for (const r of renames) lines.push(`  option ${r.option.id}: ${JSON.stringify(r.option.name)} -> ${JSON.stringify(r.to)}`);
   for (const a of adds) lines.push(`  add option ${JSON.stringify(a.name)} ${a.color} at position ${a.orderindex}`);
   for (const o of removes) lines.push(`  remove option ${JSON.stringify(o.name)} (${o.id})`);
+  if (defaultValue !== undefined) {
+    const show = (d: FrontdoorFieldDefault | null | undefined) => (d ? JSON.stringify(d.value) : "none");
+    if (show(field.default_value) !== show(defaultValue)) lines.push(`  default: ${show(field.default_value)} -> ${show(defaultValue)}`);
+  }
   return lines;
 }

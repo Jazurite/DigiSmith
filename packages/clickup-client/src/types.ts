@@ -363,9 +363,14 @@ export interface FrontdoorField {
   required_on_subtasks: boolean;
   private: boolean;
   permission_level: string | null;
-  default_value: unknown;
+  default_value: FrontdoorFieldDefault | null;
   members: unknown[];
   groups: unknown[];
+}
+
+/** A dropdown field's default: the option NAME, not its id (captured 2026-10-25). */
+export interface FrontdoorFieldDefault {
+  value: string;
 }
 
 /** A field read with ?locations=true: where it shows. */
@@ -396,7 +401,7 @@ export interface FrontdoorFieldPutBody {
   description: string;
   private: boolean;
   permission_level: string | null;
-  default_value: unknown;
+  default_value: FrontdoorFieldDefault | null;
   members: unknown[];
   groups: unknown[];
 }
