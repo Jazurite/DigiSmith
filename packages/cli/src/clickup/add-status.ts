@@ -3,7 +3,7 @@ import type { FrontdoorClient, FrontdoorStatus, FrontdoorStatusSetBody } from "@
 import { createFrontdoorClient } from "./lib.ts";
 import { printCall } from "./task-type-write.ts";
 
-const TYPES = ["custom", "done", "open", "closed"];
+export const TYPES = ["custom", "done", "open", "closed", "unstarted"];
 const DEFAULT_COLOR = "#87909e";
 
 export interface StatusAdd {
@@ -15,17 +15,14 @@ export interface StatusAdd {
   before?: string;
 }
 
-const RANK: Record<string, number> = { open: 0, custom: 1, done: 2, closed: 3 };
+export const RANK: Record<string, number> = { open: 0, unstarted: 1, custom: 2, done: 3, closed: 4 };
 
 /**
- * The PUT replaces the WHOLE set, so the body is every current status untouched (all fields as read, id kept) plus the
- * new one (no id), placed right after --after / right before --before, or before the closed status without either; orderindex is re-numbered dense from 0 in the order of the read
- * sorted by orderindex (the relative order never changes). No status_change_map: nothing is removed.
- * An anchored place must keep the type order open, custom, done, closed (checked for the new status only).
- * Refuses what could make ClickUp lose or reorder a status: an empty set, a status without id, a missing or shared orderindex.
+ * The checks both planners share: a non-empty set, every status with an id, every orderindex a finite number, no two the same.
+ * `what` names the status being built, for the empty-set message.
  */
-export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): FrontdoorStatusSetBody {
-  if (current.length === 0) throw new Error("the current status set is empty; refusing to build a set with only the new status");
+export function checkStatusSet(current: FrontdoorStatus[], what = "the new status"): void {
+  if (current.length === 0) throw new Error(`the current status set is empty; refusing to build a set with only ${what}`);
   for (const s of current) {
     if (!s.id) throw new Error(`status "${s.status}" has no id; sent back without one ClickUp may treat it as new`);
     if (typeof s.orderindex !== "number" || !Number.isFinite(s.orderindex)) {
@@ -37,6 +34,17 @@ export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): Front
     if (seen.has(s.orderindex)) throw new Error(`two statuses have the same orderindex (${s.orderindex}); their order is not known`);
     seen.add(s.orderindex);
   }
+}
+
+/**
+ * The PUT replaces the WHOLE set, so the body is every current status untouched (all fields as read, id kept) plus the
+ * new one (no id), placed right after --after / right before --before, or before the closed status without either; orderindex is re-numbered dense from 0 in the order of the read
+ * sorted by orderindex (the relative order never changes). No status_change_map: nothing is removed.
+ * An anchored place must keep the type order open, unstarted, custom, done, closed (checked for the new status only).
+ * Refuses what could make ClickUp lose or reorder a status: an empty set, a status without id, a missing or shared orderindex.
+ */
+export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): FrontdoorStatusSetBody {
+  checkStatusSet(current, "the new status");
   const name = add.name.trim();
   if (!name) throw new Error("--name must not be empty");
   if (!TYPES.includes(add.type)) throw new Error(`--type must be one of ${TYPES.join(", ")}`);
@@ -66,7 +74,7 @@ export function planStatusAdd(current: FrontdoorStatus[], add: StatusAdd): Front
     if ((left && RANK[left.type] > rank) || (right && RANK[right.type] < rank)) {
       const side = (s: FrontdoorStatus | undefined) => (s ? `"${s.status}" (${s.type})` : "nothing");
       throw new Error(
-        `a ${add.type} status cannot go between ${side(left)} and ${side(right)}: the types must stay in the order open, custom, done, closed`
+        `a ${add.type} status cannot go between ${side(left)} and ${side(right)}: the types must stay in the order open, unstarted, custom, done, closed`
       );
     }
   }
