@@ -31,18 +31,25 @@ function readConductor(conductorsJson: string): { workspace: string } {
   const entry = data[CONDUCTOR_KEY] as { workspace?: unknown } | null;
   const workspace = entry && typeof entry === "object" ? entry.workspace : undefined;
   if (typeof workspace !== "string" || !WORKSPACE_RE.test(workspace)) {
-    throw new Error(`no workspace for ${CONDUCTOR_KEY} in ${conductorsJson}`);
+    throw Object.assign(new Error(`no workspace for ${CONDUCTOR_KEY} in ${conductorsJson}`), { workspaceProblem: true });
   }
   return { workspace };
 }
 
-export function conductorProblem(conductorsJson: string): string | null {
+export type ConductorCause = "conductor-workspace-missing" | "conductor-config-unreadable";
+
+export function conductorCheck(conductorsJson: string): { cause: ConductorCause; text: string } | null {
   try {
     readConductor(conductorsJson);
     return null;
   } catch (e) {
-    return (e as Error).message;
+    const cause = (e as { workspaceProblem?: boolean }).workspaceProblem ? "conductor-workspace-missing" : "conductor-config-unreadable";
+    return { cause, text: (e as Error).message };
   }
+}
+
+export function conductorProblem(conductorsJson: string): string | null {
+  return conductorCheck(conductorsJson)?.text ?? null;
 }
 
 export async function promptConductor(exec: Exec, conductorsJson: string, message: string): Promise<void> {

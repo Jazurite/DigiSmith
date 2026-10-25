@@ -5,7 +5,7 @@ import { appendResolved, readOpen } from "./attention.ts";
 import { awayExpired, isAway, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
 import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
-import { conductorProblem, promptConductor,type Exec } from "./conductor.ts";
+import { conductorCheck, promptConductor, type Exec } from "./conductor.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
@@ -152,15 +152,15 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   }
   // 2c. A conductors.json without a workspace stops the scan before any claim; a clean read closes the item.
   if (!d.dryRun) {
-    const problem = conductorProblem(d.conductorsJson);
+    const problem = conductorCheck(d.conductorsJson);
     if (problem !== null) {
-      const cause = "conductor-workspace-missing";
+      const { cause } = problem;
       try { appendAttention(d.dir, now, { ticket: null, run: "conductor", kind: "failed", cause }); } catch { /* the scan still stops */ }
-      appendEvent(d.dir, now, "conductor-config", { problem: problem.slice(0, 300) });
+      appendEvent(d.dir, now, "conductor-config", { problem: problem.text.slice(0, 300) });
       return { outcome: "conductor-config", candidates: 0, skipped };
     }
     try {
-      for (const it of readOpen(d.dir)) if (it.run === "conductor" && it.cause === "conductor-workspace-missing") appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "conductor workspace read clean");
+      for (const it of readOpen(d.dir)) if (it.run === "conductor" && (it.cause === "conductor-workspace-missing" || it.cause === "conductor-config-unreadable")) appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "conductor workspace read clean");
     } catch { /* the item stays open until a later scan */ }
   }
   const notes = readNotes(d.dir);

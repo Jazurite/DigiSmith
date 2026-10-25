@@ -451,6 +451,17 @@ describe("runScan: the conductor workspace", () => {
     expect(tracker.calls.length).toBe(callsBefore);
     expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
   });
+  it("bad JSON: same outcome and event, cause conductor-config-unreadable, and a fixed file resolves it", async () => {
+    tracker.add({ id: "t1" });
+    writeFileSync(conductorsJson, "{ nope");
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("conductor-config");
+    expect(readOpen(dir).map((i) => ({ run: i.run, cause: i.cause }))).toEqual([{ run: "conductor", cause: "conductor-config-unreadable" }]);
+    expect(kinds()).toContain("conductor-config");
+    fixFile();
+    expect((await runScan(mk())).outcome).toBe("claimed");
+    expect(readOpen(dir)).toEqual([]);
+  });
   it("dry run: no attention item, no event", async () => {
     tracker.add({ id: "t1" });
     breakFile();
