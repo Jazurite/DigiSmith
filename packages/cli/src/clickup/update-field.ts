@@ -1,11 +1,14 @@
 import type { CommandModule } from "yargs";
-import type { FrontdoorClient } from "@digismith/clickup-client";
+import type { FrontdoorClient, FrontdoorFieldDefault } from "@digismith/clickup-client";
 import { createFrontdoorClient } from "./lib.ts";
 import { printCall } from "./task-type-write.ts";
 import {
   buildFieldPutBody,
+  checkDefaultNotRemoved,
   checkRemoveConfirmed,
+  defaultAfterRenames,
   describeFieldDiff,
+  resolveDefault,
   resolveOptionAdds,
   resolveOptionRemoves,
   resolveOptionRenames,
@@ -46,6 +49,9 @@ export function createUpdateFieldCommand(
           describe: "the exact name of each option removed with --yes",
         })
         .option("color", { type: "string", requiresArg: true, describe: 'color of the added options, "#rrggbb" (default #cecece)' })
+        .option("default", { type: "string", requiresArg: true, describe: "set the default option: current name or id" })
+        .option("clear-default", { type: "boolean", describe: "remove the default option" })
+        .conflicts("default", "clear-default")
         .option("yes", { type: "boolean", default: false, describe: "send the call (without it, only print it)" }),
     handler: async (argv) => {
       try {
@@ -53,8 +59,16 @@ export function createUpdateFieldCommand(
         const optionArgs = (argv.option as string[] | undefined) ?? [];
         const addArgs = (argv.addOption as string[] | undefined) ?? [];
         const removeArgs = (argv.removeOption as string[] | undefined) ?? [];
-        if (name === undefined && optionArgs.length === 0 && addArgs.length === 0 && removeArgs.length === 0) {
-          throw new Error("nothing to change: pass --name, --option, --add-option or --remove-option");
+        if (argv.default !== undefined && argv.clearDefault) throw new Error("--default and --clear-default exclude each other");
+        if (
+          name === undefined &&
+          optionArgs.length === 0 &&
+          addArgs.length === 0 &&
+          removeArgs.length === 0 &&
+          argv.default === undefined &&
+          !argv.clearDefault
+        ) {
+          throw new Error("nothing to change: pass --name, --option, --add-option, --remove-option, --default or --clear-default");
         }
         if (name !== undefined && name.trim() === "") throw new Error("--name must not be empty");
         const client = clientFactory();
@@ -62,11 +76,28 @@ export function createUpdateFieldCommand(
         if (field.type !== "drop_down") {
           throw new Error(`field "${field.name}" is ${field.type}; only drop_down fields are supported`);
         }
+        let wanted: FrontdoorFieldDefault | null | undefined = argv.clearDefault
+          ? null
+          : argv.default !== undefined
+            ? resolveDefault(field, argv.default as string)
+            : undefined;
         const renames = resolveOptionRenames(field, optionArgs);
         const adds = resolveOptionAdds(field, addArgs, argv.color as string | undefined);
         const removes = resolveOptionRemoves(field, renames, removeArgs);
+        const current = field.default_value ?? null;
+        if (wanted !== undefined && (wanted?.value ?? null) === (current?.value ?? null)) {
+          const otherChange = name !== undefined || renames.length > 0 || adds.length > 0 || removes.length > 0;
+          if (!otherChange) {
+            console.log(current ? `default already ${current.value}` : "default already none");
+            process.exitCode = 0;
+            return;
+          }
+          wanted = undefined;
+        }
+        checkDefaultNotRemoved(field, removes, wanted);
+        const effective = wanted !== undefined ? wanted : defaultAfterRenames(field, renames);
         if (argv.yes) checkRemoveConfirmed(removes, (argv.confirmRemove as string[] | undefined) ?? []);
-        const body = buildFieldPutBody(field, name?.trim(), renames, adds, removes);
+        const body = buildFieldPutBody(field, name?.trim(), renames, adds, removes, effective);
         // a read, so it is safe in a dry run: how many tickets hold each option about to go
         const warnings: string[] = [];
         for (const o of removes) {
@@ -84,13 +115,24 @@ export function createUpdateFieldCommand(
           }
         }
         if (!argv.yes) {
-          for (const line of describeFieldDiff(field, name?.trim(), renames, adds, removes)) console.log(line);
+          for (const line of describeFieldDiff(field, name?.trim(), renames, adds, removes, effective)) console.log(line);
           for (const line of warnings) console.log(line);
           printCall("PUT", `/customFields/v2/field/${field.id}`, body);
           console.log("nothing sent; add --yes to send");
         } else {
           for (const line of warnings) console.log(line);
-          console.log(JSON.stringify(await client.updateField(field.id, body), null, 2));
+          const updated = await client.updateField(field.id, body);
+          if ((effective?.value ?? null) !== (current?.value ?? null)) {
+            const after = (await client.getField(field.id)).default_value ?? null;
+            if ((after?.value ?? null) !== (effective?.value ?? null)) {
+              console.error(
+                `clickup update-field: the default did not stick: sent ${effective ? JSON.stringify(effective.value) : "none"}, ClickUp now has ${after ? JSON.stringify(after.value) : "none"}`
+              );
+              process.exitCode = 1;
+              return;
+            }
+          }
+          console.log(JSON.stringify(updated, null, 2));
         }
         process.exitCode = 0;
       } catch (err) {

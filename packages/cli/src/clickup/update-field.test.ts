@@ -24,8 +24,9 @@ const field = (over: object = {}) => ({
   groups: [],
   ...over,
 });
-function fake(f: object = field(), valueCount = 0) {
+function fake(f: object = field(), valueCount = 0, readBack?: object) {
   const getField = vi.fn().mockResolvedValue(f);
+  if (readBack !== undefined) getField.mockResolvedValueOnce(f).mockResolvedValueOnce(readBack);
   const updateField = vi.fn().mockResolvedValue({ id: "f1" });
   const getFieldValueCount = vi.fn().mockResolvedValue(valueCount);
   return { getField, updateField, getFieldValueCount } as unknown as FrontdoorClient & {
@@ -100,7 +101,7 @@ describe("update-field", () => {
     ["same option twice", { option: ["o1=A", "Frontdoor API=B"] }, /renamed twice/],
     ["new name already used", { option: ["Frontdoor API=public api"] }, /two options would be named/],
     ["malformed option", { option: ["Frontdoor API"] }, /must look like/],
-    ["nothing to change", {}, /nothing to change/],
+    ["nothing to change", {}, /nothing to change: pass .*--default.*--clear-default/],
     ["empty name", { name: "  " }, /must not be empty/],
   ])("errors on %s and sends nothing", async (_n, argv, re) => {
     const client = fake();
@@ -356,6 +357,142 @@ describe("update-field", () => {
     expect(err.mock.calls[0][0]).toMatch(/only drop_down/);
     expect(client.updateField).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
+  });
+});
+
+describe("update-field default", () => {
+  afterEach(() => {
+    process.exitCode = 0;
+    vi.restoreAllMocks();
+  });
+  const withDefault = (v: string | null) => field({ default_value: v === null ? null : { value: v } });
+
+  it("--default sets the default by option name", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", yes: true });
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.default_value).toEqual({ value: "Public API" });
+    expect(body.name).toBe("Bucket");
+    expect(body.type_config.options).toEqual({ add: [], update: [], rem: [] });
+  });
+
+  it("--default accepts an option id (stored by name)", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "o1", yes: true });
+    expect(client.updateField.mock.calls[0][1].default_value).toEqual({ value: "Frontdoor API" });
+  });
+
+  it("--default dry run prints the diff and the PUT, sends nothing", async () => {
+    const client = fake();
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", default: "Public API" });
+    expect(client.updateField).not.toHaveBeenCalled();
+    const text = out.join("\n");
+    expect(text).toContain('default: none -> "Public API"');
+    expect(text).toContain("PUT /customFields/v2/field/f1");
+    expect(text).toContain("nothing sent");
+  });
+
+  it("--clear-default sends default_value null", async () => {
+    const client = fake(withDefault("Public API"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", clearDefault: true, yes: true });
+    expect(client.updateField.mock.calls[0][1].default_value).toBeNull();
+  });
+
+  it("--default with an unknown option exits 1 and lists the options", async () => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Nope", yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/unknown option "Nope"/);
+    expect(err.mock.calls[0][0]).toContain("Public API");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("--default and --clear-default together exit 1", async () => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", clearDefault: true, yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/--default and --clear-default exclude each other/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("a field that is not drop_down exits 1 with --default", async () => {
+    const client = fake(field({ type: "text" }));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "X", yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/only drop_down/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([false, true])('--default equal to the current default prints "default already <name>", sends nothing (yes=%s)', async (yes) => {
+    const client = fake(withDefault("Public API"));
+    const out: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void out.push(a.join(" ")));
+    await run(client, { field: "f1", default: "o2", yes });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(out.join("\n")).toContain("default already Public API");
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("renaming the current default option moves the default to the new name", async () => {
+    const client = fake(withDefault("Public API"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", option: ["Public API=Open API"], yes: true });
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.default_value).toEqual({ value: "Open API" });
+    expect(body.type_config.options.update).toEqual([{ id: "o2", name: "Open API", color: "#1bbc9c", orderindex: 1 }]);
+  });
+
+  it("removing the current default option exits 1 without --default or --clear-default", async () => {
+    const client = fake(withDefault("Public API"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], confirmRemove: ["Public API"], yes: true });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toMatch(/removes the current default/);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("removing the current default option passes with --default <other>", async () => {
+    const client = fake(withDefault("Public API"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], confirmRemove: ["Public API"], default: "Frontdoor API", yes: true });
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.default_value).toEqual({ value: "Frontdoor API" });
+    expect(body.type_config.options.rem).toEqual(["o2"]);
+  });
+
+  it("--yes fails with exit 1 when the read-back default differs", async () => {
+    const client = fake(field(), 0, field({ default_value: null }));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", yes: true });
+    expect(client.updateField).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    const text = err.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(text).toContain("Public API");
+    expect(text).toContain("none");
+  });
+
+  it("--yes passes when the read-back default matches", async () => {
+    const client = fake(field(), 0, withDefault("Public API"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", yes: true });
+    expect(client.getField).toHaveBeenCalledTimes(2);
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("--yes without a default flag does not read back the default", async () => {
+    const client = fake();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", name: "N", yes: true });
+    expect(client.getField).toHaveBeenCalledTimes(1);
   });
 });
 
