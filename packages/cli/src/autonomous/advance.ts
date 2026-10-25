@@ -48,12 +48,16 @@ const RETRY_KINDS = ["lost", "failed"];
 const newestBuilder = (obs: Observations) =>
   obs.runs.ok ? obs.runs.value.filter((x) => x.role === "builder").sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0] ?? null : null;
 
-// an item of a known builder run that is not the newest never retries; unknown runs ("-", the ticket key) pass
+// an item passes only for the newest builder run, or for a run id obs.runs does not list ("-", the ticket key)
 const eligible = (s: TicketState, obs: Observations) => {
   if (!obs.attention.ok) return [];
   const newest = newestBuilder(obs);
-  const older = new Set(obs.runs.ok && newest !== null ? obs.runs.value.filter((x) => x.role === "builder" && x.id !== newest.id).map((x) => x.id) : []);
-  return obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind) && !(i.run !== undefined && older.has(i.run)));
+  const known = new Map(obs.runs.ok ? obs.runs.value.map((x) => [x.id, x]) : []);
+  const passes = (run: string | undefined) => {
+    const r = run === undefined ? undefined : known.get(run);
+    return r === undefined || (r.role === "builder" && (newest === null || r.id === newest.id));
+  };
+  return obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind) && passes(i.run));
 };
 
 // null = no retry business this tick

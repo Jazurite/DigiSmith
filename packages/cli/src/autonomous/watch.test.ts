@@ -456,6 +456,18 @@ describe("runWatch: review fixes", () => {
       expect([silent.kind, silent.cause, silent.retryEligible]).toEqual(["lost", "silent-30-min", false]);
       expect([gone.kind, gone.cause, gone.retryEligible]).toEqual(["lost", "pane-gone", true]);
     });
+    it("F1: a reviewer's or scout's lost pane-gone item is not retry-eligible, a builder's is", async () => {
+      present = new Set();
+      mk("DGS-30", "reviewer", 60, [[50, "started"], [40, "tool"]]);
+      mk("DGS-31", "scout", 60, [[50, "started"], [40, "tool"]]);
+      mk("DGS-32", "builder", 60, [[50, "started"], [40, "tool"]]);
+      await runWatch(deps());
+      const items = readOpen(dir);
+      const f = (t: string) => items.find((i) => i.ticket === t)!;
+      expect([f("DGS-30").cause, f("DGS-30").retryEligible]).toEqual(["pane-gone", false]);
+      expect([f("DGS-31").cause, f("DGS-31").retryEligible]).toEqual(["pane-gone", false]);
+      expect([f("DGS-32").cause, f("DGS-32").retryEligible]).toEqual(["pane-gone", true]);
+    });
     it("C1: closes the older run's items when a newer run of the same ticket and role exists, opens nothing for it", async () => {
       present = new Set(["w2:DGS-22"]);
       const old = mk("DGS-22", "builder", 60, [[50, "started"], [5, "blocked"]]);

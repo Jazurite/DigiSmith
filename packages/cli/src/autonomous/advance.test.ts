@@ -256,6 +256,12 @@ describe("retry", () => {
     for (const i of [item({ retryEligible: false }), item({ kind: "blocked" }), item({ kind: "stalled" }), item({ ticket: "DGS-2" })])
       expect(advanceTicket(s, base({ attention: ok([i]) }), J).kind).not.toBe("retry");
   });
+  it("a reviewer or scout run's lost pane-gone item gives no retry", () => {
+    for (const role of ["reviewer", "scout"]) {
+      const runs = ok([run(), run({ id: `${role}-1`, role, createdAt: "2026-10-21T00:05:00.000Z" })]);
+      expect(advanceTicket(s, base({ runs, attention: ok([item({ id: `${role}-1.lost.0`, run: `${role}-1` })]) }), J).kind).not.toBe("retry");
+    }
+  });
   it("a used retry key in any phase gives no second retry", () => {
     for (const st of ["open", "uncertain", "succeeded", "permanent"])
       expect(advanceTicket(s, base(), { "DGS-1:review:1:retry": st } as JournalResults).kind).not.toBe("retry");

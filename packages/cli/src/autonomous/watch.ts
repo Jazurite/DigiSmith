@@ -162,7 +162,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     for (const it of mine.filter((o) => o.kind !== v.state)) { close(it, `run is ${v.state} now`); opened.delete(key(it.run, it.kind)); }
     open({
       ticket: record.ticket, run: record.run, kind: v.state as AttentionKind, cause: v.cause, since: v.since,
-      retryEligible: v.cause === "pane-gone" && decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
+      retryEligible: record.role === "builder" && v.cause === "pane-gone" && decideRetry(v.state, "unknown", 0) === "retry", causeClass: "unknown",
     });
     res.lines.push(`${record.run}  ${record.ticket}  ${v.state}  ${v.cause}`);
   }
