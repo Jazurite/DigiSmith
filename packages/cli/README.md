@@ -53,6 +53,8 @@ digismith --version
 
 `--field` on create-task and update-task also takes Relationship values: `--field "Epic=DGS-343"` (keys or ids, comma-separated; a `-` prefix removes, `Epic=-DGS-343`).
 
+create-task reads the fields back after setting them, retries a wrong one once, and exits 1 with both values if it still differs (the task stays; its id is printed).
+
 Frontdoor commands cover what the public ClickUp API cannot do (task types today). Capture procedure: turn Proxyman on,
 do the action once in the ClickUp web app, export the requests as Raw into `~/Downloads/Proxyman Captures/ClickUp/`, then run
 `dg clickup frontdoor import-auth` (it never moves or changes the export). Without `--capture` both commands use the newest `Raw_*` there.
