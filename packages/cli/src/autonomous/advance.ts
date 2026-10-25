@@ -67,7 +67,9 @@ function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action
       .filter((x) => x.role === "builder" && x.started && x.id !== s.runs.builder && (cur === undefined || Date.parse(x.createdAt) > Date.parse(cur.createdAt)))
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
     // act resolves only the item named in the retry journal line; items is informational
-    if (later !== undefined) return { kind: "adopt", run: later.id, items: items.map((i) => i.id) };
+    // the items span all runs of the ticket: the retried item sits on the older run
+    const open = obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind));
+    if (later !== undefined) return { kind: "adopt", run: later.id, items: open.map((i) => i.id) };
   }
   if (items.length === 0 || restartsOf(j, s.ticket) > 0 || gate(obs) !== null) return null;
   return { kind: "retry", item: items[0].id, run: newestBuilder(obs)?.id ?? s.runs.builder ?? "-" };

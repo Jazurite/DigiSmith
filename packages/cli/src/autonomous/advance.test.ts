@@ -314,6 +314,10 @@ describe("adopt", () => {
   it("a started newer builder run after a succeeded retry gives adopt with the item ids", () => {
     expect(advanceTicket(s, O({ runs: ok([old, fresh]), attention: ok([item()]) }), j)).toEqual({ kind: "adopt", run: "builder-2", items: ["builder-1.lost.0"] });
   });
+  it("adopt lists the open retry items of the older run too", () => {
+    const r = advanceTicket(s, O({ runs: ok([old, fresh]), attention: ok([item({ run: "builder-1" })]) }), j);
+    expect(r).toEqual({ kind: "adopt", run: "builder-2", items: ["builder-1.lost.0"] });
+  });
   it("no adopt before the retry is succeeded, for an unstarted run, or twice", () => {
     expect(advanceTicket(s, O({ runs: ok([old, fresh]), attention: ok([item()]) }), { "DGS-1:building:1:retry": "uncertain" }).kind).not.toBe("adopt");
     expect(advanceTicket(s, O({ runs: ok([old, { ...fresh, started: false }]) }), j).kind).not.toBe("adopt");
