@@ -24,6 +24,7 @@ import { runScan } from "./scan.ts";
 import { runScheduleRelease } from "./schedule-release.ts";
 import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
+import { readScanIntervalFile } from "./guardrails.ts";
 import { closeBreakerAsJack, runAway, runBack } from "./switch.ts";
 import { ClickUpLoTracker } from "./tracker-clickup.ts";
 import type { EventKind, Tracker } from "./types.ts";
@@ -194,6 +195,9 @@ function statusLines(d: AutonomousDeps): string[] {
     const s = phase.state;
     lines.push(`Phase: ${s.phase} (attempt ${s.attempt}, since ${utc7(s.phaseStartedAt)}) builder run ${s.runs.builder ?? "none"}`);
   }
+  // The interval the scheduler's autonomous-scan job uses: the main checkout's config, 30 when the value is missing or bad.
+  const scan = readScanIntervalFile(d.mainRepo ?? MAIN_CHECKOUT);
+  lines.push(scan.problems.length ? `scan interval: ${scan.minutes} min (fallback: ${scan.problems[0]})` : `scan interval: ${scan.minutes} min (config)`);
   const ev = newestEvent(d.dir, SCAN_KINDS);
   lines.push(ev ? `last scan: ${utc7(ev.ts)} ${ev.kind}` : "last scan: none");
   const report = newestReport(d.dir);

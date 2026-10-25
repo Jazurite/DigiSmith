@@ -140,6 +140,31 @@ describe("dg autonomous status", () => {
   });
 });
 
+describe("dg autonomous status: scan interval", () => {
+  const withConfig = (text: string | null): AutonomousDeps => {
+    const repo = join(root, "status-repo");
+    mkdirSync(join(repo, ".digismith"), { recursive: true });
+    if (text !== null) writeFileSync(join(repo, ".digismith", "config.yml"), text);
+    return { ...deps(), mainRepo: repo };
+  };
+  const status = (d: AutonomousDeps) => yargs(["autonomous", "status"]).exitProcess(false).command(createAutonomousCommand(() => d)).strict().parseAsync();
+  it("prints the interval in force from the config", async () => {
+    await status(withConfig("nightwatch:\n  scan_every_minutes: 15\n"));
+    expect(out()).toContain("scan interval: 15 min (config)");
+  });
+  it("prints 30 for a missing key or file", async () => {
+    await status(withConfig("profile: x\n"));
+    expect(out()).toContain("scan interval: 30 min (config)");
+    log.mockClear();
+    await status(withConfig(null));
+    expect(out()).toContain("scan interval: 30 min (config)");
+  });
+  it("prints the fallback and the problem for a bad value", async () => {
+    await status(withConfig("nightwatch:\n  scan_every_minutes: 4\n"));
+    expect(out()).toMatch(/scan interval: 30 min \(fallback: nightwatch\.scan_every_minutes: "4" is not a whole number from 5 to 720; 30 used\)/);
+  });
+});
+
 describe("dg autonomous scan", () => {
   it("--dry-run prints the verdict rows at any hour and writes nothing", async () => {
     tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
