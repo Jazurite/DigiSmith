@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../../../scripts/config-parse.ts";
-import { readGuardrails, readMainConfig } from "./guardrails.ts";
+import { DEFAULT_SCAN_EVERY_MINUTES, parseScanInterval, readGuardrails, readMainConfig } from "./guardrails.ts";
 import type { Git } from "./gitx.ts";
 
 const ok = `profile: digismith
@@ -21,7 +21,7 @@ describe("readGuardrails", () => {
     expect(g.budgets).toEqual({ building: 45, review: 60 });
   });
   it("no nightwatch block: no problems, defaults apply", () => {
-    expect(readGuardrails("profile: x\n")).toEqual({ protectedPaths: null, budgets: {}, problems: [] });
+    expect(readGuardrails("profile: x\n")).toEqual({ protectedPaths: null, budgets: {}, problems: [], scanEveryMinutes: 30, scanProblems: [] });
   });
   it.each([
     ["inline value for protected_paths", "nightwatch:\n  protected_paths: hooks/\n"],
@@ -82,5 +82,37 @@ describe("readMainConfig", () => {
     const git: Git = () => { throw new Error("fatal: path does not exist"); };
     const r = readMainConfig(git, "/repo");
     expect(r.ok).toBe(false);
+  });
+});
+
+const withScan = (v: string): string => `nightwatch:\n  scan_every_minutes: ${v}\n  budgets:\n    review: 60\n`;
+
+describe("scan_every_minutes", () => {
+  it("the default is 30", () => { expect(DEFAULT_SCAN_EVERY_MINUTES).toBe(30); });
+  it.each([["30", 30], ["5", 5], ["720", 720], ["15   # quarter hour", 15]])("good value %s", (v, n) => {
+    expect(parseScanInterval(withScan(v))).toEqual({ minutes: n, problems: [] });
+    expect(readGuardrails(withScan(v)).problems).toEqual([]);
+  });
+  it("a missing key is 30 with no problem", () => {
+    expect(parseScanInterval(ok)).toEqual({ minutes: 30, problems: [] });
+    expect(parseScanInterval("profile: x\n")).toEqual({ minutes: 30, problems: [] });
+  });
+  it.each(["4", "721", "x", "7.5", "0", "-5", "030x", "", '"30"'])("bad value %j falls back to 30 with a scan problem and no guardrail problem", (v) => {
+    const r = parseScanInterval(withScan(v));
+    expect(r.minutes).toBe(30);
+    expect(r.problems).toHaveLength(1);
+    expect(r.problems[0]).toMatch(/scan_every_minutes/);
+    const g = readGuardrails(withScan(v));
+    expect(g.problems).toEqual([]);
+    expect(g.budgets).toEqual({ review: 60 });
+  });
+  it("a duplicate falls back to 30 with one scan problem", () => {
+    const r = parseScanInterval("nightwatch:\n  scan_every_minutes: 10\n  scan_every_minutes: 20\n");
+    expect(r.minutes).toBe(30);
+    expect(r.problems).toHaveLength(1);
+    expect(readGuardrails("nightwatch:\n  scan_every_minutes: 10\n  scan_every_minutes: 20\n").problems).toEqual([]);
+  });
+  it("an unknown key still fails the guardrails", () => {
+    expect(readGuardrails("nightwatch:\n  scan_every_minutes: 30\n  nope: 1\n").problems).toHaveLength(1);
   });
 });
