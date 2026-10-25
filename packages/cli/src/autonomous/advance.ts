@@ -140,8 +140,8 @@ function mergeReady(s: TicketState, obs: Observations, j: JournalResults): Actio
 }
 
 export function advanceTicket(s: TicketState, obs: Observations, j: JournalResults): Action {
-  if (obs.tracker.ok && obs.tracker.value.status === "ready" && s.phase !== "merged" && s.phase !== "released" && !used(j, keyOf(s, "status-write")))
-    return { kind: "status", status: "in progress" };
+  if (obs.tracker.ok && obs.tracker.value.status === "to do" && s.phase !== "merged" && s.phase !== "released" && !used(j, keyOf(s, "status-write")))
+    return { kind: "status", status: s.phase === "claimed" ? "claimed" : "in progress" };
   const r = retryStep(s, obs, j);
   if (r !== null) return r;
   let a: Action;

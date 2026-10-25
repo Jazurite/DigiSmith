@@ -427,7 +427,7 @@ describe("schedule-release", () => {
     await parse(["autonomous", "schedule-release", "--dry-run"]);
     expect(tracker.tasks.get("t1")?.status).toBe("scheduled");
     expect(out()).toContain("schedule-release (dry run, nothing written): 1 scheduled");
-    expect(out()).toMatch(/T1\s+.*would-move -> ready/);
+    expect(out()).toMatch(/T1\s+.*would-move -> to do/);
   });
   it("--dry-run shows a Manual ticket as would-move -> to do", async () => {
     tracker.add({ id: "t2", status: "scheduled", scheduledAt: DAY.getTime() - 60_000, mode: "Manual" });

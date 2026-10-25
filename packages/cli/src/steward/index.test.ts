@@ -51,16 +51,16 @@ describe("dg steward", () => {
     expect(process.exitCode ?? 0).toBe(0);
     expect(err.mock.calls.flat().join("\n")).toMatch(/network down/);
   });
-  it("approved --into ready prints a move to ready", async () => {
+  it("approved --into scheduled prints a move to scheduled", async () => {
     const t = new FakeTracker(snapshot("refinement"));
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    await cli(t).parse(["steward", "event", "approved", "--ticket", "DGS-1", "--quote", "go", "--into", "ready", "--dry-run"]);
-    expect(log.mock.calls.flat().join("\n")).toBe("steward: dry run: DGS-1: refinement -> ready");
+    await cli(t).parse(["steward", "event", "approved", "--ticket", "DGS-1", "--quote", "go", "--into", "scheduled", "--dry-run"]);
+    expect(log.mock.calls.flat().join("\n")).toBe("steward: dry run: DGS-1: refinement -> scheduled");
     expect(process.exitCode ?? 0).toBe(0);
   });
   it("--into with another event is a usage error (exit 2)", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    await cli(new FakeTracker(snapshot("to do"))).parse(["steward", "event", "started", "--ticket", "DGS-1", "--into", "ready"]);
+    await cli(new FakeTracker(snapshot("to do"))).parse(["steward", "event", "started", "--ticket", "DGS-1", "--into", "scheduled"]);
     expect(process.exitCode).toBe(2);
     expect(err.mock.calls.flat().join("\n")).toMatch(/--into is valid only with approved/);
   });

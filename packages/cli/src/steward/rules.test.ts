@@ -19,7 +19,6 @@ describe("entry events, one per status", () => {
     [ev("refinement-started"), view("concept"), "refinement"],
     [ev("refinement-started"), view("discovery"), "refinement"],
     [ev("approved", Q), view("refinement"), "to do"],
-    [ev("approved", { ...Q, into: "ready" }), view("refinement"), "ready"],
     [ev("approved", { ...Q, into: "scheduled" }), view("refinement"), "scheduled"],
     [ev("started"), view("to do"), "in progress"],
     [ev("review-started"), view("in progress"), "review"],
@@ -35,9 +34,9 @@ describe("entry events, one per status", () => {
   it.each(rows)("%j from %j gives %s", (input, v, expected) => {
     expect(to(evaluate(input, v, OFF))).toBe(expected);
   });
-  it("every status except backlog is the target of some row; backlog is made by filed", () => {
+  it("every status except backlog and claimed (set by the autonomous scan) is the target of some row; backlog is made by filed", () => {
     const targets = new Set(rows.map((r) => r[2]));
-    for (const s of STATUSES) if (s !== "backlog") expect(targets.has(s)).toBe(true);
+    for (const s of STATUSES) if (s !== "backlog" && s !== "claimed") expect(targets.has(s)).toBe(true);
     expect(to(evaluate(ev("filed"), view("backlog"), OFF))).toBe("refuse");
   });
 });
@@ -154,9 +153,9 @@ describe("the gates", () => {
   });
 });
 
-describe("approved --into and started from ready", () => {
-  it("approved --into ready moves refinement to ready", () => {
-    expect(evaluate({ event: "approved", quote: "yes", into: "ready" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "ready" });
+describe("approved --into and started from claimed", () => {
+  it("approved --into ready is refused", () => {
+    expect(evaluate({ event: "approved", quote: "yes", into: "ready" as never }, view("refinement"), OFF)).toEqual({ kind: "refuse", reason: "approved --into must be one of to do, scheduled" });
   });
   it("approved --into scheduled moves refinement to scheduled", () => {
     expect(evaluate({ event: "approved", quote: "yes", into: "scheduled" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "scheduled" });
@@ -164,17 +163,14 @@ describe("approved --into and started from ready", () => {
   it("approved without --into still moves to to do", () => {
     expect(evaluate({ event: "approved", quote: "yes" }, view("refinement"), OFF)).toEqual({ kind: "move", to: "to do" });
   });
-  it("approved --into ready on a ready ticket is a noop", () => {
-    expect(evaluate({ event: "approved", quote: "yes", into: "ready" }, view("ready"), OFF)).toEqual({ kind: "noop" });
-  });
   it("approved with a bad --into is refused", () => {
     const r = evaluate({ event: "approved", quote: "yes", into: "done" as never }, view("refinement"), OFF);
-    expect(r).toEqual({ kind: "refuse", reason: "approved --into must be one of to do, ready, scheduled" });
+    expect(r).toEqual({ kind: "refuse", reason: "approved --into must be one of to do, scheduled" });
   });
-  it("started is valid from ready", () => {
-    expect(evaluate({ event: "started" }, view("ready"), OFF)).toMatchObject({ kind: "move", to: "in progress", startDate: true });
+  it("started is valid from claimed", () => {
+    expect(evaluate({ event: "started" }, view("claimed"), OFF)).toMatchObject({ kind: "move", to: "in progress", startDate: true });
   });
   it("started from scheduled is refused", () => {
-    expect(evaluate({ event: "started" }, view("scheduled"), OFF)).toEqual({ kind: "refuse", reason: "started is valid from to do or ready; the ticket is in scheduled" });
+    expect(evaluate({ event: "started" }, view("scheduled"), OFF)).toEqual({ kind: "refuse", reason: "started is valid from to do or claimed; the ticket is in scheduled" });
   });
 });

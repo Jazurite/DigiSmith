@@ -11,14 +11,14 @@ export interface ScheduleDeps {
   appendEvent?: typeof appendEvent;
 }
 export type ScheduleVerdict = "moved" | "would-move" | "not-due" | "no-date" | "bad-date" | "no-mode" | "failed";
-export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: "ready" | "to do"; error?: string }
+export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: "to do"; error?: string }
 export interface ScheduleResult { scheduled: number; moved: number; lines: ScheduleLine[] }
 
 export const SCHEDULE_NOTES = "schedule-notes.json";
 export const SCHEDULE_TEXT = {
   noDate: "Scheduled at is empty. Set it (UTC+7) and the ticket moves at that time.",
   badDate: "Scheduled at is not a date. Set it again (UTC+7) and the ticket moves at that time.",
-  noMode: "Mode is empty. Set Autonomous (moves to ready) or Manual (moves to to do).",
+  noMode: "Mode is empty. Set Autonomous or Manual; the ticket then moves to to do.",
   failed: (to: string, error: string) => `Could not move this ticket to ${to}: ${error}. It stays in scheduled and is tried again every 5 minutes.`,
 };
 
@@ -78,7 +78,7 @@ export async function runScheduleRelease(d: ScheduleDeps): Promise<ScheduleResul
         line("not-due");
         continue;
       }
-      const to = t.mode === "Autonomous" ? "ready" : "to do";
+      const to = "to do";
       if (d.dryRun) { line("would-move", { to }); continue; }
       let failure: string | null = null;
       try {

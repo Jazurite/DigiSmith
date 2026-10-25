@@ -15,7 +15,7 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
     if (state.ticket !== line.ticket) return r("uncertain", "lock names another ticket");
     // unknown is not progress: an unreadable tracker keeps the claim uncertain
     if (!obs.tracker.ok) return r("uncertain", "tracker not observed");
-    if (obs.tracker.value.status !== "in progress") return r("uncertain", "tracker is not in progress");
+    if (obs.tracker.value.status !== "claimed" && obs.tracker.value.status !== "in progress") return r("uncertain", "tracker is not claimed or in progress");
     return r("succeeded", "lock held");
   }
   if (action.startsWith("move-to-")) {
@@ -27,7 +27,7 @@ function check(action: string, line: JournalLine, state: TicketState | null, obs
   }
   if (action === "status-write") {
     if (!obs.tracker.ok) return "unknown";
-    return obs.tracker.value.status === "in progress" ? r("succeeded", "status read back") : r("retryable", "status not set");
+    return obs.tracker.value.status === "claimed" || obs.tracker.value.status === "in progress" ? r("succeeded", "status read back") : r("retryable", "status not set");
   }
   if (action === "order-merge") {
     if (!obs.git.ok) return "unknown";

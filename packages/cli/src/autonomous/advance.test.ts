@@ -143,18 +143,21 @@ describe("merged, status and tracker", () => {
     expect(advanceTicket(S({ phase: "merged" }), O(), J)).toEqual({ kind: "wait", reason: "merged-awaiting-release" });
   });
   it("merged and released are never put back to in progress", () => {
-    const o = O({ tracker: ok({ status: "ready" }) });
+    const o = O({ tracker: ok({ status: "to do" }) });
     expect(advanceTicket(S({ phase: "merged" }), o, J)).toEqual({ kind: "wait", reason: "merged-awaiting-release" });
     expect(advanceTicket(S({ phase: "released" }), o, J)).toEqual({ kind: "wait", reason: "released" });
   });
-  it("a ticket the tracker shows as ready while locked is put back to in progress, once", () => {
-    const o = O({ ...withEvent("building"), tracker: ok({ status: "ready" }) });
+  it("a locked ticket the tracker shows as to do is set back: claimed in phase claimed, in progress later, once", () => {
+    const o = O({ ...withEvent("building"), tracker: ok({ status: "to do" }) });
+    expect(advanceTicket(S({ phase: "claimed" }), o, J)).toEqual({ kind: "status", status: "claimed" });
     expect(advanceTicket(S({ phase: "building" }), o, J)).toEqual({ kind: "status", status: "in progress" });
     expect(advanceTicket(S({ phase: "building" }), o, { "DGS-1:building:1:status-write": "succeeded" }).kind).not.toBe("status");
   });
-  it("a locked ticket that Jack moved to to do is left alone (to do is his)", () => {
-    const o = O({ ...withEvent("building"), tracker: ok({ status: "to do" }) });
-    expect(advanceTicket(S("building"), o, {}).kind).not.toBe("status");
+  it("a locked ticket already claimed or in progress is not written again", () => {
+    for (const status of ["claimed", "in progress"]) {
+      const o = O({ ...withEvent("building"), tracker: ok({ status }) });
+      expect(advanceTicket(S({ phase: "building" }), o, J).kind).not.toBe("status");
+    }
   });
   it("a failed tracker observation is noted only when nothing else is to do", () => {
     expect(advanceTicket(S({ phase: "building" }), O({ ...withEvent("building"), tracker: bad() }), J)).toEqual({ kind: "attention", cause: "obs-tracker-failed", attKind: "unknown" });

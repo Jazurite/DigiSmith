@@ -244,7 +244,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
         })
         .command({
           command: "schedule-release",
-          describe: "move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual); any hour",
+          describe: "move each scheduled ticket whose Scheduled at is past to to do (both Modes); any hour",
           builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "print the verdict for each scheduled ticket, write nothing" }),
           handler: (argv) =>
             guarded(depsFactory, async (d) => {

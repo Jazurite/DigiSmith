@@ -21,13 +21,13 @@ beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "sched-rel-")); tracker = ne
 afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
 describe("runScheduleRelease", () => {
-  it("a due Autonomous ticket moves to ready, is read back, and one event is written", async () => {
+  it("a due Autonomous ticket moves to to do, is read back, and one event is written", async () => {
     sched("t1");
     const r = await runScheduleRelease(mk());
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
-    expect(tracker.calls).toEqual(["listByStatus scheduled", "setStatus t1 ready", "getStatus t1"]);
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(tracker.calls).toEqual(["listByStatus scheduled", "setStatus t1 to do", "getStatus t1"]);
     expect(r).toMatchObject({ scheduled: 1, moved: 1 });
-    expect(events().map((e) => [e.kind, e.ticket, e.to, e.mode])).toEqual([["schedule-move", "T1", "ready", "Autonomous"]]);
+    expect(events().map((e) => [e.kind, e.ticket, e.to, e.mode])).toEqual([["schedule-move", "T1", "to do", "Autonomous"]]);
     expect(events()[0].scheduledAtUtc7).toBe("2026-10-25 21:59:00");
     expect(tracker.comments).toEqual([]);
   });
@@ -46,8 +46,8 @@ describe("runScheduleRelease", () => {
     expect(tracker.writeCalls()).toEqual([]);
     expect(r.lines).toEqual([{ key: "T1", scheduledAtUtc7: "2026-10-25 23:00:00", mode: "Autonomous", verdict: "not-due" }]);
   });
-  it("only scheduled tickets are read: ready and to do tickets are never touched", async () => {
-    tracker.add({ id: "r1", status: "ready", scheduledAt: PAST });
+  it("only scheduled tickets are read: to do tickets are never touched", async () => {
+    tracker.add({ id: "r1", status: "to do", scheduledAt: PAST });
     tracker.add({ id: "d1", status: "to do", scheduledAt: PAST });
     await runScheduleRelease(mk());
     expect(tracker.writeCalls()).toEqual([]);
@@ -86,12 +86,12 @@ describe("runScheduleRelease", () => {
     sched("t1");
     tracker.getStatus = async (id: string) => { tracker.calls.push(`getStatus ${id}`); return "scheduled"; };
     const r = await runScheduleRelease(mk());
-    expect(r.lines[0]).toMatchObject({ verdict: "failed", to: "ready", error: 'status read back "scheduled", expected "ready"' });
+    expect(r.lines[0]).toMatchObject({ verdict: "failed", to: "to do", error: 'status read back "scheduled", expected "to do"' });
     expect(events().map((e) => e.kind)).toEqual(["schedule-move-failed"]);
-    expect(tracker.comments.map((c) => c.text)).toEqual([`Schedule release (2026-10-25 22:00:00 UTC+7): ${SCHEDULE_TEXT.failed("ready", 'status read back "scheduled", expected "ready"')}`]);
+    expect(tracker.comments.map((c) => c.text)).toEqual([`Schedule release (2026-10-25 22:00:00 UTC+7): ${SCHEDULE_TEXT.failed("to do", 'status read back "scheduled", expected "to do"')}`]);
     tracker.tasks.get("t1")!.status = "scheduled";
     await runScheduleRelease(mk());
-    expect(tracker.calls.filter((c) => c === "setStatus t1 ready")).toHaveLength(2);
+    expect(tracker.calls.filter((c) => c === "setStatus t1 to do")).toHaveLength(2);
     expect(tracker.comments).toHaveLength(1);
   });
   it("a setStatus error is a failed move and the run goes on to the next ticket", async () => {
@@ -116,8 +116,8 @@ describe("runScheduleRelease", () => {
     const boom = () => { throw new Error("EACCES"); };
     const r = await runScheduleRelease(mk({ appendEvent: boom }));
     expect(r.lines.map((l) => [l.key, l.verdict])).toEqual([["T1", "moved"], ["A", "no-mode"], ["T2", "moved"]]);
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
-    expect(tracker.tasks.get("t2")?.status).toBe("ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(tracker.tasks.get("t2")?.status).toBe("to do");
     expect(Object.keys(JSON.parse(readFileSync(join(dir, SCHEDULE_NOTES), "utf8")))).toEqual(["A"]);
   });
   it("a failed move whose event write throws is still a failed line, and notes are saved", async () => {
@@ -169,7 +169,7 @@ describe("runScheduleRelease", () => {
     expect(tracker.writeCalls()).toEqual([]);
     expect(events()).toEqual([]);
     expect(existsSync(join(dir, SCHEDULE_NOTES))).toBe(false);
-    expect(r.lines.map((l) => [l.key, l.verdict, l.to])).toEqual([["T1", "would-move", "ready"], ["A", "no-mode", undefined]]);
+    expect(r.lines.map((l) => [l.key, l.verdict, l.to])).toEqual([["T1", "would-move", "to do"], ["A", "no-mode", undefined]]);
   });
   it("a tracker that cannot list throws (the job then fails and Nexus notifies)", async () => {
     tracker.listByStatus = async () => { throw new Error("401"); };
@@ -178,7 +178,7 @@ describe("runScheduleRelease", () => {
   it("pins the texts", () => {
     expect(SCHEDULE_TEXT.noDate).toBe("Scheduled at is empty. Set it (UTC+7) and the ticket moves at that time.");
     expect(SCHEDULE_TEXT.badDate).toBe("Scheduled at is not a date. Set it again (UTC+7) and the ticket moves at that time.");
-    expect(SCHEDULE_TEXT.noMode).toBe("Mode is empty. Set Autonomous (moves to ready) or Manual (moves to to do).");
-    expect(SCHEDULE_TEXT.failed("ready", "x")).toBe("Could not move this ticket to ready: x. It stays in scheduled and is tried again every 5 minutes.");
+    expect(SCHEDULE_TEXT.noMode).toBe("Mode is empty. Set Autonomous or Manual; the ticket then moves to to do.");
+    expect(SCHEDULE_TEXT.failed("to do", "x")).toBe("Could not move this ticket to to do: x. It stays in scheduled and is tried again every 5 minutes.");
   });
 });

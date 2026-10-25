@@ -1,7 +1,7 @@
 import type { Candidate, ListTarget, NewTicket, Tracker, TicketSnapshot } from "./tracker.ts";
 
 export const ALL_STATUSES = [
-  "backlog", "concept", "discovery", "refinement", "scheduled", "to do", "ready", "in progress", "review",
+  "backlog", "concept", "discovery", "refinement", "scheduled", "to do", "claimed", "in progress", "review",
   "acceptance", "release", "done", "documented", "discarded", "Closed",
 ];
 

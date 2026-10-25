@@ -20,6 +20,9 @@ describe("renderOrder", () => {
     expect(t).toContain("Build the thing");
     expect(t).toContain("86abc");
     expect(t).toContain("Sign-off: Auto");
+    expect(t).toContain('1. When the Builder starts building, set the ticket to in progress and read it back: `dg clickup update-task DGS-9 --status "in progress"`, then `dg clickup get-task DGS-9`.');
+    expect(t).toContain("## Mandate (unattended work)");
+    expect(t).not.toContain("works at night");
     expect(t).toContain("Spec and plan:");
     expect(t).toContain("spec.md and plan.md on the ticket");
     for (const w of ["sudo", "LaunchAgent", "delete", "Caddy", "Tailscale", "hooks 01-03", "report.html", "plan.md"]) expect(t).toContain(w);

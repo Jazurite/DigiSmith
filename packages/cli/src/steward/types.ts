@@ -1,5 +1,5 @@
 export const STATUSES = [
-  "backlog", "concept", "discovery", "refinement", "scheduled", "to do", "ready", "in progress", "review",
+  "backlog", "concept", "discovery", "refinement", "scheduled", "to do", "claimed", "in progress", "review",
   "acceptance", "release", "done", "documented", "discarded", "Closed",
 ] as const;
 export type Status = (typeof STATUSES)[number];
@@ -31,7 +31,7 @@ export interface TicketView {
 }
 
 /** Where Jack's approval can send a refined ticket. */
-export const APPROVE_TARGETS = ["to do", "ready", "scheduled"] as const;
+export const APPROVE_TARGETS = ["to do", "scheduled"] as const;
 export type ApproveTarget = (typeof APPROVE_TARGETS)[number];
 
 export interface EventInput {

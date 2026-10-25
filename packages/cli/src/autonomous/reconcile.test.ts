@@ -88,11 +88,21 @@ describe("reconcile", () => {
     const d2 = tmp(); const k2 = open(d2, "claim", "claimed");
     reconcile({ dir: d2, now: T, state: state("claimed"), obs: O() });
     expect(resultsOf(d2)[k2]).toBe("succeeded");
+    const d3 = tmp(); const k3 = open(d3, "claim", "claimed");
+    reconcile({ dir: d3, now: T, state: state("claimed"), obs: O({ tracker: ok({ status: "claimed" }) }) });
+    expect(resultsOf(d3)[k3]).toBe("succeeded");
   });
   it("status-write: reads the status back", () => {
     const d = tmp(); const k = open(d, "status-write");
     reconcile({ dir: d, now: T, state: state(), obs: O({ tracker: ok({ status: "to do" }) }) });
     expect(resultsOf(d)[k]).toBe("retryable");
+  });
+  it("status-write: succeeded on claimed or in progress", () => {
+    for (const status of ["claimed", "in progress"]) {
+      const d = tmp(); const k = open(d, "status-write");
+      reconcile({ dir: d, now: T, state: state(), obs: O({ tracker: ok({ status }) }) });
+      expect(resultsOf(d)[k]).toBe("succeeded");
+    }
   });
   it("phase-marker: succeeded when the run shows the phase, else retryable", () => {
     const d = tmp(); const k = open(d, "phase-marker", "merge-ready", { phase: "merge" });
