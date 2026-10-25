@@ -191,7 +191,9 @@ const optionLabel = (o: ReadOption) => `${o.name} (${o.orderindex ?? o.id})`;
  */
 export function findFieldMismatches(task: { custom_fields?: { id: string; value?: unknown }[] }, resolved: ResolvedField[]): FieldMismatch[] {
   const out: FieldMismatch[] = [];
-  for (const { field, value } of resolved) {
+  // A scalar field given twice ends at its last value, so only the last entry is compared.
+  const last = new Map(resolved.map((r) => [r.field.id, r]));
+  for (const { field, value } of last.values()) {
     const entry = task.custom_fields?.find((c) => c.id === field.id);
     const read = entry?.value;
     const empty = read === undefined || read === null || read === "";

@@ -39,15 +39,19 @@ export function createCreateTaskCommand(
         if (resolved.length > 0) {
           await applyFields(client, task.id, resolved);
           task = await client.get<typeof task>(`/task/${task.id}`);
+          const label = (t: { id: string; custom_id?: string | null }) => `${t.custom_id ? `${t.custom_id} (${t.id})` : t.id}`;
+          const describe = (bad: { field: string; wanted: string; got: string }[], verb: string) =>
+            bad.map((m) => `field "${m.field}" ${verb} ${m.got}, wanted ${m.wanted}`).join("; ");
           let bad = findFieldMismatches(task, resolved);
           if (bad.length > 0) {
+            console.error(`clickup create-task: task ${label(task)}: ${describe(bad, "read")}; setting it again`);
             await applyFields(client, task.id, resolved.filter((r) => bad.some((m) => m.id === r.field.id)));
             task = await client.get<typeof task>(`/task/${task.id}`);
             bad = findFieldMismatches(task, resolved);
           }
           if (bad.length > 0) {
             console.log(JSON.stringify(task, null, 2));
-            throw new Error(`task ${task.id} was created, but ${bad.map((m) => `field "${m.field}" reads ${m.got}, wanted ${m.wanted}`).join("; ")}`);
+            throw new Error(`task ${label(task)} was created, but ${describe(bad, "reads")}`);
           }
         }
         console.log(JSON.stringify(task, null, 2));

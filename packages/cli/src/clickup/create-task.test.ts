@@ -204,6 +204,7 @@ describe("createCreateTaskCommand", () => {
 
       it("retries a mismatched field once and passes", async () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
         const { client, handler } = mk2();
         (client.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(task(0, 0)).mockResolvedValueOnce(task(0, 1));
         await handler({ list: "L", name: "t", field: ["Sign-off=Auto", "Mode=Manual"] });
@@ -212,7 +213,28 @@ describe("createCreateTaskCommand", () => {
           ["new1", "fm", "m-man"],
           ["new1", "fm", "m-man"],
         ]);
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith('clickup create-task: task new1: field "Mode" read Autonomous (0), wanted Manual (1); setting it again');
         expect(process.exitCode).toBe(0);
+      });
+
+      it("compares only the last value of a field given twice", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const { client, handler } = mk2();
+        (client.get as ReturnType<typeof vi.fn>).mockResolvedValue(task(0, 0));
+        await handler({ list: "L", name: "t", field: ["Mode=Manual", "Mode=Autonomous"] });
+        expect(client.get).toHaveBeenCalledTimes(1);
+        expect(process.exitCode).toBe(0);
+      });
+
+      it("shows the custom id with the task id in the failure message", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        const { client, handler } = mk2();
+        (client.get as ReturnType<typeof vi.fn>).mockResolvedValue({ ...task(0, 0), custom_id: "DGS-123" });
+        await handler({ list: "L", name: "t", field: ["Mode=Manual"] });
+        expect(process.exitCode).toBe(1);
+        expect(String(errorSpy.mock.calls.at(-1)?.[0])).toContain("task DGS-123 (new1) was created");
       });
 
       it("does not read back or retry without --field", async () => {
