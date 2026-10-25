@@ -75,8 +75,9 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 Same key rule as the start block.
 
 Then sync the checklist once more (Plan checklist (DGS-634) in Step 2). If a whole-branch review ran, append
-`Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)`, and `Task final: complete` once its fixes are verified,
-before this sync:
+`Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)`. Before you make whole-branch fixes yourself, append
+`Task final: dispatch fix (inline)` (so the checklist shows a fix wave, not "none needed"). Append `Task final: complete` once its fixes
+are verified, before this sync:
 
 ```bash
 dg clickup checklist sync --task <Key> --plan PLAN_FILE --ledger <workspace>/progress.md --yes

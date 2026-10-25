@@ -15,6 +15,7 @@ describe("DGS-631: writing-plans creates the checklist", () => {
     expect(s).toContain("dg clickup checklist sync --task <Key> --plan <plan.md path> --yes");
     expect(s).toContain("Plan checklist: skipped (no ClickUp key)");
     expect(s).toMatch(/never blocks/);
+    expect(s).toContain("--ledger <workspace>/progress.md");
     expect(s.indexOf("### Plan checklist (DGS-631)")).toBeLessThan(s.indexOf("## Scope Check"));
   });
 });
@@ -41,6 +42,7 @@ describe("DGS-634: SDD ticks the checklist", () => {
     const fin = s.slice(s.indexOf("## Final Review"), s.indexOf("## Finish"));
     expect(fin).toContain("Task final: reviewed");
     expect(fin).toContain("Task final: complete");
+    expect(s.slice(s.indexOf("## Final Review"), s.indexOf("## Finish"))).toContain("Role mode");
   });
 });
 
@@ -50,6 +52,7 @@ describe("DGS-634: executing-plans ticks the checklist", () => {
     expect(s).toContain("Plan checklist (DGS-634)");
     expect(count(s, SYNC)).toBeGreaterThanOrEqual(2);
     expect(s).toContain("Checklist sync: failed (");
+    expect(s).toContain("Task final: dispatch fix (inline)");
     const step3 = s.indexOf("### Step 3: Complete Development");
     expect(s.indexOf(SYNC, step3)).toBeGreaterThan(step3);
   });

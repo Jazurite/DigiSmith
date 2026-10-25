@@ -640,7 +640,7 @@ fixed before merge. Append the `Task final: dispatch final-reviewer ...` line
 as in step 1.
 
 When the final review returns its verdict, append `Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)` and
-sync the checklist (Plan Checklist (DGS-634)).
+sync the checklist (Plan Checklist (DGS-634)). Role mode: append the line when your parent's verdict arrives.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
