@@ -45,7 +45,7 @@ Date: 2026-10-25 (UTC+7). Sign-off: Auto. Order oc-06 plus the Maestro's scope a
 
 ## First use (proposed commands; the conductor runs them)
 
-1. `dg autonomous scan --dry-run --repo /Users/workbox/Workspace/Jazurite/DigiSmith` with two throwaway tickets in `to do`: A (Task, Mode Autonomous, Sign-off Auto, a milestone, spec and plan attachments) and B (the same with Mode Manual). Expect A `ready`, B "Mode is not Autonomous".
+1. `dg autonomous scan --dry-run --repo /Users/workbox/Workspace/Jazurite/DigiSmith` with two throwaway tickets in `to do`: A (Task, Mode Autonomous, Sign-off Auto, a milestone link to DGS-501 Software Factory, spec and plan attachments; DGS-501 is a Milestone-type task on the Imperium list, so the milestone check counts it) and B (the same with Mode Manual). Expect A `ready`, B "Mode is not Autonomous".
 2. **Daytime claim, away off:** the real Nexus job claims A on its next 5-minute run (or `run-now` on `autonomous-scan`). Expect A `claimed` in ClickUp, the lock, the order file and a prompt to the conductor. B stays in `to do`, with no comment.
 3. The conductor's Builder-start step sets A to `in progress` and reads it back.
 4. Release A (`dg autonomous release --ticket A --result stopped --reason "first use"`), then discard A and B.
