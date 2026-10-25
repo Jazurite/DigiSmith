@@ -23,7 +23,7 @@ export interface FieldLike {
   id: string;
   name: string;
   type: string;
-  type_config?: { options?: { id: string; name: string }[] } & Record<string, unknown>;
+  type_config?: { options?: { id: string; name: string; orderindex?: number }[] } & Record<string, unknown>;
   default_value?: { value: string } | null;
 }
 
@@ -171,4 +171,52 @@ export async function applyFields(client: ClickUpClient, taskId: string, resolve
       throw new Error(`setting field "${field.name}" on task ${taskId} failed: ${(err as Error).message}${detail}`);
     }
   }
+}
+
+export interface FieldMismatch {
+  field: string;
+  wanted: string;
+  got: string;
+}
+
+type ReadOption = { id: string; name: string; orderindex?: number };
+
+const optionLabel = (o: ReadOption) => `${o.name} (${o.orderindex ?? o.id})`;
+
+/**
+ * Compares each resolved value with the task read back. ClickUp returns a dropdown value as the option
+ * orderindex (a number); an option id is accepted too. Date fields (ms string, format drift) and relationship
+ * fields (a list of tasks) are skipped: the check is for the values a wrong write can silently change.
+ */
+export function findFieldMismatches(task: { custom_fields?: { id: string; value?: unknown }[] }, resolved: ResolvedField[]): FieldMismatch[] {
+  const out: FieldMismatch[] = [];
+  for (const { field, value } of resolved) {
+    const entry = task.custom_fields?.find((c) => c.id === field.id);
+    const read = entry?.value;
+    const empty = read === undefined || read === null || read === "";
+    switch (field.type) {
+      case "drop_down": {
+        const options: ReadOption[] = field.type_config?.options ?? [];
+        const wanted = options.find((o) => o.id === value);
+        const got = empty ? undefined : options.find((o) => o.id === read || (typeof read === "number" && o.orderindex === read));
+        if (wanted && got && wanted.id === got.id) break;
+        out.push({
+          field: field.name,
+          wanted: wanted ? optionLabel(wanted) : String(value),
+          got: empty ? "(empty)" : got ? optionLabel(got) : String(read),
+        });
+        break;
+      }
+      case "text":
+      case "short_text":
+      case "number":
+      case "currency":
+      case "checkbox":
+        if (read !== value) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
+        break;
+      default:
+        break;
+    }
+  }
+  return out;
 }

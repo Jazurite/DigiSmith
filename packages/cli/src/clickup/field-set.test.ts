@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ClickUpApiError, type ClickUpClient } from "@digismith/clickup-client";
-import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue, parseDateTimeValue } from "./field-set.ts";
+import { parseFieldArg, resolveField, resolveValue, resolveFieldArgs, applyFields, parseRelationValue, parseDateTimeValue, findFieldMismatches, type ResolvedField } from "./field-set.ts";
 
 const dd = (id: string, name: string, options: { id: string; name: string }[]) => ({
   id,
@@ -233,5 +233,69 @@ describe("date fields", () => {
     const client = { setCustomField } as unknown as ClickUpClient;
     await applyFields(client, "t1", [{ field: { id: "x", name: "N", type: "text" }, value: "a" }]);
     expect(setCustomField).toHaveBeenCalledWith("t1", "x", "a");
+  });
+});
+
+describe("findFieldMismatches", () => {
+  const signOff = {
+    id: "fs",
+    name: "Sign-off",
+    type: "drop_down",
+    type_config: { options: [{ id: "s-auto", name: "Auto", orderindex: 0 }, { id: "s-jack", name: "Jack", orderindex: 1 }] },
+  };
+  const mode = {
+    id: "fm",
+    name: "Mode",
+    type: "drop_down",
+    type_config: { options: [{ id: "m-auto", name: "Autonomous", orderindex: 0 }, { id: "m-man", name: "Manual", orderindex: 1 }] },
+  };
+  const want = [
+    { field: signOff, value: "s-auto" },
+    { field: mode, value: "m-man" },
+  ] as ResolvedField[];
+
+  it("returns nothing when every dropdown value matches", () => {
+    const task = { custom_fields: [{ id: "fs", value: 0 }, { id: "fm", value: 1 }] };
+    expect(findFieldMismatches(task, want)).toEqual([]);
+  });
+
+  it("reports Mode read as Autonomous when Manual was set", () => {
+    const task = { custom_fields: [{ id: "fs", value: 0 }, { id: "fm", value: 0 }] };
+    expect(findFieldMismatches(task, want)).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "Autonomous (0)" }]);
+  });
+
+  it("accepts a dropdown value given as the option id", () => {
+    const task = { custom_fields: [{ id: "fs", value: "s-auto" }, { id: "fm", value: "m-man" }] };
+    expect(findFieldMismatches(task, want)).toEqual([]);
+  });
+
+  it("reports an empty value", () => {
+    const task = { custom_fields: [{ id: "fs", value: 0 }] };
+    expect(findFieldMismatches(task, want)).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
+    expect(findFieldMismatches({}, [want[1]])).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
+  });
+
+  it("compares text, number and checkbox with ===", () => {
+    const resolved = [
+      { field: plain("t1", "Notes", "text"), value: "hello" },
+      { field: plain("n1", "Points", "number"), value: 3 },
+      { field: plain("c1", "Done", "checkbox"), value: true },
+    ] as ResolvedField[];
+    const good = { custom_fields: [{ id: "t1", value: "hello" }, { id: "n1", value: 3 }, { id: "c1", value: true }] };
+    expect(findFieldMismatches(good, resolved)).toEqual([]);
+    const bad = { custom_fields: [{ id: "t1", value: "bye" }, { id: "n1", value: 4 }, { id: "c1", value: false }] };
+    expect(findFieldMismatches(bad, resolved)).toEqual([
+      { field: "Notes", wanted: "hello", got: "bye" },
+      { field: "Points", wanted: "3", got: "4" },
+      { field: "Done", wanted: "true", got: "false" },
+    ]);
+  });
+
+  it("skips date and relationship fields", () => {
+    const resolved = [
+      { field: plain("d1", "Due", "date"), value: 1 },
+      { field: plain("r1", "Epic", "list_relationship"), value: { add: ["x"], rem: [] } },
+    ] as ResolvedField[];
+    expect(findFieldMismatches({ custom_fields: [] }, resolved)).toEqual([]);
   });
 });
