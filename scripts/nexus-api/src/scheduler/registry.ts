@@ -59,7 +59,7 @@ export const JOBS: readonly JobDef[] = [
   }),
   defineJob({
     name: 'autonomous-scan',
-    description: 'Autonomous Operation: at night or while Jack is away, claim one ready ticket and hand it to the conductor',
+    description: 'Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor',
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
     command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },
     timeoutMs: 5 * 60 * 1000, catchUp: 'skip', order: 50, notify: 'failures', manualOutsideWindow: 'allowed',
@@ -80,7 +80,7 @@ export const JOBS: readonly JobDef[] = [
   }),
   defineJob({
     name: 'schedule-release',
-    description: 'Scheduling: move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual). No model tokens.',
+    description: 'Scheduling: move each scheduled ticket whose Scheduled at is past to to do (both Modes). No model tokens.',
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
     command: { file: process.execPath, args: [...DG, 'autonomous', 'schedule-release'] },
     timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed',

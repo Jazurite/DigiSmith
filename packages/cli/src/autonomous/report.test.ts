@@ -61,10 +61,10 @@ describe("buildReport", () => {
     expect(waiting).toMatch(/DGS-5[^\n]*needs sudo/);
   });
 
-  it("counts off events and does not list them", async () => {
+  it("does not count or list off events", async () => {
     seed();
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    expect(text.split("\n").find((l) => l.startsWith("Scans:"))).toBe("Scans: 2, 2 off, 0 busy");
+    expect(text.split("\n").find((l) => l.startsWith("Scans:"))).toBe("Scans: 2, 0 busy");
     expect(text).not.toMatch(/14:10|21:10/);
   });
 

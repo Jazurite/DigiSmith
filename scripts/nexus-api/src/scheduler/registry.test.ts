@@ -147,7 +147,7 @@ describe('JOBS', () => {
     expect(job.command.args[0]).toBe(JOBS.find((j) => j.name === 'autonomous-scan')!.command.args[0])
     expect(job).toMatchObject({ timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 45, notify: 'failures', manualOutsideWindow: 'allowed' })
     expect(job.order).toBeLessThan(JOBS.find((j) => j.name === 'autonomous-scan')!.order)
-    expect(job.description).toBe('Scheduling: move each scheduled ticket whose Scheduled at is past to ready (Mode Autonomous) or to do (Mode Manual). No model tokens.')
+    expect(job.description).toBe('Scheduling: move each scheduled ticket whose Scheduled at is past to to do (both Modes). No model tokens.')
   })
   it('selftest prints one line and exits 0 without SELFTEST_FAIL', async () => {
     const { command } = JOBS[0]!
@@ -176,7 +176,7 @@ describe('version literal', () => {
 })
 
 describe('autonomous-scan text', () => {
-  it('autonomous-scan says it claims a ready ticket', () => {
-    expect(JOBS.find((j) => j.name === 'autonomous-scan')!.description).toBe('Autonomous Operation: at night or while Jack is away, claim one ready ticket and hand it to the conductor')
+  it('autonomous-scan says it claims at any hour', () => {
+    expect(JOBS.find((j) => j.name === 'autonomous-scan')!.description).toBe('Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor')
   })
 })

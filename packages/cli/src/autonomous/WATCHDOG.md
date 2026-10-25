@@ -4,6 +4,13 @@ The watchdog looks at every open run and says what state it is in. It writes a l
 
 Command: `dg autonomous watch`. The Nexus scheduler runs it every 5 minutes, all day (job `nightwatch-watchdog`). Runs older than 7 days with no `ended` event are skipped.
 
+## Ticket flow (DGS-635)
+
+- A ticket in `to do` with Mode Autonomous: the scan claims it at any hour. The claim sets the status `claimed`, writes the lock and writes the order.
+- The conductor sets `in progress` when the Builder starts, and reads the status back.
+- A ticket with Mode Manual is never claimed. It stays in `to do` for attended work.
+- A ticket in `scheduled` moves to `to do` at its Scheduled at time (both Modes). The scan then treats it like any other `to do` ticket.
+
 Role scope (DGS-598): only builder, reviewer and scout runs are classified. A maestro, conductor or other run is skipped before its events are read: it gets no item and no comment. An open blocked or stalled item of such a run is closed with the note "role not watched". Oculus still lists these runs, as healthy or ended.
 
 ## The five states
@@ -86,7 +93,7 @@ Known limit: when salvage commits a dirty tree on a merged branch, `git branch -
 
 ### dg autonomous merge-gate
 
-`dg autonomous merge-gate --ticket <KEY> [--repo <path>]` runs before a night merge. It prints `go` and exits 0, or prints `refused: <reason>` and exits 1.
+`dg autonomous merge-gate --ticket <KEY> [--repo <path>]` runs before an autonomous merge. It prints `go` and exits 0, or prints `refused: <reason>` and exits 1.
 
 It refuses when:
 

@@ -34,7 +34,7 @@ const stamp = computed(() => (props.updatedAt === null ? '-' : fmtClock(props.up
     <span v-else>Agents <b>-</b></span>
     <template v-if="overview">
       <span>Workers <b>{{ overview.workers.length }}</b></span>
-      <span>Ready waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
+      <span>To do (autonomous) waiting <b>{{ overview.scan.candidates ?? '-' }}</b> <span class="muted">as of {{ fmtUtc7(overview.scan.lastScanAt) }}</span></span>
       <span>Mode <b>{{ mode }}</b></span>
     </template>
     <span :title="overview?.burn ? `as of ${fmtUtc7(overview.burn.asOf)} (UTC+7)` : 'no burn reading in the last 15 min'">Burn <b>{{ overview?.burn ? `${fmtTokens(overview.burn.tokensPerH)}/h · ${fmtUsd(overview.burn.usdPerH)}/h` : '-/h' }}</b></span>

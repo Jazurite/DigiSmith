@@ -72,7 +72,7 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
     `# Autonomous Operation report, ${fmtUtc7(from)} to ${fmtUtc7(to)} UTC+7`,
     "",
     "Away:", list(awayLines(allEvents, from)), "",
-    `Scans: ${of("scan").length}, ${of("off").length} off, ${of("busy").length} busy`, "",
+    `Scans: ${of("scan").length}, ${of("busy").length} busy`, "",
     "Built", list(built), "",
     "Failed or stopped", list(failed), "",
     "Waiting for Jack", list(waiting), "",

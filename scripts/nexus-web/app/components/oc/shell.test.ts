@@ -10,12 +10,12 @@ import OcTopBar from './OcTopBar.vue'
 import { overviewFixture } from '../../../tests/oculus-fixtures'
 
 describe('OcTopBar', () => {
-  it('shows health, workers, Ready waiting, the mode, the burn and the seats', async () => {
+  it('shows health, workers, To do (autonomous) waiting, the mode, the burn and the seats', async () => {
     const w = await mountSuspended(OcTopBar, { props: { overview: overviewFixture(), stale: false, updatedAt: Date.parse('2026-10-22T03:42:10Z') } })
     const t = w.text()
     expect(t).toContain('Nexus healthy')
     expect(t).toContain('Workers 2')
-    expect(t).toContain('Ready waiting 5')
+    expect(t).toContain('To do (autonomous) waiting 5')
     expect(t).toContain('away')
     expect(t).toContain('10:42:10 (UTC+7)')
     expect(t).toContain('Burn 4.1M/h · $12.30/h')
