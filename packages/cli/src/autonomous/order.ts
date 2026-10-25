@@ -44,7 +44,8 @@ export function renderOrder(i: OrderInput): string {
   }
   lines.push(
     "## Last step",
-    `dg autonomous release --ticket ${i.key} --result <merged|failed|stopped|awaiting-jack> [--reason "..."]`,
+    `dg autonomous release --ticket ${i.key} --result <merged|failed|stopped|awaiting-jack> [--reason "..."] [--commit <sha>]`,
+    `A merged release passes the merge commit: \`--commit <the merge commit sha>\`.`,
     "",
   );
   return lines.join("\n");

@@ -23,7 +23,8 @@ describe("renderOrder", () => {
     expect(t).toContain("Spec and plan:");
     expect(t).toContain("spec.md and plan.md on the ticket");
     for (const w of ["sudo", "LaunchAgent", "delete", "Caddy", "Tailscale", "hooks 01-03", "report.html", "plan.md"]) expect(t).toContain(w);
-    expect(t).toContain("dg autonomous release --ticket DGS-9 --result <merged|failed|stopped|awaiting-jack> [--reason \"...\"]");
+    expect(t).toContain("dg autonomous release --ticket DGS-9 --result <merged|failed|stopped|awaiting-jack> [--reason \"...\"] [--commit <sha>]");
+    expect(t).toContain("--commit <the merge commit sha>");
     expect(t).not.toContain("Sign-off: Jack");
   });
   it("adds the awaiting-jack rule for Jack tickets", () => {

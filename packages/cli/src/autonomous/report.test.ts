@@ -43,6 +43,8 @@ describe("buildReport", () => {
     expect(text).toMatch(/Away:[\s\S]*2026-10-20 17:30:00 to 2026-10-20 22:00:00/);
     expect(text).toMatch(/Scans: 2/);
     expect(text).toMatch(/DGS-1[^\n]*abc1234[^\n]*59/);
+    expect(text).toContain("DGS-1: commit abc1234, 59 min");
+    expect(text).not.toContain("commit unknown");
     expect(text).toMatch(/Failed or stopped[\s\S]*DGS-2[^\n]*failed[^\n]*tests red/);
     expect(text).toMatch(/Waiting for Jack[\s\S]*DGS-4[^\n]*needs review/);
     expect(text).toMatch(/Skipped[\s\S]*DGS-9[^\n]*no plan/);

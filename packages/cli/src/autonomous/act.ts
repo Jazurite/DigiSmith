@@ -13,7 +13,7 @@ export class PromptError extends Error {
 }
 
 export const ORDER_TEXTS = {
-  merge: (t: string) => `${t}: run dg autonomous merge-gate --ticket ${t} first; merge per hooks 01-03 only if it prints go, then release merged`,
+  merge: (t: string) => `${t}: run dg autonomous merge-gate --ticket ${t} first; merge per hooks 01-03 only if it prints go, then, in the main checkout, run dg autonomous release --ticket ${t} --result merged --commit $(git rev-parse HEAD)`,
   restart: (t: string) => `${t}: restart the builder, its pane is gone; before any teardown run dg salvage --ticket ${t}, and if it fails stop and tell Jack`,
 };
 
