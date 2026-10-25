@@ -123,13 +123,13 @@ describe("createCreateTaskCommand", () => {
 
   describe("--field", () => {
     const fields = [
-      { id: "f1", name: "ClickUp API Type", type: "drop_down", type_config: { options: [{ id: "o1", name: "Frontdoor" }] } },
+      { id: "f1", name: "ClickUp API Type", type: "drop_down", type_config: { options: [{ id: "o1", name: "Frontdoor", orderindex: 0 }] } },
       { id: "f2", name: "Notes", type: "text", type_config: {} },
     ];
     const mk = () => {
       const calls: string[] = [];
       const client = {
-        get: vi.fn().mockResolvedValue({ id: "new1" }),
+        get: vi.fn().mockResolvedValue({ id: "new1", custom_fields: [{ id: "f1", value: 0 }, { id: "f2", value: "hello" }] }),
         getListFields: vi.fn().mockResolvedValue(fields),
         createTask: vi.fn().mockImplementation(async () => { calls.push("create"); return { id: "new1" }; }),
         setCustomField: vi.fn().mockImplementation(async () => { calls.push("set"); }),
@@ -154,6 +154,72 @@ describe("createCreateTaskCommand", () => {
       (client as unknown as { getTaskByRef: unknown }).getTaskByRef = vi.fn(async (r: string) => ({ id: r === "DGS-343" ? "id343" : r }));
       await handler({ list: "L", name: "t", field: ["Epic=DGS-343"] });
       expect(client.setCustomField).toHaveBeenCalledWith("new1", "f9", { add: ["id343"], rem: [] });
+    });
+
+    describe("read-back", () => {
+      const twoFields = [
+        { id: "fs", name: "Sign-off", type: "drop_down", type_config: { options: [{ id: "s-auto", name: "Auto", orderindex: 0 }, { id: "s-jack", name: "Jack", orderindex: 1 }] } },
+        { id: "fm", name: "Mode", type: "drop_down", type_config: { options: [{ id: "m-auto", name: "Autonomous", orderindex: 0 }, { id: "m-man", name: "Manual", orderindex: 1 }] } },
+      ];
+      const task = (sign: number, mode: number) => ({ id: "new1", custom_fields: [{ id: "fs", value: sign }, { id: "fm", value: mode }] });
+      const mk2 = () => {
+        const m = mk();
+        (m.client.getListFields as ReturnType<typeof vi.fn>).mockResolvedValue(twoFields);
+        return m;
+      };
+
+      it("sets two dropdowns where the wanted option is not orderindex 0", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const cases: [string[], [string, string][], [number, number]][] = [
+          [["Sign-off=Auto", "Mode=Manual"], [["fs", "s-auto"], ["fm", "m-man"]], [0, 1]],
+          [["Mode=Manual", "Sign-off=Auto"], [["fm", "m-man"], ["fs", "s-auto"]], [0, 1]],
+          [["Mode=Manual", "Sign-off=Jack"], [["fm", "m-man"], ["fs", "s-jack"]], [1, 1]],
+        ];
+        for (const [flags, calls, [sign, mode]] of cases) {
+          process.exitCode = undefined;
+          const { client, handler } = mk2();
+          (client.get as ReturnType<typeof vi.fn>).mockResolvedValue(task(sign, mode));
+          await handler({ list: "L", name: "t", field: flags });
+          expect((client.setCustomField as ReturnType<typeof vi.fn>).mock.calls).toEqual(calls.map(([f, v]) => ["new1", f, v]));
+          expect(process.exitCode).toBe(0);
+        }
+      });
+
+      it("exits 1 and prints both values when Mode reads back wrong", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+        const { client, handler } = mk2();
+        (client.get as ReturnType<typeof vi.fn>).mockResolvedValue(task(0, 0));
+        await handler({ list: "L", name: "t", field: ["Sign-off=Auto", "Mode=Manual"] });
+        expect(process.exitCode).toBe(1);
+        const text = String(errorSpy.mock.calls[0][0]);
+        expect(text).toContain("Mode");
+        expect(text).toContain("Manual (1)");
+        expect(text).toContain("Autonomous (0)");
+        expect(text).toContain("new1");
+        expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task(0, 0), null, 2));
+      });
+
+      it("retries a mismatched field once and passes", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const { client, handler } = mk2();
+        (client.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce(task(0, 0)).mockResolvedValueOnce(task(0, 1));
+        await handler({ list: "L", name: "t", field: ["Sign-off=Auto", "Mode=Manual"] });
+        expect((client.setCustomField as ReturnType<typeof vi.fn>).mock.calls).toEqual([
+          ["new1", "fs", "s-auto"],
+          ["new1", "fm", "m-man"],
+          ["new1", "fm", "m-man"],
+        ]);
+        expect(process.exitCode).toBe(0);
+      });
+
+      it("does not read back or retry without --field", async () => {
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        const { client, handler } = mk2();
+        await handler({ list: "L", name: "t" });
+        expect(client.get).not.toHaveBeenCalled();
+        expect(client.createTask).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("creates nothing when a field is bad", async () => {

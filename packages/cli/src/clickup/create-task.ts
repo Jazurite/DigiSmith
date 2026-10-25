@@ -2,7 +2,7 @@ import type { CommandModule } from "yargs";
 import type { ClickUpClient } from "@digismith/clickup-client";
 import { createClient, buildTaskWriteBody, withTaskFieldOptions, type TaskFieldArgv } from "./lib.ts";
 import { resolveTaskType } from "./task-types.ts";
-import { resolveFieldArgs, applyFields } from "./field-set.ts";
+import { resolveFieldArgs, applyFields, findFieldMismatches } from "./field-set.ts";
 
 export function createCreateTaskCommand(
   clientFactory: () => ClickUpClient = createClient
@@ -39,6 +39,16 @@ export function createCreateTaskCommand(
         if (resolved.length > 0) {
           await applyFields(client, task.id, resolved);
           task = await client.get<typeof task>(`/task/${task.id}`);
+          let bad = findFieldMismatches(task, resolved);
+          if (bad.length > 0) {
+            await applyFields(client, task.id, resolved.filter((r) => bad.some((m) => m.field === r.field.name)));
+            task = await client.get<typeof task>(`/task/${task.id}`);
+            bad = findFieldMismatches(task, resolved);
+          }
+          if (bad.length > 0) {
+            console.log(JSON.stringify(task, null, 2));
+            throw new Error(`task ${task.id} was created, but ${bad.map((m) => `field "${m.field}" reads ${m.got}, wanted ${m.wanted}`).join("; ")}`);
+          }
         }
         console.log(JSON.stringify(task, null, 2));
         process.exitCode = 0;
