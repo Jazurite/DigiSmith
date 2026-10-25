@@ -10,12 +10,13 @@ import { readJournal } from "../autonomous/journal.ts";
 import { findWorkspace } from "../autonomous/observers-real.ts";
 import { autonomousDir, newestEvent, readEvents as readScanEvents, readLock } from "../autonomous/state.ts";
 import type { Event } from "../autonomous/types.ts";
-import { DEFAULT_BUDGETS } from "../autonomous/watchdog.ts";
+import { herdrPaneLookupSync, type PaneLookupSync } from "../autonomous/pane.ts";
+import { DEFAULT_BUDGETS, isWatched, type Pane } from "../autonomous/watchdog.ts";
 import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { readEvents as readEventLines, type EventLine } from "../run/events.ts";
 import { depotDir, findRunDir, isSafe } from "../run/paths.ts";
 import { readRun, type RunRecord } from "../run/record.ts";
-import { LIST_DAYS, listRuns } from "../run/read.ts";
+import { LIST_DAYS, listRuns, summarize } from "../run/read.ts";
 import { groupsOf, ledgerTasks, parsePlanTasks, phaseTable, pipelineOf, runRowOf, scalarData, triggerOf } from "./derive.ts";
 import { readBurn, readRunTokens, readSeatsView, rowTokensOf } from "./tokens.ts";
 import type { EventRowView, RunRowView } from "./types.ts";
@@ -67,24 +68,35 @@ function readEvents(dir: string): EventLine[] {
   return out;
 }
 
-function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[], reads?: ReturnType<typeof readRunTokens>[]): RunRowView[] {
+function rowsOf(env: NodeJS.ProcessEnv, now: Date, loaded: Loaded[], reads?: ReturnType<typeof readRunTokens>[], panes: PaneLookupSync = herdrPaneLookupSync()): RunRowView[] {
   const adir = autonomousDir(env);
   const away = readAway(adir);
   const budgets = readBudgets(depotCwd(env)).budgets;
   const claims = claimsOf(adir, loaded);
+  const maps = new Map<string, Map<string, string> | null>();   // one lookup per workspace per build
+  const paneOf = (r: RunRecord, events: EventLine[]): { pane: Pane; status: string | null } => {
+    const ws = r.herdr.workspace;
+    const id = r.herdr.pane;
+    if (!ws || !id || !isWatched(r.role) || summarize(events).ended) return { pane: "unknown", status: null };
+    if (!maps.has(ws)) maps.set(ws, panes(ws));
+    const m = maps.get(ws);
+    if (!m) return { pane: "unknown", status: null };
+    return m.has(id) ? { pane: "present", status: m.get(id) ?? null } : { pane: "gone", status: null };
+  };
   return loaded.map((l, i) => {
     const t = reads?.[i] ?? readRunTokens(l.dir, now.getTime());
-    return { ...runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime()), tokens: rowTokensOf(t.value), tokensAsOf: t.asOf };
+    const p = paneOf(l.record, l.events);
+    return { ...runRowOf(l.record, l.events, triggerOf(l.record, claimFor(claims, l.record), away), budgets, now.getTime(), p.pane, p.status), tokens: rowTokensOf(t.value), tokensAsOf: t.asOf };
   });
 }
 
 // Budgets come from config.yml in NIGHTWATCH_CONFIG_CWD when it is set, else in the depot folder (depotDir). The depot is not a checkout, so a missing file means defaults; the API sets no NIGHTWATCH_CONFIG_CWD.
 const depotCwd = (env: NodeJS.ProcessEnv): string => env.NIGHTWATCH_CONFIG_CWD ?? depotDir(env);
 
-export function overviewView(env: NodeJS.ProcessEnv, now: Date) {
+export function overviewView(env: NodeJS.ProcessEnv, now: Date, panes?: PaneLookupSync) {
   const adir = autonomousDir(env);
   const loadedAll = loadAll(env, undefined, LIST_DAYS, now.getTime());
-  const rows = rowsOf(env, now, loadedAll);
+  const rows = rowsOf(env, now, loadedAll, undefined, panes);
   const workers = rows.filter((r) => r.state === "healthy" || r.state === "blocked" || r.state === "stalled");
   const open = readOpen(adir);
   const releases = readScanEvents(adir, now.getTime() - 8 * DAY_MS, now.getTime() + DAY_MS).filter((e) => e.kind === "release");
@@ -149,8 +161,8 @@ function readAttentionLines(adir: string): Record<string, unknown>[] {
   return out;
 }
 
-export function runsView(env: NodeJS.ProcessEnv, now: Date, a: { state?: string; role?: string; ticket?: string; trigger?: string; project?: string; limit?: number }) {
-  let rows = rowsOf(env, now, loadAll(env, a.ticket, LIST_DAYS, now.getTime()));
+export function runsView(env: NodeJS.ProcessEnv, now: Date, a: { state?: string; role?: string; ticket?: string; trigger?: string; project?: string; limit?: number }, panes?: PaneLookupSync) {
+  let rows = rowsOf(env, now, loadAll(env, a.ticket, LIST_DAYS, now.getTime()), undefined, panes);
   if (a.state) rows = rows.filter((r) => r.state === a.state);
   if (a.role) rows = rows.filter((r) => r.role === a.role);
   if (a.trigger) rows = rows.filter((r) => r.trigger === a.trigger);
@@ -171,7 +183,7 @@ function readOrder(env: NodeJS.ProcessEnv, order: string | null): { available: b
   } catch { return none; }
 }
 
-export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd?: string }) {
+export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd?: string }, panes?: PaneLookupSync) {
   if (!isSafe(a.run)) return null;
   const dir = findRunDir(a.run, env);
   if (dir === null) return null;
@@ -179,7 +191,7 @@ export function runView(env: NodeJS.ProcessEnv, now: Date, a: { run: string; cwd
   try { record = readRun(dir); } catch { return null; }
   const loaded: Loaded = { record, events: readEvents(dir), dir };
   const tokens = readRunTokens(dir, now.getTime());
-  const row = rowsOf(env, now, [loaded], [tokens])[0];
+  const row = rowsOf(env, now, [loaded], [tokens], panes)[0];
   const adir = autonomousDir(env);
   const claim = readJournal(adir).find((l) => l.status === "planned" && l.key === `${record.ticket}:claimed:1:claim`);
   const budgets = readBudgets(a.cwd ?? depotCwd(env)).budgets;

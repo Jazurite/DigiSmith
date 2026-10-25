@@ -206,3 +206,17 @@ describe("pipelineOf durations", () => {
     expect(p.find((s) => s.step === "building")?.durationSec).toBe(40 * 60);
   });
 });
+
+describe("runRowOf with a live pane", () => {
+  const silent = [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "tool", "2026-10-22T01:05:00.000Z", { tool: "Edit", ok: true })];
+  const at = T0 + 45 * 60_000;
+  it("a present pane that is working reads healthy after 40 silent minutes", () => {
+    expect(runRowOf(run(), silent, "manual", DEFAULT_BUDGETS, at, "present", "working").state).toBe("healthy");
+  });
+  it("a gone pane reads lost", () => {
+    expect(runRowOf(run(), silent, "manual", DEFAULT_BUDGETS, at, "gone", null).state).toBe("lost");
+  });
+  it("an unknown pane keeps the old reading: silent 40 minutes is lost", () => {
+    expect(runRowOf(run(), silent, "manual", DEFAULT_BUDGETS, at).state).toBe("lost");
+  });
+});

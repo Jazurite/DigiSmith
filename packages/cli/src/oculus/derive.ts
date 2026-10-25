@@ -1,7 +1,7 @@
 // packages/cli/src/oculus/derive.ts
 import { basename } from "node:path";
 import type { Away, Event, Lock } from "../autonomous/types.ts";
-import { classify, phaseOf } from "../autonomous/watchdog.ts";
+import { classify, phaseOf, type Pane } from "../autonomous/watchdog.ts";
 import type { Budgets } from "../autonomous/watchdog.ts";
 import type { EventLine } from "../run/events.ts";
 import type { RunRecord } from "../run/record.ts";
@@ -45,8 +45,8 @@ export function scalarData(data: Record<string, unknown>): Record<string, Scalar
   return out;
 }
 
-export function runRowOf(run: RunRecord, events: EventLine[], trigger: Trigger, budgets: Budgets, nowMs: number): RunRowView {
-  const verdict = classify(run, events, "unknown", nowMs, budgets);
+export function runRowOf(run: RunRecord, events: EventLine[], trigger: Trigger, budgets: Budgets, nowMs: number, pane: Pane = "unknown", agentStatus: string | null = null): RunRowView {
+  const verdict = classify(run, events, pane, nowMs, budgets, agentStatus);
   const state: Health = verdict.state;
   const sum = summarize(events);
   const startedAt = events.find((e) => e.type === "started")?.ts ?? run.created_at;

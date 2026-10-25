@@ -2,6 +2,7 @@
 import { appendFileSync, mkdirSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { clearPaneSyncCache, herdrPaneLookupSync } from "../autonomous/pane.ts";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
 import { attentionView, eventsView, overviewView, planView, runsView, runView } from "./views.ts";
 
@@ -324,5 +325,62 @@ describe("tokens in the views (DGS-590)", () => {
     writeFileSync(join(d.dir, "runs", "DGS-590", "builder-1", "tokens.json"), JSON.stringify(tokensFile("2026-10-22T02:30:00.000Z")));
     expect(runsView(d.env, NOW, {}).runs[0]).toMatchObject({ tokens: null, tokensAsOf: "2026-10-22T02:30:00.000Z" });
     expect(runView(d.env, NOW, { run: "builder-1" })).toMatchObject({ tokens: null, tokensAsOf: "2026-10-22T02:30:00.000Z" });
+  });
+});
+
+describe("live herdr pane", () => {
+  const herdr = { workspace: "w2", tab: "t1", pane: "p9" };
+  const seedWatched = (h: { workspace: string | null; tab: string | null; pane: string | null } = herdr): void => {
+    d.writeRun({ ticket: "DGS-590", run: "builder-1", role: "builder", created_at: "2026-10-22T01:00:00.000Z", order: "/x/order-nw-1.md", herdr: h });
+    d.writeEvents("DGS-590", "builder-1", [
+      { type: "started", ts: "2026-10-22T01:00:00.000Z", data: {} },
+      { type: "tool", ts: "2026-10-22T02:15:00.000Z", data: { tool: "Edit", ok: true } },
+    ]);
+  };
+  const stateOf = (panes: (w: string) => Map<string, string> | null): string => (runsView(d.env, NOW, {}, panes) as { runs: { state: string }[] }).runs[0].state;
+  beforeEach(() => clearPaneSyncCache());
+
+  it("a present working pane reads healthy after 45 silent minutes", () => {
+    seedWatched();
+    expect(stateOf(() => new Map([["p9", "working"]]))).toBe("healthy");
+  });
+  it("a pane missing from the list reads lost", () => {
+    seedWatched();
+    expect(stateOf(() => new Map([["other", "working"]]))).toBe("lost");
+  });
+  it("herdr down (null) keeps the old reading: lost", () => {
+    seedWatched();
+    expect(stateOf(() => null)).toBe("lost");
+  });
+  it("a run without a pane id never asks herdr", () => {
+    seedWatched({ workspace: "w2", tab: null, pane: null });
+    let calls = 0;
+    expect(stateOf(() => { calls++; return new Map(); })).toBe("lost");
+    expect(calls).toBe(0);
+  });
+  it("one lookup per workspace per build", () => {
+    seedWatched();
+    let calls = 0;
+    overviewView(d.env, NOW, () => { calls++; return new Map([["p9", "working"]]); });
+    expect(calls).toBe(1);
+  });
+  it("the real lookup caches a workspace for 15 s", () => {
+    let calls = 0;
+    let t = 1_000_000;
+    const out = JSON.stringify({ result: { panes: [{ pane_id: "p9", agent_status: "working" }] } });
+    const lookup = herdrPaneLookupSync(() => { calls++; return { code: 0, stdout: out }; }, () => t);
+    expect(lookup("w2")?.get("p9")).toBe("working");
+    t += 14_000;
+    lookup("w2");
+    expect(calls).toBe(1);
+    t += 2_000;
+    lookup("w2");
+    expect(calls).toBe(2);
+    lookup("w3");
+    expect(calls).toBe(3);
+  });
+  it("a failing exec gives null", () => {
+    expect(herdrPaneLookupSync(() => { throw new Error("x"); }, () => 5)("w9")).toBeNull();
+    expect(herdrPaneLookupSync(() => ({ code: 1, stdout: "" }), () => 5_000_000)("w8")).toBeNull();
   });
 });
