@@ -5,6 +5,7 @@ import {
   resolveDefault,
   defaultAfterRenames,
   checkDefaultNotRemoved,
+  describeFieldDiff,
   resolveOptionRenames,
   resolveOptionAdds,
   resolveOptionRemoves,
@@ -94,5 +95,24 @@ describe("checkDefaultNotRemoved", () => {
     const removes = resolveOptionRemoves(f, [], ["Autonomous"]);
     expect(() => checkDefaultNotRemoved(f, removes, { value: "Manual" })).not.toThrow();
     expect(() => checkDefaultNotRemoved(f, removes, null)).not.toThrow();
+  });
+});
+
+describe("describeFieldDiff default line", () => {
+  it("prints old -> new when the default changes", () => {
+    const f = field({ default_value: { value: "Autonomous" } });
+    const lines = describeFieldDiff(f, undefined, [], [], [], { value: "Manual" });
+    expect(lines).toContain('  default: "Autonomous" -> "Manual"');
+  });
+  it("prints none for a missing old default and for a cleared one", () => {
+    expect(describeFieldDiff(field(), undefined, [], [], [], { value: "Manual" })).toContain('  default: none -> "Manual"');
+    const f = field({ default_value: { value: "Autonomous" } });
+    expect(describeFieldDiff(f, undefined, [], [], [], null)).toContain('  default: "Autonomous" -> none');
+  });
+  it("prints nothing when unchanged or omitted", () => {
+    const f = field({ default_value: { value: "Autonomous" } });
+    expect(describeFieldDiff(f, undefined, [], [], [], { value: "Autonomous" }).some((l) => l.includes("default:"))).toBe(false);
+    expect(describeFieldDiff(f, undefined, []).some((l) => l.includes("default:"))).toBe(false);
+    expect(describeFieldDiff(field(), undefined, [], [], [], null).some((l) => l.includes("default:"))).toBe(false);
   });
 });
