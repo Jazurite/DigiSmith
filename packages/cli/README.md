@@ -29,6 +29,7 @@ digismith clickup create-task --list <id> --name <name> [options]  # create a ne
 digismith clickup update-task --task <id> [options]                # update an existing task (at least one change flag required; --parent <task> sets, "" clears; --type <name or id>; --markdown-description[-file] as on create-task)
 digismith clickup list-task-types                                   # list the workspace task types (id, name, plural, description, icon)
 digismith clickup move-task --task <id> --list <id> [options]      # move a task to another List (--status-map, --move-custom-fields)
+digismith clickup update-field --field <uuid> [--name] [--option] [--add-option] [--remove-option --confirm-remove] [--default <option name or id> | --clear-default] [--yes]  # edit a dropdown field (Frontdoor; dry run without --yes); --default sets the default option (stored by name), --clear-default removes it; get-field and list-fields show the default
 digismith clickup create-folder --name <name>                      # create a new Folder in the DigiSmith space
 digismith clickup create-list --name <name> [--folder <id>]        # create a new List, in a Folder or folderless
 digismith clickup update-list --list <id> [--name <name>] [--description <text> | --description-file <path>]  # rename a List and set its description
