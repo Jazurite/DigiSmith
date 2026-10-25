@@ -192,7 +192,8 @@ describe("createCreateTaskCommand", () => {
         (client.get as ReturnType<typeof vi.fn>).mockResolvedValue(task(0, 0));
         await handler({ list: "L", name: "t", field: ["Sign-off=Auto", "Mode=Manual"] });
         expect(process.exitCode).toBe(1);
-        const text = String(errorSpy.mock.calls[0][0]);
+        const text = String(errorSpy.mock.calls.at(-1)?.[0]);
+        expect(text).toContain("was created");
         expect(text).toContain("Mode");
         expect(text).toContain("Manual (1)");
         expect(text).toContain("Autonomous (0)");
