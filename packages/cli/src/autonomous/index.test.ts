@@ -56,7 +56,7 @@ beforeEach(() => {
   dir = join(root, "autonomous");
   ordersDir = join(root, "orders");
   writeFileSync(join(root, "token"), "tok\n");
-  writeFileSync(join(root, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { tab: 1 } }));
+  writeFileSync(join(root, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { tab: 1, workspace: "w2" } }));
   tracker = new FakeTracker();
   fetchCalls = [];
   execCalls = [];
