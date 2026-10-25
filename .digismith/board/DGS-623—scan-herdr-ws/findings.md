@@ -1,0 +1,10 @@
+# Review findings
+
+| Reviewer type | Round | Path:line | Severity | What is wrong | Failing scenario | Verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| task 1 | 1 | packages/cli/src/autonomous/scan.test.ts:51 | Important | The conductors.json fixtures in scan.test.ts and index.test.ts have no workspace, so promptConductor now throws and 17 existing tests fail. | pnpm vitest run src/autonomous/scan.test.ts src/autonomous/index.test.ts: runScan returns claim-failed ('no workspace for DigiSmith/digismith-conductor'). The same fixture is at index.test.ts:59. | fixed (fe667618) |
+| task 1 | 1 | packages/cli/src/autonomous/index.test.ts:59 | Minor | The Builder ran only conductor.test.ts, so the failures in the sibling test files went unseen. | Task report lists a single test file, while scan.ts calls promptConductor. | fixed (process: the whole src/autonomous suite ran before every later report, commits f68492d2 23497db4 526274fe) |
+| task 2 | 1 | packages/cli/src/autonomous/scan.ts:8 | Minor | Import list lacks a space: `promptConductor,type Exec`. | A formatter or lint run rewrites the line. | fixed (23497db4) |
+| task 2 | 1 | packages/cli/src/autonomous/scan.ts:157 | Minor | Every readConductor failure gets the cause `conductor-workspace-missing`, including a missing file or bad JSON. | conductors.json holds invalid JSON: the attention item says the workspace is missing, and only the event text has the real error. | fixed (23497db4) |
+| ticket | 1 | packages/cli/src/autonomous/scan.ts:199 | Minor | The dry run reports bad guardrails as a verdict line but says nothing about a bad conductors.json workspace. | conductors.json lacks workspace; first-use step 3 dry run shows the test ticket ready, and the problem appears only on the real scan. | fixed (526274fe) |
+| ticket | 1 | packages/cli/src/autonomous/conductor.ts:337 | Minor | conductorProblem is exported but no production code calls it; scan.ts uses conductorCheck. | Dead wrapper kept alive only by its own tests; two entry points for one check. | fixed (526274fe) |
