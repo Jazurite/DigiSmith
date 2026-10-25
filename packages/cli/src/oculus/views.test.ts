@@ -303,6 +303,7 @@ describe("DGS-598", () => {
     expect(sources("shoppable-video")).toBeGreaterThan(0);
     expect(sources("s-m3")).toBeGreaterThan(0);
     expect(sources("DGS-590")).toBeGreaterThan(0);
+    expect(sources("DigiSmith")).toBeGreaterThan(0);
     for (const e of o.lastEvents) expect(typeof e.source).toBe("string");
     expect(overviewViewSchema.parse(o)).toBeTruthy();
   });

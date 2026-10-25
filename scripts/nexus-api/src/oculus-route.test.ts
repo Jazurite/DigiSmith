@@ -72,6 +72,12 @@ describe('routes', () => {
     expect(res.status).toBe(200)
     expect((await res.json()).lastEvents[0].source).toBe('shoppable-video')
   })
+  it('overview answers 503 internal_invalid when an event source is null (the shared schema stays strict)', async () => {
+    const bad = { ...overviewView, lastEvents: [{ ts: '2026-10-22T02:59:00.000Z', source: null, kind: 'tool', text: 'Edit ok' }] }
+    const res = await app(async () => bad).request('/api/v1/oculus/overview')
+    expect(res.status).toBe(503)
+    expect((await res.json()).error).toBe('internal_invalid')
+  })
   it('passes only known, validated query values to the reader', async () => {
     calls.length = 0
     const res = await app(fake).request('/api/v1/oculus/runs?state=stalled&role=builder&ticket=DGS-590&trigger=manual&limit=20')
