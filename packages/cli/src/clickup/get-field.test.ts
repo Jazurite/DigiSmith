@@ -34,6 +34,19 @@ describe("get-field", () => {
     await run({ getFieldLocations: vi.fn().mockResolvedValue(answer) }, { id: "f1", json: true });
     expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual(answer);
   });
+  it("prints the default", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await run({ getFieldLocations: vi.fn().mockResolvedValue({ ...answer, default_value: { value: "Autonomous" } }) }, { id: "f1" });
+    expect(log.mock.calls.map((c) => c.join(" "))).toContain("default: Autonomous");
+  });
+  it("prints default: none for null and for a missing key", async () => {
+    for (const a of [{ ...answer, default_value: null }, answer]) {
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      await run({ getFieldLocations: vi.fn().mockResolvedValue(a) }, { id: "f1" });
+      expect(log.mock.calls.map((c) => c.join(" "))).toContain("default: none");
+      log.mockRestore();
+    }
+  });
   it("a failed read exits 1 with one line", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     await run({ getFieldLocations: vi.fn().mockRejectedValue(new Error("404")) }, { id: "f1" });

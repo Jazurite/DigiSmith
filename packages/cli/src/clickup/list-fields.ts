@@ -7,6 +7,7 @@ export function formatFields(fields: FieldLike[]): string[] {
   const lines: string[] = [];
   for (const f of fields) {
     lines.push(`${f.id}  ${f.name}  ${f.type}`);
+    if (f.default_value?.value) lines.push(`    default: ${f.default_value.value}`);
     for (const o of f.type_config?.options ?? []) lines.push(`    ${o.name} (${o.id})`);
   }
   return lines;

@@ -24,6 +24,7 @@ export interface FieldLike {
   name: string;
   type: string;
   type_config?: { options?: { id: string; name: string }[] } & Record<string, unknown>;
+  default_value?: { value: string } | null;
 }
 
 export interface ResolvedField {

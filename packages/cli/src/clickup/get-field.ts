@@ -17,6 +17,7 @@ export function createGetFieldCommand(clientFactory: () => FrontdoorClient = cre
           console.log(JSON.stringify(f, null, 2));
         } else {
           console.log(`field ${f.id} (${f.type}) ${JSON.stringify(f.name)}`);
+          console.log(`default: ${f.default_value?.value ?? "none"}`);
           for (const o of f.type_config.options ?? []) console.log(`option ${o.id} ${o.name} (orderindex ${o.orderindex})`);
           const locations = f.locations ?? [];
           console.log(locations.length === 0 ? "locations: none" : `locations:\n${JSON.stringify(locations, null, 2)}`);
