@@ -54,7 +54,7 @@ function fiveRuns(): void {
   present = new Set(["w2:DGS-1", "w2:DGS-2", "w2:DGS-3", "w2:DGS-5"]);
   mk("DGS-1", "builder", 12, [[10, "started"], [1, "tool"]]);
   mk("DGS-2", "builder", 22, [[20, "started"], [5, "blocked"]]);
-  mk("DGS-3", "builder", 52, [[50, "started"], [1, "tool"]]);
+  mk("DGS-3", "builder", 192, [[190, "started"], [1, "tool"]]);
   mk("DGS-4", "builder", 12, [[10, "started"], [1, "tool"]]); // pane w2:DGS-4 absent
   mk("DGS-5", "builder", 22, [[20, "started"], [15, "ended"]]);
 }
@@ -130,7 +130,7 @@ describe("runWatch", () => {
 
   it("closes the blocked item and opens a stalled one when the run moves blocked -> stalled", async () => {
     present = new Set(["w2:DGS-1"]);
-    const run = mk("DGS-1", "builder", 52, [[50, "started"], [5, "blocked"]]);
+    const run = mk("DGS-1", "builder", 192, [[190, "started"], [5, "blocked"]]);
     await runWatch(deps());
     expect(readOpen(dir).map((i) => i.kind)).toEqual(["blocked"]);
     addEvent(run, 0, "tool", 3);
@@ -143,7 +143,7 @@ describe("runWatch", () => {
 
   it("closes the stalled item and opens a blocked one when the run moves stalled -> blocked", async () => {
     present = new Set(["w2:DGS-1"]);
-    const run = mk("DGS-1", "builder", 52, [[50, "started"], [1, "tool"]]);
+    const run = mk("DGS-1", "builder", 192, [[190, "started"], [1, "tool"]]);
     await runWatch(deps());
     expect(readOpen(dir).map((i) => i.kind)).toEqual(["stalled"]);
     addEvent(run, 0, "blocked", 3);

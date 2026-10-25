@@ -63,22 +63,22 @@ describe("classify", () => {
     expect(classify(run(), [], "present", at(29), DEFAULT_BUDGETS).state).toBe("healthy");
     expect(classify(run(), [], "present", at(31), DEFAULT_BUDGETS).state).toBe("lost");
   });
-  it("stalled at the building budget edge (45 min), kept alive by tool events", () => {
-    const e = [ev("started", 0), ev("tool", 44)];
-    expect(classify(run(), e, "present", at(45), DEFAULT_BUDGETS).state).toBe("healthy");
-    const v = classify(run(), [ev("started", 0), ev("tool", 44)], "present", at(46), DEFAULT_BUDGETS);
+  it("stalled at the building budget edge (180 min), kept alive by tool events", () => {
+    const e = [ev("started", 0), ev("tool", 179)];
+    expect(classify(run(), e, "present", at(180), DEFAULT_BUDGETS, "working").state).toBe("healthy");
+    const v = classify(run(), e, "present", at(181), DEFAULT_BUDGETS, "working");
     expect(v.state).toBe("stalled");
-    expect(v.cause).toBe("building-over-45-min");
+    expect(v.cause).toBe("building-over-180-min");
   });
   it("a reviewer uses the review budget (60 min)", () => {
     const e = [ev("started", 0), ev("tool", 59)];
-    expect(classify(run("reviewer"), e, "present", at(60), DEFAULT_BUDGETS).state).toBe("healthy");
-    expect(classify(run("reviewer"), e, "present", at(61), DEFAULT_BUDGETS).state).toBe("stalled");
+    expect(classify(run("reviewer"), e, "present", at(60), DEFAULT_BUDGETS, "working").state).toBe("healthy");
+    expect(classify(run("reviewer"), e, "present", at(61), DEFAULT_BUDGETS, "working").state).toBe("stalled");
   });
   it("a phase event sets the phase and its start (merge, 20 min)", () => {
     const e = [ev("started", 0), ev("phase", 10, { phase: "merge" }), ev("tool", 29)];
-    expect(classify(run(), e, "present", at(30), DEFAULT_BUDGETS).state).toBe("healthy");
-    const v = classify(run(), e, "present", at(31), DEFAULT_BUDGETS);
+    expect(classify(run(), e, "present", at(30), DEFAULT_BUDGETS, "working").state).toBe("healthy");
+    const v = classify(run(), e, "present", at(31), DEFAULT_BUDGETS, "working");
     expect(v.state).toBe("stalled");
     expect(v.cause).toBe("merge-over-20-min");
   });
@@ -104,12 +104,12 @@ describe("classify", () => {
     const e = [ev("started", 0), ev("review_ready", 40), ev("tool", 50), ev("phase", 60, { phase: "review" })];
     expect(phaseOf(run(), e)).toEqual({ phase: "review", since: min(60) });
   });
-  it("a builder with an earlier phase event is stalled only 45 min after the tool that follows review_ready", () => {
-    const e = [ev("started", 0), ev("phase", 1, { phase: "building" }), ev("review_ready", 40), ev("tool", 50), ev("tool", 70), ev("tool", 90)];
-    expect(classify(run(), e, "present", at(95), DEFAULT_BUDGETS).state).toBe("healthy");
-    const v = classify(run(), e, "present", at(96), DEFAULT_BUDGETS);
+  it("a builder with an earlier phase event is stalled only 180 min after the tool that follows review_ready", () => {
+    const e = [ev("started", 0), ev("phase", 1, { phase: "building" }), ev("review_ready", 40), ev("tool", 50), ev("tool", 120), ev("tool", 229)];
+    expect(classify(run(), e, "present", at(230), DEFAULT_BUDGETS, "working").state).toBe("healthy");
+    const v = classify(run(), e, "present", at(231), DEFAULT_BUDGETS, "working");
     expect(v.state).toBe("stalled");
-    expect(v.cause).toBe("building-over-45-min");
+    expect(v.cause).toBe("building-over-180-min");
     expect(v.since).toBe(min(50));
   });
   it("a scout and an other run are never stalled", () => {
@@ -125,6 +125,59 @@ describe("classify", () => {
   });
   it("a custom budget is used", () => {
     expect(classify(run(), [ev("started", 0), ev("tool", 5)], "present", at(6), { building: 5, review: 60, merge: 20 }).state).toBe("stalled");
+  });
+  describe("DGS-612: herdr status rules", () => {
+    const c = (status: string | null, events: unknown[], nowMin: number, pane: "present" | "gone" | "unknown" = "present", r = run()) =>
+      classify(r, events as never, pane, at(nowMin), DEFAULT_BUDGETS, status);
+    const e0 = () => [ev("started", 0), ev("tool", 1)];
+    it("default building budget is 180", () => { expect(DEFAULT_BUDGETS).toEqual({ building: 180, review: 60, merge: 20 }); });
+    it("R2b: status blocked with no prompt event: 2 min is blocked pane-blocked, 30 s is healthy", () => {
+      const v = c("blocked", e0(), 3);
+      expect(v).toEqual({ state: "blocked", cause: "pane-blocked", since: min(1) });
+      expect(c("blocked", e0(), 1.5).state).toBe("healthy");
+    });
+    it("R2b: counts from created_at when there are no events", () => {
+      expect(c("blocked", [], 2).cause).toBe("pane-blocked");
+    });
+    it("R2: an unanswered permission prompt keeps cause waiting-for-answer, not pane-blocked", () => {
+      expect(c("blocked", [ev("started", 0), ev("blocked", 1)], 6).cause).toBe("waiting-for-answer");
+    });
+    it("R3: idle 3 h is healthy waiting, with no phase budget", () => {
+      expect(c("idle", e0(), 1 + 180)).toEqual({ state: "healthy", cause: "waiting", since: "" });
+      expect(c("done", e0(), 1 + 200).cause).toBe("waiting");
+      expect(c("idle", e0(), 1 + 100).state).toBe("healthy");
+    });
+    it("R3: an unusual status is waiting too", () => {
+      expect(c("weird", e0(), 1 + 100).cause).toBe("waiting");
+    });
+    it("R4/R5: working, silent 100 min and 2 h are healthy; 3 h is stalled", () => {
+      expect(c("working", e0(), 1 + 100)).toEqual({ state: "healthy", cause: "", since: "" });
+      expect(c("working", e0(), 1 + 120).state).toBe("healthy");
+      const v = c("working", e0(), 1 + 180);
+      expect(v).toEqual({ state: "stalled", cause: "silent-working-180-min", since: min(1) });
+    });
+    it("R6: unknown pane silent 30 min is lost; so is a present pane with a null status", () => {
+      expect(c(null, e0(), 1 + 30, "unknown").cause).toBe("silent-30-min");
+      expect(c(null, e0(), 1 + 30).cause).toBe("silent-30-min");
+      expect(c(null, e0(), 1 + 29).state).toBe("healthy");
+    });
+    it("R7: building 100 min working is healthy; 190 min with events inside the 3 h window is stalled", () => {
+      expect(c("working", [ev("started", 0), ev("tool", 99)], 100).state).toBe("healthy");
+      const v = c("working", [ev("started", 0), ev("tool", 100), ev("tool", 189)], 190);
+      expect(v.state).toBe("stalled");
+      expect(v.cause).toBe("building-over-180-min");
+    });
+    it("R7: waiting skips the phase budget; an unknown pane keeps it", () => {
+      expect(c("idle", [ev("started", 0), ev("tool", 189)], 190).state).toBe("healthy");
+      expect(c(null, [ev("started", 0), ev("tool", 189)], 190, "unknown").cause).toBe("building-over-180-min");
+    });
+    it("a gone pane is still lost pane-gone whatever the status", () => {
+      expect(c("working", e0(), 2, "gone").cause).toBe("pane-gone");
+    });
+    it("an ended run and an unwatched role keep their verdicts", () => {
+      expect(c("blocked", [ev("started", 0), ev("ended", 5)], 500).state).toBe("ended");
+      expect(c("blocked", e0(), 500, "present", run("maestro")).state).toBe("healthy");
+    });
   });
   describe("DGS-589: herdr status answers a permission prompt", () => {
     // the prompt is at minute 1; now is minute 6, so it is 5 minutes old
@@ -154,8 +207,8 @@ describe("classify", () => {
       expect(st("done", e, 8.5).state).toBe("blocked");
     });
     it("a plain healthy run keeps the empty verdict, also with a status and an older answered prompt", () => {
-      expect(classify(run(), [ev("started", 0), ev("tool", 1)], "present", at(2), DEFAULT_BUDGETS, "done")).toEqual({ state: "healthy", cause: "", since: "" });
-      expect(classify(run(), [ev("started", 0), ev("blocked", 1), ev("tool", 2)], "present", at(3), DEFAULT_BUDGETS, "done")).toEqual({ state: "healthy", cause: "", since: "" });
+      expect(classify(run(), [ev("started", 0), ev("tool", 1)], "present", at(2), DEFAULT_BUDGETS, "working")).toEqual({ state: "healthy", cause: "", since: "" });
+      expect(classify(run(), [ev("started", 0), ev("blocked", 1), ev("tool", 2)], "present", at(3), DEFAULT_BUDGETS, "working")).toEqual({ state: "healthy", cause: "", since: "" });
     });
     it("a gone pane is lost, even with status done", () => {
       expect(classify(run(), prompt(), "gone", at(6), DEFAULT_BUDGETS, "done").state).toBe("lost");
@@ -164,10 +217,11 @@ describe("classify", () => {
       const e = [ev("started", 0), ev("blocked", 1), ev("blocked", 2, { kind: "idle_prompt" })];
       expect(st(null, e, 6).state).toBe("blocked");
     });
-    it("a healthy answer still meets the silence rule: done, but 30 min of silence is lost", () => {
-      const v = st("done", prompt(), 1 + 30);
-      expect(v.state).toBe("lost");
-      expect(v.cause).toBe("silent-30-min");
+    it("DGS-612 R3: an answered prompt with status done is waiting, not lost, after 30 min of silence", () => {
+      expect(st("done", prompt(), 1 + 30)).toEqual({ state: "healthy", cause: "prompt-answered", since: min(1) });
+    });
+    it("an answered prompt with status working still meets the 30 min rule no more: 100 min is healthy", () => {
+      expect(st("working", prompt(), 1 + 100).state).toBe("healthy");
     });
   });
 });

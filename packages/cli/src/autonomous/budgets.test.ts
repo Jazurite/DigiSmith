@@ -19,12 +19,12 @@ describe("readBudgets", () => {
   });
   it("overrides one value", () => {
     const r = readBudgets(repo("profile: x\nnightwatch:\n  budgets:\n    merge: 30\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 30 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 30 });
     expect(r.problems).toEqual([]);
   });
   it("a bad value gives one problem and the default", () => {
     const r = readBudgets(repo("nightwatch:\n  budgets:\n    building: abc\n    review: -5\n    merge: 15\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 15 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 15 });
     expect(r.problems).toHaveLength(2);
   });
   it("a key that is not building, review or merge is a problem", () => {
@@ -58,22 +58,22 @@ describe("readBudgets", () => {
   });
   it("a trailing comment after the value is ignored", () => {
     const r = readBudgets(repo("nightwatch:\n  budgets:\n    merge: 30 # min\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 30 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 30 });
     expect(r.problems).toEqual([]);
   });
   it("CRLF line endings read the same as LF", () => {
     const r = readBudgets(repo("nightwatch:\r\n  budgets:\r\n    review: 90\r\n    merge: 25\r\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 90, merge: 25 });
+    expect(r.budgets).toEqual({ building: 180, review: 90, merge: 25 });
     expect(r.problems).toEqual([]);
   });
   it("a duplicate key: the last value wins and it is one problem", () => {
     const r = readBudgets(repo("nightwatch:\n  budgets:\n    merge: 30\n    merge: 40\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 40 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 40 });
     expect(r.problems).toHaveLength(1);
   });
   it("children may use any indent deeper than the budgets line", () => {
     const r = readBudgets(repo("nightwatch:\n  budgets:\n   merge: 5\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 5 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 5 });
     expect(r.problems).toEqual([]);
   });
   it("a budgets key nested under another key is not read", () => {
@@ -83,7 +83,7 @@ describe("readBudgets", () => {
   });
   it("a column-0 comment between nightwatch and budgets is skipped", () => {
     const r = readBudgets(repo("nightwatch:\n# note\n  budgets:\n    merge: 5\n"));
-    expect(r.budgets).toEqual({ building: 45, review: 60, merge: 5 });
+    expect(r.budgets).toEqual({ building: 180, review: 60, merge: 5 });
     expect(r.problems).toEqual([]);
   });
   it("a column-0 comment between budgets children is skipped", () => {

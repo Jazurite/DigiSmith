@@ -9,7 +9,9 @@ export interface Budgets { building: number; review: number; merge: number } // 
 export interface Verdict { state: State; cause: string; since: string } // since: ISO UTC; "" when healthy or ended
 
 export const SILENCE_MS = 30 * 60_000;
-export const DEFAULT_BUDGETS: Budgets = { building: 45, review: 60, merge: 20 };
+/** DGS-612 R4: a pane herdr shows as working, with no event for this long, is stalled. */
+export const WORKING_SILENCE_MS = 180 * 60_000;
+export const DEFAULT_BUDGETS: Budgets = { building: 180, review: 60, merge: 20 };
 /** DGS-589: herdr agent_status values that mean the permission prompt is no longer waiting (answered or denied). Anything else keeps the run blocked. */
 export const ANSWERED_STATUSES: readonly string[] = ["idle", "done", "working"];
 /** A prompt younger than this is never called answered: herdr may lag behind the Notification hook. */
@@ -65,7 +67,26 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
     if (!answered) return { state: "blocked", cause: "waiting-for-answer", since: events[lastBlocked].ts };
   }
 
-  if (now - lastTs >= SILENCE_MS) return { state: "lost", cause: "silent-30-min", since: last?.ts ?? run.created_at };
+  const present = pane === "present";
+  // herdr's own "unknown" status carries no information: it counts like a missing status (R6).
+  if (agentStatus === "unknown") agentStatus = null;
+  // R2b: herdr shows the pane blocked on a dialog the hooks do not see. No status timestamp exists, so the time since the last event stands in for the 60 s hold.
+  if (present && agentStatus === "blocked") {
+    if (now - lastTs >= PROMPT_GRACE_MS) return { state: "blocked", cause: "pane-blocked", since: last?.ts ?? run.created_at };
+    return { state: "healthy", cause: "", since: "" };
+  }
+  // R3: the pane is alive and herdr says it is not working (idle, done, other): it waits for someone. No silence alarm, no phase budget.
+  if (present && agentStatus !== null && agentStatus !== "working") {
+    if (answered) return { state: "healthy", cause: "prompt-answered", since: events[lastBlocked].ts };
+    return { state: "healthy", cause: "waiting", since: "" };
+  }
+  // R4 and R5: a working pane has no 30 min silence alarm; only 3 h of nothing is stalled.
+  if (present && agentStatus === "working") {
+    if (now - lastTs >= WORKING_SILENCE_MS) return { state: "stalled", cause: "silent-working-180-min", since: last?.ts ?? run.created_at };
+  } else if (now - lastTs >= SILENCE_MS) {
+    // R6: no herdr data (unknown pane, or no status): 30 min of silence is lost.
+    return { state: "lost", cause: "silent-30-min", since: last?.ts ?? run.created_at };
+  }
 
   const p = phaseOf(run, events);
   if (p && now - ms(p.since) > budgets[p.phase] * 60_000) {
