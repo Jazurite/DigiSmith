@@ -50,7 +50,7 @@ const newestBuilder = (obs: Observations) =>
 
 // an item passes only for the newest builder run, or for a run id obs.runs does not list ("-", the ticket key)
 const eligible = (s: TicketState, obs: Observations) => {
-  if (!obs.attention.ok) return [];
+  if (!obs.attention.ok || !obs.runs.ok) return [];
   const newest = newestBuilder(obs);
   const known = new Map(obs.runs.ok ? obs.runs.value.map((x) => [x.id, x]) : []);
   const passes = (run: string | undefined) => {

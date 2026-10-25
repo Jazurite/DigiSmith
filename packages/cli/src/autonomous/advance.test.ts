@@ -262,6 +262,9 @@ describe("retry", () => {
       expect(advanceTicket(s, base({ runs, attention: ok([item({ id: `${role}-1.lost.0`, run: `${role}-1` })]) }), J).kind).not.toBe("retry");
     }
   });
+  it("a failed runs read gives no retry for a lost item", () => {
+    expect(advanceTicket(s, base({ runs: bad(), attention: ok([item({ run: "reviewer-1" })]) }), J).kind).not.toBe("retry");
+  });
   it("a used retry key in any phase gives no second retry", () => {
     for (const st of ["open", "uncertain", "succeeded", "permanent"])
       expect(advanceTicket(s, base(), { "DGS-1:review:1:retry": st } as JournalResults).kind).not.toBe("retry");
