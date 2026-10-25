@@ -3,7 +3,7 @@
 Spec: `spec.md` in this folder. Facts: `.digismith/sessions/dgs-646/maestro-reads.md`.
 Work in the worktree `.worktrees/dgs-646`. Test first in every task.
 
-Setup (fresh worktree): `pnpm install`, then `pnpm --filter @digismith/clickup-client build`.
+Setup (fresh worktree): `pnpm --filter @digismith/clickup-client build`.
 Run tests: `pnpm vitest run packages/cli/src/clickup`.
 
 ### Task 1: Type the default and pin `buildFieldPutBody`
