@@ -488,6 +488,36 @@ describe("update-field default", () => {
     expect(process.exitCode).toBe(0);
   });
 
+  it.each([false, true])("--default naming an option removed in the same call exits 1, sends nothing (yes=%s)", async (yes) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", removeOption: ["Public API"], confirmRemove: ["Public API"], default: "Public API", yes });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toContain("cannot set the default to an option removed in the same call");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([false, true])("--default naming the old side of a rename exits 1, sends nothing (yes=%s)", async (yes) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", option: ["Public API=Open API"], default: "o2", yes });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toContain("cannot set the default to an option renamed in the same call; use the new name in a second call");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("--default equal to the current default with another change sends it unchanged and does not read back", async () => {
+    const client = fake(withDefault("Public API"));
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", name: "N", yes: true });
+    expect(client.updateField).toHaveBeenCalledTimes(1);
+    const body = client.updateField.mock.calls[0][1];
+    expect(body.default_value).toEqual({ value: "Public API" });
+    expect(body.name).toBe("N");
+    expect(client.getField).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(0);
+  });
+
   it("--yes without a default flag does not read back the default", async () => {
     const client = fake();
     vi.spyOn(console, "log").mockImplementation(() => {});

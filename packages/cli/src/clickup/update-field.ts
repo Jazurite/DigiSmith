@@ -84,6 +84,15 @@ export function createUpdateFieldCommand(
         const renames = resolveOptionRenames(field, optionArgs);
         const adds = resolveOptionAdds(field, addArgs, argv.color as string | undefined);
         const removes = resolveOptionRemoves(field, renames, removeArgs);
+        if (wanted) {
+          const hit = field.type_config.options?.find((o) => o.name === wanted!.value);
+          if (hit && removes.some((o) => o.id === hit.id)) {
+            throw new Error("cannot set the default to an option removed in the same call");
+          }
+          if (hit && renames.some((r) => r.option.id === hit.id)) {
+            throw new Error("cannot set the default to an option renamed in the same call; use the new name in a second call");
+          }
+        }
         const current = field.default_value ?? null;
         if (wanted !== undefined && (wanted?.value ?? null) === (current?.value ?? null)) {
           const otherChange = name !== undefined || renames.length > 0 || adds.length > 0 || removes.length > 0;
