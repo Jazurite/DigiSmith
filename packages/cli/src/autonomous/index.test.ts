@@ -388,7 +388,7 @@ describe("dg autonomous watch --repo", () => {
     } finally {
       if (old === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = old;
     }
-    expect(out()).toContain("scan_every_minutes");
+    expect(out()).toContain('scan_every_minutes: "4" is not a whole number');
   });
 });
 

@@ -19,11 +19,11 @@ export interface WatchDeps {
 export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number }
 
 const RETENTION_MS = 7 * 24 * 3600_000;
-const AUTO: AttentionKind[] = ["blocked", "stalled"];
-/** The kinds the pass opens; C1 to C3 close all of them. Items of act, release or config are never in this list. */
 // Own run key, so the scan interval item never shares a slot with bad-budget-config (run "-", kind failed).
 const SCAN_RUN = "scan-interval";
 const SCAN_CAUSE = "bad-scan-interval-config";
+const AUTO: AttentionKind[] = ["blocked", "stalled"];
+/** The kinds the pass opens; C1 to C3 close all of them. Items of act, release or config are never in this list. */
 const CLOSABLE: AttentionKind[] = ["blocked", "stalled", "lost"];
 
 /** Each run is read once; a run older than 7 days is skipped unless it still has an open item and has ended. A broken run dir gives one stderr line; an unreadable runs root throws. */
