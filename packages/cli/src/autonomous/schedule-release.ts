@@ -78,27 +78,26 @@ export async function runScheduleRelease(d: ScheduleDeps): Promise<ScheduleResul
         line("not-due");
         continue;
       }
-      const to = "to do";
-      if (d.dryRun) { line("would-move", { to }); continue; }
+      if (d.dryRun) { line("would-move", { to: "to do" }); continue; }
       let failure: string | null = null;
       try {
-        await d.tracker.setStatus(t.id, to);
+        await d.tracker.setStatus(t.id, "to do");
         const back = await d.tracker.getStatus(t.id);
-        if (back.toLowerCase() !== to) throw new Error(`status read back "${back}", expected "${to}"`);
+        if (back.toLowerCase() !== "to do") throw new Error(`status read back "${back}", expected "to do"`);
       } catch (e) {
         failure = errText(e);
       }
       if (failure === null) {
-        writeEvent("schedule-move", { ticket: key, to, mode: t.mode, scheduledAtUtc7: when });
+        writeEvent("schedule-move", { ticket: key, to: "to do", mode: t.mode, scheduledAtUtc7: when });
         if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
         moved++;
-        line("moved", { to });
+        line("moved", { to: "to do" });
       } else {
-        const text = SCHEDULE_TEXT.failed(to, failure);
+        const text = SCHEDULE_TEXT.failed("to do", failure);
         // The event and the comment are written once per distinct failure text.
-        if (notes[key] !== hash(text)) writeEvent("schedule-move-failed", { ticket: key, to, error: failure });
+        if (notes[key] !== hash(text)) writeEvent("schedule-move-failed", { ticket: key, to: "to do", error: failure });
         await tell(t, text);
-        line("failed", { to, error: failure });
+        line("failed", { to: "to do", error: failure });
       }
     }
   } finally {
