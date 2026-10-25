@@ -45,10 +45,12 @@ export function parseScanMinutes(text: string): ScanInterval {
   return found ?? { minutes: DEFAULT_SCAN_MINUTES, problem: null }
 }
 
-/** One small read per call. A read error is a fallback with a problem, never a throw. */
+/** One small read per call. A missing file is 30 with no problem; any other read error is a fallback with a problem, never a throw. */
 export function readScanInterval(file: string): ScanInterval {
   let text: string
-  try { text = readFileSync(file, 'utf-8') } catch {
+  try { text = readFileSync(file, 'utf-8') } catch (err) {
+    // no file is no key, as in the CLI; any other read error is a problem
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { minutes: DEFAULT_SCAN_MINUTES, problem: null }
     return { minutes: DEFAULT_SCAN_MINUTES, problem: `nightwatch.scan_every_minutes: cannot read ${file}; ${DEFAULT_SCAN_MINUTES} used` }
   }
   return parseScanMinutes(text)

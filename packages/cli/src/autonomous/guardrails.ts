@@ -47,7 +47,11 @@ export function readGuardrails(text: string): Guardrails {
     const kids: string[] = [];
     for (let j = k + 1; j < sig.length && indentOf(sig[j].l) > childIndent; j++) kids.push(sig[j].l);
     if (key === "scan_every_minutes") {
-      if (seen.has(key)) { out.scanProblems.push("nightwatch.scan_every_minutes is set more than once; 30 used"); out.scanEveryMinutes = DEFAULT_SCAN_EVERY_MINUTES; dupScan = true; continue; }
+      if (seen.has(key)) {
+        // the duplicate is the one reason reported, whatever the first value was (the scheduler's reader does the same)
+        if (!dupScan) out.scanProblems = [`nightwatch.scan_every_minutes: is set more than once; ${DEFAULT_SCAN_EVERY_MINUTES} used`];
+        out.scanEveryMinutes = DEFAULT_SCAN_EVERY_MINUTES; dupScan = true; continue;
+      }
       seen.add(key);
       if (dupScan) continue;
       if (kids.length > 0) { out.scanProblems.push(`nightwatch.scan_every_minutes: has indented lines under it; ${DEFAULT_SCAN_EVERY_MINUTES} used`); continue; }
