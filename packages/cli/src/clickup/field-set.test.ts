@@ -261,7 +261,7 @@ describe("findFieldMismatches", () => {
 
   it("reports Mode read as Autonomous when Manual was set", () => {
     const task = { custom_fields: [{ id: "fs", value: 0 }, { id: "fm", value: 0 }] };
-    expect(findFieldMismatches(task, want)).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "Autonomous (0)" }]);
+    expect(findFieldMismatches(task, want)).toEqual([{ id: "fm", field: "Mode", wanted: "Manual (1)", got: "Autonomous (0)" }]);
   });
 
   it("accepts a dropdown value given as the option id", () => {
@@ -271,8 +271,8 @@ describe("findFieldMismatches", () => {
 
   it("reports an empty value", () => {
     const task = { custom_fields: [{ id: "fs", value: 0 }] };
-    expect(findFieldMismatches(task, want)).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
-    expect(findFieldMismatches({}, [want[1]])).toEqual([{ field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
+    expect(findFieldMismatches(task, want)).toEqual([{ id: "fm", field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
+    expect(findFieldMismatches({}, [want[1]])).toEqual([{ id: "fm", field: "Mode", wanted: "Manual (1)", got: "(empty)" }]);
   });
 
   it("compares text, number and checkbox with ===", () => {
@@ -285,9 +285,9 @@ describe("findFieldMismatches", () => {
     expect(findFieldMismatches(good, resolved)).toEqual([]);
     const bad = { custom_fields: [{ id: "t1", value: "bye" }, { id: "n1", value: 4 }, { id: "c1", value: false }] };
     expect(findFieldMismatches(bad, resolved)).toEqual([
-      { field: "Notes", wanted: "hello", got: "bye" },
-      { field: "Points", wanted: "3", got: "4" },
-      { field: "Done", wanted: "true", got: "false" },
+      { id: "t1", field: "Notes", wanted: "hello", got: "bye" },
+      { id: "n1", field: "Points", wanted: "3", got: "4" },
+      { id: "c1", field: "Done", wanted: "true", got: "false" },
     ]);
   });
 
@@ -303,8 +303,8 @@ describe("findFieldMismatches", () => {
     ] as ResolvedField[];
     expect(findFieldMismatches({ custom_fields: [{ id: "n1", value: "3" }, { id: "n2", value: "2.5" }] }, resolved)).toEqual([]);
     expect(findFieldMismatches({ custom_fields: [{ id: "n1", value: "4" }] }, resolved)).toEqual([
-      { field: "Points", wanted: "3", got: "4" },
-      { field: "Cost", wanted: "2.5", got: "(empty)" },
+      { id: "n1", field: "Points", wanted: "3", got: "4" },
+      { id: "n2", field: "Cost", wanted: "2.5", got: "(empty)" },
     ]);
   });
 
@@ -314,7 +314,7 @@ describe("findFieldMismatches", () => {
     expect(findFieldMismatches({ custom_fields: [] }, off)).toEqual([]);
     expect(findFieldMismatches({ custom_fields: [{ id: "c1", value: "false" }] }, off)).toEqual([]);
     expect(findFieldMismatches({ custom_fields: [{ id: "c1", value: "true" }] }, on)).toEqual([]);
-    expect(findFieldMismatches({ custom_fields: [] }, on)).toEqual([{ field: "Done", wanted: "true", got: "false" }]);
+    expect(findFieldMismatches({ custom_fields: [] }, on)).toEqual([{ id: "c1", field: "Done", wanted: "true", got: "false" }]);
   });
 
   it("skips date and relationship fields", () => {

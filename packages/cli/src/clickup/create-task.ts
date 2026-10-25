@@ -41,7 +41,7 @@ export function createCreateTaskCommand(
           task = await client.get<typeof task>(`/task/${task.id}`);
           let bad = findFieldMismatches(task, resolved);
           if (bad.length > 0) {
-            await applyFields(client, task.id, resolved.filter((r) => bad.some((m) => m.field === r.field.name)));
+            await applyFields(client, task.id, resolved.filter((r) => bad.some((m) => m.id === r.field.id)));
             task = await client.get<typeof task>(`/task/${task.id}`);
             bad = findFieldMismatches(task, resolved);
           }

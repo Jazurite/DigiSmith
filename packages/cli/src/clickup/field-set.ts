@@ -174,6 +174,7 @@ export async function applyFields(client: ClickUpClient, taskId: string, resolve
 }
 
 export interface FieldMismatch {
+  id: string;
   field: string;
   wanted: string;
   got: string;
@@ -201,6 +202,7 @@ export function findFieldMismatches(task: { custom_fields?: { id: string; value?
         const got = empty ? undefined : options.find((o) => o.id === read || (typeof read === "number" && o.orderindex === read));
         if (wanted && got && wanted.id === got.id) break;
         out.push({
+          id: field.id,
           field: field.name,
           wanted: wanted ? optionLabel(wanted) : String(value),
           got: empty ? "(empty)" : got ? optionLabel(got) : String(read),
@@ -210,18 +212,18 @@ export function findFieldMismatches(task: { custom_fields?: { id: string; value?
       case "text":
       case "short_text": {
         const got = typeof read === "string" ? read.trim() : read;
-        if (got !== value) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
+        if (got !== value) out.push({ id: field.id, field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
         break;
       }
       // ClickUp may return a number as 3 or "3": compare as numbers so a correct value never fails.
       case "number":
       case "currency":
-        if (empty || Number(read) !== Number(value)) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
+        if (empty || Number(read) !== Number(value)) out.push({ id: field.id, field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
         break;
       // An unchecked box may come back empty; true/false may come back as strings.
       case "checkbox": {
         const got = empty ? false : typeof read === "string" ? read.toLowerCase() === "true" : read === true;
-        if (got !== value) out.push({ field: field.name, wanted: String(value), got: String(got) });
+        if (got !== value) out.push({ id: field.id, field: field.name, wanted: String(value), got: String(got) });
         break;
       }
       default:

@@ -197,6 +197,8 @@ describe("createCreateTaskCommand", () => {
         expect(text).toContain("Manual (1)");
         expect(text).toContain("Autonomous (0)");
         expect(text).toContain("new1");
+        expect(client.setCustomField).toHaveBeenCalledTimes(3);
+        expect(client.get).toHaveBeenCalledTimes(2);
         expect(logSpy).toHaveBeenCalledWith(JSON.stringify(task(0, 0), null, 2));
       });
 
