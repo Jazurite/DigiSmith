@@ -83,7 +83,12 @@ export class ClickUpLoTracker implements Tracker {
     const out: LoTask[] = [];
     for (const hit of all) {
       if (hit.status?.status?.toLowerCase() !== want) continue;
-      // Search leaves out attachments: read the full ticket, only for tickets in this status.
+      // Only an Autonomous ticket can be claimed: any other is built from the search hit, with no extra call.
+      if (dropdown(hit, "Mode", ["Autonomous", "Manual"] as const) !== "Autonomous") {
+        out.push(await this.toLoTask(hit, byId, true));
+        continue;
+      }
+      // Search leaves out attachments: read the full ticket, only for Autonomous tickets in this status.
       const full = await this.client.getTaskByRef(hit.id);
       out.push(await this.toLoTask({ ...hit, ...full, dependencies: full.dependencies ?? hit.dependencies,
         linked_tasks: full.linked_tasks ?? hit.linked_tasks }, byId));
@@ -140,7 +145,8 @@ export class ClickUpLoTracker implements Tracker {
     return out;
   }
 
-  private async toLoTask(t: ClickUpTask, known: Map<string, ClickUpTask>): Promise<LoTask> {
+  /** light: from the ticket alone, no API call (milestone null, blockers empty, attachments as given). */
+  private async toLoTask(t: ClickUpTask, known: Map<string, ClickUpTask>, light = false): Promise<LoTask> {
     return {
       id: t.id,
       key: t.custom_id ?? null,
@@ -154,8 +160,8 @@ export class ClickUpLoTracker implements Tracker {
       signOff: dropdown(t, "Sign-off", ["Auto", "Jack"] as const),
       mode: dropdown(t, "Mode", ["Autonomous", "Manual"] as const),
       scheduledAt: scheduledAt(t),
-      milestone: await this.milestone(t),
-      blockers: await this.blockers(t, known),
+      milestone: light ? null : await this.milestone(t),
+      blockers: light ? [] : await this.blockers(t, known),
     };
   }
 }

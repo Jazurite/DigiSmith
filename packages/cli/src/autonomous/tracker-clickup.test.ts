@@ -25,7 +25,7 @@ type T = Record<string, unknown> & { id: string };
 const task = (t: Partial<T> & { id: string }): T => ({
   custom_id: t.id.toUpperCase(), custom_item_id: 0, name: `Task ${t.id}`,
   text_content: "", description: "", status: { status: "to do", type: "custom" },
-  date_created: "1000", due_date: null, priority: null, custom_fields: [],
+  date_created: "1000", due_date: null, priority: null, custom_fields: [modeField(0)],
   dependencies: [], linked_tasks: [], ...t,
 });
 
@@ -89,7 +89,7 @@ const READY = task({
   id: "t1", custom_id: "DGS-600", name: "Ready one", text_content: "see .digismith/board/DGS-600—x",
   priority: { id: "2", priority: "high", color: "", orderindex: "2" },
   due_date: "1792372602438", date_created: "1792000000000",
-  custom_fields: [signOffField(1)],
+  custom_fields: [signOffField(1), modeField(0)],
   linked_tasks: [
     { task_id: "t1", link_id: "peer", date_created: "1", userid: "u", workspace_id: "w" },
     { task_id: "m-v11", link_id: "t1", date_created: "1", userid: "u", workspace_id: "w" },
@@ -154,7 +154,7 @@ describe("ClickUpLoTracker.listByStatus", () => {
       id: "t1", key: "DGS-600", name: "Ready one", typeId: 0,
       priority: 2, due: 1792372602438, created: 1792000000000,
       attachments: ["design.md", "plan.md"], text: "see .digismith/board/DGS-600—x",
-      signOff: "Jack", mode: null, scheduledAt: null, milestone: "V1.1 ClickUp Sync",
+      signOff: "Jack", mode: "Autonomous", scheduledAt: null, milestone: "V1.1 ClickUp Sync",
       blockers: [
         { key: "DGS-603", done: false },
         { key: "DGS-601", done: true },
@@ -167,8 +167,41 @@ describe("ClickUpLoTracker.listByStatus", () => {
       .toEqual(["getTaskByRef b-closed", "getTaskByRef b-done", "getTaskByRef b-open", "getTaskByRef t1"]);
   });
 
+  it("reads a Manual hit from the search alone: no getTaskByRef, no milestone or blocker read", async () => {
+    const manual = task({
+      id: "m1", custom_id: "DGS-610", name: "Manual one", custom_fields: [signOffField(0), modeField(1)],
+      priority: { id: "3", priority: "normal", color: "", orderindex: "3" },
+      linked_tasks: [{ task_id: "m1", link_id: "m-dawn" }],
+      dependencies: [{ task_id: "m1", depends_on: "b-open" }],
+    });
+    const { client, calls } = fakeClient({ search: [manual] });
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(out).toEqual([{
+      id: "m1", key: "DGS-610", name: "Manual one", typeId: 0, priority: 3, due: null, created: 1000,
+      attachments: [], text: "", signOff: "Auto", mode: "Manual", scheduledAt: null, milestone: null, blockers: [],
+    }]);
+    expect(calls).toEqual([`searchTeamTasks ${SPACE} to do`]);
+  });
+
+  it("a hit with no Mode is read from the search alone too", async () => {
+    const { client, calls } = fakeClient({ search: [task({ id: "n1", custom_fields: [] })] });
+    const [t] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(t.mode).toBeNull();
+    expect(calls.some((c) => c.startsWith("getTaskByRef") || c.startsWith("getAllListTasks"))).toBe(false);
+  });
+
+  it("an Autonomous hit is read in full, a Manual hit beside it is not", async () => {
+    const { client, calls } = fakeClient({
+      search: [task({ id: "a1", linked_tasks: [{ task_id: "a1", link_id: "m-dawn" }] }), task({ id: "m1", custom_fields: [modeField(1)] })],
+      full: { a1: { ...task({ id: "a1", linked_tasks: [{ task_id: "a1", link_id: "m-dawn" }] }), attachments: [{ id: "x", title: "plan.md", extension: "md" }] } },
+    });
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(out.map((t) => [t.id, t.mode, t.milestone, t.attachments])).toEqual([["a1", "Autonomous", "Dawn", ["plan.md"]], ["m1", "Manual", null, []]]);
+    expect(calls.filter((c) => c.startsWith("getTaskByRef"))).toEqual(["getTaskByRef a1"]);
+  });
+
   it("maps a missing sign-off, milestone, priority and due to null", async () => {
-    const bare = task({ id: "t3", custom_fields: [signOffField()], linked_tasks: [
+    const bare = task({ id: "t3", custom_fields: [signOffField(), modeField(0)], linked_tasks: [
       { task_id: "t3", link_id: "i-other" },
     ] });
     const { client } = fakeClient({ search: [bare] });

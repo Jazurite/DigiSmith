@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readAway, writeAway } from "./away.ts";
 import type { Exec } from "./conductor.ts";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
-import { TYPE_BUG } from "./ready.ts";
+import { REASON, TYPE_BUG } from "./ready.ts";
 import { runScan, type ScanDeps } from "./scan.ts";
 import { readJournal, resultsOf, journalPath } from "./journal.ts";
 import type { TickResult } from "./tick.ts";
@@ -16,6 +16,7 @@ import type { ScanGuard } from "./scan-guard.ts";
 
 const NIGHT = new Date("2026-10-20T17:00:00.000Z"); // 00:00 UTC+7
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
+const NOON = new Date("2026-10-21T05:00:00.000Z"); // 12:00 UTC+7
 const HERDR = join(homedir(), ".digismith-depot", "bin", "herdr-ws");
 
 let root: string;
@@ -58,17 +59,43 @@ beforeEach(() => {
 });
 afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-describe("runScan: the work rule", () => {
-  it("daytime and not away: off, no tracker call, no lock, one off event", async () => {
-    now = DAY;
-    tracker.add({ id: "t1" });
+describe("runScan: any hour", () => {
+  it("noon, away off: claims a to do Autonomous ticket and it reads claimed", async () => {
+    now = NOON;
+    writeAway(dir, { away: false, since: "", until: null, endedAt: NIGHT.toISOString() });
+    tracker.add({ id: "t1", key: "DGS-1" });
     const r = await runScan(mk());
-    expect(r.outcome).toBe("off");
-    expect(tracker.calls).toEqual([]);
-    expect(readLock(dir)).toBeNull();
-    expect(kinds()).toEqual(["off"]);
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1", candidates: 1 });
+    expect(tracker.tasks.get("t1")?.status).toBe("claimed");
+    expect(tracker.calls).toEqual(["hasStatus claimed", "listByStatus to do", "setStatus t1 claimed", "getStatus t1"]);
+    expect(readLock(dir)?.ticket).toBe("DGS-1");
+    expect(kinds()).toEqual(["claim", "scan"]);
+    expect(kinds()).not.toContain("off");
   });
-  it("daytime, away with no until: claims a ready ticket", async () => {
+  it("noon with no away file: claims", async () => {
+    now = NOON;
+    tracker.add({ id: "t1" });
+    expect((await runScan(mk())).outcome).toBe("claimed");
+  });
+  it("away on and away off give the same claim", async () => {
+    now = NOON;
+    const run = async (away: boolean) => {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(ordersDir, { recursive: true, force: true });
+      tracker = new FakeTracker();
+      execCalls = [];
+      writeAway(dir, { away, since: NOON.toISOString(), until: null, endedAt: away ? null : NOON.toISOString() });
+      tracker.add({ id: "t1", key: "DGS-1", priority: 2 });
+      tracker.add({ id: "t2", key: "DGS-2", priority: 1 });
+      const r = await runScan(mk());
+      return { r, calls: tracker.calls, status: [...tracker.tasks.values()].map((t) => t.status), orders: orders(), exec: execCalls.length };
+    };
+    const on = await run(true);
+    const off = await run(false);
+    expect(on.r).toMatchObject({ outcome: "claimed", claimed: "DGS-2" });
+    expect(off).toEqual(on);
+  });
+  it("daytime, away with no until: claims a to do ticket", async () => {
     now = DAY;
     writeAway(dir, { away: true, since: DAY.toISOString(), until: null, endedAt: null });
     tracker.add({ id: "t1" });
@@ -82,24 +109,23 @@ describe("runScan: the work rule", () => {
     tracker.add({ id: "t1" });
     expect((await runScan(mk())).outcome).toBe("claimed");
   });
-  it("daytime, away until in the past: runBack runs once and the scan is off", async () => {
+  it("daytime, away until in the past: runBack runs once and the scan still claims", async () => {
     now = DAY;
     writeAway(dir, { away: true, since: "2026-10-21T00:00:00.000Z", until: new Date(DAY.getTime() - 60_000).toISOString(), endedAt: null });
     tracker.add({ id: "t1" });
     const r = await runScan(mk());
-    expect(r.outcome).toBe("off");
+    expect(r.outcome).toBe("claimed");
     expect(readAway(dir)?.away).toBe(false);
-    expect(kinds()).toEqual(["away-expired", "run-now", "off"]);
+    expect(kinds()).toEqual(["away-expired", "run-now", "claim", "scan"]);
     expect(fetchCalls).toEqual(["http://fake/api/v1/jobs/autonomous-report/run"]);
-    expect(tracker.calls).toEqual([]);
   });
   it("a failing runBack never stops the scan", async () => {
     now = DAY;
     writeAway(dir, { away: true, since: "", until: new Date(DAY.getTime() - 60_000).toISOString(), endedAt: null });
     const r = await runScan(mk({ nexus: { baseUrl: "http://fake", tokenFile: join(root, "token"), fetch: (async () => { throw new Error("x"); }) as unknown as typeof fetch } }));
-    expect(r.outcome).toBe("off");
+    expect(r.outcome).toBe("none");
     expect(readAway(dir)?.away).toBe(false);
-    expect(events()).toMatchObject([{ kind: "away-expired" }, { kind: "run-now", job: "autonomous-report", ok: false }, { kind: "off" }]);
+    expect(events()).toMatchObject([{ kind: "away-expired" }, { kind: "run-now", job: "autonomous-report", ok: false }, { kind: "scan" }]);
   });
   it("a run-now answering 500 at night: the scan goes on and claims", async () => {
     writeAway(dir, { away: true, since: "", until: new Date(NIGHT.getTime() - 60_000).toISOString(), endedAt: null });
@@ -151,7 +177,7 @@ describe("runScan: the tick and the journal", () => {
     const r = await runScan(mk());
     expect(r.outcome).toBe("claim-failed");
     expect(readLock(dir)).toBeNull();
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
   });
   it("the lock is held at claim time: the claim key settles retryable busy, no second claim", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
@@ -165,13 +191,13 @@ describe("runScan: the tick and the journal", () => {
     expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
     expect(execCalls).toEqual([]);
   });
-  it("no lock: off as before, the tick is not called", async () => {
+  it("no lock in the daytime: the tick is not called and the scan goes on", async () => {
     now = DAY;
     let calls = 0;
     const r = await runScan(mk({ tick: async () => { calls++; return { outcome: "no-lock", notes: [] }; } }));
-    expect(r.outcome).toBe("off");
+    expect(r.outcome).toBe("none");
     expect(calls).toBe(0);
-    expect(tracker.calls).toEqual([]);
+    expect(tracker.calls).toEqual(["hasStatus claimed", "listByStatus to do"]);
   });
   it("a dry run never calls the tick", async () => {
     held();
@@ -201,40 +227,63 @@ describe("runScan: the tick and the journal", () => {
 });
 
 describe("runScan: walk and claim", () => {
-  it("empty ready: none, one scan event, no tracker writes", async () => {
+  it("empty to do: none, one scan event, no tracker writes", async () => {
     const r = await runScan(mk());
     expect(r).toMatchObject({ outcome: "none", candidates: 0, skipped: [] });
     expect(kinds()).toEqual(["scan"]);
     expect(tracker.writeCalls()).toEqual([]);
   });
-  it("never claims a to do ticket: to do is attended", async () => {
-    tracker.add({ id: "t1", status: "to do", priority: 1 });
-    tracker.add({ id: "t2", status: "ready", priority: 4 });
+  it("only to do is scanned: a ticket in another status is never claimed", async () => {
+    tracker.add({ id: "t1", status: "ready", priority: 1 });
+    tracker.add({ id: "t3", status: "in progress", priority: 1 });
+    tracker.add({ id: "t2", status: "to do", priority: 4 });
     const r = await runScan(mk());
     expect(r.claimed).toBe("T2");
-    expect(tracker.tasks.get("t1")?.status).toBe("to do");
-    expect(tracker.writeCalls().filter((c) => c.includes("t1"))).toEqual([]);
-  });
-  it("a ready ticket with Mode Manual is skipped with one comment, not again on the next scan", async () => {
-    tracker.add({ id: "t1", mode: "Manual" });
-    await runScan(mk());
-    await runScan(mk());
-    expect(tracker.comments.map((c) => c.text)).toEqual([
-      "Autonomous scan skipped this ticket (2026-10-21 00:00:00 UTC+7): Mode is not Autonomous (Manual or missing). It stays in ready. Fix and it is picked up on a later scan.",
-    ]);
     expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t3")?.status).toBe("in progress");
+    expect(tracker.writeCalls().filter((c) => c.includes("t1") || c.includes("t3"))).toEqual([]);
   });
-  it("a ready ticket with no Mode is skipped the same way", async () => {
+  it("a to do ticket with Mode Manual is skipped (mode): no comment, no event, not a candidate", async () => {
+    tracker.add({ id: "t1", mode: "Manual" });
+    const r = await runScan(mk());
+    await runScan(mk());
+    expect(r).toMatchObject({ outcome: "none", candidates: 0, skipped: [{ key: "T1", reason: "mode" }] });
+    expect(tracker.comments).toEqual([]);
+    expect(kinds()).toEqual(["scan", "scan"]);
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(tracker.writeCalls()).toEqual([]);
+  });
+  it("a to do ticket with no Mode is skipped the same way", async () => {
     tracker.add({ id: "t1", mode: null });
     const r = await runScan(mk());
-    expect(r.outcome).toBe("none");
-    expect(r.skipped).toEqual([{ key: "T1", reason: "Mode is not Autonomous (Manual or missing)" }]);
+    expect(r).toMatchObject({ outcome: "none", candidates: 0 });
+    expect(r.skipped).toEqual([{ key: "T1", reason: "mode" }]);
+    expect(tracker.comments).toEqual([]);
   });
-  it("a ready ticket: in progress, lock, order file, one herdr-ws call", async () => {
+  it("a Manual ticket ranked first does not stop the Autonomous one; only Autonomous counts as a candidate", async () => {
+    tracker.add({ id: "t1", key: "DGS-1", priority: 1, mode: "Manual" });
+    tracker.add({ id: "t2", key: "DGS-2", priority: 4 });
+    const r = await runScan(mk());
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-2", candidates: 1, skipped: [{ key: "DGS-1", reason: "mode" }] });
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(kinds()).toEqual(["claim", "scan"]);
+  });
+  it("two ready tickets: only one is claimed", async () => {
+    now = NOON;
+    tracker.add({ id: "t1", key: "DGS-1" });
+    tracker.add({ id: "t2", key: "DGS-2" });
+    const r = await runScan(mk());
+    expect(r.outcome).toBe("claimed");
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toHaveLength(1);
+    expect([...tracker.tasks.values()].map((t) => t.status).sort()).toEqual(["claimed", "to do"]);
+    expect(orders()).toHaveLength(1);
+    expect(execCalls).toHaveLength(1);
+  });
+  it("a to do ticket: claimed, lock, order file, one herdr-ws call", async () => {
     tracker.add({ id: "t1", key: "DGS-1", name: "One" });
     const r = await runScan(mk());
     expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1", candidates: 1 });
-    expect(tracker.tasks.get("t1")?.status).toBe("in progress");
+    expect(tracker.tasks.get("t1")?.status).toBe("claimed");
     const lock = readLock(dir);
     expect(lock).toMatchObject({ ticket: "DGS-1", taskId: "t1", scanId: "scan-1", claimedAt: NIGHT.toISOString() });
     const file = join(ordersDir, "order-ao-2026-10-21-0000-DGS-1.md");
@@ -245,12 +294,12 @@ describe("runScan: walk and claim", () => {
     expect(kinds()).toEqual(["claim", "scan"]);
     expect(events()[1]).toMatchObject({ candidates: 1, skipped: 0, claimed: "DGS-1" });
   });
-  it("ranking: the higher priority is claimed, the other stays ready", async () => {
+  it("ranking: the higher priority is claimed, the other stays to do", async () => {
     tracker.add({ id: "t1", key: "DGS-1", priority: 3 });
     tracker.add({ id: "t2", key: "DGS-2", priority: 1 });
     const r = await runScan(mk());
     expect(r.claimed).toBe("DGS-2");
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
   });
   it("first fails Definition of Ready, second ready: one comment on the first, second claimed", async () => {
     tracker.add({ id: "t1", key: "DGS-1", priority: 1, milestone: null });
@@ -260,7 +309,7 @@ describe("runScan: walk and claim", () => {
     expect(r.skipped).toEqual([{ key: "DGS-1", reason: "no milestone" }]);
     expect(tracker.comments).toHaveLength(1);
     expect(tracker.comments[0].ref).toBe("t1");
-    expect(tracker.comments[0].text).toBe("Autonomous scan skipped this ticket (2026-10-21 00:00:00 UTC+7): no milestone. It stays in ready. Fix and it is picked up on a later scan.");
+    expect(tracker.comments[0].text).toBe("Autonomous scan skipped this ticket (2026-10-21 00:00:00 UTC+7): no milestone. It stays in to do. Fix and it is picked up on a later scan.");
     expect(kinds()).toEqual(["skip", "claim", "scan"]);
   });
   it("a scan while a lock exists: busy, nothing changes", async () => {
@@ -269,7 +318,7 @@ describe("runScan: walk and claim", () => {
     const r = await runScan(mk());
     expect(r.outcome).toBe("busy");
     expect(tracker.calls).toEqual([]);
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
     expect(events()).toMatchObject([{ kind: "busy", ticket: "DGS-9" }]);
     expect(orders()).toEqual([]);
   });
@@ -284,24 +333,24 @@ describe("runScan: walk and claim", () => {
     expect(tracker.comments[1].text).toContain("no Sign-off mark (Auto or Jack); no milestone");
     expect(kinds().filter((k) => k === "skip")).toHaveLength(3);
   });
-  it("readBackWrong: lock gone, back to ready, claim-failed", async () => {
+  it("readBackWrong: lock gone, back to to do, claim-failed", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
     tracker.readBackWrong = true;
     const r = await runScan(mk());
     expect(r.outcome).toBe("claim-failed");
     expect(readLock(dir)).toBeNull();
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
-    expect(tracker.calls).toContain("setStatus t1 ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(tracker.calls).toEqual(["hasStatus claimed", "listByStatus to do", "setStatus t1 claimed", "getStatus t1", "setStatus t1 to do"]);
     expect(kinds()).toEqual(["claim-failed", "scan"]);
     expect(events()[0]).toMatchObject({ ticket: "DGS-1" });
   });
-  it("exec rejecting: lock gone, back to ready, claim-failed", async () => {
+  it("exec rejecting: lock gone, back to to do, claim-failed", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
     execImpl = async () => { throw new Error("herdr down"); };
     const r = await runScan(mk());
     expect(r.outcome).toBe("claim-failed");
     expect(readLock(dir)).toBeNull();
-    expect(tracker.tasks.get("t1")?.status).toBe("ready");
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
     expect(events()[0]).toMatchObject({ kind: "claim-failed", ticket: "DGS-1", error: "herdr down" });
     expect(orders()).toEqual([]);
     execImpl = async () => ({ code: 0, stderr: "" });
@@ -324,7 +373,7 @@ describe("runScan: walk and claim", () => {
     expect(r.outcome).toBe("claim-failed");
     expect(readLock(dir)).toBeNull();
     expect(execCalls).toEqual([]);
-    expect(tracker.calls).toContain("setStatus t1 ready");
+    expect(tracker.calls).toContain("setStatus t1 to do");
     expect(events()).toMatchObject([{ kind: "claim-failed", ticket: "DGS-1", error: "setStatus failed" }, { kind: "scan" }]);
   });
   it("Epic, Initiative, Spike: skipped with reason type, no comment", async () => {
@@ -340,14 +389,33 @@ describe("runScan: walk and claim", () => {
     expect(tracker.comments).toEqual([]);
   });
   it("hasStatus false: no-starter-status, one DGS-548 comment across two scans", async () => {
-    tracker.statuses.delete("ready");
+    tracker.statuses.delete("claimed");
     tracker.add({ id: "t1" });
     expect((await runScan(mk())).outcome).toBe("no-starter-status");
     expect((await runScan(mk())).outcome).toBe("no-starter-status");
     expect(tracker.comments.map((c) => c.ref)).toEqual(["DGS-548"]);
-    expect(tracker.comments[0].text).toContain('the status "ready" is missing');
-    expect(tracker.calls).not.toContain("listByStatus ready");
+    expect(tracker.comments[0].text).toContain('the status "claimed" is missing');
+    expect(tracker.calls).not.toContain("listByStatus to do");
+    expect(tracker.calls.filter((c) => c.startsWith("setStatus"))).toEqual([]);
+    expect(readLock(dir)).toBeNull();
     expect(kinds().filter((k) => k === "no-starter-status")).toHaveLength(2);
+  });
+  it("a missing claimed status opens the attention item once, and the next clean scan closes it", async () => {
+    tracker.statuses.delete("claimed");
+    tracker.add({ id: "t1" });
+    await runScan(mk());
+    await runScan(mk());
+    expect(readOpen(dir).map((i) => ({ ticket: i.ticket, run: i.run, kind: i.kind, cause: i.cause })))
+      .toEqual([{ ticket: null, run: "starter-status", kind: "failed", cause: "claimed-status-missing" }]);
+    tracker.statuses.add("claimed");
+    expect((await runScan(mk())).outcome).toBe("claimed");
+    expect(readOpen(dir)).toEqual([]);
+  });
+  it("a missing claimed status in a dry run writes no attention item", async () => {
+    tracker.statuses.delete("claimed");
+    const r = await runScan(mk({ dryRun: true }));
+    expect(r.outcome).toBe("no-starter-status");
+    expect(existsSync(dir)).toBe(false);
   });
   it("two scans at once: one claimed, one busy, one order file", async () => {
     tracker.add({ id: "t1", key: "DGS-1" });
@@ -362,10 +430,12 @@ describe("runScan: walk and claim", () => {
     tracker.add({ id: "t1", key: "DGS-1", priority: 1, milestone: null });
     tracker.add({ id: "t2", key: "DGS-2", priority: 2 });
     tracker.add({ id: "e", key: "DGS-E", typeId: 1 });
+    tracker.add({ id: "m", key: "DGS-M", mode: "Manual" });
     const r = await runScan(mk({ dryRun: true }));
     expect(r.outcome).toBe("none");
-    expect(r.verdicts).toEqual([{ key: "DGS-1", reasons: ["no milestone"] }, { key: "DGS-2", reasons: [] }]);
-    expect(r.skipped).toEqual([{ key: "DGS-E", reason: "type" }]);
+    expect(r.verdicts).toEqual([{ key: "DGS-M", reasons: [REASON.mode] }, { key: "DGS-1", reasons: ["no milestone"] }, { key: "DGS-2", reasons: [] }]);
+    expect(r.skipped).toEqual([{ key: "DGS-E", reason: "type" }, { key: "DGS-M", reason: "mode" }]);
+    expect(r.candidates).toBe(2);
     expect(tracker.writeCalls()).toEqual([]);
     expect(existsSync(dir)).toBe(false);
     expect(orders()).toEqual([]);
@@ -408,10 +478,21 @@ describe("runScan: the breaker", () => {
     await runScan(mk());
     expect(readOpen(dir)).toEqual([]);
   });
-  it("daytime and not away: off wins over the breaker", async () => {
+  it("noon, not away: an open breaker still stops it", async () => {
     await openBreaker();
-    now = DAY;
-    expect((await runScan(mk())).outcome).toBe("off");
+    now = NOON;
+    tracker.add({ id: "t1" });
+    expect((await runScan(mk())).outcome).toBe("breaker");
+    expect(tracker.calls).toEqual([]);
+    expect(readLock(dir)).toBeNull();
+  });
+  it("noon, not away: a held lock still returns busy", async () => {
+    now = NOON;
+    tracker.add({ id: "t1" });
+    acquireLock(dir, { ticket: "DGS-9", taskId: "t9", claimedAt: "", claimedAtUtc7: "", order: "", scanId: "x" });
+    expect((await runScan(mk())).outcome).toBe("busy");
+    expect(tracker.calls).toEqual([]);
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
   });
   it("an expired away window does not close the breaker: next scan still breaker, claims nothing", async () => {
     await openBreaker();

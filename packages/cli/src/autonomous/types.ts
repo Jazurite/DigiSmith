@@ -13,7 +13,13 @@ export interface LoTask {
 }
 export interface Tracker {
   hasStatus(name: string): Promise<boolean>;
-  listByStatus(name: string): Promise<LoTask[]>;   // status equal to name (any case), whole space, any type
+  /**
+   * Tickets whose status equals name (any case), whole space, any type.
+   * Only a ticket with Mode Autonomous is read in full. Any other ticket is a light read from the
+   * search alone: attachments as the search gives them (often none), milestone null, blockers empty.
+   * Do not judge Definition of Ready on a light ticket; its mode, scheduledAt, sign-off and key are exact.
+   */
+  listByStatus(name: string): Promise<LoTask[]>;
   setStatus(taskId: string, status: string): Promise<void>;
   getStatus(taskId: string): Promise<string>;
   comment(ref: string, text: string): Promise<void>;   // ref = task id or key

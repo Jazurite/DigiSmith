@@ -142,29 +142,37 @@ describe("dg autonomous status", () => {
 
 describe("dg autonomous scan", () => {
   it("--dry-run prints the verdict rows at any hour and writes nothing", async () => {
-    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
-    tracker.add({ id: "t2", status: "ready", key: "DGS-2", attachments: [] });
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    tracker.add({ id: "t2", status: "to do", key: "DGS-2", attachments: [] });
+    tracker.add({ id: "t3", status: "to do", key: "DGS-3", mode: "Manual" });
     await parse(["autonomous", "scan", "--dry-run", "--repo", "/repo"]);
     expect(process.exitCode ?? 0).toBe(0);
     expect(out()).toMatch(/DGS-1\s+ready/);
     expect(out()).toMatch(/DGS-2\s+\S/);
     expect(out()).not.toMatch(/DGS-2\s+ready/);
+    expect(out()).toMatch(/DGS-3\s+Mode is not Autonomous/);
+    expect(out()).toContain("skipped DGS-3: mode");
     expect(tracker.writeCalls()).toEqual([]);
     expect(existsSync(dir)).toBe(false);
     expect(existsSync(ordersDir)).toBe(false);
     expect(execCalls).toEqual([]);
   });
-  it("in the day and not away prints the off outcome and exits 0", async () => {
+  it("in the day and not away claims a to do ticket and exits 0", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
     await parse(["autonomous", "scan", "--repo", "/repo"]);
     expect(process.exitCode ?? 0).toBe(0);
-    expect(out()).toMatch(/scan: off/);
+    expect(out()).toMatch(/scan: claimed DGS-1/);
+    expect(tracker.tasks.get("t1")?.status).toBe("claimed");
   });
-  it("in the day and not away makes no tracker call and never builds the tracker", async () => {
+  it("an open breaker makes no tracker call and never builds the tracker", async () => {
+    const { recordRelease } = await import("./breaker.ts");
+    recordRelease(dir, { ticket: "DGS-1", result: "failed" }, DAY);
+    recordRelease(dir, { ticket: "DGS-2", result: "failed" }, DAY);
     let built = 0;
     const lazy = (): AutonomousDeps => ({ ...deps(), tracker: () => { built++; throw new Error("createClient called"); } });
     await yargs(["autonomous", "scan", "--repo", "/repo"]).exitProcess(false).command(createAutonomousCommand(lazy)).strict().parseAsync();
     expect(process.exitCode ?? 0).toBe(0);
-    expect(out()).toMatch(/scan: off/);
+    expect(out()).toMatch(/scan: breaker/);
     expect(built).toBe(0);
   });
   it("an unexpected throw exits 1", async () => {
@@ -174,9 +182,7 @@ describe("dg autonomous scan", () => {
     expect(errLog.mock.calls.flat().join("\n")).toMatch(/network down/);
   });
   it("a git that cannot read main stops the scan: guardrail-config, no claim", async () => {
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
-    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
     const broken = (): AutonomousDeps => ({ ...deps(), git: () => { throw new Error("no repo"); } });
     await yargs(["autonomous", "scan", "--repo", "/repo"]).exitProcess(false).command(createAutonomousCommand(broken)).strict().parseAsync();
     expect(out()).toMatch(/scan: guardrail-config/);
@@ -184,9 +190,7 @@ describe("dg autonomous scan", () => {
   });
   it("--orders overrides the orders dir", async () => {
     const other = join(root, "other-orders");
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "away.json"), JSON.stringify({ away: true, since: DAY.toISOString(), until: null, endedAt: null }));
-    tracker.add({ id: "t1", status: "ready", key: "DGS-1" });
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
     await parse(["autonomous", "scan", "--repo", "/repo", "--orders", other]);
     expect(out()).toMatch(/scan: claimed DGS-1/);
     expect(readdirSync(other)).toHaveLength(1);

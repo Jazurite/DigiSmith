@@ -2,15 +2,15 @@ import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { appendAttention } from "./attention-write.ts";
 import { appendResolved, readOpen } from "./attention.ts";
-import { awayExpired, isAway, readAway } from "./away.ts";
+import { awayExpired, readAway } from "./away.ts";
 import { readBreaker } from "./breaker.ts";
-import { fmtUtc7, inNightWindow, stampOf } from "./clock.ts";
+import { fmtUtc7, stampOf } from "./clock.ts";
 import { conductorCheck, promptConductor, type Exec } from "./conductor.ts";
 import type { NexusDeps } from "./nexus.ts";
 import { orderPath, renderOrder } from "./order.ts";
 import { rankTasks } from "./rank.ts";
 import type { ScanGuard } from "./scan-guard.ts";
-import { checkReady, TYPE_BUG, TYPE_TASK } from "./ready.ts";
+import { checkReady, REASON, TYPE_BUG, TYPE_TASK } from "./ready.ts";
 import { planIfFree, settle } from "./journal.ts";
 import { acquireLock, appendEvent, clearLock, readLock, readNotes, writeNotes } from "./state.ts";
 import { runBack } from "./switch.ts";
@@ -27,14 +27,20 @@ export interface ScanDeps {
   tick?: () => Promise<TickResult>;
 }
 export interface ScanResult {
-  outcome: "off" | "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
+  outcome: "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
   claimed?: string;            // ticket key
   candidates: number;
   skipped: { key: string; reason: string }[];
   verdicts?: { key: string; reasons: string[] }[];   // dry run only
 }
 
+/** The status a claim writes; the scan stops when the space does not have it. */
+const STARTER = "claimed";
+/** Candidates are read from this status (with Mode Autonomous); a failed claim puts the ticket back here. */
+const INTAKE = "to do";
 const NO_STARTER = "__no-starter-status";
+const STARTER_RUN = "starter-status";
+const STARTER_CAUSE = "claimed-status-missing";
 const hash = (s: string): string => createHash("sha1").update(s).digest("hex");
 const keyOf = (t: LoTask): string => t.key ?? t.id;
 const errText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -65,9 +71,9 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
   }
   let wroteOrder = false;
   try {
-    await d.tracker.setStatus(t.id, "in progress");
+    await d.tracker.setStatus(t.id, STARTER);
     const back = await d.tracker.getStatus(t.id);
-    if (back !== "in progress") throw new Error(`status read back "${back}", expected "in progress"`);
+    if (back !== STARTER) throw new Error(`status read back "${back}", expected "${STARTER}"`);
     mkdirSync(d.ordersDir, { recursive: true });
     writeFileSync(order, renderOrder({
       key, name: t.name, taskId: t.id, signOff: t.signOff ?? "Jack", claimedAtUtc7, stamp: stampOf(now), specPlan: specPlanText(t),
@@ -79,7 +85,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     if (wroteOrder) rmSync(order, { force: true });
     // Each cleanup step is independent: one failing never skips the others.
     try { clearLock(d.dir); } catch { /* best effort */ }
-    try { await d.tracker.setStatus(t.id, "ready"); } catch { /* best effort */ }
+    try { await d.tracker.setStatus(t.id, INTAKE); } catch { /* best effort */ }
     try { close("permanent", errText(e)); } catch { /* best effort */ }
     appendEvent(d.dir, now, "claim-failed", { ticket: key, error: errText(e) });
     return "claim-failed";
@@ -111,11 +117,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     appendEvent(d.dir, now, "busy", { ticket: readLock(d.dir)?.ticket ?? "?", action, ...(error === undefined ? {} : { error }) });
     return { outcome: "busy", candidates: 0, skipped };
   }
-  // 1. The work rule: nothing else runs outside it.
-  if (!d.dryRun && !(inNightWindow(now) || isAway(readAway(d.dir), now))) {
-    appendEvent(d.dir, now, "off");
-    return { outcome: "off", candidates: 0, skipped };
-  }
+  // 1. The scan runs at any hour; away only marks the time as unattended.
   // 1b. An open breaker (two failed releases in a row, or a damaged breaker.json) stops the scan before any claim.
   if (!d.dryRun) {
     const b = readBreaker(d.dir);
@@ -173,13 +175,14 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   };
   const verdicts: { key: string; reasons: string[] }[] = [];
 
-  // 3. The starter status.
-  if (!(await d.tracker.hasStatus("ready"))) {
+  // 3. The starter status: a claim writes it. Missing: an attention item, no claim; found: the item closes.
+  if (!(await d.tracker.hasStatus(STARTER))) {
     if (!d.dryRun) {
       appendEvent(d.dir, now, "no-starter-status");
+      try { appendAttention(d.dir, now, { ticket: null, run: STARTER_RUN, kind: "failed", cause: STARTER_CAUSE }); } catch { /* the scan still stops */ }
       if (notes[NO_STARTER] === undefined) {
         try {
-          await d.tracker.comment("DGS-548", `Autonomous scan (${fmtUtc7(now)} UTC+7): the status "ready" is missing, so no ticket can be picked up. Add it back to the space's status set.`);
+          await d.tracker.comment("DGS-548", `Autonomous scan (${fmtUtc7(now)} UTC+7): the status "${STARTER}" is missing, so no ticket can be claimed. Add it back to the space's status set.`);
           notes[NO_STARTER] = now.toISOString();
           notesChanged = true;
         } catch { /* retried on the next scan */ }
@@ -187,13 +190,20 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     }
     return finish({ outcome: "no-starter-status", candidates: 0, skipped });
   }
+  if (!d.dryRun) {
+    try {
+      for (const it of readOpen(d.dir)) if (it.run === STARTER_RUN && it.cause === STARTER_CAUSE) appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "claimed status found");
+    } catch { /* the item stays open until a later scan */ }
+  }
 
-  // 4. Only Task and Bug are candidates.
-  const all = await d.tracker.listByStatus("ready");
+  // 4. Only Task and Bug with Mode Autonomous are candidates. A Manual to do is normal: no comment, no event.
+  const all = await d.tracker.listByStatus(INTAKE);
   const candidates: LoTask[] = [];
+  const notAutonomous: string[] = [];
   for (const t of all) {
-    if (t.typeId === TYPE_TASK || t.typeId === TYPE_BUG) candidates.push(t);
-    else skipped.push({ key: keyOf(t), reason: "type" });
+    if (t.typeId !== TYPE_TASK && t.typeId !== TYPE_BUG) skipped.push({ key: keyOf(t), reason: "type" });
+    else if (t.mode !== "Autonomous") { skipped.push({ key: keyOf(t), reason: "mode" }); notAutonomous.push(keyOf(t)); }
+    else candidates.push(t);
   }
 
   if (d.guard && d.dryRun) {
@@ -204,6 +214,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   if (d.dryRun) {
     const problem = conductorCheck(d.conductorsJson);
     if (problem !== null) verdicts.push({ key: "-", reasons: [`conductor-config: ${problem.text}`] });
+    for (const key of notAutonomous) verdicts.push({ key, reasons: [REASON.mode] });
   }
 
   // 5. Walk in rank order.
@@ -229,7 +240,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
       const h = hash(reasons.join("|"));
       if (notes[key] !== h) {
         try {
-          await d.tracker.comment(t.id, `Autonomous scan skipped this ticket (${fmtUtc7(now)} UTC+7): ${reason}. It stays in ready. Fix and it is picked up on a later scan.`);
+          await d.tracker.comment(t.id, `Autonomous scan skipped this ticket (${fmtUtc7(now)} UTC+7): ${reason}. It stays in ${INTAKE}. Fix and it is picked up on a later scan.`);
           notes[key] = h;
           notesChanged = true;
         } catch { /* retried on the next scan */ }
