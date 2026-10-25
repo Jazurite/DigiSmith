@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentSlot, formatUtc7, inWindow, nextRunAt, slotsOfNight, UTC7_OFFSET_MS } from './clock.ts'
+import { currentSlot, formatUtc7, inWindow, nextRunAt, slotKeyMs, slotsOfNight, UTC7_OFFSET_MS } from './clock.ts'
 import type { JobSchedule } from './types.ts'
 
 const utc7 = (iso: string): number => Date.parse(`${iso}+07:00`)
@@ -110,5 +110,19 @@ describe('nextRunAt', () => {
   it('crosses a month change', () => {
     expect(nextRunAt(utc7('2026-10-31T23:30:00'), hourly)).toBe(utc7('2026-11-01T00:00:00'))
     expect(nextRunAt(utc7('2026-11-01T05:30:00'), hourly)).toBe(utc7('2026-11-01T23:00:00'))
+  })
+})
+
+describe('slotKeyMs', () => {
+  it('is the same instant on any grid', () => {
+    const at = (s: string): number => Date.parse(s.replace(' ', 'T') + '+07:00')
+    for (const every of [5, 15, 30, 45]) {
+      expect(slotKeyMs('2026-10-19@10:20', { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: every })).toBe(at('2026-10-19 10:20:00'))
+    }
+  })
+  it('a key after midnight in a window that crosses midnight belongs to the next day', () => {
+    const s = { atUtc7: '23:00', windowEndUtc7: '06:00', everyMinutes: 60 }
+    expect(slotKeyMs('2026-10-19@23:00', s)).toBe(Date.parse('2026-10-19T23:00:00+07:00'))
+    expect(slotKeyMs('2026-10-19@02:00', s)).toBe(Date.parse('2026-10-20T02:00:00+07:00'))
   })
 })

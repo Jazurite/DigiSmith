@@ -387,6 +387,32 @@ describe('scheduleOf', () => {
     expect(runner.calls.length).toBe(before + 1)
     expect((await engine.getRuns('dyn', 1))[0]).toMatchObject({ trigger: 'schedule', slot: '2026-10-19@10:30' })
   })
+  it.each([[30, 5, '10:05'], [30, 15, '10:15'], [5, 30, '10:30']])('a change %i -> %i minutes writes exactly the expected run records, no skipped burst', async (from, to, nextSlot) => {
+    let every = from
+    const dyn = job('dyn', { schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: from }, catchUp: 'skip', scheduleOf: () => ({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: every }) })
+    const { engine } = make([dyn], fakeRunner('ok'))
+    await tickAt(engine, '2026-10-19 10:00:05')
+    await engine.whenIdle()
+    const count = async () => (await engine.getRuns('dyn', 2000)).length
+    const base = await count()
+    expect((await engine.getRuns('dyn', 1))[0]).toMatchObject({ status: 'ok', slot: '2026-10-19@10:00' })
+    every = to
+    for (const when of ['10:00:35', '10:01:05', '10:02:35']) { await tickAt(engine, `2026-10-19 ${when}`); await engine.whenIdle() }
+    expect(await count()).toBe(base)
+    await tickAt(engine, `2026-10-19 ${nextSlot}:05`)
+    await engine.whenIdle()
+    const runs = await engine.getRuns('dyn', 2000)
+    expect(runs.length).toBe(base + 1)
+    expect(runs[0]).toMatchObject({ status: 'ok', trigger: 'schedule', slot: `2026-10-19@${nextSlot}` })
+    expect(runs.slice(0, 2).filter((r) => r.status === 'skipped')).toEqual([])
+  })
+  it('a failing scheduleOf is reported and the static schedule is used', async () => {
+    const bad = job('bad', { schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 60 }, catchUp: 'skip', scheduleOf: () => { throw new Error('boom') } })
+    const { engine } = make([bad], fakeRunner('ok'))
+    expect(engine.snapshot()[0]).toMatchObject({ schedule: { everyMinutes: 60 } })
+    expect(engine.health().errorCount).toBeGreaterThan(0)
+    expect(engine.health().lastError).toMatchObject({ where: 'schedule' })
+  })
   it('a job without scheduleOf uses its static schedule', async () => {
     const { engine } = make([flux()], fakeRunner('ok'))
     expect(engine.snapshot()[0]).toMatchObject({ schedule: { atUtc7: '00:10', windowEndUtc7: '05:00', everyMinutes: null } })

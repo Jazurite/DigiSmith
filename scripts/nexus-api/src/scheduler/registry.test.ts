@@ -126,6 +126,20 @@ describe('JOBS', () => {
     expect(of().everyMinutes).toBe(30)
     expect(() => validateJobs([defineJob({ ...base, schedule: of() })])).not.toThrow()
   })
+  it('scanScheduleOf reports a bad value once per change, not at every call', () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'reg-')), 'config.yml')
+    const seen: string[] = []
+    const of = scanScheduleOf(f, (p) => seen.push(p))
+    writeFileSync(f, 'nightwatch:\n  scan_every_minutes: 4\n')
+    of(); of(); of()
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toMatch(/scan_every_minutes/)
+    writeFileSync(f, 'nightwatch:\n  scan_every_minutes: 30\n')
+    of()
+    writeFileSync(f, 'nightwatch:\n  scan_every_minutes: x\n')
+    of(); of()
+    expect(seen).toHaveLength(2)
+  })
   it('the other three five-minute jobs stay at 5 with no scheduleOf', () => {
     for (const name of ['nightwatch-watchdog', 'schedule-release', 'oculus-tokens']) {
       const j = JOBS.find((x) => x.name === name)!

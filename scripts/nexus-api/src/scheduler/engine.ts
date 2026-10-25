@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Logger } from '../logger.ts'
-import { currentSlot, formatUtc7, inWindow, nextRunAt, slotsOfNight, type Slot } from './clock.ts'
+import { currentSlot, formatUtc7, inWindow, nextRunAt, slotKeyMs, slotsOfNight, type Slot } from './clock.ts'
 import { appendRun, readRuns, readState, writeState as writeStateFile, type State } from './runlog.ts'
 import { runJob, type RunResult } from './runner.ts'
 import type { JobDef, JobInfo, JobSchedule, RunRecord, RunTrigger } from './types.ts'
@@ -26,7 +26,7 @@ export interface EngineOptions {
   logger?: Pick<Logger, 'error'>
 }
 
-export type EngineErrorPlace = 'append_run' | 'write_state' | 'read_state' | 'read_runs' | 'tick' | 'start'
+export type EngineErrorPlace = 'append_run' | 'write_state' | 'read_state' | 'read_runs' | 'tick' | 'start' | 'schedule'
 export interface EngineHealth { errorCount: number; lastError: { at: string; where: EngineErrorPlace; code: string } | null }
 
 export interface Engine {
@@ -64,12 +64,6 @@ function validInFlight(v: unknown): InFlight | null {
   if (typeof f.job !== 'string' || !f.job || typeof f.startedAt !== 'string' || Number.isNaN(Date.parse(f.startedAt))) return null
   const trigger = TRIGGERS.includes(f.trigger as RunTrigger) ? (f.trigger as RunTrigger) : undefined
   return { job: f.job, startedAt: f.startedAt, pid: typeof f.pid === 'number' ? f.pid : 0, ...(trigger ? { trigger } : {}) }
-}
-
-/** The schedule in force now: a job that reads its interval from config says so with scheduleOf. */
-const scheduleOf = (job: JobDef): JobSchedule | undefined => {
-  if (!job.scheduleOf) return job.schedule
-  try { return job.scheduleOf() } catch { return job.schedule }
 }
 
 export function createEngine(opts: EngineOptions): Engine {
@@ -138,11 +132,16 @@ export function createEngine(opts: EngineOptions): Engine {
     Promise.resolve().then(() => opts.notify!(event)).catch(() => undefined)
   }
 
+  /** The schedule in force now: a job that reads its interval from config says so with scheduleOf. A throw is reported and the static schedule is used. */
+  const scheduleOf = (job: JobDef): JobSchedule | undefined => {
+    if (!job.scheduleOf) return job.schedule
+    try { return job.scheduleOf() } catch (err) { report('schedule', err); return job.schedule }
+  }
+
+  /** The instant of a slot key; independent of the grid in force, so a key of an older interval still compares. */
   const keyMs = (key: string, job: JobDef): number => {
     const s = scheduleOf(job)
-    if (!s) return -Infinity
-    const night = key.slice(0, 10)
-    return slotsOfNight(night, s).find((sl) => sl.key === key)?.atMs ?? -Infinity
+    return s ? slotKeyMs(key, s) : -Infinity
   }
 
   const log = async (job: JobDef | null, record: RunRecord, slot: Slot | null): Promise<void> => {
@@ -232,8 +231,11 @@ export function createEngine(opts: EngineOptions): Engine {
     if (!s) return
     const cur = currentSlot(t, s)
     const slots = [nightOf(t - DAY_MS), nightOf(t)].flatMap((n) => slotsOfNight(n, s)).filter((sl) => sl.atMs <= t)
+    const last = state.lastSlot[job.name]
+    const lastMs = last ? slotKeyMs(last, s) : -Infinity
     for (const sl of slots) {
-      if (isHandled(job, sl.key) || due.some((d) => d.job === job)) continue
+      // a slot before the last handled one can only come from a changed interval (a finer grid); it never ran and must not be logged as missed
+      if (sl.atMs < lastMs || isHandled(job, sl.key) || due.some((d) => d.job === job)) continue
       if (!cur || sl.key !== cur.key) { await skip(job, sl, 'catch-up', 'missed'); continue }
       // a late setInterval or a slow write may delay a tick; that must not turn an on-time slot into a catch-up
       const onTime = t - sl.atMs < 2 * tickMs

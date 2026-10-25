@@ -1,11 +1,13 @@
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
+import { createLogger } from '../logger.ts'
 import { readScanInterval } from './scan-interval.ts'
 import type { JobDef, JobSchedule } from './types.ts'
 
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
-// The built CLI of the main checkout: the same build the global `dg` runs. A missing dist fails the job with node's "Cannot find module".
+// The config the scan interval is read from: the main checkout's, the same one the job's `--repo` points at.
 const CONFIG_FILE = join(MAIN_CHECKOUT, '.digismith', 'config.yml')
+// The built CLI of the main checkout: the same build the global `dg` runs. A missing dist fails the job with node's "Cannot find module".
 const DG = [join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')]
 
 export const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
@@ -53,9 +55,18 @@ export function validateJobs(jobs: readonly JobDef[]): void {
 }
 
 /** The autonomous-scan schedule: the interval is nightwatch.scan_every_minutes, read at each call (default and fallback 30). */
-export function scanScheduleOf(configFile: string = CONFIG_FILE): () => JobSchedule {
-  return () => ({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: readScanInterval(configFile).minutes })
+export function scanScheduleOf(configFile: string = CONFIG_FILE, onProblem: (problem: string) => void = logScanProblem): () => JobSchedule {
+  let last: string | null = null
+  return () => {
+    const { minutes, problem } = readScanInterval(configFile)
+    if (problem !== last && problem !== null) onProblem(problem)
+    last = problem
+    return { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: minutes }
+  }
 }
+
+// One fixed-field line per change; the problem text itself stays in the watchdog's attention item, not in the log.
+const logScanProblem = (): void => createLogger().error('scheduler_error', { where: 'scan_interval', code: 'bad_scan_interval' })
 
 export const JOBS: readonly JobDef[] = [
   defineJob({

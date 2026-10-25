@@ -26,6 +26,14 @@ export function formatUtc7(ms: number): string {
   return `${date} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
 }
 
+/** The instant a slot key names, on any grid: the key is `night@HH:MM`, and a time before the window start belongs to the next day. */
+export function slotKeyMs(key: string, schedule: JobSchedule): number {
+  const night = key.slice(0, 10)
+  const mins = minutesOf(key.slice(11, 16))
+  const start = minutesOf(schedule.atUtc7)
+  return midnightMs(night) + (mins < start ? mins + 1440 : mins) * MINUTE_MS
+}
+
 export function slotsOfNight(night: string, schedule: JobSchedule): Slot[] {
   const start = minutesOf(schedule.atUtc7)
   const end = minutesOf(schedule.windowEndUtc7)
