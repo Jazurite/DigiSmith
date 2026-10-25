@@ -11,6 +11,8 @@ export interface Verdict { state: State; cause: string; since: string } // since
 export const SILENCE_MS = 30 * 60_000;
 /** DGS-612 R4: a pane herdr shows as working, with no event for this long, is stalled. */
 export const WORKING_SILENCE_MS = 180 * 60_000;
+/** DGS-612 R3b: a pane waiting (idle or done) with no event for this long means the chain is stuck. */
+export const WAITING_SILENCE_MS = 240 * 60_000;
 export const DEFAULT_BUDGETS: Budgets = { building: 180, review: 60, merge: 20 };
 /** DGS-589: herdr agent_status values that mean the permission prompt is no longer waiting (answered or denied). Anything else keeps the run blocked. */
 export const ANSWERED_STATUSES: readonly string[] = ["idle", "done", "working"];
@@ -77,6 +79,9 @@ export function classify(run: RunRecord, events: EventLine[], pane: Pane, now: n
   }
   // R3: the pane is alive and herdr says it is not working (idle, done, other): it waits for someone. No silence alarm, no phase budget.
   if (present && agentStatus !== null && agentStatus !== "working") {
+    if ((agentStatus === "idle" || agentStatus === "done") && now - lastTs >= WAITING_SILENCE_MS) {
+      return { state: "stalled", cause: "waiting-240-min", since: last?.ts ?? run.created_at };
+    }
     if (answered) return { state: "healthy", cause: "prompt-answered", since: events[lastBlocked].ts };
     return { state: "healthy", cause: "waiting", since: "" };
   }

@@ -58,7 +58,7 @@ describe("runRowOf", () => {
     expect(r).toMatchObject({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" });
   });
   it("a builder over its budget is stalled", () => {
-    const r = runRowOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "tool", "2026-10-22T01:50:00.000Z", { tool: "Edit", ok: true })], "manual", DEFAULT_BUDGETS, T0 + 51 * 60_000);
+    const r = runRowOf(run(), [ev(1, "started", "2026-10-22T01:00:00.000Z"), ev(2, "tool", "2026-10-22T04:10:00.000Z", { tool: "Edit", ok: true })], "manual", DEFAULT_BUDGETS, T0 + 191 * 60_000);
     expect(r.state).toBe("stalled");
   });
   it("an ended run has its end time, a merged flag and a frozen elapsed time", () => {

@@ -147,6 +147,14 @@ describe("classify", () => {
       expect(c("done", e0(), 1 + 200).cause).toBe("waiting");
       expect(c("idle", e0(), 1 + 100).state).toBe("healthy");
     });
+    it("R3b: idle 3 h is healthy, idle 5 h is stalled waiting-240-min (run still open)", () => {
+      expect(c("idle", e0(), 1 + 180).state).toBe("healthy");
+      expect(c("idle", e0(), 1 + 239).cause).toBe("waiting");
+      expect(c("idle", e0(), 1 + 300)).toEqual({ state: "stalled", cause: "waiting-240-min", since: min(1) });
+      expect(c("done", e0(), 1 + 240).cause).toBe("waiting-240-min");
+      expect(c("weird", e0(), 1 + 300).cause).toBe("waiting");
+      expect(c("idle", [ev("started", 0), ev("ended", 1)], 400).state).toBe("ended");
+    });
     it("R3: an unusual status is waiting too", () => {
       expect(c("weird", e0(), 1 + 100).cause).toBe("waiting");
     });

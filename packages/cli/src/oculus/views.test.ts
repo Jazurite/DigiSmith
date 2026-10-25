@@ -121,7 +121,7 @@ describe("run and events", () => {
     const r = runView(d.env, NOW, { run: "builder-1", cwd: d.dir });
     expect(r?.row.run).toBe("builder-1");
     expect(r?.pipeline).toHaveLength(6);
-    expect(r?.budget).toMatchObject({ phase: "building", limitMin: 45, building: 45, review: 60, merge: 20 });
+    expect(r?.budget).toMatchObject({ phase: "building", limitMin: 180, building: 180, review: 60, merge: 20 });
     expect(r?.record.ticket).toBe("DGS-590");
     expect(r?.order).toEqual({ available: false, text: "" });
   });
