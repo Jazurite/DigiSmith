@@ -80,7 +80,7 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'autonomous-scan',
     description: 'Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor',
-    // every 30 minutes by default; nightwatch.scan_every_minutes in .digismith/config.yml sets it (scheduleOf reads it at each tick)
+    // the literal 30 is only a placeholder (the default): scheduleOf below overrides it at every tick from nightwatch.scan_every_minutes in .digismith/config.yml
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 30 },
     scheduleOf: scanScheduleOf(),
     command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },
