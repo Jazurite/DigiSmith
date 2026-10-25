@@ -78,6 +78,9 @@ ClickUp key (`DGS-<n>`), run:
 dg clickup checklist sync --task <Key> --plan <plan.md path> --yes
 ```
 
+After a plan revision, when `<workspace>/progress.md` already exists, run the same command with `--ledger <workspace>/progress.md`
+added, so the run keeps the ticks (without it the run unticks every item mid-build).
+
 It creates the ticket's "Plan" checklist: one item per `### Task N:` heading with children Implement, Review and Fix, then
 Whole-branch review and Whole-branch fixes. Any other key (a Jira key) or no key: print `Plan checklist: skipped (no ClickUp key)`
 and go on. A non-zero exit prints a warning with its stderr line and the flow goes on: the sync never blocks. If the classifier
