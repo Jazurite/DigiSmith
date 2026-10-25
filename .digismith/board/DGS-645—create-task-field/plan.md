@@ -4,7 +4,7 @@
 
 **Spec:** `spec.md` in this folder. Files touched: `packages/cli/src/clickup/field-set.ts`, `create-task.ts`, and their tests `field-set.test.ts`, `create-task.test.ts`. Dropdown values on a read task are orderindex numbers.
 
-**Setup (fresh worktree, NO `pnpm install`):** `pnpm --filter @digismith/clickup-client build`
+**Setup (fresh worktree):** `pnpm install --frozen-lockfile` (inside this worktree only), then `pnpm --filter @digismith/clickup-client build`
 **Run tests:** `pnpm vitest run packages/cli/src/clickup`
 
 ### Task 1: `findFieldMismatches` (test first)
