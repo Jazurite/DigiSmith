@@ -76,6 +76,13 @@ export function createUpdateFieldCommand(
         if (field.type !== "drop_down") {
           throw new Error(`field "${field.name}" is ${field.type}; only drop_down fields are supported`);
         }
+        if (argv.default !== undefined) {
+          const d = (argv.default as string).trim().toLowerCase();
+          const newNames = [...addArgs, ...optionArgs.map((a) => a.slice(a.lastIndexOf("=") + 1))].map((n) => n.trim().toLowerCase());
+          if (newNames.includes(d)) {
+            throw new Error("cannot set the default to an option added or renamed in the same call; use a second call");
+          }
+        }
         let wanted: FrontdoorFieldDefault | null | undefined = argv.clearDefault
           ? null
           : argv.default !== undefined
@@ -132,7 +139,14 @@ export function createUpdateFieldCommand(
           for (const line of warnings) console.log(line);
           const updated = await client.updateField(field.id, body);
           if ((effective?.value ?? null) !== (current?.value ?? null)) {
-            const after = (await client.getField(field.id)).default_value ?? null;
+            let after: FrontdoorFieldDefault | null;
+            try {
+              after = (await client.getField(field.id)).default_value ?? null;
+            } catch (err) {
+              console.error(`PUT sent; read-back failed: ${(err as Error).message}`);
+              process.exitCode = 1;
+              return;
+            }
             if ((after?.value ?? null) !== (effective?.value ?? null)) {
               console.error(
                 `clickup update-field: the default did not stick: sent ${effective ? JSON.stringify(effective.value) : "none"}, ClickUp now has ${after ? JSON.stringify(after.value) : "none"}`

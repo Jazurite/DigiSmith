@@ -506,6 +506,36 @@ describe("update-field default", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it.each([false, true])("--default naming an option added in the same call exits 1, sends nothing (yes=%s)", async (yes) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", addOption: ["Internal API"], default: "internal api", yes });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toContain("cannot set the default to an option added or renamed in the same call; use a second call");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([false, true])("--default naming the new name of a rename exits 1, sends nothing (yes=%s)", async (yes) => {
+    const client = fake();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", option: ["Public API=Open API"], default: "open api", yes });
+    expect(client.updateField).not.toHaveBeenCalled();
+    expect(err.mock.calls[0][0]).toContain("cannot set the default to an option added or renamed in the same call; use a second call");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("--yes reports a failed read-back after the PUT went out", async () => {
+    const client = fake();
+    (client.getField as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(field()).mockRejectedValueOnce(new Error("boom"));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await run(client, { field: "f1", default: "Public API", yes: true });
+    expect(client.updateField).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(1);
+    expect(err.mock.calls.map((c) => c.join(" ")).join("\n")).toContain("PUT sent; read-back failed: boom");
+    expect(log).not.toHaveBeenCalled();
+  });
+
   it("--default equal to the current default with another change sends it unchanged and does not read back", async () => {
     const client = fake(withDefault("Public API"));
     vi.spyOn(console, "log").mockImplementation(() => {});
