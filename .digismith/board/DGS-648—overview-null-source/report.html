@@ -71,7 +71,11 @@
 </style>
 </head>
 <body>
-<h1>DGS-648 report: Oculus overview answered 503</h1>
+<h1>Oculus overview 503 fix — Implementation Report</h1>
+<div class="meta"><span>Date: 2026-10-25</span> <span>Ticket: <strong>DGS-648</strong></span> <span>Commit range: <code>2ecd54c4..73cf8312</code></span></div>
+<section id="summary">
+<p>The Oculus overview answered 503 because a ticketless run gave events a null source; the source now falls back to the project, then the run id, and the shared schema stays strict.</p>
+</section>
 <h2>What shipped</h2>
 <p><code>GET /api/v1/oculus/overview</code> answered 503 <code>internal_invalid</code> because <code>overviewView</code> labelled each worker&#x27;s recent events with <code>source: w.ticket</code>. A ticketless run (DGS-598) gave null, and the strict shared schema refused the whole answer. The source is now <code>w.ticket ?? w.project ?? w.run</code>. The shared schema stays strict.</p>
 <h2>Files</h2>
