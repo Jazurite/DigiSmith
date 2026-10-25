@@ -34,6 +34,13 @@ describe("get-field", () => {
     await run({ getFieldLocations: vi.fn().mockResolvedValue(answer) }, { id: "f1", json: true });
     expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual(answer);
   });
+  it("--json prints the whole answer with a default unchanged", async () => {
+    const withDefault = { ...answer, default_value: { value: "Autonomous" } };
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await run({ getFieldLocations: vi.fn().mockResolvedValue(withDefault) }, { id: "f1", json: true });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual(withDefault);
+  });
   it("prints the default", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await run({ getFieldLocations: vi.fn().mockResolvedValue({ ...answer, default_value: { value: "Autonomous" } }) }, { id: "f1" });
