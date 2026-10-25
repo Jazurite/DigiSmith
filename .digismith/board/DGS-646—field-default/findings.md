@@ -1,0 +1,10 @@
+# Review findings
+
+| Reviewer type | Round | Path:line | Severity | What is wrong | Failing scenario | Verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| task 1 | 1 | packages/cli/src/clickup/field-write.test.ts:116 | Minor | describeFieldDiff's new default line has no test. | A change to the diff line format (for example showing the wrong old value or printing when unchanged) would pass all tests. | fixed (34cc75a4) |
+| task 2 | 1 | packages/cli/src/clickup/update-field.ts:99 | Minor | --default is not checked against options removed or renamed in the same call, so the PUT can carry a default that names a removed or renamed-away option. | --remove-option A --confirm-remove A --default A --yes sends default_value {value: A} while removing A; or --option A=B --default A sends the stale name A. | fixed (007d7263) |
+| task 2 | 1 | packages/cli/src/clickup/update-field.test.ts | Minor | The branch where --default equals the current default but another change exists (wanted dropped to undefined) has no test. | --default <current> --name N --yes: nothing asserts that the PUT goes out with the current default and that no read-back happens. | fixed (007d7263) |
+| task 3 | 1 | packages/cli/src/clickup/get-field.test.ts:34 | Minor | No test shows --json stays unchanged when default_value is present. | A future change that strips or reshapes default_value in --json output would pass the existing --json test, whose answer has no default_value. | fixed (f87cf6a2) |
+| ticket | 1 | packages/cli/src/clickup/update-field.ts:134 | Minor | A read-back getField error after a successful PUT exits 1 with only the read error, without saying the PUT was sent, and no test covers it. | update-field --default Manual --yes; updateField succeeds, the second getField rejects (network or session expiry). | fixed (d6d4daf6) |
+| ticket | 1 | packages/cli/src/clickup/field-write.ts:98 | Minor | --default naming an option added or renamed in the same call fails with a plain 'unknown option' error instead of the clear 'in the same call' message. | update-field --add-option Hybrid --default Hybrid, or --option "A=B" --default B. | fixed (d6d4daf6) |
