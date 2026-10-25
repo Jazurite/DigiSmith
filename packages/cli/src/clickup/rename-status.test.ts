@@ -77,6 +77,11 @@ describe("planStatusRename", () => {
     expect(planStatusRename(shuffled, forward)).toEqual({ statuses: AFTER });
   });
 
+  it("refuses a rename that changes nothing", () => {
+    expect(() => planStatusRename(BEFORE, { from: "ready", to: "ready" })).toThrow(/nothing to change/);
+    expect(() => planStatusRename(BEFORE, { from: "ready", to: " ready ", type: "unstarted", after: "to do" })).toThrow(/nothing to change/);
+  });
+
   it("refuses an unknown --from", () => {
     expect(() => planStatusRename(BEFORE, { ...forward, from: "nope" })).toThrow(/--from "nope"/);
   });
@@ -222,6 +227,15 @@ describe("rename-status handler", () => {
     await run(f, { to: "review", yes: true });
     expect(process.exitCode).toBe(1);
     expect(err.join("\n")).toContain("clickup rename-status:");
+    expect(f.putSpaceStatuses).not.toHaveBeenCalled();
+  });
+
+  it("a rename that changes nothing sends nothing, even with --yes", async () => {
+    const f = fake();
+    const { err } = capture();
+    await run(f, { to: "ready", type: undefined, before: undefined, yes: true });
+    expect(process.exitCode).toBe(1);
+    expect(err.join("\n")).toContain("nothing to change");
     expect(f.putSpaceStatuses).not.toHaveBeenCalled();
   });
 

@@ -58,6 +58,9 @@ export function planStatusRename(current: FrontdoorStatus[], rename: StatusRenam
       `a ${type} status cannot go between ${side(left)} and ${side(right)}: the types must stay in the order open, unstarted, custom, done, closed`
     );
   }
+  if (to === target.status && type === target.type && index === at) {
+    throw new Error(`nothing to change: "${target.status}" already has this name, type and place`);
+  }
   const renamed: FrontdoorStatus = { ...target, status: to, type };
   const statuses = [...rest.slice(0, index), renamed, ...rest.slice(index)].map((s, i) => ({ ...s, orderindex: i }));
   return { statuses };
