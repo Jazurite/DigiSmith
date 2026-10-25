@@ -10,7 +10,9 @@ Rules in `classify` (`watchdog.ts`). Order matters, first match wins. `status` i
 |---|------|---------|------|
 | R1 | pane gone | lost `pane-gone` (kept) | existing + keep |
 | R2 | permission prompt unanswered (60 s grace, status rule) | blocked (kept) | existing, unchanged |
-| R3 | pane present, status `idle`/`done`/other non-working | healthy `waiting`. No silence alarm, no phase budget. A Builder at a planned STOP is not a problem. | silent 5 h + idle = healthy |
+| R2b | pane present, herdr status `blocked`, no unanswered `permission_prompt` event (a dialog the hooks do not see), status held for 60 s | blocked `pane-blocked`. Under the same 60 s grace it stays healthy. | status blocked 2 min = blocked; 30 s = healthy |
+| R3 | pane present, status `idle`/`done`/other non-working, silent under 4 h | healthy `waiting`. No silence alarm, no phase budget. A Builder at a planned STOP is not a problem. | idle 3 h = healthy |
+| R3b | pane present, status `idle`/`done`, silent 4 h or more, run still open (long wait) | stalled `waiting-240-min`. 4 h of nothing means the chain is stuck, for example a dead conductor. | idle 5 h = stalled |
 | R4 | pane present, status `working`, no event for 3 h | stalled `silent-working-180-min` | silent 3 h + working = stalled; 2 h = healthy |
 | R5 | pane present, status `working`, silent under 3 h | no silence alarm. This covers a long background subagent: its tool calls are not in the run, but herdr shows `working`. | silent 100 min + working = healthy |
 | R6 | pane unknown (no herdr data), 30 min silent | lost `silent-30-min` (kept: a live run with no pane data still alarms) | existing, kept |
@@ -32,8 +34,8 @@ Release commit: the merge order text (`ORDER_TEXTS.merge`, `order.ts` usage line
 
 ## Plan
 
-### Task 1: classify rules R3 to R7
-Test first in `watchdog.test.ts` (rows above, plus: gone pane still lost, answered/unanswered prompt unchanged, unknown pane silent 30 min lost). Then edit `classify` and `DEFAULT_BUDGETS.building = 180`. Check `budgets.test.ts` and `WATCHDOG.md` for the old 45 and update them.
+### Task 1: classify rules R2b to R7
+Test first in `watchdog.test.ts` (rows above, including R2b and R3b, plus: gone pane still lost, answered/unanswered prompt unchanged, unknown pane silent 30 min lost). Then edit `classify` and `DEFAULT_BUDGETS.building = 180`. Check `budgets.test.ts` and `WATCHDOG.md` for the old 45 and update them.
 
 ### Task 2: watch.ts retry flag and closing C1 to C3
 Test first in `watch.test.ts`: lost silent-unknown has `retryEligible` false, pane-gone true; older run's items closed when a newer run exists and nothing opened for it; merged-event run and removed-worktree run closed; item with missing run record closed; live run's item stays. Then implement.
