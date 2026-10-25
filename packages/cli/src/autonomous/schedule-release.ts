@@ -5,13 +5,15 @@ import { fmtUtc7 } from "./clock.ts";
 import { appendEvent, atomicWrite } from "./state.ts";
 import type { EventKind, LoTask, Tracker } from "./types.ts";
 
+const TO_DO = "to do";
+
 export interface ScheduleDeps {
   tracker: Tracker; dir: string; now: () => Date; dryRun: boolean;
   /** The event writer; defaults to appendEvent. A failure to write an event never stops the run. */
   appendEvent?: typeof appendEvent;
 }
 export type ScheduleVerdict = "moved" | "would-move" | "not-due" | "no-date" | "bad-date" | "no-mode" | "failed";
-export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: "to do"; error?: string }
+export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: typeof TO_DO; error?: string }
 export interface ScheduleResult { scheduled: number; moved: number; lines: ScheduleLine[] }
 
 export const SCHEDULE_NOTES = "schedule-notes.json";
@@ -78,26 +80,26 @@ export async function runScheduleRelease(d: ScheduleDeps): Promise<ScheduleResul
         line("not-due");
         continue;
       }
-      if (d.dryRun) { line("would-move", { to: "to do" }); continue; }
+      if (d.dryRun) { line("would-move", { to: TO_DO }); continue; }
       let failure: string | null = null;
       try {
-        await d.tracker.setStatus(t.id, "to do");
+        await d.tracker.setStatus(t.id, TO_DO);
         const back = await d.tracker.getStatus(t.id);
-        if (back.toLowerCase() !== "to do") throw new Error(`status read back "${back}", expected "to do"`);
+        if (back.toLowerCase() !== TO_DO) throw new Error(`status read back "${back}", expected "${TO_DO}"`);
       } catch (e) {
         failure = errText(e);
       }
       if (failure === null) {
-        writeEvent("schedule-move", { ticket: key, to: "to do", mode: t.mode, scheduledAtUtc7: when });
+        writeEvent("schedule-move", { ticket: key, to: TO_DO, mode: t.mode, scheduledAtUtc7: when });
         if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
         moved++;
-        line("moved", { to: "to do" });
+        line("moved", { to: TO_DO });
       } else {
-        const text = SCHEDULE_TEXT.failed("to do", failure);
+        const text = SCHEDULE_TEXT.failed(TO_DO, failure);
         // The event and the comment are written once per distinct failure text.
-        if (notes[key] !== hash(text)) writeEvent("schedule-move-failed", { ticket: key, to: "to do", error: failure });
+        if (notes[key] !== hash(text)) writeEvent("schedule-move-failed", { ticket: key, to: TO_DO, error: failure });
         await tell(t, text);
-        line("failed", { to: "to do", error: failure });
+        line("failed", { to: TO_DO, error: failure });
       }
     }
   } finally {
