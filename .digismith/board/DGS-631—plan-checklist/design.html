@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan tasks as a ClickUp checklist</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Plan tasks as a ClickUp checklist</h1>
+  <div class="meta">
+    <span>Date: 2026-10-25</span>
+    <span>Ticket: DGS-631 + DGS-632</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#goal">Goal</a></li><li><a href="#command">DGS-632: dg clickup checklist sync</a></li><li><a href="#skills">DGS-631: skill hooks</a></li><li><a href="#out">Out of scope</a></li>
+  </ol>
+</nav>
+
+<section id="goal">
+<h2>Goal</h2>
+<p>A ticket's plan tasks show as a ClickUp checklist on that ticket, one item per plan task, ticked as each task passes. One branch,
+two tickets: DGS-632 builds the dg command (tool side), DGS-631 hooks it into three skills (skills side). A checklist, not subtasks:
+DGS-563 spike Q4 (one write per task, no new keys, no status flow).</p>
+</section>
+
+<section id="command">
+<h2>DGS-632: <code>dg clickup checklist sync</code></h2>
+<pre><code>dg clickup checklist sync --task &lt;KEY|id&gt; --plan &lt;plan.md&gt;
+    [--done &lt;n,n,...&gt; | --ledger &lt;progress.md&gt;] [--name "Plan"] [--yes]</code></pre>
+<ul>
+<li><b>Plan parse.</b> Every line <code>### Task N: &lt;title&gt;</code> outside fenced code blocks gives item number N, name
+<code>Task N: &lt;title&gt;</code>. No task headings, or a number twice: exit 1.</li>
+<li><b>Done set.</b> <code>--done</code> lists task numbers; a number not in the plan exits 1. <code>--ledger</code> (an addition to
+decision 1, so the skills read the ledger, not memory) takes every <code>Task N: complete</code> line of an SDD or inline-execution
+ledger; ledger numbers not in the plan are ignored and listed in the output. Both flags: exit 1. Neither: no item is done.</li>
+<li><b>Read.</b> <code>getTaskByRef</code> returns the task's <code>checklists</code>. The target is the first checklist named
+<code>--name</code> (default <code>Plan</code>); a second one of that name is left alone and reported.</li>
+<li><b>Diff by task number.</b> Each checklist item whose name starts <code>Task N:</code> is matched to plan task N. Missing → add.
+Name differs → rename. Number not in plan, or a second item for the same number → remove. <code>resolved</code> differs from the done
+set → tick or untick (in the same PUT as a rename). Items with any other name are someone else's: left alone, counted as
+<code>foreign</code>. No checklist → create it, then add every item.</li>
+<li><b>Dry run</b> (no <code>--yes</code>): reads the task only, writes nothing, prints the planned operations.</li>
+<li><b>With <code>--yes</code></b>: create, remove, rename/tick, add (then tick the added done items), then read the task back and check
+the checklist equals the plan. A failed write or a read-back mismatch exits 1 with <code>clickup checklist sync: &lt;message&gt;</code>
+on stderr, naming the step that failed. A second run with no change makes no write (idempotent).</li>
+<li><b>Output.</b> One JSON line on stdout:
+<code>{"task":"DGS-631","checklist_id":"…","dry_run":false,"ops":{"create":0,"add":1,"rename":0,"remove":0,"tick":2,"untick":0},
+"items":[{"n":1,"name":"Task 1: …","resolved":true}],"foreign":0,"ignored_done":[]}</code>.</li>
+</ul>
+<h3>Code</h3>
+<ul>
+<li><code>packages/clickup-client/src/types.ts</code>: <code>ClickUpChecklist</code>, <code>ClickUpChecklistItem</code>;
+<code>ClickUpTask.checklists</code> typed with them.</li>
+<li><code>packages/clickup-client/src/client.ts</code>: <code>createChecklist(taskId, name)</code> (POST /task/{id}/checklist),
+<code>createChecklistItem(checklistId, name)</code> (POST /checklist/{id}/checklist_item),
+<code>editChecklistItem(checklistId, itemId, {name?, resolved?})</code> (PUT /checklist/{id}/checklist_item/{item}),
+<code>deleteChecklistItem(checklistId, itemId)</code> (DELETE same path).</li>
+<li><code>packages/cli/src/clickup/checklist/</code>: <code>plan.ts</code> (pure parse of plan and ledger), <code>diff.ts</code>
+(pure diff: current checklist + plan + done set → operations), <code>sync.ts</code> (the yargs command, client factory injected like
+<code>add-comment.ts</code>), <code>index.ts</code> (the <code>checklist</code> group, registered in <code>clickup/index.ts</code>).
+No low-level checklist commands: the sync covers recovery.</li>
+<li>Tests: Vitest, mocks only. Pure tests for parse and diff; command tests with a fake client (dry run writes nothing, create path,
+add/rename/remove/tick, idempotent second run, failed write exits 1, read-back mismatch exits 1). No live ClickUp write.</li>
+</ul>
+</section>
+
+<section id="skills">
+<h2>DGS-631: skill hooks</h2>
+<p>Each hook is one small step titled <b>Plan checklist (DGS-631)</b>, so the Hallmark (DGS-546) rebase stays easy. Key rule: the key the
+build runs under (board folder, else branch/worktree name, same regex the skills already use). Only <code>DGS-&lt;n&gt;</code> keys run the
+sync; any other key or none prints one line <code>Plan checklist: skipped (no ClickUp key)</code>.</p>
+<div class="table-wrap"><table>
+<tr><th>Skill</th><th>When</th><th>Command</th></tr>
+<tr><td>writing-plans</td><td>After the plan is written and committed</td><td><code>dg clickup checklist sync --task &lt;Key&gt; --plan &lt;plan&gt; --yes</code></td></tr>
+<tr><td>subagent-driven-development</td><td>Step 5, after the completion line (role mode reaches step 5 on "review clean"); after a plan revision; once after the final review is clean, before Finish</td><td><code>… --ledger &lt;workspace&gt;/progress.md --yes</code></td></tr>
+<tr><td>executing-plans</td><td>After each task's ledger line (step 6); after a plan revision; once in Step 3 before the report</td><td><code>… --ledger &lt;workspace&gt;/progress.md --yes</code></td></tr>
+</table></div>
+<p><b>Never blocks.</b> A non-zero exit prints a warning and appends <code>Checklist sync: failed (&lt;first stderr line&gt;)</code> to the
+ledger (writing-plans has no ledger: warning only); the build goes on. The next sync recomputes the whole list and heals a missed one.</p>
+<p><b>Allowlist.</b> If the classifier blocks <code>dg clickup checklist sync</code>, the worker tells its conductor; the runbook gets the
+rule, never edited by the worker.</p>
+</section>
+
+<section id="out">
+<h2>Out of scope</h2>
+<ul>
+<li>Item order repair (a task added back later sits at the end; the numbers still say the order).</li>
+<li>Assignees, nested items, deleting a whole checklist.</li>
+<li>Ticket status changes (the conductor owns them).</li>
+</ul>
+</section>
+
+
+<footer>DigiSmith · .digismith/board/DGS-631—plan-checklist/design.html</footer>
+
+</body>
+</html>
