@@ -69,6 +69,20 @@ A profile is present when `.digismith/config.yml` has a `profile` key, or when `
   skill's own unmodified default)
   - (User preferences for plan location override this default)
 
+### Plan checklist (DGS-631)
+
+After the plan is written and committed, and again after a plan revision, when `<Key>` (same key rule as the start block) is a
+ClickUp key (`DGS-<n>`), run:
+
+```bash
+dg clickup checklist sync --task <Key> --plan <plan.md path> --yes
+```
+
+It creates the ticket's "Plan" checklist: one item per `### Task N:` heading with children Implement, Review and Fix, then
+Whole-branch review and Whole-branch fixes. Any other key (a Jira key) or no key: print `Plan checklist: skipped (no ClickUp key)`
+and go on. A non-zero exit prints a warning with its stderr line and the flow goes on: the sync never blocks. If the classifier
+blocks the command, tell your conductor (the runbook worker start line gets the allow rule); never edit the allowlist yourself.
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
