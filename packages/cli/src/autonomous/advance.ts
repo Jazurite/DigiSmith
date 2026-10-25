@@ -44,8 +44,17 @@ function order(o: "merge" | "restart", s: TicketState, obs: Observations, j: Jou
 }
 
 const RETRY_KINDS = ["lost", "failed"];
-const eligible = (s: TicketState, obs: Observations) =>
-  obs.attention.ok ? obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind)) : [];
+// the newest builder run by createdAt; null when the runs read failed or holds no builder run
+const newestBuilder = (obs: Observations) =>
+  obs.runs.ok ? obs.runs.value.filter((x) => x.role === "builder").sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0] ?? null : null;
+
+// an item of a known builder run that is not the newest never retries; unknown runs ("-", the ticket key) pass
+const eligible = (s: TicketState, obs: Observations) => {
+  if (!obs.attention.ok) return [];
+  const newest = newestBuilder(obs);
+  const older = new Set(obs.runs.ok && newest !== null ? obs.runs.value.filter((x) => x.role === "builder" && x.id !== newest.id).map((x) => x.id) : []);
+  return obs.attention.value.filter((i) => i.ticket === s.ticket && i.retryEligible && RETRY_KINDS.includes(i.kind) && !(i.run !== undefined && older.has(i.run)));
+};
 
 // null = no retry business this tick
 function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action | null {
@@ -61,7 +70,7 @@ function retryStep(s: TicketState, obs: Observations, j: JournalResults): Action
     if (later !== undefined) return { kind: "adopt", run: later.id, items: items.map((i) => i.id) };
   }
   if (items.length === 0 || restartsOf(j, s.ticket) > 0 || gate(obs) !== null) return null;
-  return { kind: "retry", item: items[0].id, run: s.runs.builder ?? "-" };
+  return { kind: "retry", item: items[0].id, run: newestBuilder(obs)?.id ?? s.runs.builder ?? "-" };
 }
 
 function claimed(s: TicketState, obs: Observations): Action {

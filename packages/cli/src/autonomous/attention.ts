@@ -84,5 +84,5 @@ export function formatOpen(items: OpenItem[], now: number): string {
 export function attentionViews(items: OpenItem[], ticket: string | undefined): AttentionView[] {
   return items
     .filter((i) => i.ticket === ticket)
-    .map((i) => ({ id: i.id, ticket: i.ticket, kind: i.kind, retryEligible: i.retryEligible === true }));
+    .map((i) => ({ id: i.id, ticket: i.ticket, kind: i.kind, retryEligible: i.retryEligible === true, run: i.run }));
 }

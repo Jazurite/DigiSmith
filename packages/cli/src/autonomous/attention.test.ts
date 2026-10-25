@@ -75,7 +75,7 @@ describe("attentionViews", () => {
     expect(attentionViews([item(), item({ id: "b.lost.0", ticket: "DGS-2", retryEligible: true })], "DGS-1").map((v) => v.id)).toEqual(["a.lost.0"]);
   });
   it("maps a missing retryEligible field to false and keeps true", () => {
-    expect(attentionViews([item()], "DGS-1")).toEqual([{ id: "a.lost.0", ticket: "DGS-1", kind: "lost", retryEligible: false }]);
+    expect(attentionViews([item()], "DGS-1")).toEqual([{ id: "a.lost.0", ticket: "DGS-1", kind: "lost", retryEligible: false, run: expect.any(String) }]);
     expect(attentionViews([item({ retryEligible: true })], "DGS-1")[0].retryEligible).toBe(true);
   });
 });

@@ -289,6 +289,23 @@ describe("retry", () => {
     expect(advanceTicket(s, O({ ...withEvent("building"), attention: bad() }), J)).toEqual({ kind: "attention", cause: "obs-attention-failed", attKind: "unknown" });
   });
 });
+describe("retry targets the newest builder run", () => {
+  const s = S({ phase: "building" });
+  const older = run({ id: "builder-1", createdAt: "2026-10-21T00:01:00.000Z" });
+  const newer = run({ id: "builder-2", createdAt: "2026-10-21T02:00:00.000Z" });
+  it("an item of the older run gives no retry", () => {
+    const o = O({ runs: ok([older, newer]), attention: ok([item({ run: "builder-1" })]) });
+    expect(advanceTicket(s, o, J).kind).not.toBe("retry");
+  });
+  it("an item of the newer run gives a retry naming it", () => {
+    const o = O({ runs: ok([older, newer]), attention: ok([item({ id: "builder-2.lost.0", run: "builder-2" })]) });
+    expect(advanceTicket(s, o, J)).toEqual({ kind: "retry", item: "builder-2.lost.0", run: "builder-2" });
+  });
+  it("an item of an unknown run still retries", () => {
+    const o = O({ runs: ok([older, newer]), attention: ok([item({ id: "DGS-1.failed.0", kind: "failed", run: "DGS-1" })]) });
+    expect(advanceTicket(s, o, J)).toMatchObject({ kind: "retry", item: "DGS-1.failed.0" });
+  });
+});
 describe("adopt", () => {
   const s = S({ phase: "building" });
   const j: JournalResults = { "DGS-1:building:1:retry": "succeeded" };
