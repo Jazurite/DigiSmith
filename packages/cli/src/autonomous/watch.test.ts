@@ -520,6 +520,28 @@ describe("runWatch: review fixes", () => {
       expect(readOpen(dir).some((i) => i.run === live && i.kind === "blocked")).toBe(true);
       expect(readFileSync(att, "utf-8")).toContain("run record gone");
     });
+    it("C1: a run with ticket null is never superseded; its open item stays", async () => {
+      present = new Set(["w2:t-old", "w2:t-new"]);
+      const a = mk("DGS-29", "builder", 60, [[50, "started"], [5, "blocked"]], { pane: "w2:t-old" });
+      const b = mk("DGS-30", "builder", 10, [[9, "started"], [1, "tool"]], { pane: "w2:t-new" });
+      for (const id of [a, b]) { const rd = findRunDir(id, env)!; rewriteRun(rd, { ...readRun(rd), ticket: null } as never); }
+      const r = await runWatch(deps());
+      expect(r.opened).toBe(1);
+      expect(readOpen(dir).map((i) => [i.run, i.kind])).toEqual([[a, "blocked"]]);
+      expect((await runWatch(deps())).resolved).toBe(0);
+      expect(readOpen(dir).map((i) => i.run)).toEqual([a]);
+    });
+    it("C3: a run skipped by the 7-day retention keeps its lost item open, as its record is readable", async () => {
+      present = new Set();
+      const old = mk("DGS-31", "builder", 8 * 24 * 60, [[8 * 24 * 60 - 1, "started"]]);
+      const att = join(dir, "attention.jsonl");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(att, JSON.stringify({ id: "l1", ts: ago(5), ticket: "DGS-31", run: old, kind: "lost", cause: "pane-gone", since: ago(5) }) + "\n");
+      const r = await runWatch(deps());
+      expect(r.resolved).toBe(0);
+      expect(readOpen(dir).map((i) => i.id)).toEqual(["l1"]);
+      expect(readFileSync(att, "utf-8")).not.toContain("run record gone");
+    });
     it("a failed item of a finished run is untouched", async () => {
       present = new Set(["w2:DGS-28"]);
       const id = mk("DGS-28", "builder", 60, [[50, "started"], [5, "merged"]]);
