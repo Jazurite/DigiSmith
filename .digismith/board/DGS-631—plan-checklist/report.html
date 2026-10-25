@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan Checklist — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Plan Checklist — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-25</span>
+    <span>Ticket: <strong>DGS-631</strong></span>
+    <span>Commit range: <code>8e918082..63aaba6e</code></span>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#delivered">What Was Delivered</a></li>
+    <li><a href="#build">Build Process</a></li>
+    <li><a href="#finalreview">Final Review &amp; Fix</a></li>
+    <li><a href="#merge">Commits</a></li>
+  </ol>
+</nav>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The branch adds <code>dg clickup checklist sync</code> (DGS-632). The command keeps a ticket's ClickUp "Plan" checklist equal to its plan and its build ledger. writing-plans creates the checklist (DGS-631). subagent-driven-development and executing-plans tick it as the build moves (DGS-634). Four client calls use the public API v2 checklist endpoints. Three pure modules parse the plan and ledger, build the wanted checklist and compute the writes. The command applies the writes with <code>--yes</code>, reads back and prints one JSON line. Each skill has one small named step. Followed the full Superpowers process: brainstorming → spec → writing-plans → <code>digismith:subagent-driven-development</code> (5 tasks, each dispatched to a fresh implementer subagent and independently reviewed) → a final whole-branch review, plus 2 fix round(s) before merge.</p>
+  <p>Reference documents: the <a href="design.html">design spec</a> and the
+  <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Checklist types and client methods</h4><p>Adds <code>ClickUpChecklist</code> types and four client calls: create a checklist, add, edit (rename, tick, nest with <code>parent</code>) and delete an item.</p></div><div class="card"><span class="tag">Task 2</span><h4>Plan, <code>--done</code> keys and ledger parsing</h4><p>Reads <code>### Task N:</code> headings outside code fences, the <code>--done</code> item keys and the ledger lines that map to item keys.</p></div><div class="card"><span class="tag">Task 3</span><h4>Wanted items and the checklist diff</h4><p>Builds the wanted nested checklist and the writes that make the current checklist match it, matched by item key, so renames keep the same item.</p></div><div class="card"><span class="tag">Task 4</span><h4>The <code>dg clickup checklist sync</code> command</h4><p>The command: dry run unless <code>--yes</code>, writes, read-back check, one JSON line; an orphan child left by a failed write is adopted on the next run.</p></div><div class="card"><span class="tag">Task 5</span><h4>Skill hooks (DGS-631 create, DGS-634 tick)</h4><p>writing-plans creates the checklist; subagent-driven-development and executing-plans write ledger lines and sync after each step; a failed sync never blocks.</p></div>
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <p>Executed via <code>digismith:subagent-driven-development</code>: fresh implementer
+  subagent per task, independent spec-compliance + quality review after each.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th><th>Deferred minors</th></tr>
+    <tr><td>1. Checklist types and client methods</td><td>Adds <code>ClickUpChecklist</code> types and four client calls: create a checklist, add, edit (rename, tick, nest with <code>parent</code>) and delete an item.</td><td>Approved, clean</td><td>none</td></tr><tr><td>2. Plan, <code>--done</code> keys and ledger parsing</td><td>Reads <code>### Task N:</code> headings outside code fences, the <code>--done</code> item keys and the ledger lines that map to item keys.</td><td>Approved, clean</td><td>FENCE opens on a one-line backtick span or 4+ space indent (plan.ts:143)<br>TASK_HEADING accepts Task 0/leading zeros that DONE_KEY rejects (plan.ts:142)<br>empty heading title gives 'Task N: ' with trailing space (plan.ts:168)</td></tr><tr><td>3. Wanted items and the checklist diff</td><td>Builds the wanted nested checklist and the writes that make the current checklist match it, matched by item key, so renames keep the same item.</td><td>Approved, clean</td><td>removing a dropped task item may also delete its foreign children in ClickUp (diff.ts:78)<br>'Task 01:' item gets key 01 and is removed instead of left alone (diff.ts:41)</td></tr><tr><td>4. The <code>dg clickup checklist sync</code> command</td><td>The command: dry run unless <code>--yes</code>, writes, read-back check, one JSON line; an orphan child left by a failed write is adopted on the next run.</td><td>Approved after 1 fix round</td><td>nest-edit test asserted only one of three edits by args (folded into fix round 1)<br>an adoption-only edit (parent change) is not counted in ops counts, so the dry-run summary reads as no change (diff.ts counts)</td></tr><tr><td>5. Skill hooks (DGS-631 create, DGS-634 tick)</td><td>writing-plans creates the checklist; subagent-driven-development and executing-plans write ledger lines and sync after each step; a failed sync never blocks.</td><td>Approved, clean</td><td>role-mode append rule stated for the task verdict only, not the final review verdict (SDD SKILL.md:642)<br>skills test counts pointers and does not check role-mode wording (plan-checklist-skills.test.ts:55)</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: With fixes. 1 Important and 11 Minor findings; one fix wave fixed 9, 3 are parked with rulings; the scoped re-review found all fixes addressed.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>F1 executing-plans showed "Whole-branch fixes (none needed)" after inline whole-branch fixes</td><td>Fixed (63aaba6e): executing-plans appends <code>Task final: dispatch fix (inline)</code> before the fixes</td></tr><tr><td>Minor</td><td>F2 an empty heading title gave <code>Task N: </code> with a trailing space</td><td>Fixed (c4a82bfe): the name is trimmed</td></tr><tr><td>Minor</td><td>F3 an adoption-only edit was in no count</td><td>Fixed (c4a82bfe): new <code>nest</code> count in the ops JSON</td></tr><tr><td>Minor</td><td>F4 no role-mode clause on the final-review verdict hook</td><td>Fixed (63aaba6e)</td></tr><tr><td>Minor</td><td>F5 FENCE opened on a one-line backtick span or a 4+ space indent</td><td>Fixed (c4a82bfe)</td></tr><tr><td>Minor</td><td>F6 <code>Task 0</code> and leading-zero headings were tasks</td><td>Fixed (c4a82bfe): only <code>[1-9]\d*</code></td></tr><tr><td>Minor</td><td>F7 removing a dropped task item may delete its foreign children</td><td>Parked: only on a dropped task; accepted</td></tr><tr><td>Minor</td><td>F8 a hand-made <code>Task 01:</code> item is removed</td><td>Parked: rare hand-made name; accepted</td></tr><tr><td>Minor</td><td>F9 the skills test counts pointers</td><td>Parked: docs test, not a defect</td></tr><tr><td>Minor</td><td>F10 the writing-plans re-sync after a revision had no <code>--ledger</code></td><td>Fixed (63524a89)</td></tr><tr><td>Minor</td><td>F11 flattenItems could lose a child's parent</td><td>Fixed (c4a82bfe)</td></tr><tr><td>Minor</td><td>F12 orphan adoption by name prefix could rename someone else's item</td><td>Fixed (c4a82bfe): exact child names only</td></tr><tr><td>Minor</td><td>Re-review R1: the F12 test passes without its fix (item order)</td><td>Parked: fix verified in diff.ts; test-order polish</td></tr><tr><td>Minor</td><td>Re-review R2: the F4 skills assertion held before the fix</td><td>Parked: clause verified in the SDD skill</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">74dfd11b</span> feat(dgs-632): add the checklist calls to the ClickUp client</li><li><span class="sha">24f0e423</span> feat(dgs-632): parse plan tasks, done keys and ledger lines</li><li><span class="sha">f6adefbc</span> feat(dgs-632): build the wanted checklist and diff it by item key</li><li><span class="sha">e276952a</span> feat(dgs-632): add dg clickup checklist sync</li><li><span class="sha">4b4e3b2b</span> fix(dgs-632): adopt an orphan child item on the next sync</li><li><span class="sha">7599defb</span> feat(dgs-631): create the plan checklist from writing-plans</li><li><span class="sha">9a582b5d</span> feat(dgs-634): tick the plan checklist from SDD and executing-plans</li><li><span class="sha">c4a82bfe</span> fix(dgs-632): harden plan parsing, count nest ops, adopt exact orphans only</li><li><span class="sha">63524a89</span> fix(dgs-631): re-sync after a plan revision with the ledger</li><li><span class="sha">63aaba6e</span> fix(dgs-634): record inline final fixes and role-mode final verdict</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-631—plan-checklist/report.html</footer>
+
+</body>
+</html>
