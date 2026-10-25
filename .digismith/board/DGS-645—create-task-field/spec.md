@@ -8,7 +8,7 @@ Why it matters: Mode = Autonomous makes a `to do` ticket factory work. A wrong M
 
 Scope: the "create-task defaults Mode to Autonomous" half is dropped. ClickUp's own field default (set in the UI, DGS-646) applies to API-created tickets. Sign-off: Auto. Mode: Autonomous.
 
-## The cause (proven for the CLI side, not for ClickUp's side)
+## The cause (unproven)
 
 The CLI does not send the wrong option. Read from code and reproduced with a fake client (no live call):
 
@@ -27,9 +27,9 @@ A throw-away test with fields Sign-off (Auto 0, Jack 1) and Mode (Autonomous 0, 
 
 All three are right. So Mode=Manual does not become orderindex 0 inside the CLI.
 
-The one place left is ClickUp. `create-task` sets the fields in a second call right after the task exists. If ClickUp applies the Mode field default asynchronously after creation, it can overwrite the value just set. The create ran while the Mode default was being set up in the UI (DGS-646). DGS-643, made with Mode=Manual, read Manual, so the effect is timing-dependent. This cannot be proven without a live call, and the refinement makes none.
+The cause is **unproven**. DGS-644 was created at about 22:05 UTC+7. Jack set the Mode default in the UI at 22:24 (DGS-646), so no default existed at creation: a late default overwriting the value does not explain DGS-644. One possibility stays open, with no proof: ClickUp itself dropped or replaced the value written right after create. DGS-643, made with Mode=Manual, read Manual, so the effect is not constant. This cannot be settled without a live call, and the refinement makes none.
 
-The real defect in our code is therefore this: **`create-task` trusts the write and never checks it.** Line 41 reads the task back (`client.get`) and prints it, and never compares it with the `--field` values. A wrong value passes silently with exit 0.
+The defect we can fix in our code: **`create-task` trusts the write and never checks it.** Line 41 reads the task back (`client.get`) and prints it, and never compares it with the `--field` values. A wrong value passes silently with exit 0.
 
 ## The fix
 
@@ -46,12 +46,15 @@ In `create-task.ts`, after `applyFields` and the `client.get` at line 41, check 
 
 ## The first use (conductor, after the merge)
 
-1. Create ONE throwaway ticket: `dg clickup create-task --list <DigiSmith tasks list> --name "DGS-645 first use (throwaway)" --field "Mode=Manual" --field "Sign-off=Jack"`.
-2. Read both back with `dg clickup get-task`: Mode = Manual, Sign-off = Jack. Exit 0 from create-task is already the proof, because the check passed.
-3. Set the ticket to `discarded`. This is a status change, never a delete.
+Reproduce the exact failing form of DGS-644.
+
+1. Create ONE throwaway ticket with the same flags as DGS-644, Sign-off first: `dg clickup create-task --list <DigiSmith tasks list> --name "DGS-645 first use (ignore)" --status "to do" --priority 2 --field "Sign-off=Auto" --field "Mode=Manual"`. It has no spec, so the factory scan skips it.
+2. Exit 0 from create-task is already the proof, because the read-back passed. Also read Mode and Sign-off back with `dg clickup get-task`: Mode = Manual, Sign-off = Auto.
+3. Set the ticket to `discarded` at once. This is a status change, never a delete.
+4. Post the result as a comment on DGS-645. If the output shows a retry line or a mismatch, that line is the evidence for the open cause.
 
 ## Not in scope
 
 - A default Mode in code (dropped).
 - Changing the ClickUp field default (DGS-646, UI).
-- A proven ClickUp-side cause. If the throwaway shows the mismatch after the fix, the retry line in the output is the evidence for a new ticket.
+- A proven cause. If a mismatch shows later, the retry line in the output is the evidence.
