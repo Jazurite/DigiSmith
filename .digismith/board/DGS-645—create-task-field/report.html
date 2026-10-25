@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>create-task read-back for --field values — Implementation Report</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; --good:#1a7f4b; --good-bg:#eefaf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; --good:#4fd889; --good-bg:#12271c; } }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; } .meta span { margin-right: 1.2rem; }
+  .badge { display: inline-block; border: 1px solid var(--good); color: var(--good); background: var(--good-bg); border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600; }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem; padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>create-task read-back for --field values — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-25</span>
+    <span>Ticket: <strong>DGS-645</strong></span>
+    <span>Commit range: <code>d1c9f7d1..4d39e50c</code></span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>dg clickup create-task now reads the task back after it sets the <code>--field</code> values, compares each value, sets a wrong field one more time, and exits 1 with both values if it still differs. The cause of the original wrong Mode on DGS-644 is unproven: the CLI sends the right option. The fix makes a wrong value loud. A retry that cures a value prints one stderr line, so the cause can be found later. Built with digismith:subagent-driven-development (3 tasks, each reviewed independently in role mode) and a whole-branch review with one fix wave. Findings table: <a href="findings.md">findings.md</a>.</p>
+  <p>Reference documents: the <a href="spec.md">spec</a> and the <a href="plan.md">implementation plan</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <ul>
+    <li><strong>Task 1: findFieldMismatches.</strong> A pure function in <code>field-set.ts</code> that compares each resolved field with the task read back: dropdowns by orderindex or option id, text trimmed, number and currency numeric, checkbox tolerant; date and relationship fields are skipped; only the last entry per field id counts.</li>
+    <li><strong>Task 2: create-task read-back.</strong> After the writes, create-task reads the task, retries the mismatched fields once (with a stderr line), and fails with exit 1 and the task key and id if a value still differs.</li>
+    <li><strong>Task 3: README.</strong> One sentence that describes the read-back.</li>
+  </ul>
+</section>
+
+<section id="build">
+  <h2>Build Process</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Task</th><th>Review verdict</th></tr>
+    <tr><td>1: findFieldMismatches</td><td>Approved with 2 Minor, both fixed</td></tr>
+    <tr><td>2: create-task read-back</td><td>Approved with 2 Minor, both fixed</td></tr>
+    <tr><td>3: README line</td><td>Approved, clean</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="finalreview">
+  <h2>Final Review &amp; Fix</h2>
+  <p>Ready to merge: round 1 was with fixes (1 Important, 2 Minor, all fixed). Round 2 was clean. Table: <a href="findings.md">findings.md</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+    <tr><td>Important</td><td>A retry that cures a mismatch left no evidence.</td><td>Fixed: one stderr line before the retry, asserted in a test.</td></tr>
+    <tr><td>Minor</td><td>A field given twice failed the read-back.</td><td>Fixed: only the last entry per field id is compared.</td></tr>
+    <tr><td>Minor</td><td>The error named the task id only.</td><td>Fixed: it shows the key and the id when a custom id exists.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">514f8d39</span> docs(dgs-645): add the spec and plan</li>
+    <li><span class="sha">93662683</span> docs(dgs-645): fix the plan setup line</li>
+    <li><span class="sha">95c79d03</span> docs(dgs-645): correct the spec timeline and first use</li>
+    <li><span class="sha">c1916f5a</span> docs(dgs-645): drop the late-default claim from the spec</li>
+    <li><span class="sha">c49b6466</span> feat(clickup): add findFieldMismatches for field read-back</li>
+    <li><span class="sha">71b2941d</span> fix(clickup): compare number, text and checkbox read-back tolerantly</li>
+    <li><span class="sha">fd1ee599</span> fix(clickup): read back create-task fields and fail on a mismatch</li>
+    <li><span class="sha">6ddd3e68</span> fix(clickup): pick the read-back retry set by field id</li>
+    <li><span class="sha">41b2c5d3</span> docs(clickup): note the create-task field read-back</li>
+    <li><span class="sha">db6cdfd4</span> fix(clickup): log the retry, compare the last value per field, show the custom id</li>
+    <li><span class="sha">4d39e50c</span> test(clickup): assert the final failure message, not the retry line</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-645—create-task-field/report.html</footer>
+
+</body>
+</html>
