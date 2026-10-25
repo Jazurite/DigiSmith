@@ -208,12 +208,22 @@ export function findFieldMismatches(task: { custom_fields?: { id: string; value?
         break;
       }
       case "text":
-      case "short_text":
+      case "short_text": {
+        const got = typeof read === "string" ? read.trim() : read;
+        if (got !== value) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
+        break;
+      }
+      // ClickUp may return a number as 3 or "3": compare as numbers so a correct value never fails.
       case "number":
       case "currency":
-      case "checkbox":
-        if (read !== value) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
+        if (empty || Number(read) !== Number(value)) out.push({ field: field.name, wanted: String(value), got: empty ? "(empty)" : String(read) });
         break;
+      // An unchecked box may come back empty; true/false may come back as strings.
+      case "checkbox": {
+        const got = empty ? false : typeof read === "string" ? read.toLowerCase() === "true" : read === true;
+        if (got !== value) out.push({ field: field.name, wanted: String(value), got: String(got) });
+        break;
+      }
       default:
         break;
     }

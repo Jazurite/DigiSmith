@@ -291,6 +291,32 @@ describe("findFieldMismatches", () => {
     ]);
   });
 
+  it("trims a string read before comparing text", () => {
+    const resolved = [{ field: plain("t1", "Notes", "text"), value: "hello" }] as ResolvedField[];
+    expect(findFieldMismatches({ custom_fields: [{ id: "t1", value: " hello\n" }] }, resolved)).toEqual([]);
+  });
+
+  it("compares number and currency numerically", () => {
+    const resolved = [
+      { field: plain("n1", "Points", "number"), value: 3 },
+      { field: plain("n2", "Cost", "currency"), value: 2.5 },
+    ] as ResolvedField[];
+    expect(findFieldMismatches({ custom_fields: [{ id: "n1", value: "3" }, { id: "n2", value: "2.5" }] }, resolved)).toEqual([]);
+    expect(findFieldMismatches({ custom_fields: [{ id: "n1", value: "4" }] }, resolved)).toEqual([
+      { field: "Points", wanted: "3", got: "4" },
+      { field: "Cost", wanted: "2.5", got: "(empty)" },
+    ]);
+  });
+
+  it("treats an empty checkbox read as false and accepts string booleans", () => {
+    const off = [{ field: plain("c1", "Done", "checkbox"), value: false }] as ResolvedField[];
+    const on = [{ field: plain("c1", "Done", "checkbox"), value: true }] as ResolvedField[];
+    expect(findFieldMismatches({ custom_fields: [] }, off)).toEqual([]);
+    expect(findFieldMismatches({ custom_fields: [{ id: "c1", value: "false" }] }, off)).toEqual([]);
+    expect(findFieldMismatches({ custom_fields: [{ id: "c1", value: "true" }] }, on)).toEqual([]);
+    expect(findFieldMismatches({ custom_fields: [] }, on)).toEqual([{ field: "Done", wanted: "true", got: "false" }]);
+  });
+
   it("skips date and relationship fields", () => {
     const resolved = [
       { field: plain("d1", "Due", "date"), value: 1 },
