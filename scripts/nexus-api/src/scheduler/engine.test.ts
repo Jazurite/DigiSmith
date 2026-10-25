@@ -372,6 +372,27 @@ describe('snapshot and runs', () => {
   })
 })
 
+describe('scheduleOf', () => {
+  it('a schedule that changes between ticks moves the next slot without a restart', async () => {
+    let every = 60
+    const dyn = job('dyn', { schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 60 }, catchUp: 'skip', scheduleOf: () => ({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: every }) })
+    const { engine, runner } = make([dyn], fakeRunner('ok'))
+    await tickAt(engine, '2026-10-19 10:10:00')
+    expect(engine.snapshot()[0]).toMatchObject({ schedule: { everyMinutes: 60 }, nextRunAtUtc7: '2026-10-19 11:00:00' })
+    every = 30
+    expect(engine.snapshot()[0]).toMatchObject({ schedule: { everyMinutes: 30 }, nextRunAtUtc7: '2026-10-19 10:30:00' })
+    const before = runner.calls.length
+    await tickAt(engine, '2026-10-19 10:30:05')
+    await engine.whenIdle()
+    expect(runner.calls.length).toBe(before + 1)
+    expect((await engine.getRuns('dyn', 1))[0]).toMatchObject({ trigger: 'schedule', slot: '2026-10-19@10:30' })
+  })
+  it('a job without scheduleOf uses its static schedule', async () => {
+    const { engine } = make([flux()], fakeRunner('ok'))
+    expect(engine.snapshot()[0]).toMatchObject({ schedule: { atUtc7: '00:10', windowEndUtc7: '05:00', everyMinutes: null } })
+  })
+})
+
 describe('queued jobs', () => {
   it('a job waiting behind another shows queued, not running, and starts its record when it runs', async () => {
     const { engine, runner } = make([job('a'), job('b')], fakeRunner('hang'))

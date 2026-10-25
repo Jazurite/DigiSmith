@@ -1,9 +1,11 @@
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
-import type { JobDef } from './types.ts'
+import { readScanInterval } from './scan-interval.ts'
+import type { JobDef, JobSchedule } from './types.ts'
 
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 // The built CLI of the main checkout: the same build the global `dg` runs. A missing dist fails the job with node's "Cannot find module".
+const CONFIG_FILE = join(MAIN_CHECKOUT, '.digismith', 'config.yml')
 const DG = [join(MAIN_CHECKOUT, 'packages', 'cli', 'dist', 'index.js')]
 
 export const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000
@@ -17,6 +19,7 @@ export function defineJob(input: JobInput): JobDef {
     description: input.description,
     command: input.command,
     ...(input.schedule === undefined ? {} : { schedule: input.schedule }),
+    ...(input.scheduleOf === undefined ? {} : { scheduleOf: input.scheduleOf }),
     timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     catchUp: input.catchUp ?? 'run-once-in-window',
     order: input.order ?? 100,
@@ -38,14 +41,20 @@ export function validateJobs(jobs: readonly JobDef[]): void {
     if (!isAbsolute(job.command.file)) throw new Error(`job ${job.name}: command file must be an absolute path`)
     if (!Number.isFinite(job.timeoutMs) || job.timeoutMs <= 0 || job.timeoutMs > MAX_TIMEOUT_MS)
       throw new Error(`job ${job.name}: timeoutMs must be above 0 and at most ${MAX_TIMEOUT_MS}`)
-    const s = job.schedule
-    if (!s) continue
-    if (!HHMM.test(s.atUtc7)) throw new Error(`job ${job.name}: atUtc7 "${s.atUtc7}" is not HH:MM`)
-    if (!HHMM.test(s.windowEndUtc7)) throw new Error(`job ${job.name}: windowEndUtc7 "${s.windowEndUtc7}" is not HH:MM`)
-    if (s.atUtc7 === s.windowEndUtc7) throw new Error(`job ${job.name}: window end equal to start is refused`)
-    if (s.everyMinutes !== undefined && !(Number.isInteger(s.everyMinutes) && s.everyMinutes >= 5 && s.everyMinutes <= 720))
-      throw new Error(`job ${job.name}: everyMinutes must be a whole number from 5 to 720`)
+    for (const s of [job.schedule, job.scheduleOf?.()]) {
+      if (!s) continue
+      if (!HHMM.test(s.atUtc7)) throw new Error(`job ${job.name}: atUtc7 "${s.atUtc7}" is not HH:MM`)
+      if (!HHMM.test(s.windowEndUtc7)) throw new Error(`job ${job.name}: windowEndUtc7 "${s.windowEndUtc7}" is not HH:MM`)
+      if (s.atUtc7 === s.windowEndUtc7) throw new Error(`job ${job.name}: window end equal to start is refused`)
+      if (s.everyMinutes !== undefined && !(Number.isInteger(s.everyMinutes) && s.everyMinutes >= 5 && s.everyMinutes <= 720))
+        throw new Error(`job ${job.name}: everyMinutes must be a whole number from 5 to 720`)
+    }
   }
+}
+
+/** The autonomous-scan schedule: the interval is nightwatch.scan_every_minutes, read at each call (default and fallback 30). */
+export function scanScheduleOf(configFile: string = CONFIG_FILE): () => JobSchedule {
+  return () => ({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: readScanInterval(configFile).minutes })
 }
 
 export const JOBS: readonly JobDef[] = [
@@ -60,7 +69,8 @@ export const JOBS: readonly JobDef[] = [
   defineJob({
     name: 'autonomous-scan',
     description: 'Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor',
-    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 30 },
+    scheduleOf: scanScheduleOf(),
     command: { file: process.execPath, args: [...DG, 'autonomous', 'scan', '--repo', MAIN_CHECKOUT] },
     timeoutMs: 5 * 60 * 1000, catchUp: 'skip', order: 50, notify: 'failures', manualOutsideWindow: 'allowed',
   }),

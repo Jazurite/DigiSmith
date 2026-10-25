@@ -7,6 +7,8 @@ export interface JobDef {
   name: string
   description: string
   schedule?: JobSchedule
+  /** When set, the engine asks it at every tick and snapshot; `schedule` is the default it falls back to. */
+  scheduleOf?: () => JobSchedule
   command: { file: string; args: string[] }
   timeoutMs: number
   catchUp: 'run-once-in-window' | 'skip'

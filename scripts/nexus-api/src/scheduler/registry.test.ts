@@ -1,11 +1,11 @@
 import { execFile } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import { currentSlot, slotsOfNight } from './clock.ts'
-import { JOBS, MAX_TIMEOUT_MS, defineJob, validateJobs } from './registry.ts'
+import { JOBS, MAX_TIMEOUT_MS, defineJob, scanScheduleOf, validateJobs } from './registry.ts'
 
 const base = { name: 'night-scan', description: 'd', command: { file: '/bin/echo', args: ['hi'] } }
 const withSchedule = (schedule: object) => defineJob({ ...base, schedule } as never)
@@ -99,18 +99,39 @@ describe('JOBS', () => {
       expect(command.args).not.toContain('--experimental-strip-types')
     }
   })
-  it('autonomous-scan has 288 five-minute slots for one night key', () => {
+  it('autonomous-scan has 48 thirty-minute slots for one night key and reads its interval from the config', () => {
     const scan = JOBS.find((j) => j.name === 'autonomous-scan')!
     const slots = slotsOfNight('2026-10-19', scan.schedule!)
-    expect(slots.map((s) => s.key)).toEqual(Array.from({ length: 288 }, (_, i) => `2026-10-19@${String(Math.floor(i / 12)).padStart(2, '0')}:${String((i % 12) * 5).padStart(2, '0')}`))
+    expect(slots.map((s) => s.key)).toEqual(Array.from({ length: 48 }, (_, i) => `2026-10-19@${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`))
     for (const s of slots) expect(s.atMs).toBeLessThan(s.windowEndMs)
-    expect(scan.schedule!.everyMinutes).toBe(5)
+    expect(scan.schedule!.everyMinutes).toBe(30)
+    expect(typeof scan.scheduleOf).toBe('function')
+    // 09:00 to 18:00 UTC+7 inclusive of 09:00 and 17:30: 18 slots
+    expect(slots.filter((s) => s.key >= '2026-10-19@09:00' && s.key < '2026-10-19@18:00')).toHaveLength(18)
     expect(slots[0]!.key).toBe('2026-10-19@00:00')
-    expect(slots[287]!.key).toBe('2026-10-19@23:55')
+    expect(slots[47]!.key).toBe('2026-10-19@23:30')
     expect(scan.catchUp).toBe('skip')
     expect(scan.manualOutsideWindow).toBe('allowed')
     expect(scan.command.args).toContain('autonomous')
     expect(scan.command.args).toContain('scan')
+  })
+  it('scanSchedule follows the config file each call and validates', () => {
+    const f = join(mkdtempSync(join(tmpdir(), 'reg-')), 'config.yml')
+    const of = scanScheduleOf(f)
+    writeFileSync(f, 'nightwatch:\n  scan_every_minutes: 15\n')
+    expect(of()).toEqual({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 15 })
+    writeFileSync(f, 'nightwatch:\n  scan_every_minutes: 4\n')
+    expect(of().everyMinutes).toBe(30)
+    writeFileSync(f, 'profile: x\n')
+    expect(of().everyMinutes).toBe(30)
+    expect(() => validateJobs([defineJob({ ...base, schedule: of() })])).not.toThrow()
+  })
+  it('the other three five-minute jobs stay at 5 with no scheduleOf', () => {
+    for (const name of ['nightwatch-watchdog', 'schedule-release', 'oculus-tokens']) {
+      const j = JOBS.find((x) => x.name === name)!
+      expect(j.schedule).toEqual({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 })
+      expect(j.scheduleOf).toBeUndefined()
+    }
   })
   it('autonomous-report has one slot at 06:00', () => {
     const report = JOBS.find((j) => j.name === 'autonomous-report')!

@@ -4,7 +4,7 @@ import type { Logger } from '../logger.ts'
 import { currentSlot, formatUtc7, inWindow, nextRunAt, slotsOfNight, type Slot } from './clock.ts'
 import { appendRun, readRuns, readState, writeState as writeStateFile, type State } from './runlog.ts'
 import { runJob, type RunResult } from './runner.ts'
-import type { JobDef, JobInfo, RunRecord, RunTrigger } from './types.ts'
+import type { JobDef, JobInfo, JobSchedule, RunRecord, RunTrigger } from './types.ts'
 
 export type EngineEvent =
   | { type: 'run'; job: JobDef; run: RunRecord }
@@ -64,6 +64,12 @@ function validInFlight(v: unknown): InFlight | null {
   if (typeof f.job !== 'string' || !f.job || typeof f.startedAt !== 'string' || Number.isNaN(Date.parse(f.startedAt))) return null
   const trigger = TRIGGERS.includes(f.trigger as RunTrigger) ? (f.trigger as RunTrigger) : undefined
   return { job: f.job, startedAt: f.startedAt, pid: typeof f.pid === 'number' ? f.pid : 0, ...(trigger ? { trigger } : {}) }
+}
+
+/** The schedule in force now: a job that reads its interval from config says so with scheduleOf. */
+const scheduleOf = (job: JobDef): JobSchedule | undefined => {
+  if (!job.scheduleOf) return job.schedule
+  try { return job.scheduleOf() } catch { return job.schedule }
 }
 
 export function createEngine(opts: EngineOptions): Engine {
@@ -133,7 +139,7 @@ export function createEngine(opts: EngineOptions): Engine {
   }
 
   const keyMs = (key: string, job: JobDef): number => {
-    const s = job.schedule
+    const s = scheduleOf(job)
     if (!s) return -Infinity
     const night = key.slice(0, 10)
     return slotsOfNight(night, s).find((sl) => sl.key === key)?.atMs ?? -Infinity
@@ -222,7 +228,7 @@ export function createEngine(opts: EngineOptions): Engine {
   }
 
   const tickJob = async (job: JobDef, t: number, due: Item[]): Promise<void> => {
-    const s = job.schedule
+    const s = scheduleOf(job)
     if (!s) return
     const cur = currentSlot(t, s)
     const slots = [nightOf(t - DAY_MS), nightOf(t)].flatMap((n) => slotsOfNight(n, s)).filter((sl) => sl.atMs <= t)
@@ -315,7 +321,7 @@ export function createEngine(opts: EngineOptions): Engine {
       const job = jobs.find((j) => j.name === name)
       if (!job) return { accepted: false, error: 'not_found', message: `no job named ${name}` }
       if (stopped) return { accepted: false, error: 'stopped', message: 'the scheduler is stopping' }
-      const s = job.schedule
+      const s = scheduleOf(job)
       if (job.manualOutsideWindow === 'refused' && (!s || !inWindow(now(), s))) {
         const win = s ? `${s.atUtc7} to ${s.windowEndUtc7} UTC+7` : 'none'
         return { accepted: false, error: 'forbidden', message: `${name} runs only inside its window ${win}` }
@@ -329,7 +335,7 @@ export function createEngine(opts: EngineOptions): Engine {
     snapshot() {
       const t = now()
       return jobs.map((job): JobInfo => {
-        const s = job.schedule
+        const s = scheduleOf(job)
         const next = s ? nextRunAt(t, s) : null
         const runningItem = active?.item.job === job ? active.item : null
         const queuedItem = runningItem ? null : queue.find((q) => q.job === job)
