@@ -328,9 +328,9 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Generate the review package (`scripts/review-package PLAN_FILE BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the printed path.
+**DONE:** Generate the review package (`scripts/review-package PLAN_FILE BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the printed path. Before the review, append `Task <N>: implemented` to the ledger and sync the checklist (Plan Checklist (DGS-634)).
 
-**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
+**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review. Before the review, append `Task <N>: implemented` to the ledger and sync the checklist (Plan Checklist (DGS-634)).
 
 **NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
 
@@ -392,6 +392,9 @@ lacks. If you confirm an item is a real gap, treat it as a failed spec
 review — it enters the fix loop with the other findings.
 
 Template: [task-reviewer-prompt.md](task-reviewer-prompt.md)
+
+When the task review returns its verdict, append `Task <N>: reviewed (clean)` or `Task <N>: reviewed (<K> findings)` to the
+ledger and sync the checklist (Plan Checklist (DGS-634)). Role mode: append the line when your parent's verdict arrives.
 
 ### 4. The fix loop
 
@@ -493,9 +496,28 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 
 Same key rule as the step-start block in Setup.
 
+Then sync the checklist (Plan Checklist (DGS-634)): the `complete` line ticks Fix, and the task item with it.
+
 Then mark the todo complete and move on. Never move to the next task while
 the review has open Critical/Important issues that are neither fixed nor
 parked-with-ruling at the cap.
+
+## Plan Checklist (DGS-634)
+
+When `<Key>` is a ClickUp key (`DGS-<n>`), the ticket's "Plan" checklist (made by writing-plans, DGS-631) follows the build. Each
+sync recomputes the whole checklist from the ledger, never from memory:
+
+```bash
+dg clickup checklist sync --task <Key> --plan PLAN_FILE --ledger <workspace>/progress.md --yes
+```
+
+The ledger lines it reads: `Task <N>: implemented` (Implement), `Task <N>: reviewed (clean)` or
+`Task <N>: reviewed (<K> findings)` (Review), `Task <N>: complete` (Fix; "Fix (none needed)" when the task had no fix round),
+`Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)` (Whole-branch review), `Task final: complete`
+(Whole-branch fixes; "(none needed)" when no fix wave ran). A task item ticks when its three children are ticked. Sync after each
+of those lines and after a plan revision (a task added, split or dropped). Any other key or none: skip. The key is the one the
+build runs under (a subtask build has its own checklist). A non-zero exit never blocks the build: print a warning, append
+`Checklist sync: failed (<first stderr line>)` to the ledger and go on; the next sync heals it.
 
 ## Role Mode (a herdr Builder)
 
@@ -617,6 +639,9 @@ the ledger's deferred-minor and parked lines so it can triage which must be
 fixed before merge. Append the `Task final: dispatch final-reviewer ...` line
 as in step 1.
 
+When the final review returns its verdict, append `Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)` and
+sync the checklist (Plan Checklist (DGS-634)).
+
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
 Per-finding fixers each rebuild context and re-run suites; a real
@@ -628,6 +653,9 @@ Adjudicate any residual findings as in the task loop's breaker: park with
 rulings, or stop on load-bearing ones. There is no second fix wave —
 residual load-bearing findings surface to your human partner when
 finishing-a-development-branch presents the options.
+
+Once the final review is clean (its fixes verified), append `Task final: complete` and sync the checklist
+(Plan Checklist (DGS-634)) so the end state is right.
 
 Once the final review is clean, before the report and the Finish step, mark the end of the final window and of the step:
 

@@ -57,6 +57,10 @@ For each task:
    reviewer to produce one.
 7. Mark as completed, and mark the end of the task's window:
    `node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/entry.ts task-end --ticket <Key> --task <N>`
+8. **Plan checklist (DGS-634).** When `<Key>` is a ClickUp key (`DGS-<n>`), sync the ticket's checklist from the ledger, never
+   from memory: `dg clickup checklist sync --task <Key> --plan PLAN_FILE --ledger <workspace>/progress.md --yes`. The `complete`
+   line ticks Implement, Review and "Fix (none needed)". Sync again after a plan revision. Any other key or none: skip. A
+   non-zero exit never blocks: print a warning and append `Checklist sync: failed (<first stderr line>)` to the ledger.
 
 `<N>` is the task's number in the plan. Same key rule as the start block. A warning or non-zero exit never blocks the flow.
 
@@ -69,6 +73,14 @@ node --experimental-strip-types ~/.digismith-depot/repo/packages/cli/src/tokens/
 ```
 
 Same key rule as the start block.
+
+Then sync the checklist once more (Plan checklist (DGS-634) in Step 2). If a whole-branch review ran, append
+`Task final: reviewed (clean)` or `Task final: reviewed (<K> findings)`, and `Task final: complete` once its fixes are verified,
+before this sync:
+
+```bash
+dg clickup checklist sync --task <Key> --plan PLAN_FILE --ledger <workspace>/progress.md --yes
+```
 
 After all tasks complete and verified:
 - Announce: "I'm using the report-implementation skill to generate this feature's implementation report."
