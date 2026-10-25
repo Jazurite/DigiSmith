@@ -6,6 +6,7 @@ import { runsDir } from "../run/paths.ts";
 import { readRun, type RunRecord } from "../run/record.ts";
 import { appendOpen, appendResolved, readOpen, type AttentionKind, type OpenItem } from "./attention.ts";
 import { readBudgets } from "./budgets.ts";
+import { readScanIntervalFile } from "./guardrails.ts";
 import { atomicWrite } from "./state.ts";
 import { notifyNew, type RunDg } from "./notify.ts";
 import type { PaneLookup } from "./pane.ts";
@@ -20,6 +21,9 @@ export interface WatchResult { lines: string[]; opened: number; resolved: number
 const RETENTION_MS = 7 * 24 * 3600_000;
 const AUTO: AttentionKind[] = ["blocked", "stalled"];
 /** The kinds the pass opens; C1 to C3 close all of them. Items of act, release or config are never in this list. */
+// Own run key, so the scan interval item never shares a slot with bad-budget-config (run "-", kind failed).
+const SCAN_RUN = "scan-interval";
+const SCAN_CAUSE = "bad-scan-interval-config";
 const CLOSABLE: AttentionKind[] = ["blocked", "stalled", "lost"];
 
 /** Each run is read once; a run older than 7 days is skipped unless it still has an open item and has ended. A broken run dir gives one stderr line; an unreadable runs root throws. */
@@ -84,7 +88,7 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   const key = (run: string, kind: string): string => `${run}|${kind}`;
   const open = (i: Omit<OpenItem, "id" | "ts">): void => {
     if (items.some((o) => o.run === i.run && o.kind === i.kind)) return;
-    if (i.run !== "-") { // "-" is the config item: it follows the config, not a run
+    if (i.run !== "-" && i.run !== SCAN_RUN) { // "-" and the scan interval item are config items: they follow the config, not a run
       const k = key(i.run, i.kind);
       if (opened.has(k)) {
         const was = opened.get(k);
@@ -106,6 +110,14 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     res.lines.push(`config: ${p}`);
     open({ ticket: null, run: "-", kind: "failed", cause: "bad-budget-config", since: nowIso });
   }
+
+  // A bad scan_every_minutes keeps 30 (the scheduler's own fallback). The item closes on the first pass that reads clean.
+  const scan = readScanIntervalFile(d.cwd);
+  for (const p of scan.problems) {
+    res.lines.push(`config: ${p}`);
+    open({ ticket: null, run: SCAN_RUN, kind: "failed", cause: SCAN_CAUSE, since: nowIso });
+  }
+  if (scan.problems.length === 0) for (const it of items.filter((o) => o.run === SCAN_RUN && o.cause === SCAN_CAUSE)) close(it, "scan_every_minutes reads clean");
 
   const paneCache = new Map<string, ReadonlyMap<string, string> | null>();
   const paneOf = async (ws: string | null, pane: string | null): Promise<Pane> => {

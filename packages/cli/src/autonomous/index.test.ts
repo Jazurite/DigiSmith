@@ -376,6 +376,22 @@ describe("dg autonomous: attention, resume, watch", () => {
   });
 });
 
+describe("dg autonomous watch --repo", () => {
+  it("reads the config of the given repo, so the scheduler (cwd /) still sees scan_every_minutes", async () => {
+    const repo = join(root, "watch-repo");
+    mkdirSync(join(repo, ".digismith"), { recursive: true });
+    writeFileSync(join(repo, ".digismith", "config.yml"), "nightwatch:\n  scan_every_minutes: 4\n");
+    const old = process.env.DIGISMITH_DEPOT_DIR;
+    process.env.DIGISMITH_DEPOT_DIR = root;
+    try {
+      await parse(["autonomous", "watch", "--dry-run", "--repo", repo]);
+    } finally {
+      if (old === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = old;
+    }
+    expect(out()).toContain("scan_every_minutes");
+  });
+});
+
 describe("dg autonomous merge-gate", () => {
   const g = (cwd: string, ...a: string[]) => execFileSync("git", a, { cwd, encoding: "utf8" });
   function tempRepo(): string {

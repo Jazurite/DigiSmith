@@ -167,7 +167,7 @@ describe('JOBS', () => {
     expect(job.timeoutMs).toBe(120000)
     expect(job.order).toBe(40)
     expect(job.command.file).toBe(process.execPath)
-    expect(job.command.args.slice(-2)).toEqual(['autonomous', 'watch'])
+    expect(job.command.args.slice(-4)).toEqual(['autonomous', 'watch', '--repo', join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')])
     for (const hhmm of ['10:00', '23:55']) {
       const ms = Date.parse(`2026-10-19T${hhmm}:00+07:00`)
       expect(currentSlot(ms, job.schedule!)).not.toBeNull()

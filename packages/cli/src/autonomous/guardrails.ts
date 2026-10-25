@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Git } from "./gitx.ts";
 
 const PHASES = ["building", "review", "merge"] as const;
@@ -88,6 +90,16 @@ export function readGuardrails(text: string): Guardrails {
 export function parseScanInterval(text: string): { minutes: number; problems: string[] } {
   const g = readGuardrails(text);
   return { minutes: g.scanEveryMinutes, problems: g.scanProblems };
+}
+
+/** The scan interval in force for the config in `cwd` (the working file, like the budgets). No file or no key: 30, no problem; an unreadable file is a problem. */
+export function readScanIntervalFile(cwd: string): { minutes: number; problems: string[] } {
+  let text: string;
+  try { text = readFileSync(join(cwd, ".digismith", "config.yml"), "utf-8"); } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { minutes: DEFAULT_SCAN_EVERY_MINUTES, problems: [] };
+    return { minutes: DEFAULT_SCAN_EVERY_MINUTES, problems: [`nightwatch.scan_every_minutes: .digismith/config.yml cannot be read; ${DEFAULT_SCAN_EVERY_MINUTES} used`] };
+  }
+  return parseScanInterval(text);
 }
 
 /** The policy is read from main, never from the branch or the working tree. Unreadable = not ok (fail closed). */

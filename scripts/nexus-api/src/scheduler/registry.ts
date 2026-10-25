@@ -96,7 +96,7 @@ export const JOBS: readonly JobDef[] = [
     name: 'nightwatch-watchdog',
     description: 'Watches every open run for blocked, stalled and lost; writes the attention list. No model tokens.',
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
-    command: { file: process.execPath, args: [...DG, 'autonomous', 'watch'] },
+    command: { file: process.execPath, args: [...DG, 'autonomous', 'watch', '--repo', MAIN_CHECKOUT] },
     timeoutMs: 2 * 60 * 1000, catchUp: 'skip', order: 40, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
   defineJob({

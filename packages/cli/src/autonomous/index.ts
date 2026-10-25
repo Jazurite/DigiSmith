@@ -322,12 +322,14 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
         .command({
           command: "watch",
           describe: "check the open runs for blocked, stalled and lost ones and write the attention list",
-          builder: (e) => e.option("dry-run", { type: "boolean", default: false, describe: "print what would change, write nothing" }),
+          builder: (e) => e
+            .option("dry-run", { type: "boolean", default: false, describe: "print what would change, write nothing" })
+            .option("repo", { type: "string", requiresArg: true, describe: "the checkout whose .digismith/config.yml sets the budgets and the scan interval (default: the current directory)" }),
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const entry = process.argv[1];
               const r = await runWatch({
-                env: process.env, dir: d.dir, cwd: process.cwd(), now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
+                env: process.env, dir: d.dir, cwd: (argv.repo as string | undefined) ?? process.cwd(), now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
                 runDg: (args) => new Promise((resolve) => {
                   execFile(process.execPath, [entry, ...args], { timeout: 60_000 }, (err) => resolve({ ok: !err }));
                 }),

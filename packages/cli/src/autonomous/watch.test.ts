@@ -300,6 +300,51 @@ describe("runWatch", () => {
     expect(readOpen(dir)).toHaveLength(1);
   });
 
+  const writeConfig = (text: string): void => {
+    mkdirSync(join(cwd, ".digismith"), { recursive: true });
+    writeFileSync(join(cwd, ".digismith", "config.yml"), text);
+  };
+
+  it("opens one failed bad-scan-interval-config item for a bad scan_every_minutes, once, and closes it when the value reads clean", async () => {
+    writeConfig("nightwatch:\n  scan_every_minutes: 4\n");
+    const r = await runWatch(deps());
+    const items = readOpen(dir);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: "failed", cause: "bad-scan-interval-config", run: "scan-interval", ticket: null });
+    expect(r.opened).toBe(1);
+    expect(r.lines.join("\n")).toMatch(/scan_every_minutes/);
+    expect(calls).toHaveLength(0);
+    const r2 = await runWatch(deps());
+    expect(r2.opened).toBe(0);
+    expect(readOpen(dir)).toHaveLength(1);
+    writeConfig("nightwatch:\n  scan_every_minutes: 30\n");
+    const r3 = await runWatch(deps());
+    expect(r3.resolved).toBe(1);
+    expect(readOpen(dir)).toHaveLength(0);
+    writeConfig("nightwatch:\n  scan_every_minutes: x\n");
+    expect((await runWatch(deps())).opened).toBe(1);
+  });
+
+  it("a missing scan_every_minutes, or no config file, opens nothing", async () => {
+    expect((await runWatch(deps())).opened).toBe(0);
+    writeConfig("nightwatch:\n  budgets:\n    review: 60\n");
+    expect((await runWatch(deps())).opened).toBe(0);
+    expect(readOpen(dir)).toHaveLength(0);
+  });
+
+  it("a bad scan interval and a bad budget are two separate items", async () => {
+    writeConfig("nightwatch:\n  scan_every_minutes: 4\n  budgets:\n    building: abc\n");
+    await runWatch(deps());
+    expect(readOpen(dir).map((i) => i.cause).sort()).toEqual(["bad-budget-config", "bad-scan-interval-config"]);
+  });
+
+  it("a dry run writes no scan interval item", async () => {
+    writeConfig("nightwatch:\n  scan_every_minutes: 4\n");
+    const r = await runWatch({ ...deps(), dryRun: true });
+    expect(r.opened).toBe(1);
+    expect(readOpen(dir)).toHaveLength(0);
+  });
+
   it("marks only lost as retry eligible, starts no worker and touches no journal", async () => {
     fiveRuns();
     await runWatch(deps());
