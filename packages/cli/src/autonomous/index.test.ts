@@ -175,7 +175,7 @@ describe("dg autonomous scan", () => {
     expect(out()).toMatch(/DGS-1\s+ready/);
     expect(out()).toMatch(/DGS-2\s+\S/);
     expect(out()).not.toMatch(/DGS-2\s+ready/);
-    expect(out()).toMatch(/DGS-3\s+Mode is not Autonomous/);
+    expect(out()).toMatch(/DGS-3\s+Mode is Manual/);
     expect(out()).toContain("skipped DGS-3: mode");
     expect(tracker.writeCalls()).toEqual([]);
     expect(existsSync(dir)).toBe(false);

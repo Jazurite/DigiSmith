@@ -183,11 +183,16 @@ describe("ClickUpLoTracker.listByStatus", () => {
     expect(calls).toEqual([`searchTeamTasks ${SPACE} to do`]);
   });
 
-  it("a hit with no Mode is read from the search alone too", async () => {
-    const { client, calls } = fakeClient({ search: [task({ id: "n1", custom_fields: [] })] });
+  it("a hit with no Mode is read in full (empty Mode is Autonomous): attachments come from the full ticket", async () => {
+    const hit = task({ id: "n1", custom_fields: [] });
+    const { client, calls } = fakeClient({
+      search: [hit],
+      full: { n1: { ...hit, attachments: [{ id: "x", title: "plan.md", extension: "md" }] } },
+    });
     const [t] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(t.mode).toBeNull();
-    expect(calls.some((c) => c.startsWith("getTaskByRef") || c.startsWith("getAllListTasks"))).toBe(false);
+    expect(t.attachments).toEqual(["plan.md"]);
+    expect(calls.filter((c) => c.startsWith("getTaskByRef"))).toEqual(["getTaskByRef n1"]);
   });
 
   it("an Autonomous hit is read in full, a Manual hit beside it is not", async () => {
@@ -274,6 +279,13 @@ describe("ClickUpLoTracker.listByStatus", () => {
     expect(pages).toEqual([0, 1, 2]);
   });
 
+  it("a failed milestone read gives milestone null and does not fail the list", async () => {
+    const { client } = fakeClient({ search: [task({ id: "a" })] });
+    (client as unknown as { getAllListTasks: () => Promise<never> }).getAllListTasks = async () => { throw new Error("network down"); };
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(out.map((t) => [t.id, t.milestone])).toEqual([["a", null]]);
+  });
+
   it("does not keep a failed milestone read cached", async () => {
     const { client, calls } = fakeClient({ search: [task({ id: "a" })] });
     const real = client.getAllListTasks.bind(client);
@@ -283,7 +295,8 @@ describe("ClickUpLoTracker.listByStatus", () => {
       return real(id);
     };
     const tr = new ClickUpLoTracker(client, SPACE);
-    await expect(tr.listByStatus("to do")).rejects.toThrow("network down");
+    const first = await tr.listByStatus("to do");
+    expect(first.map((t) => t.milestone)).toEqual([null]);
     const out = await tr.listByStatus("to do");
     expect(out.map((t) => t.id)).toEqual(["a"]);
     expect(calls.filter((c) => c.startsWith("getAllListTasks"))).toHaveLength(1);

@@ -12,7 +12,7 @@ export interface ScheduleDeps {
   /** The event writer; defaults to appendEvent. A failure to write an event never stops the run. */
   appendEvent?: typeof appendEvent;
 }
-export type ScheduleVerdict = "moved" | "would-move" | "not-due" | "no-date" | "bad-date" | "no-mode" | "failed";
+export type ScheduleVerdict = "moved" | "would-move" | "not-due" | "no-date" | "bad-date" | "failed";
 export interface ScheduleLine { key: string; scheduledAtUtc7: string | null; mode: LoTask["mode"]; verdict: ScheduleVerdict; to?: typeof TO_DO; error?: string }
 export interface ScheduleResult { scheduled: number; moved: number; lines: ScheduleLine[] }
 
@@ -20,7 +20,6 @@ export const SCHEDULE_NOTES = "schedule-notes.json";
 export const SCHEDULE_TEXT = {
   noDate: "Scheduled at is empty. Set it (UTC+7) and the ticket moves at that time.",
   badDate: "Scheduled at is not a date. Set it again (UTC+7) and the ticket moves at that time.",
-  noMode: "Mode is empty. Set Autonomous or Manual; the ticket then moves to to do.",
   failed: (to: string, error: string) => `Could not move this ticket to ${to}: ${error}. It stays in scheduled and is tried again every 5 minutes.`,
 };
 
@@ -74,7 +73,6 @@ export async function runScheduleRelease(d: ScheduleDeps): Promise<ScheduleResul
       const line = (verdict: ScheduleVerdict, extra: Partial<ScheduleLine> = {}): void => { lines.push({ key, scheduledAtUtc7: when, mode: t.mode, verdict, ...extra }); };
       if (t.scheduledAt === null) { await tell(t, SCHEDULE_TEXT.noDate); line("no-date"); continue; }
       if (t.scheduledAt === "invalid") { await tell(t, SCHEDULE_TEXT.badDate); line("bad-date"); continue; }
-      if (t.mode === null) { await tell(t, SCHEDULE_TEXT.noMode); line("no-mode"); continue; }
       if (t.scheduledAt > now.getTime()) {
         if (notes[key] !== undefined) { delete notes[key]; notesChanged = true; }
         line("not-due");

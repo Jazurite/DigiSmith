@@ -85,12 +85,12 @@ export class ClickUpLoTracker implements Tracker {
     const out: LoTask[] = [];
     for (const hit of all) {
       if (hit.status?.status?.toLowerCase() !== want) continue;
-      // Only an Autonomous ticket can be claimed: any other is built from the search hit, with no extra call.
-      if (dropdown(hit, "Mode", ["Autonomous", "Manual"] as const) !== "Autonomous") {
+      // Only a Manual ticket is never claimed (an empty Mode is Autonomous): it is built from the search hit, with no extra call.
+      if (dropdown(hit, "Mode", ["Autonomous", "Manual"] as const) === "Manual") {
         out.push(await this.toLoTask(hit, byId, true));
         continue;
       }
-      // Search leaves out attachments: read the full ticket, only for Autonomous tickets in this status.
+      // Search leaves out attachments: read the full ticket, for every ticket in this status but a Manual one.
       const full = await this.client.getTaskByRef(hit.id);
       out.push(await this.toLoTask({ ...hit, ...full, dependencies: full.dependencies ?? hit.dependencies,
         linked_tasks: full.linked_tasks ?? hit.linked_tasks }, byId));
@@ -122,7 +122,9 @@ export class ClickUpLoTracker implements Tracker {
   private async milestone(t: ClickUpTask): Promise<string | null> {
     // Only the link form is read. The older form, where the milestone waits on the ticket through
     // `dependencies` (probe.md row a), is not read: such a ticket reads "no milestone" until it gets a link.
-    const names = await this.loadMilestones();
+    // The milestone is for reports only: a failed read gives null and never fails a scan.
+    let names: Map<string, string>;
+    try { names = await this.loadMilestones(); } catch { return null; }
     for (const link of (t.linked_tasks ?? []) as Link[]) {
       const other = link.task_id === t.id ? link.link_id : link.link_id === t.id ? link.task_id : undefined;
       if (other && names.has(other)) return names.get(other)!;
