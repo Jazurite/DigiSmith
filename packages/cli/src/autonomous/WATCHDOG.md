@@ -6,9 +6,10 @@ Command: `dg autonomous watch`. The Nexus scheduler runs it every 5 minutes, all
 
 ## Ticket flow (DGS-635)
 
-- A ticket in `to do` with Mode Autonomous: the scan claims it at any hour. The claim sets the status `claimed`, writes the lock and writes the order.
+- A ticket in `to do` whose Mode is not Manual (an empty Mode is Autonomous): the scan claims it at any hour when it is ready. The claim sets the status `claimed`, writes the lock and writes the order.
 - The conductor sets `in progress` when the Builder starts, and reads the status back.
 - A ticket with Mode Manual is never claimed. It stays in `to do` for attended work.
+- Definition of Ready (DGS-660): spec and plan on the ticket, no open blocker, Mode not Manual. An empty Sign-off is Auto; Sign-off Jack makes the run stop at acceptance. The milestone is for tracking only and never blocks a claim.
 - A ticket in `scheduled` moves to `to do` at its Scheduled at time (both Modes). The scan then treats it like any other `to do` ticket.
 
 Role scope (DGS-598): only builder, reviewer and scout runs are classified. A maestro, conductor or other run is skipped before its events are read: it gets no item and no comment. An open blocked or stalled item of such a run is closed with the note "role not watched". Oculus still lists these runs, as healthy or ended.

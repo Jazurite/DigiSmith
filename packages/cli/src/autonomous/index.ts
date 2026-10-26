@@ -220,7 +220,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
       y
         .command({
           command: "scan",
-          describe: "scan to do (Mode Autonomous) and claim the first ticket that passes the Definition of Ready; any hour",
+          describe: "scan to do (any Mode but Manual) and claim the first ticket that passes the Definition of Ready; any hour",
           builder: (e) =>
             e
               .option("dry-run", { type: "boolean", default: false, describe: "print the verdict for each candidate, write nothing, any hour" })
