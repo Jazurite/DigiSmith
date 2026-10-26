@@ -41,5 +41,12 @@ echo "  CPU idle ${idle}%   load ${load1} ${load5} ${load15}   memory free ${mem
 echo "  biggest processes:"
 ps -Ao rss,%cpu,comm | sort -rn | head -5 | awk '{n=$3; sub(/.*\//,"",n); printf "    %6d MB %5s%% %s\n", $1/1024, $2, n}'
 
+echo "  git drift (line endings, file modes):"
+DRIFT="$HOME/.digismith-depot/bin/drift-check"
+if [ -x "$DRIFT" ]; then
+  drift_out=$("$DRIFT" 2>&1) && echo "    clean" || printf '%s\n' "$drift_out" | sed 's/^/    /'
+else
+  echo "    drift-check is not installed (run scripts/workbox-health/install.sh)"
+fi
 echo "$now,$cpu_c,$gpu_c,$fan,$pressure,$cpu_level,$prochots,$idle,$load1,$load5,$load15,$memfree,$oc_mb" >> "$LOG"
 echo "  logged to $LOG"
