@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { freezeClock } from '../e2e/freeze-clock.ts'
 import { startStubForOculus } from '../e2e/stub-server.ts'
 
 // Row cards at the phone width: one baseline each for the index, the index with herdr down (DGS-599), Runs and a run page with the tokens card (DGS-590) (the phone project only).
@@ -10,7 +11,7 @@ for (const [name, path, mode] of [['index', '/', 'oc-ok'], ['index-disconnected'
   test(`oculus mobile ${name}`, async ({ page }, info) => {
     test.skip(info.project.name !== 'phone', 'phone width only')
     await stub.setMode(mode)
-    await page.clock.install({ time: new Date('2026-10-22T03:00:00Z') })
+    await freezeClock(page, '2026-10-22T03:00:00Z')
     await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
     await page.goto(`${stub.url}${path}`)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()

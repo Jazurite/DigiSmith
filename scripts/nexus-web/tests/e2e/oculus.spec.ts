@@ -225,6 +225,7 @@ test.describe('the index page: agents (DGS-599)', () => {
 
 // DGS-613: phase times
 test('Runs: the Duration cell shows the running phase and its time', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'))
   await page.goto(`${stub.url}/runs/`)
   const first = page.locator('tbody tr').first().locator('td[data-label="Duration"]')
   await expect(first.locator('[aria-hidden="true"]')).toHaveText('0:50:00 · building 0:14')
@@ -232,6 +233,7 @@ test('Runs: the Duration cell shows the running phase and its time', async ({ pa
 })
 
 test('Run page: the strip shows durations and the current step in the info color', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'))
   await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
   const strip = page.getByRole('list', { name: /pipeline/i })
   const steps = strip.locator('li')
@@ -239,4 +241,48 @@ test('Run page: the strip shows durations and the current step in the info color
   await expect(steps.nth(2).locator('.dur')).toHaveText('0:50')
   await expect(steps.nth(2).locator('.dur')).toHaveClass(/live/)
   await expect(strip).not.toContainText('now')
+})
+
+test('Runs: the Duration counts every second while a run is running', async ({ page }) => {
+  await page.goto(`${stub.url}/runs/`)
+  const first = page.locator('tbody tr').first().locator('td[data-label="Duration"] [aria-hidden="true"]')
+  await expect(first).toHaveText(/^0:50:0[0-1] · building 0:14$/)   // fake time runs on between install and the first read
+  const before = await first.textContent()
+  await page.clock.runFor(1000)
+  const after = await first.textContent()
+  expect(after).not.toBe(before)
+  await page.clock.runFor(2000)
+  await expect(first).not.toHaveText(after!)
+  await expect(page.locator('td[data-label="Duration"] [aria-live], td[data-label="Duration"] [role="status"], td[data-label="Duration"] [role="timer"]')).toHaveCount(0)
+})
+
+test('Runs: a hidden tab goes back to the 30 s clock and comes back to one second', async ({ page }) => {
+  await page.goto(`${stub.url}/runs/`)
+  const first = page.locator('tbody tr').first().locator('td[data-label="Duration"] [aria-hidden="true"]')
+  const setVisibility = (v: 'visible' | 'hidden') => page.evaluate((state) => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }, v)
+  await expect(first).toHaveText(/^0:50:/)
+  await setVisibility('hidden')
+  const hiddenAt = await first.textContent()
+  await page.clock.runFor(5_000)
+  expect(await first.textContent()).toBe(hiddenAt)        // no per-second tick while hidden
+  await page.clock.runFor(25_000)
+  expect(await first.textContent()).not.toBe(hiddenAt)    // the 30 s clock still moves it
+  await setVisibility('visible')
+  const backAt = await first.textContent()
+  await page.clock.runFor(1_000)
+  expect(await first.textContent()).not.toBe(backAt)
+})
+
+test('Run page: the current step and the budget text move on the minute', async ({ page }) => {
+  await page.goto(`${stub.url}/run/?id=builder-20261022T021000-a1b2c3`)
+  const current = page.getByRole('list', { name: /pipeline/i }).locator('li').nth(2).locator('.dur')
+  await expect(current).toHaveText(/^0:5[01]$/)
+  const budget = page.getByText(/^building \d+:\d+ of \d+ min/)
+  await expect(budget).toHaveText('building 0:14 of 120 min')
+  await page.clock.runFor(60_000)
+  await expect(current).toHaveText(/^0:5[12]$/)
+  await expect(budget).toHaveText('building 0:15 of 120 min')
 })

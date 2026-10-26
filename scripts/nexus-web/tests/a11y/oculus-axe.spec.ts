@@ -1,6 +1,7 @@
 // scripts/nexus-web/tests/a11y/oculus-axe.spec.ts
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { freezeClock } from '../e2e/freeze-clock.ts'
 import { startStubForOculus } from '../e2e/stub-server.ts'
 
 let stub: Awaited<ReturnType<typeof startStubForOculus>>
@@ -57,7 +58,7 @@ for (const scheme of ['light', 'dark'] as const) {
 // DGS-613: times read in words
 test('the Duration cell and the strip read times in words', async ({ page }) => {
   await stub.setMode('oc-ok')
-  await page.clock.install({ time: new Date('2026-10-22T03:00:00Z') })
+  await freezeClock(page, '2026-10-22T03:00:00Z')
   await page.goto(`${stub.url}/runs/`)
   const cell = page.locator('tbody tr').first().getByRole('cell').filter({ has: page.locator('.sr') }).first()
   await expect(cell.locator('.sr')).toHaveText('50 min, building for 14 min')
