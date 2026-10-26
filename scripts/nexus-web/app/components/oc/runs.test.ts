@@ -162,6 +162,15 @@ describe('RunsTable cells', () => {
   })
 })
 
+describe('RunsTable key (DGS-622)', () => {
+  const key = async (row: ReturnType<typeof runFixture>) => (await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })).find('td[data-label="Key"]').text()
+  it('Key falls back to the project, then to a dash', async () => {
+    expect(await key(runFixture({ ticket: null, project: 'DigiSmith' }))).toBe('DigiSmith')
+    expect(await key(runFixture({ ticket: null, project: null }))).toBe('-')
+    expect(await key(runFixture({ ticket: 'DGS-1', project: 'DigiSmith' }))).toBe('DGS-1')
+  })
+})
+
 describe('RunsTable tokens and cost (DGS-590)', () => {
   const cells = async (row: ReturnType<typeof runFixture>) => {
     const w = await mountSuspended(RunsTable, { props: { runs: [row], nowMs: NOW } })

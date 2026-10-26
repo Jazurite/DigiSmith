@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { eventRowSchema, oculusErrorSchema, overviewSchema, pipelineStepSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
+import { TRIGGERS, eventRowSchema, oculusErrorSchema, overviewSchema, pipelineStepSchema, planSchema, runRowSchema, runsSchema } from './oculus.ts'
 
 const row = { run: 'builder-20261022T010000-a1b2c3', ticket: 'DGS-590', role: 'builder', project: null, source: 'start', seat: 'dev0', model: null, trigger: 'night-scan', state: 'healthy', phase: 'building', phaseSince: '2026-10-22T01:00:00.000Z', startedAt: '2026-10-22T01:00:00.000Z', endedAt: null, elapsedSec: 60, events: 3, merged: false, pushed: false, tokens: null, tokensAsOf: null }
 
@@ -16,6 +16,10 @@ describe('oculus schemas', () => {
     expect(runRowSchema.safeParse({ ...row, state: 'sleeping' }).success).toBe(false)
     expect(runRowSchema.safeParse({ ...row, role: 'boss' }).success).toBe(false)
     expect(runRowSchema.safeParse({ ...row, trigger: 'cron' }).success).toBe(false)
+  })
+  it('TRIGGERS is manual, night-scan, away, auto', () => {
+    expect([...TRIGGERS]).toEqual(['manual', 'night-scan', 'away', 'auto'])
+    expect(runsSchema.safeParse({ readAt: '2026-10-22T01:00:00.000Z', total: 1, runs: [{ ...row, trigger: 'unknown' }] }).success).toBe(false)
   })
   it('an event row only carries scalar data', () => {
     const ev = { n: 1, seq: 1, ts: '2026-10-22T01:00:00.000Z', type: 'tool', groups: ['agent'], data: { tool: 'Edit', ok: true } }

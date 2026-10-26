@@ -2,7 +2,7 @@
 import type { Role } from "../run/schema.ts";
 import type { RowTokens } from "./tokens.ts";
 export type Health = "healthy" | "blocked" | "stalled" | "lost" | "ended";
-export type Trigger = "manual" | "night-scan" | "away" | "unknown";
+export type Trigger = "manual" | "night-scan" | "away" | "auto";
 export type EventGroup = "agent" | "system" | "errors";
 export type RunPhase = "building" | "review" | "merge";
 export type TicketPhase = "claimed" | "building" | "review" | "merge-ready" | "merged" | "released" | "lost";

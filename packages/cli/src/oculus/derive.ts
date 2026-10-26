@@ -17,8 +17,9 @@ export function isAutonomousOrder(order: string | null): boolean {
 }
 
 export function triggerOf(run: RunRecord, claim: Event | null, away: Away | null): Trigger {
-  if (run.order === null) return "unknown";
-  if (!isAutonomousOrder(run.order)) return "manual";
+  if (run.order !== null && !isAutonomousOrder(run.order)) return "manual";
+  const scanned = run.order !== null || (run.role === "builder" && claim !== null);
+  if (!scanned) return (run.source ?? "start") === "auto" ? "auto" : "manual";
   if (claim !== null && away !== null && away.away) {
     const at = ms(claim.ts);
     const since = away.since === "" ? Number.NEGATIVE_INFINITY : ms(away.since);

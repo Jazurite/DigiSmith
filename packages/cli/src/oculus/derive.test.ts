@@ -25,8 +25,31 @@ describe("triggerOf", () => {
     const away = { away: true, since: "2026-10-21T15:00:00.000Z", until: null, endedAt: null };
     expect(triggerOf(run({ order: "/d/orders/order-ao-x-DGS-590.md" }), claim, away)).toBe("away");
   });
-  it("is unknown when the run has no order", () => {
-    expect(triggerOf(run({ order: null }), null, null)).toBe("unknown");
+  it("is auto for an automatic run with no order", () => {
+    expect(triggerOf(run({ order: null, source: "auto" }), null, null)).toBe("auto");
+  });
+  it("is manual for a dg run start run with no order", () => {
+    expect(triggerOf(run({ order: null, source: "start" }), null, null)).toBe("manual");
+  });
+  it("is night-scan for an automatic builder the scan claimed", () => {
+    const claim = { ts: "2026-10-22T01:00:00.000Z", tsUtc7: "", kind: "claim" as const, ticket: "DGS-590" };
+    expect(triggerOf(run({ order: null, source: "auto", role: "builder" }), claim, null)).toBe("night-scan");
+  });
+  it("is away for that builder when the claim is inside an away window", () => {
+    const claim = { ts: "2026-10-22T01:00:00.000Z", tsUtc7: "", kind: "claim" as const, ticket: "DGS-590" };
+    const away = { away: true, since: "2026-10-21T15:00:00.000Z", until: null, endedAt: null };
+    expect(triggerOf(run({ order: null, source: "auto", role: "builder" }), claim, away)).toBe("away");
+  });
+  it("an automatic reviewer with a claim for its ticket stays auto", () => {
+    const claim = { ts: "2026-10-22T01:00:00.000Z", tsUtc7: "", kind: "claim" as const, ticket: "DGS-590" };
+    expect(triggerOf(run({ order: null, source: "auto", role: "reviewer" }), claim, null)).toBe("auto");
+  });
+  it("never returns unknown", () => {
+    for (const order of [null, "/x/order-nw-07.md", "/d/order-ao-1-DGS-1.md"]) {
+      for (const source of ["auto", "start"] as const) {
+        expect(triggerOf(run({ order, source }), null, null)).not.toBe("unknown");
+      }
+    }
   });
   it("isAutonomousOrder looks at the file name only", () => {
     expect(isAutonomousOrder("/a/order-ao-1.md")).toBe(true);
@@ -54,7 +77,7 @@ describe("runRowOf", () => {
     expect(r).toMatchObject({ state: "healthy", phase: "building", elapsedSec: 60, merged: false, pushed: false, endedAt: null, project: null, source: "start" });
   });
   it("carries project and source from the record", () => {
-    const r = runRowOf(run({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" }), [ev(1, "started", "2026-10-22T01:00:00.000Z")], "unknown", DEFAULT_BUDGETS, T0 + 60_000);
+    const r = runRowOf(run({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" }), [ev(1, "started", "2026-10-22T01:00:00.000Z")], "auto", DEFAULT_BUDGETS, T0 + 60_000);
     expect(r).toMatchObject({ project: "emma-theme", source: "auto", ticket: null, role: "maestro" });
   });
   it("a builder over its budget is stalled", () => {
