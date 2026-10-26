@@ -15,6 +15,10 @@
           {
             "type": "command",
             "command": "D=\"${DIGISMITH_DEPOT_DIR:-$HOME/.digismith-depot}\"; [ -n \"$DIGISMITH_RUN_ID\" ] || [ -d \"$D\" ] || exit 0; NODE_COMPILE_CACHE=\"$D/runs/.index/node-cache\" node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/run-events/hook-cli.ts\" started"
+          },
+          {
+            "type": "command",
+            "command": "node --experimental-strip-types \"${CLAUDE_PLUGIN_ROOT}/scripts/workbox-health/drift-check.ts\" --alarm --repo \"$PWD\""
           }
         ]
       }
