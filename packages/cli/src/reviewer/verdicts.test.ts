@@ -89,6 +89,7 @@ describe("no-findings lines", () => {
     "Review task 3 r1: no finding",
     "Review task 3: no findings",
     "Review task 3 r1: no findings.",
+    "Review task 3 r1:",
   ])("parseVerdictEntries still throws on a malformed no-findings line: %s", (line) => {
     expect(() => parseVerdictEntries(line)).toThrow(/ledger line 1: not a verdict line/);
   });
