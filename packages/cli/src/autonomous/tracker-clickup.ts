@@ -3,6 +3,8 @@ import type { LoTask, Tracker } from "./types.ts";
 
 /** The Imperium list holds the milestone tasks (probe.md row a). */
 export const IMPERIUM_LIST_ID = "1301150000002179";
+/** The Projects folder (Emma, personal): its tickets need no milestone. */
+export const PROJECTS_FOLDER_ID = "1301150000003307";
 /** Task type Milestone (probe.md row d). */
 export const TYPE_MILESTONE = 1;
 /** The V1.1 initiative ("after Dawn") is also a milestone link target. */
@@ -147,6 +149,7 @@ export class ClickUpLoTracker implements Tracker {
 
   /** light: from the ticket alone, no API call (milestone null, blockers empty, attachments as given). */
   private async toLoTask(t: ClickUpTask, known: Map<string, ClickUpTask>, light = false): Promise<LoTask> {
+    const inProjects = t.folder?.id === PROJECTS_FOLDER_ID;
     return {
       id: t.id,
       key: t.custom_id ?? null,
@@ -160,7 +163,8 @@ export class ClickUpLoTracker implements Tracker {
       signOff: dropdown(t, "Sign-off", ["Auto", "Jack"] as const),
       mode: dropdown(t, "Mode", ["Autonomous", "Manual"] as const),
       scheduledAt: scheduledAt(t),
-      milestone: light ? null : await this.milestone(t),
+      milestone: light || inProjects ? null : await this.milestone(t),
+      inProjects,
       blockers: light ? [] : await this.blockers(t, known),
     };
   }

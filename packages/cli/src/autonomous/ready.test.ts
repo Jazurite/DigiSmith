@@ -4,7 +4,7 @@ import type { LoTask } from "./types.ts";
 
 const base: LoTask = {
   id: "1", key: "DGS-1", name: "t", typeId: 0, priority: null, due: null, created: 0,
-  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: "Dawn", blockers: [],
+  attachments: ["design.html", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: "Dawn", inProjects: false, blockers: [],
 };
 const ctx = { repo: "/r", fileExists: () => false };
 
@@ -20,6 +20,15 @@ describe("checkReady", () => {
     expect(checkReady({ ...base, signOff: null }, ctx)).toEqual([REASON.signOff]);
     expect(checkReady({ ...base, milestone: null }, ctx)).toEqual([REASON.milestone]);
     expect(checkReady({ ...base, blockers: [{ key: "DGS-2", done: false }] }, ctx)).toEqual([REASON.blocked(["DGS-2"])]);
+  });
+  it("a Projects ticket needs no milestone", () => {
+    expect(checkReady({ ...base, milestone: null, inProjects: true }, ctx)).toEqual([]);
+  });
+  it("a clan ticket without a milestone is still refused", () => {
+    expect(checkReady({ ...base, milestone: null, inProjects: false }, ctx)).toEqual([REASON.milestone]);
+  });
+  it("a Projects ticket still needs a Sign-off", () => {
+    expect(checkReady({ ...base, milestone: null, inProjects: true, signOff: null }, ctx)).toEqual([REASON.signOff]);
   });
   it("lists all four in order", () => {
     const t = { ...base, attachments: [], signOff: null, milestone: null, blockers: [{ key: "DGS-2", done: false }, { key: "DGS-3", done: false }] };

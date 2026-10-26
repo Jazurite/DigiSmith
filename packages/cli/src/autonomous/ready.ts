@@ -29,7 +29,7 @@ export function checkReady(t: LoTask, ctx: ReadyCtx): string[] {
   const out: string[] = [];
   if (!hasSpecPlan(t, ctx)) out.push(REASON.specPlan);
   if (t.signOff === null) out.push(REASON.signOff);
-  if (t.milestone === null) out.push(REASON.milestone);
+  if (t.milestone === null && !t.inProjects) out.push(REASON.milestone);
   const open = t.blockers.filter((b) => !b.done).map((b) => b.key);
   if (open.length > 0) out.push(REASON.blocked(open));
   if (t.mode !== "Autonomous") out.push(REASON.mode);

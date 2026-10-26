@@ -5,7 +5,7 @@ import type { LoTask } from "./types.ts";
 
 const task = (over: Partial<LoTask> = {}): LoTask => ({
   id: "t1", key: "DGS-1", name: "n", typeId: 0, priority: 3, due: null, created: 1, attachments: [], text: "",
-  signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: null, blockers: [], ...over,
+  signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: null, inProjects: false, blockers: [], ...over,
 });
 
 interface Fx { config?: string | Error; fetch?: Error; log?: string; branches?: string; ancestors?: string[]; branchLog?: string }

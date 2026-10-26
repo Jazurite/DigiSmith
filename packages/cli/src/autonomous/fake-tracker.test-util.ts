@@ -13,7 +13,7 @@ export class FakeTracker implements Tracker {
   add(t: Partial<FakeTask> & { id: string }): FakeTask {
     const task: FakeTask = {
       key: t.id.toUpperCase(), name: `Task ${t.id}`, typeId: 0, priority: 3, due: null, created: 1,
-      attachments: ["design.md", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: "Dawn", blockers: [],
+      attachments: ["design.md", "plan.md"], text: "", signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: "Dawn", inProjects: false, blockers: [],
       status: "to do", ...t,
     };
     this.tasks.set(task.id, task);

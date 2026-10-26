@@ -9,6 +9,7 @@ export interface LoTask {
   mode: "Autonomous" | "Manual" | null;
   scheduledAt: number | null | "invalid";   // "Scheduled at", ms
   milestone: string | null;
+  inProjects: boolean;          // the ticket's list sits in the Projects folder: no milestone needed
   blockers: { key: string; done: boolean }[];
 }
 export interface Tracker {

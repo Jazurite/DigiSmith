@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ClickUpClient } from "@digismith/clickup-client";
-import { ClickUpLoTracker, IMPERIUM_LIST_ID } from "./tracker-clickup.ts";
+import { ClickUpLoTracker, IMPERIUM_LIST_ID, PROJECTS_FOLDER_ID } from "./tracker-clickup.ts";
 
 // Fixtures shaped like probe.md (made-up ids, no secrets).
 const SPACE = "space-1";
@@ -154,7 +154,7 @@ describe("ClickUpLoTracker.listByStatus", () => {
       id: "t1", key: "DGS-600", name: "Ready one", typeId: 0,
       priority: 2, due: 1792372602438, created: 1792000000000,
       attachments: ["design.md", "plan.md"], text: "see .digismith/board/DGS-600—x",
-      signOff: "Jack", mode: "Autonomous", scheduledAt: null, milestone: "V1.1 ClickUp Sync",
+      signOff: "Jack", mode: "Autonomous", scheduledAt: null, milestone: "V1.1 ClickUp Sync", inProjects: false,
       blockers: [
         { key: "DGS-603", done: false },
         { key: "DGS-601", done: true },
@@ -178,7 +178,7 @@ describe("ClickUpLoTracker.listByStatus", () => {
     const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out).toEqual([{
       id: "m1", key: "DGS-610", name: "Manual one", typeId: 0, priority: 3, due: null, created: 1000,
-      attachments: [], text: "", signOff: "Auto", mode: "Manual", scheduledAt: null, milestone: null, blockers: [],
+      attachments: [], text: "", signOff: "Auto", mode: "Manual", scheduledAt: null, milestone: null, inProjects: false, blockers: [],
     }]);
     expect(calls).toEqual([`searchTeamTasks ${SPACE} to do`]);
   });
@@ -198,6 +198,20 @@ describe("ClickUpLoTracker.listByStatus", () => {
     const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
     expect(out.map((t) => [t.id, t.mode, t.milestone, t.attachments])).toEqual([["a1", "Autonomous", "Dawn", ["plan.md"]], ["m1", "Manual", null, []]]);
     expect(calls.filter((c) => c.startsWith("getTaskByRef"))).toEqual(["getTaskByRef a1"]);
+  });
+
+  it("reads a Projects folder ticket as inProjects, with no Imperium read", async () => {
+    const proj = task({ id: "p1", folder: { id: PROJECTS_FOLDER_ID } });
+    const { client, calls } = fakeClient({ search: [proj] });
+    const [t] = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(t).toMatchObject({ id: "p1", inProjects: true, milestone: null });
+    expect(calls.some((c) => c.startsWith("getAllListTasks"))).toBe(false);
+  });
+
+  it("reads a clan folder ticket, or one with no folder, as not inProjects", async () => {
+    const { client } = fakeClient({ search: [task({ id: "c1", folder: { id: "clan-folder" } }), task({ id: "c2" })] });
+    const out = await new ClickUpLoTracker(client, SPACE).listByStatus("to do");
+    expect(out.map((t) => [t.id, t.inProjects])).toEqual([["c1", false], ["c2", false]]);
   });
 
   it("maps a missing sign-off, milestone, priority and due to null", async () => {

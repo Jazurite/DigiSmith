@@ -4,7 +4,7 @@ import type { LoTask } from "./types.ts";
 
 const task = (id: string, over: Partial<LoTask> = {}): LoTask => ({
   id, key: null, name: id, typeId: 0, priority: null, due: null, created: 0,
-  attachments: [], text: "", signOff: null, mode: "Autonomous", scheduledAt: null, milestone: null, blockers: [], ...over,
+  attachments: [], text: "", signOff: null, mode: "Autonomous", scheduledAt: null, milestone: null, inProjects: false, blockers: [], ...over,
 });
 const ids = (ts: LoTask[]) => ts.map((t) => t.id);
 
