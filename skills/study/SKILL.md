@@ -25,6 +25,13 @@ The card owns the detail. In short, the researcher:
 - answers three questions in the findings file: how it relates to DigiSmith, how we could absorb it, how it could help us (link the open tickets it touches);
 - says where it sits on the lineage.
 
+## The run limit (DGS-665)
+
+- At most 2 builders (the factory ticket counts as one), 1 reviewer and 1 role are busy at once. `dg run limit` shows the count.
+- `dg run start` refuses a start over the limit and names the open run. Queue the worker and retry at the next checkpoint. Never start the worker some other way.
+- An idle builder (waiting for a merge or a review) is not counted. Before you wake one that is not the factory's with a fix order, run `dg run limit` and wait if its kind is full.
+- A run that shows as `stale` is a dead pane. Clear it with `dg run event <run-id> lost`. Never pause or kill a running agent to make room.
+
 ## Relay
 1. Read the findings file.
 2. Check one or two claims against the clone.

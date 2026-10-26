@@ -33,5 +33,12 @@ The card has `role: researcher`, a `mandate` (the order or brief path) and `unde
 3. Follow the Workbox runbook "Start of a ticket", S0 to S6, with `dg run start --ticket <KEY> --role other --order <order path> --seat <seat> --model <model> --workspace <w> --tab "<tab label>" --pane <pane>`, tab label `<name> ⚚ researcher`, agent name `<name>-researcher`. There is no worktree: start the agent in `~/Workspace/Library`, with `--add-dir` for the depot findings folder (without it the findings write is denied). The run role and the session registration role (the brief's `entry.ts session --role`) are both `other` until DGS-609 adds `researcher` to both lists; DGS-609 changes the card and the brief together.
 4. Close the tab when the report is read (runbook "Tab cleanup").
 
+## The run limit (DGS-665)
+
+- At most 2 builders (the factory ticket counts as one), 1 reviewer and 1 role are busy at once. `dg run limit` shows the count.
+- `dg run start` refuses a start over the limit and names the open run. Queue the worker and retry at the next checkpoint. Never start the worker some other way.
+- An idle builder (waiting for a merge or a review) is not counted. Before you wake one that is not the factory's with a fix order, run `dg run limit` and wait if its kind is full.
+- A run that shows as `stale` is a dead pane. Clear it with `dg run event <run-id> lost`. Never pause or kill a running agent to make room.
+
 ## Other cards
 Reviewer: `skills/reviewer/SKILL.md`. The scout has no skill file: its card is the session card plus its brief.
