@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { parseConfig } from "../../../../scripts/config-parse.ts";
 import { DEFAULT_SCAN_EVERY_MINUTES, parseScanInterval, readGuardrails, readLimitsFile, readMainConfig } from "./guardrails.ts";
 import type { Git } from "./gitx.ts";
@@ -134,6 +136,9 @@ describe("this repo's own config.yml", () => {
     expect(g.scanEveryMinutes).toBe(15);
     expect(/^  scan_every_minutes: 15\b/m.test(text)).toBe(true);
     expect(g.protectedPaths).toContain("scripts/nexus-api/src/scheduler/");
+    expect(g.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
+    expect(g.staleAfterMinutes).toBe(120);
+    expect(g.limitProblems).toEqual([]);
   });
 });
 
@@ -170,5 +175,35 @@ describe("limits (DGS-665)", () => {
   });
   it("readLimitsFile gives defaults without a file", () => {
     expect(readLimitsFile("/nonexistent-dir-dgs665")).toEqual({ limits: { builder: 2, reviewer: 1, role: 1 }, staleAfterMinutes: 120, problems: [] });
+  });
+  it("reports a duplicate stale_after_minutes and uses the default", () => {
+    const g = readGuardrails(`${base}  stale_after_minutes: 60\n  stale_after_minutes: 30\n`);
+    expect(g.staleAfterMinutes).toBe(120);
+    expect(g.limitProblems.join(" ")).toMatch(/stale_after_minutes: is set more than once/);
+    expect(g.problems).toEqual([]);
+  });
+  it("reports a duplicate limits block and keeps the first", () => {
+    const g = readGuardrails(`${base}  limits:\n    builder: 3\n  limits:\n    builder: 4\n`);
+    expect(g.limits.builder).toBe(3);
+    expect(g.limitProblems.join(" ")).toMatch(/limits: is set more than once/);
+    expect(g.problems).toEqual([]);
+  });
+  it("readLimitsFile reads a real file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dgs665-"));
+    mkdirSync(join(dir, ".digismith"));
+    writeFileSync(join(dir, ".digismith", "config.yml"), `${base}  limits:\n    builder: 4\n  stale_after_minutes: 45\n`);
+    expect(readLimitsFile(dir)).toEqual({ limits: { builder: 4, reviewer: 1, role: 1 }, staleAfterMinutes: 45, problems: [] });
+  });
+  it("readLimitsFile gives defaults and one problem for an unreadable file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dgs665-"));
+    mkdirSync(join(dir, ".digismith"));
+    const file = join(dir, ".digismith", "config.yml");
+    writeFileSync(file, base);
+    chmodSync(file, 0o000);
+    const r = readLimitsFile(dir);
+    chmodSync(file, 0o600);
+    expect(r.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
+    expect(r.staleAfterMinutes).toBe(120);
+    expect(r.problems).toHaveLength(1);
   });
 });
