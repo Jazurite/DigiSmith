@@ -1,3 +1,4 @@
+* text=auto eol=lf
 skills/brainstorming/** -text
 skills/dispatching-parallel-agents/** -text
 skills/executing-plans/** -text
