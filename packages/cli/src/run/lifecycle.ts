@@ -3,8 +3,7 @@
 // Regexes only, no shell parsing and no child process. The event keeps the type and a few scalars, never the command.
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { appendEvent, readEvents } from "./events.ts";
-import { waitFor } from "./hook.ts";
+import { appendEvent, readEvents, waitFor } from "./events.ts";
 import { isSafe, runsDir } from "./paths.ts";
 import { ticketOfBranch } from "./repo-info.ts";
 import type { RunRecord } from "./schema.ts";
@@ -22,7 +21,7 @@ export function lifecycleOf(payload: unknown): Lifecycle | null {
   const cmd = typeof input?.command === "string" ? input.command : "";
   if (/\bdg reviewer pack\b/.test(cmd)) {
     if (!/--type[ =]ticket\b/.test(cmd)) return null;
-    const ticket = /--ticket[ =]([A-Za-z0-9-]+)/.exec(cmd)?.[1] ?? "";
+    const ticket = /--ticket[ =]["']?([A-Za-z0-9-]+)/.exec(cmd)?.[1] ?? "";
     if (!TICKET_KEY.test(ticket)) return null;
     const round = Number.parseInt(/--round[ =](\d+)/.exec(cmd)?.[1] ?? "1", 10);
     return { type: "review_ready", ticket, data: { scope: "ticket", round } };

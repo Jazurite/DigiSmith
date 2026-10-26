@@ -25,6 +25,10 @@ describe("lifecycleOf", () => {
     expect(lifecycleOf(bash("dg reviewer pack --type ticket --ticket DGS-9 --workspace /w --base abc --head def"))).toEqual({ type: "review_ready", ticket: "DGS-9", data: { scope: "ticket", round: 1 } });
     expect(lifecycleOf(bash("dg reviewer pack --type ticket --ticket DGS-9 --round 2 --workspace /w"))).toEqual({ type: "review_ready", ticket: "DGS-9", data: { scope: "ticket", round: 2 } });
   });
+  it("accepts a quoted ticket key", () => {
+    expect(lifecycleOf(bash('dg reviewer pack --type ticket --ticket "DGS-9" --workspace /w'))).toMatchObject({ ticket: "DGS-9" });
+    expect(lifecycleOf(bash("dg reviewer pack --type ticket --ticket='DGS-9' --workspace /w"))).toMatchObject({ ticket: "DGS-9" });
+  });
   it("ignores a task pack", () => {
     expect(lifecycleOf(bash("dg reviewer pack --type task --task 1 --ticket DGS-9"))).toBeNull();
   });

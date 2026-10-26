@@ -14,6 +14,10 @@ export function validEventData(type: string, data: Record<string, unknown>): str
   }
   return null;
 }
+// How long a hook waits for the run lock: a tool event is short, the others may wait longer.
+export function waitFor(kind: (typeof HOOK_TYPES)[number]): number {
+  return kind === "tool" ? 150 : 2000;
+}
 export type EventType = (typeof HOOK_TYPES)[number] | (typeof CONDUCTOR_TYPES)[number];
 
 export type EventLine = { schema: string; seq: number; ts: string; run: string; type: string; data: Record<string, unknown> };

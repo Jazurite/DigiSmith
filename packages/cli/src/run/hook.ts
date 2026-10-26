@@ -4,7 +4,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findRunDir, isSafe, runsDir } from "./paths.ts";
-import { appendEvent, HOOK_TYPES } from "./events.ts";
+import { appendEvent, HOOK_TYPES, waitFor } from "./events.ts";
 import { plainName } from "./schema.ts";
 import { findAuto, startAuto } from "./auto.ts";
 import { writeLifecycle } from "./lifecycle.ts";
@@ -24,9 +24,7 @@ export type HookKind = (typeof HOOK_TYPES)[number];
 
 const LOG_CAP = 256 * 1024;
 
-export function waitFor(kind: HookKind): number {
-  return kind === "tool" ? 150 : 2000;
-}
+export { waitFor };
 
 function toolOk(response: unknown): boolean {
   if (typeof response !== "object" || response === null) return true;
