@@ -234,6 +234,11 @@ describe("sweep", () => {
     expect(state.repos[0]).toMatchObject({ repo: "a", note: "check-failed" });
     expect(state.repos[1].eol).toBe(0);
   });
+  it("an unwritable state file fails the sweep and appends no CSV line", () => {
+    world(); fs.mkdirSync(stateFile() + ".tmp", { recursive: true });
+    expect(() => sweepOnce()).toThrow();
+    expect(fs.existsSync(csvFile())).toBe(false);
+  });
   it("passes the per-repo limit to the counter", () => {
     mkRepo("a"); const seen: number[] = [];
     sweepOnce((repo, l) => { seen.push(l); return countSweepRepo(repo, l); });
@@ -314,6 +319,11 @@ describe("--alarm with sweep state", () => {
     expect(lines[0]).toContain("(DGS-498)");
     expect(lines[1]).toBe("DigiSmith: drift alarm (sweep 14:05 UTC+7): other 2 eol, 0 mode  (DGS-557)");
     expect(fs.existsSync(path.join(tmp, "depot/observability/drift.csv"))).toBe(false);
+  });
+  it("outside a git checkout it still prints the sweep line", () => {
+    const d = path.join(tmp, "plain"); fs.mkdirSync(d);
+    writeState(JSON.stringify({ ranAt: new Date().toISOString(), ranAtUtc7: "2026-10-26 14:05:00", root: tmp, repos: [{ repo: "other", eol: 2, mode: 0, broken: false, note: "" }] }));
+    expect(alarm(d).lines).toEqual(["DigiSmith: drift alarm (sweep 14:05 UTC+7): other 2 eol, 0 mode  (DGS-557)"]);
   });
   it("is silent and exits 0 on broken JSON or a missing file", () => {
     const r = mkRepo("cur");

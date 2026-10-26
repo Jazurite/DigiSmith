@@ -157,13 +157,13 @@ export function runSweep(opts: { root: string; stateFile: string; csvFile: strin
     const clean = note === "sweep:recovered";
     return [utc7(now), repo.repo, blank ? "" : clean ? 0 : repo.eol, blank ? "" : clean ? 0 : repo.mode, note].join(",");
   });
-  fs.mkdirSync(path.dirname(opts.csvFile), { recursive: true });
-  if (!fs.existsSync(opts.csvFile)) fs.writeFileSync(opts.csvFile, "time_utc7,repo,eol,mode,note\n");
-  if (lines.length) fs.appendFileSync(opts.csvFile, lines.join("\n") + "\n");
-
+  // state tmp file first: if the state cannot be written, no CSV line goes out and the next sweep sees the same changes
   fs.mkdirSync(path.dirname(opts.stateFile), { recursive: true });
   const tmpFile = `${opts.stateFile}.tmp`;
   fs.writeFileSync(tmpFile, JSON.stringify(state, null, 2) + "\n");
+  fs.mkdirSync(path.dirname(opts.csvFile), { recursive: true });
+  if (!fs.existsSync(opts.csvFile)) fs.writeFileSync(opts.csvFile, "time_utc7,repo,eol,mode,note\n");
+  if (lines.length) fs.appendFileSync(opts.csvFile, lines.join("\n") + "\n");
   fs.renameSync(tmpFile, opts.stateFile);
   return state;
 }
@@ -208,9 +208,13 @@ export function run(argv: string[], env: NodeJS.ProcessEnv = process.env, out: (
     } catch { /* a hook must not break a session */ }
     try {
       const repoArg = argv[argv.indexOf("--repo") + 1];
-      const top = git(path.resolve(repoArg), false, ["rev-parse", "--show-toplevel"]).trim();
       const state = JSON.parse(fs.readFileSync(sweepStateFile(env), "utf8")) as SweepState;
-      for (const l of sweepAlarmLines(state, rel(fs.realpathSync(top), fs.realpathSync(state.root ?? path.join(os.homedir(), "Workspace"))), new Date())) out(l);
+      let current = "";
+      try { // outside a git checkout there is no current repo: every drifting repo is "other"
+        const top = git(path.resolve(repoArg), false, ["rev-parse", "--show-toplevel"]).trim();
+        current = rel(fs.realpathSync(top), fs.realpathSync(state.root ?? path.join(os.homedir(), "Workspace")));
+      } catch { /* keep "" */ }
+      for (const l of sweepAlarmLines(state, current, new Date())) out(l);
     } catch { /* no sweep state yet, or unreadable: stay silent */ }
     return 0;
   }
