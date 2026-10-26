@@ -167,6 +167,30 @@ describe("dg autonomous status: scan interval", () => {
 });
 
 describe("dg autonomous scan", () => {
+  // The scan counts run records: keep it off the real depot.
+  let savedDepot: string | undefined;
+  beforeEach(() => {
+    savedDepot = process.env.DIGISMITH_DEPOT_DIR;
+    process.env.DIGISMITH_DEPOT_DIR = join(root, "depot");
+  });
+  afterEach(() => {
+    if (savedDepot === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = savedDepot;
+  });
+  it("two busy hand builders make the scan wait: busy, no claim, no tracker write", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    createRun({ ticket: "DGS-5", role: "builder", order: "/o.md" }, process.env, DAY);
+    createRun({ ticket: "DGS-6", role: "builder", order: "/o.md" }, process.env, DAY);
+    await parse(["autonomous", "scan", "--repo", "/repo"]);
+    expect(out()).toMatch(/scan: busy/);
+    expect(tracker.tasks.get("t1")?.status).toBe("to do");
+    expect(tracker.writeCalls()).toEqual([]);
+  });
+  it("one busy hand builder leaves a slot: the scan claims", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    createRun({ ticket: "DGS-5", role: "builder", order: "/o.md" }, process.env, DAY);
+    await parse(["autonomous", "scan", "--repo", "/repo"]);
+    expect(out()).toMatch(/scan: claimed DGS-1/);
+  });
   it("--dry-run prints the verdict rows at any hour and writes nothing", async () => {
     tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
     tracker.add({ id: "t2", status: "to do", key: "DGS-2", attachments: [] });

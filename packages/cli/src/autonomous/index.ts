@@ -247,7 +247,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 exec: d.exec, fileExists: d.fileExists, dryRun: argv.dryRun as boolean, nexus: d.nexus,
                 tick: makeTick(d, false, argv.repo as string),
                 guard: makeScanGuard(d.git ?? realGit, argv.repo as string),
-                builderFull: () => refusal(currentCount(limitEnv(d), d.mainRepo ?? MAIN_CHECKOUT).count, "builder"),
+                builderFull: () => refusal(currentCount(limitEnv(d), d.mainRepo ?? MAIN_CHECKOUT, d.now().getTime()).count, "builder"),
               });
               const lines: string[] = [];
               lines.push(`scan: ${r.outcome}${r.claimed ? ` ${r.claimed}` : ""} (${r.candidates} candidates, ${r.skipped.length} skipped)`);
