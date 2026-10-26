@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A limit on concurrent runs — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; } th,td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; } th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); } .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<h1>A limit on concurrent runs — Implementation Report</h1>
+<div class="meta"><span>Date: 2026-10-26</span> <span>Ticket: <strong>DGS-665</strong></span> <span>Commit range: <code>1e8bd702..2a56de9e</code></span></div>
+
+<section id="summary">
+<h2>Summary</h2>
+<p>The system now refuses to start a run that would pass the limit of 2 builders, 1 reviewer and 1 role. A new pure module <code>packages/cli/src/run/limit.ts</code> counts busy runs from the Nightwatch run records and the factory lock. The limits are read from the <code>nightwatch:</code> block of <code>.digismith/config.yml</code> (main checkout). Callers: <code>dg run start</code> (refuses, exit 1, no record), the autonomous scan (returns <code>busy</code> with <code>reason: builder-limit</code>, no tracker call), and the displays (<code>dg run limit</code>, <code>dg autonomous status</code>, the catch-up Health <code>Limits</code> line, DigiSmith project only).</p>
+<p>Beyond the plan: a builder start for the factory lock's own ticket is exempt from the builder limit (the lock already counts as that slot); the limits come from the main checkout config, found from a worktree through its <code>.git</code> link; spec line 74 now says <code>other</code> counts as a role. Protected paths touched: <code>.digismith/config.yml</code>, <code>packages/cli/src/autonomous/*</code>, <code>skills/reviewer/SKILL.md</code>. The scheduler reader ignores the new keys, so it is untouched. The runbook lines are in <code>.sdd-workspace/runbook-lines.md</code> for the conductor (the runbook is git-excluded).</p>
+</section>
+
+<section id="review">
+<h2>Reviews</h2>
+<p>Every task had an independent review; task 3 needed a scoped second round (one Important: tests read the repo's real config). The whole-ticket review approved with 4 Minor findings (3 fixed, 1 not needed); the scoped re-review found nothing. Task and ticket findings: 17 rows, 15 fixed, 2 rejected with a reason; see <a href="findings.md">findings.md</a>.</p>
+<p>Tests: final whole-package run 292 files, 4744 of 4744 tests green (<code>--maxWorkers=2</code>, load 3.4). Live read-only check: <code>dg run limit</code> and <code>dg autonomous status</code> show the same limits line against the real depot.</p>
+</section>
+
+<section id="merge">
+<h2>Commits</h2>
+<ul class="commit-list">
+<li><span class="sha">d64f3d79</span> docs(dgs-665): add the spec and plan</li>
+<li><span class="sha">8d8179e5</span> feat(dgs-665): count concurrent runs by kind</li>
+<li><span class="sha">93ec78a4</span> test(dgs-665): cover buckets, factory slot and stale boundary</li>
+<li><span class="sha">d853ac16</span> feat(dgs-665): read run limits from the nightwatch config</li>
+<li><span class="sha">5b9dd571</span> test(dgs-665): pin own config limits, duplicates and readLimitsFile</li>
+<li><span class="sha">49c54e1c</span> feat(dgs-665): dg run start refuses over the limit, dg run limit shows it</li>
+<li><span class="sha">9a7e130a</span> test(dgs-665): pin cwd for the run limit tests, cover problem and stale rows</li>
+<li><span class="sha">719598a3</span> feat(dgs-665): the scan waits while hand builders fill the limit, status shows limits</li>
+<li><span class="sha">9d17672d</span> fix(dgs-665): the factory ticket&#x27;s builder start is not refused by its own lock</li>
+<li><span class="sha">f6786d82</span> fix(dgs-665): scan limit uses the scan clock, cover the scan wiring</li>
+<li><span class="sha">84bfe183</span> feat(dgs-665): show the run limits in the catch-up Health</li>
+<li><span class="sha">7fad87f7</span> fix(dgs-665): limits line only for DigiSmith, tests for the failure path and an isolated depot</li>
+<li><span class="sha">89f9682c</span> docs(dgs-665): the run limit in the conductor and Maestro skills</li>
+<li><span class="sha">a6738988</span> docs(dgs-665): mark the run limit lines as conductor and Maestro text</li>
+<li><span class="sha">2678615f</span> fix(dgs-665): the builder-limit busy event uses ticket ?</li>
+<li><span class="sha">195e94a4</span> fix(dgs-665): read the limits from the main checkout config, test other as a role</li>
+<li><span class="sha">2a56de9e</span> docs(dgs-665): other is refused when the role slot is full</li>
+</ul>
+</section>
+<footer>DigiSmith · .digismith/board/DGS-665—run-limit/report.html</footer>
+</body>
+</html>
