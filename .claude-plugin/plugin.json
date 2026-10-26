@@ -1,7 +1,7 @@
 {
   "name": "digismith",
   "description": "Jack's personal SDLC plugin — ticket to delivery, built on top of Superpowers",
-  "version": "1.58.0",
+  "version": "1.59.0",
   "author": {
     "name": "Jack Huỳnh",
     "email": "jack@jazurite.com"
