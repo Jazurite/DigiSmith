@@ -249,8 +249,8 @@ test('Runs: the Duration counts every second while a run is running', async ({ p
   await expect(first).toHaveText(/^0:50:0[0-1] · building 0:14$/)   // fake time runs on between install and the first read
   const before = await first.textContent()
   await page.clock.runFor(1000)
+  await expect(first).not.toHaveText(before!)
   const after = await first.textContent()
-  expect(after).not.toBe(before)
   await page.clock.runFor(2000)
   await expect(first).not.toHaveText(after!)
   await expect(page.locator('td[data-label="Duration"] [aria-live], td[data-label="Duration"] [role="status"], td[data-label="Duration"] [role="timer"]')).toHaveCount(0)
@@ -269,11 +269,11 @@ test('Runs: a hidden tab goes back to the 30 s clock and comes back to one secon
   await page.clock.runFor(5_000)
   expect(await first.textContent()).toBe(hiddenAt)        // no per-second tick while hidden
   await page.clock.runFor(25_000)
-  expect(await first.textContent()).not.toBe(hiddenAt)    // the 30 s clock still moves it
+  await expect(first).not.toHaveText(hiddenAt!)           // the 30 s clock still moves it
   await setVisibility('visible')
   const backAt = await first.textContent()
   await page.clock.runFor(1_000)
-  expect(await first.textContent()).not.toBe(backAt)
+  await expect(first).not.toHaveText(backAt!)
 })
 
 test('Run page: the current step and the budget text move on the minute', async ({ page }) => {
