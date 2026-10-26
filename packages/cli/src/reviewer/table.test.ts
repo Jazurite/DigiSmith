@@ -251,6 +251,45 @@ describe("runTable", () => {
   });
 });
 
+describe("no-findings ledger line", () => {
+  const NF = "Review task 1 r1: no findings\n";
+  it('buildRows gives the approved row for a no-findings review whose ledger line is "no findings"', () => {
+    const rows = buildRows([review("task", "1", 1, [])], parseVerdictEntries(NF));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ type: "task 1", what: "approved, no findings" });
+  });
+  it("buildJson lists it under approvedReviews", () => {
+    expect(buildJson([review("task", "1", 1, [])], parseVerdictEntries(NF)).approvedReviews).toEqual([{ kind: "task", id: "1", round: 1 }]);
+  });
+  describe("runTable", () => {
+    let ws: string;
+    let out: string;
+    beforeEach(() => {
+      ws = fs.mkdtempSync(path.join(os.tmpdir(), "table-nf-"));
+      out = path.join(ws, "findings.md");
+    });
+    afterEach(() => { fs.rmSync(ws, { recursive: true, force: true }); });
+    const pack = (name: string, block: string) => {
+      fs.mkdirSync(path.join(ws, "reviews", name), { recursive: true });
+      fs.writeFileSync(path.join(ws, "reviews", name, "report.md"), "```json findings\n" + block + "\n```\n");
+    };
+    it("writes the table from a ledger holding a no-findings line next to a finding line", () => {
+      pack("task-1-r1", "[]");
+      pack("task-2-r1", '[{"id":"F1","path":"a.ts","line":1,"severity":"Minor","what":"w","scenario":"s"}]');
+      fs.writeFileSync(path.join(ws, "progress.md"), NF + "Review task 2 r1: F1 -> fixed (commit abc1234)\n");
+      expect(runTable({ workspace: ws, out }).written).toBe(true);
+      const md = fs.readFileSync(out, "utf8");
+      expect(md).toContain("approved, no findings");
+      expect(md).toContain("fixed (commit abc1234)");
+    });
+    it("still fails on a malformed Review line", () => {
+      pack("task-1-r1", "[]");
+      fs.writeFileSync(path.join(ws, "progress.md"), "Review task 1 r1: nothing found\n");
+      expect(() => runTable({ workspace: ws, out })).toThrow(/not a verdict line/);
+    });
+  });
+});
+
 describe("linkRulings", () => {
   const ledgerOf = (lines: string[]) => parseVerdictEntries(["Review mode: role", ...lines, ""].join("\n"));
   it("links a later round's ruling to the earlier raise, sorted by round", () => {
