@@ -116,6 +116,12 @@ check "env jack while active=izanami: gateway unsets" grep -q '^unset .*ANTHROPI
 check "env jack leaves active file unchanged" active_is izanami
 run env
 check "env (no name) uses active=izanami" grep -q '^export ANTHROPIC_BASE_URL=' "$OUT"
+check "env (no name, active izanami): exports DIGISMITH_SEAT=izanami" grep -q '^export DIGISMITH_SEAT=izanami$' "$OUT"
+run env jack
+check "env jack: exports DIGISMITH_SEAT=jack" grep -q '^export DIGISMITH_SEAT=jack$' "$OUT"
+check "env: the DIGISMITH_SEAT line holds no secret" bash -c '! grep "^export DIGISMITH_SEAT" "$0" | grep -q "FAKE"' "$OUT"
+run env izanami
+check "env izanami: exports DIGISMITH_SEAT=izanami" grep -q '^export DIGISMITH_SEAT=izanami$' "$OUT"
 run env nosuch
 check "env unknown name: exit 1, stdout empty" [ "$RC" = 1 ] && [ ! -s "$OUT" ]
 check "env unknown name: clear error" grep -q "claude-account:" "$ERR"

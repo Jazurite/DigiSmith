@@ -317,12 +317,14 @@ cmd_env() {
   fi
   if [ "$kind" = seat ]; then
     printf 'unset %s\n' "$GATEWAY_VARS"
+    printf 'export DIGISMITH_SEAT=%q\n' "$name"
     printf 'export CLAUDE_CODE_OAUTH_TOKEN=%q\n' "$(token_of "$name")"
     return 0
   fi
   gateway_complete "$name" || exit 1
   read_key "$name" || die "$name: $KEYERR"
   printf 'unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_API_KEY\n'
+  printf 'export DIGISMITH_SEAT=%q\n' "$name"
   printf 'export ANTHROPIC_BASE_URL=%q\n' "$(src_get "$name" base_url)"
   printf 'export ANTHROPIC_AUTH_TOKEN=%q\n' "$KEYVAL"
   printf 'export ANTHROPIC_DEFAULT_OPUS_MODEL=%q\n' "$(src_get "$name" model.opus)"
