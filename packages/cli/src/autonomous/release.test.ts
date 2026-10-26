@@ -357,6 +357,18 @@ describe("runRelease: unknown items close by rule", () => {
     await runRelease(mk(), { ticket: "DGS-1", result });
     expect(readOpen(dir).some((i) => i.id === "builder-9.unknown.0")).toBe(true);
   });
+  it("no lock, merged: the ticket's unknown item closes as controller", async () => {
+    seedUnknown("builder-9", "DGS-1");
+    seedUnknown("builder-8", "DGS-2");
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(readOpen(dir).map((i) => i.id)).toEqual(["builder-8.unknown.0"]);
+    expect(resolvedLines()).toMatchObject([{ id: "builder-9.unknown.0", by: "controller", note: "ticket released as merged" }]);
+  });
+  it.each(["failed", "stopped", "awaiting-jack"] as const)("no lock, %s closes nothing", async (result) => {
+    seedUnknown("builder-9", "DGS-1");
+    await runRelease(mk(), { ticket: "DGS-1", result });
+    expect(readOpen(dir).map((i) => i.id)).toEqual(["builder-9.unknown.0"]);
+  });
   it("a corrupt lock (--ticket ?) closes nothing", async () => {
     writeFileSync(join(dir, "lock.json"), "{ not json");
     seedUnknown("builder-9", "?");

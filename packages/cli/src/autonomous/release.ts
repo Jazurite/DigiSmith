@@ -23,6 +23,13 @@ export function kindOf(code: string): AttentionKind {
 const JOB = "autonomous-scan";
 const CORRUPT = "?";
 
+/** Rule 2: a merged release closes the ticket's open unknown items. Best effort: the release goes on. */
+function closeUnknown(dir: string, ticket: string, nowIso: string): void {
+  try {
+    for (const it of readOpen(dir)) if (it.ticket === ticket && it.kind === "unknown") appendResolved(dir, it.id, "controller", nowIso, "ticket released as merged");
+  } catch { /* best effort */ }
+}
+
 function newestReportAfter(dir: string, sinceMs: number): string | null {
   const reports = join(dir, "reports");
   let best: { file: string; ms: number } | null = null;
@@ -58,6 +65,7 @@ export async function runRelease(
   if (a.result === "merged" && !a.commit) warning = "merged without --commit, the report will show commit unknown";
   if (lock === null) {
     appendEvent(d.dir, now, "release", { ticket: a.ticket, result: a.result, note: "no-lock" });
+    if (a.result === "merged" && a.ticket !== CORRUPT) closeUnknown(d.dir, a.ticket, now.toISOString());
   } else {
     // A corrupt lock reads as ticket "?" (readLock): `--ticket "?"` clears it, with no ticket to comment on.
     if (lock.ticket !== a.ticket) throw new Error(`the lock belongs to ${lock.ticket}`);
@@ -98,9 +106,7 @@ export async function runRelease(
     clearLock(d.dir);
     lockCleared = true;
     if (a.result === "merged" && !corrupt) {
-      try {
-        for (const it of readOpen(d.dir)) if (it.ticket === a.ticket && it.kind === "unknown") appendResolved(d.dir, it.id, "controller", nowIso, "ticket released as merged");
-      } catch { /* best effort: the release goes on */ }
+      closeUnknown(d.dir, a.ticket, nowIso);
     }
     if (journaled) settle(d.dir, now, jkey, "succeeded", a.result);
     if (!corrupt) closeOpen(d.dir, now, a.ticket, "released");

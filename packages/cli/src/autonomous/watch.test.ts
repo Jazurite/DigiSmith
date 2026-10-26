@@ -622,8 +622,13 @@ describe("runWatch: guardrails.failed close (DGS-630 rule 4)", () => {
     expect(r.resolved).toBe(1);
     expect(readOpen(dir)).toHaveLength(0);
     const raw = readdirSync(dir).map((f) => readFileSync(join(dir, f), "utf-8")).join("\n");
-    expect(raw).toContain("guardrails read clean");
-    expect(raw).toContain("watchdog");
+    const rec = raw.split("\n").filter((l) => l.includes('"resolved":true')).map((l) => JSON.parse(l) as { by: string; note: string });
+    expect(rec).toMatchObject([{ by: "watchdog", note: "guardrails read clean" }]);
+  });
+  it("does not read the guardrails when no such item is open", async () => {
+    let calls = 0;
+    await runWatch(deps({ guardrailProblems: () => { calls++; return []; } }));
+    expect(calls).toBe(0);
   });
   it("keeps it open while the read has problems", async () => {
     seed();

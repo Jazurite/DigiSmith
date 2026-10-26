@@ -122,10 +122,11 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
   if (scan.problems.length === 0) for (const it of items.filter((o) => o.run === SCAN_RUN && o.cause === SCAN_CAUSE)) close(it, "scan_every_minutes reads clean");
 
   // The scan closes guardrails items on a clean read too; the watchdog repeats that close every pass. An unreadable config keeps the item open.
-  if (d.guardrailProblems) {
+  const guardItems = d.guardrailProblems ? items.filter((o) => o.run === "guardrails" && o.cause === "bad-guardrail-config") : [];
+  if (d.guardrailProblems && guardItems.length > 0) {
     let clean = false;
     try { clean = d.guardrailProblems().length === 0; } catch { /* unread: stays open */ }
-    if (clean) for (const it of items.filter((o) => o.run === "guardrails" && o.cause === "bad-guardrail-config")) close(it, "guardrails read clean");
+    if (clean) for (const it of guardItems) close(it, "guardrails read clean");
   }
 
   const paneCache = new Map<string, ReadonlyMap<string, string> | null>();
