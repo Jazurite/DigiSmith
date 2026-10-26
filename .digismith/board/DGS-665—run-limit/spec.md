@@ -71,7 +71,7 @@ Reason it is not by activity alone: the factory conductor wakes an idle builder 
 | `dg run start` | Refuses with exit 1 and one plain line: `limit: builder 2 of 2 in use: builder-2026... (DGS-557, last event 3 min ago), factory lock (DGS-650). Wait for one to finish.` Written before `createRun`, so no record is made. |
 | Conductor | The runbook step S3b already calls `dg run start`, so the conductor is covered through it. The runbook adds one line: a refused start means queue the worker and retry at the next checkpoint, never override. |
 
-`dg run start` for a `maestro`, `conductor` or `other` role is never refused.
+`dg run start` for a `maestro` or `conductor` role is never refused. An `other` start counts as a role (D2) and is refused when the role slot is full.
 There is no `--force`. Reason: the escape for a stuck slot is D4 (`lost`), and a force flag is how the load-140 case came back the first time. Jack changes the number in the config if he wants more.
 
 What the limit does not do (written in the runbook): it never pauses or kills a running agent, and it does not gate the wake-up of an idle builder that is not the factory's. For that case the conductor checks `dg run limit` before it sends a fix wave to an idle builder. This is a conductor step, stated in the runbook, because no code runs at that moment.
