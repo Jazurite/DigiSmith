@@ -119,9 +119,17 @@ check "env (no name) uses active=izanami" grep -q '^export ANTHROPIC_BASE_URL=' 
 check "env (no name, active izanami): exports DIGISMITH_SEAT=izanami" grep -q '^export DIGISMITH_SEAT=izanami$' "$OUT"
 run env jack
 check "env jack: exports DIGISMITH_SEAT=jack" grep -q '^export DIGISMITH_SEAT=jack$' "$OUT"
-check "env: the DIGISMITH_SEAT line holds no secret" bash -c '! grep "^export DIGISMITH_SEAT" "$0" | grep -q "FAKE"' "$OUT"
+seat_line_clean() { # the DIGISMITH_SEAT line of $OUT holds none of the fake secrets
+  local s line; line="$(grep '^export DIGISMITH_SEAT' "$OUT")"
+  [ -n "$line" ] || return 1
+  for s in "$TOK_JACK" "$TOK_DEV0" "FAKEJACKTOKEN" "FAKEDEV0TOKEN" "SECRETPART" "fake-key-123" "$HOSTILE"; do
+    case "$line" in *"$s"*) return 1 ;; esac
+  done
+}
+check "env jack: the DIGISMITH_SEAT line holds no secret" seat_line_clean
 run env izanami
 check "env izanami: exports DIGISMITH_SEAT=izanami" grep -q '^export DIGISMITH_SEAT=izanami$' "$OUT"
+check "env izanami: the DIGISMITH_SEAT line holds no secret" seat_line_clean
 run env nosuch
 check "env unknown name: exit 1, stdout empty" [ "$RC" = 1 ] && [ ! -s "$OUT" ]
 check "env unknown name: clear error" grep -q "claude-account:" "$ERR"
