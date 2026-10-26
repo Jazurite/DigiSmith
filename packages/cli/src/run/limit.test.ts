@@ -49,6 +49,25 @@ describe("countSlots", () => {
     const c = count([row({ ticket: "DGS-9" })], { ticket: "DGS-9" });
     expect(c.used.builder).toHaveLength(1);
   });
+  it("keeps reviewer, scout and other runs in their own buckets", () => {
+    const c = count([
+      row({ run: "rev", role: "reviewer" }),
+      row({ run: "sc", role: "scout" }),
+      row({ run: "ot", role: "other", role_from: "herdr" }),
+      row({ run: "b" }),
+    ]);
+    expect(c.used.reviewer.map((s) => s.run)).toEqual(["rev"]);
+    expect(c.used.role.map((s) => s.run)).toEqual(["sc", "ot"]);
+    expect(c.used.builder.map((s) => s.run)).toEqual(["b"]);
+  });
+  it("adds the factory slot when the lock ticket differs from the open builders", () => {
+    const c = count([row({ run: "hand", ticket: "DGS-1" })], { ticket: "DGS-9" });
+    expect(c.used.builder.map((s) => s.run)).toEqual(["hand", "factory lock"]);
+  });
+  it("treats exactly the stale window as busy and one minute past it as stale", () => {
+    expect(count([row({ lastTs: 120 })]).used.builder).toHaveLength(1);
+    expect(count([row({ lastTs: 121 })]).stale).toHaveLength(1);
+  });
   it("counts an unreadable lock (ticket ?) as one builder", () => {
     expect(count([], { ticket: "?" }).used.builder).toHaveLength(1);
   });
@@ -64,6 +83,10 @@ describe("refusal and lines", () => {
   it("names the open run and its age", () => {
     const c = count([row({ run: "b-1", ticket: "DGS-557" }), row({ run: "b-2", ticket: "DGS-2" })]);
     expect(refusal(c, "builder")).toBe("limit: builder 2 of 2 in use: b-1 (DGS-557, last event 1 min ago), b-2 (DGS-2, last event 1 min ago). Wait for one to finish.");
+  });
+  it("says 'Wait for it' with one open run", () => {
+    const c = countSlots([row({ run: "only" })], null, NOW, { builder: 1, reviewer: 1, role: 1 }, 120);
+    expect(refusal(c, "builder")).toBe("limit: builder 1 of 1 in use: only (DGS-1, last event 1 min ago). Wait for it to finish.");
   });
   it("refuses when the limit is 0", () => {
     const c = countSlots([], null, NOW, { builder: 0, reviewer: 1, role: 1 }, 120);
