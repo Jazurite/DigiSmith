@@ -209,6 +209,12 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
 
   // 4. Only Task and Bug whose Mode is not Manual are candidates (an empty Mode is Autonomous). A Manual to do is normal: no comment, no event.
   const all = await d.tracker.listByStatus(INTAKE);
+  if (!d.dryRun) {
+    const inToDo = new Set(all.map(keyOf));
+    try {
+      for (const it of readOpen(d.dir)) if (it.cause === "already-merged-but-open" && it.ticket !== null && !inToDo.has(it.ticket)) appendResolved(d.dir, it.id, "watchdog", now.toISOString(), "ticket left to do");
+    } catch { /* the item stays open until a later scan */ }
+  }
   const candidates: LoTask[] = [];
   const manual: string[] = [];
   for (const t of all) {

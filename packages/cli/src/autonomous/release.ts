@@ -1,6 +1,6 @@
 import { appendFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { appendOpen } from "./attention.ts";
+import { appendOpen, appendResolved, readOpen } from "./attention.ts";
 import { recordRelease } from "./breaker.ts";
 import { classOfCause, normalizeCause } from "./causes.ts";
 import { fmtUtc7 } from "./clock.ts";
@@ -97,6 +97,11 @@ export async function runRelease(
     }
     clearLock(d.dir);
     lockCleared = true;
+    if (a.result === "merged" && !corrupt) {
+      try {
+        for (const it of readOpen(d.dir)) if (it.ticket === a.ticket && it.kind === "unknown") appendResolved(d.dir, it.id, "controller", nowIso, "ticket released as merged");
+      } catch { /* best effort: the release goes on */ }
+    }
     if (journaled) settle(d.dir, now, jkey, "succeeded", a.result);
     if (!corrupt) closeOpen(d.dir, now, a.ticket, "released");
     const minutes = Number.isFinite(claimedMs) ? Math.round((now.getTime() - claimedMs) / 60_000) : null;

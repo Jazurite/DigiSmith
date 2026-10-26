@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { runRelease, type ReleaseDeps } from "./release.ts";
 import { plan, readJournal, resultsOf } from "./journal.ts";
+import { appendAttention } from "./attention-write.ts";
+import { readOpen } from "./attention.ts";
 import { acquireLock, readEvents, readLock } from "./state.ts";
 
 const CLAIMED = new Date("2026-10-20T17:00:00.000Z");
@@ -324,5 +326,42 @@ describe("runRelease: causes and the breaker", () => {
     acquireLock(dir, lock());
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc1234" });
     expect(r.warning).toBeNull();
+  });
+});
+
+describe("runRelease: unknown items close by rule", () => {
+  const seedUnknown = (run: string, ticket: string | null, cause = "journal-uncertain-order-merge") => appendAttention(dir, NOW, { ticket, run, kind: "unknown", cause });
+  const resolvedLines = () => readFileSync(join(dir, "attention.jsonl"), "utf8").split("\n").filter((l) => l.includes('"resolved":true')).map((l) => JSON.parse(l) as { id: string; by: string; note: string });
+  it("merged closes the ticket's open unknown items as controller", async () => {
+    acquireLock(dir, lock());
+    seedUnknown("builder-9", "DGS-1");
+    seedUnknown("DGS-1/already-merged", "DGS-1", "already-merged-but-open");
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(readOpen(dir)).toEqual([]);
+    expect(resolvedLines().map((l) => ({ id: l.id, by: l.by, note: l.note })).sort((a, b) => (a.id < b.id ? -1 : 1))).toEqual([
+      { id: "DGS-1/already-merged.unknown.0", by: "controller", note: "ticket released as merged" },
+      { id: "builder-9.unknown.0", by: "controller", note: "ticket released as merged" },
+    ]);
+  });
+  it("merged leaves other items open", async () => {
+    acquireLock(dir, lock());
+    appendAttention(dir, NOW, { ticket: "DGS-1", run: "DGS-1", kind: "failed", cause: "x" });
+    seedUnknown("DGS-2", "DGS-2");
+    seedUnknown("nobody", null);
+    await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(readOpen(dir).map((i) => i.id).sort()).toEqual(["DGS-1.failed.0", "DGS-2.unknown.0", "nobody.unknown.0"]);
+  });
+  it.each(["failed", "stopped", "awaiting-jack"] as const)("%s closes nothing", async (result) => {
+    acquireLock(dir, lock());
+    seedUnknown("builder-9", "DGS-1");
+    await runRelease(mk(), { ticket: "DGS-1", result });
+    expect(readOpen(dir).some((i) => i.id === "builder-9.unknown.0")).toBe(true);
+  });
+  it("a corrupt lock (--ticket ?) closes nothing", async () => {
+    writeFileSync(join(dir, "lock.json"), "{ not json");
+    seedUnknown("builder-9", "?");
+    seedUnknown("builder-8", "DGS-1");
+    await runRelease(mk(), { ticket: "?", result: "merged" });
+    expect(readOpen(dir).map((i) => i.id).sort()).toEqual(["builder-8.unknown.0", "builder-9.unknown.0"]);
   });
 });

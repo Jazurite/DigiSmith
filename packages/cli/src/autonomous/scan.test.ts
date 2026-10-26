@@ -681,3 +681,37 @@ describe("runScan: the scan guard", () => {
     expect((await runScan(mk())).outcome).toBe("claimed");
   });
 });
+
+describe("runScan: already-merged items close by rule", () => {
+  const guard = (): ScanGuard => ({ guardrailProblems: () => [], alreadyDone: () => null });
+  const seed = (cause = "already-merged-but-open", run = "DGS-600/already-merged", ticket = "DGS-600", kind: "unknown" | "failed" = "unknown") =>
+    appendAttention(dir, now, { ticket, run, kind, cause });
+  const resolvedLines = () => readFileSync(join(dir, "attention.jsonl"), "utf8").split("\n").filter((l) => l.includes('"resolved":true')).map((l) => JSON.parse(l) as { id: string; by: string; note: string });
+  it("already-merged item closes when its ticket is no longer in to do", async () => {
+    seed();
+    tracker.add({ id: "t600", key: "DGS-600", status: "complete" });
+    await runScan(mk({ guard: guard() }));
+    expect(readOpen(dir).find((i) => i.id === "DGS-600/already-merged.unknown.0")).toBeUndefined();
+    expect(resolvedLines()).toEqual([expect.objectContaining({ id: "DGS-600/already-merged.unknown.0", by: "watchdog", note: "ticket left to do" })]);
+  });
+  it("already-merged item stays open while its ticket is still in to do", async () => {
+    seed();
+    tracker.add({ id: "t600", key: "DGS-600", mode: "Manual" });
+    await runScan(mk({ guard: guard() }));
+    expect(readOpen(dir).map((i) => i.id)).toEqual(["DGS-600/already-merged.unknown.0"]);
+  });
+  it("a dry run closes nothing", async () => {
+    seed();
+    tracker.add({ id: "t600", key: "DGS-600", status: "complete" });
+    await runScan(mk({ guard: guard(), dryRun: true }));
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it("an item with another cause or another run is not closed", async () => {
+    seed("starter-status", "DGS-600/starter", "DGS-600");
+    seed("already-merged-but-open", "DGS-9/already-merged", "DGS-9");
+    tracker.add({ id: "t9", key: "DGS-9", mode: "Manual" });
+    tracker.add({ id: "t600", key: "DGS-600", status: "complete" });
+    await runScan(mk({ guard: guard() }));
+    expect(readOpen(dir).map((i) => i.id).sort()).toEqual(["DGS-600/starter.unknown.0", "DGS-9/already-merged.unknown.0"]);
+  });
+});
