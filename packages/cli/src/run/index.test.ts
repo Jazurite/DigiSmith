@@ -256,4 +256,11 @@ describe("dg run limit (DGS-665)", () => {
     const factory = await dgc("start", "--ticket", "DGS-9", "--role", "builder", "--order", "/o.md");
     expect(factory.status).toBe(0);
   });
+  it("an other start counts as a role: the second one is refused, a maestro is not", async () => {
+    expect((await dgc("start", "--ticket", "DGS-1", "--role", "other", "--order", "/o.md")).status).toBe(0);
+    const r = await dgc("start", "--ticket", "DGS-2", "--role", "other", "--order", "/o.md");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/^limit: role 1 of 1 in use/);
+    expect((await dgc("start", "--ticket", "DGS-2", "--role", "maestro", "--order", "/o.md")).status).toBe(0);
+  });
 });
