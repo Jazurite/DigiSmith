@@ -310,6 +310,7 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
     if (block.found) {
       const s = parseStateBody(block.body).state;
       if (s.running.length) return skip("note_running_rows");
+      if (s.runningUnknown !== undefined) return skip("note_running_unknown");
       if (s.waiting.length) return skip("note_waiting_rows");
       blockUpdated = parseTime(s.updated);
       checks.note_block = "ok";

@@ -17,7 +17,7 @@ node --experimental-strip-types scripts/conductor/cli.ts state-refresh --conduct
 - after you edit Waiting, Decided, Parked or Next,
 - before any catch-up (the catch-up also runs it first by itself).
 
-`--watch` is a list of files or folders (a folder is walked to depth 3, at most 2000 entries). The next refresh without `--watch` reuses the stored list. A conductor that keeps a project note outside the depot passes the note and the project's `.digismith/board` folder. A missing path gives a warning, not an error.
+`--watch` is a list of files or folders, as absolute paths (a relative path is looked up from the folder where the command runs, and the catch-up may run elsewhere; a folder is walked to depth 3, at most 2000 entries). The next refresh without `--watch` reuses the stored list. A conductor that keeps a project note outside the depot passes the note and the project's `.digismith/board` folder. A missing path gives a warning, not an error.
 
 `--workers` is the list of worker pane names this conductor owns now. The next refresh without `--workers` reuses the stored list. A card whose `under` is this conductor also counts. Without `HERDR_WS` the workspace comes from the conductor card's `runs_on` (`herdr w2:p1`); with neither, Running is unknown (see below). A pane in neither is shown under Health as `owner unknown`, never as Running.
 
@@ -57,7 +57,7 @@ A bad marker, an unreadable ticket, a failed git read or a path outside the repo
 The block header has these time and watch lines:
 
 - `Updated:` is when the block was last refreshed or written.
-- `Changed:` is when the block content last changed. A refresh that changes nothing keeps it. `state-write` also keeps it when the pasted content equals the block in the note. A block without it shows `content change time not recorded`; the next change writes it.
+- `Changed:` is when the block content last changed. A refresh that changes nothing keeps it. `state-write` computes it: the same content as the block in the note keeps the old time, other content sets now. A `Changed:` in the pasted text is ignored. A block without it shows `content change time not recorded`; the next change writes it.
 - `Watch:` lists the `--watch` paths.
 - `Running: unknown (<reason>)` is written when Running could not be rebuilt. The catch-up shows one Running line `unknown | - | <reason>`.
 

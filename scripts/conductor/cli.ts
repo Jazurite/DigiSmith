@@ -121,12 +121,13 @@ export async function main(argv: string[], io: Io & { runner?: Runner; ticketSta
       }
       if (!/^Updated:/m.test(text)) text = `Updated: ${iso7(io.now())}\n${text.startsWith("\n") ? "" : "\n"}${text}`;
       const notePath = resolveNotePath({ project, conductor, note: v.note }, io.env);
-      if (!pastedState.changed) {
-        // a hand-written block: the content time moves only when the content differs from the block now in the note
+      {
+        // the content time is computed here, never trusted from the pasted text: it moves only when the content differs from the block now in the note
         const cur = fs.existsSync(notePath) ? extractBlock(fs.readFileSync(notePath, "utf-8"), STATE_MARKER) : undefined;
         const prev = cur?.found ? parseStateBody(cur.body) : undefined;
         const same = prev && prev.problems.length === 0 && contentKey(prev.state) === contentKey(pastedState);
-        const changed = same ? prev.state.changed : pastedState.updated ?? iso7(io.now());
+        const changed = same ? prev.state.changed : prev ? iso7(io.now()) : pastedState.changed ?? pastedState.updated ?? iso7(io.now());
+        text = text.replace(/^Changed:.*\n/m, "");
         if (changed) text = text.replace(/^(Updated:.*)$/m, `$1\nChanged: ${changed}`);
       }
       writeStateBlock(notePath, text, STATE_MARKER);

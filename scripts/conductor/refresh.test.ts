@@ -107,7 +107,20 @@ describe("DGS-577 refresh", () => {
     expect(block().state.changed).toBe(first.state.changed);
     fs.writeFileSync(file, fs.readFileSync(file, "utf-8").replace("2. Do Y", "2. Do Z").replace("Changed: " + first.state.changed + "\n", ""));
     expect(await main(["state-write", "--note", note, "--from", file], io)).toBe(0);
-    expect(block().state.changed).toBe("2026-10-14T09:00+07:00");
+    expect(block().state.changed).toBe("2026-10-13T19:00:00+07:00");
+  });
+  it("state-write ignores a pasted Changed: edited content gets now, same content keeps the old time", async () => {
+    const io = { stdout: () => {}, stderr: () => {}, env: { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") }, now: () => NOW, readStdin: async () => "" } as unknown as Io;
+    await refreshState(opts(), deps(runner()));
+    const cur = extractBlock(fs.readFileSync(note, "utf-8"), STATE_MARKER).body;
+    const file = path.join(tmp, "in.md");
+    const stale = cur.replace(/^Changed:.*$/m, "Changed: 2026-10-01T09:00+07:00");
+    fs.writeFileSync(file, stale.replace("2. Do Y", "2. Do Z"));
+    expect(await main(["state-write", "--note", note, "--from", file], io)).toBe(0);
+    expect(block().state.changed).toBe("2026-10-13T19:00:00+07:00");
+    fs.writeFileSync(file, extractBlock(fs.readFileSync(note, "utf-8"), STATE_MARKER).body.replace(/^Changed:.*$/m, "Changed: 2026-10-02T09:00+07:00"));
+    expect(await main(["state-write", "--note", note, "--from", file], io)).toBe(0);
+    expect(block().state.changed).toBe("2026-10-13T19:00:00+07:00");
   });
   it("passes --watch from the command line", async () => {
     const out: string[] = [];

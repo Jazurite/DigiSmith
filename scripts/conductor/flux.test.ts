@@ -231,6 +231,8 @@ describe("skips", () => {
     await skipped("note_running_rows");
     fs.writeFileSync(note, block("## Waiting for Jack\n- Merge DGS-9 now? | since 2026-10-13T13:50+07:00 | pane w2:p5\n"));
     await skipped("note_waiting_rows");
+    fs.writeFileSync(note, block("Running: unknown (herdr agent list failed)\n\n## Running\nnone\n"));
+    await skipped("note_running_unknown");
   });
   it("a note section newer than the last handoff that names a ticket in flight", async () => {
     fs.appendFileSync(note, "\n## 2026-10-13 19:00: new order\n- DGS-77 build in flight, worker running\n");
