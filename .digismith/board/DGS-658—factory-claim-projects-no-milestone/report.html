@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factory claim without a milestone for Projects tickets — Implementation Report</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --warn:#9a6400; --warn-bg:#fdf6e3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --warn:#e0b34d; --warn-bg:#2b230f; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  h1 { font-size:1.6rem; } h2 { font-size:1.2rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; margin-top:2rem; }
+  .meta { color:var(--muted); font-size:.9rem; } code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  .callout { border-left:3px solid var(--warn); background:var(--warn-bg); padding:.8rem 1.1rem; border-radius:0 8px 8px 0; }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); }
+  .sha { color:var(--accent); font-weight:600; }
+</style>
+</head>
+<body>
+<h1>Factory claim without a milestone for Projects tickets — Implementation Report</h1>
+<div class="meta">Date: 2026-10-26 · Ticket: <strong>DGS-658</strong> · Order: sv-06</div>
+
+<h2>Summary</h2>
+<p>The factory's Definition of Ready (<code>checkReady</code>) refused every ticket without a milestone. A ticket whose list sits in the Projects folder (<code>1301150000003307</code>, Emma, personal) now needs no milestone. Clan tickets keep the check. Sign-off stays required everywhere. Built test-first and executed directly in one session; a fresh agent reviewed the whole branch and found no correctness findings. Reference documents: the <a href="design.md">design</a> and the <a href="plan.md">plan</a>.</p>
+
+<h2>What was delivered</h2>
+<ul>
+  <li><code>LoTask.inProjects</code>, set from the task's <code>folder.id</code> against the named constant <code>PROJECTS_FOLDER_ID</code> (<code>tracker-clickup.ts</code>); no Imperium read for a Projects ticket.</li>
+  <li><code>checkReady</code> skips <code>REASON.milestone</code> when <code>inProjects</code> is true (<code>ready.ts</code>).</li>
+  <li>Tests: Projects without milestone is ready; clan without milestone is refused with <code>REASON.milestone</code>; Projects without Sign-off is refused for Sign-off only; tracker maps Projects, clan and missing folder.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul>
+  <li>Ready and tracker tests: 42/42. Autonomous folder: 850 pass, 1 fail.</li>
+  <li><strong>Pre-existing failure, not from this branch:</strong> <code>guardrails.test.ts</code> expects <code>scan_every_minutes</code> 30, but <code>.digismith/config.yml</code> says 15 (main commit <code>dceb67f9</code>). It fails on main too. Not fixed here.</li>
+  <li>Dry run <code>dg autonomous scan --dry-run</code>: DGS-652 and DGS-654 are refused only with "no Sign-off mark (Auto or Jack)", not for milestone.</li>
+</ul>
+
+<h2>Open item for Jack</h2>
+<div class="callout">The "Sign-off" field does not exist on the Projects lists (Shoppable Video, App Audit). Add it in the ClickUp UI. Until then the factory cannot claim DGS-652 and DGS-654.</div>
+
+<h2>Commits</h2>
+<ul class="commit-list">
+<li><span class="sha">7c6b4541</span> docs(dgs-658): add the ticket and the design</li>
+<li><span class="sha">37c7df5e</span> docs(dgs-658): add the plan</li>
+<li><span class="sha">50dec3e8</span> feat(autonomous): ready check skips the milestone for Projects tickets</li>
+</ul>
+<p class="meta">DigiSmith · .digismith/board/DGS-658—factory-claim-projects-no-milestone/report.html — written in-session, no ledger, no offload.</p>
+</body>
+</html>
