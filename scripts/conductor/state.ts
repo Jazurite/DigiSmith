@@ -271,10 +271,13 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     warnings.push(`herdr tab list failed: ${(e as Error).message}`);
   }
 
-  // limits (DGS-665): how many runs of each kind are busy; Health never breaks the catch-up, so a failure leaves the field out
-  try {
-    state.health.limits = limitLine(currentCount(process.env, opts.repoDir).count).replace(/^limits: /, "");
-  } catch { /* leave it out */ }
+  // limits (DGS-665): how many runs of each kind are busy. The limits live in the DigiSmith config, so only the DigiSmith project gets the line.
+  // Health never breaks the catch-up, so a failure leaves the field out.
+  if (opts.project === "DigiSmith") {
+    try {
+      state.health.limits = limitLine(currentCount(env, opts.repoDir).count).replace(/^limits: /, "");
+    } catch { /* leave it out */ }
+  }
 
   // cards: cross-check the Running rows against open worker cards
   if (deps.listCards) {

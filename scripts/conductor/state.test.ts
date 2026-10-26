@@ -72,9 +72,20 @@ describe("resolveNotePath", () => {
 });
 
 describe("collectState", () => {
-  it("adds the run limits to Health (DGS-665)", async () => {
+  it("adds the run limits to Health for DigiSmith, read from the temp depot (DGS-665)", async () => {
     const s = await collectState(base(), deps(fakeRunner()));
-    expect(s.health.limits).toMatch(/^builder \d+\/\d+, reviewer \d+\/\d+, role \d+\/\d+$/);
+    expect(s.health.limits).toBe("builder 0/2, reviewer 0/1, role 0/1");
+  });
+  it("adds no limits line for another project (DGS-665)", async () => {
+    const s = await collectState({ ...base(), project: "Emma" }, deps(fakeRunner()));
+    expect(s.health.limits).toBeUndefined();
+  });
+  it("leaves limits out when the count throws, and the rest of the state still collects (DGS-665)", async () => {
+    fs.mkdirSync(path.join(depot, "autonomous", "lock.json"), { recursive: true }); // a folder where the lock file should be: readLock throws EISDIR
+    const s = await collectState(base(), deps(fakeRunner()));
+    expect(s.health.limits).toBeUndefined();
+    expect(s.health.tabs.length).toBeGreaterThan(0);
+    expect(s.version).toBe(1);
   });
   it("fills every section from the note, git and herdr", async () => {
     const runner = fakeRunner();
