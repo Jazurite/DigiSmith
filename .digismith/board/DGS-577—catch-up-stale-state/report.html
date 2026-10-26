@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The catch-up must not show old state as fresh — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; } th,td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; } th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); } .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<h1>The catch-up must not show old state as fresh — Implementation Report</h1>
+<p>Date: 2026-10-26 · Ticket: <strong>DGS-577</strong> · Commit range: <code>d7d23c9e..70ac4212</code></p>
+
+<section id="summary">
+<h2>Summary</h2>
+<p>The catch-up now shows when the state block content last changed, apart from the refresh time. It flags items older than 2 days, writes <code>Running: unknown (reason)</code> when Running cannot be rebuilt, shows warnings in Health, and warns when watched files are newer than the block content. The merge check runs only for project DigiSmith in a git checkout. Built by one worker from the plan (<a href="plan.md">plan</a>, <a href="spec.md">spec</a>), test first, 5 tasks. The plan was run directly in one session, not through subagent-driven development.</p>
+<p>Health text (chosen by the worker): <code>state block refreshed &lt;time&gt;, &lt;age&gt; ago; content changed &lt;time&gt;, &lt;age&gt; ago; warnings: w1; w2 (+N more)</code>. An old block shows <code>content change time not recorded</code>.</p>
+</section>
+
+<section id="review">
+<h2>Whole-branch review (Claude, independent agent)</h2>
+<table>
+<tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+<tr><td>Medium</td><td>Flux no longer skipped a conductor whose Running is unknown (zero rows parse).</td><td>Fixed: flux skips with <code>note_running_unknown</code>; test added.</td></tr>
+<tr><td>Medium</td><td><code>Changed:</code> went stale on a hand edit through <code>state-write</code> (a gap in the plan: the refresh cannot see a hand edit).</td><td>Fixed: <code>state-write</code> computes <code>Changed:</code> from the block now in the note; a pasted value is ignored; test added; docs updated.</td></tr>
+<tr><td>Low</td><td>A relative <code>--watch</code> path resolves against the current folder.</td><td>Documented: use absolute paths. Not changed in code.</td></tr>
+</table>
+<p>Tests: final full suite 286 files, 4585 tests green (<code>--maxWorkers=2</code>); after the last rebase <code>scripts/conductor</code> 18 files, 317 tests green.</p>
+</section>
+
+<section id="data">
+<h2>Open data step</h2>
+<p>The Emma conductor card is not in the depot (<code>sessions/Emma/cards</code> has no card named emma-conductor), so <code>runs_on: herdr w3:p1</code> could not be checked. The Emma conductor adds it. The code now shows a missing <code>runs_on</code> in Health.</p>
+</section>
+
+<section id="merge">
+<h2>Commits</h2>
+<ul class="commit-list">
+<li><span class="sha">f31f9329</span> feat(dgs-577): Changed, Watch and Running unknown lines in the state block</li>
+<li><span class="sha">5e545300</span> feat(dgs-577): state-refresh records content time, Running unknown and watch paths</li>
+<li><span class="sha">4ef807e4</span> feat(dgs-577): age flags, watch-path warnings and a merge check that only runs in a DigiSmith checkout</li>
+<li><span class="sha">1591f9f2</span> feat(dgs-577): the catch-up Health shows content time and warnings</li>
+<li><span class="sha">1117ef07</span> docs(dgs-577): the depot block is the only state the catch-up reads</li>
+<li><span class="sha">70ac4212</span> fix(dgs-577): state-write computes the content time and flux skips an unknown Running</li>
+</ul>
+</section>
+<footer>DigiSmith · .digismith/board/DGS-577—catch-up-stale-state/report.html</footer>
+</body>
+</html>
