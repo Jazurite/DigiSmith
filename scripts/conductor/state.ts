@@ -7,6 +7,8 @@ import { extractBlock, parseStateBody, STATE_MARKER, type DecidedRow, type Parke
 import type { Runner } from "./runner.ts";
 import { stripMarkers } from "./markers.ts";
 import { newestMtime } from "./watch.ts";
+import { currentCount } from "../../packages/cli/src/run/limit-check.ts";
+import { limitLine } from "../../packages/cli/src/run/limit.ts";
 
 /** an item or block content older than this is flagged in Health (DGS-577) */
 export const STALE_AFTER_MS = 2 * 24 * 3600_000;
@@ -36,7 +38,7 @@ export interface State extends CatchUpState {
   decided: DecidedRow[];
   parked: ParkedRow[];
   next: string[];
-  health: { seats: Seat[]; server: string; tabs: string[] };
+  health: { seats: Seat[]; server: string; tabs: string[]; limits?: string };
   sources: { note: SourceState; cards: SourceState; git: SourceState; herdr: SourceState; clickup: SourceState };
   warnings: string[];
 }
@@ -268,6 +270,11 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     state.sources.herdr = "failed";
     warnings.push(`herdr tab list failed: ${(e as Error).message}`);
   }
+
+  // limits (DGS-665): how many runs of each kind are busy; Health never breaks the catch-up, so a failure leaves the field out
+  try {
+    state.health.limits = limitLine(currentCount(process.env, opts.repoDir).count).replace(/^limits: /, "");
+  } catch { /* leave it out */ }
 
   // cards: cross-check the Running rows against open worker cards
   if (deps.listCards) {

@@ -18,6 +18,8 @@ export interface CatchUp {
     seats: { seat: string; fiveHourPct: number; weeklyPct: number }[];
     server: string;
     tabs: string[];
+    /** DGS-665: `builder 1/2, reviewer 0/1, role 1/1`; absent in an older data file, then no line is printed */
+    limits?: string;
   };
 }
 
@@ -104,6 +106,7 @@ export function renderCatchUp(data: CatchUp): string {
       `- Seats and usage: ${orNone(seats.join("; "))}`,
       `- Server: ${orNone(health.server)}`,
       `- Open tabs: ${health.tabs.length === 0 ? "none" : `${health.tabs.length}: ${health.tabs.join(", ")}`}`,
+      ...(typeof health.limits === "string" && health.limits !== "" ? [`- Limits: ${health.limits}`] : []),
     ].join("\n"),
   };
   const template = fs.readFileSync(TEMPLATE_PATH, "utf-8").replace(/\r\n/g, "\n");

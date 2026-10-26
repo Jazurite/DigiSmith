@@ -260,7 +260,7 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
             state.ownerUnknown = isNone(ou) ? [] : ou.split(",").map((x) => x.trim()).filter(Boolean);
             return;
           }
-          if (/^(Server|Open tabs):/.test(item)) return; // computed from herdr, not read from the note
+          if (/^(Server|Open tabs|Limits):/.test(item)) return; // computed from herdr, not read from the note
           return bad("unknown Health line");
         }
         if (isNone(seats)) return;

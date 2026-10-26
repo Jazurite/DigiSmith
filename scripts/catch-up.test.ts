@@ -82,6 +82,12 @@ Window: 2026-10-13 13:00 UTC+7 to 2026-10-13 15:30 UTC+7 (UTC+7)   Maestro ident
 - Open tabs: 2: w2:1 conductor, w2:2 dgs-427`);
   });
 
+  it("prints a Limits line after Open tabs when health.limits is set, and none without it", () => {
+    const withLimits = renderCatchUp({ ...EMPTY, health: { ...EMPTY.health, limits: "builder 1/2, reviewer 0/1, role 1/1" } });
+    expect(withLimits).toContain("- Open tabs: none\n- Limits: builder 1/2, reviewer 0/1, role 1/1");
+    expect(renderCatchUp(EMPTY)).not.toContain("Limits");
+  });
+
   it("says none for every empty section and keeps all seven headings", () => {
     const out = renderCatchUp(EMPTY);
     for (const h of HEADINGS) expect(out).toContain(h);

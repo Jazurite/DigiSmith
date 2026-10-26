@@ -119,6 +119,9 @@ describe("parseStateBody", () => {
     expect(problems[0]).toMatch(/line 2/);
     expect(problems[0]).toMatch(/jack: 5h 19%, weekly 59%/);
   });
+  it("ignores a Limits line in Health (computed)", () => {
+    expect(parseStateBody("## Health\n- Limits: builder 1/2, reviewer 0/1, role 1/1\n").problems).toEqual([]);
+  });
   it("ignores Server and Open tabs lines in Health (computed)", () => {
     const { problems } = parseStateBody("## Health\n- Server: up\n- Open tabs: 3\n");
     expect(problems).toEqual([]);

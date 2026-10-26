@@ -72,6 +72,10 @@ describe("resolveNotePath", () => {
 });
 
 describe("collectState", () => {
+  it("adds the run limits to Health (DGS-665)", async () => {
+    const s = await collectState(base(), deps(fakeRunner()));
+    expect(s.health.limits).toMatch(/^builder \d+\/\d+, reviewer \d+\/\d+, role \d+\/\d+$/);
+  });
   it("fills every section from the note, git and herdr", async () => {
     const runner = fakeRunner();
     const s = await collectState(base(), deps(runner));
