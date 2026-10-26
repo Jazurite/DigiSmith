@@ -5,6 +5,7 @@ export type EntryVerdict = Verdict | "fixing";
 export type Judgement = { verdict: Verdict; reason: string };
 
 const LINE_RE = /^Review (task|ticket) (\d+|final) r(\d+): (F\d+) -> (fixed|parked|rejected|fixing)(?: \((.+)\))?$/;
+const NO_FINDINGS_RE = /^Review (task|ticket) (\d+|final) r(\d+): no findings$/;
 
 export function judgementKey(kind: string, id: string, round: number, findingId: string): string {
   return `${kind} ${id} r${round} ${findingId}`;
@@ -20,6 +21,7 @@ export function parseVerdictEntries(ledger: string): VerdictEntry[] {
   ledger.split(/\r?\n/).forEach((raw, i) => {
     const text = raw.trim().replace(/^- /, "");
     if (!text.startsWith("Review task ") && !text.startsWith("Review ticket ")) return;
+    if (NO_FINDINGS_RE.test(text)) return;
     const m = LINE_RE.exec(text);
     if (!m) throw new Error(`ledger line ${i + 1}: not a verdict line: ${text}`);
     const verdict = m[5] as EntryVerdict;

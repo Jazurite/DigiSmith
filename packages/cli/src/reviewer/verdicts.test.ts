@@ -66,3 +66,30 @@ describe("parseVerdictEntries fixing", () => {
     ]);
   });
 });
+
+describe("no-findings lines", () => {
+  it('parseVerdictEntries skips "Review task 3 r1: no findings" and a ticket final line', () => {
+    const ledger = [
+      "Review task 3 r1: no findings",
+      "- Review ticket final r2: no findings",
+      "Review task 4 r1: F1 -> fixed",
+    ].join("\n");
+    const entries = parseVerdictEntries(ledger);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe("4");
+  });
+
+  it("parseVerdictLines ignores a no-findings line", () => {
+    expect(parseVerdictLines("Review task 3 r1: no findings\n").size).toBe(0);
+  });
+
+  it.each([
+    "Review task 3 r1: no findings (ok)",
+    "Review task 3 r1: No findings",
+    "Review task 3 r1: no finding",
+    "Review task 3: no findings",
+    "Review task 3 r1: no findings.",
+  ])("parseVerdictEntries still throws on a malformed no-findings line: %s", (line) => {
+    expect(() => parseVerdictEntries(line)).toThrow(/ledger line 1: not a verdict line/);
+  });
+});
