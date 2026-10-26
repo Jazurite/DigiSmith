@@ -42,6 +42,7 @@ const mk = (over: Partial<ScanDeps> = {}): ScanDeps => ({
 });
 const events = () => readEvents(dir, now.getTime() - 48 * 3600_000, now.getTime() + 1000);
 const kinds = () => events().map((e) => e.kind);
+const orderText = () => readFileSync(join(ordersDir, readdirSync(ordersDir)[0]), "utf8");
 const orders = () => (existsSync(ordersDir) ? readdirSync(ordersDir) : []);
 
 beforeEach(() => {
@@ -253,12 +254,24 @@ describe("runScan: walk and claim", () => {
     expect(tracker.tasks.get("t1")?.status).toBe("to do");
     expect(tracker.writeCalls()).toEqual([]);
   });
-  it("a to do ticket with no Mode is skipped the same way", async () => {
+  it("a to do ticket with no Mode is claimed (empty Mode is Autonomous)", async () => {
     tracker.add({ id: "t1", mode: null });
     const r = await runScan(mk());
-    expect(r).toMatchObject({ outcome: "none", candidates: 0 });
-    expect(r.skipped).toEqual([{ key: "T1", reason: "mode" }]);
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "T1", candidates: 1, skipped: [] });
     expect(tracker.comments).toEqual([]);
+  });
+  it("a to do ticket with no Sign-off and no milestone is claimed with Sign-off Auto", async () => {
+    tracker.add({ id: "t1", key: "DGS-1", signOff: null, milestone: null });
+    const r = await runScan(mk());
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1", skipped: [] });
+    expect(orderText()).toContain("Sign-off: Auto");
+    expect(orderText()).not.toContain("## Sign-off: Jack");
+  });
+  it("an explicit Sign-off Jack is claimed and its order stops at acceptance", async () => {
+    tracker.add({ id: "t1", key: "DGS-1", signOff: "Jack" });
+    const r = await runScan(mk());
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
+    expect(orderText()).toContain("## Sign-off: Jack");
   });
   it("a Manual ticket ranked first does not stop the Autonomous one; only Autonomous counts as a candidate", async () => {
     tracker.add({ id: "t1", key: "DGS-1", priority: 1, mode: "Manual" });
@@ -302,14 +315,14 @@ describe("runScan: walk and claim", () => {
     expect(tracker.tasks.get("t1")?.status).toBe("to do");
   });
   it("first fails Definition of Ready, second ready: one comment on the first, second claimed", async () => {
-    tracker.add({ id: "t1", key: "DGS-1", priority: 1, milestone: null });
+    tracker.add({ id: "t1", key: "DGS-1", priority: 1, attachments: [] });
     tracker.add({ id: "t2", key: "DGS-2", priority: 2 });
     const r = await runScan(mk());
     expect(r.claimed).toBe("DGS-2");
-    expect(r.skipped).toEqual([{ key: "DGS-1", reason: "no milestone" }]);
+    expect(r.skipped).toEqual([{ key: "DGS-1", reason: "no spec and plan on the ticket (an attachment named design.* or spec.* and one named plan.*, or a linked board folder with design.* and plan.md on main)" }]);
     expect(tracker.comments).toHaveLength(1);
     expect(tracker.comments[0].ref).toBe("t1");
-    expect(tracker.comments[0].text).toBe("Autonomous scan skipped this ticket (2026-10-21 00:00:00 UTC+7): no milestone. It stays in to do. Fix and it is picked up on a later scan.");
+    expect(tracker.comments[0].text).toBe("Autonomous scan skipped this ticket (2026-10-21 00:00:00 UTC+7): no spec and plan on the ticket (an attachment named design.* or spec.* and one named plan.*, or a linked board folder with design.* and plan.md on main). It stays in to do. Fix and it is picked up on a later scan.");
     expect(kinds()).toEqual(["skip", "claim", "scan"]);
   });
   it("a scan while a lock exists: busy, nothing changes", async () => {
@@ -323,14 +336,14 @@ describe("runScan: walk and claim", () => {
     expect(orders()).toEqual([]);
   });
   it("the same failing ticket twice: one comment; a changed reason set: a second", async () => {
-    const t = tracker.add({ id: "t1", key: "DGS-1", milestone: null });
+    const t = tracker.add({ id: "t1", key: "DGS-1", attachments: [] });
     await runScan(mk());
     await runScan(mk());
     expect(tracker.comments).toHaveLength(1);
-    t.signOff = null;
+    t.blockers = [{ key: "DGS-9", done: false }];
     await runScan(mk());
     expect(tracker.comments).toHaveLength(2);
-    expect(tracker.comments[1].text).toContain("no Sign-off mark (Auto or Jack); no milestone");
+    expect(tracker.comments[1].text).toContain("blocked by open ticket(s): DGS-9");
     expect(kinds().filter((k) => k === "skip")).toHaveLength(3);
   });
   it("readBackWrong: lock gone, back to to do, claim-failed", async () => {
@@ -427,13 +440,13 @@ describe("runScan: walk and claim", () => {
   });
   it("dry run in the daytime: no writes, no files, verdicts filled", async () => {
     now = DAY;
-    tracker.add({ id: "t1", key: "DGS-1", priority: 1, milestone: null });
+    tracker.add({ id: "t1", key: "DGS-1", priority: 1, blockers: [{ key: "DGS-9", done: false }] });
     tracker.add({ id: "t2", key: "DGS-2", priority: 2 });
     tracker.add({ id: "e", key: "DGS-E", typeId: 1 });
     tracker.add({ id: "m", key: "DGS-M", mode: "Manual" });
     const r = await runScan(mk({ dryRun: true }));
     expect(r.outcome).toBe("none");
-    expect(r.verdicts).toEqual([{ key: "DGS-M", reasons: [REASON.mode] }, { key: "DGS-1", reasons: ["no milestone"] }, { key: "DGS-2", reasons: [] }]);
+    expect(r.verdicts).toEqual([{ key: "DGS-M", reasons: [REASON.mode] }, { key: "DGS-1", reasons: ["blocked by open ticket(s): DGS-9"] }, { key: "DGS-2", reasons: [] }]);
     expect(r.skipped).toEqual([{ key: "DGS-E", reason: "type" }, { key: "DGS-M", reason: "mode" }]);
     expect(r.candidates).toBe(2);
     expect(tracker.writeCalls()).toEqual([]);

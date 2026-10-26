@@ -36,7 +36,7 @@ export interface ScanResult {
 
 /** The status a claim writes; the scan stops when the space does not have it. */
 const STARTER = "claimed";
-/** Candidates are read from this status (with Mode Autonomous); a failed claim puts the ticket back here. */
+/** Candidates are read from this status (any Mode but Manual); a failed claim puts the ticket back here. */
 const INTAKE = "to do";
 const NO_STARTER = "__no-starter-status";
 const STARTER_RUN = "starter-status";
@@ -76,7 +76,7 @@ async function claim(d: ScanDeps, t: LoTask, now: Date): Promise<ClaimOutcome> {
     if (back !== STARTER) throw new Error(`status read back "${back}", expected "${STARTER}"`);
     mkdirSync(d.ordersDir, { recursive: true });
     writeFileSync(order, renderOrder({
-      key, name: t.name, taskId: t.id, signOff: t.signOff ?? "Jack", claimedAtUtc7, stamp: stampOf(now), specPlan: specPlanText(t),
+      key, name: t.name, taskId: t.id, signOff: t.signOff ?? "Auto", claimedAtUtc7, stamp: stampOf(now), specPlan: specPlanText(t),
     }), { flag: "wx" });
     wroteOrder = true;
     await promptConductor(d.exec, d.conductorsJson, `Autonomous order: build ${key}, read ${order}`);
@@ -196,13 +196,13 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     } catch { /* the item stays open until a later scan */ }
   }
 
-  // 4. Only Task and Bug with Mode Autonomous are candidates. A Manual to do is normal: no comment, no event.
+  // 4. Only Task and Bug whose Mode is not Manual are candidates (an empty Mode is Autonomous). A Manual to do is normal: no comment, no event.
   const all = await d.tracker.listByStatus(INTAKE);
   const candidates: LoTask[] = [];
-  const notAutonomous: string[] = [];
+  const manual: string[] = [];
   for (const t of all) {
     if (t.typeId !== TYPE_TASK && t.typeId !== TYPE_BUG) skipped.push({ key: keyOf(t), reason: "type" });
-    else if (t.mode !== "Autonomous") { skipped.push({ key: keyOf(t), reason: "mode" }); notAutonomous.push(keyOf(t)); }
+    else if (t.mode === "Manual") { skipped.push({ key: keyOf(t), reason: "mode" }); manual.push(keyOf(t)); }
     else candidates.push(t);
   }
 
@@ -214,7 +214,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
   if (d.dryRun) {
     const problem = conductorCheck(d.conductorsJson);
     if (problem !== null) verdicts.push({ key: "-", reasons: [`conductor-config: ${problem.text}`] });
-    for (const key of notAutonomous) verdicts.push({ key, reasons: [REASON.mode] });
+    for (const key of manual) verdicts.push({ key, reasons: [REASON.mode] });
   }
 
   // 5. Walk in rank order.

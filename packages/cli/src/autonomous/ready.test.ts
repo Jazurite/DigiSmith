@@ -17,35 +17,36 @@ describe("checkReady", () => {
   });
   it("each check fails alone", () => {
     expect(checkReady({ ...base, attachments: [] }, ctx)).toEqual([REASON.specPlan]);
-    expect(checkReady({ ...base, signOff: null }, ctx)).toEqual([REASON.signOff]);
-    expect(checkReady({ ...base, milestone: null }, ctx)).toEqual([REASON.milestone]);
     expect(checkReady({ ...base, blockers: [{ key: "DGS-2", done: false }] }, ctx)).toEqual([REASON.blocked(["DGS-2"])]);
   });
-  it("a Projects ticket needs no milestone", () => {
+  it("a Projects ticket without a milestone passes (as does a clan ticket)", () => {
     expect(checkReady({ ...base, milestone: null, inProjects: true }, ctx)).toEqual([]);
   });
-  it("a clan ticket without a milestone is still refused", () => {
-    expect(checkReady({ ...base, milestone: null, inProjects: false }, ctx)).toEqual([REASON.milestone]);
+  it("lists spec and plan, then blockers, in order", () => {
+    const t = { ...base, attachments: [], blockers: [{ key: "DGS-2", done: false }, { key: "DGS-3", done: false }] };
+    expect(checkReady(t, ctx)).toEqual([REASON.specPlan, "blocked by open ticket(s): DGS-2, DGS-3"]);
   });
-  it("a Projects ticket still needs a Sign-off", () => {
-    expect(checkReady({ ...base, milestone: null, inProjects: true, signOff: null }, ctx)).toEqual([REASON.signOff]);
+  it("an empty Sign-off passes", () => {
+    expect(checkReady({ ...base, signOff: null }, ctx)).toEqual([]);
   });
-  it("lists all four in order", () => {
-    const t = { ...base, attachments: [], signOff: null, milestone: null, blockers: [{ key: "DGS-2", done: false }, { key: "DGS-3", done: false }] };
-    expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.signOff, REASON.milestone, "blocked by open ticket(s): DGS-2, DGS-3"]);
+  it("no milestone passes", () => {
+    expect(checkReady({ ...base, milestone: null }, ctx)).toEqual([]);
+  });
+  it("an explicit Sign-off Jack passes (the run stops at acceptance)", () => {
+    expect(checkReady({ ...base, signOff: "Jack" }, ctx)).toEqual([]);
   });
   it("Mode Manual fails with the Mode reason only", () => {
     expect(checkReady({ ...base, mode: "Manual" }, ctx)).toEqual([REASON.mode]);
   });
-  it("Mode missing fails with the Mode reason only", () => {
-    expect(checkReady({ ...base, mode: null }, ctx)).toEqual([REASON.mode]);
+  it("an empty Mode passes (Autonomous)", () => {
+    expect(checkReady({ ...base, mode: null }, ctx)).toEqual([]);
   });
-  it("lists all five in order", () => {
-    const t = { ...base, attachments: [], text: "", signOff: null, milestone: null, blockers: [{ key: "DGS-1", done: false }], mode: null, scheduledAt: null };
-    expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.signOff, REASON.milestone, REASON.blocked(["DGS-1"]), REASON.mode]);
+  it("lists all three in order", () => {
+    const t = { ...base, attachments: [], text: "", blockers: [{ key: "DGS-1", done: false }], mode: "Manual" as const };
+    expect(checkReady(t, ctx)).toEqual([REASON.specPlan, REASON.blocked(["DGS-1"]), REASON.mode]);
   });
   it("pins the Mode reason text", () => {
-    expect(REASON.mode).toBe("Mode is not Autonomous (Manual or missing)");
+    expect(REASON.mode).toBe("Mode is Manual");
   });
   it("attachments: plan alone fails, spec works", () => {
     expect(checkReady({ ...base, attachments: ["plan.md"] }, ctx)).toEqual([REASON.specPlan]);
