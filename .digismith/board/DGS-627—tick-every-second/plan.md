@@ -38,7 +38,7 @@ pnpm --filter @digismith/clickup-client build
 **Interfaces:**
 - Produces: `isRunning(r: Pick<RunRow, 'state'>): boolean` (oc-format.ts); `FAST_MS = 1_000`, `SLOW_MS = 30_000`, `NOW_KEY: InjectionKey<Ref<number>>`, `useNow(opts?: { fast?: MaybeRefOrGetter<boolean> }): Ref<number>` (use-now.ts).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `oc-format.test.ts` add `it('isRunning is true for healthy, blocked and stalled only', ...)`: `isRunning({ state })` is `true` for `healthy`, `blocked`, `stalled` and `false` for `lost`, `ended`.
 
@@ -53,12 +53,12 @@ Replace `use-now.test.ts` with these tests (all `vi.useFakeTimers()`, system tim
 7. `stops its timer and its listener with the scope`: spy `document.removeEventListener`; `scope.stop()`; `vi.getTimerCount()` is 0, the spy was called with `'visibilitychange'`, and a later `setVisibility('visible')` plus 60 s changes nothing.
 8. `follows a getter for fast`: `useNow({ fast: () => flag.value })` with `flag = ref(true)` ticks every second.
 
-- [ ] **Step 2: Run them and see them fail**
+- [x] **Step 2: Run them and see them fail**
 
 Run: `pnpm --dir scripts/nexus-web exec vitest run app/utils/use-now.test.ts app/utils/oc-format.test.ts`
 Expected: FAIL (`isRunning` is not exported; `useNow` ignores `fast`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `oc-format.ts`: replace the private `RUNNING` use with an exported function; `phaseTime` calls it.
 
@@ -106,12 +106,12 @@ Check on the `immediate` run: `now.value = Date.now()` there is harmless (same v
 
 Update every existing caller that passes a number: `grep -rn "useNow(" scripts/nexus-web/app` shows only `useNow()` calls in pages and `OcAttentionSummary.vue`, so nothing else changes in this task.
 
-- [ ] **Step 4: Run them and see them pass**
+- [x] **Step 4: Run them and see them pass**
 
 Run: `pnpm --dir scripts/nexus-web exec vitest run app/utils/use-now.test.ts app/utils/oc-format.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git commit -m "feat(oculus): the page clock ticks every second while a run is running" -- scripts/nexus-web/app/utils/oc-format.ts scripts/nexus-web/app/utils/oc-format.test.ts scripts/nexus-web/app/utils/use-now.ts scripts/nexus-web/app/utils/use-now.test.ts
@@ -132,7 +132,7 @@ git commit -m "feat(oculus): the page clock ticks every second while a run is ru
 - Consumes: `useNow`, `NOW_KEY`, `isRunning` (Task 1).
 - Produces: `<OcTick :now-ms?>` with scoped slot `{ nowMs: number }`. `nowMs` becomes OPTIONAL (`nowMs?: number`) on `RunsTable`, `WorkersTable`, `PhaseTable`, `PipelineBar`; `BudgetCard` gets `phaseSince?: string | null` and `nowMs?: number`.
 
-- [ ] **Step 1: Write the failing tests** in `app/components/oc/tick.test.ts` (header comment `// scripts/nexus-web/app/components/oc/tick.test.ts`; imports `mountSuspended` from `@nuxt/test-utils/runtime`, `defineComponent, h, nextTick, provide, ref` from `vue`, `runsFixture` from `../../../tests/oculus-fixtures`, `NOW_KEY` from `../../utils/use-now`):
+- [x] **Step 1: Write the failing tests** in `app/components/oc/tick.test.ts` (header comment `// scripts/nexus-web/app/components/oc/tick.test.ts`; imports `mountSuspended` from `@nuxt/test-utils/runtime`, `defineComponent, h, nextTick, provide, ref` from `vue`, `runsFixture` from `../../../tests/oculus-fixtures`, `NOW_KEY` from `../../utils/use-now`):
 
 1. `OcTick passes the injected clock to its slot`: a host component provides `now = ref(Date.parse('2026-10-22T03:00:00Z'))` under `NOW_KEY` and renders `h(OcTick, null, { default: ({ nowMs }) => String(nowMs) })`. After `now.value += 1000` and `await nextTick()` the text is the new number.
 2. `OcTick uses the nowMs prop and ignores the clock`: with `:now-ms="5"` the slot gets 5 even after the injected ref moves.
@@ -149,12 +149,12 @@ Also add to `app/pages/oculus/pages.test.ts` (read how it mounts `Runs` first), 
 - `Runs page: the clock stays at 30 s when no shown run is running`: mount with a runs fixture whose rows are all `ended` or `lost`; after 2 s the first `lost` row's Duration text is unchanged; after 30 s it moved.
 - `anyRunning` is not needed: the page uses `.some(isRunning)` inline.
 
-- [ ] **Step 2: Run them and see them fail**
+- [x] **Step 2: Run them and see them fail**
 
 Run: `pnpm --dir scripts/nexus-web exec vitest run app/components/oc/tick.test.ts app/pages/oculus/pages.test.ts`
 Expected: FAIL (`OcTick.vue` does not exist).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `OcTick.vue`:
 
@@ -187,7 +187,7 @@ Tables and cards (keep the existing helper functions; change only where `nowMs` 
 - `attention.vue` and `OcAttentionSummary.vue` stay `useNow()` (30 s). They still pass or inject the clock as before; leave them.
 - Stories keep passing `nowMs` (a number): nothing to change in `RunsTable.stories.ts`, `PipelineBar.stories.ts`. `BudgetCard.stories.ts` passes no `phaseSince`: nothing to change.
 
-- [ ] **Step 4: Run the tests and the type check**
+- [x] **Step 4: Run the tests and the type check**
 
 ```
 pnpm --dir scripts/nexus-web exec vitest run app/components app/pages app/utils
@@ -195,7 +195,7 @@ pnpm --dir scripts/nexus-web typecheck
 ```
 Expected: PASS; typecheck clean. Run the full `pnpm --dir scripts/nexus-web exec vitest run` once (DGS-613 baseline 372 tests plus the new ones; nothing else fails).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add scripts/nexus-web/app/components/oc/OcTick.vue scripts/nexus-web/app/components/oc/tick.test.ts
@@ -214,7 +214,7 @@ Needs Tasks 1 and 2.
 - Modify: `scripts/nexus-web/tests/a11y/oculus-axe.spec.ts`
 - Modify: `scripts/nexus-web/tests/visual/oculus-mobile.spec.ts`
 
-- [ ] **Step 1: Write the failing e2e tests** (they fail before Task 1 and 2 are in; here they must be written first against the new helper)
+- [x] **Step 1: Write the failing e2e tests** (they fail before Task 1 and 2 are in; here they must be written first against the new helper)
 
 `freeze-clock.ts`:
 
@@ -279,7 +279,7 @@ Switch the specs that assert or screenshot seconds to the frozen clock:
 - `oculus-axe.spec.ts` test `the Duration cell and the strip read times in words`: replace its `page.clock.install(...)` line with `await freezeClock(page, '2026-10-22T03:00:00Z')` (import it from `../e2e/freeze-clock.ts`).
 - `oculus-mobile.spec.ts`: replace `await page.clock.install({ time: new Date('2026-10-22T03:00:00Z') })` with `await freezeClock(page, '2026-10-22T03:00:00Z')`.
 
-- [ ] **Step 2: Run them**
+- [x] **Step 2: Run them**
 
 ```
 pnpm --dir scripts/nexus-web generate
@@ -288,7 +288,7 @@ pnpm --dir scripts/nexus-web exec playwright test tests/a11y/oculus-axe.spec.ts 
 ```
 Expected: PASS. (The red state is covered by the Task 1 and Task 2 unit tests; no stash or checkout of `main` files here.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add scripts/nexus-web/tests/e2e/freeze-clock.ts
@@ -303,7 +303,7 @@ Needs Tasks 1 to 3. Cost: about 40 minutes (DGS-613 ran it once on its last comm
 
 **Files:** none expected. Only a spec fix if a gate step fails because of a ticking number.
 
-- [ ] **Step 1: Web unit tests and types**
+- [x] **Step 1: Web unit tests and types**
 
 ```
 pnpm --dir scripts/nexus-web exec vitest run
@@ -311,7 +311,7 @@ pnpm --dir scripts/nexus-web typecheck
 ```
 Expected: all pass (372 plus the new tests).
 
-- [ ] **Step 2: Browser gate**
+- [x] **Step 2: Browser gate**
 
 ```
 pnpm --dir scripts/nexus-web e2e:install
@@ -322,12 +322,12 @@ pnpm --dir scripts/nexus-web visual
 ```
 Expected: e2e and a11y pass (a11y includes the axe specs, light and dark, with `reducedMotion: 'reduce'`: they must pass UNCHANGED, which proves axe is unchanged); visual passes.
 
-- [ ] **Step 3: Prove no baseline changed**
+- [x] **Step 3: Prove no baseline changed**
 
 Run: `git status --short scripts/nexus-web/tests/visual`
 Expected: empty output. If a baseline differs, a ticking number leaked in: find the spec that does not use `freezeClock`, fix it as in Task 3, rerun `pnpm --dir scripts/nexus-web visual`. NEVER run `visual:update`.
 
-- [ ] **Step 4: Commit any spec fix, then stop**
+- [x] **Step 4: Commit any spec fix, then stop**
 
 If Step 3 needed a fix: `git commit -m "test(oculus): freeze the clock in the remaining spec" -- <the spec path>`. Otherwise nothing to commit.
 
