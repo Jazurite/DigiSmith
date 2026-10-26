@@ -51,3 +51,39 @@ export function ticketOfBranch(branch: string | null): string | null {
   const m = branch === null ? null : BRANCH_KEY_PREFIX.exec(branch);
   return m ? m[1] : null;
 }
+
+/** The git common dir of the repo that holds `cwd` (the .git folder; for a worktree, the folder its commondir file names). fs only. */
+export function commonGitDir(cwd: unknown): string | null {
+  if (typeof cwd !== "string" || !path.isAbsolute(cwd)) return null;
+  let dir = path.resolve(cwd);
+  for (;;) {
+    const dotGit = path.join(dir, ".git");
+    try {
+      const st = fs.statSync(dotGit);
+      if (st.isDirectory()) return dotGit;
+      const m = /^gitdir:\s*(.+?)\s*$/m.exec(fs.readFileSync(dotGit, "utf8"));
+      if (!m) return null;
+      const gitDir = path.resolve(dir, m[1]);
+      try {
+        return path.resolve(gitDir, fs.readFileSync(path.join(gitDir, "commondir"), "utf8").trim());
+      } catch {
+        return gitDir;
+      }
+    } catch {
+      /* no .git here: go up */
+    }
+    const up = path.dirname(dir);
+    if (up === dir) return null;
+    dir = up;
+  }
+}
+
+/** Whether a ref exists in a common git dir, as a loose file or a packed-refs line. fs only. */
+export function refExists(commonDir: string, ref: string): boolean {
+  if (fs.existsSync(path.join(commonDir, ref))) return true;
+  try {
+    return fs.readFileSync(path.join(commonDir, "packed-refs"), "utf8").split("\n").some((l) => l.endsWith(` ${ref}`));
+  } catch {
+    return false;
+  }
+}

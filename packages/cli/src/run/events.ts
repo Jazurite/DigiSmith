@@ -18,6 +18,12 @@ export function validEventData(type: string, data: Record<string, unknown>): str
 export function waitFor(kind: (typeof HOOK_TYPES)[number]): number {
   return kind === "tool" ? 150 : 2000;
 }
+export function toolOk(response: unknown): boolean {
+  if (typeof response !== "object" || response === null) return true;
+  const r = response as Record<string, unknown>;
+  return !(r.is_error === true || r.success === false || (r.error !== undefined && r.error !== null && r.error !== false));
+}
+
 export type EventType = (typeof HOOK_TYPES)[number] | (typeof CONDUCTOR_TYPES)[number];
 
 export type EventLine = { schema: string; seq: number; ts: string; run: string; type: string; data: Record<string, unknown> };

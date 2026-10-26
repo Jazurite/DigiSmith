@@ -3,14 +3,15 @@
 // Regexes only, no shell parsing and no child process. The event keeps the type and a few scalars, never the command.
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { appendEvent, readEvents, waitFor } from "./events.ts";
+import { appendEvent, readEvents, toolOk, waitFor } from "./events.ts";
 import { isSafe, runsDir } from "./paths.ts";
-import { ticketOfBranch } from "./repo-info.ts";
+import { commonGitDir, refExists, ticketOfBranch } from "./repo-info.ts";
 import type { RunRecord } from "./schema.ts";
 import { TICKET_KEY } from "../ticket-key.ts";
 
 export type Lifecycle = { type: "review_ready" | "merged" | "pushed"; ticket: string | null; data: Record<string, unknown> };
 
+const PIN = /\bgit update-ref refs\/digismith\/post-finish\/(\S+?)\/head\b/;
 const PUSHED_DAYS = 7;
 const DAY_MS = 86_400_000;
 
@@ -26,7 +27,7 @@ export function lifecycleOf(payload: unknown): Lifecycle | null {
     const round = Number.parseInt(/--round[ =](\d+)/.exec(cmd)?.[1] ?? "1", 10);
     return { type: "review_ready", ticket, data: { scope: "ticket", round } };
   }
-  const pin = /\bgit update-ref refs\/digismith\/post-finish\/(\S+?)\/head\b/.exec(cmd);
+  const pin = PIN.exec(cmd);
   if (pin) {
     const ticket = ticketOfBranch(pin[1]);
     return ticket === null ? null : { type: "merged", ticket, data: {} };
@@ -76,16 +77,26 @@ export function newestBuilderRun(ticket: string, env: NodeJS.ProcessEnv): Found 
 const has = (dir: string, type: string): boolean => readEvents(dir).some((e) => e.type === type);
 
 export function writeLifecycle(payload: unknown, env: NodeJS.ProcessEnv, now: Date = new Date()): void {
+  const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+  if (!toolOk(p.tool_response)) return;
   const l = lifecycleOf(payload);
   if (l === null) return;
   const wait = waitFor("tool");
-  if (l.type === "pushed") {
+  // The command text alone is not proof: the finishing skill's pin line sits in an if-block of one big Bash call.
+  const common = l.type === "review_ready" ? null : commonGitDir(p.cwd);
+  if (l.type !== "review_ready" && common === null) return;
+  if (l.type === "pushed" && common !== null) {
     const since = now.getTime() - PUSHED_DAYS * DAY_MS;
     for (const { dir, run } of builderRuns(null, env)) {
       if (Date.parse(run.created_at) < since || !has(dir, "merged") || has(dir, "pushed")) continue;
+      if (run.worktree === null || commonGitDir(run.worktree) !== common) continue; // another repo
       appendEvent(dir, run.run, "pushed", {}, wait);
     }
     return;
+  }
+  if (l.type === "merged") {
+    const ref = /refs\/digismith\/post-finish\/\S+?\/head/.exec(String((p.tool_input as { command?: unknown }).command))?.[0];
+    if (ref === undefined || common === null || !refExists(common, ref)) return;
   }
   const found = l.ticket === null ? null : newestBuilderRun(l.ticket, env);
   if (found === null) return;

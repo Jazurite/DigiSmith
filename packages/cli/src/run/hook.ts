@@ -4,7 +4,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findRunDir, isSafe, runsDir } from "./paths.ts";
-import { appendEvent, HOOK_TYPES, waitFor } from "./events.ts";
+import { appendEvent, HOOK_TYPES, toolOk, waitFor } from "./events.ts";
 import { plainName } from "./schema.ts";
 import { findAuto, startAuto } from "./auto.ts";
 import { writeLifecycle } from "./lifecycle.ts";
@@ -26,11 +26,7 @@ const LOG_CAP = 256 * 1024;
 
 export { waitFor };
 
-function toolOk(response: unknown): boolean {
-  if (typeof response !== "object" || response === null) return true;
-  const r = response as Record<string, unknown>;
-  return !(r.is_error === true || r.success === false || (r.error !== undefined && r.error !== null && r.error !== false));
-}
+export { toolOk };
 
 export function buildData(kind: HookKind, payload: unknown): Record<string, unknown> {
   const p = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
