@@ -1,5 +1,6 @@
 export type Phase = "claimed" | "building" | "review" | "merge-ready" | "merged" | "released";
 export const PHASES: Phase[] = ["claimed", "building", "review", "merge-ready", "merged", "released"];
+export const WORKTREE_GONE = "worktree-gone:"; // prefix of a git-read error: the builder worktree is removed
 export const MAX_ATTEMPTS = 4; // ticket-review rounds: three fix waves and the review that checks them
 export const MAX_TRIES = 3;
 export const RETRY_PROOF_WAIT_MS = 15 * 60 * 1000;

@@ -343,3 +343,30 @@ describe("adopt", () => {
     expect(advanceTicket(sr, O({ runs: ok([builder, newer]), attention: ok([item()]) }), jr).kind).not.toBe("adopt");
   });
 });
+
+describe("DGS-630 rule 3: a failed git read", () => {
+  const wait = (reason: string) => ({ kind: "wait", reason });
+  const gitNote = { kind: "attention", cause: "obs-git-failed", attKind: "unknown" };
+  const phases: Array<["building" | "review" | "merge-ready", RunView["phaseEvent"]]> = [["building", "building"], ["review", "review"], ["merge-ready", "merge"]];
+  for (const [phase, ev] of phases) {
+    for (const status of ["complete", "done", "closed"]) {
+      it(`${phase}: a failed git read with a done ticket (${status}) waits, no note`, () => {
+        expect(advanceTicket(S({ phase }), O({ ...withEvent(ev), git: bad(), tracker: ok({ status }) }), J)).toEqual(wait("ticket-done"));
+      });
+    }
+    it(`${phase}: a failed git read with an open ticket still gives obs-git-failed`, () => {
+      expect(advanceTicket(S({ phase }), O({ ...withEvent(ev), git: bad() }), J)).toEqual(gitNote);
+    });
+    it(`${phase}: a failed tracker read does not hide obs-git-failed`, () => {
+      expect(advanceTicket(S({ phase }), O({ ...withEvent(ev), git: bad(), tracker: bad() }), J)).toEqual(gitNote);
+    });
+  }
+  it("merge-ready: a worktree-gone error waits", () => {
+    expect(advanceTicket(S({ phase: "merge-ready" }), O({ ...withEvent("merge"), git: bad("worktree-gone: no branch") }), J)).toEqual(wait("worktree-gone"));
+  });
+  it("building and review: a worktree-gone error still gives obs-git-failed", () => {
+    for (const [phase, ev] of phases.slice(0, 2)) {
+      expect(advanceTicket(S({ phase }), O({ ...withEvent(ev), git: bad("worktree-gone: no branch") }), J)).toEqual(gitNote);
+    }
+  });
+});

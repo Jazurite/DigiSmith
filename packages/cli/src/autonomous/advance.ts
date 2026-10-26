@@ -1,5 +1,5 @@
 import { adoptUsed, restartsOf, retrySucceeded } from "./journal.ts";
-import { MAX_ATTEMPTS } from "./phase-types.ts";
+import { MAX_ATTEMPTS, WORKTREE_GONE } from "./phase-types.ts";
 import type { Action, JournalResults, MarkerPhase, Observations, Phase, TicketState } from "./phase-types.ts";
 
 const MARKER: Partial<Record<Phase, MarkerPhase>> = { building: "building", review: "review", "merge-ready": "merge" };
@@ -86,11 +86,21 @@ function claimed(s: TicketState, obs: Observations): Action {
   return { kind: "move", to: "building", proof: `run ${r.id} started`, builder: r.id };
 }
 
+const DONE = new Set(["complete", "done", "closed"]);
+const ticketDone = (obs: Observations): boolean => obs.tracker.ok && DONE.has(obs.tracker.value.status.toLowerCase());
+// the action for a failed git read
+function gitFailed(obs: Observations, phase: Phase): Action {
+  if (obs.git.ok) throw new Error("gitFailed called with a good git read");
+  if (ticketDone(obs)) return wait("ticket-done");
+  if (phase === "merge-ready" && obs.git.error.startsWith(WORKTREE_GONE)) return wait("worktree-gone");
+  return note("obs-git-failed");
+}
+
 function building(s: TicketState, obs: Observations, j: JournalResults): Action {
   const m = marker(s, obs, j);
   if (m !== null) return m;
   if (!obs.packs.ok) return note("obs-packs-failed");
-  if (!obs.git.ok) return note("obs-git-failed");
+  if (!obs.git.ok) return gitFailed(obs, s.phase);
   const g = obs.git.value;
   if (g.head !== null && g.head !== g.base && obs.packs.value.some((p) => p.round >= s.attempt && p.head === g.head))
     return { kind: "move", to: "review", proof: `pack for ${sha7(g.head)}` };
@@ -112,7 +122,7 @@ function building(s: TicketState, obs: Observations, j: JournalResults): Action 
 function review(s: TicketState, obs: Observations, j: JournalResults): Action {
   const m = marker(s, obs, j);
   if (m !== null) return m;
-  if (!obs.git.ok) return note("obs-git-failed");
+  if (!obs.git.ok) return gitFailed(obs, s.phase);
   if (!obs.verdicts.ok) return note("obs-verdicts-failed");
   const head = obs.git.value.head;
   // the latest ticket row for this head wins
@@ -132,7 +142,7 @@ function review(s: TicketState, obs: Observations, j: JournalResults): Action {
 function mergeReady(s: TicketState, obs: Observations, j: JournalResults): Action {
   const m = marker(s, obs, j);
   if (m !== null) return m;
-  if (!obs.git.ok) return note("obs-git-failed");
+  if (!obs.git.ok) return gitFailed(obs, s.phase);
   const g = obs.git.value;
   if (g.head !== null && g.onOriginMain) return { kind: "move", to: "merged", proof: `${sha7(g.head)} on origin/main` };
   if (obs.runs.ok && obs.runs.value.some((r) => r.id === s.runs.builder && (r.merged || r.pushed))) return note("proof-disagree");

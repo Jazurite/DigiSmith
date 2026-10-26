@@ -12,6 +12,7 @@ import { parseVerdictEntries } from "../reviewer/verdicts.ts";
 import { PromptError, type ActDeps } from "./act.ts";
 import { classifyInputBox } from "./input-box.ts";
 import type { Observers } from "./observe.ts";
+import { WORKTREE_GONE } from "./phase-types.ts";
 import type { AttentionView, GitView, HerdrView, InputBox, MarkerPhase, PackView, RunView, VerdictView } from "./phase-types.ts";
 
 /** Runs a file and returns its stdout. Rejects with an Error whose numeric `code` is the exit code on a non-zero exit. */
@@ -56,8 +57,14 @@ async function gitView(exec: ExecOut, mainRepo: string, run: RunRecord | undefin
   let head: string;
   if (existsSync(run.worktree)) head = (await exec("git", ["-C", run.worktree, "rev-parse", "HEAD"])).stdout.trim();
   else if (mergeHead !== null) head = mergeHead; // worktree and branch removed after the merge: the head recorded at merge-ready
-  else if (run.branch) head = (await exec("git", ["-C", mainRepo, "rev-parse", run.branch])).stdout.trim(); // worktree removed after the merge: the branch sha, from the main checkout
-  else throw new Error("worktree is gone and the run has no branch");
+  else {
+    if (!run.branch) throw new Error(`${WORKTREE_GONE} the run has no branch`);
+    try {
+      head = (await exec("git", ["-C", mainRepo, "rev-parse", run.branch])).stdout.trim(); // worktree removed after the merge: the branch sha, from the main checkout
+    } catch (e) {
+      throw new Error(`${WORKTREE_GONE} ${(e as Error).message}`);
+    }
+  }
   let onOriginMain = false;
   try {
     await exec("git", ["-C", mainRepo, "merge-base", "--is-ancestor", head, "origin/main"]);

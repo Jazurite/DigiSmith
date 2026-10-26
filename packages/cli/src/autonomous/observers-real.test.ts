@@ -109,6 +109,18 @@ describe("git observer", () => {
     it("exit 1 is false", async () => { expect((await obsWith(codeErr(1)).o.git()).onOriginMain).toBe(false); });
     it("exit 128 throws", async () => { await expect(obsWith(codeErr(128)).o.git()).rejects.toThrow(); });
   });
+  it("worktree gone, no mergeHead, branch rev-parse fails: throws worktree-gone:", async () => {
+    const f = fakeExec((_f, a) => (a.includes("rev-parse") ? codeErr(128) : ""));
+    await expect(makeObservers(deps(f.exec, [run({ worktree: "/nonexistent/wt-gone", branch: "DGS-1__x" })])).git()).rejects.toThrow(/^worktree-gone:/);
+  });
+  it("worktree gone and the run has no branch: throws worktree-gone:", async () => {
+    await expect(makeObservers(deps(fakeExec().exec, [run({ worktree: "/nonexistent/wt-gone", branch: null })])).git()).rejects.toThrow(/^worktree-gone:/);
+  });
+  it("worktree present and git fails: the error does not start with worktree-gone", async () => {
+    const e = await makeObservers(deps(fakeExec(gitHandler(codeErr(128))).exec)).git().catch((x) => x as Error);
+    expect(e).toBeInstanceOf(Error);
+    expect(e.message.startsWith("worktree-gone")).toBe(false);
+  });
   it("no worktree throws", async () => {
     await expect(makeObservers(deps(fakeExec().exec, [run({ worktree: null })])).git()).rejects.toThrow("no worktree");
   });
