@@ -146,7 +146,7 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     let why: string | null = null;
     try { why = d.builderFull(); } catch { /* an unreadable count never stops the scan */ }
     if (why !== null) {
-      appendEvent(d.dir, now, "busy", { ticket: null, reason: "builder-limit", detail: why.slice(0, 300) });
+      appendEvent(d.dir, now, "busy", { ticket: "?", reason: "builder-limit", detail: why.slice(0, 300) });
       return { outcome: "busy", candidates: 0, skipped };
     }
   }

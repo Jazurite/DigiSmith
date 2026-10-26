@@ -235,7 +235,7 @@ describe("runScan: the builder limit (DGS-665)", () => {
     expect(tracker.calls).toEqual([]);
     expect(readLock(dir)).toBeNull();
     expect(events().map((e) => e.kind)).toEqual(["busy"]);
-    expect(events()[0]).toMatchObject({ ticket: null, reason: "builder-limit" });
+    expect(events()[0]).toMatchObject({ ticket: "?", reason: "builder-limit" });
     expect(orders()).toEqual([]);
     expect(readOpen(dir)).toEqual([]);
   });
