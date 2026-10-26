@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>.gitattributes eol — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; } code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  a { color:var(--accent); } footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<h1>.gitattributes eol — Implementation Report</h1>
+<div class="meta">Date: 2026-10-26 · Ticket: <strong>DGS-499</strong> · Commit range: <code>fe6d03a6..e279ea8c</code></div>
+
+<h2>Summary</h2>
+<p>Git now stores and checks out text files as LF on every machine. The rule <code>* text=auto eol=lf</code> is line 1 of <code>.gitattributes</code>. The existing <code>-text</code> lines come after it and win, so the 14 vendored skill folders and <code>vendored/*</code> stay byte-identical. One task, one line, built directly from the plan with no subagent ledger. Reference documents: the <a href="spec.md">spec</a> and the <a href="plan.md">plan</a>.</p>
+
+<h2>Evidence</h2>
+<ul>
+  <li>Open branches: every unmerged branch has the same count of CRLF text files outside the exception list as main (3). No branch adds one.</li>
+  <li>Rule test in a scratch clone: a CRLF file in the normal tree became <code>i/lf</code>; a CRLF file under <code>vendored/</code> stayed <code>i/crlf</code>. <code>git add --renormalize .</code> staged nothing else.</li>
+  <li>After the edit: <code>git ls-files --eol</code> (index and working-tree columns) identical to before; the 21 files at <code>100755</code> identical; <code>git diff --summary</code> empty; the same 4 CRLF files remain.</li>
+  <li>Merge diff: <code>.gitattributes</code> only, no protected path. Fast-forward merge, pushed.</li>
+  <li>Test suite: two full runs, 2 or 3 failures each, all load timeouts. <code>test-install.test.ts</code> and <code>oculus/index.test.ts</code> pass alone. <code>runner.test.ts</code> "escalates to SIGKILL" also fails on main.</li>
+</ul>
+
+<h2>Not done on purpose</h2>
+<p>DGS-478's real fix (keep git trees out of the MEGA two-way sync) is a separate item. A <code>.gitattributes</code> rule does not stop working-tree drift written outside git.</p>
+
+<h2>Commits</h2>
+<ul><li><code>e279ea8c</code> chore(dgs-499): normalize text line endings to LF with .gitattributes</li></ul>
+
+<footer>DigiSmith · .digismith/board/DGS-499—gitattributes-eol/report.html</footer>
+</body>
+</html>
