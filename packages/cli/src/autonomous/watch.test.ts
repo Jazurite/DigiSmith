@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRun, readRun, rewriteRun } from "../run/record.ts";
 import { findRunDir } from "../run/paths.ts";
-import { appendResolved, readOpen } from "./attention.ts";
+import { appendOpen, appendResolved, readOpen } from "./attention.ts";
 import { runWatch, type WatchDeps } from "./watch.ts";
 
 const NOW = Date.parse("2026-10-22T10:00:00Z");
@@ -609,5 +609,52 @@ describe("runWatch: review fixes", () => {
       expect(r.resolved).toBe(0);
       expect(readOpen(dir).map((i) => i.id)).toEqual(["f1"]);
     });
+  });
+});
+
+describe("runWatch: guardrails.failed close (DGS-630 rule 4)", () => {
+  const seed = (cause = "bad-guardrail-config", run = "guardrails"): void => {
+    appendOpen(dir, { ticket: null, run, kind: "failed", cause, since: ago(60), ts: ago(60) });
+  };
+  it("closes guardrails.failed when the guardrail read is clean", async () => {
+    seed();
+    const r = await runWatch(deps({ guardrailProblems: () => [] }));
+    expect(r.resolved).toBe(1);
+    expect(readOpen(dir)).toHaveLength(0);
+    const raw = readdirSync(dir).map((f) => readFileSync(join(dir, f), "utf-8")).join("\n");
+    expect(raw).toContain("guardrails read clean");
+    expect(raw).toContain("watchdog");
+  });
+  it("keeps it open while the read has problems", async () => {
+    seed();
+    const r = await runWatch(deps({ guardrailProblems: () => ['nightwatch: unknown guardrail key "x"'] }));
+    expect(r.resolved).toBe(0);
+    expect(r.opened).toBe(0);
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it("keeps it open when the read throws", async () => {
+    seed();
+    const r = await runWatch(deps({ guardrailProblems: () => { throw new Error("boom"); } }));
+    expect(r.resolved).toBe(0);
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it("no guardrailProblems dep: the item is untouched", async () => {
+    seed();
+    const r = await runWatch(deps());
+    expect(r.resolved).toBe(0);
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it("a dry run closes nothing and says would resolve", async () => {
+    seed();
+    const r = await runWatch(deps({ guardrailProblems: () => [], dryRun: true }));
+    expect(r.resolved).toBe(1);
+    expect(r.lines.join("\n")).toMatch(/would resolve 1/);
+    expect(readOpen(dir)).toHaveLength(1);
+  });
+  it('does not close other items of run "-"', async () => {
+    seed("bad-budget-config", "-");
+    const r = await runWatch(deps({ guardrailProblems: () => [] }));
+    expect(r.resolved).toBe(0);
+    expect(readOpen(dir).map((i) => i.cause)).toEqual(["bad-budget-config"]);
   });
 });

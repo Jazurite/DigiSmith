@@ -15,6 +15,8 @@ import { classify, decideRetry, isWatched, type Pane } from "./watchdog.ts";
 export interface WatchDeps {
   env: NodeJS.ProcessEnv; dir: string; cwd: string; now: () => number;
   panes: PaneLookup; runDg: RunDg; dryRun: boolean;
+  /** The guardrail read of the repo; the watchdog closes guardrails.failed when it is clean. Absent: the item is left alone. */
+  guardrailProblems?: () => string[];
 }
 export interface WatchResult { lines: string[]; opened: number; resolved: number; commented: number }
 
@@ -118,6 +120,13 @@ export async function runWatch(d: WatchDeps): Promise<WatchResult> {
     open({ ticket: null, run: SCAN_RUN, kind: "failed", cause: SCAN_CAUSE, since: nowIso });
   }
   if (scan.problems.length === 0) for (const it of items.filter((o) => o.run === SCAN_RUN && o.cause === SCAN_CAUSE)) close(it, "scan_every_minutes reads clean");
+
+  // The scan closes guardrails items on a clean read too; the watchdog repeats that close every pass. An unreadable config keeps the item open.
+  if (d.guardrailProblems) {
+    let clean = false;
+    try { clean = d.guardrailProblems().length === 0; } catch { /* unread: stays open */ }
+    if (clean) for (const it of items.filter((o) => o.run === "guardrails" && o.cause === "bad-guardrail-config")) close(it, "guardrails read clean");
+  }
 
   const paneCache = new Map<string, ReadonlyMap<string, string> | null>();
   const paneOf = async (ws: string | null, pane: string | null): Promise<Pane> => {

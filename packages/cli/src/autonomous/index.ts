@@ -346,8 +346,10 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
           handler: (argv) =>
             guarded(depsFactory, async (d) => {
               const entry = process.argv[1];
+              const repo = (argv.repo as string | undefined) ?? process.cwd();
               const r = await runWatch({
-                env: process.env, dir: d.dir, cwd: (argv.repo as string | undefined) ?? process.cwd(), now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
+                env: process.env, dir: d.dir, cwd: repo, now: Date.now, panes: herdrPaneLookup(), dryRun: argv.dryRun as boolean,
+                guardrailProblems: makeScanGuard(d.git ?? realGit, repo).guardrailProblems,
                 runDg: (args) => new Promise((resolve) => {
                   execFile(process.execPath, [entry, ...args], { timeout: 60_000 }, (err) => resolve({ ok: !err }));
                 }),
