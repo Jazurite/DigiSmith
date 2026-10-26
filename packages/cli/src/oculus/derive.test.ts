@@ -45,9 +45,14 @@ describe("triggerOf", () => {
     expect(triggerOf(run({ order: null, source: "auto", role: "reviewer" }), claim, null)).toBe("auto");
   });
   it("never returns unknown", () => {
+    const claim = { ts: "2026-10-22T01:00:00.000Z", tsUtc7: "", kind: "claim" as const, ticket: "DGS-590" };
     for (const order of [null, "/x/order-nw-07.md", "/d/order-ao-1-DGS-1.md"]) {
       for (const source of ["auto", "start"] as const) {
-        expect(triggerOf(run({ order, source }), null, null)).not.toBe("unknown");
+        for (const role of ["builder", "reviewer"] as const) {
+          for (const c of [null, claim]) {
+            expect(triggerOf(run({ order, source, role }), c, null)).not.toBe("unknown");
+          }
+        }
       }
     }
   });
