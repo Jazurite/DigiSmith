@@ -4,6 +4,7 @@ import { createLogger } from '../logger.ts'
 import { readScanInterval } from './scan-interval.ts'
 import type { JobDef, JobSchedule } from './types.ts'
 
+const DRIFT_CHECK = join(homedir(), '.digismith-depot', 'bin', 'drift-check.ts')
 const MAIN_CHECKOUT = join(homedir(), 'Workspace', 'Jazurite', 'DigiSmith')
 // The config the scan interval is read from: the main checkout's, the same one the job's `--repo` points at.
 const CONFIG_FILE = join(MAIN_CHECKOUT, '.digismith', 'config.yml')
@@ -113,6 +114,13 @@ export const JOBS: readonly JobDef[] = [
     schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 5 },
     command: { file: process.execPath, args: [...DG, 'tokens', 'runs'] },
     timeoutMs: 4 * 60 * 1000, catchUp: 'skip', order: 70, notify: 'failures', manualOutsideWindow: 'allowed',
+  }),
+  defineJob({
+    name: 'drift-sweep',
+    description: 'Finds line-ending and mode drift in every checkout under ~/Workspace; writes drift-sweep.json for the session-start alarm (DGS-557). Read-only. No model tokens.',
+    schedule: { atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 10 },
+    command: { file: process.execPath, args: ['--experimental-strip-types', DRIFT_CHECK, '--sweep'] },
+    timeoutMs: 4 * 60 * 1000, catchUp: 'skip', order: 80, notify: 'failures', manualOutsideWindow: 'allowed',
   }),
 ]
 

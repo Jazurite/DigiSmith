@@ -77,7 +77,7 @@ describe('validateJobs', () => {
 describe('JOBS', () => {
   it('registers a valid selftest with no schedule and the two autonomous jobs', () => {
     expect(() => validateJobs(JOBS)).not.toThrow()
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog', 'schedule-release', 'oculus-tokens'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog', 'schedule-release', 'oculus-tokens', 'drift-sweep'])
     expect(JOBS[0]?.schedule).toBeUndefined()
     expect(isAbsolute(JOBS[0]!.command.file)).toBe(true)
   })
@@ -159,6 +159,19 @@ describe('JOBS', () => {
     expect(job.command.args.slice(-2)).toEqual(['tokens', 'runs'])
     expect(job.catchUp).toBe('skip')
     expect(job.timeoutMs).toBe(4 * 60 * 1000)
+  })
+  it('drift-sweep runs the depot drift-check --sweep every 10 min and starts no model', () => {
+    const job = JOBS.find((j) => j.name === 'drift-sweep')!
+    expect(job.schedule).toEqual({ atUtc7: '00:00', windowEndUtc7: '23:59', everyMinutes: 10 })
+    expect(job.command.file).toBe(process.execPath)
+    expect(job.command.args).toEqual(['--experimental-strip-types', join(homedir(), '.digismith-depot', 'bin', 'drift-check.ts'), '--sweep'])
+    expect(isAbsolute(job.command.args[1]!)).toBe(true)
+    expect(job.catchUp).toBe('skip')
+    expect(job.timeoutMs).toBe(240000)
+    expect(job.order).toBe(80)
+    expect(job.notify).toBe('failures')
+    expect(job.manualOutsideWindow).toBe('allowed')
+    expect(() => validateJobs(JOBS)).not.toThrow()
   })
   it('nightwatch-watchdog runs all day every five minutes and calls autonomous watch', () => {
     const job = JOBS.find((j) => j.name === 'nightwatch-watchdog')!
