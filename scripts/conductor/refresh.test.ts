@@ -72,6 +72,50 @@ const opts = (o: object = {}) => ({ project: "DigiSmith", conductor: "digismith-
 const deps = (r: Runner, over: Partial<RefreshDeps> = {}): RefreshDeps => ({ runner: r, now: () => NOW, env: { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") }, ticketStatus: async () => "in progress", ...over });
 const block = () => parseStateBody(extractBlock(fs.readFileSync(note, "utf-8"), STATE_MARKER).body);
 
+describe("DGS-577 refresh", () => {
+  it("keeps Changed when nothing changed, sets it when something did", async () => {
+    const first = await refreshState(opts(), deps(runner()));
+    const t1 = first.state.changed;
+    expect(t1).toBe(first.state.updated);
+    const later = deps(runner(), { now: () => new Date(NOW.getTime() + 3 * 3600_000) });
+    const second = await refreshState(opts(), later);
+    expect(second.state.updated).not.toBe(first.state.updated);
+    expect(second.state.changed).toBe(t1);
+    const third = await refreshState(opts(), deps(runner({ agents: AGENTS.filter((a) => a.name !== "dgs-438") }), { now: later.now }));
+    expect(third.state.changed).toBe(third.state.updated);
+  });
+  it("names the conductor card when it has no runs_on", async () => {
+    const cards = () => [{ card: { role: "conductor", name: "digismith-conductor", id: "c1", started: "2026-10-13T10:00+07:00" }, path: "x" }];
+    const r = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner(), { listCards: cards }));
+    expect(r.state.runningUnknown).toMatch(/card digismith-conductor has no runs_on/);
+    expect(r.warnings.join()).toMatch(/card digismith-conductor has no runs_on/);
+  });
+  it("stores and reuses Watch", async () => {
+    await refreshState(opts({ watch: ["/x/note.md"] }), deps(runner()));
+    const b = await refreshState(opts(), deps(runner()));
+    expect(b.state.watch).toEqual(["/x/note.md"]);
+    expect(block().state.watch).toEqual(["/x/note.md"]);
+  });
+  it("state-write keeps Changed for the same content and sets it for new content", async () => {
+    const out: string[] = [];
+    const io = { stdout: (t: string) => out.push(t), stderr: (t: string) => out.push(t), env: { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") }, now: () => NOW, readStdin: async () => "" } as unknown as Io;
+    const first = await refreshState(opts(), deps(runner()));
+    const file = path.join(tmp, "in.md");
+    fs.writeFileSync(file, extractBlock(fs.readFileSync(note, "utf-8"), STATE_MARKER).body.replace(/^Changed:.*\n/m, "").replace("Updated: " + first.state.updated, "Updated: 2026-10-14T09:00+07:00"));
+    expect(await main(["state-write", "--note", note, "--from", file], io)).toBe(0);
+    expect(block().state.changed).toBe(first.state.changed);
+    fs.writeFileSync(file, fs.readFileSync(file, "utf-8").replace("2. Do Y", "2. Do Z").replace("Changed: " + first.state.changed + "\n", ""));
+    expect(await main(["state-write", "--note", note, "--from", file], io)).toBe(0);
+    expect(block().state.changed).toBe("2026-10-14T09:00+07:00");
+  });
+  it("passes --watch from the command line", async () => {
+    const out: string[] = [];
+    const io = { stdout: (t: string) => out.push(t), stderr: (t: string) => out.push(t), env: { DIGISMITH_DEPOT_DIR: path.join(tmp, "depot") }, now: () => NOW, runner: runner() } as unknown as Io;
+    expect(await main(["state-refresh", "--note", note, "--repo", repo, "--herdr-workspace", "w2", "--watch", "a, b"], { ...io, listCards: () => [] })).toBe(0);
+    expect(block().state.watch).toEqual(["a", "b"]);
+  });
+});
+
 describe("markers", () => {
   it("parses ticket, merged, gone and exists; strips them from the text", () => {
     const m = parseMarkers("Do X [resolves: ticket DGS-411] [resolves: gone a/b.txt]");
@@ -115,15 +159,16 @@ describe("refreshState: Running", () => {
     const again = await refreshState(opts({ workers: ["dgs-438"] }), deps(runner(), { now: () => new Date("2026-10-13T13:00:00Z") }));
     expect(again.state.running.find((x) => x.worker === "dgs-438")!.since).toBe("2026-10-13T19:00:00+07:00"); // kept from the old row
   });
-  it("keeps the old Running and warns when herdr fails", async () => {
+  it("writes Running unknown, not the old rows, when herdr fails", async () => {
     await refreshState(opts(), deps(runner()));
     const r = await refreshState(opts(), deps(runner({ herdrFail: true })));
-    expect(r.state.running).toHaveLength(2);
-    expect(r.warnings.join()).toMatch(/herdr agent list failed/);
+    expect(r.state.running).toEqual([]);
+    expect(r.state.runningUnknown).toMatch(/boom/);
+    expect(block().state.runningUnknown).toMatch(/boom/);
   });
   it("warns when no workspace is pinned", async () => {
     const r = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner()));
-    expect(r.warnings.join()).toMatch(/no herdr workspace pinned/);
+    expect(r.warnings.join()).toMatch(/no workspace is pinned/);
   });
 });
 
@@ -243,11 +288,11 @@ describe("review findings (DGS-462)", () => {
     await expect(refreshState(opts(), deps(slow))).rejects.toThrow(/changed while the refresh ran/);
     expect(fs.readFileSync(note, "utf-8")).toContain("added meanwhile");
   });
-  it("with no workspace pinned and no conductor card it keeps Running; the conductor card's runs_on supplies the workspace", async () => {
+  it("with no workspace pinned and no conductor card Running is unknown; the conductor card's runs_on supplies the workspace", async () => {
     await refreshState(opts(), deps(runner()));
     const r = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner({ agents: [] })));
-    expect(r.state.running).toHaveLength(2);
-    expect(r.warnings.join()).toMatch(/no herdr workspace pinned/);
+    expect(r.state.running).toEqual([]);
+    expect(r.state.runningUnknown).toMatch(/no conductor card digismith-conductor found and no workspace is pinned/);
     const cards = () => [{ card: { role: "conductor", name: "digismith-conductor", id: "c1", runs_on: "herdr w2:p1", started: "2026-10-13T10:00+07:00" }, path: "x" }];
     const r2 = await refreshState(opts({ herdrWorkspace: undefined }), deps(runner(), { listCards: cards }));
     expect(r2.state.running.map((x) => x.worker)).toEqual(["dgs-462", "dgs-438"]);

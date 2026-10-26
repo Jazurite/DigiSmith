@@ -299,3 +299,8 @@ export function renderStateBody(s: NoteState): string {
   ];
   return (head.length ? `${head.join("\n")}\n\n` : "") + parts.join("\n");
 }
+
+/** The block text without the refresh time, content time and Main: equal keys mean the content did not change (DGS-577). */
+export function contentKey(s: NoteState): string {
+  return renderStateBody({ ...s, updated: undefined, changed: undefined, main: undefined });
+}

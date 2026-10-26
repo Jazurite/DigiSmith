@@ -2,7 +2,7 @@
 // Reads only (herdr, git, cards, ClickUp through an injected status reader); the one write is writeStateBlock.
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { extractBlock, parseStateBody, renderStateBody, STATE_MARKER, writeStateBlock, type NoteState, type RunningRow } from "./state-block.ts";
+import { contentKey, extractBlock, parseStateBody, renderStateBody, STATE_MARKER, writeStateBlock, type NoteState, type RunningRow } from "./state-block.ts";
 import { iso7, resolveNotePath, type CardRef } from "./state.ts";
 import type { Runner } from "./runner.ts";
 import { parseMarkers, stripMarkers } from "./markers.ts";
@@ -41,6 +41,8 @@ export interface RefreshOpts {
   /** worker names this conductor owns; undefined = reuse the list stored in the block */
   workers?: string[];
   dryRun?: boolean;
+  /** files and folders to compare with the block content time; undefined = reuse the list stored in the block */
+  watch?: string[];
   /** allow creating a note that does not exist */
   create?: boolean;
 }
@@ -128,6 +130,7 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   // Running: herdr agents of the pinned workspace + open worker cards
   const ownerUnknown: string[] = [];
   let running = old.running;
+  let runningUnknown: string | undefined;
   const cards = (() => {
     if (!deps.listCards) return [];
     try {
@@ -145,7 +148,13 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
 
   const workspace = opts.herdrWorkspace ?? /^herdr (w\d+):/.exec(conductorCard?.runs_on ?? "")?.[1];
   try {
-    if (!workspace) throw new Error("no herdr workspace pinned (HERDR_WS or --herdr-workspace) and the conductor card names none");
+    if (!workspace) {
+      throw new Error(
+        conductorCard
+          ? `conductor card ${opts.conductor} has no runs_on and no workspace is pinned (HERDR_WS or --herdr-workspace)`
+          : `no conductor card ${opts.conductor} found and no workspace is pinned (HERDR_WS or --herdr-workspace)`,
+      );
+    }
     const r = await deps.runner("herdr", ["--session", "default", "agent", "list"]);
     if (r.code !== 0) throw new Error(r.stderr.trim() || `exit ${r.code}`);
     let agents = (JSON.parse(r.stdout) as { result?: { agents?: Agent[] } }).result?.agents ?? [];
@@ -172,7 +181,9 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     }
     running = next;
   } catch (e) {
-    warnings.push(`herdr agent list failed: ${(e as Error).message}; Running is kept as it was`);
+    runningUnknown = (e as Error).message;
+    running = [];
+    warnings.push(`Running is unknown: ${runningUnknown}`);
   }
 
   // resolved items: only an explicit marker drops one
@@ -231,6 +242,8 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     updated: iso7(now),
     conductor: old.conductor ?? opts.conductor,
     workers: opts.workers ?? old.workers,
+    watch: opts.watch ?? old.watch,
+    runningUnknown,
     ownerUnknown,
     running,
     waiting: await keep("Waiting for Jack", old.waiting, (r) => r.question),
@@ -239,6 +252,9 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     next: await keep("Next", old.next, (r) => r),
     seats: old.seats,
   };
+  // the content time moves only when the block text (without the refresh time, content time and Main) changed
+  if (contentKey(state) !== contentKey(old)) state.changed = state.updated;
+  else state.changed = old.changed;
 
   const before = new Set(old.running.map(rowText));
   const after = new Set(state.running.map(rowText));
@@ -255,7 +271,7 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
 
 export function renderRefresh(r: RefreshResult): string {
   const out = [`${r.written ? "refreshed" : "dry run, nothing written:"} the state block in ${r.notePath}`];
-  out.push(`Running: ${r.state.running.length} rows (+${r.added.length} -${r.removed.length})`);
+  out.push(r.state.runningUnknown !== undefined ? `Running: unknown (${r.state.runningUnknown})` : `Running: ${r.state.running.length} rows (+${r.added.length} -${r.removed.length})`);
   for (const a of r.added) out.push(`  + ${a}`);
   for (const a of r.removed) out.push(`  - ${a}`);
   for (const d of r.dropped) out.push(`dropped as resolved: ${d}`);

@@ -14,7 +14,7 @@ import { fluxMain, transcriptDirFor } from "./flux-cli.ts";
 import { resolveMainRoot } from "../lineage-handoff.ts";
 import { refreshState, renderRefresh } from "./refresh.ts";
 import { ticketStatus } from "./ticket-status.ts";
-import { extractBlock, parseStateBody, STATE_MARKER, writeStateBlock } from "./state-block.ts";
+import { contentKey, extractBlock, parseStateBody, STATE_MARKER, writeStateBlock } from "./state-block.ts";
 
 export interface Io {
   stdout: (s: string) => void;
@@ -28,11 +28,12 @@ const USAGE = `Usage: node --experimental-strip-types scripts/conductor/cli.ts <
   state        [--project P] [--conductor C] [--note path] [--since iso] [--json]
   state-write  --from <file or -> [--project P] [--conductor C] [--note path]
   flux         <agent> | --all [--dry-run] [--log] [--json] [--project P] [--brief path] [--note path] [--wake text]
-  state-refresh [--project P] [--conductor C] [--note path] [--herdr-workspace W] [--workers a,b,c] [--dry-run] [--create]
+  state-refresh [--project P] [--conductor C] [--note path] [--herdr-workspace W] [--workers a,b,c] [--watch a,b] [--dry-run] [--create]
   consult      [--project P] [--conductor C] [--remote <ssh-target>] [--remote-repo path] [--machine <herdr label>] [--json]
 state-refresh rebuilds Running from herdr and the open cards, keeps the hand-written parts, and drops an item only when its
   marker says it is resolved, e.g. "- Waiting text [resolves: ticket DGS-411] | since ... | pane w2:p1"; markers: ticket DGS-n (ClickUp
   done), merged DGS-n (on origin/main), gone <path>, exists <path> (paths relative to the repo). --workers lists this conductor's workers.
+  --watch lists files or folders whose change after the block content is warned about.
 state and consult only read; flux sends /clear to a conductor (night only, see flux). state-write writes only the block between the digismith:conductor-state markers in the note.
 `;
 
@@ -45,6 +46,7 @@ const OPTIONS = {
   "dry-run": { type: "boolean" },
   create: { type: "boolean" },
   workers: { type: "string" },
+  watch: { type: "string" },
   repo: { type: "string" },
   from: { type: "string" },
   remote: { type: "string" },
@@ -93,6 +95,7 @@ export async function main(argv: string[], io: Io & { runner?: Runner; ticketSta
           project, conductor, note: v.note, repoDir, dryRun: v["dry-run"], create: v.create,
           herdrWorkspace: v["herdr-workspace"] ?? io.env.HERDR_WS,
           workers: v.workers === undefined ? undefined : v.workers.split(",").map((x) => x.trim()).filter(Boolean),
+          watch: v.watch === undefined ? undefined : v.watch.split(",").map((x) => x.trim()).filter(Boolean),
         },
         {
           runner, now: io.now, env: io.env,
@@ -111,13 +114,21 @@ export async function main(argv: string[], io: Io & { runner?: Runner; ticketSta
       let text = v.from === "-" ? await io.readStdin() : fs.readFileSync(v.from, "utf-8");
       const pasted = extractBlock(text, STATE_MARKER);
       if (pasted.found) text = pasted.body;
-      const { problems } = parseStateBody(text);
+      const { state: pastedState, problems } = parseStateBody(text);
       if (problems.length) {
         io.stderr(`the block is not valid; nothing was written:\n${problems.map((p) => `  ${p}`).join("\n")}\n`);
         return 1;
       }
       if (!/^Updated:/m.test(text)) text = `Updated: ${iso7(io.now())}\n${text.startsWith("\n") ? "" : "\n"}${text}`;
       const notePath = resolveNotePath({ project, conductor, note: v.note }, io.env);
+      if (!pastedState.changed) {
+        // a hand-written block: the content time moves only when the content differs from the block now in the note
+        const cur = fs.existsSync(notePath) ? extractBlock(fs.readFileSync(notePath, "utf-8"), STATE_MARKER) : undefined;
+        const prev = cur?.found ? parseStateBody(cur.body) : undefined;
+        const same = prev && prev.problems.length === 0 && contentKey(prev.state) === contentKey(pastedState);
+        const changed = same ? prev.state.changed : pastedState.updated ?? iso7(io.now());
+        if (changed) text = text.replace(/^(Updated:.*)$/m, `$1\nChanged: ${changed}`);
+      }
       writeStateBlock(notePath, text, STATE_MARKER);
       io.stdout(`wrote the state block to ${notePath}\n`);
       return 0;
