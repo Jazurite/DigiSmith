@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drift alarm — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  .meta { color:var(--muted); font-size:.9rem; } code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  a { color:var(--accent); } footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<h1>Drift alarm — Implementation Report</h1>
+<div class="meta">
+  <span>Date: 2026-10-26</span>
+  <span>Ticket: <strong>DGS-498</strong></span>
+  <span>Commit range: <code>4a44244a..07eb72cd</code></span>
+</div>
+
+<section id="summary">
+<h2>Summary</h2>
+<p>Line-ending and mode drift is now visible. <code>scripts/workbox-health/drift-check.ts</code> counts eol drift and mode drift per checkout and ignores the repo config (<code>core.autocrlf=input</code>, <code>core.fileMode=false</code>). A fourth SessionStart hook prints one alarm line when the current checkout drifts. <code>workbox-health</code> has a "git drift" section and <code>install.sh</code> installs a <code>drift-check</code> wrapper into the depot. Built from the plan in three commits. Reference documents: the <a href="spec.md">spec</a> and the <a href="plan.md">plan</a>.</p>
+
+<h2>Evidence</h2>
+<ul>
+  <li>Tests: 28 new tests (temp git repos set up like the Workbox) plus the run-events hooks test: 33 pass after the rebase on main (plugin 1.56.0).</li>
+  <li>Whole-branch review by a fresh agent: no verified findings. Two nits left: an unquoted comma in a CSV path, and a symlinked <code>--root</code> prints the resolved path.</li>
+  <li>Live run on <code>~/Workspace</code>: about 24 s, read-only. Real drift found and not fixed: <code>Emma/shopify-template-ph</code> 176 eol, <code>Emma/shopify-hub</code> 2 mode, and about 25 Emma worktrees with broken git links (<code>D:/</code> and <code>/root/</code> paths).</li>
+  <li><code>--alarm</code> on the DigiSmith checkout: silent, exit 0, 1.15 s cold (plan target 1 s). On a CRLF temp clone it printed the one alarm line.</li>
+  <li>Full suite on the branch: 3 failures, all load timeouts or environment. <code>nexus-api/test-install.test.ts</code> also fails on main; the oculus entry tests pass alone.</li>
+  <li>The merge diff touched one protected path, <code>hooks/hooks.json</code>; the Maestro approved it.</li>
+</ul>
+
+<h2>Not done on purpose</h2>
+<p>Scheduled sweeps (DGS-557), restoring files, and the MEGA sync setting are out of scope.</p>
+
+<h2>Commits</h2>
+<ul>
+  <li><code>fa8bd4e1</code> feat(dgs-498): count eol and mode drift, find checkouts, log a CSV</li>
+  <li><code>0155fa9d</code> feat(dgs-498): drift alarm at session start</li>
+  <li><code>07eb72cd</code> feat(dgs-498): git drift section and the drift-check wrapper</li>
+</ul>
+
+<footer>DigiSmith · .digismith/board/DGS-498—drift-alarm/report.html</footer>
+</body>
+</html>
