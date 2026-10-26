@@ -58,13 +58,15 @@ export function fmtUsd(n: number | null): string {
   return usdFmt.format(n)
 }
 const RUNNING = new Set(['healthy', 'blocked', 'stalled'])
+// A run counts as running in these three states; an ended or lost run never does.
+export const isRunning = (r: Pick<RunRow, 'state'>): boolean => RUNNING.has(r.state)
 const minutesSince = (iso: string, nowMs: number): number | null => {
   const t = Date.parse(iso)
   return Number.isFinite(t) ? Math.max(0, Math.floor((nowMs - t) / 60_000)) : null
 }
 // The current phase and its whole minutes, for a running run only: an ended or lost run, or one with no phase, gets none (never a false number).
 export function phaseTime(r: Pick<RunRow, 'state' | 'phase' | 'phaseSince'>, nowMs: number): { phase: string; min: number } | null {
-  if (!RUNNING.has(r.state) || r.phase === null || r.phaseSince === null) return null
+  if (!isRunning(r) || r.phase === null || r.phaseSince === null) return null
   const min = minutesSince(r.phaseSince, nowMs)
   return min === null ? null : { phase: r.phase, min }
 }

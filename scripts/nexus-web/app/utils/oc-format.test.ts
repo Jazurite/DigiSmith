@@ -1,6 +1,6 @@
 // scripts/nexus-web/app/utils/oc-format.test.ts
 import { describe, expect, it } from 'vitest'
-import { ageOf, fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, isSafeId, phaseTime, spokenMinutes, spokenSeconds, stepTime } from './oc-format'
+import { ageOf, fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, isRunning, isSafeId, phaseTime, spokenMinutes, spokenSeconds, stepTime } from './oc-format'
 
 describe('oc-format', () => {
   it('shows UTC+7 times', () => {
@@ -41,6 +41,10 @@ describe('oc-format', () => {
 describe('phase and step times', () => {
   const now = Date.parse('2026-10-22T03:00:00.000Z')
   const row = { state: 'healthy' as const, phase: 'building' as const, phaseSince: '2026-10-22T02:46:00.000Z' }
+  it('isRunning is true for healthy, blocked and stalled only', () => {
+    for (const state of ['healthy', 'blocked', 'stalled'] as const) expect(isRunning({ state })).toBe(true)
+    for (const state of ['lost', 'ended'] as const) expect(isRunning({ state })).toBe(false)
+  })
   it('phaseTime: a running run with a phase', () => {
     expect(phaseTime(row, now)).toEqual({ phase: 'building', min: 14 })
     expect(phaseTime({ ...row, state: 'blocked' }, now)).toEqual({ phase: 'building', min: 14 })
