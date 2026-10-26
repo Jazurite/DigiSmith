@@ -91,6 +91,12 @@ export interface Seat { seat: string; fiveHourPct: number; weeklyPct: number }
 
 export interface NoteState {
   updated?: string;
+  /** when the block content (not the refresh time) last changed */
+  changed?: string;
+  /** files and folders whose mtime state-refresh compares with `changed` */
+  watch?: string[];
+  /** set when Running could not be rebuilt: the reason */
+  runningUnknown?: string;
   conductor?: string;
   /** the worker names the conductor passed to state-refresh; the next refresh reuses them */
   workers?: string[];
@@ -179,14 +185,27 @@ export function parseStateBody(body: string, firstLine = 1): { state: NoteState;
       const c = prefixed(line, "Conductor:");
       const w = prefixed(line, "Workers:");
       const mh = prefixed(line, "Main:");
+      const ch = prefixed(line, "Changed:");
+      const wa = prefixed(line, "Watch:");
+      const ru = prefixed(line, "Running:");
       if (mh !== undefined) state.main = mh;
+      else if (ch !== undefined) {
+        const t = parseTime(ch);
+        if (t) state.changed = t;
+        else problems.push(`line ${n}: Changed needs a time like 2026-10-13T14:05+07:00 (got "${ch}")`);
+      } else if (wa !== undefined) state.watch = isNone(wa) ? [] : wa.split(",").map((x) => x.trim()).filter(Boolean);
+      else if (ru !== undefined) {
+        const m = /^unknown \((.*)\)$/.exec(ru);
+        if (m) state.runningUnknown = m[1];
+        else problems.push(`line ${n}: Running here must read "unknown (<reason>)" (got "${ru}")`);
+      }
       else if (w !== undefined) state.workers = isNone(w) ? [] : w.split(",").map((x) => x.trim()).filter(Boolean);
       else if (u !== undefined) {
         const t = parseTime(u);
         if (t) state.updated = t;
         else problems.push(`line ${n}: Updated needs a time like 2026-10-13T14:05+07:00 (got "${u}")`);
       } else if (c !== undefined) state.conductor = c;
-      else problems.push(`line ${n}: text before the first "## " heading; only "Updated:", "Conductor:", "Workers:" and "Main:" are allowed there`);
+      else problems.push(`line ${n}: text before the first "## " heading; only "Updated:", "Changed:", "Conductor:", "Workers:", "Watch:", "Running: unknown (...)" and "Main:" are allowed there`);
       return;
     }
     if (section === "unknown") return;
@@ -262,9 +281,12 @@ function section(name: string, rows: string[]): string {
 export function renderStateBody(s: NoteState): string {
   const head = [
     s.updated ? `Updated: ${s.updated}` : "",
+    s.changed ? `Changed: ${s.changed}` : "",
     s.conductor ? `Conductor: ${s.conductor}` : "",
     s.main ? `Main: ${s.main}` : "",
     s.workers ? `Workers: ${s.workers.join(", ") || "none"}` : "",
+    s.watch ? `Watch: ${s.watch.join(", ") || "none"}` : "",
+    s.runningUnknown !== undefined ? `Running: unknown (${s.runningUnknown})` : "",
   ].filter(Boolean);
   const seats = s.seats.map((x) => `${x.seat}: 5h ${x.fiveHourPct}%, weekly ${x.weeklyPct}%`).join("; ");
   const parts = [

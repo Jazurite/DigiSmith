@@ -220,3 +220,45 @@ describe("Workers header and Owner unknown line (DGS-462)", () => {
     expect(body).not.toMatch(/Workers:|Owner unknown/);
   });
 });
+
+describe("header lines of DGS-577", () => {
+  const body = `Updated: 2026-10-26T10:00+07:00
+Changed: 2026-10-24T09:00+07:00
+Conductor: c
+Watch: /a/note.md, /a/board
+Running: unknown (no herdr workspace)
+
+## Running
+none
+
+## Waiting for Jack
+none
+
+## Decided under the mandate
+none
+
+## Parked or failed
+none
+
+## Next
+none
+
+## Health
+- Seats and usage: none
+`;
+  it("parses Changed, Watch and Running unknown", () => {
+    const { state, problems } = parseStateBody(body);
+    expect(problems).toEqual([]);
+    expect(state.changed).toBe("2026-10-24T09:00+07:00");
+    expect(state.watch).toEqual(["/a/note.md", "/a/board"]);
+    expect(state.runningUnknown).toBe("no herdr workspace");
+  });
+  it("round-trips through renderStateBody", () => {
+    const { state } = parseStateBody(body);
+    expect(parseStateBody(renderStateBody(state)).state).toEqual(state);
+  });
+  it("rejects a bad Changed time and accepts a block without one", () => {
+    expect(parseStateBody(body.replace("2026-10-24T09:00+07:00", "yesterday")).problems[0]).toMatch(/Changed needs a time/);
+    expect(parseStateBody(body.replace(/Changed:.*\n/, "")).state.changed).toBeUndefined();
+  });
+});
