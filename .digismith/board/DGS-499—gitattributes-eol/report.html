@@ -15,8 +15,13 @@
 </head>
 <body>
 <h1>.gitattributes eol — Implementation Report</h1>
-<div class="meta">Date: 2026-10-26 · Ticket: <strong>DGS-499</strong> · Commit range: <code>fe6d03a6..e279ea8c</code></div>
+<div class="meta">
+  <span>Date: 2026-10-26</span>
+  <span>Ticket: <strong>DGS-499</strong></span>
+  <span>Commit range: <code>fe6d03a6..e279ea8c</code></span>
+</div>
 
+<section id="summary">
 <h2>Summary</h2>
 <p>Git now stores and checks out text files as LF on every machine. The rule <code>* text=auto eol=lf</code> is line 1 of <code>.gitattributes</code>. The existing <code>-text</code> lines come after it and win, so the 14 vendored skill folders and <code>vendored/*</code> stay byte-identical. One task, one line, built directly from the plan with no subagent ledger. Reference documents: the <a href="spec.md">spec</a> and the <a href="plan.md">plan</a>.</p>
 
