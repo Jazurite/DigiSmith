@@ -363,7 +363,7 @@ describe('the real entry point on a throwaway server', () => {
   afterEach(() => { if (child && child.exitCode === null) child.kill('SIGKILL'); child = undefined })
 
   it('starts the engine, runs selftest from a separate process with the token file, and stops cleanly', async () => {
-    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog', 'schedule-release', 'oculus-tokens'])
+    expect(JOBS.map((j) => j.name)).toEqual(['selftest', 'autonomous-scan', 'autonomous-report', 'nightwatch-watchdog', 'schedule-release', 'oculus-tokens', 'drift-sweep'])
     const state = path.join(dir, 'state')
     const depot = path.join(dir, 'depot')
     const dgCalls = path.join(dir, 'dg-calls.jsonl')
