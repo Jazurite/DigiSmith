@@ -1,8 +1,8 @@
 import type { CommandModule } from "yargs";
 import { appendEvent, CONDUCTOR_TYPES, validEventData } from "./events.ts";
 import { findRunDir } from "./paths.ts";
-import { currentCount } from "./limit-check.ts";
-import { kindOf, limitLine, limitRows, refusal } from "./limit.ts";
+import { currentCount, startRefusal } from "./limit-check.ts";
+import { kindOf, limitLine, limitRows } from "./limit.ts";
 import { createRun, type RunRecord } from "./record.ts";
 import { formatList, formatShow, LIST_DAYS, listRuns, showRun, tailEvents } from "./read.ts";
 
@@ -33,7 +33,7 @@ const startCommand: CommandModule = {
       // DGS-665: refuse before createRun, so a refused start leaves no record. maestro, conductor and unknown roles give null.
       const kind = kindOf({ role: a.role as RunRecord["role"], role_from: "start" });
       if (kind !== null) {
-        const why = refusal(currentCount(process.env, process.cwd()).count, kind);
+        const why = startRefusal(process.env, process.cwd(), kind, a.ticket as string);
         if (why !== null) return fail(why);
       }
       const r = createRun({

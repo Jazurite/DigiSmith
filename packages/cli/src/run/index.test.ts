@@ -246,4 +246,14 @@ describe("dg run limit (DGS-665)", () => {
     expect(r.stdout.split("\n")[0]).toBe("limits: builder 0/2, reviewer 0/1, role 0/1");
     expect(r.stdout).toMatch(new RegExp(`^stale  builder  ${id} \\(DGS-1, \\d+ min\\): clear with dg run event ${id} lost$`, "m"));
   });
+  it("the factory ticket's own builder starts beside one hand builder; another ticket is still refused", async () => {
+    await dgc("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md");
+    fs.mkdirSync(path.join(tmp, "autonomous"), { recursive: true });
+    fs.writeFileSync(path.join(tmp, "autonomous", "lock.json"), JSON.stringify({ ticket: "DGS-9" }));
+    const other = await dgc("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md");
+    expect(other.status).toBe(1);
+    expect(other.stderr).toMatch(/^limit: builder 2 of 2 in use.*factory lock \(DGS-9\)/);
+    const factory = await dgc("start", "--ticket", "DGS-9", "--role", "builder", "--order", "/o.md");
+    expect(factory.status).toBe(0);
+  });
 });
