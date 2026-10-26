@@ -212,6 +212,6 @@ describe('version literal', () => {
 
 describe('autonomous-scan text', () => {
   it('autonomous-scan says it claims at any hour', () => {
-    expect(JOBS.find((j) => j.name === 'autonomous-scan')!.description).toBe('Autonomous Operation: at any hour, claim one to do ticket with Mode Autonomous and hand it to the conductor')
+    expect(JOBS.find((j) => j.name === 'autonomous-scan')!.description).toBe('Autonomous Operation: at any hour, claim one to do ticket with any Mode but Manual and hand it to the conductor')
   })
 })
