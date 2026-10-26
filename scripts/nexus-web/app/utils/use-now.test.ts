@@ -9,7 +9,7 @@ const setVisibility = (v: 'visible' | 'hidden'): void => {
 }
 
 describe('useNow', () => {
-  let scope: EffectScope
+  let scope: EffectScope | undefined
   const T0 = '2026-10-22T03:00:00.000Z'
   const setup = <T>(fn: () => T): T => {
     vi.useFakeTimers()
@@ -18,7 +18,7 @@ describe('useNow', () => {
     return scope.run(fn)!
   }
   afterEach(() => {
-    scope.stop()
+    scope?.stop()
     vi.useRealTimers()
     vi.restoreAllMocks()
     setVisibility('visible')
@@ -83,7 +83,7 @@ describe('useNow', () => {
     const fast = ref(true)
     const now = setup(() => useNow({ fast }))
     const spy = vi.spyOn(document, 'removeEventListener')
-    scope.stop()
+    scope?.stop()
     expect(vi.getTimerCount()).toBe(0)
     expect(spy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
     const stopped = now.value
