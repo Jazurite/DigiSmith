@@ -46,6 +46,7 @@ describe("cli", () => {
   });
   it("state --json prints the state object", async () => {
     withNote();
+    fs.mkdirSync(path.join(tmp, ".git"), { recursive: true });
     const i = io();
     expect(await main(["state", "--json", "--note", note, "--repo", tmp], { ...i, runner })).toBe(0);
     const s = JSON.parse(i.out);

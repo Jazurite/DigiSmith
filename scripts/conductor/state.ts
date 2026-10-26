@@ -6,6 +6,10 @@ import type { CatchUp } from "../catch-up.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, type DecidedRow, type ParkedRow, type RunningRow, type Seat, type WaitingRow } from "./state-block.ts";
 import type { Runner } from "./runner.ts";
 import { stripMarkers } from "./markers.ts";
+import { newestMtime } from "./watch.ts";
+
+/** an item or block content older than this is flagged in Health (DGS-577) */
+export const STALE_AFTER_MS = 2 * 24 * 3600_000;
 
 export interface DoneRow {
   key: string;
@@ -23,7 +27,7 @@ export interface State extends CatchUpState {
   project: string;
   conductor: string;
   asOf: string;
-  note: { path: string; found: boolean; blockFound: boolean; updated?: string; stale?: boolean; main?: string };
+  note: { path: string; found: boolean; blockFound: boolean; updated?: string; changed?: string; watch?: string[]; stale?: boolean; main?: string };
   /** newest merge on origin/main (plugin version bumps do not count) */
   newestMerge?: { time: string; hash: string };
   done: DoneRow[];
@@ -101,6 +105,43 @@ function findReport(repoDir: string, key: string): string | undefined {
   return undefined;
 }
 
+const days = (ms: number) => Math.floor(ms / 86_400_000);
+
+/** Age and watch warnings: item age, block content age, project files newer than the block content (DGS-577). */
+function ageWarnings(state: State, now: Date, runningUnknown: boolean): void {
+  if (!state.note.blockFound) return;
+  const w = state.warnings;
+  const changed = state.note.changed;
+  if (changed) {
+    const age = now.getTime() - Date.parse(changed);
+    if (age > STALE_AFTER_MS) w.push(`state block content unchanged for ${days(age)} days (since ${changed}): Parked, Decided and Next may be old`);
+  } else {
+    w.push("state block content change time not recorded (the next refresh that changes it records it)");
+  }
+  const old = (since: string) => {
+    const age = now.getTime() - Date.parse(since);
+    return age > STALE_AFTER_MS ? days(age) : undefined;
+  };
+  if (!runningUnknown) {
+    for (const r of state.running) {
+      const d = old(r.since);
+      if (d !== undefined) w.push(`Running item "${r.worker} | ${r.key}" is ${d} days old`);
+    }
+  }
+  for (const r of state.waiting) {
+    const d = old(r.since);
+    if (d !== undefined) w.push(`Waiting item "${r.question.slice(0, 50)}" is ${d} days old`);
+  }
+  const base = changed ?? state.note.updated;
+  for (const p of state.note.watch ?? []) {
+    const hit = newestMtime(p);
+    if (!hit) w.push(`watch path ${p} not found`);
+    else if (base && hit.time.getTime() > Date.parse(base)) {
+      w.push(`${p} changed ${iso7(hit.time)}, after the block content (${base}): the block may be behind`);
+    }
+  }
+}
+
 export async function collectState(opts: CollectOpts, deps: CollectDeps): Promise<State> {
   const now = (deps.now ?? (() => new Date()))();
   const env = deps.env ?? process.env;
@@ -118,6 +159,7 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
   };
 
   // note
+  let runningUnknown = false;
   try {
     const text = fs.readFileSync(state.note.path, "utf-8");
     state.note.found = true;
@@ -141,6 +183,12 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
       if (s.ownerUnknown?.length) state.health.server = `owner unknown: ${s.ownerUnknown.join(", ")}`;
       if (s.updated) state.note.updated = s.updated;
       state.note.main = s.main;
+      state.note.changed = s.changed;
+      state.note.watch = s.watch;
+      if (s.runningUnknown !== undefined) {
+        state.running = [{ worker: "unknown", key: "-", stage: `Running cannot be read: ${s.runningUnknown}`, since: s.updated ?? state.asOf }];
+        runningUnknown = true;
+      }
       warnings.push(...problems.map((p) => `note block: ${p}`));
     }
   } catch (e) {
@@ -152,9 +200,15 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
     }
   }
 
+  ageWarnings(state, now, runningUnknown);
+
+  // git: only a DigiSmith checkout says anything about this project's work (DGS-577)
+  const gitUsable = opts.project === "DigiSmith" && fs.existsSync(path.join(opts.repoDir, ".git"));
+  if (!gitUsable) state.sources.git = "skipped";
+
   // git: what merged since the window start
   const since = opts.since ?? startOfDay7(now);
-  try {
+  if (gitUsable) try {
     const r = await deps.runner("git", ["log", "origin/main", `--since=${since}`, "--format=%H%x09%cI%x09%s"], { cwd: opts.repoDir });
     if (r.code !== 0) throw new Error(r.stderr.trim() || `exit ${r.code}`);
     const seen = new Set<string>();
@@ -174,7 +228,7 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
   }
 
   // the newest merge on origin/main against the block's age (DGS-462)
-  try {
+  if (gitUsable) try {
     const r = await deps.runner("git", ["log", "origin/main", "--max-count=20", "--format=%H%x09%cI%x09%s"], { cwd: opts.repoDir });
     if (r.code === 0) {
       for (const row of r.stdout.split("\n")) {

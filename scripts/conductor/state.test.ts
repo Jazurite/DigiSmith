@@ -18,6 +18,7 @@ beforeEach(() => {
   depot = path.join(tmp, "depot");
   repo = path.join(tmp, "repo");
   fs.mkdirSync(depot, { recursive: true });
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
   fs.mkdirSync(path.join(repo, ".digismith/board/DGS-404—role/worker-dgs-404"), { recursive: true });
   fs.writeFileSync(path.join(repo, ".digismith/board/DGS-404—role/worker-dgs-404/report.html"), "<html>");
   notePath = path.join(tmp, "note.md");
@@ -179,3 +180,60 @@ describe("collectState", () => {
 });
 
 export type { State };
+
+describe("collectState stale state (DGS-577)", () => {
+  const writeBody = (body: string) => {
+    const m = markerLines(STATE_MARKER);
+    fs.writeFileSync(notePath, `# free\n\n${m.open}\n${body}${m.close}\n`);
+  };
+  const withHeader = (lines: string) => SAMPLE_BODY.replace(/^Changed:.*\n/m, "").replace("Conductor:", `${lines}Conductor:`);
+  const run = async (project = "DigiSmith", runner: Runner = fakeRunner()) => collectState({ ...base(), project }, deps(runner));
+
+  it("warns when the content is 3 days old and not when it is 1 day old", async () => {
+    writeBody(withHeader("Changed: 2026-10-10T09:00+07:00\n"));
+    expect((await run()).warnings.join("\n")).toMatch(/content unchanged for 3 days/);
+    writeBody(withHeader("Changed: 2026-10-12T09:00+07:00\n"));
+    expect((await run()).warnings.join("\n")).not.toMatch(/unchanged for/);
+  });
+  it("flags a Waiting or Running item 3 days old, not 1 day old", async () => {
+    writeBody(withHeader("Changed: 2026-10-13T14:00+07:00\n").replace("since 2026-10-13T13:50+07:00 | pane", "since 2026-10-10T09:00+07:00 | pane").replace("dgs-422 | DGS-422 | plan | since 2026-10-13T13:35+07:00", "dgs-422 | DGS-422 | plan | since 2026-10-10T09:00+07:00"));
+    const w = (await run()).warnings.join("\n");
+    expect(w).toMatch(/Waiting item "Merge DGS-417 now\?" is 3 days old/);
+    expect(w).toMatch(/Running item "dgs-422 \| DGS-422" is 3 days old/);
+    expect(w).not.toMatch(/dgs-417 \| DGS-417/);
+  });
+  it("warns when a watch path is newer than Changed, not when older, and when missing", async () => {
+    const f = path.join(tmp, "project-note.md");
+    fs.writeFileSync(f, "x");
+    writeBody(withHeader(`Changed: 2026-10-13T10:00+07:00\nWatch: ${f}, ${path.join(tmp, "nope")}\n`));
+    const t = (iso: string) => fs.utimesSync(f, new Date(iso), new Date(iso));
+    t("2026-10-13T05:00:00Z"); // 12:00 UTC+7, after Changed
+    const newer = (await run()).warnings.join("\n");
+    expect(newer).toMatch(/project-note.md changed 2026-10-13T12:00:00\+07:00, after the block content/);
+    expect(newer).toMatch(/watch path .*nope not found/);
+    t("2026-10-13T01:00:00Z"); // 08:00 UTC+7, before Changed
+    expect((await run()).warnings.join("\n")).not.toMatch(/after the block content/);
+  });
+  it("says the change time is not recorded for an old block", async () => {
+    writeBody(withHeader(""));
+    const s = await run();
+    expect(s.note.changed).toBeUndefined();
+    expect(s.warnings.join("\n")).toMatch(/content change time not recorded/);
+  });
+  it("runs no git for another project or a folder that is not a checkout", async () => {
+    const r1 = fakeRunner();
+    const s1 = await run("Emma", r1);
+    expect(r1.calls.some((c) => c[0] === "git")).toBe(false);
+    expect(s1.warnings.join("\n")).not.toMatch(/git log/);
+    fs.rmSync(path.join(repo, ".git"), { recursive: true });
+    const r2 = fakeRunner();
+    const s2 = await run("DigiSmith", r2);
+    expect(r2.calls.some((c) => c[0] === "git")).toBe(false);
+    expect(s2.warnings.join("\n")).not.toMatch(/git log/);
+  });
+  it("turns a Running unknown block into one unknown row", async () => {
+    writeBody(withHeader("Changed: 2026-10-13T14:00+07:00\nRunning: unknown (why)\n").replace(/^- dgs-4.*\n/gm, "- x\n").replace(/## Running\n(- x\n)+/, "## Running\nnone\n"));
+    const s = await run();
+    expect(s.running).toEqual([{ worker: "unknown", key: "-", stage: "Running cannot be read: why", since: "2026-10-13T14:05+07:00" }]);
+  });
+});

@@ -43,6 +43,7 @@ beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "dgs462-"));
   repo = path.join(tmp, "repo");
   fs.mkdirSync(path.join(repo, ".digismith"), { recursive: true });
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
   note = path.join(tmp, "note.md");
   const m = markerLines(STATE_MARKER);
   fs.writeFileSync(note, `# free\ntext\n\n${m.open}\n${BODY()}${m.close}\n\n## Session end\nResult: ok\n`);

@@ -1,4 +1,5 @@
 export const SAMPLE_BODY = `Updated: 2026-10-13T14:05+07:00
+Changed: 2026-10-13T14:05+07:00
 Conductor: digismith-conductor
 
 ## Running
