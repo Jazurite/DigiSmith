@@ -2,7 +2,7 @@
 import type { RunRow } from '#oculus-schema'
 import { fmtDay, fmtDuration, fmtMinutes, fmtTokens, fmtUsd, fmtUtc7, phaseTime, spokenMinutes, spokenSeconds } from '../../utils/oc-format'
 
-defineProps<{ runs: RunRow[]; nowMs: number }>()
+defineProps<{ runs: RunRow[]; nowMs?: number }>()
 // a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
 const totalSec = (r: RunRow, nowMs: number): number => (r.endedAt ? r.elapsedSec : Math.max(0, (nowMs - Date.parse(r.startedAt)) / 1000))
 // one value per row: "0:31:07 · building 0:14" on screen; screen readers get words, not the "·" and h:mm
@@ -36,11 +36,19 @@ const delivery = (r: RunRow): string => [r.merged ? 'merged' : '', r.pushed ? 'p
         <td data-label="Trigger">{{ r.trigger }}</td>
         <td data-label="Started" class="mono">{{ fmtDay(r.startedAt) }}</td>
         <td data-label="Duration" class="num">
-          <!-- one-item v-for: binds the per-row cell parts to d, computed once per row -->
-          <template v-for="d in [durationCell(r, nowMs)]" :key="0">
-            <span aria-hidden="true">{{ d.shown }}<template v-if="d.phase"> · <span class="phase">{{ d.phase }}</span></template></span>
-            <span class="sr">{{ d.spoken }}</span>
+          <!-- one-item v-for: binds the per-row cell parts to d, computed once per row; an ended row never reads the clock -->
+          <template v-if="r.endedAt">
+            <template v-for="d in [durationCell(r, 0)]" :key="0">
+              <span aria-hidden="true">{{ d.shown }}<template v-if="d.phase"> · <span class="phase">{{ d.phase }}</span></template></span>
+              <span class="sr">{{ d.spoken }}</span>
+            </template>
           </template>
+          <OcTick v-else v-slot="{ nowMs: t }" :now-ms="nowMs">
+            <template v-for="d in [durationCell(r, t)]" :key="0">
+              <span aria-hidden="true">{{ d.shown }}<template v-if="d.phase"> · <span class="phase">{{ d.phase }}</span></template></span>
+              <span class="sr">{{ d.spoken }}</span>
+            </template>
+          </OcTick>
         </td>
         <td data-label="Tokens" class="num" :class="{ muted: !r.tokens }" :title="r.tokens ? String(r.tokens.total) : missingWhy(r)">{{ r.tokens ? fmtTokens(r.tokens.total) : '-' }}</td>
         <td data-label="Cost" class="num" :class="{ muted: !r.tokens || r.tokens.costUsd === null }" :title="costTitle(r)">{{ r.tokens ? fmtUsd(r.tokens.costUsd) : '-' }}</td>

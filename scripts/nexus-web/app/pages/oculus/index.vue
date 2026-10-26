@@ -6,13 +6,14 @@ import { loadAttention } from '../../composables/oculus-api'
 import { useOculusPoll } from '../../composables/useOculusPoll'
 import { agentChanges } from '../../utils/agent-changes'
 import { filterAgents, type AgentFilter } from '../../utils/agent-filter'
+import { isRunning } from '../../utils/oc-format'
 import { useNow } from '../../utils/use-now'
 
 definePageMeta({ layout: 'oculus' })
 useHead({ title: 'DigiSmith Oculus' })
 // the layout owns the one overview poll; this page only reads it
 const oc = inject<{ overview: Ref<Overview | null>; stale: Ref<boolean>; updatedAt: Ref<number | null>; failedAt: Ref<number | null>; attention: ComputedRef<number>; refresh: () => Promise<void> }>('ocOverview')!
-const nowMs = useNow()
+useNow({ fast: () => (oc.overview.value?.workers ?? []).some(isRunning) })
 
 // DGS-599: the live agents (the layout owns the 5 s poll) and the attention summary
 const lv = inject<{ live: Ref<Live | null>; stale: Ref<boolean>; refresh: () => Promise<void> }>('ocLive')!
@@ -56,10 +57,10 @@ watch(() => lv.live.value, async (next) => {
   <template v-else>
     <OcStaleBanner v-if="oc.stale.value" :failed-at="oc.failedAt.value" />
     <div class="grid">
-      <OcPhaseTable :rows="oc.overview.value.tickets.rows" :lock-ticket="oc.overview.value.tickets.lockTicket" :window-days="oc.overview.value.tickets.windowDays" :now-ms="nowMs" />
+      <OcPhaseTable :rows="oc.overview.value.tickets.rows" :lock-ticket="oc.overview.value.tickets.lockTicket" :window-days="oc.overview.value.tickets.windowDays" />
       <OcScanCard :scan="oc.overview.value.scan" :lock-ticket="oc.overview.value.tickets.lockTicket" />
     </div>
-    <OcWorkersTable :workers="oc.overview.value.workers" :now-ms="nowMs" />
+    <OcWorkersTable :workers="oc.overview.value.workers" />
     <OcLastEvents :events="oc.overview.value.lastEvents" />
   </template>
 </template>

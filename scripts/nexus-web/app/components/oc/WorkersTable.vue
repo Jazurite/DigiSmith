@@ -2,7 +2,7 @@
 import type { RunRow } from '#oculus-schema'
 import { fmtDuration } from '../../utils/oc-format'
 
-defineProps<{ workers: RunRow[]; nowMs: number }>()
+defineProps<{ workers: RunRow[]; nowMs?: number }>()
 // a running row counts up from startedAt; an ended row keeps its frozen elapsedSec
 // a Maestro or conductor run is never classified (DGS-598): no health flag, a plain "-"
 const unflagged = (w: RunRow): boolean => w.role === 'maestro' || w.role === 'conductor'
@@ -22,7 +22,7 @@ const elapsed = (w: RunRow, nowMs: number): string => fmtDuration(w.endedAt ? w.
         <td data-label="Role">{{ w.role }}</td>
         <td data-label="Seat" class="mono">{{ w.seat ?? '-' }}</td>
         <td data-label="Phase" class="mono">{{ w.phase ?? '-' }}</td>
-        <td data-label="Elapsed" class="num">{{ elapsed(w, nowMs) }}</td>
+        <td data-label="Elapsed" class="num"><template v-if="w.endedAt">{{ elapsed(w, 0) }}</template><OcTick v-else v-slot="{ nowMs: t }" :now-ms="nowMs">{{ elapsed(w, t) }}</OcTick></td>
         <td data-label="Tokens" class="num muted" title="not measured">-</td>
       </tr>
     </OcTable>
