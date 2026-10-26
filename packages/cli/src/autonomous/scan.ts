@@ -25,6 +25,8 @@ export interface ScanDeps {
   guard?: ScanGuard;
   /** advances the locked ticket one step; absent: a held lock is only reported busy */
   tick?: () => Promise<TickResult>;
+  /** DGS-665: null = a builder slot is free; a string = the refusal text. Optional so older tests keep passing; production always passes it. */
+  builderFull?: () => string | null;
 }
 export interface ScanResult {
   outcome: "busy" | "no-starter-status" | "none" | "claimed" | "claim-failed" | "breaker" | "guardrail-config" | "conductor-config";
@@ -136,6 +138,15 @@ export async function runScan(d: ScanDeps): Promise<ScanResult> {
     const lock = readLock(d.dir);
     if (lock !== null) {
       appendEvent(d.dir, now, "busy", { ticket: lock.ticket });
+      return { outcome: "busy", candidates: 0, skipped };
+    }
+  }
+  // 2a. Every builder slot is busy with hand-started runs: wait. A normal wait, so no comment and no attention item.
+  if (!d.dryRun && d.builderFull) {
+    let why: string | null = null;
+    try { why = d.builderFull(); } catch { /* an unreadable count never stops the scan */ }
+    if (why !== null) {
+      appendEvent(d.dir, now, "busy", { ticket: null, reason: "builder-limit", detail: why.slice(0, 300) });
       return { outcome: "busy", candidates: 0, skipped };
     }
   }

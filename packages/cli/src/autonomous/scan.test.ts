@@ -227,6 +227,45 @@ describe("runScan: the tick and the journal", () => {
   });
 });
 
+describe("runScan: the builder limit (DGS-665)", () => {
+  it("a full limit: busy with reason builder-limit, no claim, no tracker call", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    const r = await runScan(mk({ builderFull: () => "limit: builder 2 of 2 in use: a (DGS-5, last event 1 min ago), b (DGS-6, last event 2 min ago). Wait for one to finish." }));
+    expect(r).toMatchObject({ outcome: "busy", candidates: 0 });
+    expect(tracker.calls).toEqual([]);
+    expect(readLock(dir)).toBeNull();
+    expect(events().map((e) => e.kind)).toEqual(["busy"]);
+    expect(events()[0]).toMatchObject({ ticket: null, reason: "builder-limit" });
+    expect(orders()).toEqual([]);
+    expect(readOpen(dir)).toEqual([]);
+  });
+  it("a free slot claims as before", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    const r = await runScan(mk({ builderFull: () => null }));
+    expect(r).toMatchObject({ outcome: "claimed", claimed: "DGS-1" });
+  });
+  it("a held lock still returns busy first, with the lock's ticket and no builder-limit reason", async () => {
+    acquireLock(dir, { ticket: "DGS-9", taskId: "t9", claimedAt: NIGHT.toISOString(), claimedAtUtc7: "", order: "", scanId: "s" });
+    let called = false;
+    const r = await runScan(mk({ builderFull: () => { called = true; return "limit: x"; } }));
+    expect(r.outcome).toBe("busy");
+    expect(called).toBe(false);
+    expect(events()[0]).toMatchObject({ ticket: "DGS-9" });
+    expect(events()[0]).not.toHaveProperty("reason");
+  });
+  it("a throw inside builderFull never stops the scan", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    const r = await runScan(mk({ builderFull: () => { throw new Error("boom"); } }));
+    expect(r.outcome).toBe("claimed");
+  });
+  it("a dry run does not look at the limit", async () => {
+    tracker.add({ id: "t1", status: "to do", key: "DGS-1" });
+    let called = false;
+    await runScan(mk({ dryRun: true, builderFull: () => { called = true; return "limit: x"; } }));
+    expect(called).toBe(false);
+  });
+});
+
 describe("runScan: walk and claim", () => {
   it("empty to do: none, one scan event, no tracker writes", async () => {
     const r = await runScan(mk());

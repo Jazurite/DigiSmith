@@ -25,6 +25,8 @@ import { runScheduleRelease } from "./schedule-release.ts";
 import { makeScanGuard } from "./scan-guard.ts";
 import { autonomousDir, newestEvent, readLock } from "./state.ts";
 import { readScanIntervalFile } from "./guardrails.ts";
+import { currentCount } from "../run/limit-check.ts";
+import { limitLine, refusal } from "../run/limit.ts";
 import { closeBreakerAsJack, runAway, runBack } from "./switch.ts";
 import { ClickUpLoTracker } from "./tracker-clickup.ts";
 import type { EventKind, Tracker } from "./types.ts";
@@ -182,6 +184,9 @@ function newestReport(dir: string): string | null {
   return best?.file ?? null;
 }
 
+/** The run count reads the lock from the same folder the command uses. */
+const limitEnv = (d: AutonomousDeps): NodeJS.ProcessEnv => ({ ...process.env, AUTONOMOUS_DIR: d.dir });
+
 function statusLines(d: AutonomousDeps): string[] {
   const now = d.now();
   const away = readAway(d.dir);
@@ -198,6 +203,14 @@ function statusLines(d: AutonomousDeps): string[] {
   // The interval the scheduler's autonomous-scan job uses: the main checkout's config, 30 when the value is missing or bad.
   const scan = readScanIntervalFile(d.mainRepo ?? MAIN_CHECKOUT);
   lines.push(scan.problems.length ? `scan interval: ${scan.minutes} min (fallback: ${scan.problems[0]})` : `scan interval: ${scan.minutes} min (config)`);
+  try {
+    const { count, problems } = currentCount(limitEnv(d), d.mainRepo ?? MAIN_CHECKOUT, d.now().getTime());
+    lines.push(limitLine(count));
+    for (const p of problems) lines.push(`problem: ${p}`);
+    if (count.stale.length > 0) lines.push(`stale runs: ${count.stale.map((s) => s.run).join(", ")} (clear with dg run event <id> lost)`);
+  } catch (e) {
+    lines.push(`limits: unreadable (${e instanceof Error ? e.message : String(e)})`);
+  }
   const ev = newestEvent(d.dir, SCAN_KINDS);
   lines.push(ev ? `last scan: ${utc7(ev.ts)} ${ev.kind}` : "last scan: none");
   const report = newestReport(d.dir);
@@ -234,6 +247,7 @@ export function createAutonomousCommand(depsFactory: () => AutonomousDeps = defa
                 exec: d.exec, fileExists: d.fileExists, dryRun: argv.dryRun as boolean, nexus: d.nexus,
                 tick: makeTick(d, false, argv.repo as string),
                 guard: makeScanGuard(d.git ?? realGit, argv.repo as string),
+                builderFull: () => refusal(currentCount(limitEnv(d), d.mainRepo ?? MAIN_CHECKOUT).count, "builder"),
               });
               const lines: string[] = [];
               lines.push(`scan: ${r.outcome}${r.claimed ? ` ${r.claimed}` : ""} (${r.candidates} candidates, ${r.skipped.length} skipped)`);

@@ -10,6 +10,7 @@ import { FakeTracker } from "./fake-tracker.test-util.ts";
 import { MAIN_CHECKOUT } from "./observers-real.ts";
 import { createAutonomousCommand, type AutonomousDeps } from "./index.ts";
 import { appendEvent } from "./state.ts";
+import { createRun } from "../run/record.ts";
 import { plan, readJournal, resultsOf, settle } from "./journal.ts";
 
 const DAY = new Date("2026-10-21T03:00:00.000Z"); // 10:00 UTC+7
@@ -481,5 +482,44 @@ describe("schedule-release", () => {
     await parse(["autonomous", "schedule-release"]);
     expect(errLog.mock.calls.flat().join("\n")).toContain("autonomous: 401");
     expect(process.exitCode).toBe(1);
+  });
+});
+
+describe("dg autonomous status: limits (DGS-665)", () => {
+  let savedDepot: string | undefined;
+  let repo: string;
+  beforeEach(() => {
+    savedDepot = process.env.DIGISMITH_DEPOT_DIR;
+    process.env.DIGISMITH_DEPOT_DIR = join(root, "depot");
+    repo = join(root, "limits-repo");
+    mkdirSync(join(repo, ".digismith"), { recursive: true });
+  });
+  afterEach(() => {
+    if (savedDepot === undefined) delete process.env.DIGISMITH_DEPOT_DIR; else process.env.DIGISMITH_DEPOT_DIR = savedDepot;
+  });
+  const status = () => yargs(["autonomous", "status"]).exitProcess(false).command(createAutonomousCommand(() => ({ ...deps(), mainRepo: repo }))).strict().parseAsync();
+  it("prints the limits line for an empty depot and no stale line", async () => {
+    await status();
+    expect(out()).toContain("limits: builder 0/2, reviewer 0/1, role 0/1");
+    expect(out()).not.toContain("stale runs:");
+  });
+  it("counts the factory lock as a builder", async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "lock.json"), JSON.stringify({ ticket: "DGS-9" }));
+    await status();
+    expect(out()).toContain("limits: builder 1/2, reviewer 0/1, role 0/1");
+  });
+  it("prints a problem line for a bad limit", async () => {
+    writeFileSync(join(repo, ".digismith", "config.yml"), "nightwatch:\n  limits:\n    builder: many\n");
+    await status();
+    expect(out()).toContain('problem: nightwatch.limits.builder: "many"');
+  });
+  it("prints a stale runs line for a builder with no event for hours", async () => {
+    const r = createRun({ ticket: "DGS-1", role: "builder", order: "/o.md" }, process.env, DAY);
+    const runDir = join(process.env.DIGISMITH_DEPOT_DIR as string, "runs", "DGS-1", r.run);
+    writeFileSync(join(runDir, "events.jsonl"), JSON.stringify({ schema: "nightwatch-event/v1", seq: 1, ts: new Date(DAY.getTime() - 3 * 3600_000).toISOString(), run: r.run, type: "tool", data: {} }) + "\n");
+    await status();
+    expect(out()).toContain("limits: builder 0/2, reviewer 0/1, role 0/1");
+    expect(out()).toContain(`stale runs: ${r.run} (clear with dg run event <id> lost)`);
   });
 });
