@@ -79,6 +79,17 @@ describe('tables and cards', () => {
     await nextTick()
     expect(el()).toBe('0:50:02')
   })
+  it('WorkersTable: an ended row keeps its frozen Elapsed and has no OcTick', async () => {
+    const workers = [runFixture({ state: 'ended', phase: null, phaseSince: null, endedAt: '2026-10-22T02:40:00.000Z', elapsedSec: 1800 })]
+    const { Host, now } = host(WorkersTable, { workers })
+    const w = await mountSuspended(Host)
+    const el = () => w.find('tbody tr:first-child td[data-label="Elapsed"]').text()
+    expect(w.findComponent(OcTick).exists()).toBe(false)
+    expect(el()).toBe('0:30:00')
+    now.value += 5000
+    await nextTick()
+    expect(el()).toBe('0:30:00')
+  })
   it('PipelineBar: only the current step ticks', async () => {
     const { Host, now } = host(PipelineBar, { steps: runDetailFixture().pipeline })
     const w = await mountSuspended(Host)
