@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-622: seat, trigger and lifecycle events — Implementation Report</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+    --good: #1a7f4b; --good-bg: #eefaf3; --warn: #9a6400; --warn-bg: #fdf6e3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23;
+      --good:#4fd889; --good-bg:#12271c; --warn:#e0b34d; --warn-bg:#2b230f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--good); color: var(--good);
+    background: var(--good-bg);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; margin: 1rem 0; }
+  .callout.action { border-left-color: var(--warn); background: var(--warn-bg); }
+  .status-ok { color: var(--good); font-weight: 600; }
+  .status-fixed { color: var(--warn); font-weight: 600; }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem;
+    padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .commit-list li:last-child { border-bottom: none; }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>DGS-622: seat, trigger and lifecycle events for automatic runs — Implementation Report</h1>
+  <div class="meta"><span>Date: 2026-10-26</span><span>Ticket: <strong>DGS-622</strong></span><span>Commit range: <code>9320aa0b..49fe6224</code></span></div>
+</header>
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Automatic runs now show a real Trigger (<code>auto</code>, never <code>unknown</code>), the project as Key when they have no ticket, and a Seat from <code>DIGISMITH_SEAT</code> or the login name. The tool hook writes <code>review_ready</code>, <code>merged</code> and <code>pushed</code> for builder runs. Final review: clean after one fix wave. Reference documents: the <a href="spec.md">spec</a> and <a href="plan.md">plan</a>. Review findings: <a href="findings.md">findings.md</a>.</p>
+  <p>The Runs table baseline (<code>oculus-runstable--default</code>, light and dark, desktop) changed: Key shows the project on three automatic rows, and Trigger reads <code>auto</code> where it read <code>unknown</code>.</p>
+</section>
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="cards">
+    <div class="card"><span class="tag">Task 1</span><h4>Trigger words and the Key column</h4><p><code>triggerOf</code> reads auto, manual, night-scan or away; Key falls back to the project.</p></div>
+    <div class="card"><span class="tag">Task 2</span><h4>Seat and probe tag</h4><p><code>seatOf</code> fills the seat of an automatic run without reading a token; probe panes get project <code>usage-probe</code>.</p></div>
+    <div class="card"><span class="tag">Task 3</span><h4>Seat name in claude-account env</h4><p><code>export DIGISMITH_SEAT=&lt;name&gt;</code> for a seat and a gateway.</p></div>
+    <div class="card"><span class="tag">Task 4</span><h4>Lifecycle events</h4><p><code>review_ready</code>, <code>merged</code> and <code>pushed</code> from the tool hook, checked against the repo.</p></div>
+  </div>
+</section>
+<section id="build">
+  <h2>Build Process</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th></tr>
+    <tr><td>Task 1: trigger and key</td><td>derive.ts, types.ts, oculus.ts, RunsTable.vue, fixtures, tests</td><td>Approved (1 Minor, fixed)</td></tr>
+    <tr><td>Task 2: seat and probe tag</td><td>seat.ts, auto.ts, label.ts, tests</td><td>Approved, no findings</td></tr>
+    <tr><td>Task 3: claude-account seat line</td><td>claude-account, test-claude-account.sh</td><td>Approved (1 Minor, fixed)</td></tr>
+    <tr><td>Task 4: lifecycle events</td><td>lifecycle.ts, hook.ts, events.ts, tests</td><td>Approved (2 Minor, fixed)</td></tr>
+    <tr><td>Ticket review</td><td>whole branch</td><td>Round 1: 2 Important, 1 Minor, all fixed; round 2 clean</td></tr>
+  </table></div>
+</section>
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">c95c5bb9</span> docs(dgs-622): add the spec and plan</li>
+    <li><span class="sha">71e3bdad</span> docs(dgs-622): add the plan</li>
+    <li><span class="sha">82119032</span> docs(dgs-622): add the plan</li>
+    <li><span class="sha">4f9dd9a0</span> feat(oculus): read auto for automatic runs and show the project as key</li>
+    <li><span class="sha">b2f48e02</span> test(oculus): cover the builder with a claim in the unknown loop</li>
+    <li><span class="sha">b89b0f39</span> feat(run): fill the seat of an automatic run and tag usage probes</li>
+    <li><span class="sha">b784d528</span> feat(claude-account): export the seat name with the login</li>
+    <li><span class="sha">d087c01e</span> test(claude-account): check the seat line against every fake secret</li>
+    <li><span class="sha">474e531e</span> feat(run): write review_ready, merged and pushed from the tool hook</li>
+    <li><span class="sha">e0034e6d</span> fix(run): move waitFor to events and accept a quoted ticket key</li>
+    <li><span class="sha">d04940fd</span> fix(run): confirm merged by its ref and limit pushed to the same repo</li>
+    <li><span class="sha">49fe6224</span> test(oculus): update the Runs table baseline for Key and Trigger</li>
+  </ul>
+</section>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # DGS-622 plan: seat, trigger and lifecycle events for automatic runs
 
+Status: built and reviewed 2026-10-26; Tasks 1 to 4 done, ticket review clean after one fix wave (see `report.md`, `findings.md`).
+
 Spec: `spec.md` in this folder. Work in the worktree `.worktrees/dgs-622`, branch `DGS-622__run-seat-trigger`. Test first in every task. Fake clients and temp folders only: no real depot, no real herdr, no ClickUp.
 
 Setup (fresh worktree): `pnpm install --frozen-lockfile` (inside the worktree only, never in the depot clone). `pnpm --filter @digismith/clickup-client build` only if a test import fails for a missing build.
