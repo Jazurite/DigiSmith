@@ -17,10 +17,16 @@
 </head>
 <body>
 <h1>Factory claim without a milestone for Projects tickets — Implementation Report</h1>
-<div class="meta">Date: 2026-10-26 · Ticket: <strong>DGS-658</strong> · Order: sv-06</div>
+<div class="meta">
+  <span>Date: 2026-10-26</span>
+  <span>Ticket: <strong>DGS-658</strong></span>
+  <span>Commit range: <code>dceb67f..3844476</code></span>
+</div>
 
+<section id="summary">
 <h2>Summary</h2>
 <p>The factory's Definition of Ready (<code>checkReady</code>) refused every ticket without a milestone. A ticket whose list sits in the Projects folder (<code>1301150000003307</code>, Emma, personal) now needs no milestone. Clan tickets keep the check. Sign-off stays required everywhere. Built test-first and executed directly in one session; a fresh agent reviewed the whole branch and found no correctness findings. Reference documents: the <a href="design.md">design</a> and the <a href="plan.md">plan</a>.</p>
+</section>
 
 <h2>What was delivered</h2>
 <ul>
