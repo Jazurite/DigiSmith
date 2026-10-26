@@ -46,7 +46,7 @@ Replace `use-now.test.ts` with these tests (all `vi.useFakeTimers()`, system tim
 
 1. `moves every 30 s when nothing is running`: `useNow()` (no option). After `advanceTimersByTime(29_999)` the value is unchanged; after 1 more ms it is `start + 30_000`.
 2. `moves every second while fast is on and the tab is visible`: `fast = ref(true)`, `useNow({ fast })`. After `advanceTimersByTime(3_000)` the value is `start + 3_000`.
-3. `restarts at once when fast switches on, and goes back to 30 s when it switches off`: start `fast = ref(false)`; `advanceTimersByTime(10_000)`; set `fast.value = true`: the value is `start + 10_000` at once (no advance); `advanceTimersByTime(1_000)` gives `+11_000`. Set `fast.value = false`; `vi.getTimerCount()` is 1; `advanceTimersByTime(29_000)` leaves the value at `start + 11_000` ... (it does not move before 30 s), `advanceTimersByTime(1_000)` moves it.
+3. `restarts at once when fast switches on, and goes back to 30 s when it switches off`: start `fast = ref(false)`; `advanceTimersByTime(10_000)`; set `fast.value = true`: the value is `start + 10_000` at once (no advance); `advanceTimersByTime(1_000)` gives `+11_000`. Set `fast.value = false`; `vi.getTimerCount()` is 1; `advanceTimersByTime(29_000)` leaves the value at `start + 11_000` (it does not move before 30 s), then `advanceTimersByTime(1_000)` moves it.
 4. `falls back to 30 s in a hidden tab and restarts at once when the tab returns`: `fast = ref(true)`; `setVisibility('hidden')`; `advanceTimersByTime(5_000)` leaves the value unchanged; `advanceTimersByTime(25_000)` moves it once; `setVisibility('visible')`: the value is the current `Date.now()` at once and `advanceTimersByTime(1_000)` moves it by 1 s.
 5. `starts hidden: the first rate is 30 s`: call `setVisibility('hidden')` before `useNow({ fast: ref(true) })`; no change after 29 s.
 6. `never runs two timers`: after every switch in tests 3 and 4, `expect(vi.getTimerCount()).toBe(1)`.
@@ -144,7 +144,10 @@ git commit -m "feat(oculus): the page clock ticks every second while a run is ru
 8. `BudgetCard: the minutes follow the clock when phaseSince is given`: `budget = { phase: 'building', limitMin: 45, elapsedMin: 41, ... }`, `phaseSince = '2026-10-22T02:19:00.000Z'`, clock `03:00:00Z`: text `building 0:41 of 45 min`; after `+= 4 * 60_000` text `building 0:45 of 45 min`, the bar width `100%`; after `+= 60_000` it contains `(over budget)`. Without `phaseSince` the text stays `building 0:41 of 45 min` whatever the clock does.
 9. `no live region in the cells`: the mounted RunsTable, PipelineBar and BudgetCard contain no `[aria-live]`, `[role="status"]`, `[role="timer"]` element.
 
-Also add to `app/pages/oculus/pages.test.ts` (read how it mocks `useNow`/polls first; it already mounts `Runs`): `Runs page: the fast clock is on only when a shown run is running`. Mock `useNow` with `mockNuxtImport` is NOT needed: instead spy `FAST_MS`/`SLOW_MS` through the timers: with `vi.useFakeTimers()` mount the page with the runs fixture, `vi.getTimerCount()` includes one interval; `vi.advanceTimersByTime(2_000)` moves the Duration text by 2 s. With a fixture holding only `ended` and `lost` rows the Duration text does not move after 2 s and moves after 30 s. If this test is awkward under `mountSuspended`, assert the same through the `fast` getter: extract it as `const anyRunning = (runs: RunRow[]) => runs.some(isRunning)` in `oc-format.ts`, unit-test that (`anyRunning([]) === false`), and keep the page test to the one running case.
+Also add to `app/pages/oculus/pages.test.ts` (read how it mounts `Runs` first), with `vi.useFakeTimers()`:
+- `Runs page: the clock ticks every second while a shown run is running`: mount with the runs fixture (it has running rows); `vi.advanceTimersByTime(2_000)`; the first running row's Duration text is 2 s later.
+- `Runs page: the clock stays at 30 s when no shown run is running`: mount with a runs fixture whose rows are all `ended` or `lost`; after 2 s the first `lost` row's Duration text is unchanged; after 30 s it moved.
+- `anyRunning` is not needed: the page uses `.some(isRunning)` inline.
 
 - [ ] **Step 2: Run them and see them fail**
 
@@ -272,14 +275,18 @@ test('Run page: the current step and the budget text move on the minute', async 
 (The fixture's budget phase since is `02:46:00`; check the actual stub numbers with a first run and set the budget text assertion to what the stub gives at the start and after +60 s. Do not guess: read the rendered text, then assert it.)
 
 Switch the specs that assert or screenshot seconds to the frozen clock:
-- `oculus.spec.ts`: the two DGS-613 tests (`Runs: the Duration cell shows the running phase and its time`, `Run page: the strip shows durations...`) call `await freezeClock(page, '2026-10-22T03:00:00Z')` first (a second `install` is not allowed: use a fresh `page` state by calling `freezeClock` only in a `test.describe` of its own, or call `page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'))` alone, because `beforeEach` already installed the clock). Use `setFixedTime` alone in `oculus.spec.ts`.
-- `oculus-axe.spec.ts` test `the Duration cell and the strip read times in words`: replace its `page.clock.install(...)` line with `await freezeClock(page, '2026-10-22T03:00:00Z')`.
+- `oculus.spec.ts`: its `beforeEach` already calls `page.clock.install` at `2026-10-22T03:00:00Z`, and a second `install` is not allowed. In the two DGS-613 tests (`Runs: the Duration cell shows the running phase and its time`, `Run page: the strip shows durations...`) call `await page.clock.setFixedTime(new Date('2026-10-22T03:00:00Z'))` before `page.goto`. The three new tests above do NOT freeze.
+- `oculus-axe.spec.ts` test `the Duration cell and the strip read times in words`: replace its `page.clock.install(...)` line with `await freezeClock(page, '2026-10-22T03:00:00Z')` (import it from `../e2e/freeze-clock.ts`).
 - `oculus-mobile.spec.ts`: replace `await page.clock.install({ time: new Date('2026-10-22T03:00:00Z') })` with `await freezeClock(page, '2026-10-22T03:00:00Z')`.
 
-- [ ] **Step 2: Run them and see the new ones fail on main's code, pass on this branch**
+- [ ] **Step 2: Run them**
 
-Run: `pnpm --dir scripts/nexus-web exec playwright test tests/e2e/oculus.spec.ts -g "counts every second|hidden tab|move on the minute"` after `pnpm --dir scripts/nexus-web generate` (the e2e script runs `generate` first; the `-g` form needs it done once).
-Expected on this branch: PASS. (To see the red state, `git stash` is NOT allowed: temporarily check out `main`'s `use-now.ts` with `git show main:scripts/nexus-web/app/utils/use-now.ts`, regenerate, run, and put the file back; skip this if time is short. The unit tests in Task 1 already prove red/green.)
+```
+pnpm --dir scripts/nexus-web generate
+pnpm --dir scripts/nexus-web exec playwright test tests/e2e/oculus.spec.ts -g "counts every second|hidden tab|move on the minute|Duration cell shows|strip shows"
+pnpm --dir scripts/nexus-web exec playwright test tests/a11y/oculus-axe.spec.ts -g "read times in words"
+```
+Expected: PASS. (The red state is covered by the Task 1 and Task 2 unit tests; no stash or checkout of `main` files here.)
 
 - [ ] **Step 3: Commit**
 
