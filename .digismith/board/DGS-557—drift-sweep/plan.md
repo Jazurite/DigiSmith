@@ -1,6 +1,6 @@
 # DGS-557 Drift Sweep Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A Nexus scheduler job `drift-sweep` runs `drift-check --sweep` every 10 minutes over every checkout under `~/Workspace`, and the session-start alarm shows what it found.
 
@@ -44,7 +44,7 @@
   ```
   CLI: `--sweep` (with the existing `--root`) calls `runSweep`, prints one `<repo>: <n> eol, <m> mode` or `<repo>: broken git link (<gitdir>)` line per drifting repo, exits 0.
 
-- [ ] **Step 1: Write the failing tests** (temp git repos with `core.autocrlf=input` and `core.fileMode=false`, a temp depot dir)
+- [x] **Step 1: Write the failing tests** (temp git repos with `core.autocrlf=input` and `core.fileMode=false`, a temp depot dir)
   - Two drifting repos, one clean, one broken link: `runSweep` returns all four in `repos`; the state file holds the same.
   - `changedRepos(null, state)` returns the drifting and broken repos only (a clean repo seen first time is not a change worth a line).
   - A second sweep with no change: CSV has no new line.
@@ -53,15 +53,15 @@
   - `count` that returns `note: 'timeout'` for one repo: that repo is in the state with note `timeout`, the other repos are still counted.
   - CLI: exit 0 with drift present; exit 1 with a missing `--root`.
   - Read-only: HEAD, index and `.git/config` of every repo are byte-identical after a sweep.
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
   Run: `pnpm vitest run scripts/workbox-health/drift-check.test.ts`
   Expected: FAIL, `runSweep` not defined.
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
   - `runSweep`: discover, count each repo with `REPO_LIMIT_MS` (the real count wraps the git calls with `execFileSync(..., { timeout })`; a timeout error becomes `{ eol: null, mode: null, broken: false, note: 'timeout' }`), build the state, read the previous state file (missing or unreadable = `null`), append the `changedRepos` lines to the CSV (`time_utc7,repo,eol,mode,note`), write the state atomically (write `<file>.tmp`, `renameSync`).
   - `changedRepos`: compare by `repo`. Changed = new and drifting or broken or timeout; or `eol` or `mode` or `broken` or `note` different from the previous result. Recovery = previous drifting or broken, now clean: note `sweep:recovered`.
   - Wire `--sweep` into the CLI. State and CSV paths come from `$DIGISMITH_DEPOT_DIR` or `~/.digismith-depot/observability/`.
-- [ ] **Step 4: Run to verify it passes** (same command; Expected: PASS)
-- [ ] **Step 5: Commit**
+- [x] **Step 4: Run to verify it passes** (same command; Expected: PASS)
+- [x] **Step 5: Commit**
   ```bash
   git add scripts/workbox-health/drift-check.ts scripts/workbox-health/drift-check.test.ts
   git commit -m "feat(dgs-557): add the drift-check sweep mode"
@@ -81,7 +81,7 @@
   ```
   Returns zero, one or two lines. `--alarm` prints its own line for the current repo first, then these lines.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
   - Another repo drifting, state fresh: one line `DigiSmith: drift alarm (sweep 14:05 UTC+7): Emma/shopify-dev 2 eol, 0 mode  (DGS-557)`.
   - Seven drifting repos: five named, then `and 2 more`.
   - Only the current repo drifting: no sweep line (its own alarm line covers it).
@@ -89,12 +89,12 @@
   - State older than 60 minutes: the stale line with the `ranAtUtc7` time.
   - State file missing: no line. State file with broken JSON: no line, exit 0.
   - `--alarm` never writes the CSV.
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
   Run: `pnpm vitest run scripts/workbox-health/drift-check.test.ts -t alarm`
   Expected: FAIL.
-- [ ] **Step 3: Implement** `sweepAlarmLines`, call it from the `--alarm` path inside the existing try/catch that swallows errors. The repo name in the line is the path relative to the root, as DGS-498 prints it. The sweep line uses two spaces before `(DGS-557)` exactly as in the wording above.
-- [ ] **Step 4: Run to verify it passes** (the whole file; Expected: PASS)
-- [ ] **Step 5: Commit**
+- [x] **Step 3: Implement** `sweepAlarmLines`, call it from the `--alarm` path inside the existing try/catch that swallows errors. The repo name in the line is the path relative to the root, as DGS-498 prints it. The sweep line uses two spaces before `(DGS-557)` exactly as in the wording above.
+- [x] **Step 4: Run to verify it passes** (the whole file; Expected: PASS)
+- [x] **Step 5: Commit**
   ```bash
   git add scripts/workbox-health/drift-check.ts scripts/workbox-health/drift-check.test.ts
   git commit -m "feat(dgs-557): show the sweep result in the drift alarm"
@@ -111,11 +111,11 @@
 - Consumes: `defineJob`, `validateJobs`, `homedir`, `join` (already imported in `registry.ts`).
 - Produces: the job `drift-sweep`.
 
-- [ ] **Step 1: Write the failing test** in `registry.test.ts`: `JOBS` has a job named `drift-sweep` with `command.file === process.execPath`, `args` equal to `['--experimental-strip-types', <home>/.digismith-depot/bin/drift-check.ts, '--sweep']`, `schedule.everyMinutes === 10`, `catchUp === 'skip'`, `timeoutMs === 240000`; `validateJobs(JOBS)` does not throw.
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 1: Write the failing test** in `registry.test.ts`: `JOBS` has a job named `drift-sweep` with `command.file === process.execPath`, `args` equal to `['--experimental-strip-types', <home>/.digismith-depot/bin/drift-check.ts, '--sweep']`, `schedule.everyMinutes === 10`, `catchUp === 'skip'`, `timeoutMs === 240000`; `validateJobs(JOBS)` does not throw.
+- [x] **Step 2: Run to verify it fails**
   Run: `cd scripts/nexus-api && pnpm vitest run src/scheduler/registry.test.ts`
   Expected: FAIL, job missing.
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
   ```ts
   const DRIFT_CHECK = join(homedir(), '.digismith-depot', 'bin', 'drift-check.ts')
   ```
@@ -130,10 +130,10 @@
   }),
   ```
   Add one paragraph to the workbox-health notes: what the sweep covers, the state file path, the alarm lines, how to run it by hand (`node --experimental-strip-types ~/.digismith-depot/bin/drift-check.ts --sweep`).
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
   Run: `cd scripts/nexus-api && pnpm vitest run`
   Expected: PASS, the existing route and scheduler tests unchanged.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add scripts/nexus-api/src/scheduler/registry.ts scripts/nexus-api/src/scheduler/registry.test.ts <the notes file>
   git commit -m "feat(dgs-557): schedule the drift sweep in the Nexus registry"

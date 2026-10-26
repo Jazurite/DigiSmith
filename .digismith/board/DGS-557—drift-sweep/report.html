@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scheduled drift sweep of every checkout — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; } }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  h1 { font-size:1.7rem; } h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; } th,td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; } th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); } .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<h1>Scheduled drift sweep of every checkout — Implementation Report</h1>
+<div class="meta"><span>Date: 2026-10-26</span> <span>Ticket: <strong>DGS-557</strong></span> <span>Commit range: <code>80beb4de..c0f1d0b4</code></span></div>
+
+<section id="summary">
+<h2>Summary</h2>
+<p>A new Nexus scheduler job <code>drift-sweep</code> runs <code>drift-check.ts --sweep</code> from the depot every 10 minutes and checks every checkout under <code>~/Workspace</code>. Each repo has a 30 s limit. The sweep writes <code>drift-sweep.json</code> atomically and appends to <code>drift.csv</code> only when a repo's result changed. It exits 0 when it ran, even with drift. The SessionStart alarm reads the state file and prints one sweep line for other drifting repos (cap 5, then <code>and k more</code>), or a stale line when the state is older than 60 minutes. Built by one worker from the plan (<a href="plan.md">plan</a>, <a href="spec.md">spec</a>), test first, Tasks 1 to 3. Tasks 1 and 2 share one commit. Task 4 (install, API restart, first use) comes after the merge.</p>
+<p>The plan named no notes file, so the sweep paragraph is in a new <code>scripts/workbox-health/README.md</code>. The job touches the protected path <code>scripts/nexus-api/src/scheduler/registry.ts</code>; the Maestro approved the merge.</p>
+</section>
+
+<section id="review">
+<h2>Whole-branch review (Claude, independent agent)</h2>
+<table>
+<tr><th>Severity</th><th>Finding</th><th>Resolution</th></tr>
+<tr><td>Low</td><td>The CSV was written before the state file, so a failed state write left duplicate CSV lines on every later run.</td><td>Fixed: the state tmp file is written first, the CSV second, then the rename; test added.</td></tr>
+<tr><td>Low</td><td>The sweep alarm lines were not printed when the session started outside a git repo.</td><td>Fixed: no current repo means every drifting repo is "other"; test added.</td></tr>
+<tr><td>Low</td><td>A missing state file prints no line (the spec asks for the stale line when the job is installed).</td><td>Kept as the plan says: no install marker exists.</td></tr>
+</table>
+<p>Tests: final full suite 288 files, 4647 of 4650 tests green (<code>--maxWorkers=2</code>). One failure was this branch (the job list in <code>routes.test.ts</code>), fixed and rerun green. Two <code>oculus/index.test.ts</code> failures come from an unbuilt <code>@digismith/clickup-client</code> package in the fresh worktree. After the rebase the three changed test files passed: 137 tests.</p>
+</section>
+
+<section id="data">
+<h2>Open steps</h2>
+<p>Task 4: run both install scripts, one Nexus API restart (Jack), run the job once with the token file and check that <code>drift-sweep.json</code> lists the real checkouts.</p>
+</section>
+
+<section id="merge">
+<h2>Commits</h2>
+<ul class="commit-list">
+<li><span class="sha">d1c0ebd6</span> feat(dgs-557): add the drift-check sweep mode and the sweep alarm line</li>
+<li><span class="sha">1b43d655</span> feat(dgs-557): schedule the drift sweep in the Nexus registry</li>
+<li><span class="sha">52c4ff6c</span> fix(dgs-557): write the sweep state before the CSV and alarm outside a repo</li>
+<li><span class="sha">c0f1d0b4</span> test(dgs-557): list the drift-sweep job in the routes test</li>
+</ul>
+</section>
+<footer>DigiSmith · .digismith/board/DGS-557—drift-sweep/report.html</footer>
+</body>
+</html>
