@@ -48,6 +48,8 @@ A Critical or Important finding, a confirmed ⚠️ item or a spec ❌ blocks (t
 
 ## The run limit (DGS-665)
 
+For the conductor or Maestro, not for the Reviewer worker.
+
 - At most 2 builders (the factory ticket counts as one), 1 reviewer and 1 role are busy at once. `dg run limit` shows the count.
 - `dg run start` refuses a start over the limit and names the open run. Queue the worker and retry at the next checkpoint. Never start the worker some other way.
 - An idle builder (waiting for a merge or a review) is not counted. Before you wake one that is not the factory's with a fix order, run `dg run limit` and wait if its kind is full.
