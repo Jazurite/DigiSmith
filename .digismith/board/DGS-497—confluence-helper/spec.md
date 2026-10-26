@@ -69,7 +69,7 @@ Exit 0 on success (and on a dry run). Exit 1 on any failure, with one plain line
 ## 5. Testing
 
 - Unit tests with vitest and a mocked `fetch`, in the style of `client.test.ts`. Cover: the upload request shape, placeholder found zero, one and many times, marker count changed, 409 passes through without a retry, XML escaping of caption and file name, dry run sends no write request, credentials never appear in any thrown message or output.
-- One live check, run by Jack's order on a scratch page: attach one PNG, place it, read the page. This is the only step that touches real Confluence. The build itself does not need it.
+- One live check, run by Jack's order on the scratch page he named on 2026-10-26: page id 6615105545, space CANE, "Untitled live doc 2026-10-26" (https://emma-sleep.atlassian.net/wiki/x/CYBKigE; empty when named). Attach one PNG, place it, read the page. This is the only step that touches real Confluence. The build itself does not need it.
 
 ## 6. Constraints carried from the ticket
 

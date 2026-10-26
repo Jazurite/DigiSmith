@@ -829,7 +829,7 @@ git add skills/confluence/SKILL.md
 git commit -m "feat(skills): add the confluence skill"
 ```
 
-- [ ] **Step 4: Live check (only when Jack orders it, on a scratch page he names).** Run `history <pageId>` (read only; confirm what an autosaved version looks like and fix the `/autosave/i` test in `listVersions` if the live data differs). Then, with Jack's yes at each write: `attach <pageId> <one.png> --apply`, then `place-images <pageId> --map "<placeholder>=<one.png>" --apply`, then `diff <pageId> <v1> <v2>` and read the page in the browser. Record the result in the report. This step is not part of the build's pass criteria; the mocked tests are.
+- [ ] **Step 4: Live check (only when Jack orders it, on the scratch page he named: page id 6615105545, space CANE, https://emma-sleep.atlassian.net/wiki/x/CYBKigE).** Run `history <pageId>` (read only; confirm what an autosaved version looks like and fix the `/autosave/i` test in `listVersions` if the live data differs). Then, with Jack's yes at each write: `attach <pageId> <one.png> --apply`, then `place-images <pageId> --map "<placeholder>=<one.png>" --apply`, then `diff <pageId> <v1> <v2>` and read the page in the browser. Record the result in the report. This step is not part of the build's pass criteria; the mocked tests are.
 
 ---
 
