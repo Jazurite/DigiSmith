@@ -16,7 +16,7 @@ export interface ClickUpInfo {
 
 export interface CatchUpDeps {
   listCards(project: string): CardRow[];
-  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart & { warnings?: string[]; note?: { updated?: string; stale?: boolean } }>;
+  collectState(opts: { project: string; conductor: string; since: string; notePath?: string }): Promise<StatePart & { warnings?: string[]; note?: { updated?: string; changed?: string; stale?: boolean } }>;
   /** DGS-462: refresh the conductor's state block before collecting; returns its warnings. Absent = no refresh. */
   refresh?(): Promise<string[]>;
   /** DGS-462: commit time of the newest merge on origin/main (ISO), undefined if unknown. */
@@ -79,6 +79,13 @@ async function withClickUp<T extends StatePart>(state: T, deps: CatchUpDeps): Pr
   return { ...state, done, health: { ...state.health, server } };
 }
 
+function ago(ms: number): string {
+  const mins = Math.max(0, Math.round(ms / 60_000));
+  if (mins < 90) return `${mins} min`;
+  const h = Math.round(mins / 60);
+  return h < 48 ? `${h} h` : `${Math.floor(h / 24)} days`;
+}
+
 export async function buildCatchUp(opts: CatchUpOptions, deps: CatchUpDeps): Promise<CatchUpResult> {
   const now = deps.now();
   const warnings: string[] = [];
@@ -108,12 +115,15 @@ export async function buildCatchUp(opts: CatchUpOptions, deps: CatchUpDeps): Pro
   const collected = await deps.collectState({ project: opts.project, conductor: opts.conductor, since: window.from, notePath });
   const state = await withClickUp(collected, deps);
   const updated = collected.note?.updated;
+  const changed = collected.note?.changed;
+  const parts: string[] = [];
   if (updated) {
-    const mins = Math.max(0, Math.round((now.getTime() - Date.parse(updated)) / 60_000));
-    const age = mins < 90 ? `${mins} min` : `${Math.round(mins / 60)} h`;
-    const note = `state block updated ${toUtc7(new Date(updated))}, ${age} old${collected.note?.stale ? ", OLDER than the newest merge" : ""}`;
-    state.health = { ...state.health, server: `${state.health.server}; ${note}` };
+    parts.push(`state block refreshed ${toUtc7(new Date(updated))}, ${ago(now.getTime() - Date.parse(updated))} ago${collected.note?.stale ? ", OLDER than the newest merge" : ""}`);
+    parts.push(changed ? `content changed ${toUtc7(new Date(changed))}, ${ago(now.getTime() - Date.parse(changed))} ago` : "content change time not recorded");
   }
+  const all = [...warnings, ...(state.warnings ?? [])];
+  if (all.length) parts.push(`warnings: ${all.slice(0, 5).join("; ")}${all.length > 5 ? ` (+${all.length - 5} more)` : ""}`);
+  if (parts.length) state.health = { ...state.health, server: `${state.health.server}; ${parts.join("; ")}` };
   const data: CatchUp = {
     done: state.done, running: state.running, waiting: state.waiting, decided: state.decided, parked: state.parked, next: state.next, health: state.health,
     conductor: opts.conductor, window: { from: window.from, to: window.to }, identity: opts.identity, askedBy: opts.session,

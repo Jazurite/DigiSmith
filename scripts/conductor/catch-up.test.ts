@@ -157,12 +157,32 @@ describe("buildCatchUp: the state block (DGS-462)", () => {
     expect(calls.collect).toBe(2);
   });
   it("shows the block's age and says when it is older than the newest merge", async () => {
-    const collect = (stale: boolean) => async () => ({ ...state, note: { updated: "2026-10-13T14:00+07:00", stale } });
+    const collect = (stale: boolean) => async () => ({ ...state, note: { updated: "2026-10-13T14:00+07:00", changed: "2026-10-13T14:00+07:00", stale } });
     const { deps, calls } = fakeDeps({ collectState: collect(true) });
     await buildCatchUp({ ...opts, noWrite: true }, deps);
-    expect(calls.rendered[0].health.server).toBe("up; state block updated 2026-10-13T14:00+07:00, 60 min old, OLDER than the newest merge");
+    expect(calls.rendered[0].health.server).toBe("up; state block refreshed 2026-10-13T14:00+07:00, 60 min ago, OLDER than the newest merge; content changed 2026-10-13T14:00+07:00, 60 min ago");
     const f = fakeDeps({ collectState: collect(false) });
     await buildCatchUp({ ...opts, noWrite: true }, f.deps);
-    expect(f.calls.rendered[0].health.server).toBe("up; state block updated 2026-10-13T14:00+07:00, 60 min old");
+    expect(f.calls.rendered[0].health.server).toBe("up; state block refreshed 2026-10-13T14:00+07:00, 60 min ago; content changed 2026-10-13T14:00+07:00, 60 min ago");
+  });
+  it("shows refresh time and content time apart, and the warnings in Health", async () => {
+    const collect = async () => ({ ...state, warnings: ["w1", "w2"], note: { updated: "2026-10-13T14:00+07:00", changed: "2026-10-10T09:00+07:00" } });
+    const { deps, calls } = fakeDeps({ collectState: collect, refresh: async () => ["herdr failed"] });
+    await buildCatchUp({ ...opts, noWrite: false, refresh: true }, deps);
+    const h = calls.rendered[0].health.server;
+    expect(h).toContain("refreshed 2026-10-13T14:00+07:00, 60 min ago; content changed 2026-10-10T09:00+07:00, 3 days ago");
+    expect(h).toContain("warnings: state-refresh: herdr failed; w1; w2");
+  });
+  it("says the content time is not recorded", async () => {
+    const collect = async () => ({ ...state, note: { updated: "2026-10-13T14:00+07:00" } });
+    const { deps, calls } = fakeDeps({ collectState: collect });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(calls.rendered[0].health.server).toContain("content change time not recorded");
+  });
+  it("caps the warnings at five", async () => {
+    const collect = async () => ({ ...state, warnings: ["a", "b", "c", "d", "e", "f", "g"] });
+    const { deps, calls } = fakeDeps({ collectState: collect });
+    await buildCatchUp({ ...opts, noWrite: true }, deps);
+    expect(calls.rendered[0].health.server).toContain("warnings: a; b; c; d; e (+2 more)");
   });
 });
