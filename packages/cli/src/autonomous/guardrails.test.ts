@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseConfig } from "../../../../scripts/config-parse.ts";
-import { DEFAULT_SCAN_EVERY_MINUTES, parseScanInterval, readGuardrails, readMainConfig } from "./guardrails.ts";
+import { DEFAULT_SCAN_EVERY_MINUTES, parseScanInterval, readGuardrails, readLimitsFile, readMainConfig } from "./guardrails.ts";
 import type { Git } from "./gitx.ts";
 
 const ok = `profile: digismith
@@ -22,7 +22,7 @@ describe("readGuardrails", () => {
     expect(g.budgets).toEqual({ building: 45, review: 60 });
   });
   it("no nightwatch block: no problems, defaults apply", () => {
-    expect(readGuardrails("profile: x\n")).toEqual({ protectedPaths: null, budgets: {}, problems: [], scanEveryMinutes: 30, scanProblems: [] });
+    expect(readGuardrails("profile: x\n")).toEqual({ protectedPaths: null, budgets: {}, problems: [], scanEveryMinutes: 30, scanProblems: [], limits: { builder: 2, reviewer: 1, role: 1 }, staleAfterMinutes: 120, limitProblems: [] });
   });
   it.each([
     ["inline value for protected_paths", "nightwatch:\n  protected_paths: hooks/\n"],
@@ -134,5 +134,41 @@ describe("this repo's own config.yml", () => {
     expect(g.scanEveryMinutes).toBe(15);
     expect(/^  scan_every_minutes: 15\b/m.test(text)).toBe(true);
     expect(g.protectedPaths).toContain("scripts/nexus-api/src/scheduler/");
+  });
+});
+
+describe("limits (DGS-665)", () => {
+  const base = "nightwatch:\n  scan_every_minutes: 15\n";
+  it("defaults to 2, 1, 1 and 120 with no keys", () => {
+    const g = readGuardrails(base);
+    expect(g.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
+    expect(g.staleAfterMinutes).toBe(120);
+    expect(g.limitProblems).toEqual([]);
+    expect(g.problems).toEqual([]);
+  });
+  it("reads a limits block and the stale window", () => {
+    const g = readGuardrails(`${base}  limits:\n    builder: 3\n    reviewer: 0\n    role: 2\n  stale_after_minutes: 60\n`);
+    expect(g.limits).toEqual({ builder: 3, reviewer: 0, role: 2 });
+    expect(g.staleAfterMinutes).toBe(60);
+    expect(g.problems).toEqual([]);
+  });
+  it("falls back per kind on a bad value, as a limit problem and not a guardrail problem", () => {
+    const g = readGuardrails(`${base}  limits:\n    builder: many\n    reviewer: 10\n    role: 2\n  stale_after_minutes: 0\n`);
+    expect(g.limits).toEqual({ builder: 2, reviewer: 1, role: 2 });
+    expect(g.staleAfterMinutes).toBe(120);
+    expect(g.limitProblems).toHaveLength(3);
+    expect(g.problems).toEqual([]);
+  });
+  it("reports an unknown kind and a duplicate key as limit problems", () => {
+    const g = readGuardrails(`${base}  limits:\n    builders: 2\n    role: 1\n    role: 2\n`);
+    expect(g.limitProblems.join(" ")).toMatch(/builders/);
+    expect(g.limitProblems.join(" ")).toMatch(/more than once/);
+    expect(g.problems).toEqual([]);
+  });
+  it("still fails an unknown key under nightwatch", () => {
+    expect(readGuardrails(`${base}  nonsense: 1\n`).problems[0]).toMatch(/unknown guardrail key "nonsense"/);
+  });
+  it("readLimitsFile gives defaults without a file", () => {
+    expect(readLimitsFile("/nonexistent-dir-dgs665")).toEqual({ limits: { builder: 2, reviewer: 1, role: 1 }, staleAfterMinutes: 120, problems: [] });
   });
 });

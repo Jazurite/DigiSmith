@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_LIMITS, DEFAULT_STALE_MINUTES, KINDS, type Limits } from "../run/limit.ts";
 import type { Git } from "./gitx.ts";
 
 const PHASES = ["building", "review", "merge"] as const;
@@ -8,7 +9,7 @@ type Phase = (typeof PHASES)[number];
 export const DEFAULT_SCAN_EVERY_MINUTES = 30;
 const SCAN_MIN = 5;
 const SCAN_MAX = 720; // the scheduler's own limits (validateJobs: everyMinutes)
-export interface Guardrails { protectedPaths: string[] | null; budgets: Partial<Record<Phase, number>>; problems: string[]; scanEveryMinutes: number; scanProblems: string[] }
+export interface Guardrails { protectedPaths: string[] | null; budgets: Partial<Record<Phase, number>>; problems: string[]; scanEveryMinutes: number; scanProblems: string[]; limits: Limits; staleAfterMinutes: number; limitProblems: string[] }
 export type MainConfig = { ok: true; guardrails: Guardrails } | { ok: false; error: string };
 
 const SIGNIFICANT = /^\s*[^#\s]/;
@@ -18,7 +19,7 @@ const unquote = (v: string): string => (/^(["']).*\1$/.test(v) ? v.slice(1, -1) 
 
 /** Reads only the nightwatch: block. Every problem inside it is a guardrail problem; nothing outside it is read. */
 export function readGuardrails(text: string): Guardrails {
-  const out: Guardrails = { protectedPaths: null, budgets: {}, problems: [], scanEveryMinutes: DEFAULT_SCAN_EVERY_MINUTES, scanProblems: [] };
+  const out: Guardrails = { protectedPaths: null, budgets: {}, problems: [], scanEveryMinutes: DEFAULT_SCAN_EVERY_MINUTES, scanProblems: [], limits: { ...DEFAULT_LIMITS }, staleAfterMinutes: DEFAULT_STALE_MINUTES, limitProblems: [] };
   const lines = text.replace(/^﻿/, "").split(/\r?\n/);
   const start = lines.findIndex((l) => /^nightwatch:\s*(#.*)?$/.test(l));
   if (start < 0) {
@@ -60,6 +61,31 @@ export function readGuardrails(text: string): Guardrails {
       } else out.scanEveryMinutes = Number(inline);
       continue;
     }
+    if (key === "stale_after_minutes") {
+      if (seen.has(key)) { out.limitProblems.push(`nightwatch.stale_after_minutes: is set more than once; ${DEFAULT_STALE_MINUTES} used`); out.staleAfterMinutes = DEFAULT_STALE_MINUTES; continue; }
+      seen.add(key);
+      if (kids.length > 0 || !/^[1-9]\d*$/.test(inline) || Number(inline) > 1440) out.limitProblems.push(`nightwatch.stale_after_minutes: "${inline}" is not a whole number from 1 to 1440; ${DEFAULT_STALE_MINUTES} used`);
+      else out.staleAfterMinutes = Number(inline);
+      continue;
+    }
+    if (key === "limits") {
+      if (seen.has(key)) { out.limitProblems.push("nightwatch.limits: is set more than once; the first block is used"); continue; }
+      seen.add(key);
+      if (inline !== "" || kids.length === 0) { out.limitProblems.push("nightwatch.limits: must be a block of 'kind: number' lines; defaults used"); continue; }
+      const lseen = new Set<string>();
+      for (const kid of kids) {
+        const m2 = /^\s+([A-Za-z_]+):\s*(.*)$/.exec(kid);
+        if (!m2) { out.limitProblems.push(`nightwatch.limits: line "${kid.trim()}" is not "kind: number"`); continue; }
+        const [, kind, rawV] = m2;
+        const raw = stripComment(rawV);
+        if (!(KINDS as readonly string[]).includes(kind)) { out.limitProblems.push(`nightwatch.limits.${kind} is not a kind (builder, reviewer, role)`); continue; }
+        if (lseen.has(kind)) { out.limitProblems.push(`nightwatch.limits.${kind} is set more than once; the first value is used`); continue; }
+        lseen.add(kind);
+        if (!/^[0-9]$/.test(raw)) { out.limitProblems.push(`nightwatch.limits.${kind}: "${raw}" is not a whole number from 0 to 9; ${DEFAULT_LIMITS[kind as keyof Limits]} used`); continue; }
+        out.limits[kind as keyof Limits] = Number(raw);
+      }
+      continue;
+    }
     if (seen.has(key)) bad(`${key} is set more than once`);
     seen.add(key);
     if (/^[[{]/.test(inline)) { bad(`${key}: flow syntax ([...] or {...}) is not supported`); continue; }
@@ -84,7 +110,7 @@ export function readGuardrails(text: string): Guardrails {
         out.budgets[name as Phase] = Number(raw);
       }
     } else {
-      bad(`unknown guardrail key "${key}" (protected_paths, budgets, scan_every_minutes)`);
+      bad(`unknown guardrail key "${key}" (protected_paths, budgets, scan_every_minutes, limits, stale_after_minutes)`);
     }
   }
   return out;
@@ -104,6 +130,17 @@ export function readScanIntervalFile(cwd: string): { minutes: number; problems: 
     return { minutes: DEFAULT_SCAN_EVERY_MINUTES, problems: [`nightwatch.scan_every_minutes: .digismith/config.yml cannot be read; ${DEFAULT_SCAN_EVERY_MINUTES} used`] };
   }
   return parseScanInterval(text);
+}
+
+/** The limits in force for the config in `cwd` (the working file). No file or no keys: defaults, no problem; an unreadable file is a problem. */
+export function readLimitsFile(cwd: string): { limits: Limits; staleAfterMinutes: number; problems: string[] } {
+  let text: string;
+  try { text = readFileSync(join(cwd, ".digismith", "config.yml"), "utf-8"); } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { limits: { ...DEFAULT_LIMITS }, staleAfterMinutes: DEFAULT_STALE_MINUTES, problems: [] };
+    return { limits: { ...DEFAULT_LIMITS }, staleAfterMinutes: DEFAULT_STALE_MINUTES, problems: ["nightwatch.limits: .digismith/config.yml cannot be read; defaults used"] };
+  }
+  const g = readGuardrails(text);
+  return { limits: g.limits, staleAfterMinutes: g.staleAfterMinutes, problems: g.limitProblems };
 }
 
 /** The policy is read from main, never from the branch or the working tree. Unreadable = not ok (fail closed). */
