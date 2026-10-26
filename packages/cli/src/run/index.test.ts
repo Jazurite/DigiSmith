@@ -170,41 +170,80 @@ describe("dg run", () => {
 });
 
 describe("dg run limit (DGS-665)", () => {
+  // The limits come from process.cwd()'s config: pin cwd to a temp dir so the repo's own config never leaks in.
+  let cwdDir: string;
+  const writeConfig = (text: string): void => {
+    fs.mkdirSync(path.join(cwdDir, ".digismith"), { recursive: true });
+    fs.writeFileSync(path.join(cwdDir, ".digismith", "config.yml"), text);
+  };
+  beforeEach(() => {
+    cwdDir = fs.mkdtempSync(path.join(os.tmpdir(), "nw-cwd-"));
+  });
+  // capture() restores every mock after a call, so the cwd pin is set again before each one
+  const dgc = (...args: string[]) => {
+    vi.spyOn(process, "cwd").mockReturnValue(cwdDir);
+    return dg(...args);
+  };
+  afterEach(() => {
+    fs.rmSync(cwdDir, { recursive: true, force: true });
+  });
   const runFolders = (): number => {
     const root = path.join(tmp, "runs");
     if (!fs.existsSync(root)) return 0;
     return fs.readdirSync(root).reduce((n, k) => n + fs.readdirSync(path.join(root, k)).length, 0);
   };
   const startTwoBuilders = async (): Promise<void> => {
-    expect((await dg("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).status).toBe(0);
-    expect((await dg("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md")).status).toBe(0);
+    expect((await dgc("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).status).toBe(0);
+    expect((await dgc("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md")).status).toBe(0);
   };
   it("refuses a third builder, names the open runs and writes no record", async () => {
     await startTwoBuilders();
     const before = runFolders();
-    const r = await dg("start", "--ticket", "DGS-3", "--role", "builder", "--order", "/o.md");
+    const r = await dgc("start", "--ticket", "DGS-3", "--role", "builder", "--order", "/o.md");
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/^limit: builder 2 of 2 in use/);
     expect(runFolders()).toBe(before);
   });
   it("lets a reviewer, a maestro and a conductor start while builders are full", async () => {
     await startTwoBuilders();
-    expect((await dg("start", "--ticket", "DGS-3", "--role", "reviewer", "--order", "/o.md")).status).toBe(0);
-    expect((await dg("start", "--ticket", "DGS-3", "--role", "maestro", "--order", "/o.md")).status).toBe(0);
-    expect((await dg("start", "--ticket", "DGS-3", "--role", "conductor", "--order", "/o.md")).status).toBe(0);
+    expect((await dgc("start", "--ticket", "DGS-3", "--role", "reviewer", "--order", "/o.md")).status).toBe(0);
+    expect((await dgc("start", "--ticket", "DGS-3", "--role", "maestro", "--order", "/o.md")).status).toBe(0);
+    expect((await dgc("start", "--ticket", "DGS-3", "--role", "conductor", "--order", "/o.md")).status).toBe(0);
   });
   it("limit prints the status line and one row per busy run, and exits 0", async () => {
     await startTwoBuilders();
-    const r = await dg("limit");
+    const r = await dgc("limit");
     expect(r.status).toBe(0);
     const lines = r.stdout.split("\n");
     expect(lines[0]).toBe("limits: builder 2/2, reviewer 0/1, role 0/1");
     expect(lines.filter((l) => l.startsWith("builder  "))).toHaveLength(2);
   });
   it("limit --json gives the count", async () => {
-    const j = JSON.parse((await dg("limit", "--json")).stdout);
+    const j = JSON.parse((await dgc("limit", "--json")).stdout);
     expect(j.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
     expect(j.problems).toEqual([]);
   });
+  it("limit prints a problem line for a bad config value and uses the default", async () => {
+    writeConfig("nightwatch:\n  limits:\n    builder: many\n");
+    const r = await dgc("limit");
+    expect(r.status).toBe(0);
+    expect(r.stdout.split("\n")[0]).toBe("limits: builder 0/2, reviewer 0/1, role 0/1");
+    expect(r.stdout).toMatch(/^problem: nightwatch\.limits\.builder: "many"/m);
+  });
+  it("limit follows a changed limit in the config", async () => {
+    writeConfig("nightwatch:\n  limits:\n    builder: 1\n");
+    await dgc("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md");
+    const r = await dgc("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/^limit: builder 1 of 1 in use/);
+  });
+  it("limit shows a stale run on a stale row and does not count it", async () => {
+    const id = (await dgc("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).stdout.trim();
+    const dir = findRunDir(id, process.env) as string;
+    const old = new Date(Date.now() - 3 * 3600_000).toISOString();
+    fs.writeFileSync(path.join(dir, "events.jsonl"), JSON.stringify({ schema: "nightwatch-event/v1", seq: 1, ts: old, run: id, type: "tool", data: {} }) + "\n");
+    const r = await dgc("limit");
+    expect(r.stdout.split("\n")[0]).toBe("limits: builder 0/2, reviewer 0/1, role 0/1");
+    expect(r.stdout).toMatch(new RegExp(`^stale  builder  ${id} \\(DGS-1, \\d+ min\\): clear with dg run event ${id} lost$`, "m"));
+  });
 });
-
