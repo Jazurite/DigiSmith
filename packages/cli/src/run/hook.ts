@@ -7,6 +7,7 @@ import { findRunDir, isSafe, runsDir } from "./paths.ts";
 import { appendEvent, HOOK_TYPES } from "./events.ts";
 import { plainName } from "./schema.ts";
 import { findAuto, startAuto } from "./auto.ts";
+import { writeLifecycle } from "./lifecycle.ts";
 
 const LABEL_CLI = path.join(import.meta.dirname, "label-cli.ts");
 
@@ -87,6 +88,14 @@ export function runHook(kind: string, stdin: string, env: NodeJS.ProcessEnv = pr
       label = a?.needsLabel ?? false;
     } else {
       target = findAuto(p, env);
+    }
+    if (k === "tool") {
+      // before the target check: a session with no run of its own, such as the conductor, still merges tickets
+      try {
+        writeLifecycle(p, env);
+      } catch (e) {
+        logError("lifecycle", (e as Error).message, env);
+      }
     }
     if (!target) return;
     try {

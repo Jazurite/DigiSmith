@@ -91,6 +91,18 @@ describe("runHook", () => {
     expect(log).toMatch(/lock timeout/);
     expect(log).not.toMatch(/SECRET-INPUT/);
   });
+  it("runHook tool writes the tool event and the lifecycle event", () => {
+    runHook("tool", JSON.stringify({ session_id: "s1", tool_name: "Bash", tool_input: { command: "dg reviewer pack --type ticket --ticket DGS-581 --workspace /w" }, tool_response: {} }), env);
+    expect(events().map((e) => e.type).sort()).toEqual(["review_ready", "tool"]);
+  });
+  it("a lifecycle failure does not stop the tool event or throw", () => {
+    const other = createRun({ ticket: "DGS-9", role: "builder", order: "/o.md" }, env).run;
+    fs.mkdirSync(path.join(findRunDir(other, env)!, "lock"));
+    const cmd = "dg reviewer pack --type ticket --ticket DGS-9 --workspace /w";
+    expect(() => runHook("tool", JSON.stringify({ session_id: "s1", tool_name: "Bash", tool_input: { command: cmd }, tool_response: {} }), env)).not.toThrow();
+    expect(events().map((e) => e.type)).toEqual(["tool"]);
+    expect(fs.readFileSync(path.join(runsDir(env), "hook-errors.log"), "utf8")).toMatch(/lifecycle .*lock timeout/);
+  });
   it("lets blocked wait for a lock that frees within 2 s", async () => {
     const dir = findRunDir(run, env)!;
     fs.mkdirSync(path.join(dir, "lock"));
