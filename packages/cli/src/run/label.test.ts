@@ -37,6 +37,15 @@ describe("labelRun", () => {
     expect(readRun(dir)).toMatchObject({ role: "builder", role_from: "herdr", ticket: "DGS-598" });
     expect(fs.readFileSync(path.join(dir, "run.json"), "utf8")).not.toMatch(/SECRET/);
   });
+  it("a pane named usage-probe gets project usage-probe and role scout", () => {
+    const probe = JSON.stringify({ result: { agents: [{ name: "usage-probe", pane_id: "w2:p8W", tab_id: "w2:t8W", workspace_id: "w2" }] } });
+    labelRun(dir, env, () => probe);
+    expect(readRun(dir)).toMatchObject({ role: "scout", project: "usage-probe" });
+  });
+  it("a pane named dgs-598 keeps its project", () => {
+    labelRun(dir, env, () => LIST);
+    expect(readRun(dir).project).toBe("DigiSmith");
+  });
   it("gives other, none when the pane is not listed", () => {
     labelRun(dir, env, () => JSON.stringify({ result: { agents: [] } }));
     expect(readRun(dir)).toMatchObject({ role: "other", role_from: "none", ticket: null });

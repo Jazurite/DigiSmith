@@ -38,6 +38,17 @@ afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const start = (p: Record<string, unknown>, e: NodeJS.ProcessEnv = env) => startAuto({ cwd: repo, ...p }, e, new Date("2026-10-24T05:00:00Z"));
 
 describe("startAuto", () => {
+  it("startAuto records DIGISMITH_SEAT as the seat", () => {
+    const a = start({ session_id: "sid-seat", source: "startup" }, { ...env, DIGISMITH_SEAT: "dev0" })!;
+    expect(readRun(a.dir).seat).toBe("dev0");
+  });
+  it("startAuto records the login seat from the fake .claude.json", () => {
+    const home = path.join(tmp, "home");
+    fs.mkdirSync(home);
+    fs.writeFileSync(path.join(home, ".claude.json"), JSON.stringify({ oauthAccount: { emailAddress: "Jack@jazurite.com" } }));
+    const a = start({ session_id: "sid-login", source: "startup" }, { ...env, HOME: home })!;
+    expect(readRun(a.dir).seat).toBe("jack");
+  });
   it("makes a new run under the project with id s-<session_id>", () => {
     const a = start({ session_id: "sid-1", source: "startup", model: "claude-opus-5-5" })!;
     expect(a).toMatchObject({ run: "s-sid-1", created: true, needsLabel: false });

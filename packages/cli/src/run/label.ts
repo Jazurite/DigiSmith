@@ -46,7 +46,8 @@ export function labelRun(dir: string, env: NodeJS.ProcessEnv, list: ListAgents =
       }
     }
     const r = roleOf({ inHerdr: true, looked: true, agentName: entry?.name ?? null, maestroIdentity: false });
-    rewriteRun(dir, { ...record, role: r.role, role_from: r.role_from, ticket: record.ticket ?? ticketOfAgentName(entry?.name ?? null) });
+    const probe = entry?.name.includes("probe") === true;
+    rewriteRun(dir, { ...record, role: r.role, role_from: r.role_from, ticket: record.ticket ?? ticketOfAgentName(entry?.name ?? null), project: probe ? "usage-probe" : record.project });
   } catch (e) {
     logError("label", (e as Error).message, env);
   }

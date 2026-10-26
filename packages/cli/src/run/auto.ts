@@ -2,6 +2,7 @@
 // Automatic runs (DGS-598): a session without DIGISMITH_RUN_ID is a run. node:fs and node:path only.
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { seatOf } from "./seat.ts";
 import { readEvents } from "./events.ts";
 import { maestroIdentityAt } from "./identity-folder.ts";
 import { depotDir, isSafe, runsDir } from "./paths.ts";
@@ -56,7 +57,7 @@ export function startAuto(payload: Record<string, unknown>, env: NodeJS.ProcessE
   const dir = path.join(runsDir(env), folder, run);
   const record: RunRecord = {
     schema: RUN_SCHEMA, run, ticket, role: r.role, order: null,
-    seat: env1(env.DIGISMITH_SEAT), model: plainName(payload.model), plugin_version: pluginVersion(),
+    seat: seatOf(env), model: plainName(payload.model), plugin_version: pluginVersion(),
     base_sha: null, branch: info.branch, worktree: info.worktree,
     herdr: { workspace: env1(env.HERDR_WORKSPACE_ID), tab: env1(env.HERDR_TAB_ID), pane: env1(env.HERDR_PANE_ID) },
     budget: null, created_at: now.toISOString(),
