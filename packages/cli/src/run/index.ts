@@ -1,7 +1,9 @@
 import type { CommandModule } from "yargs";
 import { appendEvent, CONDUCTOR_TYPES, validEventData } from "./events.ts";
 import { findRunDir } from "./paths.ts";
-import { createRun } from "./record.ts";
+import { currentCount } from "./limit-check.ts";
+import { kindOf, limitLine, limitRows, refusal } from "./limit.ts";
+import { createRun, type RunRecord } from "./record.ts";
 import { formatList, formatShow, LIST_DAYS, listRuns, showRun, tailEvents } from "./read.ts";
 
 function fail(message: string): void {
@@ -28,6 +30,12 @@ const startCommand: CommandModule = {
       .option("budget", { type: "string", describe: "JSON object" }),
   handler: (a) => {
     try {
+      // DGS-665: refuse before createRun, so a refused start leaves no record. maestro, conductor and unknown roles give null.
+      const kind = kindOf({ role: a.role as RunRecord["role"], role_from: "start" });
+      if (kind !== null) {
+        const why = refusal(currentCount(process.env, process.cwd()).count, kind);
+        if (why !== null) return fail(why);
+      }
       const r = createRun({
         ticket: a.ticket as string,
         role: a.role as string,
@@ -100,6 +108,19 @@ const listCommand: CommandModule = {
   },
 };
 
+const limitCommand: CommandModule = {
+  command: "limit",
+  describe: "show the concurrent-run limits and who holds each slot",
+  builder: (y) => y.option("json", { type: "boolean", default: false }),
+  handler: (a) => {
+    const { count, problems } = currentCount(process.env, process.cwd());
+    if (a.json) return console.log(JSON.stringify({ ...count, problems }));
+    console.log(limitLine(count));
+    for (const r of limitRows(count)) console.log(r);
+    for (const p of problems) console.log(`problem: ${p}`);
+  },
+};
+
 const showCommand: CommandModule = {
   command: "show <run-id>",
   describe: "show a run record with an event summary",
@@ -126,8 +147,8 @@ const tailCommand: CommandModule = {
 
 const runCommand: CommandModule = {
   command: "run",
-  describe: "Nightwatch run records: start, event, list, show, tail",
-  builder: (y) => y.command(startCommand).command(eventCommand).command(listCommand).command(showCommand).command(tailCommand).demandCommand(1, ""),
+  describe: "Nightwatch run records: start, event, list, limit, show, tail",
+  builder: (y) => y.command(startCommand).command(eventCommand).command(listCommand).command(limitCommand).command(showCommand).command(tailCommand).demandCommand(1, ""),
   handler: () => {},
 };
 

@@ -168,3 +168,43 @@ describe("dg run", () => {
     expect(bad.stderr).toContain("--days must be a whole number of 1 or more");
   });
 });
+
+describe("dg run limit (DGS-665)", () => {
+  const runFolders = (): number => {
+    const root = path.join(tmp, "runs");
+    if (!fs.existsSync(root)) return 0;
+    return fs.readdirSync(root).reduce((n, k) => n + fs.readdirSync(path.join(root, k)).length, 0);
+  };
+  const startTwoBuilders = async (): Promise<void> => {
+    expect((await dg("start", "--ticket", "DGS-1", "--role", "builder", "--order", "/o.md")).status).toBe(0);
+    expect((await dg("start", "--ticket", "DGS-2", "--role", "builder", "--order", "/o.md")).status).toBe(0);
+  };
+  it("refuses a third builder, names the open runs and writes no record", async () => {
+    await startTwoBuilders();
+    const before = runFolders();
+    const r = await dg("start", "--ticket", "DGS-3", "--role", "builder", "--order", "/o.md");
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/^limit: builder 2 of 2 in use/);
+    expect(runFolders()).toBe(before);
+  });
+  it("lets a reviewer, a maestro and a conductor start while builders are full", async () => {
+    await startTwoBuilders();
+    expect((await dg("start", "--ticket", "DGS-3", "--role", "reviewer", "--order", "/o.md")).status).toBe(0);
+    expect((await dg("start", "--ticket", "DGS-3", "--role", "maestro", "--order", "/o.md")).status).toBe(0);
+    expect((await dg("start", "--ticket", "DGS-3", "--role", "conductor", "--order", "/o.md")).status).toBe(0);
+  });
+  it("limit prints the status line and one row per busy run, and exits 0", async () => {
+    await startTwoBuilders();
+    const r = await dg("limit");
+    expect(r.status).toBe(0);
+    const lines = r.stdout.split("\n");
+    expect(lines[0]).toBe("limits: builder 2/2, reviewer 0/1, role 0/1");
+    expect(lines.filter((l) => l.startsWith("builder  "))).toHaveLength(2);
+  });
+  it("limit --json gives the count", async () => {
+    const j = JSON.parse((await dg("limit", "--json")).stdout);
+    expect(j.limits).toEqual({ builder: 2, reviewer: 1, role: 1 });
+    expect(j.problems).toEqual([]);
+  });
+});
+
