@@ -76,7 +76,7 @@
 <li><a href="#event">The Steward event</a></li>
 <li><a href="#neighbours">Neighbours and old tickets</a></li>
 <li><a href="#decoupled">Decoupled from brainstorming</a></li>
-<li><a href="#shapeup">Shape Up: follow and differ</a></li>
+<li><a href="#shapeup">Shape Up: take and leave</a></li>
 <li><a href="#followups">Follow-up tickets</a></li>
 </ol></nav>
 
@@ -102,7 +102,7 @@
 <li><strong>Set boundaries.</strong> Fix the appetite first ("fixed time, variable scope": if the idea does not fit, cut scope, never raise the appetite). Narrow the problem: ask what is really going wrong, and pin it to one specific story that shows why today does not work. Ask the shaper's strategic questions: why does it matter, who is affected, what does success look like, what does it cost compared with the alternatives. Record the baseline: how things get done today without it. A grab-bag ("redesign X", "X 2.0") is reframed or split before shaping. A Big appetite that cannot be narrowed means split. If the problem cannot be pinned down and is not critical, walk away.</li>
 <li><strong>Draw the product-level idea.</strong> In a few sentences: what the user gets, what is in scope and what is out. Mark what is appealing but not core with a leading <code>~</code>. No elements, no breadboard, no technical design.</li>
 <li><strong>Note the risks.</strong> Flag what looks risky or unknown for refinement. Flag only: do not solve it. Propose Sign-off, Mode and the roadmap fit (parent epic or initiative, and milestone) with one reason each. A ticket that fits no initiative is flagged as an open question: it may not be worth a bet yet.</li>
-<li><strong>Ask.</strong> At most three questions to Jack, only on what the draft could not settle. The default three are the book's betting questions: does the problem matter, is the appetite right, is the idea attractive.</li>
+<li><strong>Ask.</strong> At most three questions to Jack, only on what the draft could not settle.</li>
 <li><strong>Self-review the pitch</strong> against the checklist (see "The pitch"), then show it to Jack. On his yes, append it to the ticket description under <code>## Pitch</code> (the raw idea above it stays untouched), then run <code>dg steward event shaped --ticket &lt;KEY&gt; --by shaping</code>.</li>
 <li><strong>Hand over.</strong> Tell Jack the next step: "discover it" or "refine it".</li>
 </ol>
@@ -127,7 +127,7 @@
 <ul>
 <li><strong>Stays in shaping:</strong> boundaries (appetite, narrowed problem), the product-level idea, scope in and out, flagged risks, the pitch.</li>
 <li><strong>Moves to refinement:</strong> find the elements (element list, breadboard, fat marker sketch where layout is the problem) and address rabbit holes (walk the use case in slow motion, question each part that looks solved, then patch, fence off as out of bounds, or cut back). The refinement skill takes the flagged risks as its starting list.</li>
-<li><strong>Back-edge:</strong> if refinement finds the idea does not fit the appetite, the ticket goes back to shaping. It is never stretched to fit (Shape Up's circuit-breaker rule).</li>
+<li><strong>Back-edge:</strong> if refinement finds the idea does not fit the appetite, the ticket goes back to shaping. It is never stretched to fit.</li>
 </ul></section>
 
 <section id="event"><h2>The Steward event</h2>
@@ -162,17 +162,18 @@
 <li><strong>No cross-reference either way.</strong> Shaping never mentions or invokes brainstorming. The skill list gives each a clear trigger: a <code>backlog</code> ticket (or a <code>concept</code> ticket without a pitch) goes to shaping, a ticket in <code>refinement</code> goes to brainstorming. A <code>refinement</code> ticket without a pitch is sent back to shaping by the Maestro, not by a reference inside a skill.</li>
 </ul></section>
 
-<section id="shapeup"><h2>Shape Up: where we follow it and where we differ</h2>
-<p>The whole book was read (foreword, chapters 1 to 15, conclusion, three appendices, glossary). Shaping (chapters 2 to 6) is the skill. The rest maps onto DigiSmith like this.</p>
+<section id="shapeup"><h2>Shape Up: what we take and what we leave</h2>
+<p>Shape Up is a methodology, not a spec, and it is too large to adopt whole. Jack's decision: we take only what comes before chapter 8 of the book (the introduction, chapters 2 to 6 on shaping, and chapter 7 on bets versus backlogs). Betting, cycles and building (chapter 8 onward) are out of scope.</p>
 <div class="table-wrap"><table>
-<tr><th>Shape Up</th><th>DigiSmith</th></tr>
-<tr><td>Small team ("small enough to wing it"): no cycles, no formal betting table, but the phases stay: raw idea, shaped pitch, bet, build</td><td>Jack and the Maestro are that small team. <code>backlog</code> is the raw idea, <code>concept</code> the shaped pitch, Jack's approval into <code>to do</code> the bet, and the factory builds.</td></tr>
-<tr><td>Betting table asks: does the problem matter, is the appetite right, is the solution attractive, is it the right time, are the right people free</td><td>Placing a bet happens at initiative and milestone level (Imperium); a ticket inherits it, and the pitch only proposes the roadmap fit. The first three questions are the skill's default questions to Jack (with "solution" read as "idea"). The last two stay with refinement and the factory queue (DGS-670).</td></tr>
-<tr><td>No backlogs: ideas not bet on are let go; raw feedback gets a gentle "no"</td><td><strong>Deliberate difference.</strong> ClickUp is the only tracker, so a raw idea stays a <code>backlog</code> ticket. The "gentle no" is the walk-away ending: the ticket stays, with a note.</td></tr>
-<tr><td>Circuit breaker: a project that misses its cycle stops and is reshaped, never extended; uphill work at the end means a shaping oversight</td><td>The pitch's appetite is the cap. Reshaping on overrun belongs to the failed-ticket decision (DGS-490) and the claim rules (DGS-670). Listed as input to those tickets, not decided here.</td></tr>
-<tr><td>Assign projects, not tasks: no upfront task split ("a paper shredder"); the team finds scopes while building</td><td>Observation for the refinement design, not decided here: DGS-488's Refiner splits work into ranked tickets before the build. That is the one place the status model pulls against the book.</td></tr>
-<tr><td>Find the elements (breadboard, fat marker) and rabbit holes: shaping steps 2 and 3</td><td><strong>Deliberate difference (Jack).</strong> In DigiSmith these are solution design, so they sit in <code>refinement</code> (DGS-488: architecture and solution design). The shaping skill only flags risks.</td></tr>
-<tr><td>Scopes, hill charts, scope hammering, QA for the edges, kickoff</td><td>Building-side practices. Out of scope for the shaping skill. The <code>~</code> nice-to-have mark is the one piece taken over, because it helps the pitch.</td></tr>
+<tr><th>Shape Up (before chapter 8)</th><th>DigiSmith</th></tr>
+<tr><td>Appetite: a budget set before the solution, not an estimate</td><td><strong>Taken.</strong> Small, Medium or Big, fixed first; cut scope to fit.</td></tr>
+<tr><td>Set boundaries: narrow the problem, one specific story, split grab-bags, walk away</td><td><strong>Taken</strong> (flow step 2).</td></tr>
+<tr><td>Rough, solved, bounded</td><td><strong>Partly.</strong> A pitch must be rough and bounded. "Solved" is refinement's job.</td></tr>
+<tr><td>Pitch ingredients: problem, appetite, solution, rabbit holes, no-gos</td><td><strong>Adapted.</strong> Problem, Appetite, Idea, Scope in/out with no-gos, Risks (flagged), plus our Roadmap fit, Sign-off, Mode and Open questions.</td></tr>
+<tr><td>Find the elements (breadboard, fat marker) and rabbit holes</td><td><strong>Moved (Jack).</strong> In DigiSmith these are solution design, so they sit in <code>refinement</code> (DGS-488). Shaping only flags risks.</td></tr>
+<tr><td>Who shapes: a closed-door conversation, shaper asks the strategic questions</td><td><strong>Taken.</strong> Jack and the Maestro, private; the strategic questions are in step 2.</td></tr>
+<tr><td>Two tracks: shaping is separate from building</td><td><strong>Taken.</strong> No code, orders or workers during shaping.</td></tr>
+<tr><td>Bets, not backlogs: ideas not bet on are let go</td><td><strong>Deliberate difference.</strong> ClickUp is the only tracker, so a raw idea stays a <code>backlog</code> ticket. The walk-away ending keeps the ticket, with a note. The bet itself is placed at initiative and milestone level (Imperium); the pitch only proposes the roadmap fit.</td></tr>
 </table></div></section>
 
 <section id="followups"><h2>Follow-up tickets</h2>
@@ -182,7 +183,6 @@
 <li>Add the <code>shaped</code> event and the <code>shaping</code> telemetry step, remove <code>concept-started</code>, update the rules table and tests.</li>
 <li>Update the DGS-488 and DGS-549 text (status table and event map).</li>
 <li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level parts removed, and the two Shape Up solution-design steps added (find the elements, address rabbit holes). Un-vendor it (remove from <code>VENDORED_SKILLS</code>). Do this before or together with the shaping skill, so the two never overlap.</li>
-<li>Input for DGS-490 and DGS-670: an overrun stops the ticket and sends it back to shaping, never an automatic extension (Shape Up's circuit breaker).</li>
 <li>DGS-670: the claim check looks for a <code>## Pitch</code> heading.</li>
 </ul></section>
 
