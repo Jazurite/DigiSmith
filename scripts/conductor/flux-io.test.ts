@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { createFluxHerdr, fluxRunner, HERDR_WS_BIN } from "./flux-herdr.ts";
 import { resolveTarget, loadTargets } from "./flux-targets.ts";
-import { fluxMain } from "./flux-cli.ts";
+import { fluxMain, FLUX_USAGE } from "./flux-cli.ts";
 import type { Runner } from "./runner.ts";
 import type { FluxHerdr, FluxResult } from "./flux.ts";
 
@@ -210,5 +210,13 @@ describe("fluxMain (the CLI)", () => {
     const r = await run(["nobody"]);
     expect(r.code).toBe(1);
     expect(r.e).toContain("flux-targets.json");
+  });
+});
+
+describe("usage text (DGS-664)", () => {
+  it("states the idle rule and no night window or override", () => {
+    expect(FLUX_USAGE).not.toMatch(/night|override/i);
+    expect(FLUX_USAGE).toMatch(/idle or done/);
+    expect(FLUX_USAGE).toMatch(/--dry-run runs every check and sends nothing/);
   });
 });

@@ -34,7 +34,7 @@ state-refresh rebuilds Running from herdr and the open cards, keeps the hand-wri
   marker says it is resolved, e.g. "- Waiting text [resolves: ticket DGS-411] | since ... | pane w2:p1"; markers: ticket DGS-n (ClickUp
   done), merged DGS-n (on origin/main), gone <path>, exists <path> (paths relative to the repo). --workers lists this conductor's workers.
   --watch lists files or folders whose change after the block content is warned about.
-state and consult only read; flux sends /clear to a conductor (night only, see flux). state-write writes only the block between the digismith:conductor-state markers in the note.
+state and consult only read; flux sends /clear to a conductor (only when idle, see flux). state-write writes only the block between the digismith:conductor-state markers in the note.
 `;
 
 const OPTIONS = {

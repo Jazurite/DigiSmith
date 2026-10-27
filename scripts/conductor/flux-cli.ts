@@ -1,5 +1,5 @@
 // dg conductor flux <agent> | --all [--dry-run]: the manual entry to the flux job module (DGS-435).
-// There is NO daytime override: the night rule lives in the module. A dry run sends nothing, ever.
+// There is no clock rule and no force flag (DGS-664): the idle checks in the module are the gate. A dry run sends nothing, ever.
 import { parseArgs } from "node:util";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -10,8 +10,8 @@ import { loadTargets, resolveTarget } from "./flux-targets.ts";
 
 export const FLUX_USAGE = `Usage: cli.ts flux <agent> | --all  [--dry-run] [--log] [--json]
          [--project P] [--brief path] [--note path] [--wake text]
-A conductor fluxes only at night (23:30 to 02:00 UTC+7); there is no override. --dry-run runs every check and sends nothing.
-Targets come from ~/.digismith-depot/flux-targets.json; the flags override it for one named agent.
+A conductor fluxes when it is idle or done, has no live worker tab and no open ticket of its own; every check runs. --dry-run runs every check and sends nothing.
+Targets come from ~/.digismith-depot/flux-targets.json; the flags replace it for one named agent.
 `;
 
 const OPTIONS = {
