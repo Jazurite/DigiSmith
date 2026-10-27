@@ -1,0 +1,5 @@
+- task-1-r1: Approved, no Critical/Important; 2 Minor, no action
+- task-2-r1: Approved, 1 Minor (anchor splits), fixed in 295e1865
+- ticket-final-r1: pending (head 295e1865)
+- ticket-final-r1: Ready to merge, 3 Minor, fixed in a4d83d09
+- ticket-final-r2: pending (head a4d83d09)
