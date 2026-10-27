@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inject the conversation voice at session start</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Inject the conversation-voice rules at session start</h1>
+  <div class="meta"><span>Date: 2026-10-27</span><span>Ticket: DGS-679</span></div>
+</header>
+
+<nav class="toc"><h2>Contents</h2><ol>
+<li><a href="#what">What and why</a></li>
+<li><a href="#design">Design</a></li>
+<li><a href="#files">Files and tests</a></li>
+<li><a href="#out">Out of scope</a></li>
+</ol></nav>
+
+<section id="what"><h2>What and why</h2>
+<p>The SessionStart hook (<code>scripts/session-init.ts</code>) prints a banner such as <code>voices=technical+conversation</code>. It never prints the rules. A session that does not run <code>digismith:voice</code> or <code>inject-standards</code> never reads <code>standards/global/ai-voice-conversational.md</code>. On 2026-10-27 this produced long, recap-heavy replies in the DGS-671 session, with both voices on.</p>
+<p>Front-end analogy: the banner is a feature flag that says "on", and nothing loads the code behind the flag. This ticket loads a small part of it.</p></section>
+
+<section id="design"><h2>Design</h2>
+<ul>
+<li><strong>One extra line</strong> after the banner, only when the conversation voice is on: the 11 rule titles and the path to the standard. About 150 tokens. No examples, no full text.</li>
+<li><strong>Titles come from the standard file</strong> (the <code>### N. title</code> headings under <code>## Rules</code>), so the line cannot drift from the standard. No copied text in code.</li>
+<li><strong>Where it lives:</strong> <code>scripts/voice-init.ts</code> gains two exports: <code>readRuleTitles(standardPath)</code> and <code>conversationDigest(standardPath, dir)</code>. The voice state check stays in <code>voice-init.ts</code>, next to the existing summary. <code>session-init.ts</code> gains <code>loadVoiceDigest(voiceInitPath, standardPath)</code> and prints the result in <code>main</code>.</li>
+<li><strong>Silent on any problem:</strong> voice off, file missing, no titles found, or an older <code>voice-init.ts</code> without the new export: no line, no error. A failure inside the digest never changes the exit code (the session must always start).</li>
+<li><strong>Technical voice</strong> and the banner format are unchanged. The standard path is resolved from the script folder: <code>scripts/../standards/global/ai-voice-conversational.md</code>, which holds in the plugin cache too.</li>
+</ul></section>
+
+<section id="files"><h2>Files and tests</h2>
+<div class="table-wrap"><table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>scripts/voice-init.ts</code></td><td>Add <code>readRuleTitles</code>, <code>conversationDigest</code>.</td></tr>
+<tr><td><code>scripts/voice-init.test.ts</code></td><td>Titles parsed from a fixture; the real standard gives 11 titles; digest present when on, null when conversation is off, null when the file is missing.</td></tr>
+<tr><td><code>scripts/session-init.ts</code></td><td>Add <code>loadVoiceDigest</code>; print it in <code>main</code> after the banner; never set the exit code.</td></tr>
+<tr><td><code>scripts/session-init.test.ts</code></td><td><code>loadVoiceDigest</code>: null without a voice-init file, null when the module has no digest export, returns the module's string and passes the standard path through.</td></tr>
+</table></div></section>
+
+<section id="out"><h2>Out of scope</h2>
+<ul>
+<li>The full rule text or examples, the technical voice, the banner format.</li>
+<li>Any change to <code>digismith:voice</code> or <code>inject-standards</code>.</li>
+<li>A digest of other standards.</li>
+</ul></section>
+
+<footer>DigiSmith · .digismith/board/DGS-679—voice-hook/design.html</footer>
+
+</body>
+</html>
