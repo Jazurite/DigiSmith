@@ -1,6 +1,6 @@
 # Steward shaped event and shaping telemetry step Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use digismith:subagent-driven-development (recommended) or digismith:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add the `shaped` Steward event (backlog to concept) in place of `concept-started`, and the `shaping` token step.
 
@@ -31,7 +31,7 @@
 - Consumes: `evaluate(input, view, cfg)` and the `ev`, `view`, `OFF`, `to` helpers already defined at the top of `rules.test.ts`.
 - Produces: event name `"shaped"` in `EVENTS` (type `EventName`); the CLI accepts `dg steward event shaped`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `rules.test.ts` change line 17 from `[ev("concept-started"), view("backlog"), "concept"],` to:
 
@@ -59,12 +59,12 @@ describe("shaped (DGS-674)", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm vitest run packages/cli/src/steward/rules.test.ts`
 Expected: FAIL (`shaped` is an unknown event, and `concept-started` is still in `EVENTS`).
 
-- [ ] **Step 3: Make the change**
+- [x] **Step 3: Make the change**
 
 In `types.ts` line 8 replace `"concept-started"` with `"shaped"` in the `EVENTS` array (keep the position).
 
@@ -82,12 +82,12 @@ In `README.md` line 13 replace the row with:
 | `shaped` | backlog | concept (the shaping skill fires it at its end; from concept it does nothing) |
 ```
 
-- [ ] **Step 4: Run the steward tests to verify they pass**
+- [x] **Step 4: Run the steward tests to verify they pass**
 
 Run: `pnpm vitest run packages/cli/src/steward`
 Expected: PASS (all steward tests, including the four edited ones in `event.test.ts`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/cli/src/steward
@@ -106,7 +106,7 @@ git commit -m "feat(dgs-674): add the shaped event in place of concept-started"
 - Consumes: the `fixture()` and `run()` helpers and `lines()` in `entry.test.ts`.
 - Produces: `"shaping"` as a valid value of type `Step` and of `--step`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add after the `b2: step-end appends a step_end line` test:
 
@@ -119,12 +119,12 @@ Add after the `b2: step-end appends a step_end line` test:
   });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm vitest run packages/cli/src/tokens/entry.test.ts -t "b3"`
 Expected: FAIL (`invalid --step shaping`, nothing written).
 
-- [ ] **Step 3: Add the step**
+- [x] **Step 3: Add the step**
 
 In `packages/cli/src/tokens/types.ts` line 1:
 
@@ -132,12 +132,12 @@ In `packages/cli/src/tokens/types.ts` line 1:
 export const STEPS = ["shaping", "brainstorming", "writing-plans", "implementation", "finishing", "other"] as const;
 ```
 
-- [ ] **Step 4: Run the tokens tests**
+- [x] **Step 4: Run the tokens tests**
 
 Run: `pnpm vitest run packages/cli/src/tokens`
 Expected: PASS. If a test enumerates the step list and now fails, add `"shaping"` to that expectation and keep everything else.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/cli/src/tokens
