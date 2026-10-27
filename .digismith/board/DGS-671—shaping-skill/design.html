@@ -94,28 +94,29 @@
 </table></div></section>
 
 <section id="flow"><h2>The flow</h2>
-<p>It follows the four Shape Up steps. The skill writes no code, makes no orders and starts no workers (Shape Up's "two tracks": shaping is separate from building).</p>
+<p>It follows the four Shape Up steps (chapters 3 to 6 of the book). The skill writes no code, makes no orders and starts no workers (Shape Up's "two tracks": shaping is separate from building). Shaping is rough and private: a conversation between Jack and the Maestro.</p>
 <ol>
 <li><strong>Read.</strong> <code>dg clickup get-task</code>. The ticket must be in <code>backlog</code>, or in <code>concept</code> without a pitch.</li>
-<li><strong>Set boundaries.</strong> Fix the appetite first ("fixed time, variable scope": if the solution does not fit, cut scope, never raise the appetite). Narrow the problem: ask what is really going wrong and where today's workflow breaks. A grab-bag ("redesign X", "X 2.0") is reframed or split before shaping. A Big appetite that cannot be narrowed means split.</li>
-<li><strong>Rough out the elements.</strong> Draft the solution at "fat marker" level: the main parts and how they connect, with the fine details left open.</li>
-<li><strong>Address rabbit holes.</strong> Find unknowns that could trip the builder. For each, amend, cut, or specify it. Write the no-gos. Propose Sign-off and Mode with one reason each.</li>
+<li><strong>Set boundaries.</strong> Fix the appetite first ("fixed time, variable scope": if the solution does not fit, cut scope, never raise the appetite). Narrow the problem: ask what is really going wrong, and pin it to one specific story that shows why today does not work. A grab-bag ("redesign X", "X 2.0") is reframed or split before shaping. A Big appetite that cannot be narrowed means split. If the problem cannot be pinned down and is not critical, walk away.</li>
+<li><strong>Find the elements.</strong> Draft a short list of narrow, specific elements, not a vague phrase. For flows, sketch a <em>breadboard</em> in words: places (a command, a status, a screen), affordances (what can be done there) and connections (what leads where). Use a <em>fat marker</em> sketch only when layout is the core problem. Stay rough: boundaries and rules, not a spec, so the builder keeps room to decide.</li>
+<li><strong>Address rabbit holes.</strong> Walk the use case in slow motion, start to end. Question each part that looks solved: does it need new technical work, does it assume how parts fit, does it assume a design answer exists? Read the code to check the assumptions. Fix each hole with one of three moves: <em>patch</em> (dictate a simpler answer, written into the pitch), <em>declare out of bounds</em> (a no-go), or <em>cut back</em> (drop a nice-to-have). A hole with no answer goes to Open questions. Then propose Sign-off and Mode with one reason each.</li>
 <li><strong>Ask.</strong> At most three questions to Jack, only on what the draft could not settle.</li>
-<li><strong>Write the pitch.</strong> Show it to Jack. On his yes, append it to the ticket description under <code>## Pitch</code> (the raw idea above it stays untouched), then run <code>dg steward event shaped --ticket &lt;KEY&gt; --by shaping</code>.</li>
+<li><strong>Self-review the pitch</strong> against the book's pitfalls (see "The pitch"), then show it to Jack. On his yes, append it to the ticket description under <code>## Pitch</code> (the raw idea above it stays untouched), then run <code>dg steward event shaped --ticket &lt;KEY&gt; --by shaping</code>.</li>
 <li><strong>Hand over.</strong> Tell Jack the next step: "discover it" or "refine it".</li>
 </ol>
-<div class="callout"><strong>Walk away is a valid end.</strong> Shaping can end in "not now". The ticket stays in <code>backlog</code> with a one-line note on why, and no event fires. Jack decides whether to discard it. The skill never discards.</div></section>
+<div class="callout"><strong>Walk away is a valid end.</strong> Nothing is committed during shaping ("no conveyor belt"). Shaping can end in "not now". The ticket stays in <code>backlog</code> with a one-line note on why, and no event fires. Jack decides whether to discard it. The skill never discards.</div></section>
 
 <section id="pitch"><h2>The pitch</h2>
 <ol>
-<li><strong>Problem</strong>: one concrete story of why things do not work today.</li>
+<li><strong>Problem</strong>: one specific story that shows why the status quo does not work. It is the baseline the solution is judged against.</li>
 <li><strong>Appetite</strong>: Small, Medium or Big. A budget that limits the solution, not an estimate.</li>
-<li><strong>Solution</strong>: the core elements, rough.</li>
-<li><strong>Rabbit holes</strong>: what could derail the work, each with the call made on it.</li>
-<li><strong>No-gos</strong>: what is explicitly out.</li>
+<li><strong>Solution</strong>: the narrow, specific elements, rough: a breadboard in words or a fat marker sketch where it helps, never a wireframe or spec. A note says the builder may find a different way.</li>
+<li><strong>Rabbit holes</strong>: what could derail the work, each with the call made on it (patch, out of bounds, or cut back). A few lines are enough.</li>
+<li><strong>No-gos</strong>: what is explicitly out, to fit the appetite.</li>
 <li><strong>Sign-off and Mode</strong>: proposed values with a reason each (DigiSmith addition; Jack confirms them when he approves into <code>to do</code>).</li>
 <li><strong>Open questions</strong>: what shaping could not settle. A pitch with open questions can still ship, but they are listed.</li>
 </ol>
+<p><strong>Self-review checklist</strong> (the book's pitfalls). The skill refuses to show a pitch that has: a solution without a problem; a problem without a solution (unshaped work); no appetite; a wireframe-level spec that boxes the builder in; no rabbit holes or no-gos; a "TBD" or a field that contradicts another.</p>
 <p>Refinement reads this pitch as its input, so <code>digismith:brainstorming</code> no longer asks again for problem and scope.</p></section>
 
 <section id="event"><h2>The Steward event</h2>
