@@ -26,7 +26,7 @@
 - Consumes: `dg steward event shaped --ticket <KEY> --by shaping` (added by DGS-674; not callable until DGS-674 is merged) and `--step shaping` in `tokens/entry.ts` (DGS-674).
 - Produces: the skill `digismith:shaping`.
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 Create `skills/shaping/SKILL.md` with exactly this content:
 
@@ -171,7 +171,7 @@ Shaping can end in "not now": the problem cannot be pinned down, or the idea is 
 - Write to the ticket before Jack's yes.
 `````
 
-- [ ] **Step 2: Verify the structure**
+- [x] **Step 2: Verify the structure**
 
 Run:
 
@@ -189,7 +189,7 @@ grep -ci "brainstorming" skills/shaping/SKILL.md
 
 Expected: `1`, `1`, `1`, `1`, `1`, `1`, `1`, `1` (or more), and `0` for the last one.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/shaping/SKILL.md
@@ -207,16 +207,16 @@ git commit -m "feat(dgs-673): add the shaping skill"
 - Consumes: the merged `shaped` event and `shaping` step from DGS-674.
 - Produces: confirmation that the commands written in the skill run.
 
-- [ ] **Step 1: Dry-run the event**
+- [x] **Step 1: Dry-run the event**
 
 Run: `dg steward event shaped --ticket DGS-673 --by shaping --dry-run`
 Expected: a line such as `dry run: DGS-673: ...` (a move from `backlog`, or a no-op if the ticket is already in `concept` or later; a refusal naming the status for any other). It must not say the event is unknown.
 
-- [ ] **Step 2: Check the step mark**
+- [x] **Step 2: Check the step mark**
 
 Run: `DIGISMITH_TOKEN_REGISTRY_DIR=$(mktemp -d) node --experimental-strip-types packages/cli/src/tokens/entry.ts step-start --ticket T-CHECK --step shaping --session-id check-1`
 Expected: exit code 0 and no "invalid --step" message. (The temporary registry directory keeps the real registry clean.)
 
-- [ ] **Step 3: Record the result**
+- [x] **Step 3: Record the result**
 
 If both checks pass, say so in the task report. If either fails, stop: DGS-674 is not merged yet, and this ticket waits for it.
