@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DGS-630: attention items close by rule — Implementation Report</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; --good:#1a7f4b; --good-bg:#eefaf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; --good:#4fd889; --good-bg:#12271c; } }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge { display: inline-block; border: 1px solid var(--good); color: var(--good); background: var(--good-bg); border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600; }
+  section { margin-bottom: 2.2rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .commit-list { list-style: none; padding: 0; margin: .6rem 0; }
+  .commit-list li { font-family: ui-monospace, Consolas, monospace; font-size: .84rem; padding: .3rem 0; border-bottom: 1px dashed var(--border); }
+  .sha { color: var(--accent); font-weight: 600; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <span class="badge">implementation complete — merged</span>
+  <h1>DGS-630: attention items close by rule — Implementation Report</h1>
+  <div class="meta">
+    <span>Date: 2026-10-27</span>
+    <span>Ticket: <strong>DGS-630</strong></span>
+    <span>Commit range: <code>21418dc4..66ab7995</code></span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>Four kinds of attention item no longer wait for the Maestro to close them by hand. Protected path touched: <code>packages/cli/src/autonomous/*</code> (the Maestro approved the merge). Reference documents: <a href="spec.md">spec</a>, <a href="plan.md">plan</a>.</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Rule</th><th>Item</th><th>Closed by</th></tr>
+    <tr><td>1</td><td><code>already-merged-but-open</code> (scan)</td><td>The scan, when the ticket has left <code>to do</code>. <code>by: watchdog</code>.</td></tr>
+    <tr><td>2</td><td>open <code>unknown</code> items of the ticket</td><td><code>dg autonomous release --result merged</code>, also with no lock. <code>by: controller</code>.</td></tr>
+    <tr><td>3</td><td><code>obs-git-failed</code> note</td><td>Not opened for a done ticket, or for a gone worktree in merge-ready. Nothing is written.</td></tr>
+    <tr><td>4</td><td><code>guardrails.failed.0</code></td><td>The watchdog on a clean guardrail read, only when such an item is open. <code>by: watchdog</code>.</td></tr>
+  </table>
+  </div>
+</section>
+
+<section id="tasks">
+  <h2>Tasks and review</h2>
+  <ul>
+    <li>Task 1 (rules 1 and 2): review clean.</li>
+    <li>Task 2 (rule 3): review clean. The call site keeps TypeScript narrowing: <code>if (!obs.git.ok) return gitFailed(...)</code>.</li>
+    <li>Task 3 (rule 4): review clean.</li>
+    <li>Whole-branch review (opus): no blockers. Fix wave: F3 (a release with no lock also closes the unknown items) and F5 (the guardrail read runs only when an item is open). Scoped re-review: both addressed.</li>
+    <li>Final run: 292 files and 4785 tests passed. After the DGS-650 rebase, 7 changed test files, 384 tests passed.</li>
+  </ul>
+</section>
+
+<section id="findings">
+  <h2>Left open (Maestro's call or deferred)</h2>
+  <ul>
+    <li>A done ticket with a failed git read waits with no time limit. A held lock then raises no item. A limit would open one item after N minutes.</li>
+    <li>Rule 3(b) rarely fires: <code>mergeHead</code> is recorded on the move to merge-ready. Rule 3(a) closes the reported cases.</li>
+    <li>A tick in flight can open an item after the release (existed before). An empty ClickUp search closes every already-merged item (the next scan reopens them). <code>close()</code> in watch can count one resolve too many (existing code).</li>
+  </ul>
+</section>
+
+<section id="commits">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">22d41ee7</span> fix(autonomous): close already-merged and controller unknown items by rule</li>
+    <li><span class="sha">064f4af8</span> fix(autonomous): no obs-git-failed note for a done ticket or a gone worktree</li>
+    <li><span class="sha">fb70f854</span> fix(autonomous): the watchdog closes a guardrails item on a clean read</li>
+    <li><span class="sha">66ab7995</span> fix(autonomous): close unknown items on a no-lock merged release, skip the idle guardrail read</li>
+  </ul>
+</section>
+
+<footer>Board folder: .digismith/board/DGS-630—attention-close-rules/</footer>
+</body>
+</html>
