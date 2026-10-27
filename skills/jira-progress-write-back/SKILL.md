@@ -8,8 +8,9 @@ description: Use right after digismith:capture-ephemeral-url succeeds, or when e
 ## Overview
 
 DigiSmith's map item **I.1**. Posts/updates a JIRA ticket's description
-(a "🔗 Materials & Links" entry, and — only if already present — the
-"📦 Track" checklist's Technical Development line) and a dated comment —
+(a "🔗 Materials & Links" entry, and the "📦 Track" checklist's
+Technical Development line — the whole Track block is built from a
+template on the first write) and a dated comment —
 either a Progress Update or an Investigation Update — using real ADF
 nodes (status lozenges, emoji, mentions) instead of a markdown
 approximation that would round-trip as broken literal text. Consumes map
@@ -226,13 +227,58 @@ in Step 15. Never guess at a risky edit against an unfamiliar structure.
 **Only if `<template>` = Progress Update** — skip entirely for
 Investigation Update.
 
-Search the same `description` document for a heading node whose text
-contains "Track" (expect "📦 Track:"). **Not found** → no delta; the
-Track checklist is untouched, note this for the final report (see Step
-15 / Error Handling — never scaffold one from nothing).
+Search the same `description` document's top-level `content` for a
+heading node whose text is "📦 Track" (a trailing colon is tolerated;
+"Track record" or "Tracking" is not a Track heading). **Not found** → build the block
+(below). **Found** → edit it in place (further below).
 
-**Found** → scan the nodes immediately following that heading (up to the
-next heading node or end of document) for a paragraph whose content
+**Not found — build the Track block (first write on this ticket).**
+Pick one of two templates, kept beside this skill (E.5):
+
+- `skills/jira-progress-write-back/templates/track-single-market.json`
+- `skills/jira-progress-write-back/templates/track-multi-market.json`
+
+Read the file from DigiSmith's own repo (same locate rule as Step 0),
+never from a plugin cache path. Each file is an array of two ADF nodes:
+the level-2 "📦 Track" heading and one expand node holding the whole
+checklist, every stage still `TO DO`.
+
+Pick **multi-market** when the ticket names two or more markets: its
+text, an existing Materials & Links table with two or more country
+rows, or sibling repos in the same ticket. Otherwise **single-market**.
+Step 12 shows which template was picked and why, so a wrong pick costs
+one "revise".
+
+Fill the copy, then run the same edit as for an existing block (the
+Technical Development flip and this repo's checkmark line, below) on its
+expand node's `content`:
+
+- Replace the placeholder `<component name>` (bold, under Storybook
+  Conversion) with the component this ticket changes: the ticket title
+  or the repo's change, in a few words. No clear name → write the
+  ticket key instead; never leave `<…>` text in the description.
+- Multi-market only: in the "🌍 Per Market:" table, replace the
+  placeholder row `<MARKET>` with one row per market the ticket names
+  (first cell: the market code, bold; other cells empty). The code is
+  the repo label (Step 5) when the label is a market code (`JP`); for a
+  label that is not (`shopify-hub`), ask which market row it is, or put
+  no checkmark in any row. The table always keeps at least one body row
+  (an empty table is invalid ADF): no market is named at all → use the
+  single-market template. In the row for this repo's market, put an emoji node (`:check_mark:`, same
+  shape as the checkmark paragraph below) in the Dev cell. Other cells
+  stay empty: the template never claims work that is not done.
+- Never use the custom `:In_Progress:` emoji. Status nodes take `attrs`
+  `text` and `color` only (green DONE, blue IN PROGRESS, neutral
+  TO DO).
+
+The built block is one delta: heading and expand are inserted by Step 8.
+Everything else in the description stays as fetched.
+
+**Found** → the block's body is the `content` of the `expand` node that
+immediately follows the heading (the shape of every Track block the
+templates build, and of EMKT-784); with no `expand` there, the body is the
+sibling nodes after the heading up to the next level-2 heading or end of
+document. Scan the body (not the whole description) for a paragraph whose content
 starts with bold text reading "Technical Development" (matching the real
 example's `**Technical Development -**` shape, tolerant of the exact
 trailing punctuation). That paragraph must contain one `status`-type
@@ -244,7 +290,9 @@ whole of what it's tracking.)
 
 Then scan the paragraphs after that Technical Development paragraph,
 stopping at whichever comes first — the next stage's own bold-labeled
-paragraph, the next heading, or end of document — for one whose content
+paragraph, the next heading (the "📋 Deliverable:" heading above the
+stages is before Technical Development, so it never stops this scan),
+or the end of the body — for one whose content
 is exactly an `emoji` node (short name `:check_mark:`) followed by this
 repo's label (Step 5) in bold text. **Already present**
 → no further change, idempotent. **Not present** → the delta also
@@ -263,8 +311,9 @@ checkmarks yet):
 
 **If the structure under the Track heading doesn't clearly match this
 shape** (e.g. no paragraph starts with bold "Technical Development" at
-all) → treat it the same as "not found": no delta, report why in Step
-15. Never guess at a risky edit against an unfamiliar structure.
+all) → no delta, report why in Step 15. A heading already exists, so do
+not build a second block and never guess at a risky edit against an
+unfamiliar structure.
 
 ### Step 8: Compose the Full New Description Document
 
@@ -282,10 +331,14 @@ every other node untouched:
   found a heading but produced no delta (unrecognized shape), the
   description's Materials & Links section is left exactly as fetched,
   untouched — do not append a second heading.
-- Track checklist: if Step 7 produced a delta, splice the changed
-  `status` node's attrs and (if applicable) the new checkmark paragraph
-  into their exact positions within the existing node sequence. If Step
-  7 found nothing, the document is unchanged from Step 3 in this regard.
+- Track checklist: if Step 7 built a block, insert its two nodes
+  (heading, expand) immediately after the Materials & Links section
+  (Step 6's bullet list or table); with no Materials & Links section at
+  all, append them at the end of the top-level `content` array. If Step 7
+  edited an existing block, splice the changed `status` node's attrs and
+  (if applicable) the new checkmark paragraph into their exact positions
+  inside the `expand` node's `content` (never beside the expand). If Step 7 produced no delta, the
+  document is unchanged from Step 3 in this regard.
 
 This composed document is the exact value Step 13 sends back — hold it
 in memory, don't write yet.
@@ -365,8 +418,9 @@ user having already signed off on a draft that then turns out unpostable.
 
 Render the description delta (in human-readable terms of what's
 changing — "adding a Materials & Links entry with these three links" /
-"marking Technical Development done with a JP checkmark" / "Track
-section not found, skipping" as applicable — **only when `<template>` =
+"marking Technical Development done with a JP checkmark" / "no Track
+section yet: adding the <single-market|multi-market> Track block, picked
+because <reason>" as applicable — **only when `<template>` =
 Progress Update**; for Investigation Update, state plainly that no
 description changes are made at all) and the full comment text — the
 `markdown` from Step 9, readable as Markdown, not raw ADF JSON (already
@@ -411,8 +465,8 @@ creating a new one.
 
 Confirm what was written: the ticket key, which template was used,
 whether the description's Materials & Links entry was created or updated
-(and the Track line, if touched, or a note that it was skipped and why —
-Progress Update only), and whether the comment was created or updated
+(and the Track block: built from which template, edited, or skipped and
+why — Progress Update only), and whether the comment was created or updated
 (with a link to the ticket). List any screenshots uploaded at Step 9. This
 skill's job ends here.
 
@@ -432,10 +486,15 @@ skill's job ends here.
   template type, missing template file, unresolved mention) → stop here,
   surface whatever it reported plainly, and list any screenshots it already
   uploaded (id and filename). Don't fabricate a comment.
-- **Track section absent, or present but not in the expected shape**
-  (Progress Update only) → skip the Track delta entirely (Step 7),
-  report plainly in Step 15. Never scaffold or force an edit against an
+- **Track section absent** (Progress Update only) → not an error: Step 7
+  builds the block from the matching template, and Step 12 shows it
+  before anything is written.
+- **Track section present but not in the expected shape** (Progress
+  Update only) → skip the Track delta entirely (Step 7), report plainly
+  in Step 15. Never add a second block or force an edit against an
   unfamiliar structure.
+- **A Track template file is missing or is not valid JSON** → stop here,
+  say which file, and write nothing. Don't compose a block by hand.
 - **Materials & Links section already exists as neither bullets nor a
   table** (Progress Update only, unrecognized shape) → same disposition
   as the Track case: skip that part of the delta, report why, don't
@@ -470,7 +529,7 @@ skill's job ends here.
 | 4 | Determine template type — auto Progress after `capture-ephemeral-url`, else ask |
 | 5 | Derive this repo's row label (Progress Update only) |
 | 6 | Draft Materials & Links delta (Progress Update only) |
-| 7 | Draft Track checklist delta (Progress Update only) |
+| 7 | Draft Track checklist delta (Progress Update only): no Track heading → build the block from the single- or multi-market template; found → edit in place |
 | 8 | Compose the full new description document (Progress Update only; no-op otherwise) |
 | 9 | Generate the comment via `generate-comment` — get `{markdown, headingPrefix}` |
 | 10 | Find today's existing comment via `headingPrefix` + date-boundary match |

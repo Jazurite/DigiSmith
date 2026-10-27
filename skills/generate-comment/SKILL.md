@@ -98,6 +98,10 @@ specifics not actually done this session. Compose the bullets as one
 Markdown bullet-list block (one `- ` line per bullet, joined with
 newlines) — this is the `whats-done` placeholder value.
 
+The comment stays short. The links (Materials & Links) and the stage list
+(the Track block) live in the ticket description, which
+`jira-progress-write-back` writes: never copy either into these bullets.
+
 Then ask the user, via `AskUserQuestion`, which roles need a ping on this
 update and who for each (e.g. code review, design approval, QA) — there
 is no automatic source for this. Skip a role entirely if the user says no
