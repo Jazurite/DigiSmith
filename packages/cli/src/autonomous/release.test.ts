@@ -316,6 +316,10 @@ describe("runRelease: causes and the breaker", () => {
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
     expect(r.warning).toBe("merged without --commit, the report will show commit unknown");
   });
+  it("a merged release with no lock and no commit still returns the warning", async () => {
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(r.warning).toBe("merged without --commit, the report will show commit unknown");
+  });
   it("a merged release with a commit returns no warning", async () => {
     acquireLock(dir, lock());
     const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc1234" });

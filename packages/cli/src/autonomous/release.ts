@@ -55,6 +55,7 @@ export async function runRelease(
   let retryEligible = false;
   let breakerOpened = false;
   let warning: string | null = null;
+  if (a.result === "merged" && !a.commit) warning = "merged without --commit, the report will show commit unknown";
   if (lock === null) {
     appendEvent(d.dir, now, "release", { ticket: a.ticket, result: a.result, note: "no-lock" });
   } else {
@@ -86,7 +87,6 @@ export async function runRelease(
       retryEligible = decideRetry("failed", klass, 0) === "retry";
       appendOpen(d.dir, { ticket: corrupt ? null : a.ticket, run: corrupt ? "corrupt-lock" : a.ticket, kind: kindOf(n.code), cause: n.code, causeClass: klass, retryEligible, since: nowIso, ts: nowIso });
     }
-    if (a.result === "merged" && !a.commit) warning = "merged without --commit, the report will show commit unknown";
     const b = recordRelease(d.dir, { ticket: a.ticket, result: a.result }, now);
     if (b.opened) {
       breakerOpened = true;
