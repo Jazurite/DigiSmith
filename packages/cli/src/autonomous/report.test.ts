@@ -61,6 +61,47 @@ describe("buildReport", () => {
     expect(waiting).toMatch(/DGS-5[^\n]*needs sudo/);
   });
 
+  it("a proof release shows under Proofs and in neither Failed or stopped nor Waiting for Jack", async () => {
+    appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-642", result: "proof", reason: "first-use proof" });
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    const failed = text.split("Failed or stopped")[1].split("Waiting for Jack")[0];
+    const waiting = text.split("Waiting for Jack")[1].split("Proofs")[0];
+    const proofs = text.split("Proofs")[1].split("Skipped")[0];
+    expect(proofs).toContain("DGS-642: first-use proof");
+    expect(failed).toContain("none");
+    expect(failed).not.toContain("DGS-642");
+    expect(waiting).toContain("none");
+    expect(waiting).not.toContain("DGS-642");
+  });
+
+  it("Proofs reads none when there is no proof", async () => {
+    seed();
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    expect(text.split("Proofs")[1].split("Skipped")[0]).toContain("none");
+  });
+
+  it("a proof without a reason prints only the key", async () => {
+    appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-7", result: "proof" });
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    expect(text.split("Proofs")[1].split("Skipped")[0]).toMatch(/DGS-7(?!:)/);
+    expect(text).not.toContain("DGS-7:");
+  });
+
+  it("every merged release shows its commit", async () => {
+    appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-8", result: "merged", commit: "aaa1111", minutes: 5 });
+    appendEvent(dir, at("2026-10-20T17:00:00Z"), "release", { ticket: "DGS-9", result: "merged", commit: "bbb2222", minutes: 6 });
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    expect(text).toContain("DGS-8: commit aaa1111, 5 min");
+    expect(text).toContain("DGS-9: commit bbb2222, 6 min");
+    expect(text).not.toContain("unknown");
+  });
+
+  it("a merged release without a commit reads \"commit unknown (none given at release)\"", async () => {
+    appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-8", result: "merged", minutes: 5 });
+    const text = buildReport(FROM, TO, await read(FROM, TO), null);
+    expect(text).toContain("DGS-8: commit unknown (none given at release), 5 min");
+  });
+
   it("does not count or list off events", async () => {
     seed();
     const text = buildReport(FROM, TO, await read(FROM, TO), null);

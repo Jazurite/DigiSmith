@@ -44,10 +44,12 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
   const of = (kind: Event["kind"]) => events.filter((e) => e.kind === kind);
   const releases = of("release");
   const built = releases.filter((e) => e.result === "merged")
-    .map((e) => `${str(e.ticket)}: commit ${str(e.commit) || "unknown"}, ${str(e.minutes) || "?"} min`);
+    .map((e) => `${str(e.ticket)}: commit ${str(e.commit) || "unknown (none given at release)"}, ${str(e.minutes) || "?"} min`);
   const failed = releases.filter((e) => e.result === "failed" || e.result === "stopped")
     .map((e) => `${str(e.ticket)}: ${str(e.result)}${e.reason ? `, ${str(e.reason)}` : ""}`);
   const waiting = releases.filter((e) => e.result === "awaiting-jack" || e.result === "stopped")
+    .map((e) => `${str(e.ticket)}${e.reason ? `: ${str(e.reason)}` : ""}`);
+  const proofs = releases.filter((e) => e.result === "proof")
     .map((e) => `${str(e.ticket)}${e.reason ? `: ${str(e.reason)}` : ""}`);
 
   const seen = new Set<string>();
@@ -76,6 +78,7 @@ export function buildReport(from: Date, to: Date, allEvents: Event[], lock: Lock
     "Built", list(built), "",
     "Failed or stopped", list(failed), "",
     "Waiting for Jack", list(waiting), "",
+    "Proofs", list(proofs), "",
     "Skipped", list(skipped), "",
     "Still building", list(building), "",
     "Drift", list(drift), "",
