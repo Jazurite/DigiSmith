@@ -72,6 +72,13 @@ describe("entry.ts", () => {
     expect(lines(f.registry)[0]).toMatchObject({ kind: "step_end", step: "finishing" });
   });
 
+  it("b3: step-start accepts the shaping step (DGS-674)", () => {
+    const f = fixture();
+    const r = run(["step-start", "--ticket", "T-1", "--step", "shaping", "--session-id", "sess-1"], f);
+    expect(r.status).toBe(0);
+    expect(lines(f.registry)[0]).toMatchObject({ kind: "step_start", step: "shaping", session_id: "sess-1" });
+  });
+
   it("c: no id anywhere warns on stderr, writes nothing, exits 0", () => {
     const f = fixture();
     const r = run(["session", "--ticket", "T-1", "--role", "worker"], f);

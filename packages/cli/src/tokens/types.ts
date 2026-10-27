@@ -1,4 +1,4 @@
-export const STEPS = ["brainstorming", "writing-plans", "implementation", "finishing", "other"] as const;
+export const STEPS = ["shaping", "brainstorming", "writing-plans", "implementation", "finishing", "other"] as const;
 export type Step = (typeof STEPS)[number];
 
 export interface Counts {
