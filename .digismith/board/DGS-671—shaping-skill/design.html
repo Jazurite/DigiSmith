@@ -147,9 +147,10 @@
 <tr><td>Output</td><td><code>design.html</code></td><td><code>## Pitch</code> on the ticket</td><td>Different</td></tr>
 </table></div>
 <ul>
-<li><strong>No copies.</strong> <code>skills/shaping/SKILL.md</code> says "conversation rules as in <code>digismith:brainstorming</code>" and spells out only what differs: the pitch, the appetite, the event. This stops the two skills drifting apart.</li>
-<li><strong>No double trigger.</strong> Brainstorming's description ("use before any creative work") could fire on a raw idea and skip shaping. Its description gets one line: a <code>backlog</code> ticket goes to <code>digismith:shaping</code> first. Shaping's own description says it runs before brainstorming and never invokes it.</li>
-<li><strong>Handover.</strong> Brainstorming in refinement treats the pitch as given. It does not re-ask problem, scope or appetite.</li>
+<li><strong>Brainstorming becomes specific.</strong> The original is an umbrella ("use before any creative work"). In DigiSmith the work is split by role: shaping owns the product level (what, why, appetite, scope, no-gos), brainstorming owns the technical level (architecture, components, data flow, errors, testing, Jack approves the spec). Its description changes to "architecture and solution design for a ticket in refinement" and drops the umbrella trigger. It keeps its name: init, bootstrap, writing-plans and the DGS-488 text refer to it, and a rename would only add churn.</li>
+<li><strong>The pitch is its input.</strong> In refinement brainstorming reads the pitch as given and does not ask again about purpose, scope, appetite or success criteria. A ticket in refinement with no pitch goes back to shaping first.</li>
+<li><strong>No double trigger.</strong> With the umbrella trigger gone, a raw idea no longer matches brainstorming. A <code>backlog</code> ticket goes to <code>digismith:shaping</code>, which never invokes brainstorming.</li>
+<li><strong>No copies.</strong> <code>skills/shaping/SKILL.md</code> says "conversation rules as in <code>digismith:brainstorming</code>" (one question at a time, multiple choice, decomposition) and spells out only what differs: the pitch, the appetite, the event.</li>
 </ul></section>
 
 <section id="followups"><h2>Follow-up tickets</h2>
@@ -158,7 +159,7 @@
 <li>Build <code>skills/shaping/SKILL.md</code> from this design.</li>
 <li>Add the <code>shaped</code> event, remove <code>concept-started</code>, update the rules table and tests.</li>
 <li>Update the DGS-488 and DGS-549 text (status table and event map).</li>
-<li>Add the "backlog goes to shaping first" line to the brainstorming description, and the pitch-as-input rule to its refinement use.</li>
+<li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level questions removed.</li>
 <li>DGS-670: the claim check looks for a <code>## Pitch</code> heading.</li>
 </ul></section>
 
