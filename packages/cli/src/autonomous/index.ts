@@ -49,7 +49,7 @@ export interface AutonomousDeps {
   git?: Git;
 }
 
-const RESULTS: ReleaseResult[] = ["merged", "failed", "stopped", "awaiting-jack"];
+const RESULTS: ReleaseResult[] = ["merged", "failed", "stopped", "awaiting-jack", "proof"];
 const SCAN_KINDS: readonly EventKind[] = ["scan", "off", "busy"];
 
 /** The real dependencies. Built only when a handler runs, never at import time. */

@@ -291,4 +291,34 @@ describe("runRelease: causes and the breaker", () => {
     await runRelease(mk(), { ticket: "DGS-4", result: "merged" });
     expect((await breaker()).streak).toBe(0);
   });
+  it("a proof release clears the lock, comments \"Autonomous Operation proof (<time>): <reason>\" and writes no attention item", async () => {
+    acquireLock(dir, lock());
+    await runRelease(mk(), { ticket: "DGS-1", result: "proof", reason: "first-use proof" });
+    expect(readLock(dir)).toBeNull();
+    expect(tracker.comments).toEqual([{ ref: "t1", text: "Autonomous Operation proof (2026-10-21 00:30:00): first-use proof" }]);
+    expect(await items()).toHaveLength(0);
+  });
+  it("a proof release writes a release event with result proof", async () => {
+    acquireLock(dir, lock());
+    await runRelease(mk(), { ticket: "DGS-1", result: "proof", reason: "x" });
+    expect(events().filter((e) => e.kind === "release").map((e) => e.result)).toEqual(["proof"]);
+  });
+  it("a proof release does not change the breaker streak", async () => {
+    acquireLock(dir, lock("DGS-1"));
+    await runRelease(mk(), { ticket: "DGS-1", result: "failed", cause: "test-red" });
+    acquireLock(dir, lock("DGS-2"));
+    await runRelease(mk(), { ticket: "DGS-2", result: "proof" });
+    expect((await breaker()).streak).toBe(1);
+    expect(await items()).toHaveLength(1);
+  });
+  it("a merged release without a commit returns a warning", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged" });
+    expect(r.warning).toBe("merged without --commit, the report will show commit unknown");
+  });
+  it("a merged release with a commit returns no warning", async () => {
+    acquireLock(dir, lock());
+    const r = await runRelease(mk(), { ticket: "DGS-1", result: "merged", commit: "abc1234" });
+    expect(r.warning).toBeNull();
+  });
 });

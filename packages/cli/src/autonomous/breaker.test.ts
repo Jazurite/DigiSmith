@@ -33,6 +33,12 @@ describe("breaker", () => {
     recordRelease(d, { ticket: "DGS-3", result: "awaiting-jack" }, now);
     expect(readBreaker(d).streak).toBe(1);
   });
+  it("proof changes nothing", () => {
+    const d = dir();
+    fail(d, "DGS-1");
+    recordRelease(d, { ticket: "DGS-2", result: "proof" }, now);
+    expect(readBreaker(d).streak).toBe(1);
+  });
   it("a file that does not parse is open (fail closed)", () => {
     const d = dir();
     writeFileSync(join(d, "breaker.json"), "{oops");

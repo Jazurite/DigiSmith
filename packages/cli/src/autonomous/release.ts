@@ -11,7 +11,7 @@ import type { AttentionKind } from "./attention-write.ts";
 import { appendEvent, clearLock, readLock } from "./state.ts";
 import type { Tracker } from "./types.ts";
 
-export type ReleaseResult = "merged" | "failed" | "stopped" | "awaiting-jack";
+export type ReleaseResult = "merged" | "failed" | "stopped" | "awaiting-jack" | "proof";
 export interface ReleaseDeps { tracker: Tracker; dir: string; now: () => Date; nexus: NexusDeps }
 
 /** merge-refused and classifier-block are refusals, "unknown" stays unknown, every other code is a plain failure. */
@@ -86,6 +86,7 @@ export async function runRelease(
       retryEligible = decideRetry("failed", klass, 0) === "retry";
       appendOpen(d.dir, { ticket: corrupt ? null : a.ticket, run: corrupt ? "corrupt-lock" : a.ticket, kind: kindOf(n.code), cause: n.code, causeClass: klass, retryEligible, since: nowIso, ts: nowIso });
     }
+    if (a.result === "merged" && !a.commit) warning = "merged without --commit, the report will show commit unknown";
     const b = recordRelease(d.dir, { ticket: a.ticket, result: a.result }, now);
     if (b.opened) {
       breakerOpened = true;

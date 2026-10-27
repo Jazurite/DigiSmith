@@ -52,7 +52,7 @@ function write(dir: string, b: Breaker): void {
 /** Counts every failed release; a merge resets the streak (open is only changed by closeBreaker or by opening); stopped and awaiting-jack change nothing. */
 export function recordRelease(
   dir: string,
-  a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack" },
+  a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack" | "proof" },
   now: Date,
 ): { opened: boolean; breaker: Breaker } {
   const b = readBreaker(dir);
