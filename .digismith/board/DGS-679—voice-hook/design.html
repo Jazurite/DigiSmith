@@ -82,7 +82,7 @@
 <li><strong>One extra line</strong> after the banner, only when the conversation voice is on: the 11 rule titles and the path to the standard. About 150 tokens. No examples, no full text.</li>
 <li><strong>Titles come from the standard file</strong> (the <code>### N. title</code> headings under <code>## Rules</code>), so the line cannot drift from the standard. No copied text in code.</li>
 <li><strong>Where it lives:</strong> <code>scripts/voice-init.ts</code> gains two exports: <code>readRuleTitles(standardPath)</code> and <code>conversationDigest(standardPath, dir)</code>. The voice state check stays in <code>voice-init.ts</code>, next to the existing summary. <code>session-init.ts</code> gains <code>loadVoiceDigest(voiceInitPath, standardPath)</code> and prints the result in <code>main</code>.</li>
-<li><strong>Silent on any problem:</strong> voice off, file missing, no titles found, or an older <code>voice-init.ts</code> without the new export: no line, no error. A failure inside the digest never changes the exit code (the session must always start).</li>
+<li><strong>Silent on any problem:</strong> no profile (the whole hook is silent without a <code>.digismith</code> profile), voice off, file missing, no titles found, or an older <code>voice-init.ts</code> without the new export: no line, no error. A failure inside the digest never changes the exit code (the session must always start).</li>
 <li><strong>Technical voice</strong> and the banner format are unchanged. The standard path is resolved from the script folder: <code>scripts/../standards/global/ai-voice-conversational.md</code>, which holds in the plugin cache too.</li>
 </ul></section>
 

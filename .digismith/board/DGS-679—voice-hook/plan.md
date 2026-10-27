@@ -245,16 +245,19 @@ export async function loadVoiceDigest(voiceInitPath: string, standardPath: strin
 }
 ```
 
-In `main`, directly after the closing brace of the `try { const banner = ... } catch { ... }` block (the last block before the `if (import.meta.filename ...` line), add:
+In `main`, inside the existing banner block, replace `if (banner) console.log(banner);` with the block below. The digest prints only when the banner prints (a `.digismith` profile exists): without a profile the hook stays silent, as two existing tests require.
 
 ```typescript
-  try {
-    const standardPath = path.join(scriptDir, "..", "standards", "global", "ai-voice-conversational.md");
-    const digest = await loadVoiceDigest(path.join(scriptDir, VOICE_INIT_FILENAME), standardPath);
-    if (digest) console.log(digest);
-  } catch (err) {
-    console.error(`session-init: voice digest failed (${(err as Error).message})`);
-  }
+    if (banner) {
+      console.log(banner);
+      try {
+        const standardPath = path.join(scriptDir, "..", "standards", "global", "ai-voice-conversational.md");
+        const digest = await loadVoiceDigest(path.join(scriptDir, VOICE_INIT_FILENAME), standardPath);
+        if (digest) console.log(digest);
+      } catch (err) {
+        console.error(`session-init: voice digest failed (${(err as Error).message})`);
+      }
+    }
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
