@@ -1,0 +1,352 @@
+[
+  {
+    "type": "heading",
+    "attrs": {
+      "level": 2
+    },
+    "content": [
+      {
+        "type": "text",
+        "text": "📦 Track"
+      }
+    ]
+  },
+  {
+    "type": "expand",
+    "attrs": {
+      "title": ""
+    },
+    "content": [
+      {
+        "type": "heading",
+        "attrs": {
+          "level": 3
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "📋 Deliverable:"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Technical Development –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Storybook Conversion –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "emoji",
+            "attrs": {
+              "shortName": ":check_mark:",
+              "text": "✅"
+            }
+          },
+          {
+            "type": "text",
+            "text": " 1x component: "
+          },
+          {
+            "type": "text",
+            "text": "<component name>",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Design Review –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "emoji",
+            "attrs": {
+              "shortName": ":check_mark:",
+              "text": "✅"
+            }
+          },
+          {
+            "type": "text",
+            "text": " Round 1"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "emoji",
+            "attrs": {
+              "shortName": ":check_mark:",
+              "text": "✅"
+            }
+          },
+          {
+            "type": "text",
+            "text": " Obtain design approval"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "QA –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Engineering Code Review –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Translations –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Documentation –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Rollout –",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          }
+        ]
+      },
+      {
+        "type": "rule"
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Legend:",
+            "marks": [
+              {
+                "type": "strong"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "TO DO",
+              "color": "neutral"
+            }
+          },
+          {
+            "type": "text",
+            "text": "  |  "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "IN PROGRESS",
+              "color": "blue"
+            }
+          },
+          {
+            "type": "text",
+            "text": "  |  "
+          },
+          {
+            "type": "status",
+            "attrs": {
+              "text": "DONE",
+              "color": "green"
+            }
+          },
+          {
+            "type": "text",
+            "text": " + "
+          },
+          {
+            "type": "emoji",
+            "attrs": {
+              "shortName": ":check_mark:",
+              "text": "✅"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
