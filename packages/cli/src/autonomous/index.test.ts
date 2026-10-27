@@ -81,6 +81,14 @@ describe("dg autonomous: argument checks", () => {
     expect(r.err).toBeTruthy();
     expect(r.output).toMatch(/repo/);
   });
+  it("release --result merged without --commit prints the warning on stderr", async () => {
+    await parse(["autonomous", "release", "--ticket", "DGS-1", "--result", "merged"]);
+    expect(errLog.mock.calls.flat().join("\n")).toContain("release: merged without --commit, the report will show commit unknown");
+  });
+  it("release --result merged with --commit prints no warning", async () => {
+    await parse(["autonomous", "release", "--ticket", "DGS-1", "--result", "merged", "--commit", "abc1234"]);
+    expect(errLog.mock.calls.flat().join("\n")).not.toContain("without --commit");
+  });
   it("release --result bogus is refused by the choices", async () => {
     const r = await viaBuildCli(["autonomous", "release", "--ticket", "DGS-1", "--result", "bogus"]);
     expect(r.err).toBeTruthy();
