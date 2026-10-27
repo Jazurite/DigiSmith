@@ -74,6 +74,7 @@
 <li><a href="#pitch">The pitch</a></li>
 <li><a href="#event">The Steward event</a></li>
 <li><a href="#neighbours">Neighbours and old tickets</a></li>
+<li><a href="#overlap">Overlap with brainstorming</a></li>
 <li><a href="#followups">Follow-up tickets</a></li>
 </ol></nav>
 
@@ -132,12 +133,32 @@
 <li><strong>Tickets already in concept</strong> (DGS-625, 626, 633, 651 and others) stay there. They were moved before any shaping. The first refiner or claimer who touches one runs the skill on it. No mass move.</li>
 </ul></section>
 
+<section id="overlap"><h2>Overlap with brainstorming</h2>
+<p>Compared with <code>digismith:brainstorming</code> (the DigiSmith fork of the Superpowers skill). Shaping overlaps it in four rules and differs in four.</p>
+<div class="table-wrap"><table>
+<tr><th>Part</th><th>Brainstorming</th><th>Shaping</th><th>Decision</th></tr>
+<tr><td>Explore context first</td><td>Files, docs, commits</td><td>Idea, code, existing tickets</td><td>Same rule: reference it</td></tr>
+<tr><td>Clarifying questions</td><td>One at a time, multiple choice</td><td>At most 3, "interview me" escape</td><td>Same rule for the interview mode: reference it</td></tr>
+<tr><td>Decompose when too big</td><td>Flag it, split into sub-projects</td><td>Grab-bag or Big appetite means split</td><td>Same idea: reference it</td></tr>
+<tr><td>Cut scope</td><td>YAGNI</td><td>Fixed appetite, cut scope</td><td>Same idea: reference it</td></tr>
+<tr><td>2-3 approaches</td><td>Yes</td><td>One shaped solution</td><td>Different: stays out of shaping</td></tr>
+<tr><td>Architecture, components, tests</td><td>Yes</td><td>Product level only</td><td>Different</td></tr>
+<tr><td>Hard gate, then <code>writing-plans</code></td><td>Yes</td><td>None; ends with the <code>shaped</code> event</td><td>Different</td></tr>
+<tr><td>Output</td><td><code>design.html</code></td><td><code>## Pitch</code> on the ticket</td><td>Different</td></tr>
+</table></div>
+<ul>
+<li><strong>No copies.</strong> <code>skills/shaping/SKILL.md</code> says "conversation rules as in <code>digismith:brainstorming</code>" and spells out only what differs: the pitch, the appetite, the event. This stops the two skills drifting apart.</li>
+<li><strong>No double trigger.</strong> Brainstorming's description ("use before any creative work") could fire on a raw idea and skip shaping. Its description gets one line: a <code>backlog</code> ticket goes to <code>digismith:shaping</code> first. Shaping's own description says it runs before brainstorming and never invokes it.</li>
+<li><strong>Handover.</strong> Brainstorming in refinement treats the pitch as given. It does not re-ask problem, scope or appetite.</li>
+</ul></section>
+
 <section id="followups"><h2>Follow-up tickets</h2>
 <p>None is built here. Each needs its own ticket first.</p>
 <ul>
 <li>Build <code>skills/shaping/SKILL.md</code> from this design.</li>
 <li>Add the <code>shaped</code> event, remove <code>concept-started</code>, update the rules table and tests.</li>
 <li>Update the DGS-488 and DGS-549 text (status table and event map).</li>
+<li>Add the "backlog goes to shaping first" line to the brainstorming description, and the pitch-as-input rule to its refinement use.</li>
 <li>DGS-670: the claim check looks for a <code>## Pitch</code> heading.</li>
 </ul></section>
 
