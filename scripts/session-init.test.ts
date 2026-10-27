@@ -7,6 +7,7 @@ import {
   VOICE_INIT_FILENAME,
   readProfile,
   loadVoiceSummary,
+  loadVoiceDigest,
   buildLineagePointer,
   formatBanner,
   buildBanner,
@@ -404,5 +405,37 @@ describe("main (CLI)", () => {
     await main();
 
     expect(logSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadVoiceDigest", () => {
+  let tmpDir: string;
+  let voiceInitPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "digismith-session-digest-test-"));
+    voiceInitPath = path.join(tmpDir, "voice-init.ts");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns null when voice-init.ts doesn't exist", async () => {
+    expect(await loadVoiceDigest(voiceInitPath, "std.md")).toBeNull();
+  });
+
+  it("returns null when voice-init.ts has no conversationDigest export (an older plugin file)", async () => {
+    fs.writeFileSync(voiceInitPath, "export default async function (): Promise<string | null> { return 'x'; }\n");
+    expect(await loadVoiceDigest(voiceInitPath, "std.md")).toBeNull();
+  });
+
+  it("returns the digest and passes the standard path through", async () => {
+    fs.writeFileSync(
+      voiceInitPath,
+      "export default async function (): Promise<string | null> { return 'x'; }\n" +
+        "export async function conversationDigest(p: string): Promise<string | null> { return 'digest for ' + p; }\n",
+    );
+    expect(await loadVoiceDigest(voiceInitPath, "std.md")).toBe("digest for std.md");
   });
 });

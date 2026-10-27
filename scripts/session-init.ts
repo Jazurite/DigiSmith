@@ -48,7 +48,10 @@ export function buildLineagePointer(mainRoot: string, env: NodeJS.ProcessEnv = p
   return `DigiSmith: ${clauses.join("; ")} — read the one matching your session title (get_session self), or say "resume"`;
 }
 
-type VoiceInitModule = { default: () => Promise<string | null> };
+type VoiceInitModule = {
+  default: () => Promise<string | null>;
+  conversationDigest?: (standardPath: string) => Promise<string | null>;
+};
 
 function isFile(filePath: string): boolean {
   try {
@@ -62,6 +65,12 @@ export async function loadVoiceSummary(voiceInitPath: string): Promise<string | 
   if (!isFile(voiceInitPath)) return null;
   const mod = (await import(pathToFileURL(voiceInitPath).href)) as VoiceInitModule;
   return mod.default();
+}
+
+export async function loadVoiceDigest(voiceInitPath: string, standardPath: string): Promise<string | null> {
+  if (!isFile(voiceInitPath)) return null;
+  const mod = (await import(pathToFileURL(voiceInitPath).href)) as VoiceInitModule;
+  return typeof mod.conversationDigest === "function" ? mod.conversationDigest(standardPath) : null;
 }
 
 export function formatBanner(profile: string, voiceSummary: string | null): string {
@@ -91,7 +100,16 @@ export async function main(): Promise<void> {
   }
   try {
     const banner = await buildBanner(DEFAULT_DIR, path.join(scriptDir, VOICE_INIT_FILENAME));
-    if (banner) console.log(banner);
+    if (banner) {
+      console.log(banner);
+      try {
+        const standardPath = path.join(scriptDir, "..", "standards", "global", "ai-voice-conversational.md");
+        const digest = await loadVoiceDigest(path.join(scriptDir, VOICE_INIT_FILENAME), standardPath);
+        if (digest) console.log(digest);
+      } catch (err) {
+        console.error(`session-init: voice digest failed (${(err as Error).message})`);
+      }
+    }
   } catch (err) {
     if (err instanceof ConfigError) {
       console.log(`DigiSmith: warning: ${err.message}`);
