@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrow brainstorming to solution design and un-vendor it</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Narrow brainstorming to solution design and un-vendor it</h1>
+  <div class="meta"><span>Date: 2026-10-27</span><span>Ticket: DGS-676</span><span>Parent design: DGS-671</span></div>
+</header>
+
+<nav class="toc"><h2>Contents</h2><ol>
+<li><a href="#what">What and why</a></li>
+<li><a href="#input">Input</a></li>
+<li><a href="#edits">Edits to the skill</a></li>
+<li><a href="#unvendor">Un-vendor</a></li>
+<li><a href="#order">Merge order and risks</a></li>
+</ol></nav>
+
+<section id="what"><h2>What and why</h2>
+<p><code>digismith:brainstorming</code> is an umbrella skill ("use before any creative work"). DGS-671 splits the work by role: the new <code>digismith:shaping</code> owns the product level (what, why, appetite, scope), and brainstorming becomes architecture and solution design for a ticket in <code>refinement</code> (DGS-488). This ticket makes that change in brainstorming and takes it out of the vendored list. The shaping skill itself is DGS-673.</p></section>
+
+<section id="input"><h2>Input</h2>
+<p><code>bootstrap</code>, <code>adopt</code> and <code>init</code> hand a ticket to brainstorming as its seed. For Jira work the seed is <code>ticket.md</code> from jira-intake and has no <code>## Pitch</code>. A hard rule "no pitch, stop" would break that route. So brainstorming accepts either shaped input:</p>
+<ul>
+<li>a ClickUp ticket with a <code>## Pitch</code> in its description, or</li>
+<li>a <code>ticket.md</code> from jira-intake (title, description, acceptance criteria).</li>
+</ul>
+<p>If the input has no problem and no scope, brainstorming stops. A ClickUp ticket goes to <code>digismith:shaping</code>, a Jira ticket goes to jira-intake Door 2. Brainstorming never asks again for purpose, scope, appetite or success criteria.</p></section>
+
+<section id="edits"><h2>Edits to <code>skills/brainstorming/SKILL.md</code></h2>
+<div class="table-wrap"><table>
+<tr><th>Part</th><th>Change</th></tr>
+<tr><td>Description</td><td>"Architecture and solution design for a ticket in refinement, from a shaped input." The "MUST use before any creative work" trigger is dropped. The provenance tag becomes "DigiSmith-owned, forked from Superpowers' brainstorming".</td></tr>
+<tr><td>Intro and checklist</td><td>Rewritten for the new role. A new "Input" step comes first.</td></tr>
+<tr><td>"Understanding the idea"</td><td>Questions on purpose, scope and success criteria, and the "too many subsystems, decompose" paragraph are removed. The interview rules (one question at a time, multiple choice) stay, for technical questions only. "Design for isolation and clarity" stays: it is technical decomposition.</td></tr>
+<tr><td>New step: find the elements</td><td>A short, narrow element list. For flows, a breadboard in words: places (a command, a status, a file), affordances (what can be done there), connections (what leads where). A fat marker sketch only when layout is the core problem. Rough: boundaries and rules, not a spec.</td></tr>
+<tr><td>New step: address rabbit holes</td><td>Start from the pitch's flagged Risks. Walk the use case in slow motion, start to end. Question each part that looks solved: does it need new technical work, does it assume how parts fit, does it assume a design answer exists? Fix each hole with one of three moves: patch (dictate a simpler answer, written into the spec), declare out of bounds, or cut back. A hole with no answer goes to Jack.</td></tr>
+<tr><td>Back-edge</td><td>If the design cannot fit the appetite after cutting, stop and tell Jack the ticket goes back to shaping. No Steward event exists for that move yet, so it is done by hand.</td></tr>
+<tr><td>Unchanged</td><td>2-3 approaches, presenting the design, the <code>design.html</code> shell and path rules, the toolchain check, the visual companion, spec self-review, the user review gate, <code>step-end</code>, the hand-off to <code>writing-plans</code>.</td></tr>
+</table></div></section>
+
+<section id="unvendor"><h2>Un-vendor</h2>
+<p>Remove <code>"brainstorming"</code> from <code>VENDORED_SKILLS</code> in <code>scripts/check_vendored_skills.ts</code>, then run <code>node scripts/check_vendored_skills.ts</code> and confirm it passes for the remaining skills. Brainstorming is then a DigiSmith-owned skill and the upstream drift check no longer covers it.</p></section>
+
+<section id="order"><h2>Merge order and risks</h2>
+<ul>
+<li><strong>Merge order:</strong> DGS-674 (Steward event), DGS-673 (shaping skill), then this ticket. The work can be built earlier. Until it merges, brainstorming and the shaping skill overlap, which is harmless. This avoids a gap where a refinement ticket has no pitch and nowhere to go.</li>
+<li><strong>Not touched:</strong> <code>init</code>, <code>bootstrap</code> and <code>adopt</code> keep calling brainstorming unchanged. <code>using-superpowers</code> is a separate vendored skill and stays.</li>
+<li><strong>Risk:</strong> a ClickUp ticket already in <code>refinement</code> without a <code>## Pitch</code> is stopped once this merges. The Maestro shapes it first (manually until the skill exists).</li>
+</ul></section>
+
+<footer>DigiSmith · .digismith/board/DGS-676—narrow-brainstorming/design.html</footer>
+
+</body>
+</html>
