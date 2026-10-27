@@ -87,7 +87,7 @@ describe("conversationDigest", () => {
   it("lists the titles and the standard path when the conversation voice is on", async () => {
     const line = await conversationDigest(standard);
     expect(line).toContain("1. Lead with the next action; 2. Number multi-step tasks");
-    expect(line).toContain("standards/global/ai-voice-conversational.md");
+    expect(line).toContain(path.resolve(standard));
   });
 
   it("returns null when the conversation voice is off", async () => {

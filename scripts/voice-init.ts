@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { AXES, resolveAllVoices } from "./voice.ts";
 import { DEFAULT_DIR } from "./preferences.ts";
 
@@ -26,5 +27,5 @@ export async function conversationDigest(standardPath: string, dir: string = DEF
   if (resolveAllVoices(dir).conversation !== "on") return null;
   const titles = readRuleTitles(standardPath);
   if (titles.length === 0) return null;
-  return `DigiSmith conversation voice, every reply this session (rules and examples: standards/global/ai-voice-conversational.md): ${titles.join("; ")}`;
+  return `DigiSmith conversation voice, every reply this session (rules and examples: ${path.resolve(standardPath)}): ${titles.join("; ")}`;
 }
