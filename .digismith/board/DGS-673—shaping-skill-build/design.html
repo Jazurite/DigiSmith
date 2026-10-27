@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build the digismith:shaping skill</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #5a5a5a; --border: #dcdcdc;
+    --code-bg: #f4f4f4; --accent: #7a4fb5; --card-bg: #faf9fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d;
+      --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6; max-width: 860px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem;
+  }
+  header.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .4rem; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta span { margin-right: 1.2rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 999px; padding: .1rem .6rem; font-size: .78rem; font-weight: 600;
+  }
+  nav.toc { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.4rem; margin: 1.5rem 0 2.5rem; font-size: .92rem; }
+  nav.toc h2 { font-size: .82rem; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); margin: 0 0 .6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.2rem; columns: 2; }
+  nav.toc a { color: var(--fg); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 2.6rem; }
+  h2 { font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; color: var(--accent); margin-top: 1.6rem; }
+  code { background: var(--code-bg); padding: .1rem .35rem; border-radius: 4px; font-size: .88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem; overflow-x: auto; }
+  pre code { background: none; padding: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: .3rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: .9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr; } nav.toc ol { columns: 1; } table { font-size: .82rem; } }
+  .card { border: 1px solid var(--border); background: var(--card-bg); border-radius: 10px; padding: 1rem 1.2rem; }
+  .card h4 { margin: 0 0 .3rem; font-size: .98rem; }
+  .card .tag { font-size: .74rem; color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+  .card p { margin: .4rem 0 0; font-size: .9rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; margin: 1rem 0; }
+  .table-wrap { overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: .5rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--card-bg); }
+  .callout { border-left: 3px solid var(--accent); background: var(--card-bg);
+    padding: .8rem 1.1rem; border-radius: 0 8px 8px 0; font-size: .92rem; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--border);
+    padding-top: 1rem; margin-top: 3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">approved for planning</span>
+  <h1>Build the digismith:shaping skill</h1>
+  <div class="meta"><span>Date: 2026-10-27</span><span>Ticket: DGS-673</span><span>Parent design: DGS-671</span></div>
+</header>
+
+<nav class="toc"><h2>Contents</h2><ol>
+<li><a href="#what">What and why</a></li>
+<li><a href="#file">The skill file</a></li>
+<li><a href="#decisions">Technical decisions</a></li>
+<li><a href="#verify">Verification</a></li>
+<li><a href="#order">Merge order</a></li>
+</ol></nav>
+
+<section id="what"><h2>What and why</h2>
+<p>Write <code>skills/shaping/SKILL.md</code> from the approved DGS-671 design: the skill that takes a ClickUp ticket from <code>backlog</code> (a raw idea) to <code>concept</code> (shaped) by writing a <code>## Pitch</code> on the ticket and firing the <code>shaped</code> Steward event (DGS-674).</p></section>
+
+<section id="file"><h2>The skill file</h2>
+<p>One new file, self-contained, in the plain style of <code>jira-intake</code> and <code>catch-up</code>. It holds: the trigger description; a hard gate (nothing written to the ticket and no event before Jack's yes); the seven-step flow; the pitch template; the self-review checklist; the walk-away ending; the interview mode; the Small, Medium and Big definitions; the exact commands (<code>dg clickup get-task</code>, <code>dg clickup update-task --markdown-description-file</code>, <code>dg steward event shaped</code>, <code>tokens step-start</code> and <code>step-end</code> with <code>--step shaping</code>). It never mentions <code>digismith:brainstorming</code> (no cross-reference, Jack's decision).</p></section>
+
+<section id="decisions"><h2>Technical decisions</h2>
+<ul>
+<li><strong>Writing the pitch:</strong> <code>dg clickup update-task</code> replaces the whole description, so the skill reads the current description, keeps it untouched, appends <code>## Pitch</code> and the pitch text, writes the whole text to a scratchpad file, and updates with <code>--markdown-description-file</code>. It reads the ticket back and checks that the raw text and the <code>## Pitch</code> heading are both present.</li>
+<li><strong>Re-shaping a ticket that already has a pitch:</strong> the skill stops and asks Jack whether to replace it. It never silently overwrites.</li>
+<li><strong>Roadmap fit:</strong> the skill reads the ticket's list and the epics and initiatives in it with <code>dg clickup list-tasks</code> and proposes a parent and a milestone, never a done milestone. No fitting initiative becomes an open question.</li>
+<li><strong>Telemetry:</strong> <code>step-start</code> at the beginning and <code>step-end</code> before the event, same key rule as the other skills (needs the <code>shaping</code> step from DGS-674).</li>
+<li><strong>Tickets already in concept without a pitch:</strong> same flow; the final <code>shaped</code> call is a no-op by design.</li>
+</ul></section>
+
+<section id="verify"><h2>Verification</h2>
+<p>The skill is prose, so the plan checks it with searches: frontmatter name, every required heading, the three commands, and zero mentions of the brainstorming skill. The live <code>shaped</code> command is checked with <code>--dry-run</code> once DGS-674 is merged.</p></section>
+
+<section id="order"><h2>Merge order</h2>
+<p>DGS-674 first (the event and the telemetry step), then this ticket, then DGS-676 (which narrows brainstorming).</p></section>
+
+<footer>DigiSmith · .digismith/board/DGS-673—shaping-skill-build/design.html</footer>
+
+</body>
+</html>
