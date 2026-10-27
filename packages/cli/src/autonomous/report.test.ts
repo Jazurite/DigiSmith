@@ -55,8 +55,8 @@ describe("buildReport", () => {
   it("lists stopped under Waiting for Jack as well as under Failed or stopped", async () => {
     appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-5", result: "stopped", reason: "needs sudo" });
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    const failed = text.split("Failed or stopped")[1].split("Waiting for Jack")[0];
-    const waiting = text.split("Waiting for Jack")[1].split("Skipped")[0];
+    const failed = text.split("\nFailed or stopped\n")[1].split("\nWaiting for Jack\n")[0];
+    const waiting = text.split("\nWaiting for Jack\n")[1].split("\nSkipped\n")[0];
     expect(failed).toMatch(/DGS-5[^\n]*stopped[^\n]*needs sudo/);
     expect(waiting).toMatch(/DGS-5[^\n]*needs sudo/);
   });
@@ -64,9 +64,9 @@ describe("buildReport", () => {
   it("a proof release shows under Proofs and in neither Failed or stopped nor Waiting for Jack", async () => {
     appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-642", result: "proof", reason: "first-use proof" });
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    const failed = text.split("Failed or stopped")[1].split("Waiting for Jack")[0];
-    const waiting = text.split("Waiting for Jack")[1].split("Proofs")[0];
-    const proofs = text.split("Proofs")[1].split("Skipped")[0];
+    const failed = text.split("\nFailed or stopped\n")[1].split("\nWaiting for Jack\n")[0];
+    const waiting = text.split("\nWaiting for Jack\n")[1].split("\nProofs\n")[0];
+    const proofs = text.split("\nProofs\n")[1].split("\nSkipped\n")[0];
     expect(proofs).toContain("DGS-642: first-use proof");
     expect(failed).toContain("none");
     expect(failed).not.toContain("DGS-642");
@@ -77,13 +77,13 @@ describe("buildReport", () => {
   it("Proofs reads none when there is no proof", async () => {
     seed();
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    expect(text.split("Proofs")[1].split("Skipped")[0]).toContain("none");
+    expect(text.split("\nProofs\n")[1].split("\nSkipped\n")[0]).toContain("none");
   });
 
   it("a proof without a reason prints only the key", async () => {
     appendEvent(dir, at("2026-10-20T16:00:00Z"), "release", { ticket: "DGS-7", result: "proof" });
     const text = buildReport(FROM, TO, await read(FROM, TO), null);
-    expect(text.split("Proofs")[1].split("Skipped")[0]).toMatch(/DGS-7(?!:)/);
+    expect(text.split("\nProofs\n")[1].split("\nSkipped\n")[0]).toMatch(/DGS-7(?!:)/);
     expect(text).not.toContain("DGS-7:");
   });
 
