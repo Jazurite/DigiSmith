@@ -49,7 +49,7 @@ function write(dir: string, b: Breaker): void {
   atomicWrite(dir, NAME, `${JSON.stringify({ open: b.open, streak: b.streak, failed: b.failed, openedAt: b.openedAt }, null, 2)}\n`);
 }
 
-/** Counts every failed release; a merge resets the streak (open is only changed by closeBreaker or by opening); stopped and awaiting-jack change nothing. */
+/** Counts every failed release; a merge resets the streak (open is only changed by closeBreaker or by opening); stopped, awaiting-jack and proof change nothing. */
 export function recordRelease(
   dir: string,
   a: { ticket: string; result: "merged" | "failed" | "stopped" | "awaiting-jack" | "proof" },
