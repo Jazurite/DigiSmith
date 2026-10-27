@@ -74,8 +74,7 @@
 <li><a href="#pitch">The pitch</a></li>
 <li><a href="#event">The Steward event</a></li>
 <li><a href="#neighbours">Neighbours and old tickets</a></li>
-<li><a href="#overlap">Overlap with brainstorming</a></li>
-<li><a href="#reuse">Reuse from brainstorming</a></li>
+<li><a href="#decoupled">Decoupled from brainstorming</a></li>
 <li><a href="#followups">Follow-up tickets</a></li>
 </ol></nav>
 
@@ -129,39 +128,26 @@
 
 <section id="neighbours"><h2>Neighbours and old tickets</h2>
 <ul>
-<li><strong><code>digismith:brainstorming</code></strong> stays the refinement step (architecture, then Jack approves the spec). It starts from the pitch.</li>
+<li><strong><code>digismith:brainstorming</code></strong> stays the refinement step, narrowed to technical design (see "Decoupled from brainstorming"). Shaping does not reference it.</li>
 <li><strong><code>digismith:jira-intake</code></strong> is untouched. It is the Jira door. Shaping is the ClickUp door.</li>
 <li><strong>Tickets already in concept</strong> (DGS-625, 626, 633, 651 and others) stay there. They were moved before any shaping. The first refiner or claimer who touches one runs the skill on it. No mass move.</li>
 </ul></section>
 
-<section id="overlap"><h2>Overlap with brainstorming</h2>
-<p>Compared with <code>digismith:brainstorming</code> (the DigiSmith fork of the Superpowers skill). Shaping overlaps it in four rules and differs in four.</p>
+<section id="decoupled"><h2>Decoupled from brainstorming</h2>
+<p>Jack's decision: shaping has no reference to <code>digismith:brainstorming</code>, and the product-level parts physically leave brainstorming. Each skill is complete on its own. The overlap is resolved by <em>moving</em> the parts, not by sharing them.</p>
 <div class="table-wrap"><table>
-<tr><th>Part</th><th>Brainstorming</th><th>Shaping</th><th>Decision</th></tr>
-<tr><td>Explore context first</td><td>Files, docs, commits</td><td>Idea, code, existing tickets</td><td>Same rule: reference it</td></tr>
-<tr><td>Clarifying questions</td><td>One at a time, multiple choice</td><td>At most 3, "interview me" escape</td><td>Same rule for the interview mode: reference it</td></tr>
-<tr><td>Decompose when too big</td><td>Flag it, split into sub-projects</td><td>Grab-bag or Big appetite means split</td><td>Same idea: reference it</td></tr>
-<tr><td>Cut scope</td><td>YAGNI</td><td>Fixed appetite, cut scope</td><td>Same idea: reference it</td></tr>
-<tr><td>2-3 approaches</td><td>Yes</td><td>One shaped solution</td><td>Different: stays out of shaping</td></tr>
-<tr><td>Architecture, components, tests</td><td>Yes</td><td>Product level only</td><td>Different</td></tr>
-<tr><td>Hard gate, then <code>writing-plans</code></td><td>Yes</td><td>None; ends with the <code>shaped</code> event</td><td>Different</td></tr>
-<tr><td>Output</td><td><code>design.html</code></td><td><code>## Pitch</code> on the ticket</td><td>Different</td></tr>
+<tr><th>Part</th><th>Lives in</th></tr>
+<tr><td>Interview rules (one question at a time, multiple choice)</td><td>Shaping owns its own copy, written for the pitch. Brainstorming keeps its own for technical questions.</td></tr>
+<tr><td>Explore context, decompose when too big, cut scope</td><td>Shaping only (appetite, grab-bag, split). Removed from brainstorming.</td></tr>
+<tr><td>Questions on purpose, scope and success criteria</td><td>Shaping only. Removed from brainstorming.</td></tr>
+<tr><td>Hard gate, self-review, telemetry step marker, ticket key from the branch</td><td>Written into shaping in its own words: no pitch and no <code>shaped</code> event before Jack's yes; every pitch field filled and consistent; <code>tokens step-end --step shaping</code>; the same key regex.</td></tr>
+<tr><td>Architecture, components, data flow, errors, testing, 2-3 approaches, design.html, hand-off to <code>writing-plans</code></td><td>Brainstorming only. It becomes technical solution design for a ticket in <code>refinement</code>.</td></tr>
+<tr><td>Visual companion, toolchain check, HTML design shell</td><td>Brainstorming only.</td></tr>
 </table></div>
 <ul>
-<li><strong>Brainstorming becomes specific.</strong> The original is an umbrella ("use before any creative work"). In DigiSmith the work is split by role: shaping owns the product level (what, why, appetite, scope, no-gos), brainstorming owns the technical level (architecture, components, data flow, errors, testing, Jack approves the spec). Its description changes to "architecture and solution design for a ticket in refinement" and drops the umbrella trigger. The edit stays small (description plus a short "pitch is the input" note), because <code>brainstorming</code> is a vendored skill in <code>scripts/check_vendored_skills.ts</code>: the checker diffs it against upstream Superpowers, and a rewrite would make upstream merges painful. It keeps its name: init, bootstrap, writing-plans and the DGS-488 text refer to it, and a rename would only add churn.</li>
-<li><strong>The pitch is its input.</strong> In refinement brainstorming reads the pitch as given and does not ask again about purpose, scope, appetite or success criteria. A ticket in refinement with no pitch goes back to shaping first.</li>
-<li><strong>No double trigger.</strong> With the umbrella trigger gone, a raw idea no longer matches brainstorming. A <code>backlog</code> ticket goes to <code>digismith:shaping</code>, which never invokes brainstorming.</li>
-<li><strong>No copies.</strong> <code>skills/shaping/SKILL.md</code> says "conversation rules as in <code>digismith:brainstorming</code>" (one question at a time, multiple choice, decomposition) and spells out only what differs: the pitch, the appetite, the event.</li>
-</ul></section>
-
-<section id="reuse"><h2>Reuse from brainstorming</h2>
-<ul>
-<li><strong>Interview rules</strong> (one question at a time, multiple choice): referenced, not copied.</li>
-<li><strong>Hard gate</strong>, in smaller form: no pitch written to the ticket and no <code>shaped</code> event until Jack says yes.</li>
-<li><strong>Self-review</strong> before showing Jack, run on the pitch: every field filled, no "TBD", no field contradicting another.</li>
-<li><strong>Telemetry step marker</strong>: shaping runs <code>tokens step-end --step shaping</code>. The step names are a fixed list in <code>packages/cli/src/tokens/types.ts</code>, so <code>shaping</code> is added there (part of the <code>shaped</code> event ticket).</li>
-<li><strong>Ticket key</strong> from the branch name: the same regex.</li>
-<li><strong>Not reused:</strong> the HTML design shell and the visual companion (the pitch lives on the ticket), and the toolchain check (shaping asks no tooling questions).</li>
+<li><strong>Brainstorming is un-vendored.</strong> It is removed from <code>VENDORED_SKILLS</code> in <code>scripts/check_vendored_skills.ts</code> and becomes a DigiSmith-owned skill, free to diverge from Superpowers. The upstream drift check no longer covers it.</li>
+<li><strong>Brainstorming is narrowed.</strong> New description: "architecture and solution design for a ticket in refinement". The umbrella trigger ("use before any creative work") is dropped. Its input is the pitch: it does not ask again about purpose, scope, appetite or success criteria. It keeps its name, because init, bootstrap, writing-plans and the DGS-488 text refer to it.</li>
+<li><strong>No cross-reference either way.</strong> Shaping never mentions or invokes brainstorming. The skill list gives each a clear trigger: a <code>backlog</code> ticket (or a <code>concept</code> ticket without a pitch) goes to shaping, a ticket in <code>refinement</code> goes to brainstorming. A <code>refinement</code> ticket without a pitch is sent back to shaping by the Maestro, not by a reference inside a skill.</li>
 </ul></section>
 
 <section id="followups"><h2>Follow-up tickets</h2>
@@ -170,7 +156,7 @@
 <li>Build <code>skills/shaping/SKILL.md</code> from this design.</li>
 <li>Add the <code>shaped</code> event and the <code>shaping</code> telemetry step, remove <code>concept-started</code>, update the rules table and tests.</li>
 <li>Update the DGS-488 and DGS-549 text (status table and event map).</li>
-<li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level questions removed.</li>
+<li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level parts removed. Un-vendor it (remove from <code>VENDORED_SKILLS</code>). Do this before or together with the shaping skill, so the two never overlap.</li>
 <li>DGS-670: the claim check looks for a <code>## Pitch</code> heading.</li>
 </ul></section>
 
