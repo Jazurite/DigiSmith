@@ -448,14 +448,14 @@ describe("pending retries", () => {
     const setDates = t.setDates.bind(t);
     let datesFailed = false;
     t.setDates = async (k, d) => { if (!datesFailed) { datesFailed = true; throw new Error("boom"); } await setDates(k, d); };
-    await run(t, { event: "concept-started" }); // the dates fail first, so the comment waits
+    await run(t, { event: "shaped" }); // the dates fail first, so the comment waits
     expect(t.comments).toEqual([]);
     expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
-    await run(t, { event: "concept-started" });
+    await run(t, { event: "shaped" });
     expect(t.comments).toEqual(["Jack did not accept: wrong"]);
     expect(t.ticket.dueDate).toBe("2026-10-18");
     expect(readState(dir, "DGS-1")!.pending).toEqual([]);
-    await run(t, { event: "concept-started" });
+    await run(t, { event: "shaped" });
     expect(t.comments).toHaveLength(1);
   });
   it("a successful retry refreshes the snapshot so the event is judged on the fresh status", async () => {
@@ -476,7 +476,7 @@ describe("pending retries", () => {
     expect(t.comments).toHaveLength(1);
     expect(readState(dir, "DGS-1")!.pending).toHaveLength(1);
     t.setStatus = original;
-    await run(t, { event: "concept-started" }); // refused itself, but the queued move retries first
+    await run(t, { event: "shaped" }); // refused itself, but the queued move retries first
     expect(t.ticket.status).toBe("refinement");
     expect(t.comments).toHaveLength(1);
   });

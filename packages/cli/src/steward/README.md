@@ -10,7 +10,7 @@ The tracker comes from the profile (`tracker: clickup | jira | none`). `release_
 
 | Event | From | Into |
 |---|---|---|
-| `concept-started` | backlog | concept |
+| `shaped` | backlog | concept (the shaping skill fires it at its end; from concept it does nothing) |
 | `discovery-started` | concept | discovery |
 | `refinement-started` | concept, discovery | refinement |
 | `approved` (gate, needs `--quote`; `--into to do\|scheduled`, default to do) | refinement | to do or scheduled |

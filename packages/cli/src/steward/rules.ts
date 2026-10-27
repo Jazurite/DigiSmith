@@ -7,7 +7,7 @@ interface Entry {
 
 /** Events with one fixed target. The others (merged, verified, accepted, release-started, discard, close) are below. */
 const ENTRY: Partial<Record<EventName, Entry>> = {
-  "concept-started": { from: ["backlog"], to: "concept" },
+  shaped: { from: ["backlog"], to: "concept" },
   "discovery-started": { from: ["concept"], to: "discovery" },
   "refinement-started": { from: ["concept", "discovery"], to: "refinement" },
   started: { from: ["to do", "claimed"], to: "in progress" },

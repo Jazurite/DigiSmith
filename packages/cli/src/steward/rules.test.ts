@@ -14,7 +14,7 @@ const to = (r: RuleResult) => (r.kind === "move" ? r.to : r.kind);
 
 describe("entry events, one per status", () => {
   const rows: [EventInput, TicketView, string][] = [
-    [ev("concept-started"), view("backlog"), "concept"],
+    [ev("shaped"), view("backlog"), "concept"],
     [ev("discovery-started"), view("concept"), "discovery"],
     [ev("refinement-started"), view("concept"), "refinement"],
     [ev("refinement-started"), view("discovery"), "refinement"],
@@ -38,6 +38,22 @@ describe("entry events, one per status", () => {
     const targets = new Set(rows.map((r) => r[2]));
     for (const s of STATUSES) if (s !== "backlog" && s !== "claimed") expect(targets.has(s)).toBe(true);
     expect(to(evaluate(ev("filed"), view("backlog"), OFF))).toBe("refuse");
+  });
+});
+
+describe("shaped (DGS-674)", () => {
+  it("needs no quote and is not a gate", () => {
+    expect(GATE_EVENTS).not.toContain("shaped");
+    expect(to(evaluate(ev("shaped"), view("backlog"), OFF))).toBe("concept");
+  });
+  it("is a no-op on a ticket already in concept", () => {
+    expect(evaluate(ev("shaped"), view("concept"), OFF)).toEqual({ kind: "noop" });
+  });
+  it("is refused from any other status", () => {
+    expect(to(evaluate(ev("shaped"), view("to do"), OFF))).toBe("refuse");
+  });
+  it("concept-started no longer exists", () => {
+    expect(EVENTS as readonly string[]).not.toContain("concept-started");
   });
 });
 

@@ -5,7 +5,7 @@ export const STATUSES = [
 export type Status = (typeof STATUSES)[number];
 
 export const EVENTS = [
-  "filed", "concept-started", "discovery-started", "refinement-started", "approved", "started",
+  "filed", "shaped", "discovery-started", "refinement-started", "approved", "started",
   "review-started", "merged", "verified", "accepted", "release-started", "released", "documented",
   "discard", "close",
 ] as const;
