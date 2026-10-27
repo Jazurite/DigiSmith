@@ -72,6 +72,7 @@
 <li><a href="#decisions">Decisions</a></li>
 <li><a href="#flow">The flow</a></li>
 <li><a href="#pitch">The pitch</a></li>
+<li><a href="#ends">Where shaping ends</a></li>
 <li><a href="#event">The Steward event</a></li>
 <li><a href="#neighbours">Neighbours and old tickets</a></li>
 <li><a href="#decoupled">Decoupled from brainstorming</a></li>
@@ -81,13 +82,13 @@
 
 <section id="what"><h2>What and why</h2>
 <p>A ticket is created in <code>backlog</code> as a raw idea. A new skill, <code>digismith:shaping</code>, runs on it. Only after that does the ticket reach <code>concept</code>. So <code>concept</code> now means <em>shaped</em>, no longer <em>being shaped</em> (DGS-488). Claiming, by the factory or by hand, is allowed only after <code>concept</code> (DGS-670).</p>
-<p>The method is Basecamp's <a href="https://basecamp.com/shapeup">Shape Up</a>: a pitch with problem, appetite, solution, rabbit holes and no-gos, made in four steps.</p></section>
+<p>The method is Basecamp's <a href="https://basecamp.com/shapeup">Shape Up</a>: a pitch made from boundaries (appetite, a narrowed problem) and a rough idea. Shape Up's solution-design steps (elements, rabbit holes) go to <code>refinement</code> here (see "Where shaping ends").</p></section>
 
 <section id="decisions"><h2>Decisions</h2>
 <div class="table-wrap"><table>
 <tr><th>Point</th><th>Decision</th></tr>
 <tr><td>Who does the work</td><td>Draft first, from the idea, the code and existing tickets. At most three questions to Jack, only about what the draft could not settle. Jack can say "interview me" at any point and the skill switches to one question at a time.</td></tr>
-<tr><td>Shape of the pitch</td><td>The five Shape Up ingredients plus Sign-off and Mode (section "The pitch").</td></tr>
+<tr><td>Shape of the pitch</td><td>Problem, Appetite, Idea, Scope in/out with no-gos, Risks (flagged, not solved), Sign-off and Mode, Open questions (section "The pitch"). Elements and rabbit holes are refinement's (section "Where shaping ends").</td></tr>
 <tr><td>Appetite unit</td><td>Small, Medium or Big, defined once in the skill: Small = one worker, one session; Medium = a few tickets, about one day; Big = must be split first.</td></tr>
 <tr><td>Steward event</td><td>New event <code>shaped</code> (backlog to concept). <code>concept-started</code> is removed.</td></tr>
 <tr><td>Tickets already in concept</td><td>They stay. A ticket without a <code>## Pitch</code> heading counts as unshaped. The skill runs on it when someone picks it up.</td></tr>
@@ -95,30 +96,38 @@
 </table></div></section>
 
 <section id="flow"><h2>The flow</h2>
-<p>It follows the four Shape Up steps (chapters 3 to 6 of the book). The skill writes no code, makes no orders and starts no workers (Shape Up's "two tracks": shaping is separate from building). Shaping is rough and private: a conversation between Jack and the Maestro.</p>
+<p>It uses the first and last of Shape Up's four steps (set boundaries, write the pitch). The middle two (find the elements, address rabbit holes) are solution design and belong to <code>refinement</code> (see "Where shaping ends"). The skill writes no code, makes no orders and starts no workers (Shape Up's "two tracks": shaping is separate from building). Shaping is private: a conversation between Jack and the Maestro.</p>
 <ol>
-<li><strong>Read.</strong> <code>dg clickup get-task</code>. The ticket must be in <code>backlog</code>, or in <code>concept</code> without a pitch.</li>
-<li><strong>Set boundaries.</strong> Fix the appetite first ("fixed time, variable scope": if the solution does not fit, cut scope, never raise the appetite). Narrow the problem: ask what is really going wrong, and pin it to one specific story that shows why today does not work. Ask the shaper's strategic questions: why does it matter, who is affected, what does success look like, what does it cost compared with the alternatives. Record the baseline: how things get done today without it. A grab-bag ("redesign X", "X 2.0") is reframed or split before shaping. A Big appetite that cannot be narrowed means split. If the problem cannot be pinned down and is not critical, walk away.</li>
-<li><strong>Find the elements.</strong> Draft a short list of narrow, specific elements, not a vague phrase. For flows, sketch a <em>breadboard</em> in words: places (a command, a status, a screen), affordances (what can be done there) and connections (what leads where). Use a <em>fat marker</em> sketch only when layout is the core problem. Mark an element that is appealing but not core with a leading <code>~</code> (nice-to-have), as in the book, so a later cut is easy. Stay rough: boundaries and rules, not a spec, so the builder keeps room to decide.</li>
-<li><strong>Address rabbit holes.</strong> Walk the use case in slow motion, start to end. Question each part that looks solved: does it need new technical work, does it assume how parts fit, does it assume a design answer exists? Read the code to check the assumptions. Fix each hole with one of three moves: <em>patch</em> (dictate a simpler answer, written into the pitch), <em>declare out of bounds</em> (a no-go), or <em>cut back</em> (drop a nice-to-have). A hole with no answer goes to Open questions. Then propose Sign-off and Mode with one reason each.</li>
-<li><strong>Ask.</strong> At most three questions to Jack, only on what the draft could not settle. The default three are the book's betting questions: does the problem matter, is the appetite right, is the solution attractive.</li>
-<li><strong>Self-review the pitch</strong> against the book's pitfalls (see "The pitch"), then show it to Jack. On his yes, append it to the ticket description under <code>## Pitch</code> (the raw idea above it stays untouched), then run <code>dg steward event shaped --ticket &lt;KEY&gt; --by shaping</code>.</li>
+<li><strong>Read.</strong> <code>dg clickup get-task</code>. The ticket must be in <code>backlog</code>, or in <code>concept</code> without a pitch. Look at the code and at existing tickets for what already exists.</li>
+<li><strong>Set boundaries.</strong> Fix the appetite first ("fixed time, variable scope": if the idea does not fit, cut scope, never raise the appetite). Narrow the problem: ask what is really going wrong, and pin it to one specific story that shows why today does not work. Ask the shaper's strategic questions: why does it matter, who is affected, what does success look like, what does it cost compared with the alternatives. Record the baseline: how things get done today without it. A grab-bag ("redesign X", "X 2.0") is reframed or split before shaping. A Big appetite that cannot be narrowed means split. If the problem cannot be pinned down and is not critical, walk away.</li>
+<li><strong>Draw the product-level idea.</strong> In a few sentences: what the user gets, what is in scope and what is out. Mark what is appealing but not core with a leading <code>~</code>. No elements, no breadboard, no technical design.</li>
+<li><strong>Note the risks.</strong> Flag what looks risky or unknown for refinement. Flag only: do not solve it. Propose Sign-off and Mode with one reason each.</li>
+<li><strong>Ask.</strong> At most three questions to Jack, only on what the draft could not settle. The default three are the book's betting questions: does the problem matter, is the appetite right, is the idea attractive.</li>
+<li><strong>Self-review the pitch</strong> against the checklist (see "The pitch"), then show it to Jack. On his yes, append it to the ticket description under <code>## Pitch</code> (the raw idea above it stays untouched), then run <code>dg steward event shaped --ticket &lt;KEY&gt; --by shaping</code>.</li>
 <li><strong>Hand over.</strong> Tell Jack the next step: "discover it" or "refine it".</li>
 </ol>
 <div class="callout"><strong>Walk away is a valid end.</strong> Nothing is committed during shaping ("no conveyor belt"). Shaping can end in "not now". The ticket stays in <code>backlog</code> with a one-line note on why, and no event fires. Jack decides whether to discard it. The skill never discards.</div></section>
 
 <section id="pitch"><h2>The pitch</h2>
 <ol>
-<li><strong>Problem</strong>: one specific story that shows why the status quo does not work, opening with the baseline (how things get done today without it). The solution is judged against it.</li>
-<li><strong>Appetite</strong>: Small, Medium or Big. A budget that limits the solution, not an estimate.</li>
-<li><strong>Solution</strong>: the narrow, specific elements, rough: a breadboard in words or a fat marker sketch where it helps, never a wireframe or spec. A note says the builder may find a different way.</li>
-<li><strong>Rabbit holes</strong>: what could derail the work, each with the call made on it (patch, out of bounds, or cut back). A few lines are enough.</li>
-<li><strong>No-gos</strong>: what is explicitly out, to fit the appetite.</li>
+<li><strong>Problem</strong>: one specific story that shows why the status quo does not work, opening with the baseline (how things get done today without it). The idea is judged against it.</li>
+<li><strong>Appetite</strong>: Small, Medium or Big. A budget that limits the idea, not an estimate.</li>
+<li><strong>Idea</strong>: a few sentences at product level: what the user gets. Rough on purpose. Elements marked <code>~</code> are nice-to-haves.</li>
+<li><strong>Scope in and out</strong>, including the no-gos: what is explicitly excluded to fit the appetite.</li>
+<li><strong>Risks</strong>: what looks risky or unknown, flagged for refinement, not solved.</li>
 <li><strong>Sign-off and Mode</strong>: proposed values with a reason each (DigiSmith addition; Jack confirms them when he approves into <code>to do</code>).</li>
 <li><strong>Open questions</strong>: what shaping could not settle. A pitch with open questions can still ship, but they are listed.</li>
 </ol>
-<p><strong>Self-review checklist</strong> (the book's pitfalls). The pitch must also pass the book's three properties: <em>rough</em> (no wireframe-level detail), <em>solved</em> (every rabbit hole patched, fenced off, or listed as open), <em>bounded</em> (an appetite and no-gos). The skill refuses to show a pitch that has: a solution without a problem; a problem without a solution (unshaped work); no appetite; a wireframe-level spec that boxes the builder in; no rabbit holes or no-gos; a "TBD" or a field that contradicts another.</p>
-<p>Refinement reads this pitch as its input, so <code>digismith:brainstorming</code> no longer asks again for problem and scope.</p></section>
+<p><strong>Self-review checklist.</strong> The pitch must be <em>rough</em> (no element list, no breadboard, no technical design) and <em>bounded</em> (an appetite and no-gos). The skill refuses to show a pitch that has: an idea without a problem; a problem without an idea (unshaped work); no appetite; no scope out; a "TBD" or a field that contradicts another. The book's third property, <em>solved</em>, is not asked of a pitch: solving is refinement's job.</p>
+<p>Refinement takes this pitch as its input and does not ask again for problem, scope or appetite.</p></section>
+
+<section id="ends"><h2>Where shaping ends</h2>
+<p>Jack's decision: <code>concept</code> is the what and why at product level (DGS-488). Shape Up's two solution-design steps move to <code>refinement</code>, which is where DGS-488 already puts architecture and solution design.</p>
+<ul>
+<li><strong>Stays in shaping:</strong> boundaries (appetite, narrowed problem), the product-level idea, scope in and out, flagged risks, the pitch.</li>
+<li><strong>Moves to refinement:</strong> find the elements (element list, breadboard, fat marker sketch where layout is the problem) and address rabbit holes (walk the use case in slow motion, question each part that looks solved, then patch, fence off as out of bounds, or cut back). The refinement skill takes the flagged risks as its starting list.</li>
+<li><strong>Back-edge:</strong> if refinement finds the idea does not fit the appetite, the ticket goes back to shaping. It is never stretched to fit (Shape Up's circuit-breaker rule).</li>
+</ul></section>
 
 <section id="event"><h2>The Steward event</h2>
 <p><code>shaped</code> moves a ticket from <code>backlog</code> to <code>concept</code>. The skill fires it as its last step, after Jack says the pitch is fine. It needs no quote: it is not one of the two gates (refinement to <code>to do</code>, and acceptance).</p>
@@ -143,7 +152,7 @@
 <tr><td>Explore context, decompose when too big, cut scope</td><td>Shaping only (appetite, grab-bag, split). Removed from brainstorming.</td></tr>
 <tr><td>Questions on purpose, scope and success criteria</td><td>Shaping only. Removed from brainstorming.</td></tr>
 <tr><td>Hard gate, self-review, telemetry step marker, ticket key from the branch</td><td>Written into shaping in its own words: no pitch and no <code>shaped</code> event before Jack's yes; every pitch field filled and consistent; <code>tokens step-end --step shaping</code>; the same key regex.</td></tr>
-<tr><td>Architecture, components, data flow, errors, testing, 2-3 approaches, design.html, hand-off to <code>writing-plans</code></td><td>Brainstorming only. It becomes technical solution design for a ticket in <code>refinement</code>.</td></tr>
+<tr><td>Find the elements, address rabbit holes, architecture, components, data flow, errors, testing, 2-3 approaches, design.html, hand-off to <code>writing-plans</code></td><td>Brainstorming only. It becomes solution design for a ticket in <code>refinement</code>, starting from the pitch's flagged risks.</td></tr>
 <tr><td>Visual companion, toolchain check, HTML design shell</td><td>Brainstorming only.</td></tr>
 </table></div>
 <ul>
@@ -157,10 +166,11 @@
 <div class="table-wrap"><table>
 <tr><th>Shape Up</th><th>DigiSmith</th></tr>
 <tr><td>Small team ("small enough to wing it"): no cycles, no formal betting table, but the phases stay: raw idea, shaped pitch, bet, build</td><td>Jack and the Maestro are that small team. <code>backlog</code> is the raw idea, <code>concept</code> the shaped pitch, Jack's approval into <code>to do</code> the bet, and the factory builds.</td></tr>
-<tr><td>Betting table asks: does the problem matter, is the appetite right, is the solution attractive, is it the right time, are the right people free</td><td>The first three are the skill's default questions to Jack. The last two stay with refinement and the factory queue (DGS-670).</td></tr>
+<tr><td>Betting table asks: does the problem matter, is the appetite right, is the solution attractive, is it the right time, are the right people free</td><td>The first three are the skill's default questions to Jack (with "solution" read as "idea"). The last two stay with refinement and the factory queue (DGS-670).</td></tr>
 <tr><td>No backlogs: ideas not bet on are let go; raw feedback gets a gentle "no"</td><td><strong>Deliberate difference.</strong> ClickUp is the only tracker, so a raw idea stays a <code>backlog</code> ticket. The "gentle no" is the walk-away ending: the ticket stays, with a note.</td></tr>
 <tr><td>Circuit breaker: a project that misses its cycle stops and is reshaped, never extended; uphill work at the end means a shaping oversight</td><td>The pitch's appetite is the cap. Reshaping on overrun belongs to the failed-ticket decision (DGS-490) and the claim rules (DGS-670). Listed as input to those tickets, not decided here.</td></tr>
 <tr><td>Assign projects, not tasks: no upfront task split ("a paper shredder"); the team finds scopes while building</td><td>Observation for the refinement design, not decided here: DGS-488's Refiner splits work into ranked tickets before the build. That is the one place the status model pulls against the book.</td></tr>
+<tr><td>Find the elements (breadboard, fat marker) and rabbit holes: shaping steps 2 and 3</td><td><strong>Deliberate difference (Jack).</strong> In DigiSmith these are solution design, so they sit in <code>refinement</code> (DGS-488: architecture and solution design). The shaping skill only flags risks.</td></tr>
 <tr><td>Scopes, hill charts, scope hammering, QA for the edges, kickoff</td><td>Building-side practices. Out of scope for the shaping skill. The <code>~</code> nice-to-have mark is the one piece taken over, because it helps the pitch.</td></tr>
 </table></div></section>
 
@@ -170,7 +180,7 @@
 <li>Build <code>skills/shaping/SKILL.md</code> from this design.</li>
 <li>Add the <code>shaped</code> event and the <code>shaping</code> telemetry step, remove <code>concept-started</code>, update the rules table and tests.</li>
 <li>Update the DGS-488 and DGS-549 text (status table and event map).</li>
-<li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level parts removed. Un-vendor it (remove from <code>VENDORED_SKILLS</code>). Do this before or together with the shaping skill, so the two never overlap.</li>
+<li>Narrow <code>digismith:brainstorming</code> to technical solution design in refinement: new description, pitch as input, product-level parts removed, and the two Shape Up solution-design steps added (find the elements, address rabbit holes). Un-vendor it (remove from <code>VENDORED_SKILLS</code>). Do this before or together with the shaping skill, so the two never overlap.</li>
 <li>Input for DGS-490 and DGS-670: an overrun stops the ticket and sends it back to shaping, never an automatic extension (Shape Up's circuit breaker).</li>
 <li>DGS-670: the claim check looks for a <code>## Pitch</code> heading.</li>
 </ul></section>
