@@ -1,6 +1,6 @@
-// DGS-435: the conductor flux, a JOB MODULE. A Nexus scheduler (DGS-456) calls fluxConductor / fluxAll later;
-// scripts/conductor/flux-cli.ts is the manual entry. Everything that touches the world comes in through FluxDeps,
-// and the herdr interface has no verb that closes a tab, a pane or an agent.
+// DGS-435: the conductor flux, a JOB MODULE. A Nexus scheduler (DGS-456) can call fluxConductor / fluxAll later;
+// scripts/conductor/flux-cli.ts is the manual entry. DGS-664: no clock rule; the idle checks are the only gate.
+// Everything that touches the world comes in through FluxDeps, and the herdr interface has no verb that closes a tab, a pane or an agent.
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { depotDir } from "../depot-dir.ts";
@@ -8,8 +8,6 @@ import { findCardBySession, listCards, type SessionCard } from "../session-card.
 import { extractBlock, parseStateBody, STATE_MARKER } from "./state-block.ts";
 import { iso7 } from "./state.ts";
 
-/** The ONE night window (a conductor fluxes only inside it). Start inclusive, end exclusive, wraps midnight. No override. */
-export const NIGHT_WINDOW = { start: "23:30", end: "02:00", utcOffsetHours: 7 } as const;
 /** Run log folder under the depot, one <UTC+7 date>.jsonl per day (the DGS-434 proposal). */
 export const FLUX_RUN_LOG_DIR = ["runs", "conductor-flux"] as const;
 export const JOB_NAME = "conductor-flux";
@@ -32,7 +30,7 @@ export interface FluxTarget {
   note: string;
   /** Per-conductor wake text; the default is DEFAULT_WAKE. */
   wake?: string;
-  /** Names of this conductor's workers that herdr must not show working or blocked. */
+  /** Names of this conductor's workers; any of them listed in herdr, in any status, blocks the flux. */
   workers?: string[];
 }
 
@@ -95,13 +93,6 @@ export interface FluxResult {
 export const SENDER = "digismith-conductor";
 
 // ---------- pure readers ----------
-
-export function inNightWindow(d: Date, w: { start: string; end: string; utcOffsetHours: number } = NIGHT_WINDOW): boolean {
-  const hm = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
-  const m = (d.getUTCHours() * 60 + d.getUTCMinutes() + w.utcOffsetHours * 60 + 1440) % 1440;
-  const [s, e] = [hm(w.start), hm(w.end)];
-  return s <= e ? m >= s && m < e : m >= s || m < e;
-}
 
 /** input + cache read + cache creation of the last main-thread assistant usage; no model call. */
 export function lastUsageSize(text: string): number | undefined {
@@ -175,7 +166,7 @@ export function inputBoxState(ansi: string): "empty" | "typed" | "unreadable" {
   return "empty";
 }
 
-const IN_FLIGHT = /\b(in flight|in-flight|running|building|being built|in review|under review|reviewing|waiting|awaiting|pending|merging)\b/i;
+const IN_FLIGHT = /\b(in flight|in-flight|running|building|being built|in review|under review|reviewing|waiting|awaiting|pending|merging|to do|in progress|claimed)\b/i;
 const NOT_IN_FLIGHT = /\b(no|none|nothing|not|without|done|merged|closed|parked)\b/i;
 
 /**
@@ -258,14 +249,8 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
   };
   const skip = (reason: string) => finish("skipped", reason);
   try {
-    // 0. refused targets and the night window
+    // 0. refused targets
     if (target.agent === SENDER && !opts.named) return skip("refused_target");
-    if (inNightWindow(deps.now())) checks.night = "ok";
-    else if (opts.dryRun) checks.night = "outside window (would skip)";
-    else {
-      checks.night = "outside window";
-      return skip("outside_night_window");
-    }
 
     // 1. the agent
     const found = (await deps.herdr.list()).filter((a) => a.name === target.agent);
@@ -300,8 +285,7 @@ export async function fluxConductor(target: FluxTarget, opts: FluxOpts, deps: Fl
     if (target.workers?.length) {
       const live = await deps.herdr.list();
       for (const name of target.workers) {
-        const a = live.find((x) => x.name === name);
-        if (a && ["working", "blocked"].includes(a.agent_status)) return skip(`worker_running:${name}`);
+        if (live.some((x) => x.name === name)) return skip(`worker_running:${name}`); // an idle or done tab is a tab not yet closed
       }
     }
     const noteText = fs.readFileSync(target.note, "utf-8");

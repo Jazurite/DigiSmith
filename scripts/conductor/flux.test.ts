@@ -3,15 +3,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
-  NIGHT_WINDOW, DEFAULT_WAKE, FLUX_RUN_LOG_DIR, inNightWindow, lastUsageSize, inputBoxState, scanNoteInFlight,
+  DEFAULT_WAKE, FLUX_RUN_LOG_DIR, lastUsageSize, inputBoxState, scanNoteInFlight,
   fluxConductor, fluxAll, buildWake, type FluxDeps, type FluxHerdr, type FluxTarget, type HerdrAgent,
 } from "./flux.ts";
 import { closeCard, writeCard, listCards, findCardBySession, type SessionCard } from "../session-card.ts";
 
 const OLD = "aaaaaaaa-0000-4000-8000-000000000001";
 const NEW = "bbbbbbbb-0000-4000-8000-000000000002";
-const NIGHT = new Date("2026-10-13T17:30:00Z"); // 00:30 UTC+7, Oct 14
-const DAY = new Date("2026-10-13T05:00:00Z"); // 12:00 UTC+7
+const DAY = new Date("2026-10-13T12:00:00Z"); // 19:00 UTC+7, daytime; after the note (11:50Z) and the last work (10:00Z)
 
 let tmp: string;
 let env: NodeJS.ProcessEnv;
@@ -103,7 +102,7 @@ beforeEach(() => {
   writeTranscript(OLD, ["{}", usageLine(2, 206343, 348), JSON.stringify({ type: "user" })], t0);
   fs.utimesSync(note, new Date("2026-10-13T11:50:00Z"), new Date("2026-10-13T11:50:00Z")); // after the last work
   writeCard(card(), env);
-  clock = NIGHT;
+  clock = DAY;
   slept = 0;
   herdr = new FakeHerdr({
     onClear: () => {
@@ -115,24 +114,6 @@ beforeEach(() => {
   });
 });
 afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
-
-describe("night window", () => {
-  const at = (iso: string) => new Date(iso);
-  it("is one named constant: 23:30 to 02:00 at UTC+7", () => {
-    expect(NIGHT_WINDOW).toEqual({ start: "23:30", end: "02:00", utcOffsetHours: 7 });
-  });
-  it("wraps over midnight with inclusive start and exclusive end", () => {
-    expect(inNightWindow(at("2026-10-13T16:29:00Z"))).toBe(false); // 23:29
-    expect(inNightWindow(at("2026-10-13T16:30:00Z"))).toBe(true); // 23:30
-    expect(inNightWindow(at("2026-10-13T17:00:00Z"))).toBe(true); // 00:00
-    expect(inNightWindow(at("2026-10-13T18:59:00Z"))).toBe(true); // 01:59
-    expect(inNightWindow(at("2026-10-13T19:00:00Z"))).toBe(false); // 02:00
-    expect(inNightWindow(at("2026-10-13T05:00:00Z"))).toBe(false); // noon
-  });
-  it("uses UTC+7 not the machine zone: 23:30 UTC is 06:30 next day, outside", () => {
-    expect(inNightWindow(at("2026-10-13T23:30:00Z"))).toBe(false);
-  });
-});
 
 describe("pure readers", () => {
   it("lastUsageSize sums input + cache read + cache creation of the last non-sidechain assistant usage", () => {
@@ -161,6 +142,15 @@ describe("pure readers", () => {
     expect(scanNoteInFlight(withHandoff)).toBe("DGS-2");
     const quiet = `## a\n- DGS-1 running\n\n## Session end x (s) 2026\nHandoff: card x\n`;
     expect(scanNoteInFlight(quiet)).toBeUndefined();
+  });
+  it("scanNoteInFlight: to do, in progress and claimed count; merged, parked and negated lines do not", () => {
+    const sec = (line: string) => `## new\n- ${line}\n`;
+    expect(scanNoteInFlight(sec("DGS-9 in progress"))).toBe("DGS-9");
+    expect(scanNoteInFlight(sec("DGS-9 to do, Mode Autonomous"))).toBe("DGS-9");
+    expect(scanNoteInFlight(sec("DGS-9 claimed by the scan"))).toBe("DGS-9");
+    expect(scanNoteInFlight(sec("DGS-9 merged, was in progress"))).toBeUndefined();
+    expect(scanNoteInFlight(sec("No ticket in progress. DGS-9 parked."))).toBeUndefined();
+    expect(scanNoteInFlight(`## a\n- DGS-1 in progress\n\n## Session end x (s) 2026\nHandoff: card x\n`)).toBeUndefined();
   });
 });
 
@@ -196,10 +186,6 @@ describe("skips", () => {
     expect(herdr.prompts).toEqual([]);
     return r;
   };
-  it("outside the night window", async () => {
-    clock = DAY;
-    await skipped("outside_night_window");
-  });
   it("agent not found / ambiguous", async () => {
     await skipped("agent_not_found", {}, target({ agent: "ghost" }));
     herdr.agents.push({ name: "tec", pane_id: "w2:pZ", agent_status: "done", session: "x" });
@@ -221,9 +207,13 @@ describe("skips", () => {
     writeCard(card({ name: "dgs-9", role: "worker", id: "dgs-9", session: "w-1", under: "tec-01" }), env);
     await skipped("worker_running:dgs-9");
   });
-  it("a worker of the target list that herdr shows working", async () => {
-    herdr.agents.push({ name: "dgs-9", pane_id: "w2:p9", agent_status: "working", session: "w-1" });
+  it.each(["working", "blocked", "idle", "done"])("a worker of the target list that herdr shows %s", async (s) => {
+    herdr.agents.push({ name: "dgs-9", pane_id: "w2:p9", agent_status: s, session: "w-1" });
     await skipped("worker_running:dgs-9", {}, target({ workers: ["dgs-9"] }));
+  });
+  it("a worker name that herdr does not list does not skip", async () => {
+    const r = await fluxConductor(target({ workers: ["dgs-9"] }), {}, deps());
+    expect(r.result).toBe("fluxed");
   });
   it("Running or Waiting rows in the state block", async () => {
     const block = (b: string) => `<!-- digismith:conductor-state v1 -->\nUpdated: 2026-10-13T18:00+07:00\n\n${b}\n<!-- /digismith:conductor-state -->\n`;
@@ -278,14 +268,13 @@ describe("skips", () => {
 
 describe("dry run", () => {
   it("does every check, sends nothing, reports the plan, works by day", async () => {
-    clock = DAY;
     const r = await fluxConductor(target(), { dryRun: true }, deps());
     expect(herdr.prompts).toEqual([]);
     expect(herdr.calls.some((c) => c.startsWith("prompt"))).toBe(false);
     expect(r.dry_run).toBe(true);
     expect(r.result).toBe("skipped");
     expect(r.reason).toBe("dry_run");
-    expect(r.checks.night).toMatch(/outside.*would skip/);
+    expect(r.checks).not.toHaveProperty("night");
     expect(r.would_send?.clear).toBe("/clear");
     expect(r.would_send?.wake).toContain(note);
     expect(r.session_old).toBe(OLD);
@@ -306,6 +295,12 @@ describe("dry run", () => {
 });
 
 describe("flux", () => {
+  it("fluxes by day: no clock check exists", async () => {
+    clock = new Date("2026-10-13T05:00:00Z"); // 12:00 UTC+7
+    const r = await fluxConductor(target(), {}, deps());
+    expect(r.result).toBe("fluxed");
+    expect(r.checks).not.toHaveProperty("night");
+  });
   it("clears without --wait, polls the id, wakes with the paths, verifies old card closed and new card open", async () => {
     const r = await fluxConductor(target(), {}, deps());
     expect(r.result).toBe("fluxed");
@@ -387,7 +382,7 @@ describe("flux", () => {
     const r = await fluxConductor(target(), { log: true }, deps());
     const dir = path.join(tmp, "depot", ...FLUX_RUN_LOG_DIR);
     const files = fs.readdirSync(dir);
-    expect(files).toEqual(["2026-10-14.jsonl"]); // the UTC+7 date
+    expect(files).toEqual(["2026-10-13.jsonl"]); // the UTC+7 date
     const lines = fs.readFileSync(path.join(dir, files[0]), "utf-8").trim().split("\n");
     expect(lines).toHaveLength(1);
     const row = JSON.parse(lines[0]);
