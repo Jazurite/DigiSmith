@@ -9,7 +9,7 @@
     {
       "name": "digismith",
       "description": "Jack's personal SDLC plugin — ticket to delivery, built on top of Superpowers",
-      "version": "1.65.0",
+      "version": "1.66.0",
       "source": "./",
       "author": {
         "name": "Jack Huỳnh",
