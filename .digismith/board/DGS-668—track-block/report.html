@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jira Track Block Templates and First-Write Scaffold — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; --good:#1a7f4b; --good-bg:#eefaf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; --good:#4fd889; --good-bg:#12271c; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  header.doc-head { border-bottom:1px solid var(--border); padding-bottom:1.25rem; margin-bottom:2rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  .badge { display:inline-block; border:1px solid var(--good); color:var(--good); background:var(--good-bg); border-radius:999px; padding:.1rem .6rem; font-size:.78rem; font-weight:600; }
+  section { margin-bottom:2.2rem; }
+  h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; margin:1rem 0; }
+  .table-wrap { overflow-x:auto; }
+  th, td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+  th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); }
+  .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">implementation complete — merged</span>
+  <h1>Jira Track Block Templates and First-Write Scaffold — Implementation Report</h1>
+  <div class="meta"><span>Date: 2026-10-27</span><span>Ticket: <strong>DGS-668</strong> (with DGS-669)</span><span>Commit range: <code>cfedea6..77784ee</code></span></div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>The Jira description's "📦 Track" block now has two templates, and <code>jira-progress-write-back</code> builds the block on the first write of a ticket instead of skipping it. This reverses the old "never scaffold the full stage list from nothing" line, on Jack's order. Plan: <a href="plan.md">plan.md</a>. Spec: <a href="spec.md">spec.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Ticket</th><th>Delivered</th></tr>
+    <tr><td>DGS-668 (E.5)</td><td>Two ADF templates, <code>track-single-market.json</code> and <code>track-multi-market.json</code>, under <code>skills/jira-progress-write-back/templates/</code>: level-2 heading, one expand node, stage paragraphs with status lozenges (all TO DO), rule, legend; the multi-market one adds the Per Market table. Standard <code>:check_mark:</code> emoji only. 17 tests in <code>packages/jira-client/src/track-templates.test.ts</code>.</td></tr>
+    <tr><td>DGS-669 (F.7)</td><td>Step 7 builds the block when no Track heading exists: pick the template, fill the placeholders, show it at Step 12, write it after the usual confirmation. The old "skip and report why" wording is gone; an unfamiliar existing structure is still skipped. <code>generate-comment</code> states that the comment stays short and links and Track live in the description.</td></tr>
+  </table></div>
+  <p>Whole-branch review: four verified findings fixed (the existing-block scan now reads inside the expand node; exact "📦 Track" heading match; Per Market row and market-code rules). Not taken: a fill helper in jira-client and a derived multi-market file, both kept as plain files on purpose. Full suite: all pass except two files that failed on a stale <code>clickup-client</code> build in the worktree; after a rebuild <code>packages/cli</code> and <code>scripts/conductor</code> (193 files) pass.</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">64df7899</span> feat(dgs-668): add the Jira Track block templates</li>
+    <li><span class="sha">77784ee9</span> feat(dgs-669): build the Track block on first write</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-668—track-block/report.html</footer>
+</body>
+</html>
