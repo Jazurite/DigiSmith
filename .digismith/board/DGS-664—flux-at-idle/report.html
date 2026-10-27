@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conductor Flux at the Next Idle — Implementation Report</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#5a5a5a; --border:#dcdcdc; --code-bg:#f4f4f4; --accent:#7a4fb5; --card-bg:#faf9fc; --good:#1a7f4b; --good-bg:#eefaf3; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16151a; --fg:#e8e6ee; --muted:#a3a0ac; --border:#332f3d; --code-bg:#211f28; --accent:#b892ea; --card-bg:#1d1b23; --good:#4fd889; --good-bg:#12271c; } }
+  * { box-sizing: border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.6; max-width:900px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  header.doc-head { border-bottom:1px solid var(--border); padding-bottom:1.25rem; margin-bottom:2rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; }
+  .meta { color:var(--muted); font-size:.9rem; } .meta span { margin-right:1.2rem; }
+  .badge { display:inline-block; border:1px solid var(--good); color:var(--good); background:var(--good-bg); border-radius:999px; padding:.1rem .6rem; font-size:.78rem; font-weight:600; }
+  section { margin-bottom:2.2rem; }
+  h2 { font-size:1.25rem; border-bottom:1px solid var(--border); padding-bottom:.35rem; }
+  code { background:var(--code-bg); padding:.1rem .35rem; border-radius:4px; font-size:.88em; }
+  table { border-collapse:collapse; width:100%; font-size:.9rem; margin:1rem 0; }
+  .table-wrap { overflow-x:auto; }
+  th, td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+  th { background:var(--card-bg); }
+  .commit-list { list-style:none; padding:0; } .commit-list li { font-family:ui-monospace,Consolas,monospace; font-size:.84rem; padding:.3rem 0; border-bottom:1px dashed var(--border); }
+  .sha { color:var(--accent); font-weight:600; }
+  footer { color:var(--muted); font-size:.82rem; border-top:1px solid var(--border); padding-top:1rem; margin-top:3rem; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <span class="badge">implementation complete — ready to merge</span>
+  <h1>Conductor Flux at the Next Idle — Implementation Report</h1>
+  <div class="meta"><span>Date: 2026-10-27</span><span>Ticket: <strong>DGS-664</strong></span><span>Commit range: <code>24371d6..b9c97fc</code></span></div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <p>A conductor is renewed as soon as it is idle and has nothing in hand, at any hour. The night window (23:30 to 02:00 UTC+7) is removed from <code>fluxConductor</code>; the existing idle checks are the only gate. Two checks are sharper: any worker tab that herdr still lists blocks the flux, and a note line with <code>to do</code>, <code>in progress</code> or <code>claimed</code> counts as a ticket in hand. Two build tasks, each reviewed alone, then one whole-branch review. All three came back clean, with no fix round.</p>
+  <p>Reference documents: the <a href="spec.md">spec</a> and the <a href="plan.md">implementation plan</a>. Review table: <a href="findings.md">findings.md</a>.</p>
+</section>
+
+<section id="delivered">
+  <h2>What Was Delivered</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Task</th><th>Delivered</th><th>Review verdict</th></tr>
+    <tr><td>1. The idle rule in the flux module</td><td><code>NIGHT_WINDOW</code>, <code>inNightWindow</code>, <code>outside_night_window</code> and <code>checks.night</code> removed; any-status worker tab; three more in-flight words; tests.</td><td>Approved, clean</td></tr>
+    <tr><td>2. Usage and comment text</td><td><code>FLUX_USAGE</code>, the <code>flux-cli.ts</code> header and the <code>cli.ts</code> usage line state the idle rule; usage test. Two usage lines reworded so the plan's "no override" test can pass.</td><td>Approved, clean (deviation accepted)</td></tr>
+    <tr><td>3. First use</td><td>Not built here. The conductor and the Maestro write <code>flux-targets.json</code>, run the dry run and one watched flux.</td><td>n/a</td></tr>
+  </table></div>
+  <p>Whole-branch review: Approved, no findings. Suite: <code>scripts/conductor</code>, 18 files, 324 tests pass.</p>
+</section>
+
+<section id="merge">
+  <h2>Commits</h2>
+  <ul class="commit-list">
+    <li><span class="sha">723c4b9d</span> feat(dgs-664): flux when idle, not only at night</li>
+    <li><span class="sha">b9c97fcb</span> docs(dgs-664): flux usage states the idle rule</li>
+  </ul>
+</section>
+
+<footer>DigiSmith · .digismith/board/DGS-664—flux-at-idle/report.html</footer>
+</body>
+</html>
