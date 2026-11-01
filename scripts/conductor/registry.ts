@@ -69,6 +69,7 @@ function normalize(key: string, raw: unknown): ConductorEntry {
   let kinds: Kind[] = ["project"];
   if (r.kind !== undefined) {
     const list: unknown[] = Array.isArray(r.kind) ? r.kind : [r.kind];
+    if (list.length === 0) throw new Error(`${key}: kind must list at least one kind`);
     for (const k of list) {
       if (!KINDS.includes(k as Kind)) throw new Error(`${key}: unknown kind ${JSON.stringify(k)}`);
     }
