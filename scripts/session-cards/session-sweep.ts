@@ -22,12 +22,23 @@ export function liveSessionsFromAgentList(stdout: string): Live {
   }
 }
 
-// Read-only: `agent list` only, through the herdr-ws wrapper.
-export function readLiveSessions(env: NodeJS.ProcessEnv = process.env): Live {
+type SpawnFn = (cmd: string, args: string[], opts: Record<string, unknown>) => { error?: Error; status: number | null; stdout: string | Buffer | null };
+
+// Read-only: `agent list` only, through the herdr-ws wrapper; once per herdr session named in HERDR_SCOPE.
+export function readLiveSessions(env: NodeJS.ProcessEnv = process.env, spawn: SpawnFn = spawnSync as unknown as SpawnFn): Live {
   const bin = path.join(os.homedir(), ".digismith-depot", "bin", "herdr-ws");
-  const r = spawnSync(bin, ["agent", "list"], { env, encoding: "utf8", timeout: 15_000 });
-  if (r.error || r.status !== 0) return { ok: false, error: r.error?.message ?? `herdr-ws exit ${r.status}` };
-  return liveSessionsFromAgentList(r.stdout);
+  const scoped = (env.HERDR_SCOPE ?? "").split(",").map((e) => e.trim().split(":")[0]).filter(Boolean);
+  const sessions = [...new Set(scoped)];
+  const runs: string[][] = sessions.length ? sessions.map((s) => ["--session", s, "agent", "list"]) : [["agent", "list"]];
+  const merged = new Set<string>();
+  for (const args of runs) {
+    const r = spawn(bin, args, { env, encoding: "utf8", timeout: 15_000 });
+    if (r.error || r.status !== 0) return { ok: false, error: r.error?.message ?? `herdr-ws exit ${r.status}` };
+    const live = liveSessionsFromAgentList(String(r.stdout ?? ""));
+    if (!live.ok) return live;
+    for (const id of live.sessions) merged.add(id);
+  }
+  return { ok: true, sessions: merged };
 }
 
 export function sweep(opts: {

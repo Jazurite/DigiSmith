@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { sweep, liveSessionsFromAgentList } from "./session-sweep.ts";
+import { sweep, liveSessionsFromAgentList, readLiveSessions } from "./session-sweep.ts";
 import { listCards, writeCard, type SessionCard } from "./cards.ts";
 
 let depot: string;
@@ -81,5 +81,41 @@ describe("liveSessionsFromAgentList", () => {
   });
   it("fails on garbage", () => {
     expect(liveSessionsFromAgentList("nope").ok).toBe(false);
+  });
+});
+
+describe("readLiveSessions across herdr sessions", () => {
+  const list = (...v: string[]) => JSON.stringify({ result: { agents: v.map((x) => ({ agent_session: { value: x } })) } });
+  const fake = (outs: Record<string, { status: number; stdout: string }>) => {
+    const calls: string[][] = [];
+    const spawn = ((_bin: string, args: string[]) => {
+      calls.push(args);
+      const key = args[0] === "--session" ? args[1] : "";
+      return outs[key] ?? { status: 1, stdout: "" };
+    }) as any;
+    return { calls, spawn };
+  };
+  it("calls once per scoped session and unions the ids", () => {
+    const { calls, spawn } = fake({ Suite: { status: 0, stdout: list("s1") }, default: { status: 0, stdout: list("d1") } });
+    const r = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2,default:w3" }, spawn);
+    expect(calls).toEqual([["--session", "Suite", "agent", "list"], ["--session", "default", "agent", "list"]]);
+    expect(r).toEqual({ ok: true, sessions: new Set(["s1", "d1"]) });
+  });
+  it("is not ok when one call exits 1", () => {
+    const { spawn } = fake({ Suite: { status: 0, stdout: list("s1") }, default: { status: 1, stdout: "" } });
+    expect(readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn).ok).toBe(false);
+  });
+  it("without HERDR_SCOPE makes the one plain call", () => {
+    const { calls, spawn } = fake({ "": { status: 0, stdout: list("x") } });
+    expect(readLiveSessions({}, spawn).ok).toBe(true);
+    expect(calls).toEqual([["agent", "list"]]);
+  });
+  it("keeps a card whose runs_on carries the session, and an old-format card", () => {
+    writeCard(card("n", { runs_on: "herdr Suite/w7:p1" }), env);
+    writeCard(card("o", { runs_on: "herdr w2:p1" }), env);
+    const r = sweep({ project: "P", now: NOW, env, apply: true, live: alive("sess-n", "sess-o") });
+    expect(r.map((x) => x.verdict)).toEqual(["kept", "kept"]);
+    const gone = sweep({ project: "P", now: NOW, env, live: alive() });
+    expect(gone.map((x) => x.verdict)).toEqual(["lost", "lost"]);
   });
 });
