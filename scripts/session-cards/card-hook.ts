@@ -5,6 +5,7 @@ import { ROLES, closeCard, findCardBySession, listCards, nowIso, touchCard, vali
 import { cardFromIdentity, findByFolder } from "../identity.ts";
 import type { Identity } from "../identity.ts";
 import type { SessionCard } from "./cards.ts";
+import { formatRunsOn } from "./runs-on.ts";
 
 export type HookEvent = { session_id?: string; cwd?: string; source?: string; reason?: string };
 export type HookDeps = { now?: Date };
@@ -67,7 +68,7 @@ export function startHook(event: HookEvent, env: NodeJS.ProcessEnv, deps: HookDe
   if (!event.session_id) return { wrote: false, reason: "no session_id in the event: no card written" };
   if (findCardBySession(event.session_id, starter.project, env)) return { wrote: false, reason: "card exists for this session" };
   const t = nowIso(deps.now);
-  const runsOn = env.HERDR_PANE_ID ? `herdr ${env.HERDR_PANE_ID}` : "workbox";
+  const runsOn = formatRunsOn(env);
   const optional = (v: string | undefined) => (v ? v : undefined);
   const card = {
     name: env.DIGISMITH_NAME || env.DIGISMITH_ID,
