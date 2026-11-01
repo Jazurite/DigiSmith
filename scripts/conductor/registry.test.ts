@@ -54,4 +54,29 @@ describe("registry", () => {
     expect(removeEntry("A/a", env)).toBe(false);
     expect(fs.readdirSync(depot)).toEqual(["conductors.json"]);
   });
+  it("floorWorkspaces sorts numerically (w2 before w10)", () => {
+    write({ "A/a": { workspace: "w10" }, "B/b": { workspace: "w2" } });
+    expect(floorWorkspaces(env)).toEqual(["w2", "w10"]);
+  });
+  it("an unknown status throws, naming the field", () => {
+    write({ "A/a": { workspace: "w3", status: "paused" } });
+    expect(() => readRegistry(env)).toThrow(/status/);
+  });
+  it("a bad floor throws, naming the field", () => {
+    write({ "A/a": { workspace: "w3", floor: "two" } });
+    expect(() => readRegistry(env)).toThrow(/floor/);
+  });
+  it("a key with no slash throws", () => {
+    write({ "Aonly": { workspace: "w3" } });
+    expect(() => readRegistry(env)).toThrow(/must be Project\/name/);
+  });
+  it("an empty kind array throws, naming the entry key", () => {
+    write({ "A/a": { workspace: "w3", kind: [] } });
+    expect(() => readRegistry(env)).toThrow(/A\/a.*kind/);
+  });
+  it("scopeFor throws when the entry has no workspace", () => {
+    write({ "A/a": { note: "/x" }, "B/b": { session: "Suite" } });
+    expect(() => scopeFor(resolveConductor("A/a", env)!, env)).toThrow(/workspace/);
+    expect(() => scopeFor(resolveConductor("B/b", env)!, env)).toThrow(/workspace/);
+  });
 });
