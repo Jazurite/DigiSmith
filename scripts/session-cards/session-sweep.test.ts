@@ -118,4 +118,28 @@ describe("readLiveSessions across herdr sessions", () => {
     const gone = sweep({ project: "P", now: NOW, env, live: alive() });
     expect(gone.map((x) => x.verdict)).toEqual(["lost", "lost"]);
   });
+  it("an empty list from one scoped session is not ok and closes no card", () => {
+    const { spawn } = fake({ Suite: { status: 0, stdout: list() }, default: { status: 0, stdout: list("d1") } });
+    const live = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn);
+    expect(live.ok).toBe(false);
+    writeCard(card("a"), env);
+    expect(sweep({ project: "P", now: NOW, env, apply: true, live })[0].verdict).toBe("unverifiable");
+    expect(listCards("P", { env, scope: "open" })).toHaveLength(1);
+  });
+  it("reads two sessions into the verdicts: dead card closed, live ones kept", () => {
+    const { spawn } = fake({ Suite: { status: 0, stdout: list("sess-s") }, default: { status: 0, stdout: list("sess-d") } });
+    const live = readLiveSessions({ HERDR_SCOPE: "Suite:w7,default:w2" }, spawn);
+    writeCard(card("s", { runs_on: "herdr Suite/w7:p1" }), env);
+    writeCard(card("d", { runs_on: "herdr default/w2:p1" }), env);
+    writeCard(card("x", { runs_on: "herdr Suite/w7:p2" }), env);
+    const r = sweep({ project: "P", now: NOW, env, apply: true, live });
+    const v = Object.fromEntries(r.map((x) => [x.id, x.verdict]));
+    expect(v).toEqual({ s: "kept", d: "kept", x: "lost" });
+    expect(listCards("P", { env, scope: "open" })).toHaveLength(2);
+  });
+  it.each(["-x:w1", ":w1"])("an invalid session name %s is a failed read with no spawn", (scope) => {
+    const { calls, spawn } = fake({ default: { status: 0, stdout: list("d1") } });
+    expect(readLiveSessions({ HERDR_SCOPE: `default:w2,${scope}` }, spawn).ok).toBe(false);
+    expect(calls).toEqual([]);
+  });
 });
