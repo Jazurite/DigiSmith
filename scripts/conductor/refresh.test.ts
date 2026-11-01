@@ -344,3 +344,49 @@ describe("review findings (DGS-462)", () => {
     expect(s.newestMerge?.hash).toBe("fff9999");
   });
 });
+
+describe("DGS-683 refresh by registry", () => {
+  const regEnv = () => {
+    const depot = path.join(tmp, "depot");
+    fs.mkdirSync(depot, { recursive: true });
+    return depot;
+  };
+  const writeReg = (reg: object) => fs.writeFileSync(path.join(regEnv(), "conductors.json"), JSON.stringify(reg));
+  const mine = () => [{ card: { role: "worker", name: "dgs-5", id: "k1", under: "suite-cond", started: "2026-10-13T10:00+07:00" }, path: "x" }];
+  const o = () => opts({ conductor: "suite-cond", herdrWorkspace: undefined, workers: [] });
+  const SUITE = { "DigiSmith/suite-cond": { session: "Suite", workspace: "w7", floor: "w2" } };
+
+  it("lists Floor agents of the registry floor, reading the default session", async () => {
+    writeReg(SUITE);
+    const run = runner({ agents: [agent("dgs-5", "w2")] });
+    const r = await refreshState(o(), deps(run, { listCards: mine }));
+    expect(r.state.running.map((x) => x.worker)).toContain("dgs-5");
+    expect(run.calls).toContainEqual(["herdr", "--session", "default", "agent", "list"]);
+  });
+  it("does not list the same agent in another workspace", async () => {
+    writeReg(SUITE);
+    const r = await refreshState(o(), deps(runner({ agents: [agent("dgs-5", "w3")] }), { listCards: mine }));
+    expect(r.state.running.some((x) => x.stage !== "card open, no pane")).toBe(false);
+  });
+  it("a factory entry lists the agents of every Floor workspace", async () => {
+    writeReg({ "DigiSmith/suite-cond": { session: "Suite", workspace: "w7", floor: "w2", kind: "factory" }, "DigiSmith/other": { floor: "w3" } });
+    const cards = () => [
+      { card: { role: "worker", name: "dgs-5", id: "k1", under: "suite-cond", started: "2026-10-13T10:00+07:00" }, path: "x" },
+      { card: { role: "worker", name: "dgs-6", id: "k2", under: "suite-cond", started: "2026-10-13T10:00+07:00" }, path: "x" },
+    ];
+    const r = await refreshState(o(), deps(runner({ agents: [agent("dgs-5", "w2"), agent("dgs-6", "w3")] }), { listCards: cards }));
+    expect(r.state.running.filter((x) => x.stage === "working").map((x) => x.worker).sort()).toEqual(["dgs-5", "dgs-6"]);
+  });
+  it("a Suite card with no registry floor throws the no-Floor message", async () => {
+    const cards = () => [{ card: { role: "conductor", name: "suite-cond", id: "c", runs_on: "herdr Suite/w7:p1", started: "2026-10-13T10:00+07:00" }, path: "x" }];
+    const r = await refreshState(o(), deps(runner(), { listCards: cards }));
+    expect(r.state.runningUnknown).toMatch(/no Floor workspace known for conductor suite-cond/);
+  });
+  it("with no registry entry, a card runs_on herdr w2:p1 behaves as before", async () => {
+    const cards = () => [{ card: { role: "conductor", name: "suite-cond", id: "c", runs_on: "herdr w2:p1", started: "2026-10-13T10:00+07:00" }, path: "x" }];
+    const run = runner({ agents: [agent("dgs-5", "w2")] });
+    const r = await refreshState(opts({ conductor: "suite-cond", herdrWorkspace: undefined, workers: ["dgs-5"] }), deps(run, { listCards: cards }));
+    expect(r.state.running.map((x) => x.worker)).toEqual(["dgs-5"]);
+    expect(r.state.runningUnknown).toBeUndefined();
+  });
+});

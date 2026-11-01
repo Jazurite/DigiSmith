@@ -5,6 +5,8 @@ import * as path from "node:path";
 import { contentKey, extractBlock, parseStateBody, renderStateBody, STATE_MARKER, writeStateBlock, type NoteState, type RunningRow } from "./state-block.ts";
 import { iso7, resolveNotePath, type CardRef } from "./state.ts";
 import type { Runner } from "./runner.ts";
+import { floorWorkspaces, resolveConductor } from "./registry.ts";
+import { parseRunsOn } from "../session-cards/runs-on.ts";
 import { parseMarkers, stripMarkers } from "./markers.ts";
 
 /** True if the path (relative to the repo) exists; a path whose real location leaves the repo throws. */
@@ -146,11 +148,20 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
   const cardOf = (name: string) => workerCards.find((c) => [c.name, c.domain, c.id].some((x) => x && String(x).toLowerCase() === name.toLowerCase()));
   const ownsCard = (c: { under?: string } | undefined) => !!c?.under && owners.has(c.under.toLowerCase());
 
-  const workspace = opts.herdrWorkspace ?? /^herdr (w\d+):/.exec(conductorCard?.runs_on ?? "")?.[1];
   try {
-    if (!workspace) {
+    const workspaces = ((): string[] => {
+      if (opts.herdrWorkspace) return [opts.herdrWorkspace];
+      const entry = resolveConductor(`${opts.project}/${opts.conductor}`, deps.env);
+      if (entry?.kinds.includes("factory")) return floorWorkspaces(deps.env);
+      if (entry?.floor) return [entry.floor];
+      const on = parseRunsOn(conductorCard?.runs_on);
+      return on && on.session === "default" ? [on.workspace] : [];
+    })();
+    if (workspaces.length === 0) {
       throw new Error(
-        conductorCard
+        parseRunsOn(conductorCard?.runs_on)
+          ? `no Floor workspace known for conductor ${opts.conductor} (its card runs on a named herdr session): add a floor to its conductors.json entry or pin a workspace (HERDR_WS or --herdr-workspace)`
+          : conductorCard
           ? `conductor card ${opts.conductor} has no runs_on and no workspace is pinned (HERDR_WS or --herdr-workspace)`
           : `no conductor card ${opts.conductor} found and no workspace is pinned (HERDR_WS or --herdr-workspace)`,
       );
@@ -158,7 +169,7 @@ export async function refreshState(opts: RefreshOpts, deps: RefreshDeps): Promis
     const r = await deps.runner("herdr", ["--session", "default", "agent", "list"]);
     if (r.code !== 0) throw new Error(r.stderr.trim() || `exit ${r.code}`);
     let agents = (JSON.parse(r.stdout) as { result?: { agents?: Agent[] } }).result?.agents ?? [];
-    agents = agents.filter((a) => a.workspace_id === workspace);
+    agents = agents.filter((a) => a.workspace_id !== undefined && workspaces.includes(a.workspace_id));
     const next: RunningRow[] = [];
     const seen = new Set<string>();
     for (const a of agents) {

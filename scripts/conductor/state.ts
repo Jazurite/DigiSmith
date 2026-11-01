@@ -5,6 +5,7 @@ import { depotDir } from "../depot-dir.ts";
 import type { CatchUp } from "../catch-up.ts";
 import { extractBlock, parseStateBody, STATE_MARKER, type DecidedRow, type ParkedRow, type RunningRow, type Seat, type WaitingRow } from "./state-block.ts";
 import type { Runner } from "./runner.ts";
+import { herdrSessionArgs, resolveConductor } from "./registry.ts";
 import { stripMarkers } from "./markers.ts";
 import { newestMtime } from "./watch.ts";
 import { currentCount } from "../../packages/cli/src/run/limit-check.ts";
@@ -252,15 +253,24 @@ export async function collectState(opts: CollectOpts, deps: CollectDeps): Promis
 
   // herdr: server and open tabs
   try {
-    const st = await deps.runner("herdr", ["--session", "default", "status", "server"]);
+    const entry = resolveConductor(`${opts.project}/${opts.conductor}`, env);
+    const sess = entry ? herdrSessionArgs(entry) : ["--session", "default"];
+    const own = entry && entry.session !== "default";
+    const st = await deps.runner("herdr", [...sess, "status", "server"]);
     if (st.code === 127) state.sources.herdr = "skipped";
     else if (st.code !== 0) {
       state.sources.herdr = "failed";
       warnings.push(`herdr status failed: ${st.stderr.trim() || `exit ${st.code}`}`);
     } else {
-      const up = /^status:\s*(.+)$/m.exec(st.stdout)?.[1].trim() ?? "unknown";
+      const parse = (out: string) => /^status:\s*(.+)$/m.exec(out)?.[1].trim() ?? "unknown";
+      let up = parse(st.stdout);
+      if (own) {
+        const fl = await deps.runner("herdr", ["--session", "default", "status", "server"]);
+        up = `${entry.session} ${up}; Floor ${fl.code === 0 ? parse(fl.stdout) : "unknown"}`;
+      }
       state.health.server = state.health.server === "unknown" ? up : `${up}; ${state.health.server}`;
-      const args = ["--session", "default", "tab", "list", ...(opts.herdrWorkspace ? ["--workspace", opts.herdrWorkspace] : [])];
+      const ws = opts.herdrWorkspace ?? entry?.workspace;
+      const args = [...sess, "tab", "list", ...(ws ? ["--workspace", ws] : [])];
       const tl = await deps.runner("herdr", args);
       if (tl.code !== 0) throw new Error(tl.stderr.trim() || `tab list exit ${tl.code}`);
       const tabs = (JSON.parse(tl.stdout) as { result?: { tabs?: { tab_id?: string; label?: string }[] } }).result?.tabs ?? [];
