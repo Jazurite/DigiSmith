@@ -1,0 +1,86 @@
+# DGS-546 Hallmark: spike findings
+
+Spike for order hm-01. Read-only. No ClickUp write. Written 2026-11-01 22:25 UTC+7.
+
+## Answer in short
+- Use the **registry windows plus the transcripts** (what `tokens task-start`/`task-end` and `buildSnapshot` already do) as the one source of per-task tokens and agent time.
+- Do **not** price the snapshot's per-task totals. Price each response, then sum. Pricing the sum gives a wrong cost (proof below: 5 times too high for Haiku).
+- Review rounds, findings and fix rounds come from the **SDD ledger** (`progress.md`) and `findings.md`. The ledger is deleted at cleanup, so a backfill after cleanup has no review numbers unless `findings.md` or `report.md` survived.
+- Claude Code cost-state records are exact, but only per session. They cannot give a per-task number. Use them to check the ticket total, not the tasks.
+
+## Sources compared
+
+| Source | Tokens | Cost | Agent time | Per task? | Exact? | Broken? |
+| --- | --- | --- | --- | --- | --- | --- |
+| Registry `task_start`/`task_end` + transcripts (`tokens.json` `tasks.<N>.<model>`) | yes, per model: input, output, cache read, cache write 5m and 1h | not stored; computable | window = `task_end - task_start` (wall clock) | yes | Haiku and Opus match cost-state exactly; Sonnet output 4 % under, cache read 9 % under (DGS-679, whole session) | No. Two limits below |
+| `tokens task-tokens` | one line, sums models | no | no | yes | same as above | Needs `--ledger`; drops the per-model split |
+| DGS-613 phase times (`phaseSince`, `durationSec`) | no | no | per **step** of a run (building, reviewing...), not per task | no | wall clock | Works, wrong grain |
+| `dg run` records (`~/.digismith-depot/runs/<Key>/<run>/events.jsonl`) | no | no | phase events with timestamps | no | wall clock | Works, wrong grain. DGS-679 and DGS-674 have no run record (built before runs existed) |
+| Claude Code cost-state (`type: cost-state` lines in the session `.jsonl`; DGS-532) | exact per session and model, side calls and subagents included | exact list price (`costUSD`) | `totalDuration`, `totalAPIDuration` per session | **no**: one cumulative record per session, two snapshots in DGS-679's file | yes | Not usable per task |
+
+Limits of the registry-window source:
+1. A task window is wall clock. Time Jack or the conductor spent before the reviewer came back is inside it. Call it "agent time (task-start to task-end)", as the order says, never "compute time".
+2. The window covers one session (the controller). Subagent records join it because they are in the same transcript; the ledger `dispatch ... agent=<id>` lines move a subagent's records to the right task when windows overlap.
+
+Check on DGS-679 (whole session, transcripts against cost-state): Haiku output 18 624 and Opus output 3 660 match exactly. Sonnet output 40 833 against 42 621; cache read 21.11 M against 23.19 M. Cost-state total $4.04.
+
+## Pricing finding (changes the build)
+`claude-haiku-5-5` has a long-prompt tier in `packages/cli/src/tokens/prices/anthropic.ts`: when one request's prompt is over 100 000 tokens, every rate is 5 times higher. The tier is per **request**. `run-count.ts` already prices per response (`countedOf`). The snapshot keeps only sums. A sum of Haiku task 1 has a 540 K prompt, so `costFromPricing(sum)` picks the long tier.
+
+DGS-679 task 1, Haiku: sum priced = $0.0785. Per response priced = $0.0157. No single Haiku request in that task was over the tier.
+
+So `task-stamp` must read the responses (as `countTicket` does) and price each one, not read `tokens.json`. Backfill works the same way as long as the transcripts still exist on the Workbox (they do: DGS-679's transcript is present).
+
+## Proof: DGS-679 task 1
+
+Inputs: registry `~/.digismith-depot/token-registry/DGS-679.jsonl`, session `10102674-4b06-4671-b83d-57fa4eefb92f`.
+- `task_start` 2026-10-27T09:50:59.499Z = 16:50:59 UTC+7
+- `task_end` 2026-10-27T09:52:43.207Z = 16:52:43 UTC+7
+- Agent time 1 min 44 s (103.7 s)
+
+Counts (equal to `tasks.1` in `.digismith/board/DGS-679—voice-hook/tokens.json`):
+
+| Model | Input | Output | Cache read | Cache write | Responses | List price |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| claude-sonnet-5-5 | 24 | 5 348 | 2 766 374 | 41 753 (5m 32 937, 1h 8 816) | 10 | $0.4478 |
+| claude-haiku-5-5 | 18 | 5 594 | 474 505 | 65 254 (5m 65 254, 1h 0) | 9 | $0.0157 |
+| Total | 42 | 10 942 | 3 240 879 | 107 007 | 19 | $0.4635 |
+
+Review rounds, findings, fix rounds: **not recoverable** for DGS-679. Its ledger is gone and the board folder has no `findings.md`. The comment says "not recorded".
+
+Comment that would post (plain text, ClickUp does not render Markdown; first line is the idempotence marker):
+
+```
+Hallmark task 1 of DGS-679
+Window: 2026-10-27 16:50:59 to 16:52:43 UTC+7 (agent time 1 min 44 s)
+claude-sonnet-5-5: in 24, out 5348, cache read 2766374, cache write 41753 (10 responses) = $0.4478
+claude-haiku-5-5: in 18, out 5594, cache read 474505, cache write 65254 (9 responses) = $0.0157
+Task total: in 42, out 10942, cache read 3240879, cache write 107007 = $0.4635 (list price)
+Reviews: rounds not recorded | Findings: not recorded | Fix rounds: not recorded
+Source: registry window + transcripts, per-response list prices (list prices version 2026-10-18)
+```
+
+(For a ticket built with the stamp in place, the last line of "Reviews" reads like `Reviews: 1 round | Findings: 2 (1 fixed, 1 parked) | Fix rounds: 1`, taken from the ledger.)
+
+Scripts used for the proof are in the session scratchpad; the build will turn them into tested code.
+
+## Idempotence (needed by the spec)
+- `ClickUpClient.getTaskComments` returns the newest 25 comments. `addTaskComment` has no duplicate check; `add-comment` warns that a second `--yes` posts a second comment.
+- Proposal: the first line `Hallmark task <N> of <Key>` is the marker. `task-stamp` reads the comments, and if one has the marker it does nothing (exit 0, "already stamped"). A ticket with more than 25 newer comments could miss the marker: the build either pages (check the API) or also keeps a ledger line `Task <N>: stamped (comment <id>)` as the second check. The spec decides.
+
+## Proposed build tickets (proposals only; the Maestro writes ClickUp)
+
+| Ticket | Proposal | Reason |
+| --- | --- | --- |
+| DGS-535 (Builder tasks as ClickUp subtasks) | **Discard** | Replaced by one comment per task (Jack, 2026-11-01). No subtask per task, no extra task IDs |
+| DGS-536 (subtask whose home list differs from the parent's) | **Discard**, or park with no milestone | Its only reason was DGS-535. No other caller named. Keep it only if Jack wants subtasks across lists for another case |
+| DGS-545 (roll-up from subtask to ticket, epic, initiative, as ClickUp fields) | **Rewrite** | A parent sums its children's totals once, at close, from the "Hallmark" block each child already carries in its description. No custom fields (a field needs Jack's yes). Re-runnable: same totals twice. Scope: ticket to epic to initiative; Jack's time (DGS-533) stays out |
+| DGS-532 (totals from Claude Code cost-state records) | **Keep, narrow** | Cost-state is exact per session but not per task. Use it as a **check on the ticket total** (warn when the transcript total differs by more than a set share, 10 % as a start) and to catch side calls. Not a per-task source |
+| DGS-445 (registry records nothing since 2026-10-10) | **Correct the note** | The registry still records. Last write 2026-10-27 (DGS-674, DGS-679 have `task_end`). The old cause (depot clone behind) was fixed; the ticket text is stale. Close it or re-title it to what is left (conductor-started workers skipping `bootstrap`) |
+
+New ticket proposal (not in the order): **price per response in the snapshot**. Store `cost_usd` per task and model in `tokens.json` (summed from per-response prices), so no later reader prices a sum. `task-stamp` can do it alone inside Hallmark; a snapshot change would be a second, smaller ticket.
+
+## Open points for the spec
+1. Where `task-stamp` finds the task's review data: ledger first, `findings.md` second, "not recorded" last.
+2. Whether the stamp posts on a plan **task** only, or also on `final` (whole-branch review). Default: also on `final`, titled "final review".
+3. Comment text is plain: ClickUp does not convert Markdown in comments.
