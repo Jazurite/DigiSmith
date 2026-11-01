@@ -48,6 +48,8 @@ DGS-683 stays as the epic-like parent (not built itself); its description gets t
 | **D** | Factory claim writes and hands over the driver record | S | C, A2 | `packages/cli/src/autonomous/` | **yes** |
 | **M** | Suite migration (conductor/Maestro checklist, NOT for a Builder) | S | A1, A2, A3, B (C and D for the ticket-conductor go-live) | none (live files only) | n/a |
 
+**Ticket numbers (Jack, 2026-11-01): number the tickets 1 to 7 in build order, no letters.** `DGS-683 1` = A1 registry and conductor scripts; `2` = A3 herdr-ws scope; `3` = A2 scan, run records, Oculus; `4` = B Suite boot files; `5` = C ticket conductor; `6` = D factory claim driver record; `7` = M migration checklist (Mode Manual). Blockers: 1 none; 2 none; 3 on 1; 4 on 1+2; 5 on 1+2; 6 on 5+3; 7 on all. The letters inside this file stay as the section names; per-ticket extracts for the checklists: `plan-1.md` to `plan-6.md` in this folder.
+
 Why split here: A1 and A3 touch no protected path and can run in parallel (two builders); A2 and D are the only protected-path work and stay small so the Maestro reviews them alone; B and C are separate merges with separate failure modes; M is live work and never goes to the factory. A1 and A3 first, then A2, B and C in parallel, then D, then M.
 
 **ClickUp-ready descriptions** (the conductor pastes these; each ends with "Spec and plan: attached `spec.md` and `plan.md`; build only the tasks of this ticket"):
