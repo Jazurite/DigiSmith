@@ -252,3 +252,20 @@ describe("collectState stale state (DGS-577)", () => {
     expect(s.running).toEqual([{ worker: "unknown", key: "-", stage: "Running cannot be read: why", since: "2026-10-13T14:05+07:00" }]);
   });
 });
+
+describe("DGS-683 health per herdr session", () => {
+  it("reads a Suite conductor's own session and the default one", async () => {
+    fs.writeFileSync(path.join(depot, "conductors.json"), JSON.stringify({ "DigiSmith/digismith-conductor": { session: "Suite", workspace: "w7", floor: "w2" } }));
+    const runner = fakeRunner({ status: { code: 0, stdout: "status: up\n" } });
+    const s = await collectState(base(), deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "tab", "list", "--workspace", "w7"]);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "default", "status", "server"]);
+    expect(runner.calls).toContainEqual(["herdr", "--session", "Suite", "status", "server"]);
+    expect(s.health.server).toBe("Suite up; Floor up");
+  });
+  it("keeps the old default-session calls with no registry entry", async () => {
+    const runner = fakeRunner();
+    await collectState(base(), deps(runner));
+    expect(runner.calls).toContainEqual(["herdr", "--session", "default", "tab", "list"]);
+  });
+});
