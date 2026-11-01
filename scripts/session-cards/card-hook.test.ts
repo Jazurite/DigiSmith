@@ -80,6 +80,17 @@ describe("startHook", () => {
     startHook(ev(), env, { now: T0 });
     expect(listCards("DigiSmith", { env })[0].card.runs_on).toBe("workbox");
   });
+  it("runs_on carries a named herdr session", () => {
+    env.HERDR_PANE_ID = "w7:p1";
+    env.HERDR_SESSION = "Suite";
+    startHook(ev(), env, { now: T0 });
+    expect(listCards("DigiSmith", { env })[0].card.runs_on).toBe("herdr Suite/w7:p1");
+  });
+  it("runs_on keeps the old format for the default herdr session", () => {
+    env.HERDR_PANE_ID = "w2:p1";
+    startHook(ev(), env, { now: T0 });
+    expect(listCards("DigiSmith", { env })[0].card.runs_on).toBe("herdr w2:p1");
+  });
 });
 
 describe("touchHook", () => {
