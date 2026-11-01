@@ -4,7 +4,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 
 ## Ticket D: factory claim writes the driver record (protected: `autonomous/`)
 
-### Task 22 (T22): claim and hand-over
+### Task 22: claim and hand-over
 
 **Files:** Modify the claim step in `packages/cli/src/autonomous/` (find it with `grep -n "claim" packages/cli/src/autonomous/act.ts advance.ts`; the existing claim-lock write is the anchor); Test: the matching `*.test.ts` (`act.test.ts` or `advance.test.ts`).
 

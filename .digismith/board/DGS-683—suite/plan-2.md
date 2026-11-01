@@ -21,7 +21,7 @@ esac
 ```
 Helper in the test: `run(env, args)` returns `{status, stdout, stderr, log}`; `ok(r)` means `status === 0`; `refused(r)` means `status === 3 && /herdr-ws: refused/`.
 
-### Task 10 (T10): scope parsing and `--session`
+### Task 10: scope parsing and `--session`
 
 **Files:**
 - Modify: `scripts/opencode-boot/herdr-ws`
@@ -37,7 +37,7 @@ Helper in the test: `run(env, args)` returns `{status, stdout, stderr, log}`; `o
 - [ ] **Step 4: Run, expect PASS.** Also run the old script: `node scripts/opencode-boot/test-herdr-ws.mjs` (read-only against live herdr, allowed) -> `ALL PASS`.
 - [ ] **Step 5: Commit.** `git commit scripts/opencode-boot/herdr-ws scripts/opencode-boot/herdr-ws.test.ts -m "feat(dgs-683): scope herdr-ws by session and workspace"`
 
-### Task 11 (T11): the Suite close rule
+### Task 11: the Suite close rule
 
 **Files:** Modify `scripts/opencode-boot/herdr-ws`; Test `scripts/opencode-boot/herdr-ws.test.ts`.
 
@@ -49,7 +49,7 @@ Helper in the test: `run(env, args)` returns `{status, stdout, stderr, log}`; `o
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit scripts/opencode-boot/herdr-ws scripts/opencode-boot/herdr-ws.test.ts -m "feat(dgs-683): only ticket conductors can be closed in Suite"`
 
-### Task 12 (T12): the cross-project audit log
+### Task 12: the cross-project audit log
 
 **Files:** Modify `scripts/opencode-boot/herdr-ws`; Test `scripts/opencode-boot/herdr-ws.test.ts`.
 

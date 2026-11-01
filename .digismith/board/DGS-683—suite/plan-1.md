@@ -4,7 +4,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 
 ## Ticket A1: registry and session-aware conductor scripts
 
-### Task 1 (T1): the registry module
+### Task 1: the registry module
 
 **Files:**
 - Create: `scripts/conductor/registry.ts`
@@ -106,7 +106,7 @@ describe("registry", () => {
 - [ ] **Step 4: Run it, expect PASS** (same command).
 - [ ] **Step 5: Commit.** `git commit scripts/conductor/registry.ts scripts/conductor/registry.test.ts -m "feat(dgs-683): add the conductor registry module"`
 
-### Task 2 (T2): `parseRunsOn`, `formatRunsOn`, and the card hook
+### Task 2: `parseRunsOn`, `formatRunsOn`, and the card hook
 
 **Files:**
 - Create: `scripts/session-cards/runs-on.ts`, `scripts/session-cards/runs-on.test.ts`
@@ -152,7 +152,7 @@ and in `card-hook.test.ts` (same style as its existing `startHook` cases): a cas
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit scripts/session-cards -m "feat(dgs-683): carry the herdr session in runs_on"`
 
-### Task 3 (T3): the session sweep reads both sessions
+### Task 3: the session sweep reads both sessions
 
 **Files:**
 - Modify: `scripts/session-cards/session-sweep.ts:25-29` (`readLiveSessions`), `:44`
@@ -168,7 +168,7 @@ and in `card-hook.test.ts` (same style as its existing `startHook` cases): a cas
 - [ ] **Step 4: Run, expect PASS.** Also run `pnpm vitest run scripts/session-cards`.
 - [ ] **Step 5: Commit.** `git commit scripts/session-cards/session-sweep.ts scripts/session-cards/session-sweep.test.ts -m "feat(dgs-683): sweep the live sessions of both herdr sessions"`
 
-### Task 4 (T4): state refresh and health use the registry
+### Task 4: state refresh and health use the registry
 
 **Files:**
 - Modify: `scripts/conductor/refresh.ts:149-160`, `scripts/conductor/state.ts:255-266`
@@ -186,7 +186,7 @@ and in `card-hook.test.ts` (same style as its existing `startHook` cases): a cas
 - [ ] **Step 4: Run, expect PASS** (both files fully, not only the new cases).
 - [ ] **Step 5: Commit.** `git commit scripts/conductor/refresh.ts scripts/conductor/state.ts scripts/conductor/refresh.test.ts scripts/conductor/state.test.ts -m "feat(dgs-683): read workers and health per herdr session"`
 
-### Task 5 (T5): flux and flux targets per session
+### Task 5: flux and flux targets per session
 
 **Files:**
 - Modify: `scripts/conductor/flux-herdr.ts` (`fluxRunner`, `createFluxHerdr`), `scripts/conductor/flux-cli.ts:70-90`, `scripts/conductor/flux-targets.ts` (add `session` to `FluxTarget` through `resolveTarget`)
@@ -201,7 +201,7 @@ and in `card-hook.test.ts` (same style as its existing `startHook` cases): a cas
 - [ ] **Step 4: Run, expect PASS** (both files fully).
 - [ ] **Step 5: Commit.** `git commit scripts/conductor -m "feat(dgs-683): run the flux in the session of its target"`
 
-### Task 6 (T6): the registry owns the note lookup, docs
+### Task 6: the registry owns the note lookup, docs
 
 **Files:**
 - Modify: `scripts/conductor/state.ts:84` (`resolveNotePath` reads through `resolveConductor`), `scripts/conductor/flux-targets.ts:54` (same), `docs/conductor-state.md:13-26`

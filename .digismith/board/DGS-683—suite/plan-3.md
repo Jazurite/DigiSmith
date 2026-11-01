@@ -4,7 +4,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 
 ## Ticket A2: session-aware scan, run records, Oculus (protected: `autonomous/`)
 
-### Task 7 (T7): `promptConductor` and `conductorCheck` through the registry
+### Task 7: `promptConductor` and `conductorCheck` through the registry
 
 **Files:**
 - Modify: `packages/cli/src/autonomous/conductor.ts` (all of `readConductor`, `conductorCheck`, `promptConductor`), `packages/cli/src/autonomous/scan.ts:166-180` only if the cause text needs the session (it does not change the control flow)
@@ -20,7 +20,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 - [ ] **Step 4: Run, expect PASS.** Then `pnpm vitest run packages/cli/src/autonomous` (whole folder: scan tests include the conductor check).
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/autonomous/conductor.ts packages/cli/src/autonomous/conductor.test.ts scripts/conductor/registry.ts scripts/conductor/registry.test.ts -m "feat(dgs-683): prompt the factory conductor in its own herdr session"`
 
-### Task 8 (T8): run records store `herdr.session`
+### Task 8: run records store `herdr.session`
 
 **Files:**
 - Modify: `packages/cli/src/run/auto.ts:62`, `packages/cli/src/run/record.ts` (the `herdr` field type), `packages/cli/src/run/read.ts:108`
@@ -34,7 +34,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 - [ ] **Step 4: Run, expect PASS** (whole `run` folder, including fixtures that build records by hand: add `session` where the type now requires it).
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/run -m "feat(dgs-683): record the herdr session in a run record"`
 
-### Task 9 (T9): Oculus reads both sessions
+### Task 9: Oculus reads both sessions
 
 **Files:**
 - Modify: `packages/cli/src/oculus/live.ts:12,49-90`, `packages/cli/src/oculus/README.md:14`, `packages/cli/src/oculus/fixture.test-util.ts`

@@ -4,7 +4,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 
 ## Ticket C: ticket conductor
 
-### Task 17 (T17): driver records
+### Task 17: driver records
 
 **Files:**
 - Create: `packages/cli/src/conductor/drivers.ts`, `packages/cli/src/conductor/drivers.test.ts`
@@ -61,7 +61,7 @@ describe("drivers", () => {
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/conductor -m "feat(dgs-683): add driver records, one driver per ticket"`
 
-### Task 18 (T18): `start-ticket`
+### Task 18: `start-ticket`
 
 **Files:** Create `packages/cli/src/conductor/start-ticket.ts`, `start-ticket.test.ts`.
 
@@ -79,7 +79,7 @@ export async function startTicketConductor(a: StartArgs, d: StartDeps): Promise<
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/conductor -m "feat(dgs-683): start a ticket conductor"`
 
-### Task 19 (T19): `close`, `handover`, `sweep`
+### Task 19: `close`, `handover`, `sweep`
 
 **Files:** Create `packages/cli/src/conductor/close.ts`, `sweep.ts` and their tests.
 
@@ -97,7 +97,7 @@ export function sweepTickets(env: NodeJS.ProcessEnv, live: (session: string) => 
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/conductor -m "feat(dgs-683): close and sweep ticket conductors"`
 
-### Task 20 (T20): the `dg conductor` command
+### Task 20: the `dg conductor` command
 
 **Files:** Create `packages/cli/src/conductor/index.ts`, `index.test.ts`; Modify `packages/cli/src/index.ts:36-47` (add `.command(conductorCommand)`), `packages/cli/README.md` (one section).
 
@@ -109,7 +109,7 @@ export function sweepTickets(env: NodeJS.ProcessEnv, live: (session: string) => 
 - [ ] **Step 4: Run, expect PASS**, then `pnpm vitest run packages/cli/src/conductor packages/cli/src/index.test.ts packages/cli/src/strip-types.smoke.test.ts`.
 - [ ] **Step 5: Commit.** `git commit packages/cli/src/conductor packages/cli/src/index.ts packages/cli/README.md -m "feat(dgs-683): add the dg conductor command"`
 
-### Task 21 (T21): `dg run start` refuses a second driver
+### Task 21: `dg run start` refuses a second driver
 
 **Files:** Modify `packages/cli/src/run/index.ts` (the `start` handler) or `limit-check.ts` where start-time refusals live (read both first; put the check beside the existing limit check); Test: `packages/cli/src/run/index.test.ts`.
 

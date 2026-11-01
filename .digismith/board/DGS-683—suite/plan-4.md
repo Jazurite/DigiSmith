@@ -4,7 +4,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 
 ## Ticket B: Suite boot files (proposals in the repo; install = conductor)
 
-### Task 13 (T13): the Suite daemon files
+### Task 13: the Suite daemon files
 
 **Files:**
 - Create: `scripts/herdr/herdr-boot-suite.sh`, `scripts/herdr/com.jazurite.herdr-suite.plist`, `scripts/herdr/README.md`
@@ -18,7 +18,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit scripts/herdr -m "feat(dgs-683): add the Suite daemon files"`
 
-### Task 14 (T14): the registry-driven bootstrap
+### Task 14: the registry-driven bootstrap
 
 **Files:**
 - Create: `scripts/herdr/herdr-bootstrap.sh` (the new text of `~/.local/bin/herdr-bootstrap.sh`), `scripts/herdr/fake-herdr.sh` (test double)
@@ -34,7 +34,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 - [ ] **Step 4: Run, expect PASS.** Also `bash -n scripts/herdr/herdr-bootstrap.sh`.
 - [ ] **Step 5: Commit.** `git commit scripts/herdr -m "feat(dgs-683): bootstrap both herdr sessions from the registry"`
 
-### Task 15 (T15): `conductor-watch` with session targets
+### Task 15: `conductor-watch` with session targets
 
 **Files:**
 - Create: `scripts/herdr/conductor-watch` (new text of `~/.digismith-depot/bin/conductor-watch`)
@@ -48,7 +48,7 @@ Source: `plan.md` of this folder (approved 2026-11-01). Read also its 'Global Co
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit.** `git commit scripts/herdr -m "feat(dgs-683): watch conductors in the Suite session"`
 
-### Task 16 (T16): runbook text and the install list
+### Task 16: runbook text and the install list
 
 **Files:**
 - Create: `scripts/herdr/RUNBOOK-SUITE.md` (replacement text, NOT written into `.digismith/sessions/workbox.md`: that file is untracked and edited by the conductor)
