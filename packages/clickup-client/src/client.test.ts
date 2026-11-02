@@ -799,18 +799,42 @@ describe("ClickUpClient relations", () => {
       expect(request).toHaveBeenCalledTimes(8);
     });
 
-    it("stops when a page repeats an id and returns no duplicates", async () => {
+    it("drops a boundary row repeated at the top of the next page and keeps paging", async () => {
+      const client = makeClient();
+      const p1 = rows(60, 25);
+      const p2 = [p1[24], ...rows(35, 24)];
+      const p3 = rows(11, 3);
+      request.mockResolvedValueOnce({ data: { comments: p1 } });
+      request.mockResolvedValueOnce({ data: { comments: p2 } });
+      request.mockResolvedValueOnce({ data: { comments: p3 } });
+
+      const all = await client.getAllTaskComments("a");
+
+      expect(request).toHaveBeenCalledTimes(3);
+      expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
+      expect(all).toHaveLength(52);
+    });
+
+    it("stops when a page adds no new row", async () => {
       const client = makeClient();
       const p1 = rows(60, 25);
       request.mockResolvedValueOnce({ data: { comments: p1 } });
-      request.mockResolvedValueOnce({ data: { comments: [...rows(35, 24), p1[0]] } });
+      request.mockResolvedValueOnce({ data: { comments: p1 } });
       request.mockResolvedValueOnce({ data: { comments: rows(10, 25) } });
 
       const all = await client.getAllTaskComments("a");
 
       expect(request).toHaveBeenCalledTimes(2);
-      expect(new Set(all.map((c) => c.id)).size).toBe(all.length);
-      expect(all).toHaveLength(49);
+      expect(all).toEqual(p1);
+    });
+
+    it("throws when the last row of a full page has no date", async () => {
+      const client = makeClient();
+      const p1 = rows(60, 25);
+      delete (p1[24] as { date?: string }).date;
+      request.mockResolvedValueOnce({ data: { comments: p1 } });
+
+      await expect(client.getAllTaskComments("task9")).rejects.toThrow(/task9.*cannot continue/);
     });
 
     it("returns an empty list when there are no comments", async () => {

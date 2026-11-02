@@ -228,7 +228,7 @@ export class ClickUpClient {
   /**
    * All comments, newest first, paged 25 at a time with ClickUp's `start` (date of the last row)
    * and `start_id` (its id). Stops at a short page, at maxPages (default 8), or when a page
-   * repeats an id already seen. Returns each row once.
+   * adds no new row. Repeated rows (a boundary row) are dropped. Returns each row once.
    */
   async getAllTaskComments(taskId: string, opts: { maxPages?: number } = {}): Promise<ClickUpComment[]> {
     const maxPages = opts.maxPages ?? 8;
@@ -238,18 +238,19 @@ export class ClickUpClient {
     for (let page = 0; page < maxPages; page++) {
       const res = await this.get<{ comments?: ClickUpComment[] }>(`/task/${taskId}/comment`, params ? { params } : undefined);
       const rows = res.comments ?? [];
-      let repeated = false;
+      let added = 0;
       for (const row of rows) {
         const id = String(row.id);
-        if (seen.has(id)) {
-          repeated = true;
-          continue;
-        }
+        if (seen.has(id)) continue;
         seen.add(id);
         all.push(row);
+        added++;
       }
-      if (rows.length < 25 || repeated) break;
+      if (rows.length < 25 || added === 0) break;
       const last = rows[rows.length - 1];
+      if (last.date === undefined || last.date === null || last.date === "") {
+        throw new Error(`getAllTaskComments(${taskId}): the last comment of a full page has no date, paging cannot continue`);
+      }
       params = { start: last.date as string | number, start_id: String(last.id) };
     }
     return all;
