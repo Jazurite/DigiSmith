@@ -249,4 +249,38 @@ describe("herdr-ws Suite close rule (T11)", () => {
     expect(ok(suite("agent", "stop", "w7:p6"))).toBe(true) // tc-dgs-8
     expect(refused(suite("agent", "stop", "w7:p1"))).toBe(true) // digismith-conductor
   })
+
+  it("pane move bypass: a conductor pane cannot be moved into a tc- tab, so the close never gets a tc- label", () => {
+    const r = suite("pane", "move", "w7:p1", "--tab", "w7:t2")
+    expect(refused(r)).toBe(true)
+    expect(r.log).not.toMatch(/pane move/)
+    expect(refused(suite("pane", "move", "w7:p1", "--target-pane", "w7:p2"))).toBe(true)
+  })
+
+  it("pane move between ticket panes passes; a non-ticket named pane or a bad destination is refused", () => {
+    expect(ok(suite("pane", "move", "w7:p2", "--tab", "w7:t3"))).toBe(true)
+    expect(ok(suite("pane", "move", "w7:p2", "--target-pane", "w7:p6", "--split", "right"))).toBe(true)
+    expect(refused(suite("pane", "move", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
+    expect(refused(suite("pane", "move", "w7:p2", "--new-workspace"))).toBe(true)
+    expect(refused(suite("pane", "move", "w7:p2", "--workspace", "w2"))).toBe(true)
+    expect(refused(suite("pane", "move", "w7:p2", "--tab", "w9:t1"))).toBe(true)
+    expect(refused(suite("pane", "move", "w7:p2", "--tab", "w2:t1"))).toBe(true)
+  })
+
+  it("pane swap in Suite: every pane must be named and belong to a ticket agent", () => {
+    expect(ok(suite("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p6"))).toBe(true)
+    expect(refused(suite("pane", "swap", "--source-pane", "w7:p2", "--target-pane", "w7:p1"))).toBe(true)
+    expect(refused(suite("pane", "swap", "--pane", "w7:p2", "--direction", "left"))).toBe(true) // neighbour is implicit
+    expect(refused(suite("pane", "swap", "--current", "--direction", "left"))).toBe(true)
+    expect(refused(suite("pane", "swap", "--source-pane", "w7:p2"))).toBe(true)
+  })
+
+  it("default: pane move stays inside the scope for every named pane and destination", () => {
+    expect(ok(run(env, ["pane", "move", "w2:p1", "--tab", "w3:t1"]))).toBe(true)
+    expect(ok(run(env, ["pane", "swap", "--source-pane", "w2:p1", "--target-pane", "w3:p1"]))).toBe(true)
+    expect(refused(run(env, ["pane", "move", "w2:p1", "--tab", "w9:t1"]))).toBe(true)
+    expect(refused(run(env, ["pane", "move", "w2:p1", "--target-pane", "w9:p1"]))).toBe(true)
+    expect(refused(run(env, ["pane", "swap", "--source-pane", "w2:p1", "--target-pane", "w9:p1"]))).toBe(true)
+  })
 })
+

@@ -53,6 +53,38 @@ def ws_of(t):
     r = run(["agent", "get", t])
     try: return find(json.loads(r.stdout), "workspace_id")
     except Exception: return ""
+def ticket_name(n): return n.startswith("tc-") or n.startswith("nw-")
+def agent_of_pane(p):
+    try:
+        for x in json.loads(run(["agent", "list"]).stdout).get("result", {}).get("agents", []):
+            if x.get("pane_id") == p: return x.get("name", "")
+    except Exception: pass
+    return ""
+def current_label(g, t):
+    # the name the Suite rules judge: a tab's label (tab get), an agent's name, or the agent that owns a pane; "" when unknown (fail closed)
+    if g == "tab":
+        try: return find(json.loads(run(["tab", "get", t]).stdout), "label") or ""
+        except Exception: return ""
+    if g == "agent": return agent_of_pane(t) if re.match(r"^w\d+:p", t) else t
+    return agent_of_pane(t)
+def flag_values(args, names):
+    return [args[i + 1] for i, x in enumerate(args) if x in names and i + 1 < len(args)]
+def relocate_check(args):
+    # pane move / pane swap relocate a pane between tabs or workspaces: every pane and destination named must be in the scope; in Suite every pane named must also belong to a tc-/nw- agent
+    # (else a conductor's pane could be moved into a tc- tab, and closing that tab would pass the label check). Implicit panes (--current, a swap neighbour by --direction) are refused: they cannot be checked.
+    if "--new-workspace" in args or "--current" in args: deny("%s is not accepted for pane move or swap here" % ("--new-workspace" if "--new-workspace" in args else "--current"))
+    panes = flag_values(args, ("--pane", "--source-pane", "--target-pane"))
+    if args and not args[0].startswith("-"): panes.append(args[0])
+    if verb == "swap" and (len(set(panes)) < 2 or not (set(flag_values(args, ("--source-pane",))) or set(flag_values(args, ("--pane",))))): deny("pane swap needs two named panes")
+    if verb == "swap" and "--direction" in args and not flag_values(args, ("--target-pane",)): deny("pane swap neighbour must be named with --target-pane")
+    if not panes: deny("pane move needs a named pane")
+    dests = flag_values(args, ("--tab",)) + flag_values(args, ("--workspace",))
+    for x in panes + dests:
+        w = x if WS_RE.match(x) else ws_of(x)
+        if w not in WSS: deny("%s is not in the scope of session %s" % (x, SESSION))
+    if SESSION == "Suite":
+        for x in panes:
+            if not ticket_name(agent_of_pane(x)): deny("in Suite only panes of tc- or nw- conductors can be moved or swapped")
 if len(a) < 2: deny("usage: herdr-ws [--session S] <agent|pane|tab> <verb> [target] ...")
 grp, verb, rest = a[0], a[1], a[2:]
 if grp not in ("agent", "pane", "tab"): deny("group %s not allowed" % grp)
@@ -94,22 +126,9 @@ else:
     tgt = rest[0]
     if verb == "start":  # agent start <name> --pane <id>
         if "--pane" not in rest or rest.index("--pane") + 1 >= len(rest) or ws_of(rest[rest.index("--pane") + 1]) not in WSS: deny("--pane outside the scope")
+    elif grp == "pane" and verb in ("move", "swap"): relocate_check(rest)
     elif ws_of(tgt) not in WSS: deny("target %s is not in the scope of session %s" % (tgt, SESSION))
     cmd = a
-def ticket_name(n): return n.startswith("tc-") or n.startswith("nw-")
-def agent_of_pane(p):
-    try:
-        for x in json.loads(run(["agent", "list"]).stdout).get("result", {}).get("agents", []):
-            if x.get("pane_id") == p: return x.get("name", "")
-    except Exception: pass
-    return ""
-def current_label(g, t):
-    # the name the Suite rules judge: a tab's label (tab get), an agent's name, or the agent that owns a pane; "" when unknown (fail closed)
-    if g == "tab":
-        try: return find(json.loads(run(["tab", "get", t]).stdout), "label") or ""
-        except Exception: return ""
-    if g == "agent": return agent_of_pane(t) if re.match(r"^w\d+:p", t) else t
-    return agent_of_pane(t)
 if SESSION == "Suite":
     # DGS-683: in Suite the close rule is a label rule, not a position rule: only ticket conductors (tc-) and on-call (nw-) can be closed.
     # A label can be changed by rename, so rename is judged too: the CURRENT name and the NEW name must both be tc-/nw-.
