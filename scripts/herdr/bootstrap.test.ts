@@ -17,7 +17,7 @@ const REG = {
   "Emma/emma-conductor": { workspace: "w3" },
 };
 const env = (over: Record<string, string> = {}) => ({
-  PATH: process.env.PATH ?? "", HOME: home, HERDR_BIN: FAKE, FAKE_DIR: fake, DIGISMITH_DEPOT_DIR: depot, PGREP: "true",
+  PATH: process.env.PATH ?? "", HOME: home, RELAUNCH_SLEEP: "0", HERDR_BIN: FAKE, FAKE_DIR: fake, DIGISMITH_DEPOT_DIR: depot, PGREP: "true",
   DG_DIR: tmp, EMMA_DIR: tmp, EMMA_MAESTRO_DIR: tmp, SOV_DIR: tmp, ...over,
 });
 const run = (over: Record<string, string> = {}) => spawnSync("bash", [SCRIPT], { env: env(over), encoding: "utf8" });
@@ -163,6 +163,15 @@ describe("herdr-bootstrap.sh", () => {
     const before = read("calls.log").split("\n").filter((l) => /agent prompt/.test(l)).length;
     run();
     expect(read("calls.log").split("\n").filter((l) => /agent prompt/.test(l)).length).toBe(before);
+  });
+  it("never writes an invalid Castle workspace id back into the registry", () => {
+    const failing = path.join(tmp, "badherdr.sh");   // workspace create prints no id
+    fs.writeFileSync(failing, `#!/bin/bash\nif [ "$1" = --session ] && [ "$2" = Castle ] && [ "$3 $4" = "workspace create" ]; then echo '{"result":{}}'; exit 0; fi\nexec ${FAKE} "$@"\n`, { mode: 0o755 });
+    const r = run({ HERDR_BIN: failing });
+    expect(r.stderr).toMatch(/no valid Castle workspace id for DigiSmith/);
+    const reg = JSON.parse(fs.readFileSync(regFile(), "utf8"));
+    expect(reg["DigiSmith/digismith-conductor"].workspace).toBeUndefined();
+    expect(JSON.stringify(reg)).not.toMatch(/"workspace":"(null|)"/);
   });
   it("a closed entry is skipped", () => {
     fs.writeFileSync(regFile(), JSON.stringify({ ...REG, "Emma/old": { session: "Castle", kind: "project", status: "closed", floor: "w3" } }));

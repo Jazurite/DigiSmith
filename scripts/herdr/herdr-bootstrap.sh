@@ -6,6 +6,7 @@
 #   DIGISMITH_DEPOT_DIR (default $HOME/.digismith-depot): conductors.json is the conductor list
 #   DRY_RUN=1: every call that changes something is only logged as "dry-run: <argv>"
 #   FLOOR_CONDUCTORS=1 (default until the migration ends): registry entries with no session still get the old Floor conductor (tab 1 of the project workspace)
+#   RELAUNCH_SLEEP (default 4): seconds between /exit and the relaunch
 #   PGREP (default pgrep): how to tell a conductor with its flags from a plain restored resume
 #   DG_DIR, EMMA_DIR, EMMA_MAESTRO_DIR, SOV_DIR: project folders (override only to test with dummies)
 # Castle: one workspace per project (Factory, DigiSmith, Emma, Soveron); one tab per conductor, tab label = agent name.
@@ -21,6 +22,7 @@ REG="$DEPOT/conductors.json"
 DRY_RUN="${DRY_RUN:-0}"
 FLOOR_CONDUCTORS="${FLOOR_CONDUCTORS:-1}"
 PGREP="${PGREP:-pgrep}"
+RELAUNCH_SLEEP="${RELAUNCH_SLEEP:-4}"   # seconds to wait after /exit before the relaunch (tests set 0)
 DG_DIR="${DG_DIR:-$HOME/Workspace/Jazurite/DigiSmith}"
 EMMA_DIR="${EMMA_DIR:-$HOME/Workspace/Emma}"                          # the workspace folder
 EMMA_MAESTRO_DIR="${EMMA_MAESTRO_DIR:-$HOME/Workspace/Emma/shopify-hub}" # where the Emma conductor runs: its note and Claude memory live here
@@ -112,7 +114,7 @@ ensure_agent(){ # session name pane cwd env-text role body mode
   if [ -z "$sid" ]; then log "$name has no session id: not relaunched, check pane $pane by hand"; return; fi
   # restored by herdr as plain `claude --resume <id>`: relaunch with the same session id and the flags
   log "$name restored as resume ${sid:-?}: relaunching with flags"
-  hm "$s" agent prompt "$name" "/exit" >/dev/null 2>&1; [ "$DRY_RUN" = 1 ] || sleep 4
+  hm "$s" agent prompt "$name" "/exit" >/dev/null 2>&1; [ "$DRY_RUN" = 1 ] || sleep "$RELAUNCH_SLEEP"
   hm "$s" pane run "$pane" "cd '$cwd' && export $envtext" >/dev/null
   hm "$s" agent start "$name" --kind claude --pane "$pane" --timeout 90000 -- --resume "$sid" "${flags[@]}" >/dev/null 2>&1 && log "$name relaunched with flags" || log "$name relaunch failed: check pane $pane"
 }
@@ -169,7 +171,10 @@ if [ -f "$REG" ]; then
   # 3. write the resolved Castle workspace ids back (only the workspace field), atomic
   if [ "$DRY_RUN" != 1 ]; then
     for p in Factory DigiSmith Emma Soveron; do
-      jq --arg c "$CASTLE_S" --arg p "$p" --arg id "$(castle_ws_of "$p")" \
+      id=$(castle_ws_of "$p")
+      # never write an empty or odd id into the registry (a failed ensure_ws gives no w<digits>)
+      printf '%s' "$id" | grep -Eq '^w[0-9]+$' || { log "no valid Castle workspace id for $p ('$id'): registry not updated for it"; continue; }
+      jq --arg c "$CASTLE_S" --arg p "$p" --arg id "$id" \
         'with_entries(if (.value|type=="object") and .value.session==$c and (.key|startswith($p+"/")) then .value.workspace=$id else . end)' "$REG" > "$REG.tmp.$$" \
         && mv "$REG.tmp.$$" "$REG" || rm -f "$REG.tmp.$$"
     done
