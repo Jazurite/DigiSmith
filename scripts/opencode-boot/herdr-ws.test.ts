@@ -332,7 +332,6 @@ describe("herdr-ws cross-project audit log (T12)", () => {
     run(base(), ["agent", "get", "dgs-2"])
     run(base(), ["pane", "read", "w3:p1"])
     run(base(), ["tab", "list"])
-    run({ ...base(), HERDR_WS: "" }, ["agent", "prompt", "dgs-2", "hi"])
     run(base(), ["--session", "Castle", "agent", "get", "tc-dgs-9"])
     run(base(), ["--session", "Castle", "tab", "rename", "w7:t2", "tc-y"])
     expect(fs.existsSync(path.join(depot, "drivers"))).toBe(false)
@@ -434,6 +433,79 @@ describe("herdr-ws pane move/swap parsing and its audit log (T12 r1 fixes)", () 
       run(e(), ["pane", "move", "w2:p1", "--tab", "w2:t2"])
       expect(all()).toEqual([])
     })
+  })
+})
+
+describe("herdr-ws second targets by flag and the = form (ticket review r1 F1)", () => {
+  const env = { HERDR_SCOPE: "default:w2,default:w3" }
+  const one = { HERDR_SCOPE: "default:w2" }
+  it("a second pane given by --pane must be in the scope, for every verb that takes one", () => {
+    for (const args of [
+      ["pane", "split", "w2:p1", "--pane", "w9:p1"],
+      ["pane", "focus", "w2:p1", "--direction", "left", "--pane", "w9:p1"],
+      ["pane", "zoom", "w2:p1", "--pane", "w9:p1"],
+      ["pane", "resize", "w2:p1", "--pane", "w9:p1"],
+      ["pane", "neighbor", "w2:p1", "--pane", "w9:p1"],
+      ["pane", "input", "w2:p1", "--pane", "w9:p1"],
+      ["pane", "read", "w2:p1", "--source-pane", "w9:p1"],
+      ["pane", "split", "w2:p1", "--target-pane", "w9:p1"],
+      ["tab", "focus", "w2:t1", "--tab", "w9:t1"],
+      ["tab", "focus", "w2:t1", "--workspace", "w9"],
+    ]) {
+      const r = run(one, args)
+      expect(refused(r), args.join(" ")).toBe(true)
+      expect(r.log, args.join(" ")).toBe("")
+    }
+  })
+
+  it("a second target inside the scope passes", () => {
+    expect(ok(run(env, ["pane", "split", "w2:p1", "--pane", "w3:p1"]))).toBe(true)
+    expect(ok(run(env, ["tab", "focus", "w2:t1", "--workspace", "w3"]))).toBe(true)
+  })
+
+  it("--current is refused (an implicit target cannot be checked)", () => {
+    expect(refused(run(env, ["pane", "split", "w2:p1", "--current"]))).toBe(true)
+  })
+
+  it("the --flag=value form is refused for every verb outside list", () => {
+    for (const args of [
+      ["tab", "create", "--workspace", "w2", "--workspace=w9"],
+      ["tab", "create", "--workspace=w9"],
+      ["pane", "split", "w2:p1", "--pane=w9:p1"],
+      ["pane", "split", "w2:p1", "--direction=right"],
+      ["agent", "start", "dgs-1", "--pane", "w2:p1", "--pane=w9:p1"],
+      ["agent", "prompt", "dgs-1", "--x=1"],
+    ]) expect(refused(run(one, args)), args.join(" ")).toBe(true)
+  })
+})
+
+describe("herdr-ws audit log without HERDR_WS and with agent and pane (ticket review r1 F2, F3)", () => {
+  let depot: string
+  beforeEach(() => { depot = path.join(dir, "depot") })
+  const one = (f: string) => JSON.parse(fs.readFileSync(path.join(depot, "drivers", f), "utf8").trim())
+
+  it("HERDR_SCOPE only: the line is still written, own=unknown, in _unmapped.log", () => {
+    const r = run({ HERDR_SCOPE: "default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "tc-dgs-5" }, ["agent", "prompt", "dgs-683-b", "hi"])
+    expect(ok(r)).toBe(true)
+    expect(one("_unmapped.log")).toMatchObject({ who: "tc-dgs-5", own: "unknown", target: "dgs-683-b", workspace: "w3", verb: "agent prompt" })
+    expect(fs.existsSync(path.join(depot, "drivers", "DGS-683.log"))).toBe(false)
+  })
+
+  it("HERDR_SCOPE only: every non-read Floor act is logged, reads are not", () => {
+    const e = { HERDR_SCOPE: "default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot }
+    run(e, ["agent", "list"])
+    run(e, ["pane", "read", "w3:p1"])
+    expect(fs.existsSync(path.join(depot, "drivers"))).toBe(false)
+    run(e, ["pane", "send-text", "w2:p1", "x"])
+    expect(one("_unmapped.log")).toMatchObject({ own: "unknown", target: "w2:p1", pane: "w2:p1", agent: "dgs-1" })
+  })
+
+  it("the line records own, agent and pane", () => {
+    const e = { HERDR_WS: "w2", HERDR_SCOPE: "default:w2,default:w3", DIGISMITH_DEPOT_DIR: depot, DIGISMITH_NAME: "x" }
+    run(e, ["pane", "send-text", "w3:p2", "x"])
+    expect(one("DGS-683.log")).toMatchObject({ own: "w2", target: "w3:p2", pane: "w3:p2", agent: "dgs-683-b" })
+    run(e, ["agent", "prompt", "scout-a", "hi"])
+    expect(one("_unmapped.log")).toMatchObject({ own: "w2", agent: "scout-a", workspace: "w3" })
   })
 })
 
