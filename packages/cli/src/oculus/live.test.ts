@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { makeDepot, type Depot } from "./fixture.test-util.ts";
 import { roleOf } from "../run/role.ts";
-import { HERDR_ARGS, liveView, projectOf, realHerdr, type HerdrCall } from "./live.ts";
+import { HERDR_CALLS, liveView, projectOf, realHerdr, type HerdrCall } from "./live.ts";
 import { runOculus } from "./index.ts";
 
 const NOW = new Date("2026-10-24T08:00:00.000Z");
@@ -13,7 +13,9 @@ const agent = (o: Record<string, unknown>) => ({
   agent: "claude", agent_session: { value: "sess-1" }, agent_status: "idle", cwd: `${HOME}/Workspace/Jazurite/DigiSmith`, focused: false,
   foreground_cwd: `${HOME}/Workspace/Jazurite/DigiSmith`, pane_id: "w2:p1", tab_id: "w2:t1", terminal_title: SECRET_TITLE, terminal_title_stripped: SECRET_TITLE, workspace_id: "w2", ...o,
 });
-const herdrOf = (agents: object[]): HerdrCall => () => ({ ok: true, stdout: JSON.stringify({ id: "1", result: { type: "agent_list", agents } }) });
+const listOf = (agents: object[]) => ({ ok: true as const, stdout: JSON.stringify({ id: "1", result: { type: "agent_list", agents } }) });
+// the list answers the default session; the Suite answers an empty list (the tests that count rows)
+const herdrOf = (agents: object[], suite: object[] = []): HerdrCall => (argv) => listOf(argv.includes("Suite") ? suite : agents);
 
 let d: Depot;
 beforeEach(() => { d = makeDepot(); });
@@ -61,7 +63,7 @@ describe("liveView", () => {
     expect(v.agents.map((a) => [a.name, a.status, a.workspace])).toEqual([
       [null, "blocked", "w4"], ["dgs-599", "working", "w2"], ["emma-conductor", "idle", "w3"], ["weird", "unknown", "w2"], ["dgs-571", "done", "w2"],
     ]);
-    expect(v.agents[2]).toEqual({ name: "emma-conductor", pane: "w3:p1", tab: "w3:t1", workspace: "w3", role: "conductor", project: "Emma", status: "idle", run: null });
+    expect(v.agents[2]).toEqual({ session: "default", name: "emma-conductor", pane: "w3:p1", tab: "w3:t1", workspace: "w3", role: "conductor", project: "Emma", status: "idle", run: null });
     const out = JSON.stringify(v);
     expect(out).not.toContain(SECRET_TITLE);
     expect(out).not.toContain(HOME);
@@ -145,6 +147,36 @@ describe("liveView", () => {
     const v = liveView(d.env, NOW, herdrOf([agent({ name: "dgs-606", pane_id: "w2:p1", agent_session: undefined })]), HOME);
     expect(v.agents.find((a) => a.name === "dgs-606")?.run).toBeNull();
   });
+  it("two agents with the same pane id, one per session, each join their own run", () => {
+    const open = (run: string, session: string) => {
+      const f = join(d.writeRun({ ticket: "DGS-599", run, role: "builder", created_at: "2026-10-24T07:00:00.000Z", herdr: { session, workspace: "w2", tab: null, pane: "w2:p1" } }), "run.json");
+      expect(JSON.parse(readFileSync(f, "utf8")).herdr.session).toBe(session);
+      d.writeEvents("DGS-599", run, [{ type: "started", ts: "2026-10-24T07:00:00.000Z" }]);
+    };
+    open("floor-run", "default");
+    open("suite-run", "Suite");
+    const v = liveView(d.env, NOW, herdrOf([agent({ name: "dgs-599", pane_id: "w2:p1", agent_session: undefined })], [agent({ name: "digismith-conductor", pane_id: "w2:p1", agent_session: undefined })]), HOME);
+    expect(v.suite).toBe("ok");
+    expect(v.agents.map((a) => [a.session, a.name, a.run])).toEqual([["default", "dgs-599", "floor-run"], ["Suite", "digismith-conductor", "suite-run"]]);
+  });
+  it("an old run record without a session joins the default session only", () => {
+    const f = join(d.writeRun({ ticket: "DGS-599", run: "old-run", role: "builder", created_at: "2026-10-24T07:00:00.000Z", herdr: { workspace: "w2", tab: null, pane: "w2:p1" } }), "run.json");
+    const r = JSON.parse(readFileSync(f, "utf8")); delete r.herdr.session; writeFileSync(f, JSON.stringify(r));
+    d.writeEvents("DGS-599", "old-run", [{ type: "started", ts: "2026-10-24T07:00:00.000Z" }]);
+    const v = liveView(d.env, NOW, herdrOf([agent({ name: "a", pane_id: "w2:p1", agent_session: undefined })], [agent({ name: "b", pane_id: "w2:p1", agent_session: undefined })]), HOME);
+    expect(v.agents.map((a) => [a.session, a.run])).toEqual([["default", "old-run"], ["Suite", null]]);
+  });
+  it("a Suite call that fails leaves the default rows and marks the view", () => {
+    const h: HerdrCall = (argv) => (argv.includes("Suite") ? { ok: false } : listOf([agent({ name: "dgs-599", pane_id: "w2:p5" })]));
+    const v = liveView(d.env, NOW, h, HOME);
+    expect(v.herdr).toBe("ok");
+    expect(v.suite).toBe("unavailable");
+    expect(v.agents.map((a) => a.name)).toEqual(["dgs-599"]);
+  });
+  it("a default call that fails is unreachable even when the Suite answers", () => {
+    const h: HerdrCall = (argv) => (argv.includes("Suite") ? listOf([agent({ name: "x" })]) : { ok: false });
+    expect(liveView(d.env, NOW, h, HOME)).toEqual({ readAt: NOW.toISOString(), herdr: "unreachable", agents: [] });
+  });
   it("says unreachable, with no agents, when herdr fails or answers something else", () => {
     for (const h of [() => ({ ok: false as const }), () => ({ ok: true as const, stdout: "not json" }), () => ({ ok: true as const, stdout: "{\"result\":{}}" })]) {
       expect(liveView(d.env, NOW, h, HOME)).toEqual({ readAt: NOW.toISOString(), herdr: "unreachable", agents: [] });
@@ -153,7 +185,8 @@ describe("liveView", () => {
 });
 
 describe("the herdr call", () => {
-  it("uses exactly the read-only argv", () => expect([...HERDR_ARGS]).toEqual(["--session", "default", "agent", "list"]));
+  it("uses exactly the read-only argvs, one per session", () => expect(HERDR_CALLS.map((c) => [...c])).toEqual([["--session", "default", "agent", "list"], ["--session", "Suite", "agent", "list"]]));
+  it("realHerdr refuses any argv that is not one of them", () => expect(realHerdr()(["--session", "Suite", "agent", "close", "x"])).toEqual({ ok: false }));
   it("realHerdr only builds the call; the tests never run the real herdr", () => expect(typeof realHerdr()).toBe("function"));
 });
 

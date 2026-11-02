@@ -1,5 +1,5 @@
 // packages/cli/src/oculus/live.ts
-// DGS-599: every herdr agent on the Workbox for Oculus. Reads only: one herdr call with a fixed argv and the run records.
+// DGS-599: every herdr agent on the Workbox for Oculus. Reads only: one herdr call per session with a fixed argv and the run records.
 // Never reads pane text; drops terminal_title (Claude sets it from the conversation) and the folder path.
 import { spawnSync } from "node:child_process";
 import * as os from "node:os";
@@ -9,13 +9,18 @@ import { LIST_DAYS, listRuns } from "../run/read.ts";
 import { roleOf } from "../run/role.ts";
 import type { Role } from "../run/schema.ts";
 
-export const HERDR_ARGS = ["--session", "default", "agent", "list"] as const;
+// The default (Floor) session and the Suite session; the Suite may be down, the Floor may not (DGS-683).
+export const HERDR_CALLS = [
+  ["--session", "default", "agent", "list"],
+  ["--session", "Suite", "agent", "list"],
+] as const;
 export const AGENT_STATUSES = ["working", "idle", "blocked", "done", "unknown"] as const;
 export type AgentStatus = (typeof AGENT_STATUSES)[number];
 export type AgentRole = Role;   // the DGS-598 role set (run/schema.ts ROLES)
-export interface LiveAgent { name: string | null; pane: string; tab: string | null; workspace: string | null; role: AgentRole; project: string | null; status: AgentStatus; run: string | null }
-export interface LiveView { readAt: string; herdr: "ok" | "unreachable"; agents: LiveAgent[] }
-export type HerdrCall = () => { ok: true; stdout: string } | { ok: false };
+export interface LiveAgent { session: string; name: string | null; pane: string; tab: string | null; workspace: string | null; role: AgentRole; project: string | null; status: AgentStatus; run: string | null }
+export interface LiveView { readAt: string; herdr: "ok" | "unreachable"; suite?: "ok" | "unavailable"; agents: LiveAgent[] }
+/** One read-only herdr call: the argv is one of HERDR_CALLS. */
+export type HerdrCall = (argv: readonly string[]) => { ok: true; stdout: string } | { ok: false };
 
 const NAME_MAX = 64;
 const ORDER: Record<AgentStatus, number> = { blocked: 0, working: 1, idle: 2, unknown: 3, done: 4 };
@@ -23,8 +28,9 @@ const ORDER: Record<AgentStatus, number> = { blocked: 0, working: 1, idle: 2, un
 /** The real herdr: fixed argv, no shell, 3 s, only HOME, PATH and the XDG_CONFIG_HOME herdr-ws uses. */
 export function realHerdr(): HerdrCall {
   const home = os.homedir();
-  return () => {
-    const r = spawnSync(path.join(home, ".local", "bin", "herdr"), [...HERDR_ARGS], {
+  return (argv) => {
+    if (!HERDR_CALLS.some((c) => c.join(" ") === argv.join(" "))) return { ok: false };   // only the fixed argvs run
+    const r = spawnSync(path.join(home, ".local", "bin", "herdr"), [...argv], {
       encoding: "utf8", timeout: 3000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024, shell: false,
       env: { HOME: home, PATH: "/usr/bin:/bin", XDG_CONFIG_HOME: path.join(home, ".config") },
     });
@@ -58,35 +64,45 @@ function openRuns(env: NodeJS.ProcessEnv, now: Date): { byPane: Map<string, Open
   for (const { record, summary } of listRuns(env, undefined, { days: LIST_DAYS, nowMs: now.getTime() })) {   // the same window as the other views
     if (summary.ended) continue;
     const sid = typeof record.session_id === "string" && record.session_id !== "" ? record.session_id : null;
-    if (record.herdr?.pane) keep(pane, record.herdr.pane, record.run, record.created_at, sid);
+    if (record.herdr?.pane) keep(pane, `${record.herdr.session ?? "default"}/${record.herdr.pane}`, record.run, record.created_at, sid);
     if (sid) keep(session, sid, record.run, record.created_at, sid);
   }
   return { byPane: pane, bySession: session };
 }
 
+function parseAgents(r: ReturnType<HerdrCall>): Record<string, unknown>[] | null {
+  if (!r.ok) return null;
+  try {
+    const raw = (JSON.parse(r.stdout) as { result?: { agents?: unknown } }).result?.agents;
+    return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function liveView(env: NodeJS.ProcessEnv, now: Date, herdr: HerdrCall, home: string = os.homedir()): LiveView {
   const readAt = now.toISOString();
   const down: LiveView = { readAt, herdr: "unreachable", agents: [] };
-  const r = herdr();
-  if (!r.ok) return down;
-  let raw: unknown;
-  try { raw = (JSON.parse(r.stdout) as { result?: { agents?: unknown } }).result?.agents; } catch { return down; }
-  if (!Array.isArray(raw)) return down;
+  // the default session must answer; a Suite that does not answer only marks the view
+  const floor = parseAgents(herdr(HERDR_CALLS[0]));
+  if (!floor) return down;
+  const suiteRaw = parseAgents(herdr(HERDR_CALLS[1]));
+  const sessions: [string, Record<string, unknown>[]][] = [["default", floor], ...(suiteRaw ? [["Suite", suiteRaw] as [string, Record<string, unknown>[]]] : [])];
   const runs = openRuns(env, now);
   const agents: LiveAgent[] = [];
-  for (const a of raw as Record<string, unknown>[]) {
+  for (const [session, raw] of sessions) for (const a of raw) {
     const pane = str(a?.pane_id);
     if (!pane) continue;
     const name = str(a.name)?.slice(0, NAME_MAX) ?? null;
     const sessionId = str((a.agent_session as { value?: unknown } | undefined)?.value);
-    // the pane match wins, unless its run carries another Claude session (herdr reused the pane id)
-    const byPane = runs.byPane.get(pane);
+    // the pane match wins, unless its run carries another Claude session (herdr reused the pane id); a pane id is only unique inside its herdr session
+    const byPane = runs.byPane.get(`${session}/${pane}`);
     const paneRun = byPane && !(byPane.session && sessionId && byPane.session !== sessionId) ? byPane : undefined;
     const run = paneRun?.run ?? (sessionId ? runs.bySession.get(sessionId)?.run : undefined) ?? null;
     const status = (AGENT_STATUSES as readonly string[]).includes(a.agent_status as string) ? (a.agent_status as AgentStatus) : "unknown";
-    agents.push({ name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: herdrRole(name), project: projectOf(a.cwd, home), status, run });
+    agents.push({ session, name, pane: pane.slice(0, NAME_MAX), tab: str(a.tab_id)?.slice(0, NAME_MAX) ?? null, workspace: str(a.workspace_id)?.slice(0, NAME_MAX) ?? null, role: herdrRole(name), project: projectOf(a.cwd, home), status, run });
   }
   const cmp = (a: string, b: string) => a.localeCompare(b, "en", { numeric: true });   // w2 before w10
-  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
-  return { readAt, herdr: "ok", agents };
+  agents.sort((x, y) => ORDER[x.status] - ORDER[y.status] || cmp(x.session, y.session) || cmp(x.workspace ?? "~", y.workspace ?? "~") || cmp(x.name ?? "~", y.name ?? "~") || cmp(x.pane, y.pane));
+  return { readAt, herdr: "ok", suite: suiteRaw ? "ok" : "unavailable", agents };
 }
