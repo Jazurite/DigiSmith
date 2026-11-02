@@ -96,7 +96,7 @@ export function renderRefineOrder(i: { key: string; name: string; taskId: string
   lines.push(
     "## Steps",
     `1. Start a refine worker from \`skills/director/refine-brief.md\` under the role limit, with the seat from \`dg director seat\`. Always through \`dg run start\`.`,
-    `2. Keep a Monitor watch on the refine worker's pane for lines that start with \`STOP: plan-ready\` (the project conductor also relays the line). When it arrives, ASK the project conductor to start a \`ticket\` plan Reviewer for ${i.key}. Never start a Reviewer yourself: the Reviewer card stays untouched and a conductor starts every review.`,
+    `2. Keep a Monitor watch on the refine worker's pane for lines that start with \`STOP: plan-ready\`. When it arrives, ASK the project conductor to start a \`ticket\` plan Reviewer for ${i.key}. Never start a Reviewer yourself: the Reviewer card stays untouched and a conductor starts every review.`,
     "3. On a dirty report: verify each finding (read the cited text; a finding you cannot verify counts as confirmed), relay the confirmed ones to the refine worker once, and ask the conductor for one scoped re-review. Run `dg director refine-round` before the re-review.",
     `4. On a clean report: attach \`spec.md\` and \`plan.md\` with \`dg clickup upload-attachment\`.`,
     `5. Run \`dg director refine-release --ticket ${i.key} --result ready --report <report.md>\`, or \`--result escalated --question "<one question>"\` when only Jack can decide.`,

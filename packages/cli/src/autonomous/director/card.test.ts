@@ -68,6 +68,11 @@ describe("skills/director/SKILL.md", () => {
     expect(card).toMatch(/then ask the project conductor[^\n]*plan Reviewer/i);
     expect(card).toMatch(/nothing else, except the refine watch/i);
   });
+  it("F6: the card says the Monitor watch is the one route, ignores a second copy of the same STOP line for the same round and asks the plan Reviewer once per round", () => {
+    expect(card).not.toMatch(/relays the line/i);
+    expect(card).toMatch(/ignore a second copy of the same `?STOP: plan-ready`? line for the same round/i);
+    expect(card).toMatch(/once per round/i);
+  });
   it("F4: the card says how the Director stops a stuck refine run (dg run event <run-id> lost) and records it", () => {
     expect(card).toMatch(/older than 6 hours/);
     expect(card).toContain("dg run event <run-id> lost");
@@ -102,9 +107,10 @@ describe("skills/director/refine-brief.md", () => {
     expect(refineBrief).toMatch(/name an authority path only when the plan changes it/i);
     expect(refineBrief).toContain("the protected paths (section 13, DEFAULT_PROTECTED)");
   });
-  it("F2: the brief says the conductor relays 'STOP: plan-ready <path>' to the Director when the Director started the worker", () => {
-    expect(refineBrief).toMatch(/relay[^\n]*STOP: plan-ready/i);
+  it("F6: the brief says the Director started you and watches your pane for the STOP line; it does not claim a conductor relays it", () => {
     expect(refineBrief).toMatch(/Director started you/i);
+    expect(refineBrief).toMatch(/watches your pane[^\n]*STOP: plan-ready|STOP: plan-ready[^\n]*watches your pane/i);
+    expect(refineBrief).not.toMatch(/conductor that watches your pane|relays that line|agent prompt director/i);
   });
   it("has the shape of a refine worker brief: docs only, no worktree, no branch, board folder, STOP: plan-ready, placeholders", () => {
     for (const s of ["docs only", "no worktree", "no branch", "STOP: plan-ready", "<KEY>", "<board folder>", "<seat>", "done"]) expect(refineBrief).toContain(s);

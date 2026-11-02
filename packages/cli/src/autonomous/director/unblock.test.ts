@@ -175,6 +175,26 @@ describe("F1: the merge gate's refused item has run = the ticket key", () => {
   });
 });
 
+describe("F5: a move id carries the occurrence", () => {
+  const lockAt = (min: number): RefineLock => ({ ticket: "DGS-2", taskId: "t2", claimedAt: ago(min), claimedAtUtc7: "", order: "o", scanId: "s", attempt: 1, round: 1 });
+  it("two stuck locks of the same ticket give two different ids; the same lock gives the same id", () => {
+    const a = stuckLockMove(lockAt(500), NOW)!;
+    const b = stuckLockMove(lockAt(400), NOW)!;
+    expect(a.id).not.toBe(b.id);
+    expect(stuckLockMove(lockAt(500), NOW)!.id).toBe(a.id);
+    expect(stuckLockMove(lockAt(500), new Date(NOW.getTime() + 3600_000))!.id).toBe(a.id);
+  });
+  it("two refusals of the same ticket (different since) give two different gate-wait ids; the same refusal keeps its id", () => {
+    const refused = (since: string): OpenItem => item({ run: "DGS-1", ticket: "DGS-1", kind: "refused", cause: "merge-refused: protected path", since });
+    const noRole = ctx({ roleOf: () => null });
+    const a = movesFor(refused(ago(60)), hist(), noRole);
+    const b = movesFor(refused(ago(40)), hist(), noRole);
+    expect(a.kind).toBe("gate-wait");
+    expect(a.id).not.toBe(b.id);
+    expect(movesFor(refused(ago(60)), hist(), noRole).id).toBe(a.id);
+  });
+});
+
 describe("the stuck refine lock", () => {
   const lock = (min: number): RefineLock => ({ ticket: "DGS-2", taskId: "t2", claimedAt: ago(min), claimedAtUtc7: "", order: "o", scanId: "s", attempt: 1, round: 1 });
   it("older than 360 minutes: refine-release escalated; younger or none: null", () => {

@@ -79,6 +79,20 @@ describe("planLoop", () => {
     const failed = { ...done, outcome: "failed" as const };
     expect(planLoop(world({ items: [refused], history: { decisions: [done, failed], journal: [] }, ...noRole })).moves.map((m) => m.kind)).toEqual(["gate-wait"]);
   });
+  it("F5: a done id of the first stuck lock does not hide the second stuck lock of the same ticket", () => {
+    const first = planLoop(world({ lockTicket: null, refineLock: lock(500) }));
+    expect(first.moves.map((m) => m.kind)).toEqual(["refine-release"]);
+    const id = first.moves[0].id;
+    const done = { ts: ago(5), tsUtc7: "", ticket: "DGS-2", run: id, id: "release-stopped", side: "within" as const, what: "w", why: "y", by: "director" as const, move: id, outcome: "done" as const };
+    const hist = { decisions: [done], journal: [] };
+    // the same lock again: finished, no wake
+    expect(planLoop(world({ lockTicket: null, refineLock: lock(500), history: hist })).wake).toBe(false);
+    // a new lock of the same ticket, stuck again later: a new move, actionable, wakes
+    const second = planLoop(world({ lockTicket: null, refineLock: lock(400), history: hist }));
+    expect(second.moves.map((m) => m.kind)).toEqual(["refine-release"]);
+    expect(second.moves[0].id).not.toBe(id);
+    expect(second.wake).toBe(true);
+  });
   it("pending comments alone do not wake the Director", () => {
     expect(planLoop(world({ pendingComments: 3 })).wake).toBe(false);
   });

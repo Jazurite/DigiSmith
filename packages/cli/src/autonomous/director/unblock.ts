@@ -109,7 +109,7 @@ function buildLane(item: OpenItem, h: History, now: Date, ticket: string): Move 
     case "refused": {
       if (!item.cause.startsWith("merge-refused")) return listOnly(item, "refused for another cause");
       const age = ageMin(item.since, now);
-      return age >= WAIT_MIN ? withId({ kind: "gate-wait", ticket, ageMin: age }, run) : listOnly(item, "waiting for the Maestro (protected-path merge), under 30 minutes");
+      return age >= WAIT_MIN ? withId({ kind: "gate-wait", ticket, ageMin: age }, `${run}@${item.since}`) : listOnly(item, "waiting for the Maestro (protected-path merge), under 30 minutes");
     }
     case "blocked": return listOnly(item, "a prompt waits for Jack (answer-prompt): the Director never answers it");
     default: return listOnly(item, "not an item the Director acts on");
@@ -162,8 +162,8 @@ export function movesFor(item: OpenItem, h: History, ctx: UnblockCtx): Move {
   return listOnly(item, "not the factory ticket or the refine ticket: a conductor owns it");
 }
 
-/** A refine lock older than REFINE_LOCK_MAX_AGE_MINUTES is a world input of its own. */
+/** A refine lock older than REFINE_LOCK_MAX_AGE_MINUTES is a world input of its own. Its id carries the lock's claimedAt: each new lock is a new move. */
 export function stuckLockMove(lock: RefineLock | null, now: Date): Move | null {
   if (lock === null || lockAgeMinutes(lock, now) <= REFINE_LOCK_MAX_AGE_MINUTES) return null;
-  return withId({ kind: "refine-release", lane: "refine", ticket: lock.ticket, result: "escalated", reason: `The refine run of ${lock.ticket} ran more than ${REFINE_LOCK_MAX_AGE_MINUTES / 60} hours without a clean plan. Say how to go on.` });
+  return withId({ kind: "refine-release", lane: "refine", ticket: lock.ticket, result: "escalated", reason: `The refine run of ${lock.ticket} ran more than ${REFINE_LOCK_MAX_AGE_MINUTES / 60} hours without a clean plan. Say how to go on.` }, `@${lock.claimedAt}`);
 }
