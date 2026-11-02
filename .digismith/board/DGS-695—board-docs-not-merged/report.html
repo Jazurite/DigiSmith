@@ -3,6 +3,10 @@
 <style>body{font:16px/1.5 system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem}code{background:#8882;padding:0 .2em}</style></head><body>
 <h1>DGS-695 Board docs are not a merge — Implementation Report</h1>
 <div class="meta"><span>Ticket: <strong>DGS-695</strong></span><span>Date: 2026-11-02</span></div>
+<section id="summary">
+<h2>Summary</h2>
+<p>The scan no longer skips a ticket as already merged when its only key-scoped commits on main are refinement docs under its own board folder. Rules (a), (b) and the blocker check read the changed files in one git call and ignore those commits.</p>
+</section>
 <h2>What changed</h2>
 <ul>
 <li><code>readMainLog</code> reads changed files in the same single git call; rows are <code>{ sha, subject, files }</code>.</li>
