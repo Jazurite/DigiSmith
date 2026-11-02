@@ -8,6 +8,9 @@ const task = (over: Partial<LoTask> = {}): LoTask => ({
   signOff: "Auto", mode: "Autonomous", scheduledAt: null, milestone: null, inProjects: false, blockers: [], ...over,
 });
 
+/** Fake `git log --name-only --format=%x01%h%x09%s` output: one row per [sha, subject, files]. */
+const logOf = (rows: [string, string, string[]?][]): string => rows.map(([sha, subject, files = []]) => `\x01${sha}\t${subject}\n${files.map((f) => `${f}\n`).join("")}`).join("\n");
+
 interface Fx { config?: string | Error; fetch?: Error; log?: string; branches?: string; ancestors?: string[]; branchLog?: string }
 function fake(fx: Fx = {}): { git: Git; calls: string[][] } {
   const calls: string[][] = [];
@@ -15,7 +18,7 @@ function fake(fx: Fx = {}): { git: Git; calls: string[][] } {
     calls.push(args);
     if (args[0] === "show") { if (fx.config instanceof Error) throw fx.config; return fx.config ?? ""; }
     if (args[0] === "fetch") { if (fx.fetch) throw fx.fetch; return ""; }
-    if (args[0] === "log") return args[1] === "origin/main" ? (fx.log ?? "") : (fx.branchLog ?? "");
+    if (args.includes("log")) return args.includes("origin/main") ? (fx.log ?? "") : (fx.branchLog ?? "");
     if (args[0] === "branch") {
       const pats = args.slice(3, -1);
       const lines = (fx.branches ?? "").split("\n").filter(Boolean);
@@ -45,8 +48,21 @@ describe("guardrailProblems", () => {
 
 describe("alreadyDone", () => {
   it("reports work merged on main with the attention cause", () => {
-    const { git } = fake({ log: "abc123\tfeat(dgs-1): x\n" });
+    const { git } = fake({ log: logOf([["abc123", "feat(dgs-1): x", ["src/x.ts"]]]) });
     expect(makeScanGuard(git, "/r").alreadyDone(task())).toEqual({ reason: "already-merged: abc123", attention: "already-merged-but-open" });
+  });
+  it("a board-docs-only key commit is not already-merged (alreadyDone returns null)", () => {
+    const { git } = fake({ log: logOf([["abc123", "docs(dgs-1): spec", [".digismith/board/DGS-1—x/spec.md"]]]) });
+    expect(makeScanGuard(git, "/r").alreadyDone(task())).toBeNull();
+  });
+  it("a code commit with the same scope is still already-merged", () => {
+    const { git } = fake({ log: logOf([["abc123", "docs(dgs-1): spec", [".digismith/board/DGS-1—x/spec.md", "src/x.ts"]]]) });
+    expect(makeScanGuard(git, "/r").alreadyDone(task())).toEqual({ reason: "already-merged: abc123", attention: "already-merged-but-open" });
+  });
+  it("a blocker whose only main commits are board docs is not satisfied by them", () => {
+    const { git } = fake({ log: logOf([["abc123", "docs(dgs-3): spec", [".digismith/board/DGS-3—x/spec.md"]]]), branches: "DGS-3__a", ancestors: [] });
+    const r = makeScanGuard(git, "/r").alreadyDone(task({ blockers: [{ key: "DGS-3", done: true }] }));
+    expect(r).toEqual({ reason: "blocker-not-on-main: DGS-3" });
   });
   it("returns null for a clean ticket", () => {
     expect(makeScanGuard(fake().git, "/r").alreadyDone(task())).toBeNull();
@@ -75,7 +91,7 @@ describe("alreadyDone", () => {
     expect(g.guardrailProblems()).toEqual([]);
   });
   it("a git failure while checking is a skip, not a claim", () => {
-    const git: Git = (_c, a) => { if (a[0] === "log") throw new Error("boom"); return ""; };
+    const git: Git = (_c, a) => { if (a.includes("log")) throw new Error("boom"); return ""; };
     expect(makeScanGuard(git, "/r").alreadyDone(task())).toEqual({ reason: "cannot check origin/main: boom" });
   });
   it("reads the main log once across two tickets and a done blocker", () => {
@@ -83,7 +99,7 @@ describe("alreadyDone", () => {
     const g = makeScanGuard(git, "/r");
     g.alreadyDone(task({ blockers: [{ key: "DGS-3", done: true }] }));
     g.alreadyDone(task({ id: "t2", key: "DGS-2", blockers: [{ key: "DGS-3", done: true }] }));
-    expect(calls.filter((c) => c[0] === "log" && c[1] === "origin/main")).toHaveLength(1);
+    expect(calls.filter((c) => c.includes("log") && c.includes("origin/main"))).toHaveLength(1);
   });
   it("fetches once for two calls", () => {
     const { git, calls } = fake();

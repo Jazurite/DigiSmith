@@ -28,8 +28,11 @@ describe("driftLines", () => {
   it("a ticket without facts is skipped", () => expect(driftLines([{ ticket: "DGS-1", taskId: "t1" }], new Map())).toEqual([]));
 });
 
+/** Fake `git log --name-only --format=%x01%h%x09%s` output: one row per [sha, subject, files]. */
+const logOf = (rows: [string, string, string[]?][]): string => rows.map(([sha, subject, files = []]) => `\x01${sha}\t${subject}\n${files.map((f) => `${f}\n`).join("")}`).join("\n");
+
 const fakeGit = (log: string, branches: Record<string, string> = {}, count = "3\n"): Git => (_cwd, args) => {
-  if (args[0] === "log") return log;
+  if (args.includes("log")) return log;
   if (args[0] === "branch") {
     const pat = args.find((a) => a.includes("__*")) ?? "";
     const key = pat.replace("__*", "").replace("origin/", "");
@@ -45,11 +48,18 @@ describe("gatherDrift", () => {
     const tracker = new FakeTracker();
     tracker.add({ id: "t1", status: "complete" });
     tracker.add({ id: "t2", status: "to do" });
-    const git = fakeGit("abc1234\tfeat(dgs-2): thing\n");
+    const git = fakeGit(logOf([["abc1234", "feat(dgs-2): thing", ["src/y.ts"]]]));
     const facts = await gatherDrift({ tracker, git, repo: "/r" }, claimed);
     expect(facts.get("DGS-1")).toEqual({ status: "complete", mergedSha: null, branchEmpty: false, gitOk: true });
     expect(facts.get("DGS-2")).toEqual({ status: "to do", mergedSha: "abc1234", branchEmpty: false, gitOk: true });
     expect(driftLines(claimed, facts)).toEqual(["DGS-1: done in ClickUp, nothing on main", "DGS-2: to do in ClickUp, merged on main (abc1234)"]);
+  });
+  it("gatherDrift: board-docs commit gives mergedSha null", async () => {
+    const tracker = new FakeTracker();
+    tracker.add({ id: "t2", status: "to do" });
+    const git = fakeGit(logOf([["abc1234", "docs(dgs-2): spec", [".digismith/board/DGS-2—x/spec.md"]]]));
+    const facts = await gatherDrift({ tracker, git, repo: "/r" }, [claimed[1]]);
+    expect(facts.get("DGS-2")?.mergedSha).toBeNull();
   });
   it("a throwing getStatus gives status null", async () => {
     const tracker = new FakeTracker(); // t1 unknown: getStatus throws
